@@ -49,6 +49,7 @@ MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdminist
 MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdministrationQuery(int PageNumber, int PageSize, string? SearchTerm = null, string? Role = null) -> void
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, MMCA.Common.Application.Auth.AuthenticationValidators! validators, MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer! sessionIssuer, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator? twoFactor = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings!>? emailConfirmationSettings = null) -> void
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CurrentTermsVersion.get -> string?
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.GetSessionsAsync(int userId, System.Guid? currentSessionId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
@@ -61,7 +62,8 @@ MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeTokenAsync(i
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.TokenService.get -> MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Auth.AuthenticationValidators
-MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions!>? legalAcceptance = null) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.CurrentTermsVersion.get -> string?
 MMCA.Common.Application.Auth.AuthenticationValidators.Login.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>!
 MMCA.Common.Application.Auth.AuthenticationValidators.Refresh.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>!
 MMCA.Common.Application.Auth.AuthenticationValidators.Register.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>!
@@ -108,6 +110,15 @@ MMCA.Common.Application.Auth.IRefreshSessionStore.FindByTokenHashAsync(string! t
 MMCA.Common.Application.Auth.IRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.TryRotateAsync(MMCA.Common.Domain.Auth.RefreshSession! presented, MMCA.Common.Domain.Auth.RefreshSession! successor, System.DateTime revokedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService.AcceptForCurrentUserAsync(int currentUserId, string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService.GetForCurrentUserAsync(int currentUserId, string! currentVersion, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.CurrentTermsVersion.get -> string?
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.CurrentTermsVersion.init -> void
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.LegalAcceptanceOptions() -> void
+MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy
 MMCA.Common.Application.Auth.PasswordResetSettings
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.get -> int
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.init -> void
@@ -1110,6 +1121,9 @@ abstract MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollme
 const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmedCode = "Authentication.EmailNotConfirmed" -> string!
 const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidTokenCode = "Authentication.InvalidConfirmationToken" -> string!
 const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.SectionName = "Authentication:EmailConfirmation" -> string!
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAcceptedCode = "Auth.TermsNotAccepted" -> string!
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.VersionNotCurrentCode = "Legal.VersionNotCurrent" -> string!
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.SectionName = "Legal" -> string!
 const MMCA.Common.Application.Auth.PasswordResetSettings.SectionName = "PasswordReset" -> string!
 const MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.SectionName = "Authentication:PermissionGrants" -> string!
 const MMCA.Common.Application.Auth.RefreshSessionSettings.SectionName = "RefreshSessions" -> string!
@@ -1207,6 +1221,11 @@ static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.opera
 static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator ==(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidToken(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAccepted(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.VersionNotCurrent(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.EnsureAcceptsCurrentVersion(string? currentVersion, string? suppliedVersion, string? source = null) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.Normalize(string? currentVersion, MMCA.Common.Shared.Legal.LegalAcceptanceDTO! standing) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.ResolveCurrentVersion(MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions? options) -> string?
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.KeyFor(int userId) -> string!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> System.TimeSpan

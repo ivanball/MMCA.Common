@@ -182,9 +182,11 @@ MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshToken.init -> void
 MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshTokenRequest() -> void
 MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshTokenRequest(string! AccessToken, string! RefreshToken) -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.AcceptedTerms.get -> bool
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.AcceptedTerms.init -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Address.get -> MMCA.Common.Shared.ValueObjects.Contact.Address?
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Address.init -> void
-MMCA.Common.Shared.Auth.Requests.RegisterRequest.Deconstruct(out string! Email, out string! Password, out string! FirstName, out string! LastName, out MMCA.Common.Shared.ValueObjects.Contact.Address? Address) -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Deconstruct(out string! Email, out string! Password, out string! FirstName, out string! LastName, out MMCA.Common.Shared.ValueObjects.Contact.Address? Address, out bool AcceptedTerms) -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Email.get -> string!
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Email.init -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Equals(MMCA.Common.Shared.Auth.Requests.RegisterRequest other) -> bool
@@ -195,7 +197,7 @@ MMCA.Common.Shared.Auth.Requests.RegisterRequest.LastName.init -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Password.get -> string!
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.Password.init -> void
 MMCA.Common.Shared.Auth.Requests.RegisterRequest.RegisterRequest() -> void
-MMCA.Common.Shared.Auth.Requests.RegisterRequest.RegisterRequest(string! Email, string! Password, string! FirstName, string! LastName, MMCA.Common.Shared.ValueObjects.Contact.Address? Address = null) -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.RegisterRequest(string! Email, string! Password, string! FirstName, string! LastName, MMCA.Common.Shared.ValueObjects.Contact.Address? Address = null, bool AcceptedTerms = false) -> void
 MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest
 MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.Deconstruct(out string! Email, out string! Token, out string! NewPassword) -> void
 MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.Email.get -> string!
@@ -430,6 +432,27 @@ MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.StronglyTypedIdRegistry(p
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.StronglyTypedIdTypeConverter() -> void
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.AcceptLegalTermsRequest() -> void
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.AcceptLegalTermsRequest(string! Version) -> void
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Deconstruct(out string! Version) -> void
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Equals(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest other) -> bool
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Version.get -> string!
+MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Version.init -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.<Clone>$() -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.AcceptedOn.get -> System.DateTime?
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.AcceptedOn.init -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.AcceptedVersion.get -> string?
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.AcceptedVersion.init -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.CurrentVersion.get -> string?
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.CurrentVersion.init -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.Equals(MMCA.Common.Shared.Legal.LegalAcceptanceDTO? other) -> bool
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.IsCurrent.get -> bool
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.IsCurrent.init -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceDTO.LegalAcceptanceDTO() -> void
+MMCA.Common.Shared.Legal.LegalAcceptanceErrorCodes
+MMCA.Common.Shared.Legal.LegalAcceptanceRoutes
 MMCA.Common.Shared.Messaging.MessageHeaders
 MMCA.Common.Shared.Notifications.NotificationFeatures
 MMCA.Common.Shared.Notifications.NotificationPermissions
@@ -589,6 +612,7 @@ const MMCA.Common.Shared.Auth.AuthClaimTypes.Permission = "permission" -> string
 const MMCA.Common.Shared.Auth.AuthClaimTypes.SessionId = "sid" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
 const MMCA.Common.Shared.Auth.AuthErrorCodes.EmailAlreadyExists = "Auth.EmailAlreadyExists" -> string!
+const MMCA.Common.Shared.Auth.AuthErrorCodes.TermsNotAccepted = "Auth.TermsNotAccepted" -> string!
 const MMCA.Common.Shared.Auth.PasswordComplexity.MaximumLength = 128 -> int
 const MMCA.Common.Shared.Auth.PasswordComplexity.MinimumLength = 8 -> int
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageRoles = "roles:manage" -> string!
@@ -606,6 +630,9 @@ const MMCA.Common.Shared.Http.IdempotencyHeaders.IdempotentReplay = "X-Idempoten
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.EmptyResponseCode = "Http.EmptyResponse" -> string!
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.MalformedResponseCode = "Http.MalformedResponse" -> string!
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.StatusErrorCodePrefix = "Http." -> string!
+const MMCA.Common.Shared.Legal.LegalAcceptanceErrorCodes.VersionNotCurrent = "Legal.VersionNotCurrent" -> string!
+const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Action = "me/legal-acceptance" -> string!
+const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Path = "Users/me/legal-acceptance" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.CorrelationId = "MMCA-Correlation-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.TenantId = "MMCA-Tenant-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.UserId = "MMCA-User-Id" -> string!
@@ -696,6 +723,10 @@ override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TVal
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.CanConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Type? destinationType) -> bool
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertFrom(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value) -> object?
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value, System.Type? destinationType) -> object?
+override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Legal.LegalAcceptanceDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Legal.LegalAcceptanceDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Legal.LegalAcceptanceDTO.ToString() -> string!
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.ToString() -> string!
@@ -903,6 +934,11 @@ static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToV
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.GetIdentifierTypes(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IEnumerable<System.Type!>!
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.Register(System.Type! identifierType) -> void
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.RegisterAll(params System.Reflection.Assembly![]! assemblies) -> int
+static MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.operator !=(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest left, MMCA.Common.Shared.Legal.AcceptLegalTermsRequest right) -> bool
+static MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.operator ==(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest left, MMCA.Common.Shared.Legal.AcceptLegalTermsRequest right) -> bool
+static MMCA.Common.Shared.Legal.LegalAcceptanceDTO.Evaluate(string? currentVersion, string? acceptedVersion, System.DateTime? acceptedOn) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
+static MMCA.Common.Shared.Legal.LegalAcceptanceDTO.operator !=(MMCA.Common.Shared.Legal.LegalAcceptanceDTO? left, MMCA.Common.Shared.Legal.LegalAcceptanceDTO? right) -> bool
+static MMCA.Common.Shared.Legal.LegalAcceptanceDTO.operator ==(MMCA.Common.Shared.Legal.LegalAcceptanceDTO? left, MMCA.Common.Shared.Legal.LegalAcceptanceDTO? right) -> bool
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.ForEvent(long eventId) -> string!
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.ForSession(long sessionId) -> string!
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.IsValid(string? scopeKey) -> bool
@@ -1039,3 +1075,5 @@ virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.Str
 ~override MMCA.Common.Shared.AuthenticationRequest.ToString() -> string
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.ToString() -> string
+~override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.ToString() -> string

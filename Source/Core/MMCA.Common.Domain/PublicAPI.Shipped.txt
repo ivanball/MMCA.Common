@@ -19,6 +19,10 @@ MMCA.Common.Domain.Auth.IEmailConfirmableUser.ConfirmEmail() -> MMCA.Common.Shar
 MMCA.Common.Domain.Auth.IEmailConfirmableUser.IsEmailConfirmed.get -> bool
 MMCA.Common.Domain.Auth.IErasableUser
 MMCA.Common.Domain.Auth.IErasableUser.Delete() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.ILegalAcceptingUser
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.AcceptTerms(string! version, System.DateTime acceptedOn) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.AcceptedTermsVersion.get -> string?
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.TermsAcceptedOn.get -> System.DateTime?
 MMCA.Common.Domain.Auth.IPasswordChangeableUser
 MMCA.Common.Domain.Auth.IPasswordChangeableUser.ChangePassword(byte[]! newPasswordHash, byte[]! newPasswordSalt) -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.ITwoFactorUserState
