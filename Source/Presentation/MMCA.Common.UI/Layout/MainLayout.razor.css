@@ -112,6 +112,20 @@ main {
     letter-spacing: 0.02em;
 }
 
+/* Legal document links (LegalSettings). Wrap onto several lines on a phone rather than overflow;
+   the links take the footer's caption size instead of MudLink's body1 default. */
+.app-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem 1.25rem;
+    margin-top: 0.25rem;
+}
+
+    .app-footer-links ::deep .mud-link {
+        font-size: inherit;
+    }
+
 /* ── Mobile / Tablet (< 1024px) — hamburger nav, full-width content ── */
 @media (max-width: 1023.98px) {
     main, article {

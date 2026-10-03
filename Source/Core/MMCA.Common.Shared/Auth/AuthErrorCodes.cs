@@ -17,4 +17,10 @@ public static class AuthErrorCodes
     /// the caller. The registration UI keys its "sign in instead" guidance on this code.
     /// </summary>
     public const string EmailAlreadyExists = "Auth.EmailAlreadyExists";
+
+    /// <summary>
+    /// Registration was refused because the host requires acceptance of its Terms of Service and the
+    /// request did not carry it. Returned only when a current terms version is configured.
+    /// </summary>
+    public const string TermsNotAccepted = "Auth.TermsNotAccepted";
 }

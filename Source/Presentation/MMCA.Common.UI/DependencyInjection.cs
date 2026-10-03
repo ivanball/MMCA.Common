@@ -14,6 +14,7 @@ using MMCA.Common.UI.Services.Auth.OAuth;
 using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Culture;
+using MMCA.Common.UI.Services.Legal;
 using MMCA.Common.UI.Services.Navigation;
 using MMCA.Common.UI.Services.Preferences;
 using MMCA.Common.UI.Theme;
@@ -44,6 +45,11 @@ public static class DependencyInjection
             // Bind layout settings (footer text, etc.) — optional, defaults to empty values
             services.AddOptions<LayoutSettings>()
                 .Bind(configuration.GetSection(LayoutSettings.SectionName));
+
+            // Legal document links (footer, registration checkbox, terms dialog). Optional: an absent
+            // section leaves every URL empty, which renders none of them.
+            services.AddOptions<LegalSettings>()
+                .Bind(configuration.GetSection(LegalSettings.SectionName));
 
             // Client-side staleness policy (§19). Both sections are optional: an absent section leaves
             // the compiled-in defaults, which is the behaviour a host gets without configuring anything.
@@ -142,6 +148,10 @@ public static class DependencyInjection
             // The /confirm-email page's client (ADR-116). A separate interface rather than new
             // IAuthUIService members, so a consumer's own IAuthUIService implementation keeps compiling.
             services.TryAddScoped<IEmailConfirmationUIService, EmailConfirmationUIService>();
+
+            // The terms-acceptance client behind TermsAcceptanceGate. Registered for every host (the
+            // confirmation-client precedent) and inert until a host renders the gate.
+            services.TryAddScoped<ILegalAcceptanceUIService, LegalAcceptanceUIService>();
 
             // Binds an OAuth completion to the flow this client started, so a deep-linked completion
             // code from someone else's provider round trip is dropped instead of exchanged.

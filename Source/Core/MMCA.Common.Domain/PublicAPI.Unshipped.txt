@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Domain.Auth.ILegalAcceptingUser
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.AcceptedTermsVersion.get -> string?
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.AcceptTerms(string! version, System.DateTime acceptedOn) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.ILegalAcceptingUser.TermsAcceptedOn.get -> System.DateTime?

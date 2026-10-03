@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.EmailConfirmation;
+using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Extensions;
@@ -100,6 +101,23 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <summary>The user repository resolved from the unit of work.</summary>
     protected IRepository<TUser, UserIdentifierType> Repository =>
         unitOfWork.GetRepository<TUser, UserIdentifierType>();
+
+    /// <summary>
+    /// The Terms of Service version the host currently requires, or <see langword="null"/> when terms
+    /// acceptance is not configured. Read from <see cref="AuthenticationValidators.CurrentTermsVersion"/>
+    /// (the registration parameter object), so adopting the feature adds no constructor dependency
+    /// here or in the app's subclass: the host calls <c>AddLegalAcceptance(configuration)</c> and sets
+    /// <c>Legal:CurrentTermsVersion</c>.
+    /// <para>
+    /// When it is non-null, <see cref="RegisterAsync"/> has already refused any request whose
+    /// <see cref="RegisterRequest.AcceptedTerms"/> is false by the time <see cref="CreateUser"/> runs,
+    /// so a <see cref="CreateUser"/> override stamps this version on the new user (for example
+    /// <c>user.AcceptTerms(CurrentTermsVersion, now)</c> on an <see cref="ILegalAcceptingUser"/>).
+    /// An external-login path that creates users outside <see cref="RegisterAsync"/> leaves them
+    /// unstamped, and the UI's acceptance gate asks them on first sign-in.
+    /// </para>
+    /// </summary>
+    protected string? CurrentTermsVersion => validators.CurrentTermsVersion;
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> LoginAsync(
@@ -210,6 +228,14 @@ public abstract class AuthenticationServiceBase<TUser>(
         if (!validationResult.IsValid)
         {
             return Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(RegisterAsync)));
+        }
+
+        // Terms of Service: only when the host configured a current version. The client sends a
+        // plain flag (the anonymous register page cannot read the version); CreateUser stamps the
+        // configured version through CurrentTermsVersion.
+        if (CurrentTermsVersion is not null && !request.AcceptedTerms)
+        {
+            return Result.Failure<AuthenticationResponse>(LegalAcceptanceErrors.TermsNotAccepted(nameof(RegisterAsync)));
         }
 
         // ADR-029 / BR-213: IP-based registration rate limiting.

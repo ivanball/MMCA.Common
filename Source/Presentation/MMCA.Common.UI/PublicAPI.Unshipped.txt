@@ -1,1 +1,28 @@
 ﻿#nullable enable
+~override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Common.Settings.LegalSettings
+MMCA.Common.UI.Common.Settings.LegalSettings.CodeOfConductUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.CodeOfConductUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.DeleteAccountUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.DeleteAccountUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.HasFooterLinks.get -> bool
+MMCA.Common.UI.Common.Settings.LegalSettings.LegalSettings() -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.PrivacyUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.PrivacyUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.TermsUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.TermsUrl.init -> void
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose() -> void
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.TermsAcceptanceGate() -> void
+MMCA.Common.UI.Pages.Auth.RegisterModel.AcceptedTerms.get -> bool
+MMCA.Common.UI.Pages.Auth.RegisterModel.AcceptedTerms.set -> void
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService.AcceptAsync(string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.AcceptAsync(string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.LegalAcceptanceUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+static readonly MMCA.Common.UI.Common.Settings.LegalSettings.SectionName -> string!
+virtual MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose(bool disposing) -> void

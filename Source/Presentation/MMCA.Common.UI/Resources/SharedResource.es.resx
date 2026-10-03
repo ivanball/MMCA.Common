@@ -730,4 +730,49 @@
   <data name="Auth.Sessions.RevokeAll.Confirm.Message" xml:space="preserve">
     <value>Se cerrará la sesión en todos los dispositivos, incluido este, y tendrá que volver a iniciar sesión.</value>
   </data>
+  <data name="Layout.Footer.LegalLinks.Aria" xml:space="preserve">
+    <value>Avisos legales</value>
+  </data>
+  <data name="Legal.TermsOfService" xml:space="preserve">
+    <value>Términos del servicio</value>
+  </data>
+  <data name="Legal.PrivacyPolicy" xml:space="preserve">
+    <value>Política de privacidad</value>
+  </data>
+  <data name="Legal.CodeOfConduct" xml:space="preserve">
+    <value>Código de conducta</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.Prefix" xml:space="preserve">
+    <value>Acepto los</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.And" xml:space="preserve">
+    <value>y la</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.CodeOfConductPrefix" xml:space="preserve">
+    <value>y me comprometo a respetar el</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.Required" xml:space="preserve">
+    <value>Debe aceptar los Términos del servicio para registrarse.</value>
+  </data>
+  <data name="Legal.Gate.Title.First" xml:space="preserve">
+    <value>Revise nuestras condiciones</value>
+  </data>
+  <data name="Legal.Gate.Title.Updated" xml:space="preserve">
+    <value>Hemos actualizado nuestras condiciones</value>
+  </data>
+  <data name="Legal.Gate.Intro" xml:space="preserve">
+    <value>Para seguir usando esta aplicación, lea los documentos siguientes y acéptelos.</value>
+  </data>
+  <data name="Legal.Gate.Agree" xml:space="preserve">
+    <value>He leído y acepto estas condiciones</value>
+  </data>
+  <data name="Legal.Gate.Accept" xml:space="preserve">
+    <value>Aceptar</value>
+  </data>
+  <data name="Legal.Gate.SignOut" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="Legal.Gate.AcceptFailed" xml:space="preserve">
+    <value>No pudimos registrar su aceptación. Inténtelo de nuevo.</value>
+  </data>
 </root>

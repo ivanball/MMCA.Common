@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.Application.Auth.Administration;
 using MMCA.Common.Application.Auth.EmailConfirmation;
+using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Application.Auth.Permissions;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Auth;
@@ -77,6 +78,33 @@ public static partial class DependencyInjection
             // The token service stamps expiries from the injected clock. AddServices registers it
             // too; TryAdd keeps this call self-sufficient without displacing a host's own clock.
             services.TryAddSingleton(TimeProvider.System);
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the opt-in Terms of Service acceptance options, bound from the <c>Legal</c>
+        /// configuration section (<c>Legal:CurrentTermsVersion</c>).
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// It deliberately registers no <c>ILegalAcceptanceService</c>: the accepted version and
+        /// instant belong to the app's own <c>User</c> aggregate, so the consumer supplies that one
+        /// implementation and a controller deriving from <c>LegalAcceptanceControllerBase</c>.
+        /// </para>
+        /// <para>
+        /// The options reach the registration flow through <c>AuthenticationValidators</c>, which takes
+        /// them as an optional constructor argument, so the app's <c>AuthenticationService</c> needs no
+        /// change. Registration asks for acceptance only while <c>Legal:CurrentTermsVersion</c> is set;
+        /// with it unset this call changes nothing.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddLegalAcceptance(IConfiguration configuration)
+        {
+            services.AddOptions<LegalAcceptanceOptions>()
+                .Bind(configuration.GetSection(LegalAcceptanceOptions.SectionName));
 
             return services;
         }

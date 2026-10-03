@@ -1,4 +1,6 @@
 using FluentValidation;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Application.Auth;
@@ -13,10 +15,17 @@ namespace MMCA.Common.Application.Auth;
 /// <param name="login">Validator for <see cref="LoginRequest"/>.</param>
 /// <param name="register">Validator for <see cref="RegisterRequest"/>.</param>
 /// <param name="refresh">Validator for <see cref="RefreshTokenRequest"/>.</param>
+/// <param name="legalAcceptance">
+/// Optional Terms of Service options (bound by <c>AddLegalAcceptance(configuration)</c>), carried
+/// here because the terms check is a registration rule: bundling it keeps the opt-in from adding a
+/// constructor dependency to <c>AuthenticationServiceBase</c> or to the app's subclass. Null, or no
+/// configured version, means registration does not ask for acceptance.
+/// </param>
 public sealed class AuthenticationValidators(
     IValidator<LoginRequest> login,
     IValidator<RegisterRequest> register,
-    IValidator<RefreshTokenRequest> refresh)
+    IValidator<RefreshTokenRequest> refresh,
+    IOptions<LegalAcceptanceOptions>? legalAcceptance = null)
 {
     /// <summary>Gets the login request validator.</summary>
     public IValidator<LoginRequest> Login { get; } = login;
@@ -26,4 +35,10 @@ public sealed class AuthenticationValidators(
 
     /// <summary>Gets the refresh-token request validator.</summary>
     public IValidator<RefreshTokenRequest> Refresh { get; } = refresh;
+
+    /// <summary>
+    /// Gets the Terms of Service version registration requires, or <see langword="null"/> when terms
+    /// acceptance is not configured (see <see cref="LegalAcceptancePolicy.ResolveCurrentVersion"/>).
+    /// </summary>
+    public string? CurrentTermsVersion => LegalAcceptancePolicy.ResolveCurrentVersion(legalAcceptance?.Value);
 }

@@ -1,0 +1,52 @@
+@using MMCA.Common.UI.Components.Capabilities
+
+@* Terms acceptance gate. A host renders it once through an IUIModule's LayoutComponentTypes
+   extension point. For a signed-in user whose accepted terms version is not the server's current
+   one (an OAuth sign-up that never saw the register form, an account older than the feature, or a
+   version bump) it opens a dialog that cannot be dismissed: the only ways out are accepting or
+   signing out. It renders nothing for an anonymous visitor, on a host with no terms version
+   configured, and on ANY failure to read the standing (404, outage, unexpected body), so an API
+   problem never locks people out of the app. *@
+
+<MudDialog Visible="_visible" Options="DialogOptions" Class="terms-acceptance-gate">
+    <TitleContent>
+        <MudText Typo="Typo.h6" HtmlTag="h2">@Heading</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">@L["Legal.Gate.Intro"]</MudText>
+        @if (Legal.HasFooterLinks)
+        {
+            <ul class="mb-3">
+                @if (!string.IsNullOrWhiteSpace(Legal.TermsUrl))
+                {
+                    <li><ExternalLink Href="@Legal.TermsUrl" Underline="Underline.Always">@L["Legal.TermsOfService"]</ExternalLink></li>
+                }
+                @if (!string.IsNullOrWhiteSpace(Legal.PrivacyUrl))
+                {
+                    <li><ExternalLink Href="@Legal.PrivacyUrl" Underline="Underline.Always">@L["Legal.PrivacyPolicy"]</ExternalLink></li>
+                }
+                @if (!string.IsNullOrWhiteSpace(Legal.CodeOfConductUrl))
+                {
+                    <li><ExternalLink Href="@Legal.CodeOfConductUrl" Underline="Underline.Always">@L["Legal.CodeOfConduct"]</ExternalLink></li>
+                }
+            </ul>
+        }
+        <MudCheckBox T="bool" @bind-Value="_agreed" Color="Color.Primary" Dense="true"
+                     Label="@L["Legal.Gate.Agree"]" data-testid="terms-acceptance-gate-agree" />
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            @* role="alert": the message only enters the DOM after a failed accept. *@
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true" role="alert">@_errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="SignOutAsync" Disabled="@_busy">
+            @L["Legal.Gate.SignOut"]
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AcceptAsync"
+                   Disabled="@(_busy || !_agreed)" aria-busy="@(_busy ? "true" : "false")"
+                   data-testid="terms-acceptance-gate-accept">
+            @L["Legal.Gate.Accept"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>

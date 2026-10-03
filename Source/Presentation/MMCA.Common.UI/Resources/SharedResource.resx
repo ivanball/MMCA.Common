@@ -730,4 +730,49 @@
   <data name="Auth.Sessions.RevokeAll.Confirm.Message" xml:space="preserve">
     <value>Every device will be signed out, including this one, and you will have to sign in again.</value>
   </data>
+  <data name="Layout.Footer.LegalLinks.Aria" xml:space="preserve">
+    <value>Legal</value>
+  </data>
+  <data name="Legal.TermsOfService" xml:space="preserve">
+    <value>Terms of Service</value>
+  </data>
+  <data name="Legal.PrivacyPolicy" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Legal.CodeOfConduct" xml:space="preserve">
+    <value>Code of Conduct</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.Prefix" xml:space="preserve">
+    <value>I agree to the</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.And" xml:space="preserve">
+    <value>and the</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.CodeOfConductPrefix" xml:space="preserve">
+    <value>and to follow the</value>
+  </data>
+  <data name="Auth.Register.AcceptTerms.Required" xml:space="preserve">
+    <value>You must accept the Terms of Service to register.</value>
+  </data>
+  <data name="Legal.Gate.Title.First" xml:space="preserve">
+    <value>Please review our terms</value>
+  </data>
+  <data name="Legal.Gate.Title.Updated" xml:space="preserve">
+    <value>We&apos;ve updated our terms</value>
+  </data>
+  <data name="Legal.Gate.Intro" xml:space="preserve">
+    <value>To keep using this app, please read the documents below and accept them.</value>
+  </data>
+  <data name="Legal.Gate.Agree" xml:space="preserve">
+    <value>I have read and agree to these terms</value>
+  </data>
+  <data name="Legal.Gate.Accept" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="Legal.Gate.SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Legal.Gate.AcceptFailed" xml:space="preserve">
+    <value>We could not record your acceptance. Please try again.</value>
+  </data>
 </root>
