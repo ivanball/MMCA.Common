@@ -224,7 +224,7 @@
     <value>Error de autenticación: falta el código de intercambio.</value>
   </data>
   <data name="Auth.OAuth.UnexpectedCompletion" xml:space="preserve">
-    <value>Este enlace de inicio de sesion no procede de un inicio de sesion comenzado en este dispositivo. Vuelve a iniciar sesion.</value>
+    <value>Este enlace de inicio de sesión no procede de un inicio de sesión comenzado en este dispositivo. Vuelve a iniciar sesión.</value>
   </data>
   <data name="Delete.Entity.Item" xml:space="preserve">
     <value>elemento</value>

@@ -16,7 +16,7 @@
     <value>Roles</value>
   </data>
   <data name="Description" xml:space="preserve">
-    <value>Cada rol concede los permisos declarados en el codigo mas los permisos almacenados aqui. Solo los almacenados se pueden editar.</value>
+    <value>Cada rol concede los permisos declarados en el código más los permisos almacenados aquí. Solo los almacenados se pueden editar.</value>
   </data>
   <data name="Loading" xml:space="preserve">
     <value>Cargando roles</value>
@@ -28,13 +28,13 @@
     <value>No se encontraron roles.</value>
   </data>
   <data name="Aria.Table" xml:space="preserve">
-    <value>Roles y su numero de permisos</value>
+    <value>Roles y su número de permisos</value>
   </data>
   <data name="Column.Role" xml:space="preserve">
     <value>Rol</value>
   </data>
   <data name="Column.Compiled" xml:space="preserve">
-    <value>Concedidos en el codigo</value>
+    <value>Concedidos en el código</value>
   </data>
   <data name="Column.Stored" xml:space="preserve">
     <value>Almacenados</value>

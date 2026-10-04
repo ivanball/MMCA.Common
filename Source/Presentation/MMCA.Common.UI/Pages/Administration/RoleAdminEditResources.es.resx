@@ -16,7 +16,7 @@
     <value>Permisos de {0}</value>
   </data>
   <data name="Description" xml:space="preserve">
-    <value>Marque los permisos que este rol debe recibir mediante filas almacenadas. Los permisos concedidos en el codigo ya estan marcados y no se pueden cambiar aqui.</value>
+    <value>Marque los permisos que este rol debe recibir mediante filas almacenadas. Los permisos concedidos en el código ya están marcados y no se pueden cambiar aquí.</value>
   </data>
   <data name="Loading" xml:space="preserve">
     <value>Cargando permisos</value>
@@ -34,16 +34,16 @@
     <value>Guardar los permisos almacenados de {0}</value>
   </data>
   <data name="Empty.NoPermissions" xml:space="preserve">
-    <value>Esta aplicacion aun no declara permisos, por lo que no hay nada que conceder.</value>
+    <value>Esta aplicación aún no declara permisos, por lo que no hay nada que conceder.</value>
   </data>
   <data name="Group.General" xml:space="preserve">
     <value>General</value>
   </data>
   <data name="Hint.Compiled" xml:space="preserve">
-    <value>Concedido en el codigo</value>
+    <value>Concedido en el código</value>
   </data>
   <data name="Hint.ManageRoles" xml:space="preserve">
-    <value>Solo se puede conceder en el codigo</value>
+    <value>Solo se puede conceder en el código</value>
   </data>
   <data name="Save.FailedTitle" xml:space="preserve">
     <value>No se guardaron los permisos</value>

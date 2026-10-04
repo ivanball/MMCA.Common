@@ -448,13 +448,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             TaskCreationOptions.RunContinuationsAsynchronously);
         var newestStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var supersededEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _toast.Setup(t => t.Info(It.IsAny<string>())).Callback(() => supersededEnded.TrySetResult());
         var calls = 0;
         cut.Instance.Fetch = (_, _, _, _, _, _) =>
         {
             if (++calls == 1)
             {
-                return supersededFetch.Task;
+                return SignalWhenEndedAsync(supersededFetch.Task, supersededEnded);
             }
 
             newestStarted.TrySetResult();
@@ -471,8 +470,9 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         await cut.InvokeAsync(() => { });
         cut.Instance.LoadingNow.Should().BeTrue();
 
-        // A ends now, while B is still in flight (its cancellation raises the info toast from its
-        // catch, right before its finally runs on the same dispatcher turn).
+        // A ends now, while B is still in flight. The signal fires as A's fetch ends, on the same
+        // dispatcher turn that then runs A's catch and finally (independent of whether a superseded
+        // load raises a toast, which it must not: see the O-39 tests below).
         supersededFetch.SetException(new OperationCanceledException());
         await supersededEnded.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
         await cut.InvokeAsync(() => { });
@@ -501,6 +501,97 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         data.Items.Should().BeEmpty();
         cut.Instance.LoadingNow.Should().BeFalse("a user cancel ends the latest load, and with it the loading state");
+    }
+
+    // == Cancel toast: only a cancel the user asked for announces itself (O-39) ==
+    [Fact]
+    public async Task LoadServerDataAsync_WhenALoadIsSupersededByANewerLoad_RaisesNoCancelToastAndShowsTheNewerRows()
+    {
+        // A paged grid supersedes its own in-flight load on every pager, sort or filter change: the
+        // newer ServerData call's reset cancels the older load's token. That is not a cancel the user
+        // asked for, so the admin-page cancel toast (showCancelSnackbar: true) must stay quiet.
+        var cut = Render<TestGridPage>();
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, token) =>
+            ++calls == 1 ? UntilCancelled(token) : Loaded(1, new WidgetRow(4, "Newer"));
+
+        Task<GridData<WidgetRow>>? supersededLoad = null;
+        Task<GridData<WidgetRow>>? newerLoad = null;
+        await cut.InvokeAsync(() =>
+        {
+            supersededLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: true);
+            newerLoad = cut.Instance.LoadAsync(State(page: 1, pageSize: 10), showCancelSnackbar: true);
+        });
+
+        var newer = await newerLoad!;
+        var superseded = await supersededLoad!;
+
+        calls.Should().Be(2);
+        newer.Items.Should().ContainSingle().Which.Name.Should().Be("Newer");
+        superseded.Items.Should().ContainSingle().Which.Name.Should().Be("Newer");
+        _toast.Verify(
+            t => t.Info(It.IsAny<string>()),
+            Times.Never,
+            "a load superseded by a newer load was not cancelled by the user, so it must not announce 'Loading cancelled.'");
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WhenTheUserCancelsALoad_RaisesExactlyOneLoadingCancelledToast()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, token) => UntilCancelled(token);
+
+        Task<GridData<WidgetRow>>? load = null;
+        await cut.InvokeAsync(() => { load = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: true); });
+
+        await cut.InvokeAsync(cut.Instance.CancelLoading);
+        var data = await load!;
+
+        data.Items.Should().BeEmpty();
+        _toast.Verify(t => t.Info("Loading cancelled."), Times.Once);
+        _toast.Verify(t => t.Info(It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WhenTheComponentIsDisposedMidLoad_RaisesNoCancelToast()
+    {
+        // Navigating away disposes the page, which cancels its in-flight load. The user is already on
+        // another page; a "Loading cancelled." toast there describes nothing they did.
+        var cut = Render<TestGridPage>();
+        var fetchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        cut.Instance.Fetch = (_, _, _, _, _, token) =>
+        {
+            fetchStarted.TrySetResult();
+            return UntilCancelled(token);
+        };
+
+        Task<GridData<WidgetRow>>? load = null;
+        await cut.InvokeAsync(() => { load = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: true); });
+        await fetchStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        var data = await load!;
+
+        data.Items.Should().BeEmpty();
+        _toast.Verify(
+            t => t.Info(It.IsAny<string>()),
+            Times.Never,
+            "a load cancelled by the component's own disposal was not cancelled by the user");
+    }
+
+    // Passes a fetch through unchanged and signals the moment it ends, however it ends.
+    private static async Task<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>> SignalWhenEndedAsync(
+        Task<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>> fetch,
+        TaskCompletionSource ended)
+    {
+        try
+        {
+            return await fetch;
+        }
+        finally
+        {
+            ended.TrySetResult();
+        }
     }
 
     // A fetch that honors its token: it only ends, by cancellation, when the next load supersedes it.

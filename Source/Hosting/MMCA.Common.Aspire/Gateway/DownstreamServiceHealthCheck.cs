@@ -22,8 +22,10 @@ namespace MMCA.Common.Aspire.Gateway;
 /// <para>
 /// Under <see cref="DownstreamProbeVersion.Auto"/> the first probe asks for HTTP/2 and, if the
 /// downstream refuses the protocol, retries once as HTTP/1.1 within the same check, so one poll
-/// still yields one verdict. The version that answered is latched for the life of this instance,
-/// and the health-check service holds one instance per downstream, so the latch is effectively per
+/// still yields one verdict. The version that answered is latched for the life of this instance.
+/// The health-check service rebuilds a check from its registration factory on every poll, so
+/// <c>AddGatewayDownstreamHealthChecks</c> registers each instance as a keyed singleton and the
+/// factory resolves that one: there is one instance per downstream, and the latch is per
 /// downstream for the life of the process. That is safe because a service cannot change the
 /// protocol of its cleartext endpoint without a redeploy, and a redeploy of the topology restarts
 /// this gateway too: a stale latch cannot outlive the endpoint that justified it.

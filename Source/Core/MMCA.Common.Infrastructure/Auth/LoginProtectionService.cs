@@ -132,7 +132,10 @@ public sealed partial class LoginProtectionService(
         long registrationCount;
         try
         {
-            registrationCount = await cacheService.GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
+            // Read the counter from the shared store, never from a process-local copy: IncrementAsync
+            // writes the shared store only, so a hybrid cache's in-process entry would pin the first
+            // count it saw and the limit would never trip while that copy lived.
+            registrationCount = await cacheService.GetFromSharedStoreAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
         }
         catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
         {

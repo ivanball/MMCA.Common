@@ -23,9 +23,11 @@ public interface INotificationScopeProvider
 
     /// <summary>
     /// Gets a human-readable name for the scope currently in force (the conference event's title, the
-    /// tenant's name), or null when there is nothing to show. The send page uses it to caption who a
-    /// notification will actually reach, so an operator can see the auto-applied target rather than
-    /// infer it.
+    /// tenant's name), or null when there is nothing to show. The send page uses it to caption which
+    /// scope the notification will be tagged with, so an operator can see the auto-applied scope
+    /// rather than infer it. The scope only decides which inbox view (for example which event's)
+    /// lists the notification; it does not narrow delivery, which goes to every recipient the
+    /// application's recipient provider returns, so the caption must not be read as the audience.
     /// <para>
     /// It is a default interface method returning null: an application that has no display name, and
     /// every existing implementation, keeps compiling untouched. The same never-throw, fail-closed
