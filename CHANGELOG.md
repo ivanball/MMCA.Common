@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.227.0] - 2026-10-04
+
+### Added
+
+- `RegistrationSettings` (`MMCA.Common.UI`, configuration section `Registration`, bound by `AddUIShared` like `LegalSettings`): `CollectAddress` (default `true`) shows the optional address block on the Register page; a host that stores no address sets it to `false`, which hides the block and skips its validation, so nothing is collected and then dropped.
+- `NotificationScopeKey.MetadataKey` (`"scopeKey"`) and `NotificationHubService.NotificationFilter`: a scoped push carries its scope key in the live SignalR metadata, and `NotificationListener` uses the filter with `INotificationScopeProvider` so a notification for another scope (another event, another tenant) neither toasts nor bumps the badge. Unscoped sends and unscoped hosts behave as before.
+- Login reads the `error` query parameter (`Login.Error`) that the OAuth completion redirect sets and shows a localized message in the page's alert (`Auth.Login.ExternalError.*`, English and Spanish), where a refused external sign-in used to land on a bare form.
+
+### Fixed
+
+- External sign-in with GitHub creates the account. `OAuthControllerBase` reads the display name from `urn:github:name` before `ClaimTypes.Name`, which GitHub maps to the login handle (never a space, so the split produced an empty last name and every first GitHub sign-up was refused with `User.LastName.Empty`). A missing or single-token name now falls back to the non-empty placeholder "User" for whichever part is absent.
+- `TermsAcceptanceGate` keeps its consent dialog open across navigation (`CloseOnNavigation = false`). A list page rewrites its own URL right after it loads, and the dialog provider closed every open dialog on that `LocationChanged`, so consent was skipped for the rest of the session.
+- The skip link in `MainLayout` stays on the current page: its href resolves against the current path rather than the base href (which navigated to the home page), the interactive click focuses the main region, and `#main-content` is focusable (`tabindex="-1"`). Nav links show a visible `:focus-visible` outline.
+- `BiometricGate` signs out through `IAuthUIService.LogoutAsync`, so the auth state is notified and the read and local caches are cleared; it only cleared the tokens, leaving the UI signed in with the previous session's cached data.
+- MAUI capability services keep their null/false contracts on any platform failure: `MauiSpeechToTextService`, `MauiShareService`, `MauiScreenshotService` and `MauiMediaPickerService` catch every non-cancellation exception (they caught a few named types, so anything else surfaced as an unhandled error). Speech recognition starts and stops on the main thread, which Android's recognizer requires.
+- `QrCodeImage` shrinks to its container (`max-width: 100%; height: auto`), so a large QR code is no longer clipped on a phone.
+
 ## [1.226.0] - 2026-10-04
 
 ### Added
