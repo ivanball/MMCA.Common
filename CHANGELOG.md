@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- The server-side `"APIClient"` handler from `AddCommonServerTokenStorage()` (renamed `BrowserOriginHandler`, internal) also forwards the visitor's `User-Agent`, replacing the host's empty one, so a sign-in or registration made on the Blazor Server path records the browser's device on the signed-in devices page instead of "Unrecognized device", matching the cookie-session refresh. A blank user-agent is not forwarded.
+
 ## [1.225.0] - 2026-10-03
 
 ### Fixed

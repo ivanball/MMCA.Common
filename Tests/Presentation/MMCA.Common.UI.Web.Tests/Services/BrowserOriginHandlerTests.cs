@@ -7,15 +7,17 @@ using MMCA.Common.UI.Web.Services;
 namespace MMCA.Common.UI.Web.Tests.Services;
 
 /// <summary>
-/// Pins <see cref="BrowserForwardedForHandler"/>: a server-side API call made for a visitor carries
-/// that visitor's address in <c>X-Forwarded-For</c> as the single value, nothing is sent when no
-/// visitor request is in scope, and <c>AddCommonServerTokenStorage()</c> composes the handler onto the
-/// <c>"APIClient"</c> pipeline.
+/// Pins <see cref="BrowserOriginHandler"/>: a server-side API call made for a visitor carries that
+/// visitor's address in <c>X-Forwarded-For</c> and the browser's user-agent in <c>User-Agent</c>, each
+/// as the single value, nothing is sent when no visitor request is in scope, and
+/// <c>AddCommonServerTokenStorage()</c> composes the handler onto the <c>"APIClient"</c> pipeline.
 /// </summary>
-public sealed class BrowserForwardedForHandlerTests
+public sealed class BrowserOriginHandlerTests
 {
     private const string HeaderName = "X-Forwarded-For";
+    private const string UserAgentHeaderName = "User-Agent";
     private const string BrowserIp = "198.51.100.23";
+    private const string BrowserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
     private static readonly Uri ApiUri = new("https://gateway.example.com/Auth/register");
 
     [Fact]
@@ -46,6 +48,7 @@ public sealed class BrowserForwardedForHandlerTests
         await client.GetAsync(ApiUri, TestContext.Current.CancellationToken);
 
         inner.LastRequest!.Headers.Contains(HeaderName).Should().BeFalse();
+        inner.LastRequest.Headers.Contains(UserAgentHeaderName).Should().BeFalse();
     }
 
     [Fact]
@@ -85,6 +88,39 @@ public sealed class BrowserForwardedForHandlerTests
     }
 
     [Fact]
+    public async Task SendAsync_WithAVisitorRequestInScope_ForwardsTheBrowserUserAgent()
+    {
+        var (client, inner) = CreateClient(VisitorContext(BrowserIp, BrowserUserAgent));
+
+        await client.PostAsync(ApiUri, content: null, TestContext.Current.CancellationToken);
+
+        inner.LastRequest!.Headers.UserAgent.ToString().Should().Be(BrowserUserAgent);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenTheRequestAlreadyCarriesAUserAgent_ReplacesIt()
+    {
+        var (client, inner) = CreateClient(VisitorContext(BrowserIp, BrowserUserAgent));
+        using var request = new HttpRequestMessage(HttpMethod.Get, ApiUri);
+        request.Headers.TryAddWithoutValidation(UserAgentHeaderName, "MMCA-Host/1.0");
+
+        await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        inner.LastRequest!.Headers.UserAgent.ToString().Should().Be(BrowserUserAgent);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenTheBrowserSentNoUserAgent_SendsNone()
+    {
+        var (client, inner) = CreateClient(VisitorContext(BrowserIp, userAgent: "   "));
+
+        await client.GetAsync(ApiUri, TestContext.Current.CancellationToken);
+
+        inner.LastRequest!.Headers.Contains(UserAgentHeaderName).Should().BeFalse();
+        inner.LastRequest.Headers.GetValues(HeaderName).Should().ContainSingle().Which.Should().Be(BrowserIp);
+    }
+
+    [Fact]
     public async Task AddCommonServerTokenStorage_ComposesTheHandlerOntoTheApiClient()
     {
         var inner = new CapturingHandler();
@@ -92,25 +128,31 @@ public sealed class BrowserForwardedForHandlerTests
         services.AddCommonServerTokenStorage();
         services.AddHttpClient("APIClient").ConfigurePrimaryHttpMessageHandler(() => inner);
         await using var provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = VisitorContext(BrowserIp);
+        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = VisitorContext(BrowserIp, BrowserUserAgent);
 
         using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient("APIClient");
         await client.GetAsync(ApiUri, TestContext.Current.CancellationToken);
 
         inner.LastRequest!.Headers.GetValues(HeaderName).Should().ContainSingle().Which.Should().Be(BrowserIp);
+        inner.LastRequest.Headers.UserAgent.ToString().Should().Be(BrowserUserAgent);
     }
 
-    private static DefaultHttpContext VisitorContext(string remoteIp)
+    private static DefaultHttpContext VisitorContext(string remoteIp, string? userAgent = null)
     {
         var context = new DefaultHttpContext();
         context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
+        if (userAgent is not null)
+        {
+            context.Request.Headers.UserAgent = userAgent;
+        }
+
         return context;
     }
 
     private static (HttpClient Client, CapturingHandler Inner) CreateClient(HttpContext? httpContext)
     {
         var inner = new CapturingHandler();
-        var handler = new BrowserForwardedForHandler(new HttpContextAccessor { HttpContext = httpContext })
+        var handler = new BrowserOriginHandler(new HttpContextAccessor { HttpContext = httpContext })
         {
             InnerHandler = inner,
         };
