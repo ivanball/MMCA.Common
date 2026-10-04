@@ -28,10 +28,24 @@ public static class DependencyInjection
         /// same-origin refresh endpoint on the interactive circuit (ADR-022). Pair with the session
         /// cookie plumbing from MMCA.Common.API (<c>AddServerAuthSessionCookie</c> /
         /// <c>UseCookieSessionRefresh</c>) and a registered <c>ITokenRefresher</c>.
+        /// <para>
+        /// Also forwards the visitor's address on this host's server-side <c>"APIClient"</c> calls:
+        /// each request carries <c>X-Forwarded-For</c> set to the remote IP of the HTTP request behind
+        /// the render (the page request during prerender, the circuit's connection afterwards), the
+        /// same value the cookie-session refresh already forwards, so per-client limits such as the
+        /// registration rate limit key on the visitor instead of on this host. Nothing is sent when no
+        /// request is in scope.
+        /// </para>
         /// </summary>
         public IServiceCollection AddCommonServerTokenStorage()
         {
             services.AddHttpContextAccessor();
+
+            // The UI services' named client (AddUIShared); a second AddHttpClient call with the same
+            // name appends to that client's pipeline, whichever of the two registrations runs first.
+            services.AddTransient<BrowserForwardedForHandler>();
+            services.AddHttpClient("APIClient").AddHttpMessageHandler<BrowserForwardedForHandler>();
+
             return services.AddScoped<ITokenStorageService, ServerTokenStorageService>();
         }
 

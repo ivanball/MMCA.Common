@@ -223,6 +223,72 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
         result.Errors[0].Type.Should().Be(ErrorType.NotFound);
     }
 
+    // ── A set never creates a role ──
+    [Fact]
+    public async Task SetStoredPermissionsAsync_ForAnUnknownRoleWithAnEmptySet_IsTheSameNotFoundAsGetRole()
+    {
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
+
+        var expected = await sut.GetRoleAsync("Ghost");
+        var result = await sut.SetStoredPermissionsAsync("Ghost", []);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].Code.Should().Be("Authorization.RoleNotFound");
+        result.Errors[0].Type.Should().Be(ErrorType.NotFound);
+        result.Errors[0].Should().BeEquivalentTo(expected.Errors[0], "a set answers an unknown role exactly as a read does");
+        _invalidator.Verify(x => x.InvalidateAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetStoredPermissionsAsync_ForAnUnknownRoleWithPermissions_IsNotFoundAndStoresNothing()
+    {
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
+
+        var result = await sut.SetStoredPermissionsAsync("Managre", [Manage]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Authorization.RoleNotFound");
+        result.Errors[0].Type.Should().Be(ErrorType.NotFound);
+        _store.Grants.Should().BeEmpty("a typo in the role name must not become a new role");
+    }
+
+    [Fact]
+    public async Task SetStoredPermissionsAsync_ForAnUnknownRoleWithAPermissionOutsideTheCatalog_IsNotFound()
+    {
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
+
+        var result = await sut.SetStoredPermissionsAsync("Ghost", ["x:y"]);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("Authorization.RoleNotFound");
+        _store.Grants.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SetStoredPermissionsAsync_ForAConfiguredRoleWithNoGrantsYet_StillSucceeds()
+    {
+        var sut = CreateService(
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Read),
+            knownRoles: ["Member"]);
+
+        var result = await sut.SetStoredPermissionsAsync("Member", [Read]);
+
+        result.IsSuccess.Should().BeTrue();
+        (await _store.GetPermissionsAsync("Member")).Should().Equal(Read);
+    }
+
+    [Fact]
+    public async Task SetStoredPermissionsAsync_ForARoleKnownOnlyByItsStoredGrants_CanStillBeCleared()
+    {
+        await _store.GrantAsync("Auditor", Read);
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Read));
+
+        var result = await sut.SetStoredPermissionsAsync("Auditor", []);
+
+        result.IsSuccess.Should().BeTrue();
+        (await _store.GetPermissionsAsync("Auditor")).Should().BeEmpty();
+    }
+
     private StoredPermissionRoleAdministrationService CreateService(
         PermissionRegistryBuilder compiled,
         IReadOnlyList<string>? knownRoles = null,

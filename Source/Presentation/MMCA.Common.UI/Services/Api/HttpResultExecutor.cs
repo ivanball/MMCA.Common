@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MMCA.Common.Shared.Abstractions;
+using Polly;
 
 namespace MMCA.Common.UI.Services.Api;
 
@@ -114,12 +115,14 @@ public static class HttpResultExecutor
     /// <summary>
     /// The fault set a client-side HTTP call can raise once responses are handled: the request
     /// never got an answer (<see cref="HttpRequestException"/>), the stream broke mid-body
-    /// (<see cref="IOException"/>), or the payload could not be serialized or read
-    /// (<see cref="JsonException"/>). Anything else is a genuine programming fault and keeps
-    /// travelling as an exception.
+    /// (<see cref="IOException"/>), the payload could not be serialized or read
+    /// (<see cref="JsonException"/>), or the client's resilience pipeline refused to run or finish
+    /// the call (<see cref="ExecutionRejectedException"/>, the base of Polly's
+    /// <c>TimeoutRejectedException</c> and <c>BrokenCircuitException</c>). Anything else is a
+    /// genuine programming fault and keeps travelling as an exception.
     /// </summary>
     private static bool IsTransportFault(Exception exception) =>
-        exception is HttpRequestException or IOException or JsonException;
+        exception is HttpRequestException or IOException or JsonException or ExecutionRejectedException;
 
     private static Error TransportError(Exception exception) =>
         // The exception text goes on Source, not Message: it is diagnostic detail, neither
