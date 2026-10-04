@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `SpanishAccentTestsBase` (`MMCA.Common.Testing.Architecture`, flat `Bases` namespace): a fitness test that scans every `*.es.resx` under the subclass's `ResourceRoot` (bin, obj, node_modules and .git skipped) and fails on a string value containing a known unaccented spelling ("codigo", "sesion", "aplicacion" and the rest of `UnaccentedWords`), matched as a whole word, listing each hit as `file:key: words`. Override `UnaccentedWords` to extend the list (`[.. base.UnaccentedWords, "x"]`), `AllowedEntries` to accept an intended spelling by its `relative/path.es.resx:Key`, and `MinimumResourceFileCount` (default 1) so a wrong root fails instead of passing on zero files. MMCA.Common runs it over its own `Source/`.
+
+### Fixed
+
+- The server-side `"APIClient"` handler from `AddCommonServerTokenStorage()` (renamed `BrowserOriginHandler`, internal) also forwards the visitor's `User-Agent`, replacing the host's empty one, so a sign-in or registration made on the Blazor Server path records the browser's device on the signed-in devices page instead of "Unrecognized device", matching the cookie-session refresh. A blank user-agent is not forwarded.
+- The per-IP registration rate limit trips over the hybrid cache. `LoginProtectionService.CheckRegistrationRateLimitAsync` reads the counter with `ICacheService.GetFromSharedStoreAsync`, since `IncrementAsync` writes the shared store only; it read through `GetAsync`, which `HybridCacheService` answered from a 30-second in-process copy, so the count it saw stayed at its first value and a burst from one IP was never refused. The fail-open behavior on a cache outage is unchanged. The lockout check is unchanged: its flag is written with `SetAsync`, which updates both tiers.
+- `DataGridListPageBase` shows "Loading cancelled." only when the cancelled load is still the current one and the page is not disposed. A load superseded by a newer one (a re-sort, a filter change, a search) and a load cut off by leaving the page used to toast it too; a user's Cancel still toasts once.
+- The gateway downstream health checks from `AddGatewayDownstreamHealthChecks` stop flapping on an HTTP/1.1 head. Each check is one instance per downstream for the life of the provider (a keyed singleton the registration factory resolves), so the HTTP version latched on the first poll survives to the next; the health-check service rebuilt the check on every poll, so every poll renegotiated. The `gateway-downstream-*` probe clients also drop the resilience handler that `AddServiceDefaults()` puts on every client (`RemoveAllResilienceHandlers`): its retry backoff spent the two-second probe budget on the refused HTTP/2 attempt, so the HTTP/1.1 fallback never ran and a healthy downstream read Unhealthy.
+- Spanish role-administration strings (`RoleAdminListResources.es.resx`, `RoleAdminEditResources.es.resx`) and the OAuth unexpected-completion message (`SharedResource.es.resx`) carry their accents; eight values used the unaccented spellings of "codigo", "mas", "aqui", "numero", "estan", "aplicacion", "aun" and "sesion".
+
 ## [1.225.0] - 2026-10-03
 
 ### Fixed

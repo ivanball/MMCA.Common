@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Http.Resilience;
 
 namespace MMCA.Common.Aspire.Gateway;
 
@@ -198,15 +199,44 @@ public static class GatewayHealthCheckExtensions
                 // request, because under DownstreamProbeVersion.Auto the check discovers which
                 // version this downstream speaks and may send both on one poll. See
                 // GatewayDownstreamHealthCheckOptions.ProbeVersion.
+            })
+
+            // No resilience handler on the probe: AddServiceDefaults() puts the standard Polly
+            // pipeline on every factory client, and its one retry (about two seconds of backoff)
+            // lands inside the two-second probe budget. A refused HTTP/2 attempt must reach the
+            // check at once so it can fall back to HTTP/1.1, and a probe is re-sent on the next
+            // poll anyway, so a retry here only turns a healthy downstream into a timed-out one.
+            // This is what RemoveAllResilienceHandlers() does, written against the stable
+            // ConfigureAdditionalHttpMessageHandlers because that helper is still EXTEXP0001
+            // (experimental) in Microsoft.Extensions.Http.Resilience.
+            .ConfigureAdditionalHttpMessageHandlers(static (handlers, _) =>
+            {
+                for (var i = handlers.Count - 1; i >= 0; i--)
+                {
+                    if (handlers[i] is ResilienceHandler)
+                    {
+                        handlers.RemoveAt(i);
+                    }
+                }
             });
 
-            healthChecks.Add(new HealthCheckRegistration(
-                CheckName(name),
-                sp => new DownstreamServiceHealthCheck(
+            // One check instance per downstream for the life of the provider. The health-check
+            // service builds the check from its registration factory on EVERY poll, so a factory
+            // that news one up would drop the latched HTTP version between polls and renegotiate
+            // each time. The singleton is keyed by the check name; the latch inside it is already
+            // safe under overlapping polls (Interlocked, first writer wins).
+            var checkName = CheckName(name);
+            services.AddKeyedSingleton(
+                checkName,
+                (sp, _) => new DownstreamServiceHealthCheck(
                     sp.GetRequiredService<IHttpClientFactory>(),
                     name,
                     clientName,
-                    probeVersion),
+                    probeVersion));
+
+            healthChecks.Add(new HealthCheckRegistration(
+                checkName,
+                sp => sp.GetRequiredKeyedService<DownstreamServiceHealthCheck>(checkName),
                 failureStatus: HealthStatus.Unhealthy,
                 tags: [HealthCheckTags.Ready],
                 timeout: ProbeTimeout));

@@ -733,9 +733,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         catch (OperationCanceledException)
         {
-            // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
-            // toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
-            if (showCancelSnackbar)
+            // Covers user/disposal cancellation, a superseded load and the pre-render timeout. Only a
+            // cancel of the CURRENT load on a live component toasts: a superseded load lost its source
+            // to the newer one (ResetCancellationTokenAsync swaps before it cancels), and a disposed
+            // component has nobody to tell, so both end silently. A user cancel (CancelLoading)
+            // cancels the current source without replacing it, so it still toasts. During pre-render
+            // the toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
+            if (showCancelSnackbar && ReferenceEquals(loadSource, _cts) && !_disposed)
             {
                 Toast.Info(Localizer["Grid.Snackbar.LoadCancelled"]);
             }
