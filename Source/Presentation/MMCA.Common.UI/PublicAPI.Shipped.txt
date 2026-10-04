@@ -1518,3 +1518,12 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Routes.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Theme.MmcaThemeProviders.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Theme.ThemeToggle.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Common.Settings.RegistrationSettings
+MMCA.Common.UI.Common.Settings.RegistrationSettings.CollectAddress.get -> bool
+MMCA.Common.UI.Common.Settings.RegistrationSettings.CollectAddress.set -> void
+MMCA.Common.UI.Common.Settings.RegistrationSettings.RegistrationSettings() -> void
+static readonly MMCA.Common.UI.Common.Settings.RegistrationSettings.SectionName -> string!
+MMCA.Common.UI.Pages.Auth.Login.Error.get -> string?
+MMCA.Common.UI.Pages.Auth.Login.Error.set -> void
+MMCA.Common.UI.Services.Notifications.NotificationHubService.NotificationFilter.get -> System.Func<System.Collections.Generic.IReadOnlyDictionary<string!, string!>?, System.Threading.Tasks.Task<bool>!>?
+MMCA.Common.UI.Services.Notifications.NotificationHubService.NotificationFilter.set -> void
