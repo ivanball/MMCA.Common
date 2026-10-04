@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
@@ -15,12 +17,21 @@ namespace MMCA.Common.Infrastructure.Auth;
 ///   <item><b>Registration rate limit</b>: limits registrations per IP address within a
 ///     configurable time window.</item>
 /// </list>
+/// <para>
+/// <b>Fails open on a cache outage.</b> The counters live in the cache, and the cache is an
+/// optimization that never turns its own outage into an error (<c>CacheSettings</c>). When the cache
+/// throws, a check answers success and an increment or reset does nothing, each with a warning log,
+/// so an unreachable cache suspends the limits instead of failing every sign-in and registration.
+/// Cancellation of the caller's own token still propagates.
+/// </para>
 /// </summary>
-public sealed class LoginProtectionService(
+public sealed partial class LoginProtectionService(
     ICacheService cacheService,
-    IOptions<LoginProtectionSettings> settings) : ILoginProtectionService
+    IOptions<LoginProtectionSettings> settings,
+    ILogger<LoginProtectionService>? logger = null) : ILoginProtectionService
 {
     private readonly LoginProtectionSettings _settings = settings.Value;
+    private readonly ILogger _logger = logger ?? NullLogger<LoginProtectionService>.Instance;
 
     /// <summary>
     /// Normalizes the supplied address the same way <see cref="Email"/> does before it is used in a
@@ -39,7 +50,16 @@ public sealed class LoginProtectionService(
     public async Task<Result> CheckLockoutAsync(string email, CancellationToken cancellationToken = default)
     {
         var lockoutKey = LockoutKey(email);
-        var isLockedOut = await cacheService.GetAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
+        bool isLockedOut;
+        try
+        {
+            isLockedOut = await cacheService.GetAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
+        }
+        catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
+        {
+            LogCacheUnavailable(_logger, nameof(CheckLockoutAsync), ex);
+            return Result.Success();
+        }
 
         return isLockedOut
             ? Result.Failure(Error.TooManyRequests(
@@ -61,29 +81,43 @@ public sealed class LoginProtectionService(
         // is what a credential-stuffing run against one account looks like, still trips the lockout.
         // Closing the gap needs the increment made atomic again WITHIN the hash layout (a Lua
         // script) or counters moved off IDistributedCache so both sides speak Redis strings.
-        var newCount = await cacheService.IncrementAsync(
-            AttemptsKey(email),
-            TimeSpan.FromMinutes(_settings.FailedAttemptWindowMinutes),
-            cancellationToken).ConfigureAwait(false);
-
-        if (newCount >= _settings.MaxFailedAttempts)
+        try
         {
-            var excessAttempts = (int)Math.Min(newCount - _settings.MaxFailedAttempts, int.MaxValue);
+            var newCount = await cacheService.IncrementAsync(
+                AttemptsKey(email),
+                TimeSpan.FromMinutes(_settings.FailedAttemptWindowMinutes),
+                cancellationToken).ConfigureAwait(false);
 
-            // Clamp the shift exponent: C# masks int shift counts to 5 bits, so 1 << 31 is negative
-            // and 1 << 32 wraps back to 1, silently shrinking (or negating) the lockout TTL for a
-            // sufficiently persistent attacker. 1 << 30 already exceeds any permitted
-            // MaxLockoutSeconds (range caps at 3600), so deep excess always lands on the cap.
-            var lockoutSeconds = Math.Min(1 << Math.Min(excessAttempts, 30), _settings.MaxLockoutSeconds);
-            await cacheService.SetAsync(LockoutKey(email), true, TimeSpan.FromSeconds(lockoutSeconds), cancellationToken).ConfigureAwait(false);
+            if (newCount >= _settings.MaxFailedAttempts)
+            {
+                var excessAttempts = (int)Math.Min(newCount - _settings.MaxFailedAttempts, int.MaxValue);
+
+                // Clamp the shift exponent: C# masks int shift counts to 5 bits, so 1 << 31 is negative
+                // and 1 << 32 wraps back to 1, silently shrinking (or negating) the lockout TTL for a
+                // sufficiently persistent attacker. 1 << 30 already exceeds any permitted
+                // MaxLockoutSeconds (range caps at 3600), so deep excess always lands on the cap.
+                var lockoutSeconds = Math.Min(1 << Math.Min(excessAttempts, 30), _settings.MaxLockoutSeconds);
+                await cacheService.SetAsync(LockoutKey(email), true, TimeSpan.FromSeconds(lockoutSeconds), cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
+        {
+            LogCacheUnavailable(_logger, nameof(IncrementFailedAttemptsAsync), ex);
         }
     }
 
     /// <inheritdoc />
     public async Task ResetFailedAttemptsAsync(string email, CancellationToken cancellationToken = default)
     {
-        await cacheService.RemoveAsync(AttemptsKey(email), cancellationToken).ConfigureAwait(false);
-        await cacheService.RemoveAsync(LockoutKey(email), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await cacheService.RemoveAsync(AttemptsKey(email), cancellationToken).ConfigureAwait(false);
+            await cacheService.RemoveAsync(LockoutKey(email), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
+        {
+            LogCacheUnavailable(_logger, nameof(ResetFailedAttemptsAsync), ex);
+        }
     }
 
     /// <inheritdoc />
@@ -95,7 +129,16 @@ public sealed class LoginProtectionService(
         }
 
         var key = RegistrationKey(ipAddress);
-        var registrationCount = await cacheService.GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
+        long registrationCount;
+        try
+        {
+            registrationCount = await cacheService.GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
+        }
+        catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
+        {
+            LogCacheUnavailable(_logger, nameof(CheckRegistrationRateLimitAsync), ex);
+            return Result.Success();
+        }
 
         return registrationCount >= _settings.MaxRegistrationsPerIpPerHour
             ? Result.Failure(Error.Unauthorized(
@@ -116,11 +159,29 @@ public sealed class LoginProtectionService(
         // Read-modify-write (see IncrementFailedAttemptsAsync for why the native-counter path was
         // removed), so the TTL is refreshed on every write. That makes the window slide rather than
         // stay anchored to the first registration, which only ever tightens the limit.
-        await cacheService.IncrementAsync(
-            RegistrationKey(ipAddress),
-            TimeSpan.FromMinutes(_settings.RegistrationRateLimitWindowMinutes),
-            cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await cacheService.IncrementAsync(
+                RegistrationKey(ipAddress),
+                TimeSpan.FromMinutes(_settings.RegistrationRateLimitWindowMinutes),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
+        {
+            LogCacheUnavailable(_logger, nameof(IncrementRegistrationCountAsync), ex);
+        }
     }
 
     private static string RegistrationKey(string ipAddress) => $"registration:ip:{ipAddress}";
+
+    /// <summary>
+    /// Every cache fault counts as an outage except the caller's own cancellation, which keeps
+    /// propagating. A cancellation the caller did not request (a store-side timeout) is an outage.
+    /// </summary>
+    private static bool IsCacheOutage(Exception exception, CancellationToken cancellationToken) =>
+        exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested;
+
+    // The operation name is logged, never the key: the keys carry the email address or client IP.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection could not reach the cache during {Operation}; failing open, so this call applies no lockout and no registration limit.")]
+    private static partial void LogCacheUnavailable(ILogger logger, string operation, Exception exception);
 }

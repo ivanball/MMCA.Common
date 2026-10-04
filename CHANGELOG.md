@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- `HttpResultExecutor` treats Polly's `ExecutionRejectedException` (so `TimeoutRejectedException` and `BrokenCircuitException`) as a transport fault, exactly like `HttpRequestException`: the UI service returns the `Http.TransportFailure` result instead of throwing, so a gateway outage no longer turns a prerender into a 500. Cancellation of the caller's own token still propagates.
+- `LoginProtectionService` fails open when the cache throws (Redis down), as `CacheSettings` promises a cache outage never becomes an error: the lockout and registration-limit checks answer success, and the failed-attempt increment, the reset and the registration count do nothing, each with a Warning log naming the operation (never the email or IP). Sign-in and registration used to fail with a 500. Cancellation of the caller's own token still propagates. The constructor takes a trailing optional `ILogger<LoginProtectionService>` (resolved by DI; existing calls compile unchanged, recompile needed).
+- The `/register` duplicate-email alert names the address the server rejected, not the live field, and disappears as soon as the email field no longer equals it; typing the same address back shows nothing until the next submit re-checks it. Editing the field used to print an unchecked address as "already registered".
+- Spanish user-administration strings (`UserAdminListResources.es.resx`) carry their accents and opening question marks; seven values used the unaccented spellings of "correo electronico", "administracion", "sesion", "cerrara", "podra", "volvera" and "elimino".
+- `SetStoredPermissionsAsync` (the role-administration `PUT`) answers `Authorization.RoleNotFound` for a role outside the role universe (compiled catalog roles, `KnownRoles`, roles with stored grants), the same error `GetRoleAsync` returns, and stores nothing, for an empty and a non-empty list alike. An empty list used to answer 200 for a nonexistent role, and a non-empty one created the typo as a new role.
+- `AddCommonServerTokenStorage()` also composes a handler onto the `"APIClient"` pipeline that stamps `X-Forwarded-For` with the visitor's remote IP (the page request during prerender, the circuit's connection afterwards; the same value the cookie-session refresh forwards), replacing any value already on the request. Blazor Server API calls used to carry no client address, so per-IP limits such as the registration rate limit keyed every visitor on the UI host's address. Nothing is sent when no request is in scope; the WebAssembly path is unchanged.
+
 ## [1.224.0] - 2026-10-03
 
 ### Fixed

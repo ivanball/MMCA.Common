@@ -36,7 +36,13 @@
         <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
             <LocalizedDataAnnotationsValidator />
             <MudCardContent Class="pa-6">
-                @if (_emailAlreadyRegistered)
+                @* _rejectedEmail is the address the server rejected, exactly as submitted, so the alert can
+                   only ever name an address the server checked, never the live field. Rule: a rejection
+                   stands only while the field still holds that address. The first time the field differs
+                   (an edit after the answer, or one made while the request was in flight) OnEmailEdited
+                   dismisses it for good, so typing the same address back shows nothing until the next
+                   submit re-checks it. *@
+                @if (_rejectedEmail is not null)
                 {
                     @* The address already has an account, so the way forward is signing in rather than
                        resubmitting the form: Severity.Warning plus the two routes out of the dead end.
@@ -44,7 +50,7 @@
                        announces it unless it arrives as a live region. *@
                     <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" role="alert"
                               data-testid="email-already-registered">
-                        @L["Auth.Register.EmailAlreadyRegistered", _model.Email]
+                        @L["Auth.Register.EmailAlreadyRegistered", _rejectedEmail ?? string.Empty]
                         @* Underline.Always: an in-text link must be distinguishable without relying on
                            colour alone (WCAG 2.1 AA / axe link-in-text-block). *@
                         <div class="d-flex flex-wrap mt-1" style="gap: 1rem;">
@@ -73,7 +79,7 @@
                                       autocomplete="family-name" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
+                        <MudTextField @bind-Value="_model.Email" @bind-Value:after="OnEmailEdited" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Adornment="Adornment.Start"
@@ -174,8 +180,11 @@
 @code {
     private readonly RegisterModel _model = new();
     private string? _errorMessage;
-    private bool _emailAlreadyRegistered;
+    private string? _rejectedEmail; // The duplicate-email rule is documented at the alert markup.
     private bool _isLoading;
+
+    private void OnEmailEdited() =>
+        _rejectedEmail = string.Equals(_model.Email, _rejectedEmail, StringComparison.Ordinal) ? _rejectedEmail : null;
 
     private LegalSettings Legal => LegalOptions.Value;
 
@@ -222,7 +231,7 @@
         // EditForm + DataAnnotations before OnValidSubmit fires; this method only handles the call and
         // any server-side failure, surfaced in the form-level MudAlert.
         _errorMessage = null;
-        _emailAlreadyRegistered = false;
+        _rejectedEmail = null;
 
         // The disabled submit button is the primary guard; this covers a submit that arrives anyway
         // (Enter in a field while the button state is stale).
@@ -241,11 +250,13 @@
 
         _isLoading = true;
 
+        var submittedEmail = _model.Email; // The field stays editable while the request is in flight.
+
         try
         {
             var result = await AuthService.RegisterAsync(
                 new RegisterRequest(
-                    _model.Email,
+                    submittedEmail,
                     _model.Password,
                     _model.FirstName,
                     _model.LastName,
@@ -258,7 +269,8 @@
                 // red alert that invites a retry. Matched on the code, never on the wording.
                 if (result.Errors.Any(e => string.Equals(e.Code, AuthErrorCodes.EmailAlreadyExists, StringComparison.Ordinal)))
                 {
-                    _emailAlreadyRegistered = true;
+                    _rejectedEmail = submittedEmail;
+                    OnEmailEdited(); // An edit made while the request was in flight dismisses it at once.
                     return;
                 }
 

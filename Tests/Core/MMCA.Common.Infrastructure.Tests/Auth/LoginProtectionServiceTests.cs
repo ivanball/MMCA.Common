@@ -1,8 +1,10 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
 
@@ -265,7 +267,134 @@ public sealed class LoginProtectionServiceTests
         cache.Values.Should().HaveCount(1);
     }
 
+    // ── Cache outage: fail open (CacheSettings: a cache outage never becomes an error) ──
+    [Fact]
+    public async Task CheckLockoutAsync_WhenTheCacheIsDown_ReturnsSuccess()
+    {
+        var sut = CreateOutageSut(out _);
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsSuccess.Should().BeTrue("an unreachable cache holds no lockout, so sign-in proceeds");
+    }
+
+    [Fact]
+    public async Task CheckRegistrationRateLimitAsync_WhenTheCacheIsDown_ReturnsSuccess()
+    {
+        var sut = CreateOutageSut(out _);
+
+        Result result = await sut.CheckRegistrationRateLimitAsync(TestIp);
+
+        result.IsSuccess.Should().BeTrue("an unreachable cache holds no registration count, so registration proceeds");
+    }
+
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_WhenTheCacheIsDown_CompletesWithoutThrowing()
+    {
+        var sut = CreateOutageSut(out _);
+
+        Func<Task> act = () => sut.IncrementFailedAttemptsAsync(TestEmail);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task ResetFailedAttemptsAsync_WhenTheCacheIsDown_CompletesWithoutThrowing()
+    {
+        var sut = CreateOutageSut(out _);
+
+        Func<Task> act = () => sut.ResetFailedAttemptsAsync(TestEmail);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task IncrementRegistrationCountAsync_WhenTheCacheIsDown_CompletesWithoutThrowing()
+    {
+        var sut = CreateOutageSut(out _);
+
+        Func<Task> act = () => sut.IncrementRegistrationCountAsync(TestIp);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_WhenTheCacheIsDown_LogsAWarningWithoutTheEmail()
+    {
+        var sut = CreateOutageSut(out List<(LogLevel Level, string Message)> logged);
+
+        await sut.CheckLockoutAsync(TestEmail);
+
+        var entry = logged.Should().ContainSingle().Subject;
+        entry.Level.Should().Be(LogLevel.Warning);
+        entry.Message.Should().Contain(nameof(LoginProtectionService.CheckLockoutAsync));
+        entry.Message.Should().NotContain(TestEmail, "the cache keys carry personal data and stay out of the log");
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_WhenTheStoreCancelsOnItsOwn_TreatsItAsAnOutage()
+    {
+        // A store-side timeout surfaces as OperationCanceledException with the caller's token live.
+        var sut = new LoginProtectionService(
+            new ThrowingCacheService(new OperationCanceledException("store timeout")),
+            Options.Create(new LoginProtectionSettings()));
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(nameof(LoginProtectionService.CheckLockoutAsync))]
+    [InlineData(nameof(LoginProtectionService.IncrementFailedAttemptsAsync))]
+    [InlineData(nameof(LoginProtectionService.ResetFailedAttemptsAsync))]
+    [InlineData(nameof(LoginProtectionService.CheckRegistrationRateLimitAsync))]
+    [InlineData(nameof(LoginProtectionService.IncrementRegistrationCountAsync))]
+    public async Task EveryMethod_WhenTheCallerCancels_StillThrowsOperationCanceled(string method)
+    {
+        var sut = CreateOutageSut(out _);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = method switch
+        {
+            nameof(LoginProtectionService.CheckLockoutAsync) => () => sut.CheckLockoutAsync(TestEmail, cts.Token),
+            nameof(LoginProtectionService.IncrementFailedAttemptsAsync) => () => sut.IncrementFailedAttemptsAsync(TestEmail, cts.Token),
+            nameof(LoginProtectionService.ResetFailedAttemptsAsync) => () => sut.ResetFailedAttemptsAsync(TestEmail, cts.Token),
+            nameof(LoginProtectionService.CheckRegistrationRateLimitAsync) => () => sut.CheckRegistrationRateLimitAsync(TestIp, cts.Token),
+            _ => () => sut.IncrementRegistrationCountAsync(TestIp, cts.Token),
+        };
+
+        await act.Should().ThrowAsync<OperationCanceledException>("the caller's own cancellation is never swallowed");
+    }
+
     // ── Helpers ──
+    private static LoginProtectionService CreateOutageSut(out List<(LogLevel Level, string Message)> logged)
+    {
+        var sink = new List<(LogLevel Level, string Message)>();
+        logged = sink;
+        var logger = new Mock<ILogger<LoginProtectionService>>();
+        logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        logger
+            .Setup(l => l.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var formatter = (Delegate)invocation.Arguments[4]!;
+                sink.Add((
+                    (LogLevel)invocation.Arguments[0]!,
+                    (string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!));
+            }));
+
+        return new LoginProtectionService(
+            new ThrowingCacheService(new InvalidOperationException("It was not possible to connect to the redis server(s).")),
+            Options.Create(new LoginProtectionSettings()),
+            logger.Object);
+    }
     private static (LoginProtectionService Sut, FakeCacheService Cache) CreateSut(
         int maxFailedAttempts = 5,
         int maxLockoutSeconds = 300,
@@ -323,5 +452,35 @@ public sealed class LoginProtectionServiceTests
 
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>
+    /// An <see cref="ICacheService"/> whose every member fails the way an unreachable store does,
+    /// including the members the interface implements by default, after first honoring the caller's
+    /// token exactly as a real store would.
+    /// </summary>
+    private sealed class ThrowingCacheService(Exception fault) : ICacheService
+    {
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) => Fail<T?>(cancellationToken);
+
+        public Task<T?> GetFromSharedStoreAsync<T>(string key, CancellationToken cancellationToken = default) => Fail<T?>(cancellationToken);
+
+        public Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default) =>
+            Fail<(bool Found, T? Value)>(cancellationToken);
+
+        public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) =>
+            Fail<bool>(cancellationToken);
+
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Fail<bool>(cancellationToken);
+
+        public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default) => Fail<bool>(cancellationToken);
+
+        public Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default) =>
+            Fail<long>(cancellationToken);
+
+        private Task<TResult> Fail<TResult>(CancellationToken cancellationToken) =>
+            cancellationToken.IsCancellationRequested
+                ? Task.FromCanceled<TResult>(cancellationToken)
+                : Task.FromException<TResult>(fault);
     }
 }

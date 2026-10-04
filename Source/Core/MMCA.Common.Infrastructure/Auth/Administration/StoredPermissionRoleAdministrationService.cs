@@ -102,13 +102,7 @@ internal sealed class StoredPermissionRoleAdministrationService(
         var stored = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
         var compiled = CompiledPermissions(role);
 
-        // A role the host has never named, never compiled a permission for and never granted one to
-        // does not exist as far as this surface is concerned. Reporting it as an empty role instead
-        // would make every typo look like a real role with nothing granted.
-        if (stored.Count == 0
-            && compiled.Count == 0
-            && !settings.Value.KnownRoles.Contains(role, StringComparer.OrdinalIgnoreCase)
-            && !catalog.Roles.Contains(role, StringComparer.OrdinalIgnoreCase))
+        if (!IsKnownRole(role, stored, compiled))
         {
             return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
         }
@@ -126,6 +120,15 @@ internal sealed class StoredPermissionRoleAdministrationService(
         ArgumentNullException.ThrowIfNull(permissions);
 
         if (string.IsNullOrWhiteSpace(role))
+        {
+            return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
+        }
+
+        // The same existence rule GetRoleAsync applies, checked before anything is validated or
+        // written: a set must not be the route by which a typo becomes a role, with an empty list
+        // (answering success for a role that does not exist) or with a non-empty one (creating it).
+        var current = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
+        if (!IsKnownRole(role, current, CompiledPermissions(role)))
         {
             return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
         }
@@ -159,7 +162,6 @@ internal sealed class StoredPermissionRoleAdministrationService(
                 role));
         }
 
-        var current = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
         var existing = new HashSet<string>(current, StringComparer.Ordinal);
 
         // Each grant and revoke commits on its own, so a failure or a throw part-way through leaves
@@ -213,6 +215,24 @@ internal sealed class StoredPermissionRoleAdministrationService(
 
         return roles;
     }
+
+    /// <summary>
+    /// Whether a role belongs to the universe <see cref="RoleUniverse"/> lists: a catalog role, a
+    /// configured <c>KnownRoles</c> entry, or a role that already carries a stored grant (plus a role
+    /// the registry compiles permissions for).
+    /// </summary>
+    /// <remarks>
+    /// A role the host has never named, never compiled a permission for and never granted one to
+    /// does not exist as far as this surface is concerned. Reporting it as an empty role instead
+    /// would make every typo look like a real role with nothing granted.
+    /// </remarks>
+    /// <param name="role">The role name.</param>
+    /// <param name="stored">The role's stored grants.</param>
+    /// <param name="compiled">The role's compiled permissions.</param>
+    /// <returns><see langword="true"/> when the role exists for this surface.</returns>
+    private bool IsKnownRole(string role, IReadOnlyList<string> stored, IReadOnlyList<string> compiled) =>
+        compiled.Count > 0
+        || RoleUniverse(stored.Count > 0 ? [role] : []).Contains(role);
 
     private static Error RoleNotFound(string? role) => Error.NotFoundError(
         "Authorization.RoleNotFound",

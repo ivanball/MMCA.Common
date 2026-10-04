@@ -31,6 +31,10 @@ public sealed class RegisterFormTests : BunitTestBase
             "refresh-token",
             new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc)));
 
+    private static Result<AuthenticationResponse> DuplicateEmail()
+        => Result.Failure<AuthenticationResponse>(
+            Error.Conflict(AuthErrorCodes.EmailAlreadyExists, "An account with this email already exists."));
+
     private void RegistrationReturns(Result<AuthenticationResponse> result) =>
         _auth
             .Setup(x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()))
@@ -205,6 +209,63 @@ public sealed class RegisterFormTests : BunitTestBase
             "the generic error alert is replaced by this one, not shown beside it");
         cut.Markup.Should().NotContain("An account with this email already exists.",
             "the server's generic wording gives the user nowhere to go");
+    }
+
+    [Fact]
+    public void WhenTheEmailIsAlreadyRegistered_TheAlertNamesTheRejectedAddress()
+    {
+        RegistrationReturns(DuplicateEmail());
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='email-already-registered']").TextContent
+                .Should().Contain("ada@example.com is already registered"));
+    }
+
+    [Fact]
+    public void EditingTheEmailAfterADuplicateRejection_RemovesTheAlert()
+    {
+        RegistrationReturns(DuplicateEmail());
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+        cut.ClickButtonByText("Create Account");
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
+
+        cut.Find("input[autocomplete='email']").Input("grace@example.com");
+
+        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
+            "an address the server never checked must not be reported as already registered");
+        cut.Markup.Should().NotContain("grace@example.com is already registered");
+    }
+
+    [Fact]
+    public void TypingTheRejectedAddressBack_ShowsNoAlertUntilTheNextSubmit()
+    {
+        RegistrationReturns(DuplicateEmail());
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+        cut.ClickButtonByText("Create Account");
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
+        cut.Find("input[autocomplete='email']").Input("grace@example.com");
+
+        cut.Find("input[autocomplete='email']").Input("ada@example.com");
+
+        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
+            "an edit dismisses the rejection for good; only a new submit re-checks the address");
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='email-already-registered']").TextContent
+                .Should().Contain("ada@example.com is already registered"));
+        _auth.Verify(
+            x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]

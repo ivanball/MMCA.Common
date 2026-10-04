@@ -19,7 +19,7 @@
     <value>usuario</value>
   </data>
   <data name="Placeholder.Search" xml:space="preserve">
-    <value>Buscar por correo electronico...</value>
+    <value>Buscar por correo electrónico...</value>
   </data>
   <data name="Aria.CancelLoading" xml:space="preserve">
     <value>Cancelar la carga de usuarios</value>
@@ -31,7 +31,7 @@
     <value>No se encontraron usuarios.</value>
   </data>
   <data name="Column.Email" xml:space="preserve">
-    <value>Correo electronico</value>
+    <value>Correo electrónico</value>
   </data>
   <data name="Column.Role" xml:space="preserve">
     <value>Rol</value>
@@ -55,7 +55,7 @@
     <value>Acciones</value>
   </data>
   <data name="Aria.Actions" xml:space="preserve">
-    <value>Acciones de administracion para {0}</value>
+    <value>Acciones de administración para {0}</value>
   </data>
   <data name="Action.Lock" xml:space="preserve">
     <value>Bloquear cuenta</value>
@@ -73,19 +73,19 @@
     <value>Bloquear cuenta</value>
   </data>
   <data name="Confirm.Lock.Message" xml:space="preserve">
-    <value>Bloquear a {0}? Se cerrara su sesion y no podra iniciar sesion hasta que la cuenta se desbloquee.</value>
+    <value>¿Bloquear a {0}? Se cerrará su sesión y no podrá iniciar sesión hasta que la cuenta se desbloquee.</value>
   </data>
   <data name="Confirm.Unlock.Title" xml:space="preserve">
     <value>Desbloquear cuenta</value>
   </data>
   <data name="Confirm.Unlock.Message" xml:space="preserve">
-    <value>Desbloquear a {0}? Podra iniciar sesion de nuevo.</value>
+    <value>¿Desbloquear a {0}? Podrá iniciar sesión de nuevo.</value>
   </data>
   <data name="Confirm.Role.Title" xml:space="preserve">
     <value>Cambiar rol</value>
   </data>
   <data name="Confirm.Role.Message" xml:space="preserve">
-    <value>Cambiar el rol de {0} a {1}? Se cerrara su sesion y volvera a entrar con los nuevos permisos.</value>
+    <value>¿Cambiar el rol de {0} a {1}? Se cerrará su sesión y volverá a entrar con los nuevos permisos.</value>
   </data>
   <data name="Confirm.Role.Confirm" xml:space="preserve">
     <value>Cambiar rol</value>
@@ -109,7 +109,7 @@
     <value>No se pudo cambiar el rol.</value>
   </data>
   <data name="Snackbar.UserDeleted" xml:space="preserve">
-    <value>El usuario se elimino correctamente.</value>
+    <value>El usuario se eliminó correctamente.</value>
   </data>
   <data name="Snackbar.DeleteUserFailed" xml:space="preserve">
     <value>No se pudo eliminar el usuario.</value>

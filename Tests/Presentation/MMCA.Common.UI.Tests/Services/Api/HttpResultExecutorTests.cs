@@ -2,6 +2,8 @@ using System.Text.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Services.Api;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace MMCA.Common.UI.Tests.Services.Api;
 
@@ -17,6 +19,8 @@ public sealed class HttpResultExecutorTests
     private const string HttpFault = "http";
     private const string IoFault = "io";
     private const string JsonFault = "json";
+    private const string PollyTimeoutFault = "polly-timeout";
+    private const string PollyBrokenCircuitFault = "polly-broken-circuit";
 
     [Fact]
     public void ErrorCodes_AreStable()
@@ -82,6 +86,8 @@ public sealed class HttpResultExecutorTests
     [InlineData(HttpFault)]
     [InlineData(IoFault)]
     [InlineData(JsonFault)]
+    [InlineData(PollyTimeoutFault)]
+    [InlineData(PollyBrokenCircuitFault)]
     public async Task ExecuteAsync_ConvertsATransportFaultIntoASingleUnexpectedFailure(string kind)
     {
         Exception fault = TransportFault(kind);
@@ -100,6 +106,8 @@ public sealed class HttpResultExecutorTests
     [InlineData(HttpFault)]
     [InlineData(IoFault)]
     [InlineData(JsonFault)]
+    [InlineData(PollyTimeoutFault)]
+    [InlineData(PollyBrokenCircuitFault)]
     public async Task ExecuteAsync_Generic_ConvertsATransportFaultIntoASingleUnexpectedFailure(string kind)
     {
         Exception fault = TransportFault(kind);
@@ -266,6 +274,8 @@ public sealed class HttpResultExecutorTests
         HttpFault => new HttpRequestException("connection refused"),
         IoFault => new IOException("the response stream ended unexpectedly"),
         JsonFault => new JsonException("unexpected token at position 0"),
+        PollyTimeoutFault => new TimeoutRejectedException("The operation didnt complete within the allowed timeout of 00:00:30."),
+        PollyBrokenCircuitFault => new BrokenCircuitException("The circuit is now open and is not allowing calls."),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown transport fault kind."),
     };
 }
