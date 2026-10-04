@@ -292,6 +292,9 @@ MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.SoftDeleteEnforc
 MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase
 MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.SortableColumnConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.SortableColumns_ShouldNotBe_TemplateColumns() -> void
+MMCA.Common.Testing.Architecture.SpanishAccentTestsBase
+MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.SpanishAccentTestsBase() -> void
+MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.Spanish_resources_keep_their_accents() -> void
 MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase
 MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase.SpecificationConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase.Specifications_ShouldNotNavigate_ToOtherEntities() -> void
@@ -367,6 +370,7 @@ abstract MMCA.Common.Testing.Architecture.SharedLayerTestsBase.Map.get -> MMCA.C
 abstract MMCA.Common.Testing.Architecture.SliceCohesionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+abstract MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.ResourceRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -562,6 +566,9 @@ virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.AllowedFiles.
 virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.ScannedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.MinimumGovernedPages.get -> int
 virtual MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.AllowedHardDeleteTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.AllowedEntries.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.MinimumResourceFileCount.get -> int
+virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.UnaccentedWords.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.AllowedStaticMembers.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.ExcludedPathFragments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.MaxCodeBehindLines.get -> int

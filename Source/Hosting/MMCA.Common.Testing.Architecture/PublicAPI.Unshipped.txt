@@ -1,8 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.Testing.Architecture.SpanishAccentTestsBase
-MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.Spanish_resources_keep_their_accents() -> void
-MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.SpanishAccentTestsBase() -> void
-abstract MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.ResourceRoot.get -> string!
-virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.AllowedEntries.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
-virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.MinimumResourceFileCount.get -> int
-virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.UnaccentedWords.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
