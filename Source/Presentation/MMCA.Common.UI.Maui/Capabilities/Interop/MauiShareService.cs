@@ -19,8 +19,10 @@ public sealed class MauiShareService : IShareService
             }).ConfigureAwait(false);
             return true;
         }
-        catch (FeatureNotSupportedException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // The contract reports an unavailable share as false so callers can fall back to
+            // copy-link; any platform failure, not only an unsupported feature, means exactly that.
             return false;
         }
     }
@@ -39,12 +41,10 @@ public sealed class MauiShareService : IShareService
             }).ConfigureAwait(false);
             return true;
         }
-        catch (FeatureNotSupportedException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return false;
-        }
-        catch (IOException)
-        {
+            // Same contract as ShareLinkAsync: an unsupported feature, an unreadable file or any
+            // other platform failure reports false rather than throwing at the caller.
             return false;
         }
     }

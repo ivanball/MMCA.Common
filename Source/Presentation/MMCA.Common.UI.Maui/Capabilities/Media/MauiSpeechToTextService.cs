@@ -48,7 +48,12 @@ public sealed class MauiSpeechToTextService : ISpeechToTextService
                     Culture = culture,
                     ShouldReportPartialResults = partialResults is not null,
                 };
-                await SpeechToText.Default.StartListenAsync(options, cancellationToken).ConfigureAwait(false);
+
+                // The platform recognizer must be created and driven from the main thread (Android's
+                // SpeechRecognizer refuses any other), and the permission await above resumes on the
+                // thread pool.
+                await MainThread.InvokeOnMainThreadAsync(
+                    () => SpeechToText.Default.StartListenAsync(options, cancellationToken)).ConfigureAwait(false);
 
                 await using var registration =
                     cancellationToken.Register(() => completion.TrySetResult(null));
@@ -58,15 +63,18 @@ public sealed class MauiSpeechToTextService : ISpeechToTextService
             {
                 SpeechToText.Default.RecognitionResultUpdated -= OnUpdated;
                 SpeechToText.Default.RecognitionResultCompleted -= OnCompleted;
-                await SpeechToText.Default.StopListenAsync(CancellationToken.None).ConfigureAwait(false);
+                await MainThread.InvokeOnMainThreadAsync(
+                    () => SpeechToText.Default.StopListenAsync(CancellationToken.None)).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)
         {
             return null;
         }
-        catch (Exception ex) when (ex is InvalidOperationException or FeatureNotSupportedException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Every recognizer or permission failure, not only the expected types: the contract
+            // promises null, and a throw here surfaces as an unhandled error in the dictating form.
             return null;
         }
     }

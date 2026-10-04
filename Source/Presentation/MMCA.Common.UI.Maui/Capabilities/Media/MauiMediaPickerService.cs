@@ -20,10 +20,16 @@ public sealed class MauiMediaPickerService : IMediaPickerService
 #pragma warning restore CS0618
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The capture-support probe runs inside the guarded pick, so a platform fault while resolving
+    /// the camera intent also surfaces as <see langword="null"/> rather than a throw.
+    /// </remarks>
     public Task<PickedMedia?> CapturePhotoAsync(CancellationToken cancellationToken = default) =>
-        MediaPicker.Default.IsCaptureSupported
-            ? PickCoreAsync(() => MediaPicker.Default.CapturePhotoAsync(), cancellationToken)
-            : Task.FromResult<PickedMedia?>(null);
+        PickCoreAsync(
+            () => MediaPicker.Default.IsCaptureSupported
+                ? MediaPicker.Default.CapturePhotoAsync()
+                : Task.FromResult<FileResult?>(null),
+            cancellationToken);
 
     private static async Task<PickedMedia?> PickCoreAsync(Func<Task<FileResult?>> pick, CancellationToken cancellationToken)
     {
@@ -44,14 +50,11 @@ public sealed class MauiMediaPickerService : IMediaPickerService
             var stream = await file.OpenReadAsync().ConfigureAwait(false);
             return new PickedMedia(stream, file.FileName, file.ContentType ?? "application/octet-stream");
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            throw;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types — picking is best-effort; denied permission = null
-        catch
-#pragma warning restore CA1031
-        {
+            // Picking is best-effort: a denied permission, a camera the device cannot resolve, or any
+            // other platform failure is null (the caller tells the user), never a throw. The caller's
+            // own cancellation still propagates.
             return null;
         }
     }

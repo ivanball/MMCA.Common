@@ -180,6 +180,7 @@
     {
         _hasExternalProviders = OAuthSettings.AppleEnabled || OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
+        _errorMessage = ExternalSignInErrorMessage(Error);
     }
 
     // The per-attempt value the completion page requires back. Written once interactivity exists,

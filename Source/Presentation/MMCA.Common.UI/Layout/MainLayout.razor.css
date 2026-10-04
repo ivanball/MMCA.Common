@@ -17,6 +17,12 @@
         top: 0;
     }
 
+/* The skip target takes focus by script (tabindex="-1") only to move the keyboard's starting
+   point; a ring around the whole content region would add nothing. */
+#main-content:focus {
+    outline: none;
+}
+
 /* ── Page Layout ── */
 .page {
     position: relative;

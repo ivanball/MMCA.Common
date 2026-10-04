@@ -9,6 +9,7 @@ using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 
 namespace MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
@@ -131,14 +132,16 @@ public sealed partial class SendPushNotificationHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Send the notification via SignalR (or other configured sender)
+        // Send the notification via SignalR (or other configured sender). The live leg carries the
+        // scope key, so a client viewing another scope can leave it out of its toast and badge.
         try
         {
             await pushNotificationSender.SendToUsersAsync(
                 recipientIds,
                 command.Request.Title,
                 command.Request.Body,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+                LiveMetadata(notification.ScopeKey),
+                cancellationToken).ConfigureAwait(false);
 
             notification.MarkAsSent();
             LogNotificationSent(logger, notification.Id, recipientIds.Count);
@@ -185,6 +188,17 @@ public sealed partial class SendPushNotificationHandler(
     private static string SenderScopedDedupKey(UserIdentifierType sentByUserId, string clientKey) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             string.Create(CultureInfo.InvariantCulture, $"{sentByUserId}:{clientKey}"))));
+
+    /// <summary>
+    /// The live leg's metadata: the scope key under <see cref="NotificationScopeKey.MetadataKey"/> for
+    /// a scoped send, and no metadata at all for an unscoped one.
+    /// </summary>
+    /// <param name="scopeKey">The notification's (normalized) scope key, or null when unscoped.</param>
+    /// <returns>The metadata, or null.</returns>
+    private static Dictionary<string, string>? LiveMetadata(string? scopeKey) =>
+        scopeKey is null
+            ? null
+            : new Dictionary<string, string>(StringComparer.Ordinal) { [NotificationScopeKey.MetadataKey] = scopeKey };
 
     /// <summary>
     /// Looks up an already-persisted notification by its deduplication key. Uses the read

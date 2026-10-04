@@ -73,4 +73,22 @@ public sealed class QrCodeImageTests : BunitTestBase
 
         cut.Find("img").GetAttribute("class").Should().Be("mmca-qr d-print-block");
     }
+
+    // OBS-9: the bitmap's intrinsic width is modules x PixelsPerModule (about 300 px at the default,
+    // more for a long payload or a larger module size), so on a narrow phone the code overflowed its
+    // card and was clipped, which can make it unscannable. The image must shrink to its container
+    // while keeping its aspect ratio, whatever class the caller passes.
+    [Fact]
+    public void Image_ShrinksToItsContainer_KeepingItsAspectRatio()
+    {
+        var cut = RenderUnderTest<QrCodeImage>(p => p
+            .Add(c => c.Payload, "https://example.com/conference/sessions/42")
+            .Add(c => c.AltText, "code")
+            .Add(c => c.PixelsPerModule, 14));
+
+        var style = (cut.Find("img").GetAttribute("style") ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        style.Should().Contain("max-width:100%", "the code must never be wider than the space it is given");
+        style.Should().Contain("height:auto", "shrinking the width must not distort the square code");
+    }
 }

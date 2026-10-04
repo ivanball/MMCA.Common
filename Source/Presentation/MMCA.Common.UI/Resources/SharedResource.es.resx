@@ -496,6 +496,15 @@
   <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
     <value>El inicio de sesión externo no se completó. Inténtalo de nuevo.</value>
   </data>
+  <data name="Auth.Login.ExternalError.Failed" xml:space="preserve">
+    <value>No se pudo iniciar sesión con ese proveedor. Inténtalo de nuevo o usa otro método de inicio de sesión.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.MissingClaims" xml:space="preserve">
+    <value>El proveedor no compartió los datos necesarios para iniciar tu sesión, como tu correo electrónico. Revisa la configuración de privacidad de la cuenta e inténtalo de nuevo.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.Refused" xml:space="preserve">
+    <value>No pudimos completar el inicio de sesión con esa cuenta. Inténtalo de nuevo o usa otro método de inicio de sesión.</value>
+  </data>
   <data name="Auth.Login.ForgotPassword" xml:space="preserve">
     <value>¿Olvidó su contraseña?</value>
   </data>

@@ -7,7 +7,10 @@
 
 @if (_dataUri is not null)
 {
-    <img src="@_dataUri" alt="@AltText" class="@Class" />
+    @* Inline, not a class: the bitmap's intrinsic width is modules x PixelsPerModule, which overflows
+       a narrow phone card and gets clipped (unscannable). It must shrink to its container, square,
+       whatever class the caller passes. *@
+    <img src="@_dataUri" alt="@AltText" class="@Class" style="max-width: 100%; height: auto;" />
 }
 
 @code {

@@ -51,6 +51,11 @@ public static class DependencyInjection
             services.AddOptions<LegalSettings>()
                 .Bind(configuration.GetSection(LegalSettings.SectionName));
 
+            // Optional blocks of the shared register page. Optional: an absent section keeps every
+            // block the page has always offered.
+            services.AddOptions<RegistrationSettings>()
+                .Bind(configuration.GetSection(RegistrationSettings.SectionName));
+
             // Client-side staleness policy (§19). Both sections are optional: an absent section leaves
             // the compiled-in defaults, which is the behaviour a host gets without configuring anything.
             services.AddOptions<UiReadCacheOptions>()

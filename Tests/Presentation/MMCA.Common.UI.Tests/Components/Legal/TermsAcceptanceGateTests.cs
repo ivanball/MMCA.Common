@@ -151,6 +151,41 @@ public sealed class TermsAcceptanceGateTests : BunitTestBase
         _legal.Verify(l => l.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Navigation must not dismiss the gate (A-45) ──
+    // MudBlazor's dialog provider closes every open dialog on LocationChanged, and a list page
+    // rewrites its URL (page/sort/filter query) right after it loads. The gate must not let that
+    // close the consent dialog for the rest of the session while the terms are still unaccepted.
+    [Fact]
+    public void ANavigationWhileTheTermsAreUnaccepted_LeavesTheDialogShowing()
+    {
+        StandingIs(Result.Success(LegalAcceptanceDTO.Evaluate("v2", "v1", DateTime.UtcNow)));
+        var providers = RenderSignedIn();
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.FindAll("h2").Should().ContainSingle());
+
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/events?page=2&sort=name", replace: true);
+
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.FindAll("h2").Should().ContainSingle(
+                "the terms are still unaccepted, so a URL change must not dismiss the consent dialog"));
+        providers.Dialog.FindAll(AcceptSelector).Should().ContainSingle();
+    }
+
+    [Fact]
+    public void ANavigationToAnotherPage_LeavesTheDialogShowing()
+    {
+        StandingIs(Result.Success(LegalAcceptanceDTO.Evaluate("v2", acceptedVersion: null, acceptedOn: null)));
+        var providers = RenderSignedIn();
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.FindAll("h2").Should().ContainSingle());
+
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/sessions");
+
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.FindAll("h2").Should().ContainSingle(
+                "consent is still owed after navigating, so the gate must still be asking for it"));
+    }
+
     private void StandingIs(Result<LegalAcceptanceDTO> standing) =>
         _legal.Setup(l => l.GetAsync(It.IsAny<CancellationToken>())).ReturnsAsync(standing);
 

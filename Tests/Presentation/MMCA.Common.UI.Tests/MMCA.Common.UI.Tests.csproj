@@ -29,5 +29,7 @@
   <ItemGroup>
     <!-- Embed the shipped CSS tokens so BrandColorTokenTests can assert app.css mirrors BrandColors.cs. -->
     <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\wwwroot\app.css" LogicalName="app.css" />
+    <!-- Embed the sidebar's scoped stylesheet so MainLayoutSkipLinkTests can assert its keyboard-focus rule. -->
+    <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\Layout\NavMenu.razor.css" LogicalName="NavMenu.razor.css" />
   </ItemGroup>
 </Project>

@@ -47,6 +47,15 @@ public abstract class OAuthControllerBase(
     // Authentication-properties key the client's opaque per-attempt state rides in. Not "state":
     // that name belongs to the OAuth handler's own protocol value.
     private const string ClientStateItemKey = "clientState";
+
+    // The GitHub handler maps ClaimTypes.Name to the login handle and the profile display name here.
+    private const string GitHubDisplayNameClaimType = "urn:github:name";
+
+    // Stand-ins for a name the provider did not supply. Never empty: user invariants reject an
+    // empty first or last name, so an empty value fails the first external sign-up outright.
+    private const string PlaceholderFirstName = "User";
+    private const string PlaceholderLastName = "User";
+
     private static readonly TimeSpan OAuthExchangeCodeLifetime = TimeSpan.FromMinutes(2);
 
     /// <summary>
@@ -228,29 +237,46 @@ public abstract class OAuthControllerBase(
         var givenName = claims.FindFirst(ClaimTypes.GivenName)?.Value;
         var surname = claims.FindFirst(ClaimTypes.Surname)?.Value;
 
-        if (givenName is not null && surname is not null)
+        if (!string.IsNullOrWhiteSpace(givenName) && !string.IsNullOrWhiteSpace(surname))
         {
             return (givenName, surname);
         }
 
-        var (fallbackFirst, fallbackLast) = SplitFullName(claims.FindFirst(ClaimTypes.Name)?.Value);
-        return (givenName ?? fallbackFirst, surname ?? fallbackLast);
+        // GitHub maps ClaimTypes.Name to the LOGIN handle and puts the profile display name in
+        // "urn:github:name", so the display-name claim wins whenever the provider issues one.
+        var fullName = claims.FindFirst(GitHubDisplayNameClaimType)?.Value;
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            fullName = claims.FindFirst(ClaimTypes.Name)?.Value;
+        }
+
+        var (fallbackFirst, fallbackLast) = SplitFullName(fullName);
+        var firstName = string.IsNullOrWhiteSpace(givenName) ? fallbackFirst : givenName;
+        var lastName = string.IsNullOrWhiteSpace(surname) ? fallbackLast : surname;
+        return (firstName, lastName);
     }
 
+    /// <summary>
+    /// Splits a display name at its first space. A missing or single-token name yields the
+    /// placeholders, never an empty last name: user invariants reject an empty last name, which
+    /// would bounce every such first sign-up back to the login page.
+    /// </summary>
     private static (string First, string Last) SplitFullName(string? fullName)
     {
-        if (string.IsNullOrEmpty(fullName))
+        if (string.IsNullOrWhiteSpace(fullName))
         {
-            return ("User", string.Empty);
+            return (PlaceholderFirstName, PlaceholderLastName);
         }
 
-        var spaceIndex = fullName.IndexOf(' ', StringComparison.Ordinal);
+        var trimmed = fullName.Trim();
+        var spaceIndex = trimmed.IndexOf(' ', StringComparison.Ordinal);
         if (spaceIndex <= 0)
         {
-            return ("User", string.Empty);
+            return (PlaceholderFirstName, PlaceholderLastName);
         }
 
-        return (fullName[..spaceIndex], fullName[(spaceIndex + 1)..]);
+        var last = trimmed[(spaceIndex + 1)..].Trim();
+        return (trimmed[..spaceIndex], last.Length == 0 ? PlaceholderLastName : last);
     }
 
     private static string GetErrorCode(IReadOnlyList<Error> errors) =>
