@@ -72,6 +72,14 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// </summary>
     public Func<string, string, Task>? NotificationCallback { get; set; }
 
+    /// <summary>
+    /// Optional gate consulted with a received notification's live metadata (null for an unscoped
+    /// send) before <see cref="NotificationCallback"/> runs; <see langword="false"/> drops the
+    /// notification for this client. The listener uses it to leave another scope's notifications
+    /// out of the toast and the badge.
+    /// </summary>
+    public Func<IReadOnlyDictionary<string, string>?, Task<bool>>? NotificationFilter { get; set; }
+
     public NotificationHubService(
         ITokenStorageService tokenStorageService,
         IOptions<ApiSettings> apiSettings,
@@ -193,8 +201,13 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             .WithAutomaticReconnect(new UnboundedReconnectPolicy())
             .Build();
 
-        connection.On<string, string, Dictionary<string, string>?>(ReceiveNotificationMethodName, async (title, body, _) =>
+        connection.On<string, string, Dictionary<string, string>?>(ReceiveNotificationMethodName, async (title, body, metadata) =>
         {
+            if (NotificationFilter is not null && !await NotificationFilter.Invoke(metadata).ConfigureAwait(false))
+            {
+                return;
+            }
+
             if (NotificationCallback is not null)
             {
                 await NotificationCallback.Invoke(title, body).ConfigureAwait(false);

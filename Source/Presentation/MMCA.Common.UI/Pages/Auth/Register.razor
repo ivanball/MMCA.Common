@@ -15,6 +15,7 @@
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> L
 @inject IOptions<LegalSettings> LegalOptions
+@inject IOptions<RegistrationSettings> RegistrationOptions
 @attribute [AllowAnonymous]
 
 <PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
@@ -101,36 +102,41 @@
                     </MudItem>
                 </MudGrid>
 
-                <MudExpansionPanels Class="mt-4" Elevation="0">
-                    <MudExpansionPanel Text="@L["Auth.Register.AddressOptional"]">
-                        <MudGrid Spacing="3">
-                            <MudItem xs="12">
-                                <MudTextField @bind-Value="_model.AddressLine1" Label="@L["Auth.Field.AddressLine1"]"
-                                              Variant="Variant.Outlined" autocomplete="address-line1" />
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudTextField @bind-Value="_model.AddressLine2" Label="@L["Auth.Field.AddressLine2"]"
-                                              Variant="Variant.Outlined" autocomplete="address-line2" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.City" Label="@L["Auth.Field.City"]"
-                                              Variant="Variant.Outlined" autocomplete="address-level2" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.State" Label="@L["Auth.Field.State"]"
-                                              Variant="Variant.Outlined" autocomplete="address-level1" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.ZipCode" Label="@L["Auth.Field.ZipCode"]"
-                                              Variant="Variant.Outlined" autocomplete="postal-code" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.Country" Label="@L["Auth.Field.Country"]"
-                                              Variant="Variant.Outlined" autocomplete="country-name" />
-                            </MudItem>
-                        </MudGrid>
-                    </MudExpansionPanel>
-                </MudExpansionPanels>
+                @* Offered only when the host collects addresses (RegistrationSettings, on by default):
+                   a host whose user model stores no address must not ask for one. *@
+                @if (CollectAddress)
+                {
+                    <MudExpansionPanels Class="mt-4" Elevation="0">
+                        <MudExpansionPanel Text="@L["Auth.Register.AddressOptional"]">
+                            <MudGrid Spacing="3">
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="_model.AddressLine1" Label="@L["Auth.Field.AddressLine1"]"
+                                                  Variant="Variant.Outlined" autocomplete="address-line1" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="_model.AddressLine2" Label="@L["Auth.Field.AddressLine2"]"
+                                                  Variant="Variant.Outlined" autocomplete="address-line2" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_model.City" Label="@L["Auth.Field.City"]"
+                                                  Variant="Variant.Outlined" autocomplete="address-level2" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_model.State" Label="@L["Auth.Field.State"]"
+                                                  Variant="Variant.Outlined" autocomplete="address-level1" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_model.ZipCode" Label="@L["Auth.Field.ZipCode"]"
+                                                  Variant="Variant.Outlined" autocomplete="postal-code" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="_model.Country" Label="@L["Auth.Field.Country"]"
+                                                  Variant="Variant.Outlined" autocomplete="country-name" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
 
                 @if (RequiresTerms)
                 {
@@ -208,22 +214,6 @@
         builder.AddComponentParameter(4, nameof(ExternalLink.ChildContent), (RenderFragment)(content => content.AddContent(5, name)));
         builder.CloseComponent();
     };
-
-    // Null means "no address entered", which is legitimate: the address block is optional. Anything
-    // the user DID type is validated, and an invalid address blocks the registration instead of being
-    // silently dropped (the account used to be created with no address at all).
-    private Result<Address>? BuildAddressResult()
-    {
-        if (string.IsNullOrWhiteSpace(_model.AddressLine1)
-            && string.IsNullOrWhiteSpace(_model.AddressLine2)
-            && string.IsNullOrWhiteSpace(_model.City)
-            && string.IsNullOrWhiteSpace(_model.State)
-            && string.IsNullOrWhiteSpace(_model.ZipCode)
-            && string.IsNullOrWhiteSpace(_model.Country))
-            return null;
-
-        return Address.Create(_model.AddressLine1, _model.AddressLine2, _model.City, _model.State, _model.ZipCode, _model.Country);
-    }
 
     private async Task HandleRegisterAsync()
     {

@@ -80,6 +80,35 @@ internal sealed class InMemoryHubServer : IConnectionFactory
         }
     }
 
+    /// <summary>
+    /// Pushes a <c>ReceiveNotification(title, body, metadata)</c> invocation to every live connection,
+    /// exactly as <c>SignalRPushNotificationSender</c> sends it.
+    /// </summary>
+    /// <param name="title">The notification title.</param>
+    /// <param name="body">The notification body.</param>
+    /// <param name="metadata">The live metadata (null sends a JSON null, as an unscoped send does).</param>
+    /// <returns>A task that completes once the record has been written to every live connection.</returns>
+    public async Task SendNotificationAsync(string title, string body, Dictionary<string, string>? metadata)
+    {
+        IDuplexPipe[] live;
+        lock (_sync)
+        {
+            live = [.. _live];
+        }
+
+        var invocation = JsonSerializer.Serialize(new
+        {
+            type = 1,
+            target = "ReceiveNotification",
+            arguments = new object?[] { title, body, metadata },
+        }) + "\u001e";
+        var bytes = Encoding.UTF8.GetBytes(invocation);
+        foreach (var application in live)
+        {
+            await application.Output.WriteAsync(bytes).ConfigureAwait(false);
+        }
+    }
+
     public ValueTask<ConnectionContext> ConnectAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _connectAttempts);

@@ -31,6 +31,13 @@ public static partial class NotificationScopeKey
     /// </summary>
     public const string Pattern = "^(event|session):[0-9]+$";
 
+    /// <summary>
+    /// The key under which a live (SignalR) notification's metadata carries its scope key, so a
+    /// client can leave a notification for another scope out of its toast and badge. The sender
+    /// writes it and the client listener reads it; an unscoped send carries no metadata at all.
+    /// </summary>
+    public const string MetadataKey = "scopeKey";
+
     /// <summary>Builds the scope key for an event.</summary>
     /// <param name="eventId">The event identifier.</param>
     /// <returns>The key in the form <c>event:{id}</c>.</returns>

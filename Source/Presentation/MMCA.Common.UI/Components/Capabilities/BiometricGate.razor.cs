@@ -202,9 +202,13 @@ public partial class BiometricGate
         }
     }
 
+    /// <summary>
+    /// The app's own logout, never a bare token clear: clearing the tokens alone left Blazor's auth
+    /// state signed in and the previous session's read cache and offline snapshots on the device.
+    /// </summary>
     private async Task SignOutAsync()
     {
-        await TokenStorage.ClearTokensAsync();
+        await AuthService.LogoutAsync();
         _locked = false;
         Navigation.NavigateTo("/login");
     }

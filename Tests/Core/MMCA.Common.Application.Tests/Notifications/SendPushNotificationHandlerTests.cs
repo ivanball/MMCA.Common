@@ -321,6 +321,32 @@ public class SendPushNotificationHandlerTests
         added!.ScopeKey.Should().BeNull();
     }
 
+    // OBS-7: the live (SignalR) leg carried title and body only, so a client could not tell which
+    // scope a notification belonged to and toasted every scope's notifications. The scope key must
+    // travel in the live metadata under "scopeKey" (the client listener reads the same key).
+    [Fact]
+    public async Task HandleAsync_WithScopedRequest_CarriesTheScopeKeyInTheLiveMetadata()
+    {
+        var (sut, mocks) = CreateSut();
+        Dictionary<string, string>? liveMetadata = null;
+        mocks.PushNotificationSender
+            .Setup(x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<UserIdentifierType>, string, string, Dictionary<string, string>?, CancellationToken>(
+                (_, _, _, metadata, _) => liveMetadata = metadata)
+            .Returns(Task.CompletedTask);
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand(scopeKey: "event:2"));
+
+        result.IsSuccess.Should().BeTrue();
+        liveMetadata.Should().NotBeNull("the live leg must say which scope the notification belongs to");
+        liveMetadata!.Should().ContainKey("scopeKey").WhoseValue.Should().Be("event:2");
+    }
+
     [Fact]
     public async Task HandleAsync_WithScopeKeyExceedingMaxLength_ReturnsFailure()
     {

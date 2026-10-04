@@ -1,1 +1,2 @@
 ﻿#nullable enable
+const MMCA.Common.Shared.Notifications.NotificationScopeKey.MetadataKey = "scopeKey" -> string!

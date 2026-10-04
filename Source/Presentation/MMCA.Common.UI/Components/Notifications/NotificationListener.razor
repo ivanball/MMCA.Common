@@ -3,6 +3,7 @@
 @inject NotificationHubService HubService
 @inject NotificationState NotificationState
 @inject IToastService Toast
+@inject INotificationScopeProvider ScopeProvider
 @implements IAsyncDisposable
 
 <CascadingAuthenticationState>
@@ -36,6 +37,9 @@
 
     private async Task StartListeningAsync()
     {
+        // The inbox and the badge count only the current scope, so a live notification sent for
+        // another scope (another conference event, another tenant) must not toast or bump the badge.
+        HubService.NotificationFilter = IsForCurrentScopeAsync;
         HubService.NotificationCallback = async (title, body) =>
         {
             try
@@ -60,6 +64,21 @@
         };
 
         await HubService.StartAsync();
+    }
+
+    // An unscoped send (no scope key in the metadata) and an unscoped host (no current scope) both
+    // pass; otherwise the notification passes only when its scope is the one in force here.
+    private async Task<bool> IsForCurrentScopeAsync(IReadOnlyDictionary<string, string>? metadata)
+    {
+        if (metadata is null
+            || !metadata.TryGetValue(MMCA.Common.Shared.Notifications.NotificationScopeKey.MetadataKey, out var scopeKey)
+            || string.IsNullOrEmpty(scopeKey))
+        {
+            return true;
+        }
+
+        var currentScopeKey = await ScopeProvider.GetCurrentScopeKeyAsync();
+        return currentScopeKey is null || string.Equals(scopeKey, currentScopeKey, StringComparison.Ordinal);
     }
 
     public async ValueTask DisposeAsync() => await HubService.StopAsync();

@@ -16,7 +16,12 @@
 <MmcaThemeProviders />
 <DocumentLanguage />
 
-<a href="#main-content" class="skip-nav">@L["Layout.SkipToMainContent"]</a>
+@* The href names the CURRENT page: a bare "#main-content" resolves against <base href="/"> to the
+   app root, and the router then navigates home from every other page. Once interactive, the click
+   is handled in-page instead and moves focus to the main region (Blazor's own same-page fragment
+   handling only scrolls, which leaves keyboard focus on the skip link). *@
+<a href="@SkipLinkHref" class="skip-nav"
+   @onclick="SkipToMainContentAsync" @onclick:preventDefault="true">@L["Layout.SkipToMainContent"]</a>
 
 <div class="page">
     <aside class="sidebar" aria-label="@L["Layout.Sidebar.Aria"]">
@@ -63,7 +68,9 @@
                 </AuthorizeView>
             </MudAppBar>
         </div>
-        <article id="main-content" class="content px-4">
+        @* tabindex="-1": the skip target must accept focus by script, or focus stays on the skip
+           link and the next Tab walks the sidebar again. *@
+        <article id="main-content" class="content px-4" tabindex="-1" @ref="_mainContent">
             @* Offline awareness (ADR-042 Wave 3): renders nothing while online; the Blazor
                Server fallback is always online, so only MAUI/WASM heads ever show it. *@
             <MMCA.Common.UI.Components.Capabilities.OfflineBanner />
@@ -122,6 +129,19 @@
 @code {
     private List<Type> _appBarComponents = [];
     private List<Type> _layoutComponents = [];
+    private ElementReference _mainContent;
+
+    // Base-relative path and query of the page being shown, plus the fragment. The router re-renders
+    // the layout on every location change, so a list page's own URL rewrite is picked up too.
+    private string SkipLinkHref
+    {
+        get
+        {
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var hashIndex = relative.IndexOf('#', StringComparison.Ordinal);
+            return (hashIndex >= 0 ? relative[..hashIndex] : relative) + "#main-content";
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -132,6 +152,8 @@
         // every page in both Server and WASM, so this configures it once per circuit/host.
         ErrorMessages.Configure(L);
     }
+
+    private Task SkipToMainContentAsync() => _mainContent.FocusAsync().AsTask();
 
     private async Task HandleLogoutAsync()
     {

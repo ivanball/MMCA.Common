@@ -9,6 +9,7 @@ using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Components.Notifications;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Notifications;
+using MMCA.Common.UI.Tests.Services.Notifications;
 using Moq;
 
 namespace MMCA.Common.UI.Tests.Components.Notifications;
@@ -27,6 +28,10 @@ public sealed class NotificationListenerTests : BunitTestBase
     public NotificationListenerTests()
     {
         Services.AddSingleton(_state);
+
+        // The listener reads the current notification scope; an unscoped host is the default
+        // (AddNotificationUI registers this same provider).
+        Services.AddSingleton<INotificationScopeProvider, NullNotificationScopeProvider>();
 
         // Registered after the base class's default facade, so this wins: it is the only way to make
         // the dispatched body throw the way a torn-down circuit does.
@@ -74,6 +79,59 @@ public sealed class NotificationListenerTests : BunitTestBase
     [Fact]
     public Task NotificationDispatchThrowingInvalidOperation_DoesNotThrowBackAtTheHub() =>
         AssertDispatchExceptionIsSwallowedAsync(new InvalidOperationException("The renderer has been disposed."));
+
+    // OBS-7: notifications are scoped (one conference event, one tenant), and the inbox and badge
+    // count only the current scope. The live toast and the optimistic badge bump ignored the scope,
+    // so a notification sent for another event toasted on this one. A notification whose live
+    // metadata names a different scope must leave both alone; the current scope's still shows.
+    [Fact]
+    public async Task NotificationForAnotherScope_ShowsNoToastAndDoesNotBumpTheBadge()
+    {
+        var server = new InMemoryHubServer();
+        var scope = new Mock<INotificationScopeProvider>();
+        scope.Setup(s => s.GetCurrentScopeKeyAsync(It.IsAny<CancellationToken>())).ReturnsAsync("event:2");
+        Services.AddSingleton(scope.Object);
+        Services.AddSingleton(_ => new NotificationHubService(
+            new Mock<ITokenStorageService>().Object,
+            Options.Create(new ApiSettings { ApiEndpoint = "http://in-memory" }),
+            NullLogger<NotificationHubService>.Instance)
+        {
+            InitialRetryDelay = TimeSpan.FromMilliseconds(1),
+            MaxRetryDelay = TimeSpan.FromMilliseconds(10),
+            ConnectionFactory = server.CreateConnection,
+        });
+        _ = RenderAs<NotificationListener>(
+            TestPrincipal.AuthenticatedUser(), _ => { });
+        NotificationHubService hubService = Services.GetRequiredService<NotificationHubService>();
+
+        // Polled, not WaitForAssertion: the listener renders nothing when a notification arrives, and
+        // bUnit's wait helpers only re-check on a render.
+        await WaitUntilAsync(() => hubService.IsConnected);
+
+        await server.SendNotificationAsync("Other event", "Body", new Dictionary<string, string>(StringComparer.Ordinal) { ["scopeKey"] = "event:1" });
+        await server.SendNotificationAsync("This event", "Body", new Dictionary<string, string>(StringComparer.Ordinal) { ["scopeKey"] = "event:2" });
+
+        // The second notification is the sync point: invocations arrive in order, so once it has
+        // toasted, the first one has been handled too.
+        await WaitUntilAsync(() => _toast.Invocations.Any(i =>
+            string.Equals(i.Method.Name, nameof(IToastService.ShowPersistent), StringComparison.Ordinal)
+            && Equals(i.Arguments[0], "This event")));
+        _toast.Verify(
+            t => t.ShowPersistent("Other event", It.IsAny<string>(), It.IsAny<ToastSeverity>()),
+            Times.Never,
+            "a notification for another scope must not toast here");
+        _state.UnreadCount.Should().Be(1, "only the current scope's notification counts toward this scope's badge");
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!condition())
+        {
+            DateTime.UtcNow.Should().BeBefore(deadline, "the condition should hold within five seconds");
+            await Task.Delay(10, Xunit.TestContext.Current.CancellationToken);
+        }
+    }
 
     private async Task AssertDispatchExceptionIsSwallowedAsync(Exception raised)
     {

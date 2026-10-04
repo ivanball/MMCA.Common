@@ -164,6 +164,15 @@
     background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
+/* Keyboard focus needs a visible indicator on the dark sidebar (WCAG 2.4.7): MudBlazor's default
+   focus treatment is a faint overlay that disappears against it. Inset, so the margin-hugging
+   pill does not clip the ring. */
+::deep .mud-nav-link:focus-visible {
+    color: #ffffff !important;
+    outline: 2px solid #ffffff;
+    outline-offset: -2px;
+}
+
 /* Active item: a brand-tinted pill plus a left accent bar in the lightened primary. The flat
    white wash this replaces read as "disabled" on the dark sidebar and carried no brand cue. The
    background is that same #42A5F5 at 16% alpha (rgba, because a custom property cannot be given

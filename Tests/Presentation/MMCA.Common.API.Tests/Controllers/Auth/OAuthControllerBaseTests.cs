@@ -30,6 +30,9 @@ public sealed class OAuthControllerBaseTests
     private const string UIBaseUrl = "https://ui.example.com";
     private const string ExchangeCodePrefix = "oauth-exchange:";
 
+    // The display-name claim the GitHub handler maps the profile "name" into (login handle is ClaimTypes.Name).
+    private const string GitHubDisplayNameClaimType = "urn:github:name";
+
     // ── Mocks ──
     private sealed record Mocks(
         Mock<IAuthenticationService> AuthService,
@@ -332,9 +335,9 @@ public sealed class OAuthControllerBaseTests
     [InlineData("Jane", "Doe", null, "Jane", "Doe")]
     [InlineData(null, null, "John Smith", "John", "Smith")]
     [InlineData(null, null, "Mary Jane Watson", "Mary", "Jane Watson")]
-    [InlineData(null, null, "Prince", "User", "")]
-    [InlineData(null, null, null, "User", "")]
-    [InlineData("Jane", null, null, "Jane", "")]
+    [InlineData(null, null, "Prince", "User", "User")]
+    [InlineData(null, null, null, "User", "User")]
+    [InlineData("Jane", null, null, "Jane", "User")]
     public async Task CompleteAsync_ExtractsNameFromClaimsWithFullNameFallback(
         string? givenName,
         string? surname,
@@ -382,6 +385,87 @@ public sealed class OAuthControllerBaseTests
                 expectedLastName,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ── CompleteAsync: the REAL GitHub claim shape (U-15/A-46) ──
+    // The GitHub handler maps ClaimTypes.Name to the LOGIN handle (never contains a space) and puts
+    // the display name in "urn:github:name". It never issues GivenName/Surname. A last name that
+    // reaches ExternalLoginAsync empty fails the user invariants, so every first GitHub sign-up
+    // bounced back to /login?error=User.LastName.Empty.
+    [Fact]
+    public async Task CompleteAsync_GitHubPrincipal_TakesTheNameFromTheDisplayNameClaimNotTheLoginHandle()
+    {
+        var (sut, mocks) = CreateSut();
+        var captured = CaptureExternalLoginNames(mocks);
+        SetupExternalAuthentication(
+            mocks,
+            SuccessfulAuthentication(GitHubPrincipal(
+                new Claim(ClaimTypes.Name, "octocat"),
+                new Claim(GitHubDisplayNameClaimType, "Mona Lisa Octocat"))));
+
+        await sut.CompleteAsync();
+
+        captured.Should().ContainSingle();
+        captured[0].FirstName.Should().Be("Mona", "the first name comes from the GitHub display name, not the login handle");
+        captured[0].LastName.Should().Be("Lisa Octocat", "the rest of the GitHub display name is the last name");
+    }
+
+    [Fact]
+    public async Task CompleteAsync_GitHubPrincipalWithoutADisplayName_NeverPassesAnEmptyLastName()
+    {
+        var (sut, mocks) = CreateSut();
+        var captured = CaptureExternalLoginNames(mocks);
+        SetupExternalAuthentication(
+            mocks,
+            SuccessfulAuthentication(GitHubPrincipal(new Claim(ClaimTypes.Name, "octocat"))));
+
+        await sut.CompleteAsync();
+
+        captured.Should().ContainSingle();
+        captured[0].LastName.Should().NotBeNullOrWhiteSpace(
+            "a GitHub account with no public display name must still be able to sign up; an empty last name fails the user invariants");
+    }
+
+    [Fact]
+    public async Task CompleteAsync_GitHubPrincipalWithASingleTokenDisplayName_NeverPassesAnEmptyLastName()
+    {
+        var (sut, mocks) = CreateSut();
+        var captured = CaptureExternalLoginNames(mocks);
+        SetupExternalAuthentication(
+            mocks,
+            SuccessfulAuthentication(GitHubPrincipal(
+                new Claim(ClaimTypes.Name, "prince"),
+                new Claim(GitHubDisplayNameClaimType, "Prince"))));
+
+        await sut.CompleteAsync();
+
+        captured.Should().ContainSingle();
+        captured[0].LastName.Should().NotBeNullOrWhiteSpace(
+            "a one-word display name must still yield a usable (placeholder) last name");
+    }
+
+    private static ClaimsPrincipal GitHubPrincipal(params Claim[] nameClaims) =>
+        CreatePrincipal(
+            providerKey: "583231",
+            email: "octocat@github.com",
+            authenticationType: GitHubAuthenticationDefaults.AuthenticationScheme,
+            nameClaims: nameClaims);
+
+    private static List<(string FirstName, string LastName)> CaptureExternalLoginNames(Mocks mocks)
+    {
+        var captured = new List<(string FirstName, string LastName)>();
+        mocks.AuthService
+            .Setup(x => x.ExternalLoginAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, string, string, CancellationToken>(
+                (_, _, _, firstName, lastName, _) => captured.Add((firstName, lastName)))
+            .ReturnsAsync(Result.Failure<AuthenticationResponse>(Error.Failure("Test.Stop", "stop here")));
+        return captured;
     }
 
     [Fact]

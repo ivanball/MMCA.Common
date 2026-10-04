@@ -37,12 +37,10 @@ public sealed class MauiScreenshotService : IScreenshotService
 
             return path;
         }
-        catch (FeatureNotSupportedException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return null;
-        }
-        catch (IOException)
-        {
+            // The contract returns null on failure: an unsupported capture, an IO or access fault on
+            // the cache file, or any other platform error.
             return null;
         }
     }

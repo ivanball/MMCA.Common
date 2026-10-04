@@ -29,12 +29,16 @@ namespace MMCA.Common.UI.Components.Legal;
 public partial class TermsAcceptanceGate : IDisposable
 {
     /// <summary>
-    /// No close button, no backdrop click, no Escape: accepting or signing out are the only exits.
+    /// No close button, no backdrop click, no Escape, no navigation: accepting or signing out are the
+    /// only exits. The dialog provider otherwise dismisses every open dialog on LocationChanged, and a
+    /// list page rewrites its own URL (page, sort, filter) right after it loads, which closed the gate
+    /// for the rest of the session while consent was still owed.
     /// </summary>
     private static readonly DialogOptions DialogOptions = new()
     {
         BackdropClick = false,
         CloseOnEscapeKey = false,
+        CloseOnNavigation = false,
         CloseButton = false,
         MaxWidth = MaxWidth.Small,
         FullWidth = true,

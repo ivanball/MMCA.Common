@@ -1,0 +1,31 @@
+using Microsoft.AspNetCore.Components;
+
+namespace MMCA.Common.UI.Pages.Auth;
+
+/// <summary>
+/// Code-behind for the <c>/login</c> page: the external sign-in refusal it is sent back with.
+/// </summary>
+public partial class Login
+{
+    /// <summary>
+    /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
+    /// every refusal back here as <c>/login?error={code}</c>: <c>oauth_failed</c>,
+    /// <c>missing_claims</c>, or the first domain error code (for example <c>User.LastName.Empty</c>).
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// Maps the machine error code to words; the raw code is never shown. Any code other than the
+    /// two transport-level ones is a domain refusal of the account (for example an invalid name).
+    /// </summary>
+    /// <param name="errorCode">The code from the query string, or null when there is none.</param>
+    /// <returns>The localized message, or null when nothing failed.</returns>
+    private string? ExternalSignInErrorMessage(string? errorCode) => errorCode switch
+    {
+        null or "" => null,
+        "oauth_failed" => L["Auth.Login.ExternalError.Failed"].Value,
+        "missing_claims" => L["Auth.Login.ExternalError.MissingClaims"].Value,
+        _ => L["Auth.Login.ExternalError.Refused"].Value,
+    };
+}
