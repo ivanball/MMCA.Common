@@ -1,2 +1,1 @@
 ﻿#nullable enable
-static MMCA.Common.Shared.Http.ProblemDetailsResultReader.TryGetSynthesizedStatus(MMCA.Common.Shared.Abstractions.Error! error, out int statusCode) -> bool

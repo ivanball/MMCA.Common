@@ -922,6 +922,7 @@ static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ParseProblemDetails(in
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync(System.Net.Http.HttpResponseMessage! response, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync<T>(System.Net.Http.HttpResponseMessage! response, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ToFailureResult(int statusCode, string? jsonBody) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.TryGetSynthesizedStatus(MMCA.Common.Shared.Abstractions.Error! error, out int statusCode) -> bool
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.CanParseValues<TValue>() -> bool
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.GetValueType(System.Type! type) -> System.Type?
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.IsStronglyTypedId(System.Type! type) -> bool
