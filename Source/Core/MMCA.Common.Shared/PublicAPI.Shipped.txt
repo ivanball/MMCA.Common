@@ -640,6 +640,7 @@ const MMCA.Common.Shared.Messaging.MessageHeaders.UserRoles = "MMCA-User-Roles" 
 const MMCA.Common.Shared.Notifications.NotificationFeatures.PushNotifications = "Notification.PushNotifications" -> string!
 const MMCA.Common.Shared.Notifications.NotificationPermissions.Manage = "notifications:manage" -> string!
 const MMCA.Common.Shared.Notifications.NotificationScopeKey.EventPrefix = "event" -> string!
+const MMCA.Common.Shared.Notifications.NotificationScopeKey.MetadataKey = "scopeKey" -> string!
 const MMCA.Common.Shared.Notifications.NotificationScopeKey.Pattern = "^(event|session):[0-9]+$" -> string!
 const MMCA.Common.Shared.Notifications.NotificationScopeKey.SessionPrefix = "session" -> string!
 const MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.ApnsPlatform = "apns" -> string!
@@ -1077,4 +1078,3 @@ virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.Str
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.ToString() -> string
 ~override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.ToString() -> string
-const MMCA.Common.Shared.Notifications.NotificationScopeKey.MetadataKey = "scopeKey" -> string!
