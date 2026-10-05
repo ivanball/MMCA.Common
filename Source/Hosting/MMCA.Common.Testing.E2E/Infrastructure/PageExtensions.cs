@@ -308,6 +308,22 @@ public static class PageExtensions
         {
             ArgumentNullException.ThrowIfNull(page);
 
+            // Let running CSS transitions finish first. A MudBlazor filled button fades its background
+            // from transparent to the palette color over 250 ms on first render; axe sampling mid-fade
+            // reports a contrast violation (white on a 75% primary) that no user ever sees settled.
+            // Only CSSTransition is awaited: infinite animations (spinners) would never finish.
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    "() => document.getAnimations().every(a => !(a instanceof CSSTransition) || a.playState !== 'running')",
+                    null,
+                    new() { Timeout = 2_000 }).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                // Scan anyway: a transition that never ends is itself worth reporting.
+            }
+
             var result = options is null
                 ? await page.RunAxe().ConfigureAwait(false)
                 : await page.RunAxe(options).ConfigureAwait(false);
@@ -323,7 +339,7 @@ public static class PageExtensions
                 {
                     var nodes = string.Join(
                         Environment.NewLine,
-                        v.Nodes.Select(n => $"      → {CompactHtml(n.Html)}"));
+                        v.Nodes.Select(n => $"      → {CompactHtml(n.Html)} {n.Target}{DescribeChecks(n)}"));
                     return $"  [{v.Impact}] {v.Id}: {v.Help} ({v.Nodes.Length} node(s)){Environment.NewLine}{nodes}";
                 }));
 
@@ -462,5 +478,20 @@ public static class PageExtensions
 
         var collapsed = string.Join(' ', html.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         return collapsed.Length > 220 ? string.Concat(collapsed.AsSpan(0, 220), "…") : collapsed;
+    }
+
+    // Appends axe's own check messages (for color-contrast: the measured ratio and the foreground and
+    // background colors), so an intermittent violation can be diagnosed from the failure text alone.
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above; same cross-block analyzer false positive as CompactHtml.")]
+    private static string DescribeChecks(AxeResultNode node)
+    {
+        var messages = (node.Any ?? []).Concat(node.All ?? []).Concat(node.None ?? [])
+            .Select(c => c.Message)
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .ToList();
+        return messages.Count == 0 ? string.Empty : $" :: {string.Join("; ", messages)}";
     }
 }

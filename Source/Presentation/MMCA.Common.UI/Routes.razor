@@ -21,6 +21,8 @@
                 <LayoutView Layout="typeof(Layout.MainLayout)">
                     <MMCA.Common.UI.Pages.NotFound />
                 </LayoutView>
+                @* Sets the 404 status on a server render, so the answer is a real not-found. *@
+                <DynamicComponent Type="typeof(NotificationPageNotFoundStatus)" />
             }
             else
             {

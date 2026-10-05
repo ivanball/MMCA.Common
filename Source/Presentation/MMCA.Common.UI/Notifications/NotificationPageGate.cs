@@ -20,7 +20,13 @@ internal static class NotificationPageGate
     /// <param name="modules">The UI modules the host registered.</param>
     /// <returns><see langword="true"/> to render the not-found page instead of the matched page.</returns>
     public static bool Hides(Type pageType, LayoutSettings settings, IEnumerable<IUIModule> modules) =>
+        NotificationPages.Contains(pageType) && HidesNotificationPages(settings, modules);
+
+    /// <summary>Whether this host hides every notification page.</summary>
+    /// <param name="settings">The host's layout settings.</param>
+    /// <param name="modules">The UI modules the host registered.</param>
+    /// <returns><see langword="true"/> when the notification pages answer with the not-found page.</returns>
+    public static bool HidesNotificationPages(LayoutSettings settings, IEnumerable<IUIModule> modules) =>
         settings.HideNotificationPagesWhenUnregistered
-        && NotificationPages.Contains(pageType)
         && !modules.Any(m => m is NotificationUIModule);
 }

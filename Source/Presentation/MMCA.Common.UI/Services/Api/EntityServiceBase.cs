@@ -57,6 +57,13 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// </summary>
     protected IUiReadCache? ReadCache { get; } = readCache;
 
+    /// <summary>
+    /// Gets a value indicating whether <see cref="GetPagedAsync"/> asks the API to include foreign-key
+    /// navigations (<c>includeFKs=True</c>). Off by default, so the paged URL is unchanged; a service
+    /// whose list grid shows a foreign-key name (a product's category) overrides it to <see langword="true"/>.
+    /// </summary>
+    protected virtual bool PagedIncludeFKs => false;
+
     /// <inheritdoc />
     public virtual async Task<Result<IReadOnlyList<TEntityDTO>>> GetAllAsync(
         bool includeFKs = false,
@@ -93,6 +100,11 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             $"sortDirection={Uri.EscapeDataString(sortDirection ?? string.Empty)}",
             $"includeChildren={includeChildren}"
         };
+
+        if (PagedIncludeFKs)
+        {
+            queryParams.Add("includeFKs=True");
+        }
 
         if (filters is not null)
         {

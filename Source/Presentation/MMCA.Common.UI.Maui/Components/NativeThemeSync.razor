@@ -7,7 +7,9 @@
    NATIVE chrome follows the in-app toggle. Without it the two disagree: ThemeService only drives the
    MudThemeProvider inside the WebView, while Application.UserAppTheme was never set at all, so the
    native side kept tracking the OS. Dark mode on a light-mode phone left the page background behind
-   the WebView (visible on cold start, and around the safe areas) rendering light.
+   the WebView (visible on cold start, and around the safe areas) rendering light. It also mirrors
+   the mode into device preferences (MauiThemeStore), which MainPageBase applies on the next cold
+   launch before the WebView paints: this component only runs after Blazor's first render.
 
    It ships from MMCA.Common.UI.Maui rather than MMCA.Common.UI by necessity: Application and
    MainThread are MAUI types, so the plain net10.0 MMCA.Common.UI (shared with the Blazor Web heads)
@@ -38,6 +40,10 @@
         {
             return;
         }
+
+        // Mirror the resolved mode natively, so the next cold launch applies it from MainPageBase's
+        // constructor, before the WebView paints, instead of only after this first render.
+        MMCA.Common.UI.Maui.Theme.MauiThemeStore.Save(ThemeService.IsDarkMode);
 
         var theme = ThemeService.IsDarkMode ? AppTheme.Dark : AppTheme.Light;
         if (app.UserAppTheme == theme)

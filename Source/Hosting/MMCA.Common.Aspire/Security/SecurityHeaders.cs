@@ -150,6 +150,9 @@ public sealed class SecurityHeadersMiddleware
     /// <summary>Nonce entropy in bytes; 16 bytes (128 bits) is the CSP specification's recommendation.</summary>
     private const int NonceByteCount = 16;
 
+    /// <summary>The Cache-Control value a credential page must leave with.</summary>
+    private const string CredentialCacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+
     private readonly RequestDelegate _next;
     private readonly ICspPolicyProvider _cspPolicyProvider;
     private readonly SecurityHeadersSettings _settings;
@@ -191,8 +194,19 @@ public sealed class SecurityHeadersMiddleware
 
         if (IsCredentialPath(context.Request.Path))
         {
-            headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
-            headers.Pragma = "no-cache";
+            ApplyCredentialCacheHeaders(headers);
+
+            // A downstream component (the Razor Components endpoint) writes its own, weaker
+            // Cache-Control while it renders. Re-applying at response start settles the value last:
+            // registered BEFORE the rest of the pipeline runs, this callback runs after every
+            // response-start callback registered downstream (they run last-registered first).
+            context.Response.OnStarting(
+                static state =>
+                {
+                    ApplyCredentialCacheHeaders(((HttpContext)state).Response.Headers);
+                    return Task.CompletedTask;
+                },
+                context);
         }
 
         if (_enableHsts)
@@ -225,6 +239,12 @@ public sealed class SecurityHeadersMiddleware
         }
 
         await _next(context).ConfigureAwait(false);
+    }
+
+    private static void ApplyCredentialCacheHeaders(IHeaderDictionary headers)
+    {
+        headers.CacheControl = CredentialCacheControl;
+        headers.Pragma = "no-cache";
     }
 }
 

@@ -2,7 +2,9 @@
 @page "/notifications/inbox/{Id:int}"
 @using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.UserNotifications
-@attribute [Authorize]
+@* The notification-page policy, not a bare [Authorize]: it lets the request through to the router's
+   not-found answer when the host hides these pages (Layout:HideNotificationPagesWhenUnregistered). *@
+@attribute [Authorize(Policy = MMCA.Common.UI.Notifications.NotificationPageRequirement.PolicyName)]
 
 <PageTitle>@Title</PageTitle>
 
