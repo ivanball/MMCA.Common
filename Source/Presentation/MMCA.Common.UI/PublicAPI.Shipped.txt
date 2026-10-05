@@ -1208,6 +1208,8 @@ MMCA.Common.UI.Services.WasmFormFactor.GetFormFactor() -> string!
 MMCA.Common.UI.Services.WasmFormFactor.GetPlatform() -> string!
 MMCA.Common.UI.Services.WasmFormFactor.WasmFormFactor() -> void
 MMCA.Common.UI.Theme.BrandColors
+MMCA.Common.UI.Theme.IInitialThemeModeSource
+MMCA.Common.UI.Theme.IInitialThemeModeSource.IsDarkMode.get -> bool?
 MMCA.Common.UI.Theme.MMCATheme
 MMCA.Common.UI.Theme.MmcaThemeProviders
 MMCA.Common.UI.Theme.MmcaThemeProviders.Dispose() -> void
