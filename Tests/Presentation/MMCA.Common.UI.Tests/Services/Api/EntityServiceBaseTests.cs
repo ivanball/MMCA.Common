@@ -183,6 +183,30 @@ public sealed class EntityServiceBaseTests
     }
 
     [Fact]
+    public async Task GetPagedAsync_WhenTheServiceOptsIntoForeignKeys_RequestsThem()
+    {
+        var handler = new StubHttpMessageHandler(_ => PagedResponse(0));
+        var tokenStorage = new Mock<ITokenStorageService>();
+        tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("stored-access-token");
+        var sut = new ForeignKeyWidgetService(new StubHttpClientFactory(handler), tokenStorage.Object);
+
+        await sut.GetPagedAsync(
+            [], pageNumber: 1, pageSize: 10, sortColumn: null, sortDirection: null,
+            includeChildren: true, TestContext.Current.CancellationToken);
+
+        // A list whose grid shows a foreign-key name (a product's category) needs the FK navigation
+        // in the paged read; the default paged URL deliberately omits it.
+        handler.LastRequest.Uri!.PathAndQuery.Should().Be(
+            "/widgets/paged?pageNumber=1&pageSize=10&sortColumn=&sortDirection=&includeChildren=True&includeFKs=True");
+    }
+
+    private sealed class ForeignKeyWidgetService(IHttpClientFactory httpClientFactory, ITokenStorageService tokenStorageService)
+        : EntityServiceBase<WidgetDto, int>("widgets", httpClientFactory, tokenStorageService)
+    {
+        protected override bool PagedIncludeFKs => true;
+    }
+
+    [Fact]
     public async Task GetPagedAsync_WhenBodyDeserializesToNull_FailsAsEmptyResponse()
     {
         // Same reasoning as the list read: a grid must not paint an empty page over a broken one.
