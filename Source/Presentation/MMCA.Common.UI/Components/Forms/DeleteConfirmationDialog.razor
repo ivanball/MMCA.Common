@@ -1,0 +1,33 @@
+@inject IStringLocalizer<SharedResource> L
+
+@* The dialog DeleteConfirmation.ShowAsync opens. Not MudMessageBox: its action row wraps the buttons in
+   its own focus trap pinned to the Yes button, so the destructive Delete always took initial focus and
+   a stray Enter deleted. Here Cancel comes first and the dialog's focus trap starts on the first child,
+   and the mud-message-box classes keep existing selectors working. *@
+<MudDialog Class="mud-message-box" DefaultFocus="DefaultFocus.FirstChild">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@L["Delete.Title", EntityType]</MudText>
+    </TitleContent>
+    <DialogContent>
+        @L["Delete.Message", EntityType.ToLower(System.Globalization.CultureInfo.CurrentUICulture), EntityName ?? string.Empty]
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="mud-message-box__cancel-button" OnClick="Cancel">@L["Common.Button.Cancel"]</MudButton>
+        <MudButton Class="mud-message-box__yes-button" Color="Color.Error" Variant="Variant.Filled" OnClick="Confirm" data-testid="confirm-delete">@L["Delete.Confirm"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialog { get; set; } = null!;
+
+    /// <summary>The localized display name of the entity type being deleted.</summary>
+    [Parameter, EditorRequired] public string EntityType { get; set; } = string.Empty;
+
+    /// <summary>The name of the entity being deleted, shown in the prompt.</summary>
+    [Parameter] public string? EntityName { get; set; }
+
+    private void Cancel() => Dialog.Cancel();
+
+    private void Confirm() => Dialog.Close(DialogResult.Ok(true));
+}

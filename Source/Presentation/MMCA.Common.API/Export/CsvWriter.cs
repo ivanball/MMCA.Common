@@ -1,6 +1,11 @@
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
+using MMCA.Common.Shared.ValueObjects.Financial;
 
 namespace MMCA.Common.API.Export;
 
@@ -22,7 +27,10 @@ namespace MMCA.Common.API.Export;
 /// capitalized form .NET's own ToString produces; <see cref="DateTime"/> and
 /// <see cref="DateTimeOffset"/> write ISO 8601 round-trip ("O"), chosen over the sortable "s" format
 /// because "O" keeps sub-second precision and the offset, so a parsed value equals the one exported;
-/// anything else <see cref="IFormattable"/> formats with <see cref="CultureInfo.InvariantCulture"/>.
+/// anything else <see cref="IFormattable"/> formats with <see cref="CultureInfo.InvariantCulture"/>;
+/// <see cref="Money"/> writes its amount and currency code ("49.99 USD") and <see cref="Currency"/>
+/// its code; any other value whose <c>ToString</c> is the compiler-generated record text or the
+/// inherited type name writes as compact JSON.
 /// </para>
 /// <para>
 /// The writer does NOT prefix fields that a spreadsheet would evaluate as formulas (values opening
@@ -59,6 +67,9 @@ internal static class CsvWriter
     /// quote character, and either half of a line break.
     /// </summary>
     private static readonly SearchValues<char> MustQuote = SearchValues.Create(",\"\r\n");
+
+    /// <summary>Per-type answer of <see cref="HasNoValueText"/>, so reflection runs once per type.</summary>
+    private static readonly ConcurrentDictionary<Type, bool> NoValueTextTypes = new();
 
     /// <summary>
     /// Writes the UTF-8 byte order mark. Call this once, before the header row, on an export written
@@ -133,8 +144,53 @@ internal static class CsvWriter
         DateTime timestamp => timestamp.ToString("O", CultureInfo.InvariantCulture),
         DateTimeOffset timestamp => timestamp.ToString("O", CultureInfo.InvariantCulture),
         IFormattable formattable => formattable.ToString(format: null, CultureInfo.InvariantCulture),
+        _ => FormatObject(value)
+    };
+
+    /// <summary>
+    /// Formats a cell value that is neither a primitive nor <see cref="IFormattable"/>: the money
+    /// value objects get their value form, a type whose <c>ToString</c> is debugging text writes as
+    /// compact JSON, and anything else writes its own invariant text.
+    /// </summary>
+    /// <param name="value">The value to format.</param>
+    /// <returns>The cell text.</returns>
+    private static string FormatObject(object value) => value switch
+    {
+        Money money => FormatMoney(money),
+        Currency currency => currency.Code,
+        _ when HasNoValueText(value.GetType()) => JsonSerializer.Serialize(value, value.GetType(), JsonSerializerOptions.Web),
         _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
     };
+
+    /// <summary>
+    /// Formats a <see cref="Money"/> cell as its invariant amount followed by its ISO 4217 code
+    /// ("49.99 USD"); a currency-less zero writes the amount alone.
+    /// </summary>
+    /// <param name="money">The money value.</param>
+    /// <returns>The cell text.</returns>
+    private static string FormatMoney(Money money)
+    {
+        var amount = money.Amount.ToString(CultureInfo.InvariantCulture);
+        return string.IsNullOrEmpty(money.Currency.Code) ? amount : $"{amount} {money.Currency.Code}";
+    }
+
+    /// <summary>
+    /// Decides whether a type's <c>ToString</c> is debugging text rather than a value: the
+    /// compiler-generated record form (<c>Name { Member = ... }</c>) or the inherited
+    /// <see cref="object.ToString"/>, which prints the type name. Such a cell is written as compact
+    /// JSON instead, the same shape the sibling JSON endpoints return. Cached per type.
+    /// </summary>
+    /// <param name="type">The runtime type of the cell value.</param>
+    /// <returns><see langword="true"/> when the type has no meaningful text of its own.</returns>
+    private static bool HasNoValueText(Type type) =>
+        NoValueTextTypes.GetOrAdd(type, static t =>
+        {
+            var toString = t.GetMethod(nameof(ToString), BindingFlags.Public | BindingFlags.Instance, Type.EmptyTypes);
+            return toString is null
+                || toString.DeclaringType == typeof(object)
+                || toString.DeclaringType == typeof(ValueType)
+                || toString.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false);
+        });
 
     /// <summary>
     /// Writes a single already-formatted field, quoting it and doubling any embedded quote when the

@@ -17,9 +17,28 @@ public static class MmcaCultureBootstrap
     /// Resolves the culture from the browser's culture cookie (falling back to
     /// <see cref="SupportedCultures.Default"/>) and assigns it to
     /// <see cref="CultureInfo.DefaultThreadCurrentCulture"/> / <see cref="CultureInfo.DefaultThreadCurrentUICulture"/>.
+    /// The pseudo locale is never accepted; a Development host that wants it uses
+    /// <see cref="SetBrowserCultureAsync(IJSRuntime, bool)"/>.
     /// </summary>
     /// <param name="jsRuntime">The WASM host's JS runtime (resolve from <c>host.Services</c>).</param>
-    public static async Task SetBrowserCultureAsync(IJSRuntime jsRuntime)
+    /// <returns>A task that completes once the thread default cultures are set.</returns>
+    public static Task SetBrowserCultureAsync(IJSRuntime jsRuntime) =>
+        SetBrowserCultureAsync(jsRuntime, allowPseudoLocale: false);
+
+    /// <summary>
+    /// Resolves the culture from the browser's culture cookie exactly as
+    /// <see cref="SetBrowserCultureAsync(IJSRuntime)"/> does, additionally keeping the
+    /// <see cref="SupportedCultures.PseudoLocale"/> when <paramref name="allowPseudoLocale"/> is
+    /// <see langword="true"/>. The server accepts the pseudo locale only in Development
+    /// (<c>MapCultureEndpoint</c> and request localization), so pass
+    /// <c>builder.HostEnvironment.IsDevelopment()</c> from the WASM <c>Program.cs</c>: hydration then
+    /// stays in the pseudo locale the server prerendered, and the pseudo localizer registered by
+    /// <c>AddUIShared</c> transforms the client's strings too.
+    /// </summary>
+    /// <param name="jsRuntime">The WASM host's JS runtime (resolve from <c>host.Services</c>).</param>
+    /// <param name="allowPseudoLocale">Whether the pseudo locale is a culture this host may run in.</param>
+    /// <returns>A task that completes once the thread default cultures are set.</returns>
+    public static async Task SetBrowserCultureAsync(IJSRuntime jsRuntime, bool allowPseudoLocale)
     {
         ArgumentNullException.ThrowIfNull(jsRuntime);
 
@@ -27,7 +46,9 @@ public static class MmcaCultureBootstrap
             "import", "./_content/MMCA.Common.UI/culture.js");
         var culture = await module.InvokeAsync<string?>("getCulture");
 
-        var resolved = SupportedCultures.IsSupported(culture) ? culture! : SupportedCultures.Default;
+        var accepted = SupportedCultures.IsSupported(culture)
+            || allowPseudoLocale && SupportedCultures.IsPseudoLocale(culture);
+        var resolved = accepted ? culture! : SupportedCultures.Default;
         var cultureInfo = new CultureInfo(resolved);
         CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
         CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;

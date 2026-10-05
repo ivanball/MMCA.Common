@@ -74,6 +74,12 @@
             @* Offline awareness (ADR-042 Wave 3): renders nothing while online; the Blazor
                Server fallback is always online, so only MAUI/WASM heads ever show it. *@
             <MMCA.Common.UI.Components.Capabilities.OfflineBanner />
+            @* Module content headers (IUIModule.ContentHeaderComponentTypes): banners that belong
+               above the page, inside the main landmark, rather than at the root layout level. *@
+            @foreach (var componentType in _contentHeaderComponents)
+            {
+                <DynamicComponent Type="componentType" />
+            }
             @Body
         </article>
     </main>
@@ -129,6 +135,7 @@
 @code {
     private List<Type> _appBarComponents = [];
     private List<Type> _layoutComponents = [];
+    private List<Type> _contentHeaderComponents = [];
     private ElementReference _mainContent;
 
     // Base-relative path and query of the page being shown, plus the fragment. The router re-renders
@@ -147,6 +154,7 @@
     {
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
         _layoutComponents = UIModules.SelectMany(m => m.LayoutComponentTypes).ToList();
+        _contentHeaderComponents = UIModules.SelectMany(m => m.ContentHeaderComponentTypes).ToList();
 
         // Back the static ErrorMessages helper with the shared localizer (ADR-027). The layout renders for
         // every page in both Server and WASM, so this configures it once per circuit/host.

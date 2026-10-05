@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.JSInterop;
+using MMCA.Common.UI.Maui.Theme;
 using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Maui;
@@ -19,6 +20,13 @@ namespace MMCA.Common.UI.Maui;
 /// </summary>
 public abstract class MainPageBase : ContentPage
 {
+    /// <summary>
+    /// Initializes the page. Applies the persisted Day/Dark mode (ADR-028) to the native app theme
+    /// first, so the page behind the <c>BlazorWebView</c> starts in that theme instead of flashing the
+    /// OS theme until Blazor's first render (<c>NativeThemeSync</c> keeps it in sync afterwards).
+    /// </summary>
+    protected MainPageBase() => MauiThemeStore.ApplyStoredTheme();
+
     /// <summary>
     /// The <c>BlazorWebView</c> declared in the derived page's XAML. Implemented as an expression
     /// body over the generated <c>x:Name</c> field (e.g. <c>=&gt; blazorWebView;</c>): the field is

@@ -17,6 +17,11 @@ namespace MMCA.Common.API.Middleware;
 /// exception derives from <see cref="InvalidOperationException"/>, so nothing ahead of this handler
 /// claims it, and every other save-time invariant failure of that family still ends at the 500.
 /// </para>
+/// <para>
+/// A <see cref="BadHttpRequestException"/> (a body over the endpoint's request size limit, or an
+/// unreadable request) is also a caller fault: it is answered with the status the exception carries
+/// (413 or 400) and logged at Warning.
+/// </para>
 /// </summary>
 /// <param name="problemDetailsService">The service used to write RFC 9457 problem details.</param>
 /// <param name="logger">Logger for recording unhandled exceptions.</param>
@@ -60,6 +65,31 @@ public sealed class GlobalExceptionHandler(
                     Status = httpContext.Response.StatusCode,
                     Title = CrossTenantWriteTitle,
                     Detail = CrossTenantWriteDetail
+                }
+            }).ConfigureAwait(false);
+        }
+
+        if (exception is BadHttpRequestException badRequest)
+        {
+            // Warning, not error: the server (Kestrel or model binding) rejected a malformed or
+            // oversize request, which is a caller fault. The exception already carries the status
+            // to answer (413 for a body over the endpoint's size limit, 400 otherwise).
+            logger.LogWarning(badRequest, "Bad request rejected with status {StatusCode}", badRequest.StatusCode);
+
+            httpContext.Response.StatusCode = badRequest.StatusCode;
+            return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                Exception = exception,
+                ProblemDetails = new ProblemDetails
+                {
+                    Status = badRequest.StatusCode,
+                    Title = badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge
+                        ? "Payload Too Large"
+                        : "Bad Request",
+                    Detail = badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge
+                        ? "The request body exceeds the size this endpoint accepts."
+                        : "The request could not be read."
                 }
             }).ConfigureAwait(false);
         }

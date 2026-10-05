@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -7,6 +8,7 @@ using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
+using MMCA.Common.UI.Notifications;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auth;
@@ -72,6 +74,15 @@ public static class DependencyInjection
             // On WebAssembly and MAUI the scope is the app lifetime, which is why the sign-out path
             // clears it (AuthUIService.LogoutAsync): otherwise one account's reads outlive its session.
             services.TryAddScoped<IUiReadCache, UiReadCache>();
+
+            // The notification pages' authorization policy: [Authorize] semantics, except that a host
+            // hiding those pages (Layout:HideNotificationPagesWhenUnregistered) lets the request reach
+            // the router, which answers 404 instead of the sign-in challenge.
+            services.AddAuthorizationCore(options => options.AddPolicy(
+                NotificationPageRequirement.PolicyName,
+                policy => policy.AddRequirements(new NotificationPageRequirement())));
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IAuthorizationHandler, NotificationPageAuthorizationHandler>());
 
             // Resource-based localization for IStringLocalizer<T> across all UI hosts (ADR-027).
             services.AddLocalization();

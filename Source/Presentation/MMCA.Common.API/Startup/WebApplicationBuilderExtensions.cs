@@ -2,11 +2,13 @@
 using System.IO.Compression;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MMCA.Common.API.Caching;
 using MMCA.Common.API.OpenApi;
 
 namespace MMCA.Common.API.Startup;
@@ -52,6 +54,10 @@ public static partial class WebApplicationBuilderExtensions
             });
 
             services.AddApiParameterDescriptorBackfill();
+
+            // Report the version headers ahead of the body so an output-cache entry stores them
+            // and a cache hit still carries api-supported-versions.
+            services.Configure<MvcOptions>(static options => options.Filters.Add(new ApiVersionReportingResultFilter()));
 
             return services;
         }

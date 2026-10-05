@@ -23,9 +23,10 @@ internal static class EntityCsvExporter<TEntityDTO>
     /// per closed DTO type, since a DTO's shape cannot change at runtime.
     /// </summary>
     /// <remarks>
-    /// Value objects and other class-typed properties are deliberately NOT dropped: a record or
-    /// value object has a meaningful invariant <c>ToString</c>, which is exactly the cell a reader
-    /// expects. Only the two categories above render a type name instead of a value.
+    /// Value objects and other class-typed properties are deliberately NOT dropped: <c>CsvWriter</c>
+    /// renders them as a value (Money as amount and currency code, Currency as its code, any other
+    /// record as compact JSON rather than its compiler-generated <c>ToString</c>). Only the two
+    /// categories above have no faithful single-cell form.
     /// </remarks>
     private static readonly string[] UnexportablePropertyNames =
     [
