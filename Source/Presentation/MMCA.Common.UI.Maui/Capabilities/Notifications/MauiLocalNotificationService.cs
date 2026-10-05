@@ -2,6 +2,7 @@ using MMCA.Common.UI.Services.Capabilities.Navigation;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.Core.Models;
+using Plugin.LocalNotification.Core.Models.AndroidOption;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Notifications;
 
@@ -13,6 +14,9 @@ namespace MMCA.Common.UI.Maui.Capabilities.Notifications;
 /// </summary>
 public sealed class MauiLocalNotificationService : ILocalNotificationService
 {
+    /// <summary>How late an inexact Android alarm may fire and still post its notification.</summary>
+    private static readonly TimeSpan LateDeliveryWindow = TimeSpan.FromMinutes(15);
+
     /// <inheritdoc />
     public bool IsSupported => true;
 
@@ -53,6 +57,16 @@ public sealed class MauiLocalNotificationService : ILocalNotificationService
             Schedule = new NotificationRequestSchedule
             {
                 NotifyTime = request.DeliverAt,
+
+                // Inexact alarms (no SCHEDULE_EXACT_ALARM) can fire minutes late under Doze, and the
+                // plugin drops any alarm more than AllowedDelay past NotifyTime (default 1 minute),
+                // so a late reminder silently never posted. A late reminder is still useful; one
+                // past this window is stale. The service does not know the caller's lead time, so
+                // 15 minutes is the cap: wide enough for typical inexact batching.
+                Android = new AndroidScheduleOptions
+                {
+                    AllowedDelay = LateDeliveryWindow,
+                },
             },
         };
 

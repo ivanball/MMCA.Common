@@ -212,7 +212,12 @@ public partial class TermsAcceptanceGate : IDisposable
                 return;
             }
 
-            _errorMessage = result.LocalizedErrorMessage(L) ?? L["Legal.Gate.AcceptFailed"];
+            // Only a validation refusal was phrased for the user by the server. A transport fault, a
+            // timeout or any server error carries a synthesized or generic message the user cannot
+            // act on beyond retrying, so the gate shows its own localized wording for those.
+            _errorMessage = result.HasErrorType(ErrorType.Validation)
+                ? result.LocalizedErrorMessage(L) ?? L["Legal.Gate.AcceptFailed"].Value
+                : L["Legal.Gate.AcceptFailed"].Value;
         }
         catch (OperationCanceledException)
         {

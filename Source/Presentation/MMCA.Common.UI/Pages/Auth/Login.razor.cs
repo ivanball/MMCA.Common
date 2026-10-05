@@ -17,7 +17,10 @@ public partial class Login
 
     /// <summary>
     /// Maps the machine error code to words; the raw code is never shown. Any code other than the
-    /// two transport-level ones is a domain refusal of the account (for example an invalid name).
+    /// two transport-level ones is a domain refusal of the account. A refusal whose code carries a
+    /// recovery path of its own (a locked account, an email already linked to another sign-in, an
+    /// unverified provider email) has a resource <c>Auth.Login.ExternalError.{code}</c>; every other
+    /// code (for example an invalid name) falls back to the generic refusal.
     /// </summary>
     /// <param name="errorCode">The code from the query string, or null when there is none.</param>
     /// <returns>The localized message, or null when nothing failed.</returns>
@@ -26,6 +29,12 @@ public partial class Login
         null or "" => null,
         "oauth_failed" => L["Auth.Login.ExternalError.Failed"].Value,
         "missing_claims" => L["Auth.Login.ExternalError.MissingClaims"].Value,
-        _ => L["Auth.Login.ExternalError.Refused"].Value,
+        _ => RefusalMessage(errorCode),
     };
+
+    private string RefusalMessage(string errorCode)
+    {
+        var specific = L["Auth.Login.ExternalError." + errorCode];
+        return specific.ResourceNotFound ? L["Auth.Login.ExternalError.Refused"].Value : specific.Value;
+    }
 }

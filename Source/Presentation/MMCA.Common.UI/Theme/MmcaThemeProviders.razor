@@ -1,6 +1,8 @@
+@using Microsoft.Extensions.DependencyInjection
 @using MMCA.Common.UI.Theme
 @inject ThemeService ThemeService
 @inject IJSRuntime JS
+@inject IServiceProvider ServiceProvider
 @implements IDisposable
 
 @* The four Mud providers every root layout needs (theme, popover, dialog, snackbar) plus the
@@ -36,7 +38,19 @@
     private bool _isDarkMode;
     private bool _disposed;
 
-    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+    protected override void OnInitialized()
+    {
+        // A head that knows the stored preference without JS (MAUI, from device preferences)
+        // registers an IInitialThemeModeSource, so the first render already has the right palette
+        // instead of light-then-dark. Optional: web heads register none, and null means "unknown",
+        // both leaving the mode to the JS path in OnAfterRenderAsync as before.
+        if (ServiceProvider.GetService<IInitialThemeModeSource>()?.IsDarkMode is bool initialIsDark)
+        {
+            _isDarkMode = initialIsDark;
+        }
+
+        ThemeService.OnChange += OnThemeChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

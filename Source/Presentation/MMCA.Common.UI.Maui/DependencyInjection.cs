@@ -8,6 +8,7 @@ using MMCA.Common.UI.Maui.Capabilities.Interop;
 using MMCA.Common.UI.Maui.Capabilities.Media;
 using MMCA.Common.UI.Maui.Capabilities.Notifications;
 using MMCA.Common.UI.Maui.Services;
+using MMCA.Common.UI.Maui.Theme;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Capabilities.Accessibility;
@@ -19,6 +20,7 @@ using MMCA.Common.UI.Services.Capabilities.Interop;
 using MMCA.Common.UI.Services.Capabilities.Media;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 using MMCA.Common.UI.Services.Navigation;
+using MMCA.Common.UI.Theme;
 
 namespace MMCA.Common.UI.Maui;
 
@@ -60,6 +62,10 @@ public static class DependencyInjection
             services.AddSingleton<ILocalCacheStore, MauiLocalCacheStore>();
             services.AddSingleton<IBiometricAuthenticator, MauiBiometricAuthenticator>();
             services.AddSingleton<ISpeechToTextService, MauiSpeechToTextService>();
+
+            // The stored Day/Dark preference, read synchronously so MmcaThemeProviders paints its
+            // first frame in that mode rather than light-then-dark (ADR-028).
+            services.AddSingleton<IInitialThemeModeSource, MauiInitialThemeModeSource>();
 
             // Native push registration (ADR-044). Real deliveries additionally need the app to
             // register a credentialed IPushDeviceTokenProvider; the shared default yields no

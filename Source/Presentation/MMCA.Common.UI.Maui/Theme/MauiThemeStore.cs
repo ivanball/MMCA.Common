@@ -28,6 +28,20 @@ internal static class MauiThemeStore
     public static void Save(bool isDarkMode) => Preferences.Default.Set(PreferenceKey, isDarkMode ? Dark : Light);
 
     /// <summary>
+    /// Reads the stored mode synchronously.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> for dark, <see langword="false"/> for light, or <see langword="null"/>
+    /// when no mode has been stored yet (first launch) or the stored value is unrecognized.
+    /// </returns>
+    public static bool? ReadStoredIsDarkMode() => Preferences.Default.Get<string?>(PreferenceKey, null) switch
+    {
+        Dark => true,
+        Light => false,
+        _ => null
+    };
+
+    /// <summary>
     /// Applies the stored mode to <see cref="Application.UserAppTheme"/>. Does nothing when no mode
     /// has been stored yet (first launch keeps following the OS, exactly as the web preference does)
     /// or when no application exists.
@@ -35,11 +49,11 @@ internal static class MauiThemeStore
     public static void ApplyStoredTheme()
     {
         var app = Application.Current;
-        var theme = Preferences.Default.Get<string?>(PreferenceKey, null) switch
+        var theme = ReadStoredIsDarkMode() switch
         {
-            Dark => AppTheme.Dark,
-            Light => AppTheme.Light,
-            _ => AppTheme.Unspecified
+            true => AppTheme.Dark,
+            false => AppTheme.Light,
+            null => AppTheme.Unspecified
         };
 
         if (app is null || theme == AppTheme.Unspecified || app.UserAppTheme == theme)

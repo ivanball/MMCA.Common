@@ -81,6 +81,13 @@
         color: white;
     }
 
+    /* Keyboard focus needs a visible indicator on the dark row (WCAG 2.4.7): a color change alone
+       is invisible on a brand that is already white, and MudBlazor resets the anchor outline. */
+    .nav-brand:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
+
 /* Optional decorative logo (Layout:BrandLogoUrl). Fixed height, natural width, never squeezed:
    the brand TEXT is the element that gives way on a narrow row. */
 .nav-brand-logo {

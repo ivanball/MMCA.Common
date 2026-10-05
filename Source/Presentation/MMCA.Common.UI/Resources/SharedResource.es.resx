@@ -505,6 +505,15 @@
   <data name="Auth.Login.ExternalError.Refused" xml:space="preserve">
     <value>No pudimos completar el inicio de sesión con esa cuenta. Inténtalo de nuevo o usa otro método de inicio de sesión.</value>
   </data>
+  <data name="Auth.Login.ExternalError.Auth.AccountLocked" xml:space="preserve">
+    <value>Un administrador ha bloqueado esta cuenta. Ponte en contacto con los organizadores.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.Auth.ExternalProviderAlreadyLinked" xml:space="preserve">
+    <value>Ya existe una cuenta con este correo electrónico que inicia sesión de otra forma. Inicia sesión de esa forma o usa ¿Olvidó su contraseña? para establecer una contraseña para esta cuenta.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.Auth.ExternalEmailNotVerified" xml:space="preserve">
+    <value>El proveedor no confirmó que este correo electrónico esté verificado. Inicia sesión con tu correo electrónico y tu contraseña.</value>
+  </data>
   <data name="Auth.Login.ForgotPassword" xml:space="preserve">
     <value>¿Olvidó su contraseña?</value>
   </data>
@@ -783,5 +792,47 @@
   </data>
   <data name="Legal.Gate.AcceptFailed" xml:space="preserve">
     <value>No pudimos registrar su aceptación. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.Status" xml:space="preserve">
+    <value>La solicitud falló con el código de estado HTTP {0}.</value>
+  </data>
+  <data name="Http.400" xml:space="preserve">
+    <value>La solicitud no es válida.</value>
+  </data>
+  <data name="Http.401" xml:space="preserve">
+    <value>No ha iniciado sesión o su sesión ha caducado. Inicie sesión e inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.403" xml:space="preserve">
+    <value>No tiene permiso para hacer eso.</value>
+  </data>
+  <data name="Http.404" xml:space="preserve">
+    <value>No se encontró el elemento solicitado.</value>
+  </data>
+  <data name="Http.408" xml:space="preserve">
+    <value>La solicitud tardó demasiado. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.409" xml:space="preserve">
+    <value>La solicitud entra en conflicto con el estado actual. Vuelva a cargar e inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.429" xml:space="preserve">
+    <value>Demasiadas solicitudes. Espere un momento e inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.500" xml:space="preserve">
+    <value>Se produjo un error en el servidor. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.502" xml:space="preserve">
+    <value>El servicio no está disponible temporalmente. Inténtelo de nuevo en unos momentos.</value>
+  </data>
+  <data name="Http.503" xml:space="preserve">
+    <value>El servicio no está disponible temporalmente. Inténtelo de nuevo en unos momentos.</value>
+  </data>
+  <data name="Http.504" xml:space="preserve">
+    <value>El servidor tardó demasiado en responder. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.TransportFailure" xml:space="preserve">
+    <value>No se pudo completar la solicitud. Compruebe la conexión e inténtelo de nuevo.</value>
+  </data>
+  <data name="Http.Timeout" xml:space="preserve">
+    <value>Se agotó el tiempo de espera antes de que el servidor respondiera.</value>
   </data>
 </root>

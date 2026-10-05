@@ -68,6 +68,27 @@ public sealed class FeatureGateQueryDecoratorTests
         inner.Verify(x => x.HandleAsync(It.IsAny<FeatureGatedQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── The user-facing message (X-28 side, ADC local test run 6) ──
+    // Same contract as the command decorator: no internal flag name in the message, the wording
+    // DisabledFeatureHandler uses, and the Feature.Disabled code unchanged.
+    [Fact]
+    public async Task HandleAsync_DisabledFeature_UsesTheGenericMessage_WithoutTheFlagName()
+    {
+        var inner = new Mock<IQueryHandler<FeatureGatedQuery, Result<string>>>();
+        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
+            .ReturnsAsync(false);
+
+        var sut = new FeatureGateQueryDecorator<FeatureGatedQuery, Result<string>>(
+            inner.Object, _featureManager.Object);
+
+        var result = await sut.HandleAsync(new FeatureGatedQuery());
+
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Feature.Disabled");
+        error.Message.Should().NotContain("QueryFeature", "the flag name is internal and must not reach the user");
+        error.Message.Should().Be("The requested feature is not currently available.");
+    }
+
     // ── A handler whose TResult is neither Result nor Result<T> ──
     // Scrutor's TryDecorate is unconditional, so such a handler gets decorated too. Building the
     // failure delegate eagerly (in the static constructor) turned that into a

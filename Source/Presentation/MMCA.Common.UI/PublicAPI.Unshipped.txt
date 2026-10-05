@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.UI.Theme.IInitialThemeModeSource
+MMCA.Common.UI.Theme.IInitialThemeModeSource.IsDarkMode.get -> bool?
