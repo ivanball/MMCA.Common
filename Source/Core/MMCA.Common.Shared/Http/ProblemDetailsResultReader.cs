@@ -215,6 +215,33 @@ public static class ProblemDetailsResultReader
         Result.Failure(ParseProblemDetails(statusCode, jsonBody));
 
     /// <summary>
+    /// Whether this error is one the reader synthesized for a status code because the response
+    /// carried no message of its own (a bodiless or unreadable error response): its code is
+    /// <c>Http.{status}</c> and its message is the reader's English default sentence. A UI uses
+    /// this to localize the failure by its status instead of showing that sentence, while a
+    /// message the server phrased itself is left alone.
+    /// </summary>
+    /// <param name="error">The error to inspect.</param>
+    /// <param name="statusCode">The HTTP status code the error was synthesized for, or zero.</param>
+    /// <returns><see langword="true"/> when the error carries the synthesized default message.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="error"/> is <see langword="null"/>.</exception>
+    public static bool TryGetSynthesizedStatus(Error error, out int statusCode)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+
+        statusCode = 0;
+        if (!error.Code.StartsWith(StatusErrorCodePrefix, StringComparison.Ordinal)
+            || !int.TryParse(error.Code.AsSpan(StatusErrorCodePrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+            || !string.Equals(error.Message, DefaultMessage(parsed), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        statusCode = parsed;
+        return true;
+    }
+
+    /// <summary>
     /// Converts a response into a valueless <see cref="Result"/>: success when the status is 2xx,
     /// otherwise a failure carrying every error the Problem Details payload describes.
     /// </summary>

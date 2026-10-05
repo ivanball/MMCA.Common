@@ -505,6 +505,15 @@
   <data name="Auth.Login.ExternalError.Refused" xml:space="preserve">
     <value>We could not complete sign-in with that account. Please try again or use another sign-in method.</value>
   </data>
+  <data name="Auth.Login.ExternalError.Auth.AccountLocked" xml:space="preserve">
+    <value>This account has been locked by an administrator. Contact the organizers.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.Auth.ExternalProviderAlreadyLinked" xml:space="preserve">
+    <value>An account with this email already signs in another way. Sign in that way, or use Forgot password to set a password for this account.</value>
+  </data>
+  <data name="Auth.Login.ExternalError.Auth.ExternalEmailNotVerified" xml:space="preserve">
+    <value>The provider did not confirm this email address as verified. Sign in with your email and password instead.</value>
+  </data>
   <data name="Auth.Login.ForgotPassword" xml:space="preserve">
     <value>Forgot your password?</value>
   </data>
@@ -783,5 +792,47 @@
   </data>
   <data name="Legal.Gate.AcceptFailed" xml:space="preserve">
     <value>We could not record your acceptance. Please try again.</value>
+  </data>
+  <data name="Http.Status" xml:space="preserve">
+    <value>The request failed with HTTP status code {0}.</value>
+  </data>
+  <data name="Http.400" xml:space="preserve">
+    <value>The request was not valid.</value>
+  </data>
+  <data name="Http.401" xml:space="preserve">
+    <value>You are not signed in, or your session has expired. Sign in and try again.</value>
+  </data>
+  <data name="Http.403" xml:space="preserve">
+    <value>You do not have permission to do that.</value>
+  </data>
+  <data name="Http.404" xml:space="preserve">
+    <value>The requested item was not found.</value>
+  </data>
+  <data name="Http.408" xml:space="preserve">
+    <value>The request took too long. Please try again.</value>
+  </data>
+  <data name="Http.409" xml:space="preserve">
+    <value>The request conflicts with the current state. Reload and try again.</value>
+  </data>
+  <data name="Http.429" xml:space="preserve">
+    <value>Too many requests. Wait a moment and try again.</value>
+  </data>
+  <data name="Http.500" xml:space="preserve">
+    <value>Something went wrong on the server. Please try again.</value>
+  </data>
+  <data name="Http.502" xml:space="preserve">
+    <value>The service is temporarily unavailable. Please try again in a moment.</value>
+  </data>
+  <data name="Http.503" xml:space="preserve">
+    <value>The service is temporarily unavailable. Please try again in a moment.</value>
+  </data>
+  <data name="Http.504" xml:space="preserve">
+    <value>The server took too long to respond. Please try again.</value>
+  </data>
+  <data name="Http.TransportFailure" xml:space="preserve">
+    <value>The request could not be completed. Check the connection and try again.</value>
+  </data>
+  <data name="Http.Timeout" xml:space="preserve">
+    <value>The request timed out before the server responded.</value>
   </data>
 </root>

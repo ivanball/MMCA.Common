@@ -102,6 +102,16 @@ main {
     box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
+/* Keyboard focus needs a visible indicator on the app bar (WCAG 2.4.7). MudBlazor strips the
+   outline from its buttons, icon buttons and menu activators and leaves a faint overlay that
+   disappears against the dark chrome, which both palettes share (BrandColors.ChromeBackground),
+   so a white ring reads in either theme. */
+.appbar-container ::deep .mud-button-root:focus-visible,
+.appbar-container ::deep .mud-menu-activator:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
 .sidebar {
     background-color: var(--mmca-sidebar-bg, #1A2035);
     /* Subtle definition where the dark sidebar meets the content surface. Inset shadow, not a

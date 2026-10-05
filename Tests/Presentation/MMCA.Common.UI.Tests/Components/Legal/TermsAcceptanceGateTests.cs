@@ -3,9 +3,11 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.Shared.Legal;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Components.Legal;
+using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Capabilities.Interop;
 using MMCA.Common.UI.Services.Legal;
@@ -26,6 +28,7 @@ public sealed class TermsAcceptanceGateTests : BunitTestBase
     private const string AcceptSelector = "button[data-testid='terms-acceptance-gate-accept']";
     private const string FirstHeading = "Please review our terms";
     private const string UpdatedHeading = "We've updated our terms";
+    private const string AcceptFailedEnglish = "We could not record your acceptance. Please try again.";
 
     private readonly Mock<ILegalAcceptanceUIService> _legal = new();
     private readonly Mock<IAuthUIService> _auth = new();
@@ -184,6 +187,82 @@ public sealed class TermsAcceptanceGateTests : BunitTestBase
         providers.Dialog.WaitForAssertion(() =>
             providers.Dialog.FindAll("h2").Should().ContainSingle(
                 "consent is still owed after navigating, so the gate must still be asking for it"));
+    }
+
+    // ── A failed accept (A-45, ADC local test run 6) ──
+    // Every HTTP failure carries a synthesized English message ("The request failed with HTTP status
+    // code 500.", the transport and timeout wording), so falling back to Legal.Gate.AcceptFailed only
+    // when the result had NO message meant the localized sentence was never shown. A server or
+    // transport fault gets the gate's own wording; only a validation refusal, which the server
+    // phrased for the user, is shown verbatim.
+    public static TheoryData<string> NonValidationFailures =>
+    [
+        "transport",
+        "timeout",
+        "500-bodiless",
+        "503-bodiless",
+        "500-problem-body",
+    ];
+
+    [Theory]
+    [MemberData(nameof(NonValidationFailures))]
+    public async Task AFailedAccept_ThatIsNotAValidationRefusal_ShowsTheLocalizedAcceptFailedMessage(string failure)
+    {
+        var acceptResult = await NonValidationFailure(failure);
+        var alert = AcceptAndReadTheAlert(acceptResult);
+
+        alert.Should().Be(
+            AcceptFailedEnglish,
+            "a server or transport fault is not something the user can act on beyond retrying, so the gate shows its own localized wording");
+        alert.Should().NotContain("The request failed with HTTP status code");
+    }
+
+    [Fact]
+    public void AValidationRefusalFromTheServer_StillShowsTheServersMessage()
+    {
+        const string serverMessage = "The terms version you accepted is not valid.";
+        const string body =
+            """{"title":"Validation failed","status":400,"errors":[{"code":"Legal.Acceptance.Invalid","message":"The terms version you accepted is not valid.","type":"Validation"}]}""";
+        var acceptResult = Result.Failure<LegalAcceptanceDTO>(ProblemDetailsResultReader.ParseProblemDetails(400, body));
+
+        var alert = AcceptAndReadTheAlert(acceptResult);
+
+        alert.Should().Be(serverMessage, "a validation refusal is phrased for the user by the server");
+    }
+
+    private static async Task<Result<LegalAcceptanceDTO>> NonValidationFailure(string failure) => failure switch
+    {
+        "transport" => await HttpResultExecutor.ExecuteAsync(
+            () => Task.FromException<Result<LegalAcceptanceDTO>>(new HttpRequestException("Connection refused")),
+            CancellationToken.None),
+        "timeout" => await HttpResultExecutor.ExecuteAsync(
+            () => Task.FromException<Result<LegalAcceptanceDTO>>(new TaskCanceledException("HttpClient.Timeout")),
+            CancellationToken.None),
+        "500-bodiless" => Result.Failure<LegalAcceptanceDTO>(ProblemDetailsResultReader.ParseProblemDetails(500, null)),
+        "503-bodiless" => Result.Failure<LegalAcceptanceDTO>(ProblemDetailsResultReader.ParseProblemDetails(503, string.Empty)),
+        "500-problem-body" => Result.Failure<LegalAcceptanceDTO>(ProblemDetailsResultReader.ParseProblemDetails(
+            500,
+            """{"title":"An error occurred while processing your request.","status":500,"detail":"An unexpected error occurred."}""")),
+        _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "unknown failure shape"),
+    };
+
+    private string AcceptAndReadTheAlert(Result<LegalAcceptanceDTO> acceptResult)
+    {
+        StandingIs(Result.Success(LegalAcceptanceDTO.Evaluate("v2", "v1", DateTime.UtcNow)));
+        _legal
+            .Setup(l => l.AcceptAsync("v2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(acceptResult);
+        var providers = RenderSignedIn();
+        providers.Dialog.WaitForAssertion(() => providers.Dialog.FindAll(AgreeSelector).Should().ContainSingle());
+
+        providers.Dialog.Find(AgreeSelector).Change(true);
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.Find(AcceptSelector).HasAttribute("disabled").Should().BeFalse());
+        providers.Dialog.Find(AcceptSelector).Click();
+
+        providers.Dialog.WaitForAssertion(() =>
+            providers.Dialog.FindAll("[role='alert']").Should().ContainSingle("a failed accept keeps the dialog open with one alert"));
+        return providers.Dialog.Find("[role='alert']").TextContent.Trim();
     }
 
     private void StandingIs(Result<LegalAcceptanceDTO> standing) =>

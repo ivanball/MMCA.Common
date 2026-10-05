@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Services.Api;
 
 namespace MMCA.Common.UI.Common;
 
@@ -19,7 +21,11 @@ namespace MMCA.Common.UI.Common;
 /// that matches a key in the supplied <see cref="IStringLocalizer"/> renders translated, and one
 /// that does not renders verbatim. That is what lets the same call site handle both an API error
 /// whose text the server already localized and a client-side error whose <c>Message</c> is a
-/// resource key (ADR-027).
+/// resource key (ADR-027). The failures the client synthesized itself, with no server-phrased
+/// message to pass through (a bodiless HTTP status, a transport failure, a client timeout), are
+/// looked up by their error CODE instead (<c>Http.{status}</c>, then the generic
+/// <c>Http.Status</c> format, <c>Http.TransportFailure</c>, <c>Http.Timeout</c>), falling back to
+/// the English message when the localizer has no such key.
 /// </para>
 /// <para>
 /// <b>Deduplication and order.</b> Messages are made distinct (ordinal) and ordered most severe
@@ -62,6 +68,10 @@ namespace MMCA.Common.UI.Common;
 /// </example>
 public static class ResultUiExtensions
 {
+    // Format resource ({0} = the status code) for a synthesized HTTP failure whose status has no
+    // Http.{status} resource of its own.
+    private const string HttpStatusFallbackKey = "Http.Status";
+
     /// <summary>
     /// Unwraps a successful <see cref="Result{T}"/> inside a conditional, the way
     /// <c>Dictionary.TryGetValue</c> does, so the success and failure branches sit side by side
@@ -153,7 +163,7 @@ public static class ResultUiExtensions
 
         return [.. result.Errors
             .OrderByDescending(error => ErrorTypeSeverity.Rank(error.Type))
-            .Select(error => Localize(error.Message, localizer))
+            .Select(error => LocalizeError(error, localizer))
             .Where(message => !string.IsNullOrWhiteSpace(message))
             .Distinct(StringComparer.Ordinal)];
     }
@@ -325,6 +335,43 @@ public static class ResultUiExtensions
     /// <param name="result">The result to inspect.</param>
     /// <returns><see langword="true"/> when the failure is an authentication failure.</returns>
     public static bool IsUnauthorized(this Result result) => result.HasErrorType(ErrorType.Unauthorized);
+
+    private static string LocalizeError(Error error, IStringLocalizer? localizer)
+    {
+        if (localizer is null)
+        {
+            return error.Message;
+        }
+
+        if (ProblemDetailsResultReader.TryGetSynthesizedStatus(error, out var statusCode))
+        {
+            var specific = localizer[error.Code];
+            if (!specific.ResourceNotFound)
+            {
+                return specific.Value;
+            }
+
+            var generic = localizer[HttpStatusFallbackKey, statusCode];
+            return generic.ResourceNotFound ? error.Message : generic.Value;
+        }
+
+        if (IsSynthesizedTransportFailure(error))
+        {
+            var byCode = localizer[error.Code];
+            return byCode.ResourceNotFound ? error.Message : byCode.Value;
+        }
+
+        return Localize(error.Message, localizer);
+    }
+
+    // Only the executor's own English sentence is replaced: a caller that reused one of these codes
+    // with a message of its own keeps that message.
+    private static bool IsSynthesizedTransportFailure(Error error) => error.Code switch
+    {
+        HttpResultExecutor.TransportErrorCode => string.Equals(error.Message, HttpResultExecutor.TransportMessage, StringComparison.Ordinal),
+        HttpResultExecutor.TimeoutErrorCode => string.Equals(error.Message, HttpResultExecutor.TimeoutMessage, StringComparison.Ordinal),
+        _ => false,
+    };
 
     private static string Localize(string message, IStringLocalizer? localizer)
     {

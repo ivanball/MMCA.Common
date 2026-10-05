@@ -24,9 +24,10 @@ namespace MMCA.Common.UI.Services.Api;
 /// </para>
 /// <para>
 /// <b>Messages are English.</b> A transport failure never reached a server, so nothing localized it
-/// on the way back, exactly as with the reader's own synthesized messages. A page that needs
-/// translated wording branches on the code (<see cref="TransportErrorCode"/>,
-/// <see cref="TimeoutErrorCode"/>) or supplies a resource key of its own.
+/// on the way back, exactly as with the reader's own synthesized messages.
+/// <c>ResultUiExtensions.LocalizedErrorMessage</c> translates these two by their code
+/// (<see cref="TransportErrorCode"/>, <see cref="TimeoutErrorCode"/>) against the shared UI
+/// resources; a page can also branch on the code or supply a resource key of its own.
 /// </para>
 /// </summary>
 public static class HttpResultExecutor
@@ -37,10 +38,10 @@ public static class HttpResultExecutor
     /// <summary>Error code for a request the client itself gave up on before the caller cancelled.</summary>
     public const string TimeoutErrorCode = "Http.Timeout";
 
-    private const string TransportMessage =
+    internal const string TransportMessage =
         "The request could not be completed. Check the connection and try again.";
 
-    private const string TimeoutMessage =
+    internal const string TimeoutMessage =
         "The request timed out before the server responded.";
 
     /// <summary>

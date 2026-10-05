@@ -65,6 +65,27 @@ public sealed class FeatureGateCommandDecoratorTests
         inner.Verify(x => x.HandleAsync(It.IsAny<FeatureGatedCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── The user-facing message (X-28 side, ADC local test run 6) ──
+    // The failure message reaches the user verbatim (the UI shows a server-phrased message), so it
+    // must not leak the internal flag name and must match the wording DisabledFeatureHandler already
+    // uses for a [FeatureGate] endpoint. The CODE stays Feature.Disabled for clients that branch on it.
+    [Fact]
+    public async Task HandleAsync_DisabledFeature_UsesTheGenericMessage_WithoutTheFlagName()
+    {
+        var inner = new Mock<ICommandHandler<FeatureGatedCommand, Result>>();
+        _featureManager.Setup(x => x.IsEnabledAsync("TestFeature"))
+            .ReturnsAsync(false);
+
+        var sut = new FeatureGateCommandDecorator<FeatureGatedCommand, Result>(inner.Object, _featureManager.Object);
+
+        var result = await sut.HandleAsync(new FeatureGatedCommand());
+
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Feature.Disabled");
+        error.Message.Should().NotContain("TestFeature", "the flag name is internal and must not reach the user");
+        error.Message.Should().Be("The requested feature is not currently available.");
+    }
+
     // ── Disabled feature works with generic Result<T> ──
     [Fact]
     public async Task HandleAsync_DisabledFeature_WithGenericResult_ReturnsFailure()

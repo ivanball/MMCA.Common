@@ -53,9 +53,12 @@ public sealed class FeatureGateCommandDecorator<TCommand, TResult>(
         if (await featureManager.IsEnabledAsync(featureGated.FeatureName).ConfigureAwait(false))
             return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
+        // The message reaches the user verbatim, so it is the generic wording DisabledFeatureHandler
+        // uses for a [FeatureGate] endpoint; the flag name is internal and stays out of it. Clients
+        // branch on the Feature.Disabled code.
         var createFailure = CreateFailure();
         return createFailure([Error.NotFoundError(
             "Feature.Disabled",
-            $"Feature '{featureGated.FeatureName}' is not currently available.")]);
+            "The requested feature is not currently available.")]);
     }
 }

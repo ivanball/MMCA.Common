@@ -100,6 +100,9 @@
     color: white;
     padding: 4px 24px;
     border-radius: 4px;
+    /* MudBlazor's global button typography uppercases every <button>; this modal's labels are
+       sentences and read as written. */
+    text-transform: none;
 }
 
     #components-reconnect-modal button:hover {

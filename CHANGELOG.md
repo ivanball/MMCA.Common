@@ -4,6 +4,24 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `IInitialThemeModeSource` (`MMCA.Common.UI.Theme`, single member `bool? IsDarkMode { get; }`): an optional synchronous source for the Day/Dark mode of the first render, read by `MmcaThemeProviders` during initialization. `null`, or no registration, leaves the first render to the JS path as before. `AddMauiDeviceCapabilities()` registers the MAUI implementation.
+- `ProblemDetailsResultReader.TryGetSynthesizedStatus(Error, out int)`: whether an error carries the reader's own English default sentence for a bodiless or unreadable status response, as opposed to a message the server phrased.
+
+### Fixed
+
+- Login shows a specific message for the refusal codes that carry a recovery path, looked up as `Auth.Login.ExternalError.{code}` before the generic refusal (English and Spanish): `Auth.AccountLocked` (locked by an administrator, contact the organizers), `Auth.ExternalProviderAlreadyLinked` (provider-neutral: the email already signs in another way, sign in that way or use Forgot password) and `Auth.ExternalEmailNotVerified` (the provider did not confirm the email as verified). Every other code still shows the generic refusal; `oauth_failed` and `missing_claims` are unchanged. Found in ADC local test run 6.
+- `TermsAcceptanceGate` shows its localized `Legal.Gate.AcceptFailed` for every failed accept that is not a validation refusal (transport failure, timeout, any server error), and the server's text only for a validation refusal. Every HTTP failure carries a message, so the localized fallback was never shown. Found in ADC local test run 6.
+- `ResultUiExtensions.LocalizedErrorMessage` localizes the failures the client synthesized by their error code against the shared UI resources (`Http.{status}` for the common statuses, then the `Http.Status` format for any other, `Http.TransportFailure`, `Http.Timeout`; English and Spanish), so a Spanish user no longer reads "The request failed with HTTP status code 429.". A message the server phrased is still shown verbatim, and a localizer without these keys keeps the English text. Found in ADC local test run 6.
+- `FeatureGateCommandDecorator` and `FeatureGateQueryDecorator` fail with the generic "The requested feature is not currently available." that `DisabledFeatureHandler` already uses, instead of a message naming the internal flag. The `Feature.Disabled` code is unchanged. Found in ADC local test run 6.
+- MAUI: the first render already uses the stored Day/Dark mode. The MAUI `IInitialThemeModeSource` reads the preference `MauiThemeStore` keeps, so a dark-mode app no longer paints light and flips to dark once JS interop runs. Found in ADC local test run 6.
+- MAUI: `MauiLocalNotificationService` sets the Android `AllowedDelay` to 15 minutes, so an inexact alarm that fires late still posts its reminder; the plugin default of 1 minute silently dropped it. Found in ADC local test run 6.
+- The app-bar buttons, icon buttons and menu activators in `MainLayout`, and the brand link in `NavMenu`, show a visible 2px `:focus-visible` outline on the dark chrome in both themes. Found in ADC local test run 6.
+- The reconnect modal's buttons keep their sentence case (`text-transform: none`) instead of MudBlazor's uppercase. Found in ADC local test run 6.
+
 ## [1.228.0] - 2026-10-05
 
 ### Added
