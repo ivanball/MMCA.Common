@@ -1,11 +1,1 @@
 ﻿#nullable enable
-static MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap.SetBrowserCultureAsync(Microsoft.JSInterop.IJSRuntime! jsRuntime, bool allowPseudoLocale) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Common.Interfaces.IUIModule.ContentHeaderComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.DeleteConfirmationDialog() -> void
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityName.get -> string?
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityName.set -> void
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityType.get -> string!
-MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityType.set -> void
-~override MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.PagedIncludeFKs.get -> bool

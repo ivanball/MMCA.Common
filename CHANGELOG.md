@@ -4,6 +4,26 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.228.0] - 2026-10-05
+
+### Added
+
+- `IUIModule.ContentHeaderComponentTypes` (default empty): components a UI module renders inside `#main-content`, before the page body and after `OfflineBanner`. `LayoutComponentTypes` still render after the body (drawers, listeners), which placed a top-of-page banner at the bottom of the page.
+- `EntityServiceBase.PagedIncludeFKs` (protected virtual, default `false`): a derived service whose list shows a foreign-key name overrides it to send `includeFKs=True` on `GetPagedAsync`, instead of copying the paged URL builder. The default paged URL is unchanged.
+- `MmcaCultureBootstrap.SetBrowserCultureAsync(IJSRuntime, bool allowPseudoLocale)`: a WASM client passes `builder.HostEnvironment.IsDevelopment()` so a `qps-Ploc` culture cookie survives hydration in Development. The one-argument overload still falls back to the default culture.
+- `DeleteConfirmationDialog`, the dialog `DeleteConfirmation` now opens: initial focus on Cancel, Escape closes it as Cancel. `ShowAsync` still returns `true` or `null`.
+
+### Fixed
+
+- Hidden notification pages answer 404. With `HideNotificationPagesWhenUnregistered` on, signed-out `/notifications` and `/notifications/inbox` were challenged (302 to sign-in) before the router's gate ran; the pages now use an internal `mmca:notification-pages` policy registered by `AddUIShared` and the gate calls `NavigationManager.NotFound()`. With the option off nothing changes.
+- The credential `Cache-Control` value (`no-store, no-cache, must-revalidate, max-age=0`) and `Pragma` are re-applied at response start, so a downstream component can no longer drop `must-revalidate`.
+- An anonymous request with an unsupported `api-version` answers 400 `UnsupportedApiVersion` instead of 401: the deny-by-default fallback policy lets API versioning's rejection endpoints through. Output-cache hits keep the `api-supported-versions` header.
+- `BadHttpRequestException` answers its own status (413 for an oversize body, 400 otherwise) as ProblemDetails and is logged at Warning; it surfaced as 500 with an Error log.
+- CSV exports write a `Money` cell as `49.99 USD`, a `Currency` cell as its code, and any other record value as compact JSON, never compiler-generated record text.
+- MAUI: `NativeThemeSync` stores the resolved theme in device Preferences and `MainPageBase()` applies it to `Application.UserAppTheme` before the WebView paints, so a cold launch in dark mode no longer flashes the light theme. Heads must derive their main page from `MainPageBase`.
+- `DeleteConfirmation` no longer opens with focus on the destructive button and now closes on Escape (MudMessageBox 9.11 always focuses its Yes button).
+- `AssertNoAccessibilityViolationsAsync` waits for running CSS transitions before scanning (a filled button fades in over 250 ms and axe sampling mid-fade reported a false color-contrast failure), and each violating node now carries axe's check message (ratio and colors).
+
 ## [1.227.0] - 2026-10-04
 
 ### Added
