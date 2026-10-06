@@ -1,5 +1,6 @@
 #nullable enable
 MMCA.Common.UI.Common.BreakpointConstants
+MMCA.Common.UI.Common.ComponentLifetimeExtensions
 MMCA.Common.UI.Common.Interfaces.IAppDialogService
 MMCA.Common.UI.Common.Interfaces.IAppDialogService.ConfirmAsync(string! title, string! message, string! confirmText, string! cancelText) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>
@@ -120,6 +121,19 @@ MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.set -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.ChangePasswordCard() -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose() -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.MaxLength.get -> int?
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.MaxLength.set -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.MinLength.get -> int
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.MinLength.set -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.set -> void
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.get -> Microsoft.AspNetCore.Components.EventCallback<MMCA.Common.Shared.Abstractions.Result!>
+MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.set -> void
 MMCA.Common.UI.Components.Auth.RedirectToLogin
 MMCA.Common.UI.Components.Auth.RedirectToLogin.RedirectToLogin() -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate
@@ -1366,6 +1380,7 @@ override MMCA.Common.UI.Theme.MmcaThemeProviders.OnAfterRenderAsync(bool firstRe
 override MMCA.Common.UI.Theme.MmcaThemeProviders.OnInitialized() -> void
 override MMCA.Common.UI.Theme.ThemeToggle.OnInitialized() -> void
 static MMCA.Common.UI.Common.BreakpointConstants.IsMobileBreakpoint(MudBlazor.Breakpoint breakpoint) -> bool
+static MMCA.Common.UI.Common.ComponentLifetimeExtensions.LifetimeToken(this System.Threading.CancellationTokenSource? source) -> System.Threading.CancellationToken
 static MMCA.Common.UI.Common.NavItem.operator !=(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NavItem.operator ==(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
@@ -1460,6 +1475,7 @@ virtual MMCA.Common.UI.Common.NavItem.<Clone>$() -> MMCA.Common.UI.Common.NavIte
 virtual MMCA.Common.UI.Common.NavItem.EqualityContract.get -> System.Type!
 virtual MMCA.Common.UI.Common.NavItem.Equals(MMCA.Common.UI.Common.NavItem? other) -> bool
 virtual MMCA.Common.UI.Common.NavItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Notifications.NotificationBell.Dispose(bool disposing) -> void
@@ -1488,6 +1504,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!>!
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.PagedIncludeFKs.get -> bool
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+~override MMCA.Common.UI.Components.Auth.ChangePasswordCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.RedirectToLogin.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.BiometricGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

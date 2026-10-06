@@ -1,18 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Common.ComponentLifetimeExtensions
-static MMCA.Common.UI.Common.ComponentLifetimeExtensions.LifetimeToken(this System.Threading.CancellationTokenSource? source) -> System.Threading.CancellationToken
-MMCA.Common.UI.Components.Auth.ChangePasswordCard
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.ChangePasswordCard() -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.get -> Microsoft.AspNetCore.Components.RenderFragment?
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.set -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.MaxLength.get -> int?
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.MaxLength.set -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose() -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.MinLength.get -> int
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.MinLength.set -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.get -> Microsoft.AspNetCore.Components.EventCallback
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.set -> void
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.get -> Microsoft.AspNetCore.Components.EventCallback<MMCA.Common.Shared.Abstractions.Result!>
-MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.set -> void
-virtual MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose(bool disposing) -> void
-~override MMCA.Common.UI.Components.Auth.ChangePasswordCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

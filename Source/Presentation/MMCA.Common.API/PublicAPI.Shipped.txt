@@ -87,6 +87,10 @@ MMCA.Common.API.Controllers.AuthControllerBase.CurrentUserService.get -> MMCA.Co
 MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>
 MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.CrudEntityControllerBase(MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>! queryService, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! createHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! updateHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity!, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result!>! deleteHandler, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Controllers.EntityControllerBase<TEntity!, TEntityDTO, TIdentifierType>!>! logger) -> void
 MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.ConfirmHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TConfirmCommand, MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.EmailConfirmationControllerBase(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TSendCommand, MMCA.Common.Shared.Abstractions.Result!>! sendHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TConfirmCommand, MMCA.Common.Shared.Abstractions.Result!>! confirmHandler) -> void
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.SendHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TSendCommand, MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.EntityControllerBase(MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>! queryService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Controllers.EntityControllerBase<TEntity!, TEntityDTO, TIdentifierType>!>! logger) -> void
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.EntityName.get -> string!
@@ -354,6 +358,7 @@ MMCA.Common.API.SessionCookies.SessionTokenResult.Deconstruct(out string! Access
 MMCA.Common.API.SessionCookies.SessionTokenResult.Equals(MMCA.Common.API.SessionCookies.SessionTokenResult other) -> bool
 MMCA.Common.API.SessionCookies.SessionTokenResult.SessionTokenResult() -> void
 MMCA.Common.API.SessionCookies.SessionTokenResult.SessionTokenResult(string! AccessToken, System.DateTime AccessTokenExpiry) -> void
+MMCA.Common.API.Startup.Auth.JwtAudience
 MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions
 MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!)
 MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!).GetRequiredJwtAuthority() -> string!
@@ -438,6 +443,8 @@ MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline() -> Microsoft.AspNetCore.Builder.WebApplication!
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonRequestLocalization() -> Microsoft.AspNetCore.Builder.WebApplication!
+abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateConfirmCommand(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request) -> TConfirmCommand
+abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateSendCommand(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest request) -> TSendCommand
 abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateForgotPasswordCommand(MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest request) -> TForgotPasswordCommand
 abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateResetPasswordCommand(MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest request) -> TResetPasswordCommand
 abstract MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.CreateQuery(int userId, int currentUserId, string? currentUserRole) -> TQuery
@@ -458,6 +465,7 @@ const MMCA.Common.API.ModelBinders.QueryFilterModelBinder.MaxFilters = 50 -> int
 const MMCA.Common.API.SessionCookies.SessionCookieAuthenticationHandler.SchemeName = "SessionCookie" -> string!
 const MMCA.Common.API.SessionCookies.SessionCookieEndpoints.AccessTokenCookieName = "mmca_auth_access" -> string!
 const MMCA.Common.API.SessionCookies.SessionCookieEndpoints.RefreshTokenCookieName = "mmca_auth_refresh" -> string!
+const MMCA.Common.API.Startup.Auth.JwtAudience.ConfigKey = "Jwt:Audience" -> string!
 const MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.JwtAuthorityConfigKey = "Authentication:JwtBearer:Authority" -> string!
 const MMCA.Common.API.Startup.Endpoints.AppAssociationEndpointExtensions.AppleAppSiteAssociationPath = "/.well-known/apple-app-site-association" -> string!
 const MMCA.Common.API.Startup.Endpoints.AppAssociationEndpointExtensions.AssetLinksPath = "/.well-known/assetlinks.json" -> string!
@@ -553,6 +561,7 @@ static MMCA.Common.API.SessionCookies.SessionTokenResponse.operator !=(MMCA.Comm
 static MMCA.Common.API.SessionCookies.SessionTokenResponse.operator ==(MMCA.Common.API.SessionCookies.SessionTokenResponse? left, MMCA.Common.API.SessionCookies.SessionTokenResponse? right) -> bool
 static MMCA.Common.API.SessionCookies.SessionTokenResult.operator !=(MMCA.Common.API.SessionCookies.SessionTokenResult left, MMCA.Common.API.SessionCookies.SessionTokenResult right) -> bool
 static MMCA.Common.API.SessionCookies.SessionTokenResult.operator ==(MMCA.Common.API.SessionCookies.SessionTokenResult left, MMCA.Common.API.SessionCookies.SessionTokenResult right) -> bool
+static MMCA.Common.API.Startup.Auth.JwtAudience.RequireConfigured(string? configuredValue) -> string!
 static MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.GetRequiredJwtAuthority(this Microsoft.Extensions.Configuration.IConfiguration! configuration) -> string!
 static MMCA.Common.API.Startup.CommonForwardedHeaders.Create(Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders? headers = null) -> Microsoft.AspNetCore.Builder.ForwardedHeadersOptions!
 static MMCA.Common.API.Startup.CommonForwardedHeaders.DefaultHeaders.get -> Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders
@@ -610,6 +619,8 @@ virtual MMCA.Common.API.Controllers.AuthControllerBase.RegisterAsync(MMCA.Common
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateAsync(TIdentifierType id, TUpdateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
+virtual MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.ConfirmEmailAsync(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.SendEmailConfirmationAsync(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.AllowUnscopedExport.get -> bool
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.BuildExportFileName(System.DateTimeOffset timestamp) -> string!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportAsync(bool includeFKs = false, string? sortColumn = null, string? sortDirection = null, string? fields = null, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
