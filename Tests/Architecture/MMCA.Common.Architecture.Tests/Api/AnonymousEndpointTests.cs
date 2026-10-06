@@ -36,6 +36,11 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // arity suffix.
         "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ForgotPasswordAsync",
         "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ResetPasswordAsync",
+        // Email confirmation (ADR-116): the link is followed from a mail client with no session, and
+        // an unconfirmed account may be unable to sign in at all when confirmation is required. Both
+        // are throttled by the auth-ip policy, and send always answers 202 on a well-formed request.
+        "MMCA.Common.API.Controllers.EmailConfirmationControllerBase`2.SendEmailConfirmationAsync",
+        "MMCA.Common.API.Controllers.EmailConfirmationControllerBase`2.ConfirmEmailAsync",
         // The three OAuth challenge endpoints and the provider-callback completion run before any
         // local token exists, so they declare their anonymity rather than relying on the absence of
         // an attribute: the framework's fallback authorization policy would otherwise break login.
