@@ -22,6 +22,17 @@
     <EmbeddedResource Include="Fixtures\observability-OPERATIONS.md">
       <LogicalName>fixtures.observability-OPERATIONS.md</LogicalName>
     </EmbeddedResource>
+    <!-- Fixtures for the cost-tag and broker-backpressure bases (rubric sections 34 and 12): read
+         across the assembly boundary exactly as a consumer's subclass reads its own resources. -->
+    <EmbeddedResource Include="Fixtures\costtag-main.bicep">
+      <LogicalName>fixtures.costtag-main.bicep</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\costtag-untagged.bicep">
+      <LogicalName>fixtures.costtag-untagged.bicep</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\backpressure-appsettings.json">
+      <LogicalName>services.Fixture.appsettings.json</LogicalName>
+    </EmbeddedResource>
     <!-- The deployment sample's own IaC pair (rubric section 13): SampleDeploymentObservabilityTests
          runs the shipped pairing gate over samples/deployment, so the sample consumers copy cannot
          gain, lose or re-tier an alert without its runbook section moving in the same change. -->

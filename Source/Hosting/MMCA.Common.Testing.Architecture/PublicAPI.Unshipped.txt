@@ -2,3 +2,26 @@
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ApplicationServices_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Controllers_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Handlers_ConstructorDependencyCeilingIsTight() -> void
+MMCA.Common.Testing.Architecture.CostTagConventionTestsBase
+MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.CostTagConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.EveryContainerApp_CarriesAServiceTag() -> void
+MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ServiceDatabases_CarryTheServiceTagOfTheOwningApp() -> void
+abstract MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.DatabaseNamePrefix.get -> string!
+abstract MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.MinimumContainerApps.get -> int
+virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.BicepResource.get -> string!
+virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
+MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase
+MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.MessageBusBackpressureTestsBase() -> void
+MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.EveryServiceAppSettings_BoundsBrokerBackpressure() -> void
+abstract MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.Services.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.AppSettingsResource(string! service) -> string!
+virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
+const MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.ConcurrentMessageLimitKey = "ConcurrentMessageLimit" -> string!
+const MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.MessageBusSectionName = "MessageBus" -> string!
+const MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.PrefetchCountKey = "PrefetchCount" -> string!
+static MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.Check(string! service, string! appSettingsJson) -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_ReadRequirednessOffTheirModel() -> void
+MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileForm_KeepsErrorSummaryAndPasswordValidation() -> void
+const MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ChangePasswordCardTag = "<ChangePasswordCard" -> string!
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingPasswordFormMarkers(string! markup) -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileFormPath.get -> string?
