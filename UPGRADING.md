@@ -92,6 +92,16 @@ items below either need one mechanical step in a consumer or change what a consu
 14. **Path-prefix settings fail fast (M193).** A `GatewayRateLimiting:BypassPathPrefixes` or
     `SecurityHeaders:CredentialPathPrefixes` entry without a leading `/` now fails startup with a
     validation error naming the entry. Add the slash. No first-party consumer sets either list.
+15. **Explicit authorization decisions are on by default (L143).**
+    `AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision` now defaults to `true`. A
+    subclass that never overrode it gets `Endpoints_DeclareAnAuthorizationDecision` failures naming
+    each undecorated controller or routable page: give each an authorization attribute, list it in
+    `EndpointsWithoutAuthorizationAttribute`, or override the property to `false` to opt out
+    knowingly. The first-party consumers already opt in, so they change nothing.
+16. **Module isolation covers Shared and UI as sources (M194).** A module's Shared or UI project
+    that references another module's Domain, Application, Infrastructure or Api now fails
+    `ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers`. Reach the other module through
+    its Shared contracts (or its UI for composition) instead.
 
 ## [1.231.0] - 2026-10-06
 

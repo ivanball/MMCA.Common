@@ -49,3 +49,13 @@ internal sealed class TodayReadingFixture
 {
     public DateOnly Stamp() => DateOnly.FromDateTime(DateTime.Today);
 }
+
+/// <summary>Reads the clock inside an ASYNC lambda: a state machine nested in the lambda's display class.</summary>
+internal sealed class AsyncLambdaClockReadingFixture
+{
+    public Func<Task<DateTime>> Clock() => async () =>
+    {
+        await Task.Yield();
+        return DateTime.UtcNow;
+    };
+}

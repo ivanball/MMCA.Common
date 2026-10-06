@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// L141 fixture: shapes the line-based parser mis-scoped. An rpc with an option body (whose closing
+// brace used to pop the SERVICE), one-line message and enum bodies, and a multi-line message.
+package mmca.shapes;
+
+option csharp_namespace = "MMCA.Shapes;Contracts";
+
+service ShapeService {
+  rpc First (Req) returns (Reply) {
+    option deprecated = true;
+  }
+  rpc Second (Req) returns (Reply);
+}
+
+message Req { string id = 1; }
+
+enum Kind { KIND_UNSPECIFIED = 0; KIND_ROUND = 1; }
+
+message Reply {
+  Kind kind = 1;
+}

@@ -46,10 +46,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - `GatewayRateLimiting:BypassPathPrefixes` and `SecurityHeaders:CredentialPathPrefixes` entries must start with `/`: a bad entry fails registration or options validation at startup instead of throwing on every request (`AddCommonSecurityHeaders` now validates on start). A whitespace-only credential prefix is skipped like the gateway's. (M193)
 - The gateway cuts a caller-supplied `X-Correlation-ID` to 64 characters on the forwarded request and the echo, matching what the service stores. (L136)
 - `MauiTokenStorageService` shares its refresh single-flight across DI scopes (process-wide), so the delegating handler's scope and a component scope can no longer rotate the same refresh token twice. (L137)
-
-### Changed (UI text)
-
-- The user-administration search placeholder says what the search does: "Search by exact email address..." (and the matching Spanish text). The email filter matches a complete address only. (L154, decision D8)
+- `ModuleIsolationTestsBase.ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers` also covers a module's Shared and UI reaching another module's Domain, Application, Infrastructure or Api (as sources only; composing another module's UI or consuming its Shared contracts stays legal). No first-party consumer has such a reference. (M194)
+- `RoleAdminPage.SetPermissionAsync` waits for a previous save's toast to clear before saving, so the wait can no longer be satisfied by the earlier toast; the toast is exposed as `RoleAdminPage.SavedToast`. (L138)
+- `BlazorNavigateAsync` passes the path to the page as an argument instead of interpolating it into script, and waits only for its path portion, so a query string, fragment or quote no longer times the wait out. (L139)
+- `SqlServerIntegrationTestFixtureBase` drops its throwaway database when the host fails after the migration created it (the flag is set before the host builds; the drop is `IF DB_ID` guarded). (L140)
+- The proto contract parser reads by statement: an rpc with an option body no longer pops its service (every later rpc used to go unpinned), and one-line message and enum bodies pin their members. Snapshots of protos without those shapes are unchanged. (L141)
+- The clock-read rule attributes a read inside an async lambda or async local function to the member that wrote it, so the member's allow-list entry covers it. (L142)
 
 ### Added
 
@@ -59,6 +61,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Changed
 
 - `OwnsMoney` maps the amount as `decimal(18,2)` (`HasPrecision(18, 2)`) on every engine, the SQL Server default made explicit. SQL Server data and DDL are unchanged; the EF model snapshot of a consumer that maps `OwnsMoney` moves, so it needs one snapshot-only migration per affected context (see UPGRADING.md). (L125)
+- **Behavior change:** `AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision` defaults to `true`, and the off branch no longer asserts the vacuous "the two scans cannot overlap" invariant. A subclass that never set it now gets a failure naming every controller or routable page with no authorization decision; opt out explicitly with `false`. MMCA.ADC, MMCA.Store, MMCA.Helpdesk and MMCA.Common already set it to `true`. (L143, decision D7)
+- The user-administration search placeholder says what the search does: "Search by exact email address..." (and the matching Spanish text). The email filter matches a complete address only. (L154, decision D8)
 
 ## [1.231.0] - 2026-10-06
 

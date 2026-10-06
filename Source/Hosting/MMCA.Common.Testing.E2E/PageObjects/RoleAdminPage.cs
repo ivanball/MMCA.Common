@@ -30,6 +30,12 @@ public sealed class RoleAdminPage
     /// <summary>The editor's save button.</summary>
     public ILocator SaveButton => _page.GetByTestId("save-permissions");
 
+    /// <summary>
+    /// The success snackbar a stored-permissions save raises. Exposed so a test can await or dismiss
+    /// it explicitly; it lives in the root layout and survives a client-side navigation.
+    /// </summary>
+    public ILocator SavedToast => _page.GetByText("Stored permissions saved.");
+
     public async Task GotoListAsync() =>
         await _page.GotoProtectedAsync("/roles").ConfigureAwait(false);
 
@@ -56,6 +62,12 @@ public sealed class RoleAdminPage
     /// <param name="granted">Whether the role should end up holding it.</param>
     public async Task SetPermissionAsync(string permission, bool granted)
     {
+        // A previous save's toast is still visible after GotoEditorAsync (the snackbar host is in the
+        // root layout), so it would satisfy the wait below before THIS save's PUT has landed, and two
+        // visible toasts make the text locator a strict-mode violation. Wait for it to clear first.
+        await Assertions.Expect(SavedToast)
+            .ToHaveCountAsync(0, new() { Timeout = 15_000 }).ConfigureAwait(false);
+
         // Force: MudBlazor renders the real input at zero opacity underneath its icon button, so
         // Playwright's actionability check would time out on a control the user can click perfectly
         // well. SetCheckedAsync still drives the input, which is what the component binds to.
@@ -66,7 +78,7 @@ public sealed class RoleAdminPage
         // Blazor circuit, so the click alone proves nothing: navigating away before the PUT lands
         // tears the circuit down, cancels the request, and the Identity service logs the write as
         // "Operation cancelled by user" (a consumer deploy run once lost the write on all three tries).
-        await Assertions.Expect(_page.GetByText("Stored permissions saved."))
+        await Assertions.Expect(SavedToast)
             .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
     }
 }

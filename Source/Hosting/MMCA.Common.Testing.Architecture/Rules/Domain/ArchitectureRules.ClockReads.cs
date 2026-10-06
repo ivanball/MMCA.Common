@@ -147,15 +147,26 @@ public static partial class ArchitectureRules
         return BracketedName(method.Name) is { Length: > 0 } fromMethod ? fromMethod : method.Name;
     }
 
-    /// <summary>The text between a leading <c>&lt;</c> and its <c>&gt;</c>, or null when the name has none.</summary>
+    /// <summary>
+    /// The member name inside a compiler-generated name, skipping EVERY leading <c>&lt;</c>: an async
+    /// lambda's state machine is <c>&lt;&lt;Clock&gt;b__0_0&gt;d</c> and an async local function's
+    /// <c>&lt;&lt;Clock&gt;g__Local|0_0&gt;d</c>, both of which belong to <c>Clock</c>. Null when the
+    /// name has no leading bracket.
+    /// </summary>
     private static string? BracketedName(string name)
     {
-        if (!name.StartsWith('<'))
+        var start = 0;
+        while (start < name.Length && name[start] == '<')
+        {
+            start++;
+        }
+
+        if (start == 0)
         {
             return null;
         }
 
-        var close = name.IndexOf('>', StringComparison.Ordinal);
-        return close > 1 ? name[1..close] : null;
+        var close = name.IndexOf('>', start);
+        return close > start ? name[start..close] : null;
     }
 }

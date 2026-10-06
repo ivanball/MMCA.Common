@@ -47,6 +47,20 @@ public sealed class ClockReadTests : ClockReadTestsBase
             "an async body lives in a state machine and must still be attributed to the member that wrote it");
     }
 
+    // L142: an async lambda compiles to <<Clock>b__0_0>d, nested in the display class; the member
+    // name must be read past BOTH leading brackets, or the read is reported as ".<Clock" and the
+    // member's allowlist entry does not exempt it.
+    [Fact]
+    public void ReadsInsideAnAsyncLambda_AreAttributedToTheSourceMemberAndExemptedWithIt()
+    {
+        Report([]).Should().Contain(
+            $"{nameof(AsyncLambdaClockReadingFixture)}.Clock reads DateTime.UtcNow",
+            "an async lambda is still the member that wrote it");
+        Report([$"{FixtureNamespace}.{nameof(AsyncLambdaClockReadingFixture)}.Clock"]).Should().NotContain(
+            nameof(AsyncLambdaClockReadingFixture),
+            "the member's allowlist entry covers a clock read inside its async lambda, as the rule's doc promises");
+    }
+
     [Fact]
     public void InjectedTimeProvider_IsNotFlagged() =>
         Report([]).Should().NotContain(

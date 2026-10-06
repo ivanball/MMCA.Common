@@ -52,10 +52,11 @@ public abstract class AnonymousEndpointTestsBase
     protected virtual int MinimumScannedTypes => 1;
 
     /// <summary>
-    /// Whether <see cref="Endpoints_DeclareAnAuthorizationDecision"/> runs. Off by default so a repo
-    /// adopts the stricter gate deliberately; turn it on once every controller and routable page in
-    /// <see cref="TargetAssemblies"/> either declares its own decision or appears in
-    /// <see cref="EndpointsWithoutAuthorizationAttribute"/>.
+    /// Whether <see cref="Endpoints_DeclareAnAuthorizationDecision"/> enforces the gate. On by
+    /// default: every controller and routable page in <see cref="TargetAssemblies"/> must either
+    /// declare its own decision or appear in <see cref="EndpointsWithoutAuthorizationAttribute"/>. A
+    /// repo that is not ready yet opts out explicitly by overriding this to <see langword="false"/>,
+    /// and the fact then passes without checking anything.
     /// </summary>
     /// <remarks>
     /// SECURITY: the allow-list check above can only see endpoints that carry
@@ -65,7 +66,7 @@ public abstract class AnonymousEndpointTestsBase
     /// routable Blazor component is gated by <c>AuthorizeRouteView</c>, which reads attributes and
     /// ignores the fallback policy entirely, so for pages this test IS the control.
     /// </remarks>
-    protected virtual bool RequireExplicitAuthorizationDecision => false;
+    protected virtual bool RequireExplicitAuthorizationDecision => true;
 
     /// <summary>
     /// Endpoints deliberately left without an authorization attribute, identified the same way as
@@ -119,12 +120,7 @@ public abstract class AnonymousEndpointTestsBase
     {
         if (!RequireExplicitAuthorizationDecision)
         {
-            // Repo has not opted into the stricter gate yet. Assert the invariant the two scans
-            // share instead, so this is a real check rather than an empty one: an endpoint cannot
-            // be both explicitly anonymous and undecorated.
-            UndecoratedEndpoints().Should().NotIntersectWith(
-                AnonymousEndpoints(),
-                "an endpoint carrying [AllowAnonymous] is a declared decision, not an omission");
+            // The repo opted out explicitly (see RequireExplicitAuthorizationDecision): nothing is checked.
             return;
         }
 
