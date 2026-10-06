@@ -71,6 +71,52 @@ public sealed class ConstructorDependencyCountTestsBaseTests
             "a map whose Application assemblies hold no handler would pass while checking nothing");
     }
 
+    [Fact]
+    public void LooseControllerCeiling_IsFlagged_NamingPopulationCeilingAndObservedMax()
+    {
+        var assert = new LooseCeilingTests().Controllers_ConstructorDependencyCeilingIsTight;
+
+        var message = assert.Should().Throw<Exception>().Which.Message;
+
+        message.Should().Contain("API controllers", "the failure must name the population");
+        message.Should().Contain("MaxControllerConstructorDependencies is 4",
+            "the failure must name the ceiling property and its declared value");
+        message.Should().Contain("takes 3", "the failure must name the observed maximum");
+        message.Should().Contain(typeof(FatFixtureController).FullName!,
+            "the failure must name the class sitting at the observed maximum");
+        message.Should().Contain("from 4 to 3", "the failure must spell out the fix");
+    }
+
+    [Fact]
+    public void LooseHandlerCeiling_IsFlagged()
+    {
+        var assert = new LooseCeilingTests().Handlers_ConstructorDependencyCeilingIsTight;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain("CQRS handlers", "a loose handler ceiling is a budget, not a ratchet");
+    }
+
+    [Fact]
+    public void CeilingsAtTheObservedMaximum_AreTight()
+    {
+        var conformant = new ConformantTests();
+
+        var controllers = conformant.Controllers_ConstructorDependencyCeilingIsTight;
+        var handlers = conformant.Handlers_ConstructorDependencyCeilingIsTight;
+
+        controllers.Should().NotThrow("the controller ceiling sits exactly on the widest controller");
+        handlers.Should().NotThrow("the handler ceiling sits exactly on the widest handler");
+    }
+
+    [Fact]
+    public void TightnessCheck_FailsVacuousScans()
+    {
+        var assert = new EmptyScanTests().Controllers_ConstructorDependencyCeilingIsTight;
+
+        assert.Should().Throw<Exception>(
+            "a population with nothing to measure cannot prove its ceiling is tight");
+    }
+
     /// <summary>A map pointing both scanned layers at THIS assembly, where the fixtures compile.</summary>
     private sealed class FixtureMap : ArchitectureMapBase
     {
@@ -116,6 +162,17 @@ public sealed class ConstructorDependencyCountTestsBaseTests
         protected override int MaxControllerConstructorDependencies => 3;
 
         protected override int MaxHandlerConstructorDependencies => 3;
+    }
+
+    private sealed class LooseCeilingTests : ConstructorDependencyCountTestsBase
+    {
+        protected override IArchitectureMap Map { get; } = new FixtureMap();
+
+        protected override int MaxConstructorDependencies => int.MaxValue;
+
+        protected override int MaxControllerConstructorDependencies => 4;
+
+        protected override int MaxHandlerConstructorDependencies => 4;
     }
 
     private sealed class EmptyScanTests : ConstructorDependencyCountTestsBase

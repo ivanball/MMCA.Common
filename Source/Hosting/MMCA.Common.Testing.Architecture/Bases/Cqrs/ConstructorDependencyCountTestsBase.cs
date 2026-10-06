@@ -13,7 +13,10 @@ namespace MMCA.Common.Testing.Architecture;
 /// <para>
 /// Each ceiling is a RATCHET, not a budget: a consumer sets it at its current high-water mark so the
 /// next class cannot silently grow past it, raises it only as a recorded deliberate decision, and
-/// lowers it the moment remediation makes a lower number true.
+/// lowers it the moment remediation makes a lower number true. Both directions are enforced: the
+/// <c>*_DoNotExceedConstructorDependencyCeiling</c> facts fail above a ceiling, and the
+/// <c>*_ConstructorDependencyCeilingIsTight</c> facts fail when the widest class of a population sits
+/// below its ceiling, naming the number to lower it to.
 /// </para>
 /// <para>
 /// The three populations and the constructors measured on each type are virtual extension points
@@ -156,6 +159,81 @@ public abstract class ConstructorDependencyCountTestsBase
     }
 
     /// <summary>
+    /// The ratchet's other half: the Application-service ceiling must equal the widest scanned
+    /// service. A ceiling left above the observed maximum is a budget, not a ratchet, because the next
+    /// class can grow into the slack without anything failing; the moment remediation makes a lower
+    /// number true, this fact fails and names the number to lower it to.
+    /// </summary>
+    [Fact]
+    public void ApplicationServices_ConstructorDependencyCeilingIsTight() =>
+        AssertCeilingIsTight(
+            "Application services",
+            nameof(MaxConstructorDependencies),
+            MaxConstructorDependencies,
+            ScannedServices);
+
+    /// <summary>
+    /// The controller ceiling must equal the widest scanned controller, so a ceiling cannot be left
+    /// loose after a controller is slimmed down (see
+    /// <see cref="ApplicationServices_ConstructorDependencyCeilingIsTight"/>).
+    /// </summary>
+    [Fact]
+    public void Controllers_ConstructorDependencyCeilingIsTight() =>
+        AssertCeilingIsTight(
+            "API controllers",
+            nameof(MaxControllerConstructorDependencies),
+            MaxControllerConstructorDependencies,
+            ScannedControllers);
+
+    /// <summary>
+    /// The handler ceiling must equal the widest scanned command or query handler, so a ceiling cannot
+    /// be left loose after a handler is slimmed down (see
+    /// <see cref="ApplicationServices_ConstructorDependencyCeilingIsTight"/>).
+    /// </summary>
+    [Fact]
+    public void Handlers_ConstructorDependencyCeilingIsTight() =>
+        AssertCeilingIsTight(
+            "CQRS handlers",
+            nameof(MaxHandlerConstructorDependencies),
+            MaxHandlerConstructorDependencies,
+            ScannedHandlers);
+
+    /// <summary>
+    /// Fails when the widest measured class of a population sits below the population's declared
+    /// ceiling. The message names the population, the ceiling property, its value, the observed
+    /// maximum and the classes at that maximum, so the fix (lower the ceiling to the observed number)
+    /// is in the failure itself.
+    /// </summary>
+    private void AssertCeilingIsTight(string population, string ceilingName, int ceiling, IEnumerable<Type> types)
+    {
+        var measured = types
+            .Select(t => (Type: t, Count: WidestConstructor(t)))
+            .ToList();
+
+        measured.Should().NotBeEmpty(
+            $"the {population} tightness check must measure at least one class (otherwise it passes vacuously)");
+
+        var observedMax = measured.Max(static x => x.Count);
+        var widest = measured
+            .Where(x => x.Count == observedMax)
+            .Select(static x => x.Type.FullName)
+            .Order(StringComparer.Ordinal);
+
+        observedMax.Should().BeGreaterThanOrEqualTo(
+            ceiling,
+            $"the {population} ceiling is a ratchet, not a budget: {ceilingName} is {ceiling} but the widest "
+            + $"{population} constructor takes {observedMax} ({string.Join(", ", widest)}). Lower "
+            + $"{ceilingName} from {ceiling} to {observedMax} so the next class cannot grow into the slack");
+    }
+
+    /// <summary>The parameter count of the widest measured constructor of a type (0 when none).</summary>
+    private int WidestConstructor(Type type) =>
+        MeasuredConstructors(type)
+            .Select(static c => c.GetParameters().Length)
+            .DefaultIfEmpty(0)
+            .Max();
+
+    /// <summary>
     /// The concrete, non-nested, non-compiler-generated classes of the given assemblies that match the
     /// population predicate.
     /// </summary>
@@ -171,10 +249,7 @@ public abstract class ConstructorDependencyCountTestsBase
             .Select(t => new
             {
                 Type = t,
-                MaxParameters = MeasuredConstructors(t)
-                    .Select(static c => c.GetParameters().Length)
-                    .DefaultIfEmpty(0)
-                    .Max(),
+                MaxParameters = WidestConstructor(t),
             })
             .Where(x => x.MaxParameters > ceiling)
             .Select(static x => $"{x.Type.FullName} ({x.MaxParameters} ctor dependencies)")];
