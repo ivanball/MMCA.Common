@@ -108,7 +108,7 @@ public partial class NotificationInbox : IDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Sent times render on the viewer's clock; the zone is only readable once JS is available.
-        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.LifetimeToken()))
         {
             StateHasChanged();
         }
@@ -216,7 +216,7 @@ public partial class NotificationInbox : IDisposable
         IsLoading = true;
         try
         {
-            var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.Token);
+            var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.LifetimeToken());
             if (result.TryGetValue(out var page))
             {
                 _notifications = [.. page.Items];
@@ -268,7 +268,7 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.Token);
+            var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.LifetimeToken());
             if (markRead.IsFailure)
             {
                 markRead.NotifyOnFailure(Toast, L);
@@ -283,7 +283,7 @@ public partial class NotificationInbox : IDisposable
             }
 
             // Refresh the unread count; a failed count means "unknown", so the badge keeps its value.
-            var count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            var count = await InboxService.GetUnreadCountAsync(_cts.LifetimeToken());
             if (count.TryGetValue(out var unread))
             {
                 NotificationState.SetUnreadCount(unread);
@@ -304,7 +304,7 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            var markAllRead = await InboxService.MarkAllReadAsync(_cts.Token);
+            var markAllRead = await InboxService.MarkAllReadAsync(_cts.LifetimeToken());
             if (markAllRead.IsFailure)
             {
                 markAllRead.NotifyOnFailure(Toast, L);

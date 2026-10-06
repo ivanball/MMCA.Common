@@ -92,7 +92,7 @@ public partial class NotificationSend : IDisposable
         // injected localizer (ADR-027).
         try
         {
-            var scopeName = await ScopeProvider.GetCurrentScopeDisplayNameAsync(_cts.Token);
+            var scopeName = await ScopeProvider.GetCurrentScopeDisplayNameAsync(_cts.LifetimeToken());
             if (!string.IsNullOrWhiteSpace(scopeName))
             {
                 _scopeCaption = L["Notif.Send.Targeting", scopeName].Value;
@@ -126,7 +126,7 @@ public partial class NotificationSend : IDisposable
         try
         {
             var request = new SendPushNotificationRequest(_model.Title, _model.Body);
-            var result = await NotificationService.SendAsync(request, _cts.Token);
+            var result = await NotificationService.SendAsync(request, _cts.LifetimeToken());
             _sendResult = result;
 
             if (result.TryGetValue(out PushNotificationDTO? sent))

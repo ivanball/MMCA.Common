@@ -41,3 +41,11 @@ virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.AllowedInlineStyle
 virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.InlineStyleViolations(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.RazorMarkupCarriesNoInlineStyles(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots, int minimumRazorFiles, System.Collections.Generic.IReadOnlyCollection<string!>? allowedViolations = null) -> void
+MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase
+MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.LifetimeTokenConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.Components_ReadTheirTokenOnlyThroughLifetimeToken() -> void
+abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.MinimumCodeBehindFiles.get -> int
+abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanRoot.get -> string!
+virtual MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanAllCodeFiles.get -> bool
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ComponentsReadTheirTokenThroughLifetimeToken(string! scanRoot, int minimumCodeBehindFiles, bool includeAllCodeFiles = false) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.DirectTokenReads(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Permissions;
+using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services.Administration;
 
@@ -162,7 +163,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
 
         try
         {
-            var role = await Roles.GetAsync(Role, _cts.Token);
+            var role = await Roles.GetAsync(Role, _cts.LifetimeToken());
             if (role.IsFailure)
             {
                 _loadResult = role;
@@ -170,7 +171,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
                 return;
             }
 
-            var catalog = await Roles.GetCatalogAsync(_cts.Token);
+            var catalog = await Roles.GetCatalogAsync(_cts.LifetimeToken());
             if (catalog.IsFailure)
             {
                 _loadResult = catalog;
@@ -272,7 +273,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
         {
             IReadOnlyList<string> permissions = [.. _stored.Order(StringComparer.Ordinal)];
 
-            var result = await Roles.SetStoredPermissionsAsync(Role, permissions, _cts.Token);
+            var result = await Roles.SetStoredPermissionsAsync(Role, permissions, _cts.LifetimeToken());
             if (result.IsFailure)
             {
                 _saveResult = result;

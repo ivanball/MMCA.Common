@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.UI.Common.ComponentLifetimeExtensions
+static MMCA.Common.UI.Common.ComponentLifetimeExtensions.LifetimeToken(this System.Threading.CancellationTokenSource? source) -> System.Threading.CancellationToken

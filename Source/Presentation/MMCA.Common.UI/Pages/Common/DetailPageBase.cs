@@ -33,7 +33,7 @@ public abstract class DetailPageBase : ComponentBase, IDisposable
     /// so a navigation away (or an InteractiveAuto render-mode transition) cancels the in-flight
     /// work instead of completing into a component that is gone.
     /// </summary>
-    protected CancellationToken PageToken => _cts.Token;
+    protected CancellationToken PageToken => _cts.LifetimeToken();
 
     /// <summary>
     /// Gets the guard for the route-driven load: <c>Begin()</c> at the start of each load cancels the

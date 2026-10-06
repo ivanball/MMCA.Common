@@ -813,8 +813,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private CancellationTokenSource CreateFetchCts(CancellationToken additionalToken)
     {
         var cts = additionalToken.CanBeCanceled
-            ? CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token, additionalToken)
-            : CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
+            ? CancellationTokenSource.CreateLinkedTokenSource(_cts.LifetimeToken(), additionalToken)
+            : CancellationTokenSource.CreateLinkedTokenSource(_cts.LifetimeToken());
         if (!RendererInfo.IsInteractive)
         {
             cts.CancelAfter(PrerenderFetchTimeoutMs);

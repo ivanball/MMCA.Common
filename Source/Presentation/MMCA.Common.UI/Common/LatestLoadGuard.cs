@@ -55,7 +55,7 @@ public sealed class LatestLoadGuard : IDisposable
         _cts = new CancellationTokenSource();
         _generation++;
 
-        return (_cts.Token, _generation);
+        return (_cts.LifetimeToken(), _generation);
     }
 
     /// <summary>

@@ -72,7 +72,7 @@ public partial class NotificationList : IDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Sent times render on the viewer's clock; the zone is only readable once JS is available.
-        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.LifetimeToken()))
         {
             StateHasChanged();
         }
@@ -83,7 +83,7 @@ public partial class NotificationList : IDisposable
         IsLoading = true;
         try
         {
-            var result = await NotificationService.GetHistoryAsync(pageNumber: 1, pageSize: 50, _cts.Token);
+            var result = await NotificationService.GetHistoryAsync(pageNumber: 1, pageSize: 50, _cts.LifetimeToken());
             if (result.TryGetValue(out var history))
             {
                 _notifications = [.. history.Items];
