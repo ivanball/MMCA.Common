@@ -4,6 +4,21 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.230.0] - 2026-10-06
+
+### Fixed
+
+- Register keeps the spaces around the optional Code of Conduct phrase in the terms-acceptance sentence. Razor drops the whitespace around a code block, so the phrase ran into the links on either side whenever `Legal.CodeOfConductUrl` was set.
+
+### Security
+
+- `MessagePack` 3.1.10 -> 3.1.11 fixes an LZ4 decompression integer overflow ([GHSA-7rj2-5w9w-r9jx](https://github.com/MessagePack-CSharp/MessagePack-CSharp/security/advisories/GHSA-7rj2-5w9w-r9jx)). The pin is a direct `PackageReference` in `MMCA.Common.Infrastructure` and `MMCA.Common.Aspire.Hosting`, so consumers pick up the fix with the package bump.
+
+### Dependencies
+
+- `Anthropic` 12.52.0 -> 12.53.0, `Scalar.AspNetCore` 2.17.12 -> 2.17.13.
+- `Meziantou.Analyzer` 3.0.290 -> 3.0.294 and `Roslynator.Analyzers` 5.0.0 -> 5.0.1; no new finding at error severity, so the shared `.editorconfig` baseline is unchanged.
+
 ## [1.229.0] - 2026-10-05
 
 ### Added
