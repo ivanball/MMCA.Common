@@ -4,6 +4,32 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Breaking
+
+- **Breaking:** `ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase` changes its `RequiredMarkers` default and gains the two facts both consumers re-authored, and an AppHost that keeps a local `WithSelectedBroker` extension no longer compiles against `BrokerSelection`. Map and fix: UPGRADING.md, [Unreleased].
+
+### Added
+
+- `JwtAudience` (`MMCA.Common.API.Startup.Auth`): the fail-closed audience contract next to `AddForwardedJwtBearer`. `ConfigKey` is `Jwt:Audience`; `RequireConfigured(string?)` returns the value or throws naming the key and the `Jwt__Audience` environment variable. Lifted unchanged from MMCA.ADC (ADR-004).
+- `ForwardedJwtAudienceTestsBase` and `ArchitectureRules.ForwardedJwtBearerAudienceIsFailClosed`: every `.AddForwardedJwtBearer(` call under `Source/` passes its audience through `JwtAudience.RequireConfigured(...)` with no `??` fallback, above a minimum host count.
+- `CostTagConventionTestsBase` (rubric section 34): every `Microsoft.App/containerApps` resource in the embedded `infra.main.bicep` carries a `service` tag, above a minimum-app floor, and the per-service databases carry the same dimension under the repo's database-name prefix.
+- `MessageBusBackpressureTestsBase` (rubric section 12): each listed service's embedded `appsettings.json` sets `MessageBus:PrefetchCount` and `MessageBus:ConcurrentMessageLimit` positive, with the prefetch window at least the concurrency. Read with `System.Text.Json` (case-insensitive keys, comments allowed) because the package takes no framework reference; the key names are pinned against `MessageBusSettings` in this repo's tests.
+- `InlineStyleTestsBase` and `ArchitectureRules.RazorMarkupCarriesNoInlineStyles` (rubric section 20): no `.razor` file under `Source/` carries `style=`, `Style=`, `CellStyle=`, `HeaderStyle=` or `*StyleFunc=`, above a minimum-file floor, with an empty-by-default prefix allow-list.
+- `ComponentLifetimeExtensions.LifetimeToken(this CancellationTokenSource?)` (`MMCA.Common.UI.Common`): the component token read that returns an already-cancelled token once the source is cancelled, disposed or null, instead of throwing `ObjectDisposedException`.
+- `LifetimeTokenConventionTestsBase` and `ArchitectureRules.ComponentsReadTheirTokenThroughLifetimeToken`: no `.razor` / `.razor.cs` file under the scan root reads `_cts.Token` directly (optionally plain `.cs` too). Adopting it is breaking until every raw read is migrated: MMCA.Store reads `_cts.Token` raw today.
+- `EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>`: the anonymous `POST send-email-confirmation` (202) and `POST confirm-email` (204) actions with `[Idempotent]`, `[AllowAnonymous]` and the `auth-ip` policy, modeled on `PasswordResetAuthControllerBase`. Route, version and commands stay app-side.
+- `ChangePasswordCard` (`MMCA.Common.UI.Components.Auth`): the change-password body of a profile page (three required fields, min-length and match validation, ErrorSummary, submit) with `MinLength` (default 8), `OnChanged` and `OnFailed`, and its own English and Spanish resources. It renders a `MudCardContent`/`MudCardActions` pair inside the page's own card.
+- `BrokerSelection` (`MMCA.Common.Aspire.Hosting`): `AddSelectedBroker(environmentVariableName, sqlServer)` returns the attach delegate for RabbitMQ (persistent) or, when the variable reads `servicebus`, the Service Bus emulator; `WithSelectedBroker(attach)` applies it; `IsServiceBusSelected` exposes the switch.
+
+### Changed
+
+- `ConstructorDependencyCountTestsBase` gains `ApplicationServices_`, `Controllers_` and `Handlers_ConstructorDependencyCeilingIsTight`: each fails when the widest class of its population sits below the declared ceiling, naming the population, the ceiling property and value, the observed maximum and the classes at it. A consumer whose ceiling is above its observed maximum goes red until it lowers the ceiling (see Breaking).
+- `FormsConventionTestsBase.RequiredMarkers` defaults to the model-bridge set (`Model="_model"`, `Validation="@_validate"`, `<ErrorSummary`, `Result="_saveResult"`, `Messages="_form?.Errors"`, `Validation.CorrectFollowing` plus the guard markers) instead of `Required="true"` / `RequiredError`, and the base gains `AdminCreateForms_ReadRequirednessOffTheirModel` (with the `*FormFields.razor` sibling scan) and `ProfileForm_KeepsErrorSummaryAndPasswordValidation` (virtual `ProfileFormPath`; a page rendering `ChangePasswordCard` passes). See Breaking.
+- Common.UI's own markup carries no inline style: the 20 inline styles across 13 files moved to semantic classes in `wwwroot/app.css` (`mmca-auth-actions`, `mmca-auth-status`, `mmca-auth-links`, `mmca-status-icon`, `mmca-hero`, `mmca-app-lock-overlay`, `mmca-break-all`, `mmca-search-field`, `mmca-min-w-0`, `mmca-actions-cell`, `.notification-card.unread` / `.deep-linked`) or, for `QrCodeImage`, its scoped stylesheet. Every value is unchanged and declared `!important`, keeping the precedence the inline style had, so nothing renders differently. A host that does not link `_content/MMCA.Common.UI/app.css` and its scoped-CSS bundle loses this styling.
+- Common.UI reads every component token through `LifetimeToken()` (28 reads across 12 files, `DetailPageBase.PageToken` and `DataGridListPageBase` included), so a load that resumes after navigation stops through `OperationCanceledException` instead of throwing.
+
 ## [1.230.0] - 2026-10-06
 
 ### Fixed
