@@ -34,6 +34,21 @@ public sealed class FormsConventionTestsBaseTests
                 CompleteForm.Replace("Required=\"true\" RequiredError=\"a\" ", string.Empty, StringComparison.Ordinal))
             .Should().HaveCount(2, "both the requiredness and the required message dropped below three fields");
 
+    /// <summary>
+    /// A consumer Profile page that renders the shared card passes the base's Profile fact on the
+    /// strength of this test, so the card must keep every marker an inline form is held to.
+    /// </summary>
+    [Fact]
+    public void SharedChangePasswordCard_KeepsEveryPasswordFormMarker()
+    {
+        var card = Path.Combine(
+            ArchitectureMapBase.FindRepoRoot("MMCA.Common.slnx"),
+            "Source", "Presentation", "MMCA.Common.UI", "Components", "Auth", "ChangePasswordCard.razor");
+
+        FormsConventionTestsBase.MissingPasswordFormMarkers(File.ReadAllText(card)).Should().BeEmpty(
+            "the shared ChangePasswordCard stands in for an inline Profile password form, so it must keep the ErrorSummary, three required fields and both validators");
+    }
+
     [Fact]
     public void PasswordForm_WithoutMatchValidation_IsFlagged() =>
         FormsConventionTestsBase.MissingPasswordFormMarkers(
