@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.231.0] - 2026-10-06
 
 **`ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase`
 changes its `RequiredMarkers` default and gains two facts, and an AppHost that keeps a local
