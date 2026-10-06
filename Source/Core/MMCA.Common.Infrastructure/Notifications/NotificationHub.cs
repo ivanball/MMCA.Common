@@ -38,6 +38,9 @@ public sealed class NotificationHub(
     /// <summary>The hub method name clients invoke to leave a channel.</summary>
     public const string LeaveChannelMethod = "LeaveChannel";
 
+    /// <summary>The per-connection marker that this connection holds a counted slot.</summary>
+    private const string SlotItemKey = "mmca.hub.slot";
+
     private static readonly TimeSpan ChannelKeyMatchTimeout = TimeSpan.FromSeconds(1);
 
     // One pattern per host in practice; cached so join/leave do not recompile the regex per call.
@@ -46,7 +49,11 @@ public sealed class NotificationHub(
     /// <summary>
     /// Live connection count per user identifier on THIS replica (SEC-ADC-25). Per replica, like the
     /// in-memory rate limiters: it bounds what one token can do to one process, which is the
-    /// resource actually being exhausted.
+    /// resource actually being exhausted. A connection that took a slot is marked in its
+    /// <see cref="HubCallerContext.Items"/> bag, and only a marked connection gives one back on
+    /// disconnect: SignalR also runs <see cref="OnDisconnectedAsync"/> for a connection whose
+    /// <see cref="OnConnectedAsync"/> threw, and releasing a slot for that refused connection would
+    /// erode the cap one refusal at a time.
     /// </summary>
     private static readonly ConcurrentDictionary<string, int> ConnectionsPerUser = new(StringComparer.Ordinal);
 
@@ -66,6 +73,8 @@ public sealed class NotificationHub(
                 Decrement(userId);
                 throw new HubException("Too many concurrent connections for this account.");
             }
+
+            Context.Items[SlotItemKey] = true;
         }
 
         await base.OnConnectedAsync().ConfigureAwait(false);
@@ -75,7 +84,7 @@ public sealed class NotificationHub(
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = Context.UserIdentifier;
-        if (!string.IsNullOrEmpty(userId))
+        if (!string.IsNullOrEmpty(userId) && Context.Items.Remove(SlotItemKey))
         {
             Decrement(userId);
         }

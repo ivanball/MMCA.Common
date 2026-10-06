@@ -58,6 +58,26 @@ items below either need one mechanical step in a consumer or change what a consu
    `AddTypedServiceClient` that times out or gets a 5xx, 408 or 429 now fails on the first attempt
    instead of being replayed once. Make the endpoint idempotent (`[Idempotent]` plus an
    `Idempotency-Key`) and retry explicitly where a replay is wanted.
+5. **Shaped query specifications no longer compose (M179).** `And`/`Or`/`Not` throw
+   `ArgumentException` for a `QuerySpecification` that called `AddInclude`, `AddOrderBy`,
+   `ApplyPaging`, `WithTracking` or `WithSoftDeleted`. Move the extra predicate into that
+   specification's own `Criteria` (or compose plain `Specification` types and pass the shaped one
+   alone). No first-party consumer composes one.
+6. **Concurrent duplicate push sends (M180).** The losing request of two concurrent sends with the
+   same dedup key now gets 409 instead of 200 with the winner's DTO; a retry gets the winner. A
+   client that treats 409 as final should retry once on a dedup-keyed send.
+7. **Sort column (L120).** A comma-separated `sortColumn` is now 400. Send one column.
+8. **Session cookie lifetime (L126).** The cookies now follow `Jwt:RefreshTokenExpirationDays` when
+   the host binds `Jwt`. A UI host that does not bind `Jwt` and runs a non-default refresh lifetime
+   sets `SessionCookieSettings.Lifetime` (for example in the same `Configure<SessionCookieSettings>`
+   call the same-origin proxy uses).
+9. **Distributed rate-limit keys (L127).** Only for `RateLimiting:Distributed=true`: the Redis key
+   format becomes `rl:{namespace}:{scope}:{partition}:{window}`. The first deploy abandons the
+   in-flight counters, so every partition gets one fresh one-minute allowance; the old keys expire on
+   their own TTL. Nothing to migrate.
+10. **Zero `Money` on the wire (L144).** `{"amount":0,"currency":""}` now deserializes to
+    `Money.Zero()` instead of throwing; a client that relied on the 400 for an empty currency code
+    no longer gets it.
 
 ## [1.231.0] - 2026-10-06
 

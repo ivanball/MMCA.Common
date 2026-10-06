@@ -52,15 +52,14 @@ public class MoneySerializationTests
     }
 
     [Fact]
-    public void Deserialize_ZeroPayload_ThrowsJsonException()
+    public void Deserialize_ZeroPayload_RoundTripsTheZeroSentinel()
     {
-        // The Currency.None sentinel is an in-memory/EF concept: its empty code is not a valid
-        // ISO 4217 code, so the currency converter rejects it on the way back in. Documented
-        // contract, unchanged by the constructor guard.
+        // L144 (decision D6): the zero sentinel serializes as the empty code, and the currency
+        // converter reads that code back as the sentinel, so a zero total round-trips. A non-zero
+        // amount can never carry it (Money.Create refuses the sentinel).
         var json = JsonSerializer.Serialize(Money.Zero());
 
-        FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>(json))
-            .Should().Throw<JsonException>();
+        JsonSerializer.Deserialize<Money>(json)!.Should().Be(Money.Zero());
     }
 
     [Fact]

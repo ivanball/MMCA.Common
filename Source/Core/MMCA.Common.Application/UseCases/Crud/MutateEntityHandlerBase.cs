@@ -202,9 +202,14 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
 
     /// <summary>
     /// Post-commit hook, called after <see cref="LogMutated(TEntity, TCommand, MutationContext)"/>.
-    /// The default does nothing. Override it for best-effort work that must never fail the command,
-    /// such as enqueuing a broadcast or deleting the blob the write just orphaned. Not called when
-    /// the mutation short-circuited through <see cref="MutationContext.SkipSave"/>.
+    /// The default does nothing. Override it for follow-up work such as enqueuing a broadcast or
+    /// deleting the blob the write just orphaned. Not called when the mutation short-circuited
+    /// through <see cref="MutationContext.SkipSave"/>.
+    /// <para>
+    /// Runs after the save has committed. The base has no logger and does not guard the call, so an
+    /// override that does I/O must catch and log its own failures: an exception here reports an
+    /// already-committed write as failed, and the client's retry re-runs a write that landed.
+    /// </para>
     /// </summary>
     /// <param name="entity">The mutated aggregate.</param>
     /// <param name="command">The command that was handled.</param>
@@ -217,7 +222,8 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
     /// The context-aware post-commit hook, called by the workflow. Forwards to
     /// <see cref="OnMutatedAsync(TEntity, TCommand, CancellationToken)"/> by default; override this
     /// overload instead to act on a value the mutation derived before it wrote, which is the shape of
-    /// every "clean up what the write replaced" step.
+    /// every "clean up what the write replaced" step. The same exception-safety contract applies:
+    /// it runs unguarded after the commit, so an override must catch and log its own failures.
     /// </summary>
     /// <param name="entity">The mutated aggregate.</param>
     /// <param name="command">The command that was handled.</param>

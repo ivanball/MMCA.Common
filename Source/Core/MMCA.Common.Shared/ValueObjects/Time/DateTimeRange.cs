@@ -39,14 +39,16 @@ public sealed record class DateTimeRange : ValueObject
     public TimeSpan Duration => End - Start;
 
     /// <summary>
-    /// Determines whether this range overlaps with <paramref name="other"/> using half-open interval logic.
+    /// Determines whether this range overlaps with <paramref name="other"/>, inclusive on both ends,
+    /// consistent with <see cref="Contains"/> and <c>DateRange</c>: two ranges sharing only a boundary
+    /// instant overlap.
     /// </summary>
     /// <param name="other">The range to test against.</param>
     /// <returns><see langword="true"/> if the ranges share at least one point in time.</returns>
     public bool Overlaps(DateTimeRange other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        return Start < other.End && End > other.Start;
+        return Start <= other.End && End >= other.Start;
     }
 
     /// <summary>Determines whether the specified instant falls within this range (inclusive).</summary>

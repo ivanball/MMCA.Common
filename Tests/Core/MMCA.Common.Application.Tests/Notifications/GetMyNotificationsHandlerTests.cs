@@ -53,6 +53,23 @@ public sealed class GetMyNotificationsHandlerTests
         result.Value!.PaginationMetadata.PageSize.Should().Be(500);
     }
 
+    // L121: a page past the 32-bit offset range reads nothing, but its metadata still reports the
+    // requested page size rather than a zero size and zero pages.
+    [Fact]
+    public async Task HandleAsync_WithAPageBeyondTheOffsetRange_ReportsTheRequestedPageSize()
+    {
+        var (sut, _) = CreateSut(totalCount: 5, pageItems: 0);
+
+        var query = new GetMyNotificationsQuery(UserId: 1, PageNumber: int.MaxValue, PageSize: 20);
+        Result<PagedCollectionResult<UserNotificationDTO>> result = await sut.HandleAsync(query);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Items.Should().BeEmpty();
+        result.Value.PaginationMetadata.PageSize.Should().Be(20);
+        result.Value.PaginationMetadata.TotalPageCount.Should().Be(1);
+        result.Value.PaginationMetadata.TotalItemCount.Should().Be(5);
+    }
+
     // ── Sub-1 page numbers ──
     [Theory]
     [InlineData(-1)]

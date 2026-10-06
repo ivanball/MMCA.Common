@@ -1,9 +1,12 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using MMCA.Common.API.SessionCookies;
+using MMCA.Common.Infrastructure.Auth;
 using Moq;
 using HeaderSameSiteMode = Microsoft.Net.Http.Headers.SameSiteMode;
 
@@ -48,6 +51,45 @@ public sealed class SessionCookieJarTests
             cookie.SameSite.Should().Be(HeaderSameSiteMode.Lax);
             cookie.Path.ToString().Should().Be("/");
             cookie.MaxAge.Should().Be(ExpectedLifetime, "the cookie must not outlive the refresh token it carries");
+        }
+    }
+
+    // L126: the cookies must not outlive (or undershoot) a refresh token whose lifetime the host
+    // configured away from the 7-day default.
+    [Fact]
+    public void Append_TakesItsLifetimeFromTheRefreshTokenSetting()
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection()
+                .AddSingleton(Options.Create(new JwtSettings { RefreshTokenExpirationDays = 30, Issuer = "issuer", Audience = "audience" }))
+                .BuildServiceProvider(),
+        };
+
+        SessionCookieJar.Append(context, "access-value", "refresh-value", CreateEnvironment(Environments.Production));
+
+        foreach (SetCookieHeaderValue cookie in ParseSetCookies(context))
+        {
+            cookie.MaxAge.Should().Be(TimeSpan.FromDays(30));
+        }
+    }
+
+    [Fact]
+    public void Append_AnExplicitCookieLifetime_WinsOverTheRefreshTokenSetting()
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection()
+                .AddSingleton(Options.Create(new JwtSettings { RefreshTokenExpirationDays = 30, Issuer = "issuer", Audience = "audience" }))
+                .AddSingleton(Options.Create(new SessionCookieSettings { Lifetime = TimeSpan.FromDays(2) }))
+                .BuildServiceProvider(),
+        };
+
+        SessionCookieJar.Append(context, "access-value", "refresh-value", CreateEnvironment(Environments.Production));
+
+        foreach (SetCookieHeaderValue cookie in ParseSetCookies(context))
+        {
+            cookie.MaxAge.Should().Be(TimeSpan.FromDays(2));
         }
     }
 

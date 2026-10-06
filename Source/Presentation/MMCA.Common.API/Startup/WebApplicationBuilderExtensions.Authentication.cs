@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Startup.Auth;
 using MMCA.Common.Infrastructure.Auth;
+using MMCA.Common.Infrastructure.Notifications.Push;
 
 namespace MMCA.Common.API.Startup;
 
@@ -70,13 +71,14 @@ public static partial class WebApplicationBuilderExtensions
                     ServiceDescriptor.Singleton<IStartupFilter, InsecureJwtMetadataWarningStartupFilter>());
             }
 
-            return services.AddForwardedJwtBearerCore(authority, audience, resolvedRequireHttpsMetadata);
+            return services.AddForwardedJwtBearerCore(authority, audience, resolvedRequireHttpsMetadata, ResolveHubPath(configuration));
         }
 
         private IServiceCollection AddForwardedJwtBearerCore(
             string authority,
             string audience,
-            bool resolvedRequireHttpsMetadata)
+            bool resolvedRequireHttpsMetadata,
+            string hubPath)
         {
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -108,20 +110,7 @@ public static partial class WebApplicationBuilderExtensions
                     };
 
                     // Same SignalR access_token query-string fallback as AddCommonAuthentication.
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
-                        {
-                            var accessToken = context.Request.Query["access_token"];
-                            if (!string.IsNullOrEmpty(accessToken)
-                                && context.HttpContext.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
-                            {
-                                context.Token = accessToken;
-                            }
-
-                            return Task.CompletedTask;
-                        }
-                    };
+                    options.Events = HubAccessTokenEvents(hubPath);
                 });
 
             services.AddAuthorizationPolicies();
@@ -148,6 +137,8 @@ public static partial class WebApplicationBuilderExtensions
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            var hubPath = ResolveHubPath(configuration);
+
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
@@ -156,23 +147,9 @@ public static partial class WebApplicationBuilderExtensions
 
                     options.TokenValidationParameters = BuildValidationParameters(jwtSettings);
 
-                    // SignalR WebSocket connections cannot send HTTP headers — the JWT is
-                    // passed as an "access_token" query-string parameter instead. Extract
-                    // it here so the standard JWT middleware can authenticate hub requests.
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
-                        {
-                            var accessToken = context.Request.Query["access_token"];
-                            if (!string.IsNullOrEmpty(accessToken)
-                                && context.HttpContext.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
-                            {
-                                context.Token = accessToken;
-                            }
-
-                            return Task.CompletedTask;
-                        }
-                    };
+                    // SignalR WebSocket connections cannot send HTTP headers: the JWT is passed as
+                    // an "access_token" query-string parameter instead, extracted here for hub paths.
+                    options.Events = HubAccessTokenEvents(hubPath);
                 });
 
             services.AddAuthorizationPolicies();
@@ -180,6 +157,37 @@ public static partial class WebApplicationBuilderExtensions
             return services;
         }
     }
+
+    /// <summary>
+    /// The notification hub path this host maps (<c>PushNotifications:HubPath</c>, default
+    /// <c>/hubs/notifications</c>), read once per registration.
+    /// </summary>
+    private static string ResolveHubPath(IConfiguration configuration) =>
+        configuration.GetSection(PushNotificationSettings.SectionName).Get<PushNotificationSettings>()?.HubPath
+        ?? new PushNotificationSettings().HubPath;
+
+    /// <summary>
+    /// Bearer events that take the token from the <c>access_token</c> query parameter on a SignalR
+    /// path, since a WebSocket upgrade cannot carry an <c>Authorization</c> header. A path counts as
+    /// a hub path when it is under the configured <paramref name="hubPath"/>, or under the literal
+    /// <c>/hubs</c> floor, so a host mapping further hubs there keeps working.
+    /// </summary>
+    private static JwtBearerEvents HubAccessTokenEvents(string hubPath) => new()
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken)
+                && (path.StartsWithSegments(hubPath, StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase)))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        },
+    };
 
     /// <summary>
     /// Decodes a Base64-encoded JWT signing key and validates that it meets the

@@ -16,6 +16,26 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - A keyset cursor's `DateTime` and `DateTimeOffset` sort values parse back with their kind and offset (`DateTimeStyles.RoundtripKind`) instead of being converted to local time, which moved the seek boundary by the host's UTC offset. (L122)
 - `IRepository.ExecuteUpdateAsync` re-stamps `RowVersion` on PostgreSQL and SQLite, so a bulk update invalidates a stale `If-Match` token as a tracked update does. SQL Server is unchanged. (L123)
 - The audit trail no longer records the client-stamped `RowVersion` on every update, and renders a changed `byte[]` column as hexadecimal instead of `System.Byte[]`. (L124)
+- Fluent `And`/`Or`/`Not` (and the `AndSpecification`/`OrSpecification`/`NotSpecification` constructors) throw `ArgumentException` for a `QuerySpecification` that carries includes, ordering, paging, tracking or soft-delete scope, instead of silently returning a criteria-only specification that dropped that shape. An unshaped `QuerySpecification` still composes. (M179)
+- `SendPushNotificationHandler` no longer swallows a lost dedup-key unique-index race and returns the winner: the failed insert stayed tracked and broke the transactional commit. The loser now gets the persistence failure (409 through `DbUpdateExceptionHandler`) and its retry is answered by the dedup check. (M180)
+- The PII redaction guardrail redacts tool results and tool-call arguments that arrive as `JsonElement` (the shape the function-invoking client produces), string values only; numbers and the document structure are kept. (M195)
+- A SignalR connection refused by the per-user cap no longer releases a slot on its disconnect, so repeated refusals cannot erode the cap. (M196)
+- The sort column is validated as exactly one name, trimmed, with the same rules sorting applies, so a padded name is honored instead of silently ignored, and a comma-separated list is a 400 instead of a 200 sorted by the tie-break. (L120)
+- The notification inbox and history report the requested page size for a page past the 32-bit offset range, instead of `PageSize` 0 and `TotalPageCount` 0. (L121)
+- The session cookies take their `Max-Age` from `SessionCookieSettings.Lifetime`, else `Jwt:RefreshTokenExpirationDays`, else 7 days, instead of a fixed 7 days. (L126)
+- Distributed rate-limit keys carry the application namespace (`rl:{namespace}:{scope}:{partition}:{window}`), so two MMCA applications on one Redis no longer share counters. (L127)
+- `/culture/set` treats a `redirectUri` containing a control character as non-local and redirects to `/`, instead of failing with a 500 after writing the cookie. (L128)
+- The SignalR `access_token` query-string fallback accepts the token on the configured `PushNotifications:HubPath` as well as under `/hubs`. (L129)
+- A non-ASCII or control-character `X-Correlation-ID` is replaced by the generated id instead of being echoed, which made Kestrel fail the response. (L130)
+- Both currency JSON converters read the empty code as the zero sentinel (`Money.Zero().Currency`), so a serialized `Money.Zero()` deserializes again. A non-zero amount still cannot carry it. (L144)
+- `DateTimeRange.Overlaps` is inclusive on both ends, consistent with `Contains` and `DateRange`: ranges sharing only a boundary instant overlap. (L145)
+- `BoundedChatClient` clears a `RequireSpecific` tool mode whose tool the policy filter stripped, instead of sending the provider a tool choice it rejects. (L146)
+- The post-save hook docs (`OnMutatedAsync`, `OnCreatedAsync`, `OnAddedAsync`) now state the real contract: the hook runs unguarded after the commit, so an override must catch and log its own failures. (L119)
+
+### Added
+
+- `QueryFieldService.ValidateSortColumn<TEntity>(sortColumn, dtoToEntityPropertyMap, fieldContract)`, the single-column validator `EntityQueryService` now uses. (L120)
+- `SessionCookieSettings.Lifetime` (`TimeSpan?`): an explicit `Max-Age` for both session cookies. (L126)
 
 ### Changed
 

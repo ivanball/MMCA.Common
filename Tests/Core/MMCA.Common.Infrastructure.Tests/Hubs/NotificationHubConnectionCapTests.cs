@@ -21,6 +21,9 @@ public sealed class NotificationHubConnectionCapTests
         var context = new Mock<HubCallerContext>();
         context.SetupGet(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
         context.SetupGet(c => c.UserIdentifier).Returns(userId);
+
+        // The per-connection bag both callbacks of one connection share, as SignalR provides it.
+        context.SetupGet(c => c.Items).Returns(new Dictionary<object, object?>());
         context.SetupGet(c => c.User).Returns(new ClaimsPrincipal(
             new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], authenticationType: "TestAuth")));
 
@@ -74,6 +77,28 @@ public sealed class NotificationHubConnectionCapTests
         var third = CreateHub(userId, maxConnectionsPerUser: 1);
         await third.OnConnectedAsync();
         await third.OnDisconnectedAsync(exception: null);
+    }
+
+    // M196: SignalR runs OnDisconnectedAsync for a connection whose OnConnectedAsync threw, so a
+    // refused connection must not release a slot it never held.
+    [Fact]
+    public async Task OnDisconnectedAsync_AfterARefusedConnect_DoesNotReleaseALiveSlot()
+    {
+        var userId = $"refused-{Guid.NewGuid()}";
+        var first = CreateHub(userId, maxConnectionsPerUser: 1);
+        await first.OnConnectedAsync();
+
+        var second = CreateHub(userId, maxConnectionsPerUser: 1);
+        Func<Task> connectSecond = () => second.OnConnectedAsync();
+        await connectSecond.Should().ThrowAsync<HubException>();
+        await second.OnDisconnectedAsync(exception: null);
+
+        var third = CreateHub(userId, maxConnectionsPerUser: 1);
+        Func<Task> connectThird = () => third.OnConnectedAsync();
+        await connectThird.Should().ThrowAsync<HubException>("the first connection is still live and holds the only slot");
+        await third.OnDisconnectedAsync(exception: null);
+
+        await first.OnDisconnectedAsync(exception: null);
     }
 
     [Fact]

@@ -151,14 +151,16 @@ public static class WebApplicationExtensions
     /// <summary>
     /// The rule <see cref="Results.LocalRedirect(string, bool, bool)"/> enforces, applied before it:
     /// a single leading slash, not followed by a second slash or a backslash (which browsers treat
-    /// as protocol-relative).
+    /// as protocol-relative), and no control character anywhere, the same rule LocalRedirect
+    /// enforces when it executes (by then the culture cookie has already been written).
     /// </summary>
     /// <param name="url">The requested redirect target.</param>
     /// <returns><see langword="true"/> when <paramref name="url"/> is a local path.</returns>
     private static bool IsLocalRedirectTarget(string? url) =>
         !string.IsNullOrWhiteSpace(url)
         && url[0] == '/'
-        && !(url.Length > 1 && (url[1] == '/' || url[1] == '\\'));
+        && !(url.Length > 1 && (url[1] == '/' || url[1] == '\\'))
+        && !url.Any(char.IsControl);
 
     /// <summary>
     /// Seeds the default steps, lets the host adjust them, validates the load-bearing adjacencies,

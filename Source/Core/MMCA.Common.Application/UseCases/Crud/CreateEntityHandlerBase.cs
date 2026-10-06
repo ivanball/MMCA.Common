@@ -154,6 +154,11 @@ public abstract class CreateEntityHandlerBase<TCreateRequest, TEntity, TIdentifi
     /// Post-commit hook, called after <see cref="LogCreated"/> and before the DTO is mapped. The
     /// default does nothing. Override it to publish an integration event carrying the now-known
     /// database-generated id.
+    /// <para>
+    /// Runs after the save has committed. The base has no logger and does not guard the call, so an
+    /// override that does I/O must catch and log its own failures: an exception here reports an
+    /// already-committed write as failed, and the client's retry re-runs a write that landed.
+    /// </para>
     /// </summary>
     /// <param name="entity">The persisted entity.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

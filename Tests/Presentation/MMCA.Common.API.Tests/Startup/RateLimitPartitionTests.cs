@@ -2,8 +2,13 @@
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.API.RateLimiting;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Shared.Auth;
+using Moq;
+using StackExchange.Redis;
 
 namespace MMCA.Common.API.Tests.Startup;
 
@@ -75,6 +80,40 @@ public sealed class RateLimitPartitionTests
         WebApplicationBuilderExtensions.GlobalRateLimitPartition(
                 Ctx(path: "/api/events", authenticated: true, userId: "u-42"), 300)
             .PartitionKey.Should().Be("u-42");
+
+    // L127: two MMCA apps on one Redis must not share counters, so the Redis key carries the
+    // application namespace (the SEC-Common-53 rule the cache keys already follow).
+    [Fact]
+    public async Task GlobalRateLimitPartition_WhenDistributed_QualifiesTheRedisKeyWithTheApplicationNamespace()
+    {
+        var keys = new List<string>();
+        var database = new Mock<IDatabase>();
+        database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, long, CommandFlags>((key, _, _) => keys.Add(key.ToString()))
+            .ReturnsAsync(1);
+        database.Setup(d => d.KeyExpireAsync(It.IsAny<RedisKey>(), It.IsAny<TimeSpan?>(), It.IsAny<ExpireWhen>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+        var connection = new Mock<IConnectionMultiplexer>();
+        connection.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(database.Object);
+
+        await using var provider = new ServiceCollection()
+            .AddSingleton(connection.Object)
+            .AddSingleton<IConfiguration>(new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Application:Namespace"] = "adc" })
+                .Build())
+            .BuildServiceProvider();
+
+        var context = Ctx(path: "/api/events", authenticated: true, userId: "u-42");
+        context.RequestServices = provider;
+
+        var partition = WebApplicationBuilderExtensions.GlobalRateLimitPartition(
+            context,
+            new RateLimitingSettings { Distributed = true, GlobalPermitLimit = 300 });
+        await using var limiter = partition.Factory(partition.PartitionKey);
+        using var lease = await limiter.AcquireAsync(1, TestContext.Current.CancellationToken);
+
+        keys.Should().ContainSingle().Which.Should().StartWith("rl:adc:global:u-42:");
+    }
 
     [Fact]
     public void GlobalRateLimitPartition_WhenNameAndUserIdMissing_FallsBackToRemoteIp() =>

@@ -1,1 +1,2 @@
 ﻿#nullable enable
+static MMCA.Common.Application.Services.QueryFieldService.ValidateSortColumn<TEntity>(string? sortColumn, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? dtoToEntityPropertyMap, MMCA.Common.Application.Services.Query.QueryFieldContract? fieldContract) -> MMCA.Common.Shared.Abstractions.Result!

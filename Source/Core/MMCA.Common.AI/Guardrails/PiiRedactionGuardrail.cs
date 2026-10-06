@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 using MMCA.Common.AI.Chat;
@@ -98,30 +100,91 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
     }
 
     /// <summary>
-    /// Rewrites the text a content item carries: message text, reasoning text, a string tool result
-    /// and the string arguments of a tool call. A tool's output is exactly where contact details
-    /// turn up (a customer lookup, a directory search), so it is scrubbed like any other text.
+    /// Rewrites the text a content item carries: message text, reasoning text, a tool result and the
+    /// arguments of a tool call, whether they arrive as CLR strings or as <see cref="JsonElement"/>
+    /// values (the shape Microsoft.Extensions.AI's function-invoking client marshals a tool's return
+    /// value and the model's arguments into). A tool's output is exactly where contact details turn
+    /// up (a customer lookup, a directory search), so it is scrubbed like any other text.
     /// </summary>
     private static AIContent RedactContent(AIContent content) => content switch
     {
         TextContent { Text: { Length: > 0 } text } => new TextContent(RedactText(text)),
         TextReasoningContent { Text: { Length: > 0 } reasoning } => new TextReasoningContent(RedactText(reasoning)),
+        FunctionResultContent { Result: JsonElement element } call => new FunctionResultContent(call.CallId, RedactJson(element)),
         FunctionResultContent { Result: string result } call => new FunctionResultContent(call.CallId, RedactText(result)),
         FunctionCallContent { Arguments: { } arguments } call => new FunctionCallContent(
             call.CallId,
             call.Name,
             arguments.ToDictionary(
                 pair => pair.Key,
-                pair => pair.Value is string value ? RedactText(value) : pair.Value,
+                pair => RedactArgument(pair.Value),
                 StringComparer.Ordinal)),
 
-        // Binary and other non-text content (images, non-string tool results and arguments,
-        // provider-specific items) passes through untouched: this guardrail understands text, and
-        // silently dropping what it does not understand would be a far worse failure than leaving
-        // it alone.
+        // Binary and other non-text content (images, tool results and arguments that are neither a
+        // string nor a JsonElement, provider-specific items) passes through untouched: this
+        // guardrail understands text, and silently dropping what it does not understand would be a
+        // far worse failure than leaving it alone.
         _ => content,
+    };
+
+    private static object? RedactArgument(object? value) => value switch
+    {
+        string text => RedactText(text),
+        JsonElement element => RedactJson(element),
+        _ => value,
     };
 
     private static string RedactText(string value) =>
         PhonePattern.Replace(EmailPattern.Replace(value, EmailPlaceholder), PhonePlaceholder);
+
+    /// <summary>
+    /// Rebuilds a JSON value with every string VALUE redacted. Property names, numbers, booleans and
+    /// nulls are copied as they are: running the patterns over the raw JSON text would turn a bare
+    /// 10-digit number (a Unix timestamp) into a phone placeholder and break the document.
+    /// </summary>
+    private static JsonElement RedactJson(JsonElement element)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            WriteRedacted(writer, element);
+        }
+
+        using var document = JsonDocument.Parse(buffer.WrittenMemory);
+        return document.RootElement.Clone();
+    }
+
+    private static void WriteRedacted(Utf8JsonWriter writer, JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            writer.WriteStartObject();
+            foreach (var property in element.EnumerateObject())
+            {
+                writer.WritePropertyName(property.Name);
+                WriteRedacted(writer, property.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            writer.WriteStartArray();
+            foreach (var item in element.EnumerateArray())
+            {
+                WriteRedacted(writer, item);
+            }
+
+            writer.WriteEndArray();
+        }
+        else if (element.ValueKind == JsonValueKind.String)
+        {
+            writer.WriteStringValue(RedactText(element.GetString()!));
+        }
+        else
+        {
+            // Numbers, booleans and nulls are copied verbatim.
+            element.WriteTo(writer);
+        }
+    }
 }

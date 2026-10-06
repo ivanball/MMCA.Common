@@ -46,6 +46,29 @@ public sealed class CorrelationIdMiddlewareTests
         capturedId.Should().Be(expectedId);
     }
 
+    // L130: Kestrel refuses to echo a non-ASCII or control character in a response header, which
+    // failed the request after the handler ran, so such a value is replaced by the generated id.
+    [Theory]
+    [InlineData(0xE9)] // Latin small e with acute, built from its code point so this file stays ASCII.
+    [InlineData(0x01)]
+    public async Task InvokeAsync_WithANonPrintableAsciiHeader_FallsBackToAGeneratedId(int codePoint)
+    {
+        var header = "caf" + (char)codePoint + "-123";
+        string? capturedId = null;
+        var correlationContext = new Mock<ICorrelationContext>();
+        correlationContext.Setup(x => x.SetCorrelationId(It.IsAny<string>()))
+            .Callback<string>(id => capturedId = id);
+
+        var sut = new CorrelationIdMiddleware(_ => Task.CompletedTask);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers[CorrelationIdMiddleware.HeaderName] = header;
+
+        await sut.InvokeAsync(httpContext, correlationContext.Object);
+
+        capturedId.Should().NotBe(header);
+        capturedId.Should().NotBeNullOrWhiteSpace();
+    }
+
     // ── Registers OnStarting callback for response header ──
     [Fact]
     public async Task InvokeAsync_RegistersOnStartingCallback_ThatSetsResponseHeader()

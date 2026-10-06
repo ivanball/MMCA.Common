@@ -93,6 +93,42 @@ public sealed class BoundedChatClientTests
         options.Tools.Should().HaveCount(1, because: "the caller's own options are never mutated");
     }
 
+    // L146: a RequireSpecific mode naming a tool the filter stripped would be rejected by the
+    // provider, so it falls back to auto exactly like the no-tools branch.
+    [Fact]
+    public async Task GetResponseAsync_ClearsARequireSpecificModeWhenThatToolIsStripped()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+        var options = new ChatOptions
+        {
+            Tools = [new StubTool("answer"), new StubTool("send_email", consequential: true)],
+            ToolMode = ChatToolMode.RequireSpecific("send_email"),
+        };
+
+        await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.Tools.Should().ContainSingle().Which.Name.Should().Be("answer");
+        inner.LastOptions.ToolMode.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_KeepsARequireSpecificModeWhenThatToolIsOffered()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+        var options = new ChatOptions
+        {
+            Tools = [new StubTool("answer"), new StubTool("send_email", consequential: true)],
+            ToolMode = ChatToolMode.RequireSpecific("answer"),
+        };
+
+        await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.ToolMode.Should().BeOfType<RequiredChatToolMode>()
+            .Which.RequiredFunctionName.Should().Be("answer");
+    }
+
     [Fact]
     public async Task GetResponseAsync_KeepsToolsWhenToolUseIsAllowed()
     {

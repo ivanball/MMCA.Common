@@ -296,7 +296,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         // Step 1: Validate all query parameters upfront before touching the database
         var validateResult = Result.Combine(
             QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false),
-            QueryFieldService.Validate<TEntity>(sortColumn, DTOToEntityPropertyMap, allowWriteableFields: true, FieldContract),
+            QueryFieldService.ValidateSortColumn<TEntity>(sortColumn, DTOToEntityPropertyMap, FieldContract),
             QueryFieldService.ValidateSortDirection(sortDirection),
             QueryFilterService.ValidateFilters<TEntity>(filters, DTOToEntityPropertyMap, FieldContract)
             );

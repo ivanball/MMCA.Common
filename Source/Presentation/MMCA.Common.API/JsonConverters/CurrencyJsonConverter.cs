@@ -7,7 +7,9 @@ namespace MMCA.Common.API.JsonConverters;
 /// <summary>
 /// Serializes <see cref="Currency"/> as its ISO 4217 three-letter code string and deserializes
 /// by validating the code through <see cref="Currency.FromCode"/>. Invalid or non-string tokens
-/// throw <see cref="JsonException"/>, causing a 400 Bad Request response from the framework.
+/// throw <see cref="JsonException"/>, causing a 400 Bad Request response from the framework. The
+/// empty code is the one exception: it is how the zero sentinel of <see cref="Money.Zero()"/>
+/// serializes, so it reads back as that sentinel.
 /// </summary>
 public sealed class CurrencyJsonConverter : JsonConverter<Currency>
 {
@@ -18,6 +20,11 @@ public sealed class CurrencyJsonConverter : JsonConverter<Currency>
             throw new JsonException("Currency must be a string.");
 
         string code = reader.GetString() ?? string.Empty;
+
+        // Symmetric with Write: the zero sentinel (internal to Shared) serializes as the empty code.
+        if (code.Length == 0)
+            return Money.Zero().Currency;
+
         var result = Currency.FromCode(code);
         if (result.IsFailure)
             throw new JsonException($"Invalid currency code: {code}");

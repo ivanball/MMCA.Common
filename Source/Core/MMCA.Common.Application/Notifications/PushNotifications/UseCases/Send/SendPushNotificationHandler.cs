@@ -29,6 +29,16 @@ namespace MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 /// unit, so a transient fault on the final status save re-runs them under the execution strategy:
 /// delivery is at-least-once for the live channels and exactly-once for the inbox rows.
 /// </para>
+/// <para>
+/// <b>Deduplication race.</b> The dedup lookup is a check-then-act: two concurrent sends of one key
+/// can both pass it, and the loser fails its first save on the filtered unique index on
+/// <c>DedupKey</c>. That failure propagates as the persistence exception (a 409 through
+/// <c>DbUpdateExceptionHandler</c>) and the transactional decorator rolls the attempt back; the
+/// client's retry is then answered by the dedup lookup with the winner's notification. Recovering
+/// in place is not possible here: the failed insert stays tracked (nothing in the Application
+/// contract can detach it), so the commit would throw, and on PostgreSQL the unique violation has
+/// already aborted the transaction a requery would run in.
+/// </para>
 /// </summary>
 public sealed partial class SendPushNotificationHandler(
     IUnitOfWork unitOfWork,
@@ -89,38 +99,8 @@ public sealed partial class SendPushNotificationHandler(
         var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
         await repository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
 
-        try
-        {
-            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types: the persistence exception is not visible from this layer (see below)
-        catch (Exception)
-#pragma warning restore CA1031
-        {
-            // The dedup lookup above is a check-then-act: two concurrent retries of the same send
-            // both pass it, and the loser only fails here, on the insert, against the filtered
-            // unique index on DedupKey. Swallow-and-requery is the same shape EfInboxStore uses on
-            // its InboxMessage.MessageId unique index; the difference is only which exception can
-            // be named. Application has no EF Core dependency (layer rule), so DbUpdateException
-            // is not a type this file can reference, and the requery is what narrows the broad
-            // catch: if the key exists now, the concurrent send is the cause and the caller gets
-            // that notification; anything else rethrows untouched so a genuine persistence fault
-            // still reaches the exception middleware.
-            //
-            // CancellationToken.None: the requery has to run even when the caller's token is what
-            // aborted the save, otherwise a cancelled save could never be classified.
-            if (dedupKey is not null)
-            {
-                PushNotification? winner = await FindByDedupKeyAsync(dedupKey, CancellationToken.None).ConfigureAwait(false);
-                if (winner is not null)
-                {
-                    LogDedupRaceRequery(logger, winner.Id, dedupKey);
-                    return Result.Success(dtoMapper.MapToDTO(winner));
-                }
-            }
-
-            throw;
-        }
+        // A lost race on the DedupKey unique index fails here and propagates (see the class remarks).
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Create per-user inbox records so recipients can retrieve missed notifications
         var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
@@ -227,7 +207,4 @@ public sealed partial class SendPushNotificationHandler(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Push notification {NotificationId} already exists for dedup key {DedupKey}; returning it without sending again")]
     private static partial void LogDedupHit(ILogger logger, PushNotificationIdentifierType notificationId, string dedupKey);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Push notification {NotificationId} won the unique-index race on dedup key {DedupKey}; returning the existing notification without sending again")]
-    private static partial void LogDedupRaceRequery(ILogger logger, PushNotificationIdentifierType notificationId, string dedupKey);
 }

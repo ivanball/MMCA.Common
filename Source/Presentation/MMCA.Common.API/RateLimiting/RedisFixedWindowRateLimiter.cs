@@ -21,7 +21,9 @@ namespace MMCA.Common.API.RateLimiting;
 /// concern that only the rate-limiting middleware constructs.
 /// </para>
 /// <para>
-/// <b>Storage:</b> one key per partition per window, <c>rl:{partitionKey}:{unixMinute}</c>,
+/// <b>Storage:</b> one key per partition per window, <c>rl:{partitionKey}:{unixMinute}</c>, where the
+/// framework partition key is <c>{application namespace}:{scope}:{partition}</c> so two MMCA
+/// applications sharing one Redis never share a counter,
 /// incremented with <c>INCR</c> and given a TTL slightly longer than the window on the increment
 /// that creates it. Keys expire on their own, so nothing has to sweep them, and a window rollover
 /// is a new key rather than a reset. The counter is not transactional with the permit decision

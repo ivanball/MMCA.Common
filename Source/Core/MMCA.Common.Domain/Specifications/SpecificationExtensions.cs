@@ -26,6 +26,12 @@ namespace MMCA.Common.Domain.Specifications;
 /// instance. Hold on to the composed specification (a field, a local) rather than rebuilding it per
 /// request if the composition itself is on a hot path.
 /// </para>
+/// <para>
+/// A composed specification is criteria-only, so composing a
+/// <see cref="QuerySpecification{TEntity, TIdentifierType}"/> that carries includes, ordering,
+/// paging, tracking or soft-delete scope throws <see cref="ArgumentException"/> rather than
+/// silently dropping that shape.
+/// </para>
 /// </summary>
 public static class SpecificationExtensions
 {

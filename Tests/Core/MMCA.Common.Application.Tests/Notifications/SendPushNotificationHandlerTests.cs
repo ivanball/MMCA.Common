@@ -258,18 +258,21 @@ public class SendPushNotificationHandlerTests
             Times.Once);
     }
 
+    // M180: the lost unique-index race propagates (409 via DbUpdateExceptionHandler) instead of
+    // returning the winner while the failed insert stays tracked and breaks the transactional commit.
+    // The client's retry is answered by the pre-check, so no requery happens here.
     [Fact]
-    public async Task HandleAsync_WhenSaveHitsDedupUniqueIndex_RequeriesAndReturnsExistingDTO()
+    public async Task HandleAsync_WhenSaveHitsDedupUniqueIndex_PropagatesTheSaveFailure()
     {
         PushNotification winner = CreateExisting("Winner Title", "Winner Body", "key-2");
         var (sut, mocks) = CreateSut(saveThrows: true, dedupWinnerOnRequery: winner);
 
         SendPushNotificationCommand command = CreateCommand() with { DedupKey = "key-2" };
-        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+        Func<Task> act = () => sut.HandleAsync(command);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value!.Title.Should().Be("Winner Title");
+        await act.Should().ThrowAsync<InvalidOperationException>();
         VerifyNoSend(mocks);
+        mocks.ReadRepo.Verify(AnyDedupLookup(), Times.Once);
     }
 
     [Fact]

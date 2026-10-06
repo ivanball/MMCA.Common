@@ -8,7 +8,8 @@ namespace MMCA.Common.Shared.ValueObjects.Financial;
 /// Value object representing an ISO 4217 currency. Uses a closed set of supported currencies
 /// (<see cref="All"/>) and a private constructor to prevent arbitrary instances.
 /// <see cref="None"/> is an internal sentinel used by <see cref="Money.Zero()"/> to represent
-/// "no currency yet" — it is never exposed to API consumers.
+/// "no currency yet". It crosses the wire only as the empty code of a zero amount, and both JSON
+/// converters read that empty code back as the sentinel, so a zero total round-trips.
 /// </summary>
 [JsonConverter(typeof(CurrencyJsonConverter))]
 public sealed record Currency : ValueObject
@@ -79,6 +80,11 @@ public sealed class CurrencyJsonConverter : JsonConverter<Currency>
             throw new JsonException("Currency must be a string.");
 
         string code = reader.GetString() ?? string.Empty;
+
+        // Symmetric with Write: the zero sentinel serializes as the empty code. Nothing non-zero
+        // can carry it, because Money.Create refuses the sentinel.
+        if (code.Length == 0)
+            return Currency.None;
 
         var result = Currency.FromCode(code);
         if (result.IsFailure)

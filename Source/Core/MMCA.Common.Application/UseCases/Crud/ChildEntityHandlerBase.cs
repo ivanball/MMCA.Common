@@ -101,6 +101,11 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
     /// <summary>
     /// Post-commit hook, called after <see cref="LogAdded"/> and before the DTO is mapped. The default
     /// does nothing.
+    /// <para>
+    /// Runs after the save has committed. The base has no logger and does not guard the call, so an
+    /// override that does I/O must catch and log its own failures: an exception here reports an
+    /// already-committed write as failed, and the client's retry re-runs a write that landed.
+    /// </para>
     /// </summary>
     /// <param name="parent">The parent aggregate.</param>
     /// <param name="child">The newly added child.</param>

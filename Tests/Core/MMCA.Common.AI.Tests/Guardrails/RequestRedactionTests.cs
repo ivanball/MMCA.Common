@@ -117,6 +117,42 @@ public sealed class RequestRedactionTests
         call.Arguments["count"].Should().Be(3, "a non-string argument passes through");
     }
 
+    // M195: the function-invoking client marshals a tool's result to a JsonElement, so that shape
+    // must be redacted too, string values only (a bare 10-digit number is not a phone number).
+    [Fact]
+    public void ThePiiGuardrail_RedactsAJsonElementToolResult()
+    {
+        var element = System.Text.Json.JsonSerializer.SerializeToElement(
+            new { email = "jane@example.com", phone = "404-555-0100", count = 3, since = 1700000000 });
+
+        var redacted = new PiiRedactionGuardrail().Redact(
+            [new ChatMessage(ChatRole.Tool, [new FunctionResultContent("call-3", element)])]);
+
+        var result = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionResultContent>().Subject;
+        result.CallId.Should().Be("call-3");
+        var json = result.Result.Should().BeOfType<System.Text.Json.JsonElement>().Subject;
+        json.GetProperty("email").GetString().Should().Be("[redacted-email]");
+        json.GetProperty("phone").GetString().Should().Be("[redacted-phone]");
+        json.GetProperty("count").GetInt32().Should().Be(3);
+        json.GetProperty("since").GetInt64().Should().Be(1700000000, "numbers are values, not text, and stay untouched");
+    }
+
+    [Fact]
+    public void ThePiiGuardrail_RedactsAJsonElementToolCallArgument()
+    {
+        var redacted = new PiiRedactionGuardrail().Redact(
+            [new ChatMessage(
+                ChatRole.Assistant,
+                [new FunctionCallContent(
+                    "call-4",
+                    "email_user",
+                    new Dictionary<string, object?> { ["to"] = System.Text.Json.JsonSerializer.SerializeToElement("jane@example.com") })])]);
+
+        var call = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionCallContent>().Subject;
+        call.Arguments!["to"].Should().BeOfType<System.Text.Json.JsonElement>()
+            .Which.GetString().Should().Be("[redacted-email]");
+    }
+
     [Fact]
     public void ThePiiGuardrail_RedactsReasoningText()
     {
