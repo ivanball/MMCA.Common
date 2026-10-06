@@ -89,29 +89,38 @@ public sealed class AuthUIService(
     {
         await UnregisterPushAsync();
 
-        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
-
         var accessToken = await ReadAccessTokenAsync();
         if (!string.IsNullOrWhiteSpace(accessToken))
         {
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
             // Best-effort revoke on the server side. Deliberately fire-and-forget: the local
             // sign-out below runs whatever happened, so a dropped connection cannot strand a user
             // inside a session they asked to leave.
-            try
-            {
-                await httpClient.PostAsync(new Uri("auth/revoke", UriKind.Relative), null);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types: the revoke is best-effort
-            catch
-#pragma warning restore CA1031
-            {
-                // Ignore errors - we still want to clear local tokens
-            }
+            await TryRevokeAsync(accessToken, CancellationToken.None);
         }
 
         await SignOutLocallyAsync();
+    }
+
+    /// <summary>
+    /// Best-effort <c>POST auth/revoke</c> with <paramref name="accessToken"/> set by hand, never
+    /// failing the caller. Shared by sign-out and by the login path that cannot store the session it
+    /// was just issued, so the two revokes cannot drift.
+    /// </summary>
+    private async Task TryRevokeAsync(string accessToken, CancellationToken cancellationToken)
+    {
+        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        try
+        {
+            using var response = await httpClient.PostAsync(new Uri("auth/revoke", UriKind.Relative), content: null, cancellationToken);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: the revoke is best-effort
+        catch
+#pragma warning restore CA1031
+        {
+            // Ignore errors: the caller clears local state whatever the server answered.
+        }
     }
 
     /// <inheritdoc />
@@ -296,7 +305,20 @@ public sealed class AuthUIService(
         catch (InvalidOperationException exception)
         {
             // JS interop not available (e.g., during render mode transition): the credentials are
-            // valid but nothing can hold them, so this is a failure, not a silent no-op.
+            // valid but nothing can hold them, so this is a failure, not a silent no-op. The server
+            // already minted a session and the storage took the access token in memory before its
+            // cookie write failed, so revoke the one (needs nothing from storage) and then clear the
+            // other, or the API client would behave signed in behind a page that reported failure.
+            await TryRevokeAsync(authentication.AccessToken, cancellationToken);
+            try
+            {
+                await tokenStorageService.ClearTokensAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // The in-memory token is cleared before the cookie call in every implementation.
+            }
+
             return Result.Failure<AuthenticationResponse>(
                 Error.Unexpected(
                     TokenStorageUnavailableCode,

@@ -112,6 +112,7 @@
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.Apple"
                                        Href="@BuildOAuthUrl("apple")"
+                                       Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithApple"]">
                                 @L["Auth.Login.SignInWithApple"]
                             </MudButton>
@@ -133,6 +134,7 @@
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.Google"
                                        Href="@BuildOAuthUrl("google")"
+                                       Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithGoogle"]">
                                 @L["Auth.Login.SignInWithGoogle"]
                             </MudButton>
@@ -154,6 +156,7 @@
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.GitHub"
                                        Href="@BuildOAuthUrl("github")"
+                                       Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithGitHub"]">
                                 @L["Auth.Login.SignInWithGitHub"]
                             </MudButton>
@@ -192,11 +195,7 @@
             return;
         }
 
-        _oauthState = await OAuthFlowState.BeginAsync();
-        if (_oauthState is not null)
-        {
-            StateHasChanged();
-        }
+        await BeginOAuthAttemptAsync();
     }
 
     private string BuildOAuthUrl(string provider)

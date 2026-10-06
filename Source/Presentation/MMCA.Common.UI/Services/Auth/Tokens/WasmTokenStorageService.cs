@@ -7,23 +7,43 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// by JS. <see cref="SetTokensAsync"/> seeds the cookies at login via <see cref="ISessionCookieSync"/>.
 /// Hoisted from the app WASM clients (it carries no app-specific state); its Blazor Server sibling is
 /// <c>ServerTokenStorageService</c> in MMCA.Common.UI.Web.
+/// <para>
+/// A visitor with no session is answered from memory for <see cref="AnonymousGrace"/> after a
+/// hydrate comes back empty, instead of one same-origin token POST per API call; a session created
+/// in another tab is therefore seen within that window, and <see cref="SetTokensAsync"/> (a login
+/// here) ends it at once.
+/// </para>
 /// </summary>
+/// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
+/// <param name="tokenRefresher">Acquires an access token from the session cookies.</param>
+/// <param name="timeProvider">The clock for the anonymous grace; <see cref="TimeProvider.System"/> when null.</param>
 public sealed class WasmTokenStorageService(
     ISessionCookieSync sessionCookieSync,
-    ITokenRefresher tokenRefresher) : ITokenStorageService
+    ITokenRefresher tokenRefresher,
+    TimeProvider? timeProvider = null) : ITokenStorageService
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
+    /// <summary>How long a "no session" answer is remembered before the next hydrate.</summary>
+    private static readonly TimeSpan AnonymousGrace = TimeSpan.FromSeconds(15);
+
     private readonly Lock _hydrateSync = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     private string? _accessToken;
     private Task<string?>? _hydrateInFlight;
+    private DateTimeOffset _anonymousUntil;
 
     public async Task<string?> GetAccessTokenAsync()
     {
         if (JwtTokenInfo.IsFresh(_accessToken, ExpirySkew))
         {
             return _accessToken;
+        }
+
+        if (_accessToken is null && _timeProvider.GetUtcNow() < _anonymousUntil)
+        {
+            return null;
         }
 
         // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one
@@ -60,6 +80,8 @@ public sealed class WasmTokenStorageService(
 
     public async Task SetTokensAsync(string accessToken, string refreshToken)
     {
+        // A login right after anonymous browsing must not wait out the grace.
+        _anonymousUntil = default;
         _accessToken = accessToken;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
         // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
@@ -83,6 +105,11 @@ public sealed class WasmTokenStorageService(
     private async Task<string?> HydrateAsync()
     {
         _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+        if (_accessToken is null)
+        {
+            _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
+        }
+
         return _accessToken;
     }
 }

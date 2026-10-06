@@ -43,6 +43,11 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
     /// on the challenge URL. Returns <see langword="null"/> when the host has no durable storage.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">
+    /// The store reported itself available but did not keep the attempt (storage full, site data
+    /// blocked, private mode). The completion would then refuse the flow one redirect later with no
+    /// diagnostic, so the failure is raised here, before the redirect, for the page to explain.
+    /// </exception>
     public async Task<string?> BeginAsync(CancellationToken cancellationToken = default)
     {
         if (!store.IsAvailable)
@@ -54,6 +59,15 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
         await store
             .SetAsync(StorageKey, new PendingAttempt(state, _timeProvider.GetUtcNow()), cancellationToken)
             .ConfigureAwait(false);
+
+        // Read back: the browser store swallows a failed write, and an attempt that was never kept
+        // cannot be completed.
+        var persisted = await store.GetAsync<PendingAttempt>(StorageKey, cancellationToken).ConfigureAwait(false);
+        if (persisted is null || !string.Equals(persisted.State, state, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Device-local storage accepted the OAuth attempt without persisting it (storage full, blocked, or private mode); the external sign-in cannot be bound to this client.");
+        }
 
         return state;
     }

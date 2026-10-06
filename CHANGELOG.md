@@ -31,6 +31,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - `DateTimeRange.Overlaps` is inclusive on both ends, consistent with `Contains` and `DateRange`: ranges sharing only a boundary instant overlap. (L145)
 - `BoundedChatClient` clears a `RequireSpecific` tool mode whose tool the policy filter stripped, instead of sending the provider a tool choice it rejects. (L146)
 - The post-save hook docs (`OnMutatedAsync`, `OnCreatedAsync`, `OnAddedAsync`) now state the real contract: the hook runs unguarded after the commit, so an override must catch and log its own failures. (L119)
+- `AuthDelegatingHandler` leaves a request that already carries `Authorization` as sent and does not read the token storage, so the forced-refresh 401 replay no longer resends the rejected token. (M187)
+- OAuth sign-in on a browser whose storage drops writes fails before the redirect with a clear message (`Auth.Login.ExternalSignInStorageUnavailable`, English and Spanish) and disables the web-redirect provider buttons, instead of failing one redirect later at completion. `OAuthFlowStateStore.BeginAsync` reads the attempt back and throws `InvalidOperationException` when it was not kept. (M188)
+- `MobileInfiniteScrollList` skips rows a later page repeats (offset paging plus an insert), which threw a duplicate-key render error, and stops fetching after a page that added nothing new. (M189)
+- The UI edge rate limiter counts proxied API traffic whatever its last segment looks like (no file-extension exemption under the proxy prefix), and exempts proxied hub traffic under the configured `SameOriginApiProxy:PathPrefix` instead of a literal `/api/hubs`. (M190)
+- The push-notification compose page guards against a second send while the first is in flight, so a double click no longer broadcasts twice. (M191)
+- `RoleAdminEdit` supersedes an in-flight load when `Role` changes, so a late answer for the previous role can no longer be what Save posts for the current one. (M192)
+- `EntityServiceBase` invalidates the endpoint's cached reads after any write outcome except a refusal before the write (validation, 422, 401, 403, 429). A 412, 404, 409, 5xx or transport failure can answer the retry of a write that landed, so the cache no longer pins the pre-write copy. (L131)
+- `WasmTokenStorageService` and `ServerTokenStorageService` remember a "no session" answer for 15 seconds instead of one token round trip per API call for an anonymous visitor; a login ends the grace at once. (L132)
+- A login whose session cannot be stored on the device revokes the server session it was just issued and clears the in-memory token, instead of leaving both behind a page that reported failure. (L133)
+- `NotificationInboxService` shares one forced token refresh between concurrent reads that both got 401, so a MAUI client no longer presents the same refresh token twice (read as reuse, which revokes the session). (L134)
+- The theme initialization, toggle and persistence no longer let a JS interop failure (asset missing, a malformed `mmca_theme` cookie) escape a component lifecycle; `ThemeService.SetDarkModeAsync` changes `IsDarkMode` only after the value is persisted, and `theme.js` falls back to `localStorage` for a malformed cookie. (L135)
+
+### Changed (UI text)
+
+- The user-administration search placeholder says what the search does: "Search by exact email address..." (and the matching Spanish text). The email filter matches a complete address only. (L154, decision D8)
 
 ### Added
 

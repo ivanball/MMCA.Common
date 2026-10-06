@@ -84,4 +84,19 @@ public sealed class AuthDelegatingHandlerTests
         inner.LastRequest.Authorization.Should().BeNull();
         tokenStorage.Verify(s => s.GetAccessTokenAsync(), Times.Never);
     }
+
+    // M187: a caller that already set the bearer (the forced-refresh replay) keeps it; replacing it
+    // with the stored token resends the very token the server just rejected.
+    [Fact]
+    public async Task SendAsync_WithAuthorizationAlreadySet_KeepsItAndSkipsTheStorageRead()
+    {
+        var (invoker, inner, tokenStorage) = CreateSut("stored-access-token");
+        using var request = CreateRequest();
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "freshly-refreshed");
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        inner.LastRequest.Authorization!.Parameter.Should().Be("freshly-refreshed");
+        tokenStorage.Verify(s => s.GetAccessTokenAsync(), Times.Never);
+    }
 }

@@ -8,6 +8,11 @@ namespace MMCA.Common.UI.Pages.Auth;
 public partial class Login
 {
     /// <summary>
+    /// Set when device storage dropped the OAuth attempt; the web-redirect provider buttons are then
+    /// disabled, because a flow started there would be refused at completion.
+    /// </summary>
+    private bool _externalSignInUnavailable;
+    /// <summary>
     /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
     /// every refusal back here as <c>/login?error={code}</c>: <c>oauth_failed</c>,
     /// <c>missing_claims</c>, or the first domain error code (for example <c>User.LastName.Empty</c>).
@@ -36,5 +41,31 @@ public partial class Login
     {
         var specific = L["Auth.Login.ExternalError." + errorCode];
         return specific.ResourceNotFound ? L["Auth.Login.ExternalError.Refused"].Value : specific.Value;
+    }
+
+    /// <summary>
+    /// Writes the per-attempt OAuth state the completion page requires back. When device storage
+    /// accepts the attempt without keeping it (storage full, site data blocked, private mode) the
+    /// completion would refuse the flow one redirect later with no explanation, so this says so now
+    /// and keeps the web-redirect providers disabled.
+    /// </summary>
+    private async Task BeginOAuthAttemptAsync()
+    {
+        try
+        {
+            _oauthState = await OAuthFlowState.BeginAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            _externalSignInUnavailable = true;
+            _errorMessage = L["Auth.Login.ExternalSignInStorageUnavailable"].Value;
+            StateHasChanged();
+            return;
+        }
+
+        if (_oauthState is not null)
+        {
+            StateHasChanged();
+        }
     }
 }

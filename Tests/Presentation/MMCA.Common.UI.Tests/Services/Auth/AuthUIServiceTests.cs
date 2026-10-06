@@ -231,6 +231,26 @@ public sealed class AuthUIServiceTests : IDisposable
         _authStates.Should().BeEmpty();
     }
 
+    // L133: the server minted a session the device cannot hold, and the storage already took the
+    // access token in memory; reporting failure must not leave either behind.
+    [Fact]
+    public async Task LoginAsync_WhenTokenStorageIsUnavailable_RevokesTheOrphanedSessionAndClearsTheInMemoryToken()
+    {
+        _tokenStorage
+            .Setup(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("JS interop is not available"));
+        var jwt = Jwt();
+        var sut = CreateSut(request => request.RequestUri!.AbsolutePath == "/auth/revoke"
+            ? StubHttpMessageHandler.CreateResponse(HttpStatusCode.NoContent)
+            : AuthResponse(jwt));
+
+        await sut.LoginAsync(Credentials(), Ct);
+
+        _handler.Requests.Should().ContainSingle(r => r.Uri!.AbsolutePath == "/auth/revoke" && r.Method == HttpMethod.Post)
+            .Which.Authorization!.Parameter.Should().Be(jwt);
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Once);
+    }
+
     [Fact]
     public async Task LoginAsync_When2xxCarriesNoAccessToken_FailsWithMissingAccessTokenCode()
     {

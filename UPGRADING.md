@@ -78,6 +78,17 @@ items below either need one mechanical step in a consumer or change what a consu
 10. **Zero `Money` on the wire (L144).** `{"amount":0,"currency":""}` now deserializes to
     `Money.Zero()` instead of throwing; a client that relied on the 400 for an empty currency code
     no longer gets it.
+11. **Token storage constructors (L132).** `WasmTokenStorageService` and `ServerTokenStorageService`
+    gain an optional trailing `TimeProvider? timeProvider = null`. Source-compatible; a host that
+    registers them through the framework extension methods changes nothing, and code compiled
+    against the old constructor recompiles unchanged.
+12. **User-admin search placeholder (L154).** The placeholder text is now "Search by exact email
+    address..." (and the matching Spanish text). An E2E page object that locates the box by its
+    placeholder (MMCA.ADC `PageObjects/Identity/UserListPage.cs`) must use the new text.
+13. **Proxied traffic and the UI edge limiter (M190).** A proxied request whose last segment has a
+    file extension (`/api/report.csv`) now counts against the per-IP window and the concurrency
+    ceiling. Proxied hub traffic stays exempt at whatever `SameOriginApiProxy:PathPrefix` the host
+    configures.
 
 ## [1.231.0] - 2026-10-06
 

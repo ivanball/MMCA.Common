@@ -30,7 +30,8 @@ public sealed class ServerTokenStorageServiceTests
 
     private static (ServerTokenStorageService Sut, Mocks Mocks) CreateSut(
         HttpContext? httpContext = null,
-        string? refresherToken = "hydrated-token")
+        string? refresherToken = "hydrated-token",
+        TimeProvider? timeProvider = null)
     {
         var accessor = new Mock<IHttpContextAccessor>();
         accessor.SetupGet(a => a.HttpContext).Returns(httpContext);
@@ -45,7 +46,8 @@ public sealed class ServerTokenStorageServiceTests
             accessor.Object,
             new CookieTokenReader(accessor.Object),
             cookieSync.Object,
-            refresher.Object);
+            refresher.Object,
+            timeProvider);
         return (sut, new Mocks(accessor, cookieSync, refresher));
     }
 
@@ -108,6 +110,22 @@ public sealed class ServerTokenStorageServiceTests
         var result = await sut.GetAccessTokenAsync();
 
         result.Should().BeNull();
+    }
+
+    // L132: on the circuit, an anonymous visitor's "no session" answer is remembered briefly.
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuitWhenNoSessionExists_RemembersTheNegativeAnswerBriefly()
+    {
+        var clock = new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var (sut, mocks) = CreateSut(httpContext: null, refresherToken: null, timeProvider: clock);
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        clock.Advance(TimeSpan.FromSeconds(16));
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     // == Interactive circuit: in-memory token hydrated via the refresher ==
@@ -178,10 +196,12 @@ public sealed class ServerTokenStorageServiceTests
     {
         // The single-flight slot must be cleared once its own hydrate finishes, so a later caller
         // with a still-stale token hydrates again rather than awaiting a completed task forever.
-        var (sut, mocks) = CreateSut(httpContext: null, refresherToken: null);
+        // The hydrated value is not a JWT, so it stays stale (a null hydrate is now remembered
+        // briefly, L132, and would no longer exercise the slot).
+        var (sut, mocks) = CreateSut(httpContext: null);
 
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
 
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
@@ -255,5 +275,15 @@ public sealed class ServerTokenStorageServiceTests
         var act = () => sut.ClearTokensAsync();
 
         await act.Should().NotThrowAsync();
+    }
+
+    /// <summary>A settable clock (this project does not reference the TimeProvider testing package).</summary>
+    private sealed class ManualClock(DateTimeOffset start) : TimeProvider
+    {
+        private DateTimeOffset _now = start;
+
+        public void Advance(TimeSpan delta) => _now += delta;
+
+        public override DateTimeOffset GetUtcNow() => _now;
     }
 }

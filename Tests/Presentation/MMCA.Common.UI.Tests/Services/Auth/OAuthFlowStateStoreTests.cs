@@ -112,6 +112,29 @@ public sealed class OAuthFlowStateStoreTests
             "nothing durable can be written across the redirect there, so sign-in keeps its old behaviour");
     }
 
+    // M188: a store that reports itself available but drops the write (quota, blocked site data,
+    // private mode) must be caught BEFORE the redirect, not one redirect too late at completion.
+    [Fact]
+    public async Task BeginAsync_WhenTheStoreDropsTheWrite_ThrowsInsteadOfArmingAnUnpersistedAttempt()
+    {
+        var sut = new OAuthFlowStateStore(new DroppingCacheStore(), _time);
+
+        Func<Task> act = () => sut.BeginAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    private sealed class DroppingCacheStore : ILocalCacheStore
+    {
+        public bool IsAvailable => true;
+
+        public Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) => Task.FromResult<T?>(default);
+
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
     private sealed class FakeCacheStore : ILocalCacheStore
     {
         private readonly Dictionary<string, string> _entries = [];

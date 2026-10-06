@@ -79,6 +79,47 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         await cut.WaitForAssertionAsync(() => module.Invocations["observe"].Should().HaveCount(2));
     }
 
+    // M189: offset paging plus an insert ahead of the window repeats a row across pages; two
+    // value-equal siblings share a @key and Blazor's diff throws.
+    [Fact]
+    public async Task ARowRepeatedAcrossPages_RendersOnce_WithoutADuplicateKeyRenderError()
+    {
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 2)
+            .Add(c => c.FetchPageResult, (page, _, _) =>
+                Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((page == 1 ? ["a", "b"] : ["b", "c"], 4)))));
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(2));
+
+        await cut.InvokeAsync(() => cut.Instance.OnSentinelVisible());
+
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(3));
+    }
+
+    [Fact]
+    public async Task APageThatAddsNothingNew_StopsFetching()
+    {
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 2)
+            .Add(c => c.FetchPageResult, (_, _, _) =>
+                Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["a", "b"], 10)))));
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(2));
+
+        await cut.InvokeAsync(() => cut.Instance.OnSentinelVisible());
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".infinite-scroll-sentinel").Should().BeEmpty());
+        cut.FindComponents<MudCard>().Count.Should().Be(2);
+    }
+
     private static string PageItem(int page, string suffix) =>
         string.Create(CultureInfo.InvariantCulture, $"item-{page}-{suffix}");
 

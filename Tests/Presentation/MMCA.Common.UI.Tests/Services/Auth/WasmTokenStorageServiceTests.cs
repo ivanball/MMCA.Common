@@ -17,7 +17,9 @@ public sealed class WasmTokenStorageServiceTests
 {
     private sealed record Mocks(Mock<ISessionCookieSync> CookieSync, Mock<ITokenRefresher> Refresher);
 
-    private static (WasmTokenStorageService Sut, Mocks Mocks) CreateSut(string? refresherToken = "hydrated-token")
+    private static (WasmTokenStorageService Sut, Mocks Mocks) CreateSut(
+        string? refresherToken = "hydrated-token",
+        TimeProvider? timeProvider = null)
     {
         var cookieSync = new Mock<ISessionCookieSync>();
         cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
@@ -26,7 +28,7 @@ public sealed class WasmTokenStorageServiceTests
         refresher
             .Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(refresherToken);
-        return (new WasmTokenStorageService(cookieSync.Object, refresher.Object), new Mocks(cookieSync, refresher));
+        return (new WasmTokenStorageService(cookieSync.Object, refresher.Object, timeProvider), new Mocks(cookieSync, refresher));
     }
 
     private static string CreateJwt(DateTime expires) =>
@@ -119,10 +121,42 @@ public sealed class WasmTokenStorageServiceTests
     {
         // The single-flight slot must be cleared once its own hydrate finishes, so a later caller
         // with a still-stale token hydrates again rather than awaiting a completed task forever.
-        var (sut, mocks) = CreateSut(refresherToken: null);
+        // The hydrated value is not a JWT, so it stays stale (a null hydrate is now remembered
+        // briefly, L132, and would no longer exercise the slot).
+        var (sut, mocks) = CreateSut();
+
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    // L132: an anonymous visitor's "no session" answer is remembered for a short grace, instead of
+    // one /auth/session/token round trip per API call.
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenNoSessionExists_RemembersTheNegativeAnswerBriefly()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var (sut, mocks) = CreateSut(refresherToken: null, timeProvider: clock);
 
         (await sut.GetAccessTokenAsync()).Should().BeNull();
         (await sut.GetAccessTokenAsync()).Should().BeNull();
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        clock.Advance(TimeSpan.FromSeconds(16));
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task SetTokensAsync_AfterANegativeAnswer_EndsTheGrace()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var (sut, mocks) = CreateSut(refresherToken: null, timeProvider: clock);
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        await sut.SetTokensAsync("not-a-jwt", "refresh-token");
+        await sut.GetAccessTokenAsync();
 
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }

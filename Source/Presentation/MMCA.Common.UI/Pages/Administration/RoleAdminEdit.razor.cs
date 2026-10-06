@@ -39,6 +39,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
     private const string GeneralAreaKey = "Group.General";
 
     private readonly CancellationTokenSource _cts = new();
+    private readonly LatestLoadGuard _load = new();
 
     // IDE0028 suggests a collection expression here, but it cannot carry the Ordinal comparer that
     // keeps permission comparisons matching the registry's own.
@@ -99,7 +100,9 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
 
     /// <summary>
     /// Loads on the first parameter set and again only when <see cref="Role"/> actually changes. A
-    /// re-render from the parent must not throw away the operator's half-made edits.
+    /// re-render from the parent must not throw away the operator's half-made edits. A Role change
+    /// supersedes the load still in flight (<see cref="LatestLoadGuard"/>), so a late answer for the
+    /// previous role can never become what Save posts for the current one.
     /// </summary>
     /// <returns>A task that completes once the form reflects the server.</returns>
     protected override Task OnParametersSetAsync() =>
@@ -121,6 +124,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
         {
             _cts.Cancel();
             _cts.Dispose();
+            _load.Dispose();
         }
 
         _disposed = true;
@@ -155,15 +159,23 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
     /// <returns>A task that completes once the form reflects the server.</returns>
     private async Task LoadAsync()
     {
+        var (token, generation) = _load.Begin();
+        var requestedRole = Role;
+
         IsLoading = true;
         _loadResult = null;
         _saveResult = null;
-        _loadedRole = Role;
+        _loadedRole = requestedRole;
         _isDirty = false;
 
         try
         {
-            var role = await Roles.GetAsync(Role, _cts.LifetimeToken());
+            var role = await Roles.GetAsync(requestedRole, token);
+            if (!_load.IsCurrent(generation))
+            {
+                return;
+            }
+
             if (role.IsFailure)
             {
                 _loadResult = role;
@@ -171,7 +183,12 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
                 return;
             }
 
-            var catalog = await Roles.GetCatalogAsync(_cts.LifetimeToken());
+            var catalog = await Roles.GetCatalogAsync(token);
+            if (!_load.IsCurrent(generation))
+            {
+                return;
+            }
+
             if (catalog.IsFailure)
             {
                 _loadResult = catalog;
@@ -186,9 +203,16 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
 
             _groups = Group(catalog.Value!.Permissions);
         }
+        catch (OperationCanceledException) when (!_load.IsCurrent(generation))
+        {
+            // Superseded by a newer Role: that load owns the form now.
+        }
         finally
         {
-            IsLoading = false;
+            if (_load.IsCurrent(generation))
+            {
+                IsLoading = false;
+            }
         }
     }
 

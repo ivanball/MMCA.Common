@@ -496,6 +496,9 @@
   <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
     <value>External sign-in did not complete. Please try again.</value>
   </data>
+  <data name="Auth.Login.ExternalSignInStorageUnavailable" xml:space="preserve">
+    <value>External sign-in needs browser storage. Allow site data (or leave private mode) and reload to continue with a provider.</value>
+  </data>
   <data name="Auth.Login.ExternalError.Failed" xml:space="preserve">
     <value>Signing in with that provider failed. Please try again or use another sign-in method.</value>
   </data>
