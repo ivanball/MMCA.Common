@@ -1,3 +1,11 @@
 ﻿#nullable enable
-*REMOVED*MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
-MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
+MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.AccessToken.get -> string?
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.IsUnavailable.get -> bool
+MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider) -> void
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Acquired(string! accessToken) -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.NoSession.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Unavailable.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!

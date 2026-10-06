@@ -5,8 +5,8 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.InternalCommands;
 
 /// <summary>
 /// The internal-command twin of the outbox type cache (M183): only a successful resolution is
-/// cached, so an unresolvable stored name is re-scanned on its next attempt and a late-loading
-/// assembly can still resolve it before the row dead-letters.
+/// cached, consistent with OutboxMessage. Defensive here: the processor dead-letters a row with an
+/// unresolvable type on its first attempt (ADR-114), so the pin is that no null is cached.
 /// </summary>
 public sealed class InternalCommandMessageTypeCacheTests
 {

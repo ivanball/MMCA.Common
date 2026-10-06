@@ -167,23 +167,32 @@ public sealed class NotificationInboxService(
     /// <param name="cancellationToken">A cancellation token.</param>
     private async Task<string?> TryAcquireRefreshedTokenAsync(CancellationToken cancellationToken)
     {
+        // The shared refresh runs under no caller's token: one caller giving up (a disposed bell)
+        // must not cancel the refresh another caller is awaiting. Each caller stops waiting on its own
+        // token instead. A completed task left in the slot (every waiter gave up before it finished)
+        // is never reused: the next caller starts a fresh refresh.
         Task<string?> inFlight;
         lock (_refreshSync)
         {
-            _refreshInFlight ??= AcquireRefreshedTokenAsync(cancellationToken);
+            if (_refreshInFlight is null || _refreshInFlight.IsCompleted)
+            {
+                _refreshInFlight = AcquireRefreshedTokenAsync(CancellationToken.None);
+            }
+
             inFlight = _refreshInFlight;
         }
 
         try
         {
-            return await inFlight;
+            return await inFlight.WaitAsync(cancellationToken);
         }
         finally
         {
-            // Only clear our own task, so a newer refresh started after this one is not dropped.
+            // Only clear our own, finished task: a refresh still running for other callers stays, and
+            // a newer refresh started after this one is not dropped.
             lock (_refreshSync)
             {
-                if (ReferenceEquals(_refreshInFlight, inFlight))
+                if (inFlight.IsCompleted && ReferenceEquals(_refreshInFlight, inFlight))
                 {
                     _refreshInFlight = null;
                 }

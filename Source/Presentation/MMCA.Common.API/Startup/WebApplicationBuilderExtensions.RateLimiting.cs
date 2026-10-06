@@ -245,12 +245,15 @@ public static partial class WebApplicationBuilderExtensions
                     ?? NullLogger<RedisFixedWindowRateLimiter>.Instance;
 
                 // The application namespace keeps two MMCA apps on one Redis from sharing counters,
-                // under the same rule the distributed cache keys follow (SEC-Common-53).
-                var keyNamespace = RateLimitKeyNamespace(requestServices!);
-
+                // under the same rule the distributed cache keys follow (SEC-Common-53). Resolved in
+                // the factory, which runs once per partition, not on every request.
                 return RateLimitPartition.Get(
                     partitionKey,
-                    key => new RedisFixedWindowRateLimiter(connection, $"{keyNamespace}:{redisScope}:{key}", permitLimit, logger));
+                    key => new RedisFixedWindowRateLimiter(
+                        connection,
+                        $"{RateLimitKeyNamespace(requestServices!)}:{redisScope}:{key}",
+                        permitLimit,
+                        logger));
             }
 
             // No multiplexer registered: fall through to the in-memory limiters rather than failing

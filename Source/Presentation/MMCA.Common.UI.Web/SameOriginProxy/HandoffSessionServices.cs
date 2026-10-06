@@ -11,20 +11,33 @@ namespace MMCA.Common.UI.Web.SameOriginProxy;
 /// handoff instead and opens it here, on the server, so the token only ever exists in circuit memory.
 /// Registered by <c>AddCommonSameOriginApiProxy</c>.
 /// </summary>
-internal sealed class HandoffTokenRefresher(IJSRuntime jsRuntime, SessionHandoffProtector protector) : ITokenRefresher
+internal sealed class HandoffTokenRefresher(IJSRuntime jsRuntime, SessionHandoffProtector protector) : ISessionAwareTokenRefresher
 {
-    public async Task<string?> AcquireAccessTokenAsync(CancellationToken cancellationToken = default)
+    public async Task<string?> AcquireAccessTokenAsync(CancellationToken cancellationToken = default) =>
+        (await TryAcquireAccessTokenAsync(cancellationToken)).AccessToken;
+
+    public async Task<TokenAcquisition> TryAcquireAccessTokenAsync(CancellationToken cancellationToken = default)
     {
         try
         {
+            // The script answers null only for the endpoint's 401 and throws for any other failure.
             var handoff = await jsRuntime.InvokeAsync<string?>("mmcaAuthHandoff.getToken", cancellationToken);
-            return protector.UnprotectAccessToken(handoff);
+            if (handoff is null)
+            {
+                return TokenAcquisition.NoSession;
+            }
+
+            // A handoff this host cannot open (expired, or a key it does not hold) says nothing about
+            // the session itself.
+            return protector.UnprotectAccessToken(handoff) is { Length: > 0 } accessToken
+                ? TokenAcquisition.Acquired(accessToken)
+                : TokenAcquisition.Unavailable;
         }
         catch (Exception ex) when (ex is InvalidOperationException or JSDisconnectedException or JSException or OperationCanceledException)
         {
-            // JS interop unavailable (SSR prerender / disconnected circuit): the server-side cookie path
-            // handles those phases; here we simply report "no token acquired".
-            return null;
+            // JS interop unavailable (SSR prerender / disconnected circuit), a cancelled call, or the
+            // endpoint failing transiently: the server-side cookie path handles the interop-less phases.
+            return TokenAcquisition.Unavailable;
         }
     }
 }

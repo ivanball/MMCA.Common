@@ -22,6 +22,7 @@ public sealed class CurrencyJsonConverter : JsonConverter<Currency>
         string code = reader.GetString() ?? string.Empty;
 
         // Symmetric with Write: the zero sentinel (internal to Shared) serializes as the empty code.
+        // A non-zero amount with it is refused by Money's own JSON read (IJsonOnDeserialized).
         if (code.Length == 0)
             return Money.Zero().Currency;
 

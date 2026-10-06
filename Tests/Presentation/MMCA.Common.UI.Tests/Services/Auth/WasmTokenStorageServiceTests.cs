@@ -161,6 +161,41 @@ public sealed class WasmTokenStorageServiceTests
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
+    // L132 review follow-up: only a DEFINITIVE "no session" starts the grace. A transient failure
+    // (429, 5xx, dropped connection) must leave the next read free to hydrate again, or a signed-in
+    // user reads as anonymous for the grace period.
+    [Fact]
+    public async Task GetAccessTokenAsync_AfterATransientFailure_HydratesAgainOnTheNextRead()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TokenAcquisition.Unavailable)
+            .ReturnsAsync(TokenAcquisition.Acquired("hydrated-token"));
+        var sut = new WasmTokenStorageService(Mock.Of<ISessionCookieSync>(), refresher.Object, clock);
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_AfterADefinitiveNoSession_FromASessionAwareRefresher_RemembersIt()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TokenAcquisition.NoSession)
+            .ReturnsAsync(TokenAcquisition.Acquired("hydrated-token"));
+        var sut = new WasmTokenStorageService(Mock.Of<ISessionCookieSync>(), refresher.Object, clock);
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().BeNull("a definitive no-session answer is remembered for the grace");
+
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // == Refresh token never surfaces in the browser ==
     [Fact]
     public async Task GetRefreshTokenAsync_EvenAfterSet_ReturnsNull()

@@ -52,8 +52,10 @@ items below either need one mechanical step in a consumer or change what a consu
    `ScopedIntegrationEventHandlerBase` now resolves the delivery's tenant, principal and correlation
    id in its own scope: audit stamps name the original user instead of the system sentinel, and on a
    tenancy host its unit of work routes to the original tenant. A handler that relied on running as
-   the system user, or that opens a scope for a different tenant inside the delivery (the seeded
-   tenant cannot then be changed), must be reviewed. No code change otherwise.
+   the system user must be reviewed. A scope created inside the delivery with
+   `CreateTenantScope(target)` keeps the target's tenant (or the shared source for a tenantless
+   target), as before; only a plain `CreateScope()` inherits the delivery's tenant. No code change
+   otherwise.
 4. **Typed REST clients no longer retry POST or PATCH (M185).** A POST or PATCH through
    `AddTypedServiceClient` that times out or gets a 5xx, 408 or 429 now fails on the first attempt
    instead of being replayed once. Make the endpoint idempotent (`[Idempotent]` plus an
@@ -76,12 +78,18 @@ items below either need one mechanical step in a consumer or change what a consu
    in-flight counters, so every partition gets one fresh one-minute allowance; the old keys expire on
    their own TTL. Nothing to migrate.
 10. **Zero `Money` on the wire (L144).** `{"amount":0,"currency":""}` now deserializes to
-    `Money.Zero()` instead of throwing; a client that relied on the 400 for an empty currency code
-    no longer gets it.
-11. **Token storage constructors (L132).** `WasmTokenStorageService` and `ServerTokenStorageService`
-    gain an optional trailing `TimeProvider? timeProvider = null`. Source-compatible; a host that
-    registers them through the framework extension methods changes nothing, and code compiled
-    against the old constructor recompiles unchanged.
+    `Money.Zero()` instead of throwing. Only a zero amount may carry the empty code: a non-zero
+    amount with an empty currency (`{"amount":5,"currency":""}`) is still a `JsonException`, so a
+    400 on the MVC path, as before.
+11. **Token storage anonymous grace (L132).** `WasmTokenStorageService` and
+    `ServerTokenStorageService` gain a constructor overload with a trailing `TimeProvider?`; the
+    existing constructors stay, so nothing breaks at compile or bind time. A definitive "no session"
+    (the token endpoint's 401) is remembered for 15 seconds, so a session created in another tab
+    shows up within that window; a transient failure is not remembered. A custom `ITokenRefresher`
+    on a browser host keeps working (its null is read as "no session"); implement
+    `ISessionAwareTokenRefresher` to report transient failures as `TokenAcquisition.Unavailable`.
+    The `mmcaAuthSession.getToken` / `mmcaAuthHandoff.getToken` scripts now throw for any failure
+    other than a 401, so a host script calling them directly must catch.
 12. **User-admin search placeholder (L154).** The placeholder text is now "Search by exact email
     address..." (and the matching Spanish text). An E2E page object that locates the box by its
     placeholder (MMCA.ADC `PageObjects/Identity/UserListPage.cs`) must use the new text.

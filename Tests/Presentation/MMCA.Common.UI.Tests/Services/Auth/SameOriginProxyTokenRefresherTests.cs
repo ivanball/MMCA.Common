@@ -86,4 +86,43 @@ public sealed class SameOriginProxyTokenRefresherTests
 
         await act.Should().ThrowAsync<NotSupportedException>();
     }
+
+    // L132 review follow-up: the script answers null only for the endpoint's 401 and throws for any
+    // other failure, so the outcome tells "no session" apart from a transient failure.
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenJsReturnsNull_IsADefinitiveNoSession()
+    {
+        SetupGetToken(null);
+
+        var result = await CreateSut().TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        result.AccessToken.Should().BeNull();
+        result.IsUnavailable.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(nameof(InvalidOperationException))]
+    [InlineData(nameof(JSDisconnectedException))]
+    [InlineData(nameof(JSException))]
+    [InlineData(nameof(OperationCanceledException))]
+    public async Task TryAcquireAccessTokenAsync_WhenTheCallFails_IsUnavailableNotNoSession(string exceptionKind)
+    {
+        SetupGetTokenThrows(CreateInteropException(exceptionKind));
+
+        var result = await CreateSut().TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        result.AccessToken.Should().BeNull();
+        result.IsUnavailable.Should().BeTrue("a 429, a 5xx or unavailable interop says nothing about the session");
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenJsReturnsAToken_IsAcquired()
+    {
+        SetupGetToken("fresh-access-token");
+
+        var result = await CreateSut().TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        result.AccessToken.Should().Be("fresh-access-token");
+        result.IsUnavailable.Should().BeFalse();
+    }
 }

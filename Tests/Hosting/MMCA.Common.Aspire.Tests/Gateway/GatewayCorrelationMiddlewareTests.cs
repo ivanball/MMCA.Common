@@ -103,6 +103,23 @@ public sealed class GatewayCorrelationMiddlewareTests
         context.Response.Headers[Header].ToString().Should().Be(context.Request.Headers[Header].ToString());
     }
 
+    // L130/L136 review follow-up: the edge applies the service's printable-ASCII rule too, so it
+    // never echoes (or forwards) an id Kestrel refuses or the service would replace.
+    [Theory]
+    [InlineData(0xE9)] // Latin small e with acute, built from its code point so this file stays ASCII.
+    [InlineData(0x01)]
+    public async Task InvokeAsync_WithANonPrintableAsciiHeader_ReplacesItOnRequestAndResponse(int codePoint)
+    {
+        var supplied = "caf" + (char)codePoint + "-123";
+
+        var context = await RunAsync(c => c.Request.Headers[Header] = supplied);
+
+        var forwarded = context.Request.Headers[Header].ToString();
+        forwarded.Should().NotBe(supplied);
+        forwarded.Should().NotBeNullOrWhiteSpace();
+        context.Response.Headers[Header].ToString().Should().Be(forwarded);
+    }
+
     // The load-bearing difference from CorrelationIdMiddleware: nothing is resolved from DI, so
     // this runs in a bare YARP host that never registered the Common application services.
     [Fact]

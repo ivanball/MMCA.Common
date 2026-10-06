@@ -138,7 +138,9 @@ internal static class AmbientOrigin
     /// <see cref="TenantContext"/>, <see cref="ScopedUserOverride"/> and
     /// <see cref="CorrelationContext"/> seed themselves from it when constructed. The published
     /// tenant and correlation id are the ones the restored scope ends up with, so a scope whose
-    /// tenant was already fixed (a database-per-tenant target) hands down that tenant.
+    /// tenant was already fixed (a database-per-tenant target) hands down that tenant. An explicit
+    /// <c>CreateTenantScope</c> target inside the hop wins over the published tenant (see
+    /// <see cref="Suppress"/>).
     /// </para>
     /// </remarks>
     /// <param name="services">The scope to restore the context onto.</param>
@@ -219,6 +221,19 @@ internal static class AmbientOrigin
     }
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
+
+    /// <summary>
+    /// Withdraws the published origin until the returned handle is disposed, so a scope created
+    /// meanwhile does not inherit it. Used where an EXPLICIT choice must win over an enclosing hop:
+    /// <c>TenantDataSourceTargets.CreateTenantScope</c>.
+    /// </summary>
+    /// <returns>A handle that puts the withdrawn origin back.</returns>
+    internal static IDisposable Suppress()
+    {
+        var previous = CurrentOrigin.Value;
+        CurrentOrigin.Value = null;
+        return new RestoreHandle(previous);
+    }
 
     /// <summary>Puts back the origin that was published before a <see cref="Restore"/>.</summary>
     /// <param name="previous">The origin to put back, or null.</param>

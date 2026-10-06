@@ -16,10 +16,11 @@ namespace MMCA.Common.Aspire.Gateway;
 /// <see cref="RequestDelegate"/>, which is what makes it safe to drop into a bare YARP host.
 /// </para>
 /// <para>
-/// It writes the value onto the REQUEST headers when the caller did not supply one (and cuts a
-/// caller-supplied value to <see cref="MaxLength"/>, the stored width), so the proxied request
-/// carries it downstream and the service-side <c>CorrelationIdMiddleware</c> adopts the same ID
-/// instead of minting a second one. The response echo runs from
+/// It writes the value onto the REQUEST headers when the caller did not supply a usable one, so the
+/// proxied request carries it downstream and the service-side <c>CorrelationIdMiddleware</c> adopts
+/// the same ID instead of minting a second one. A caller-supplied value follows the service's rule
+/// exactly: cut to <see cref="MaxLength"/> (the stored width), and replaced by a generated id when
+/// it has a non-ASCII or control character (Kestrel refuses to echo one). The response echo runs from
 /// <see cref="HttpResponse.OnStarting(Func{Task})"/>, so it survives a proxied response whose
 /// headers are written by the forwarder.
 /// </para>
@@ -51,24 +52,19 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var correlationId = context.Request.Headers[HeaderName].FirstOrDefault();
+        var header = context.Request.Headers[HeaderName].FirstOrDefault();
 
-        if (correlationId is { Length: > MaxLength } && !string.IsNullOrWhiteSpace(correlationId))
-        {
-            // Cut a caller-supplied id to the stored width and write it back, so the proxied request
-            // carries exactly what this edge echoes and the service stores. The service applies the
-            // same cut, but this echo runs from OnStarting after the forwarder copied the service's
-            // headers, so without it the client would see the long value.
-            correlationId = correlationId[..MaxLength];
-            context.Request.Headers[HeaderName] = correlationId;
-        }
+        // The service's rule (CorrelationIdMiddleware.Sanitize), mirrored because the packages share
+        // no reference: this echo runs from OnStarting after the forwarder copied the service's
+        // headers, so the edge must forward and echo exactly what the service keeps and stores.
+        // Prefer the W3C trace id for a generated one so the correlation ID and the distributed
+        // trace line up; TraceIdentifier is the fallback when no Activity is running.
+        var correlationId = (string.IsNullOrWhiteSpace(header) ? null : Sanitize(header))
+            ?? Activity.Current?.TraceId.ToString()
+            ?? context.TraceIdentifier;
 
-        if (string.IsNullOrWhiteSpace(correlationId))
+        if (!string.Equals(correlationId, header, StringComparison.Ordinal))
         {
-            // Prefer the W3C trace id so the correlation ID and the distributed trace line up in
-            // the backend; TraceIdentifier is the fallback when no Activity is running (tracing
-            // disabled, or a request that arrived before the instrumentation started one).
-            correlationId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
             context.Request.Headers[HeaderName] = correlationId;
         }
 
@@ -80,6 +76,18 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
         });
 
         await next(context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Cuts a caller-supplied id to <see cref="MaxLength"/> characters and keeps it only when every
+    /// character is printable ASCII (the service's rule).
+    /// </summary>
+    /// <param name="value">The header value.</param>
+    /// <returns>The value, at most <see cref="MaxLength"/> characters long, or null when it cannot be echoed.</returns>
+    private static string? Sanitize(string value)
+    {
+        var cut = value.Length > MaxLength ? value[..MaxLength] : value;
+        return cut.All(static c => c is >= ' ' and <= '~') ? cut : null;
     }
 }
 

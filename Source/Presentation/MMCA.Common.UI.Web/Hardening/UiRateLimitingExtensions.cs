@@ -2,8 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Web.SameOriginProxy;
 
 namespace MMCA.Common.UI.Web.Hardening;
@@ -186,29 +188,31 @@ public static class UiRateLimitingExtensions
             var settings = configuration.GetSection(UiRateLimitingSettings.SectionName)
                 .Get<UiRateLimitingSettings>() ?? new UiRateLimitingSettings();
 
-            // The proxy prefix the hub exemption and the extension carve-out key on, read the same
-            // way the proxy itself binds it.
-            var proxyPathPrefix = new PathString(
-                configuration.GetSection(SameOriginApiProxySettings.SectionName)[nameof(SameOriginApiProxySettings.PathPrefix)]
-                ?? new SameOriginApiProxySettings().PathPrefix);
+            services.AddRateLimiter(options => options.RejectionStatusCode = StatusCodes.Status429TooManyRequests);
 
-            return services.AddRateLimiter(options =>
+            if (!settings.Enabled)
             {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                return services;
+            }
 
-                if (!settings.Enabled)
+            // The proxy prefix the hub exemption and the extension carve-out key on, read through
+            // the proxy's own options (Bind plus any Configure<> the host adds), so the limiter and
+            // the proxy can never disagree. Resolved once, when the limiter options are built.
+            services.AddOptions<RateLimiterOptions>()
+                .Configure<IOptions<SameOriginApiProxySettings>>((options, proxyOptions) =>
                 {
-                    return;
-                }
+                    var proxyPathPrefix = new PathString(proxyOptions.Value.PathPrefix);
 
-                // Chained, so a request must satisfy the per-IP window AND the replica-wide
-                // concurrency ceiling: they answer different questions.
-                options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
-                    PartitionedRateLimiter.Create<HttpContext, string>(
-                        httpContext => ClientIpPartition(httpContext, settings, proxyPathPrefix)),
-                    PartitionedRateLimiter.Create<HttpContext, string>(
-                        httpContext => ConcurrencyPartition(httpContext, settings, proxyPathPrefix)));
-            });
+                    // Chained, so a request must satisfy the per-IP window AND the replica-wide
+                    // concurrency ceiling: they answer different questions.
+                    options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
+                        PartitionedRateLimiter.Create<HttpContext, string>(
+                            httpContext => ClientIpPartition(httpContext, settings, proxyPathPrefix)),
+                        PartitionedRateLimiter.Create<HttpContext, string>(
+                            httpContext => ConcurrencyPartition(httpContext, settings, proxyPathPrefix)));
+                });
+
+            return services;
         }
     }
 

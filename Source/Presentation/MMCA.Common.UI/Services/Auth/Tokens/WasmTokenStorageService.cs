@@ -9,9 +9,11 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// <c>ServerTokenStorageService</c> in MMCA.Common.UI.Web.
 /// <para>
 /// A visitor with no session is answered from memory for <see cref="AnonymousGrace"/> after a
-/// hydrate comes back empty, instead of one same-origin token POST per API call; a session created
-/// in another tab is therefore seen within that window, and <see cref="SetTokensAsync"/> (a login
-/// here) ends it at once.
+/// hydrate comes back with a DEFINITIVE "no session" (see <see cref="ISessionAwareTokenRefresher"/>),
+/// instead of one same-origin token POST per API call; a session created in another tab is
+/// therefore seen within that window, and <see cref="SetTokensAsync"/> (a login here) ends it at
+/// once. A transient failure (a 429, a 5xx, a dropped connection) is never remembered: the next read
+/// hydrates again.
 /// </para>
 /// </summary>
 /// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
@@ -20,7 +22,7 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 public sealed class WasmTokenStorageService(
     ISessionCookieSync sessionCookieSync,
     ITokenRefresher tokenRefresher,
-    TimeProvider? timeProvider = null) : ITokenStorageService
+    TimeProvider? timeProvider) : ITokenStorageService
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
@@ -33,6 +35,17 @@ public sealed class WasmTokenStorageService(
     private string? _accessToken;
     private Task<string?>? _hydrateInFlight;
     private DateTimeOffset _anonymousUntil;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WasmTokenStorageService"/> class on the system
+    /// clock. Kept so code compiled against the original two-argument constructor keeps binding.
+    /// </summary>
+    /// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
+    /// <param name="tokenRefresher">Acquires an access token from the session cookies.</param>
+    public WasmTokenStorageService(ISessionCookieSync sessionCookieSync, ITokenRefresher tokenRefresher)
+        : this(sessionCookieSync, tokenRefresher, timeProvider: null)
+    {
+    }
 
     public async Task<string?> GetAccessTokenAsync()
     {
@@ -104,8 +117,23 @@ public sealed class WasmTokenStorageService(
 
     private async Task<string?> HydrateAsync()
     {
-        _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
-        if (_accessToken is null)
+        // Only a DEFINITIVE "no session" starts the grace. A refresher that can tell (the browser
+        // ones) reports a 429, a 5xx, a dropped connection or unavailable interop as unavailable, and
+        // the next read then hydrates again instead of treating a signed-in user as anonymous. A
+        // refresher without that capability keeps the previous reading: its null means "no session".
+        var unavailable = false;
+        if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
+        {
+            var acquisition = await sessionAware.TryAcquireAccessTokenAsync().ConfigureAwait(false);
+            _accessToken = acquisition.AccessToken;
+            unavailable = acquisition.IsUnavailable;
+        }
+        else
+        {
+            _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+        }
+
+        if (_accessToken is null && !unavailable)
         {
             _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
         }

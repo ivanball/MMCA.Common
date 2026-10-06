@@ -54,13 +54,21 @@ public class MoneySerializationTests
     [Fact]
     public void Deserialize_ZeroPayload_RoundTripsTheZeroSentinel()
     {
-        // L144 (decision D6): the zero sentinel serializes as the empty code, and the currency
-        // converter reads that code back as the sentinel, so a zero total round-trips. A non-zero
-        // amount can never carry it (Money.Create refuses the sentinel).
+        // L144 (option C): the zero sentinel serializes as the empty code, and the currency converter
+        // reads that code back as the sentinel, so a zero total round-trips.
         var json = JsonSerializer.Serialize(Money.Zero());
 
         JsonSerializer.Deserialize<Money>(json)!.Should().Be(Money.Zero());
     }
+
+    // L144 (option C): the JSON constructor bypasses Money.Create, so the read itself must refuse a
+    // NON-ZERO amount with no currency instead of admitting Money(5, Currency.None).
+    [Theory]
+    [InlineData("""{"Amount":5,"Currency":""}""")]
+    [InlineData("""{"Amount":-0.01,"Currency":""}""")]
+    public void Deserialize_NonZeroAmountWithAnEmptyCurrency_ThrowsJsonException(string json) =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>(json))
+            .Should().Throw<JsonException>();
 
     [Fact]
     public void Roundtrip_ZeroWithCurrency_PreservesValue()

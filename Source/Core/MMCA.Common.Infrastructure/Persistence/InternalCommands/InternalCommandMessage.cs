@@ -27,9 +27,11 @@ public sealed class InternalCommandMessage
 
     /// <summary>
     /// Caches resolved command types per STORED name (an assembly-qualified name, or an
-    /// <see cref="InternalCommandNameAttribute"/> identity). Only a successful resolution is cached:
-    /// an unresolvable name is re-scanned on each attempt, so an assembly that loads late can still
-    /// resolve it before the row dead-letters (a bounded cost: <c>MaxAttempts</c> scans per row).
+    /// <see cref="InternalCommandNameAttribute"/> identity). Only a successful resolution is cached,
+    /// consistent with <c>OutboxMessage</c>. Here that is defensive rather than load-bearing: the
+    /// processor dead-letters a row whose type it cannot resolve on its FIRST attempt
+    /// (<c>type_unresolvable</c>, ADR-114: a host that cannot name the type has no handler for it),
+    /// so an unresolvable name costs one assembly scan per row and is never retried.
     /// </summary>
     private static readonly ConcurrentDictionary<string, Type?> CommandTypeCache = new(StringComparer.Ordinal);
 
@@ -183,7 +185,8 @@ public sealed class InternalCommandMessage
     /// <summary>
     /// Resolves the stored <see cref="CommandType"/> to a CLR type: as a CLR name first, then as an
     /// <see cref="InternalCommandNameAttribute"/> identity. A successful resolution caches under the
-    /// stored name; a failure does not, so a later attempt scans again.
+    /// stored name; a failure does not (the row it belongs to is dead-lettered on that attempt, so
+    /// another row carrying the same name scans again).
     /// </summary>
     /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
     private Type? ResolveCommandType()

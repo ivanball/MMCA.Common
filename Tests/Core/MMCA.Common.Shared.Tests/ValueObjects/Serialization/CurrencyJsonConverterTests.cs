@@ -50,8 +50,8 @@ public class CurrencyJsonConverterTests
         FluentActions.Invoking(() => JsonSerializer.Deserialize<Currency>(json))
             .Should().Throw<JsonException>();
 
-    // L144 (decision D6): Write emits the zero sentinel's empty code, so Read accepts it back as
-    // the sentinel; an empty code cannot produce a non-zero Money (Money.Create refuses it).
+    // L144 (option C): Write emits the zero sentinel's empty code, so Read accepts it back as the
+    // sentinel; a non-zero Money with it is refused by Money's own JSON read (MoneySerializationTests).
     [Fact]
     public void Read_EmptyStringCode_ReturnsTheZeroSentinel() =>
         JsonSerializer.Deserialize<Currency>("\"\"").Should().BeSameAs(Money.Zero().Currency);

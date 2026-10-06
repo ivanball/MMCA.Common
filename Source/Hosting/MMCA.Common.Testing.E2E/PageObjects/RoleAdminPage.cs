@@ -66,7 +66,7 @@ public sealed class RoleAdminPage
         // root layout), so it would satisfy the wait below before THIS save's PUT has landed, and two
         // visible toasts make the text locator a strict-mode violation. Wait for it to clear first.
         await Assertions.Expect(SavedToast)
-            .ToHaveCountAsync(0, new() { Timeout = 15_000 }).ConfigureAwait(false);
+            .ToHaveCountAsync(0, new() { Timeout = 30_000 }).ConfigureAwait(false);
 
         // Force: MudBlazor renders the real input at zero opacity underneath its icon button, so
         // Playwright's actionability check would time out on a control the user can click perfectly

@@ -128,6 +128,29 @@ public sealed class ServerTokenStorageServiceTests
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
+    // L132 review follow-up: a transient failure on the circuit must not start the anonymous grace.
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuitAfterATransientFailure_HydratesAgainOnTheNextRead()
+    {
+        var accessor = new Mock<IHttpContextAccessor>();
+        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TokenAcquisition.Unavailable)
+            .ReturnsAsync(TokenAcquisition.Acquired("hydrated-token"));
+        var sut = new ServerTokenStorageService(
+            accessor.Object,
+            new CookieTokenReader(accessor.Object),
+            Mock.Of<ISessionCookieSync>(),
+            refresher.Object,
+            new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
     // == Interactive circuit: in-memory token hydrated via the refresher ==
     [Fact]
     public async Task GetAccessTokenAsync_OnCircuit_HydratesViaRefresher()

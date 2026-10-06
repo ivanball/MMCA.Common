@@ -46,6 +46,12 @@ public sealed class CurrencyJsonConverterTests
     public void Read_EmptyCode_RoundTripsTheZeroSentinel() =>
         JsonSerializer.Deserialize<Money>(JsonSerializer.Serialize(Money.Zero(), _options), _options)!.Should().Be(Money.Zero());
 
+    // L144 (option C): the MVC read path refuses a non-zero amount with no currency (a 400).
+    [Fact]
+    public void Read_NonZeroAmountWithAnEmptyCode_ThrowsJsonException() =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>("""{"Amount":5,"Currency":""}""", _options))
+            .Should().Throw<JsonException>();
+
     [Fact]
     public void Read_NumberToken_ThrowsJsonException() =>
         FluentActions.Invoking(() => ReadCurrency("123"u8))
