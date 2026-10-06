@@ -759,6 +759,8 @@ MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.ClearTokensAsync() -> Syst
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService
@@ -770,6 +772,10 @@ MMCA.Common.UI.Services.Auth.Tokens.JwtTokenInfo
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.SameOriginProxyTokenRefresher(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.AccessToken.get -> string?
+MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.IsUnavailable.get -> bool
 MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
@@ -777,6 +783,7 @@ MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetAccessTokenAsync(
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider) -> void
 MMCA.Common.UI.Services.Caching.IUiReadCache
 MMCA.Common.UI.Services.Caching.IUiReadCache.Clear() -> void
 MMCA.Common.UI.Services.Caching.IUiReadCache.Generation.get -> long
@@ -1431,6 +1438,9 @@ static MMCA.Common.UI.Services.Api.IdempotentReadRetry.GetAsync(System.Net.Http.
 static MMCA.Common.UI.Services.Api.PagedReadAll.LookupPageUrl(string! entity, int pageNumber) -> string!
 static MMCA.Common.UI.Services.Api.PagedReadAll.ReadAllAsync<T>(System.Func<int, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>!>!>!>! fetchPage, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.List<T>!>!>!
 static MMCA.Common.UI.Services.Auth.Tokens.JwtTokenInfo.IsFresh(string? token, System.TimeSpan skew) -> bool
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Acquired(string! accessToken) -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.NoSession.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Unavailable.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
 static MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup.WarmAsync(System.IServiceProvider! services) -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddBrowserDeviceCapabilities(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabilityDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

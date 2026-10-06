@@ -171,6 +171,7 @@ MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RoleAdminPage(Microsoft.Playwr
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RoleTable.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RowByRole(string! role) -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SaveButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SavedToast.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SetPermissionAsync(string! permission, bool granted) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.DefaultCulture_DoesNotLeakPseudoSentinel() -> System.Threading.Tasks.Task!

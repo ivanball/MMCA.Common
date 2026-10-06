@@ -1,2 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SavedToast.get -> Microsoft.Playwright.ILocator!

@@ -1,3 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.API.SessionCookies.SessionCookieSettings.Lifetime.get -> System.TimeSpan?
-MMCA.Common.API.SessionCookies.SessionCookieSettings.Lifetime.set -> void
