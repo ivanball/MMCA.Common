@@ -90,6 +90,19 @@ public sealed class GatewayCorrelationMiddlewareTests
         context.Response.Headers[Header].ToString().Should().NotBeNullOrWhiteSpace();
     }
 
+    // L136: the edge echoes (and forwards) exactly what the service stores, which is the first 64
+    // characters (CorrelationIdMiddleware.MaxLength, the persisted column width).
+    [Fact]
+    public async Task InvokeAsync_WithAnOverlongCallerSuppliedHeader_CutsItToTheStoredWidthOnRequestAndResponse()
+    {
+        var supplied = new string('x', 80);
+
+        var context = await RunAsync(c => c.Request.Headers[Header] = supplied);
+
+        context.Request.Headers[Header].ToString().Should().HaveLength(64);
+        context.Response.Headers[Header].ToString().Should().Be(context.Request.Headers[Header].ToString());
+    }
+
     // The load-bearing difference from CorrelationIdMiddleware: nothing is resolved from DI, so
     // this runs in a bare YARP host that never registered the Common application services.
     [Fact]

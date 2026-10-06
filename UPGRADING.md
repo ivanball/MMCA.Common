@@ -89,6 +89,9 @@ items below either need one mechanical step in a consumer or change what a consu
     file extension (`/api/report.csv`) now counts against the per-IP window and the concurrency
     ceiling. Proxied hub traffic stays exempt at whatever `SameOriginApiProxy:PathPrefix` the host
     configures.
+14. **Path-prefix settings fail fast (M193).** A `GatewayRateLimiting:BypassPathPrefixes` or
+    `SecurityHeaders:CredentialPathPrefixes` entry without a leading `/` now fails startup with a
+    validation error naming the entry. Add the slash. No first-party consumer sets either list.
 
 ## [1.231.0] - 2026-10-06
 

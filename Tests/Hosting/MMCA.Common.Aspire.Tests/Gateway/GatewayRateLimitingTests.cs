@@ -360,6 +360,17 @@ public sealed class GatewayRateLimitingTests
         act.Should().Throw<ValidationException>();
     }
 
+    // M193: PathString refuses a non-empty value without a leading slash, so a bad bypass prefix
+    // used to throw on every request; it must fail at registration instead (ADR-070).
+    [Fact]
+    public void AddGatewayRateLimiting_WithABypassPrefixMissingItsLeadingSlash_ThrowsAtRegistration()
+    {
+        var act = () => new ServiceCollection().AddGatewayRateLimiting(
+            new GatewayRateLimitingSettings { BypassPathPrefixes = ["hubs"] });
+
+        act.Should().Throw<ValidationException>();
+    }
+
     [Fact]
     public void AddGatewayRateLimiting_WithAThirtyTwoCharacterSecret_IsAccepted()
     {

@@ -16,9 +16,10 @@ namespace MMCA.Common.Aspire.Gateway;
 /// <see cref="RequestDelegate"/>, which is what makes it safe to drop into a bare YARP host.
 /// </para>
 /// <para>
-/// It writes the value onto the REQUEST headers when the caller did not supply one, so the proxied
-/// request carries it downstream and the service-side <c>CorrelationIdMiddleware</c> adopts the
-/// same ID instead of minting a second one. The response echo runs from
+/// It writes the value onto the REQUEST headers when the caller did not supply one (and cuts a
+/// caller-supplied value to <see cref="MaxLength"/>, the stored width), so the proxied request
+/// carries it downstream and the service-side <c>CorrelationIdMiddleware</c> adopts the same ID
+/// instead of minting a second one. The response echo runs from
 /// <see cref="HttpResponse.OnStarting(Func{Task})"/>, so it survives a proxied response whose
 /// headers are written by the forwarder.
 /// </para>
@@ -34,6 +35,13 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
     public const string HeaderName = "X-Correlation-ID";
 
     /// <summary>
+    /// The longest correlation id kept. Twin of <c>CorrelationIdMiddleware.MaxLength</c> in
+    /// MMCA.Common.API (the persisted column width); the two packages share no reference, so the
+    /// literal is repeated on purpose.
+    /// </summary>
+    internal const int MaxLength = 64;
+
+    /// <summary>
     /// Ensures the request carries a correlation ID, echoes it on the response, then invokes the
     /// rest of the pipeline.
     /// </summary>
@@ -44,6 +52,16 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(context);
 
         var correlationId = context.Request.Headers[HeaderName].FirstOrDefault();
+
+        if (correlationId is { Length: > MaxLength } && !string.IsNullOrWhiteSpace(correlationId))
+        {
+            // Cut a caller-supplied id to the stored width and write it back, so the proxied request
+            // carries exactly what this edge echoes and the service stores. The service applies the
+            // same cut, but this echo runs from OnStarting after the forwarder copied the service's
+            // headers, so without it the client would see the long value.
+            correlationId = correlationId[..MaxLength];
+            context.Request.Headers[HeaderName] = correlationId;
+        }
 
         if (string.IsNullOrWhiteSpace(correlationId))
         {

@@ -42,6 +42,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - A login whose session cannot be stored on the device revokes the server session it was just issued and clears the in-memory token, instead of leaving both behind a page that reported failure. (L133)
 - `NotificationInboxService` shares one forced token refresh between concurrent reads that both got 401, so a MAUI client no longer presents the same refresh token twice (read as reuse, which revokes the session). (L134)
 - The theme initialization, toggle and persistence no longer let a JS interop failure (asset missing, a malformed `mmca_theme` cookie) escape a component lifecycle; `ThemeService.SetDarkModeAsync` changes `IsDarkMode` only after the value is persisted, and `theme.js` falls back to `localStorage` for a malformed cookie. (L135)
+- `RedisDistributedLock` logs a Redis fault on release (a `RedisTimeoutException` included) instead of throwing it, so a committed idempotent action or an issued password-reset token is no longer reported as a 500; the lock expires on its own TTL. (M186)
+- `GatewayRateLimiting:BypassPathPrefixes` and `SecurityHeaders:CredentialPathPrefixes` entries must start with `/`: a bad entry fails registration or options validation at startup instead of throwing on every request (`AddCommonSecurityHeaders` now validates on start). A whitespace-only credential prefix is skipped like the gateway's. (M193)
+- The gateway cuts a caller-supplied `X-Correlation-ID` to 64 characters on the forwarded request and the echo, matching what the service stores. (L136)
+- `MauiTokenStorageService` shares its refresh single-flight across DI scopes (process-wide), so the delegating handler's scope and a component scope can no longer rotate the same refresh token twice. (L137)
 
 ### Changed (UI text)
 

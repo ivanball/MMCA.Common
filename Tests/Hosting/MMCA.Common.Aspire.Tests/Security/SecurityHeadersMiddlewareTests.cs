@@ -1,6 +1,7 @@
 ﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -44,6 +45,24 @@ public sealed class SecurityHeadersMiddlewareTests
 
         await middleware.InvokeAsync(context);
         return context.Response.Headers;
+    }
+
+    // M193: a credential prefix without its leading slash made every request throw inside the
+    // middleware; it must fail options validation at startup instead (ADR-070).
+    [Fact]
+    public void AddCommonSecurityHeaders_WithACredentialPrefixMissingItsLeadingSlash_FailsOptionsValidation()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["SecurityHeaders:CredentialPathPrefixes:0"] = "reset-password" })
+            .Build();
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddCommonSecurityHeaders(configuration);
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+
+        var act = () => Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<IOptions<SecurityHeadersSettings>>(provider).Value;
+
+        act.Should().Throw<OptionsValidationException>();
     }
 
     // ── Credential pages (SEC-Store-22) ──
