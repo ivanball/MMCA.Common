@@ -151,9 +151,11 @@
                                 @LegalDocument(Legal.TermsUrl, L["Legal.TermsOfService"])
                                 @L["Auth.Register.AcceptTerms.And"]
                                 @LegalDocument(Legal.PrivacyUrl, L["Legal.PrivacyPolicy"])
+                                @* Razor drops the whitespace around a code block, so the separating
+                                   spaces of this optional phrase are explicit. *@
                                 @if (!string.IsNullOrWhiteSpace(Legal.CodeOfConductUrl))
                                 {
-                                    @L["Auth.Register.AcceptTerms.CodeOfConductPrefix"]
+                                    @($" {L["Auth.Register.AcceptTerms.CodeOfConductPrefix"]} ")
                                     @LegalDocument(Legal.CodeOfConductUrl, L["Legal.CodeOfConduct"])
                                 }
                             </MudText>
