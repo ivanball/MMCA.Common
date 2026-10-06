@@ -44,6 +44,12 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <!-- Text fixtures for the AddForwardedJwtBearer audience rule: scanned as .cs TEXT by
+         ForwardedJwtAudienceFitnessTests, never compiled (they reference host types on purpose). -->
+    <Compile Remove="JwtAudienceFixtures\**" />
+    <None Include="JwtAudienceFixtures\**" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="NetArchTest.eNhancedEdition" />

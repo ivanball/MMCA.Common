@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.API.Startup.Auth.JwtAudience
+const MMCA.Common.API.Startup.Auth.JwtAudience.ConfigKey = "Jwt:Audience" -> string!
+static MMCA.Common.API.Startup.Auth.JwtAudience.RequireConfigured(string? configuredValue) -> string!

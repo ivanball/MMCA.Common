@@ -25,3 +25,10 @@ MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileForm_KeepsError
 const MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ChangePasswordCardTag = "<ChangePasswordCard" -> string!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingPasswordFormMarkers(string! markup) -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileFormPath.get -> string?
+MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase
+MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.ForwardedJwtAudienceTestsBase() -> void
+MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.ForwardedJwtBearerHosts_ResolveTheirAudienceFailClosed() -> void
+abstract MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.MinimumForwardedJwtHosts.get -> int
+virtual MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.SourceRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ForwardedJwtBearerAudienceIsFailClosed(System.Collections.Generic.IReadOnlyCollection<string!>! sourceRoots, int minimumCalls) -> void
