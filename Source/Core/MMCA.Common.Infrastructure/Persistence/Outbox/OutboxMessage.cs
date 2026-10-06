@@ -23,7 +23,9 @@ public sealed class OutboxMessage
     /// Caches resolved event types per STORED name (an assembly-qualified name, or an
     /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity);
     /// <see cref="Type.GetType(string)"/> and the attribute scan behind it are per-call reflection
-    /// lookups otherwise. Unresolvable names cache as null.
+    /// lookups otherwise. Only a successful resolution is cached: an unresolvable name is re-scanned
+    /// on its retry, so an assembly that loads late can still resolve it before the row
+    /// dead-letters.
     /// </summary>
     private static readonly ConcurrentDictionary<string, Type?> EventTypeCache = new(StringComparer.Ordinal);
 
@@ -174,17 +176,34 @@ public sealed class OutboxMessage
         return JsonSerializer.Deserialize(Payload, type, SerializerOptions) as IDomainEvent;
     }
 
+    /// <summary>Whether a stored event name currently has a cached resolution (a test hook).</summary>
+    /// <param name="storedName">The stored <see cref="EventType"/> value.</param>
+    /// <returns><see langword="true"/> when the name is in the resolution cache.</returns>
+    internal static bool IsEventTypeCached(string storedName) => EventTypeCache.ContainsKey(storedName);
+
     /// <summary>
     /// Resolves the stored <see cref="EventType"/> to a CLR type: as a CLR name first, then as an
-    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity. The result, including
-    /// a failure, caches under the stored name.
+    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity. A successful
+    /// resolution caches under the stored name; a failure does not, so the one-shot retry the
+    /// processor grants an unresolvable row really scans again.
     /// </summary>
     /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
-    private Type? ResolveEventType() =>
+    private Type? ResolveEventType()
+    {
+        if (EventTypeCache.TryGetValue(EventType, out var cached))
+        {
+            return cached;
+        }
+
         // Order is load-bearing. Type.GetType stays first, so a row storing an assembly-qualified
         // name resolves by a direct lookup; the attribute scan only runs for a stored name that is
         // not a CLR name.
-        EventTypeCache.GetOrAdd(
-            EventType,
-            static typeName => Type.GetType(typeName) ?? EventNameResolver.FindTypeByDeclaredName(typeName));
+        var resolved = Type.GetType(EventType) ?? EventNameResolver.FindTypeByDeclaredName(EventType);
+        if (resolved is not null)
+        {
+            EventTypeCache[EventType] = resolved;
+        }
+
+        return resolved;
+    }
 }

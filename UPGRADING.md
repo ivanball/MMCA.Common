@@ -32,6 +32,33 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Behavior changes from the ninth bug-hunt wave.** No public signature is removed or renamed; the
+items below either need one mechanical step in a consumer or change what a consumer observes.
+
+1. **`OwnsMoney` precision (L125).** The amount column is now configured `HasPrecision(18, 2)`. A
+   consumer that maps `OwnsMoney` gets a model-snapshot change with no schema change on SQL Server
+   (the column was already `decimal(18,2)`). Add one migration per affected context and confirm its
+   `Up()`/`Down()` are empty, for example
+   `dotnet ef migrations add OwnsMoneyPrecision -- --datasource Catalog`; the EF model-drift gate
+   fails the version bump until it exists. MMCA.Store needs one for Catalog and one for Sales.
+2. **Owned value objects stamp their owner (M181).** Editing only an owned value (an address, a
+   money amount) now moves the owner's `LastModifiedOn/By`, re-stamps its `RowVersion` on PostgreSQL
+   and SQLite, and writes trail rows named `Navigation.Property` for an `IAuditedEntity` owner. A
+   client holding the owner's old concurrency token after such an edit now gets a conflict, as for
+   any other update. No code change.
+3. **Scoped integration event handlers see the restored origin (M184).** A handler built on
+   `ScopedIntegrationEventHandlerBase` now resolves the delivery's tenant, principal and correlation
+   id in its own scope: audit stamps name the original user instead of the system sentinel, and on a
+   tenancy host its unit of work routes to the original tenant. A handler that relied on running as
+   the system user, or that opens a scope for a different tenant inside the delivery (the seeded
+   tenant cannot then be changed), must be reviewed. No code change otherwise.
+4. **Typed REST clients no longer retry POST or PATCH (M185).** A POST or PATCH through
+   `AddTypedServiceClient` that times out or gets a 5xx, 408 or 429 now fails on the first attempt
+   instead of being replayed once. Make the endpoint idempotent (`[Idempotent]` plus an
+   `Idempotency-Key`) and retry explicitly where a replay is wanted.
+
 ## [1.231.0] - 2026-10-06
 
 **`ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase`

@@ -64,7 +64,8 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         // reason: under database-per-tenant the inbox store's routing is decided by the tenant this
         // restores. A retired contract is delivered with the same headers as a current one, so a
         // consumer that skipped this would run its handlers anonymous while its sibling did not.
-        ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
+        // Held for the whole consume, so a handler's own scope inherits the origin too.
+        using var origin = ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
 
         // Dedup on the ORIGINAL message id, before any upcasting: the envelope survives every hop, so
         // this is the same id a plain IntegrationEventConsumer<TEvent> would have recorded.
@@ -74,8 +75,8 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         // short type name otherwise, which is what every row written so far holds.
         var eventTypeName = EventNameResolver.GetInboxName(typeof(TEvent));
 
-        // TryBegin also stages the inbox row in the scope's unit of work, so a handler's own
-        // SaveChangesAsync commits it atomically with its mutations (see IInboxStore).
+        // TryBegin also stages the inbox row in the scope's unit of work; it is written by
+        // CompleteAsync once every handler has succeeded (see IntegrationEventConsumer).
         if (!await inbox.TryBeginAsync(messageId, eventTypeName, context.CancellationToken).ConfigureAwait(false))
         {
             LogDuplicateSkipped(logger, eventTypeName, messageId);

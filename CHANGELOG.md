@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- An edit confined to an owned value object (an `OwnsOne` address, an `OwnsMoney` amount) now stamps its owner: `LastModifiedOn/By` move and, on PostgreSQL and SQLite, `RowVersion` is re-stamped, and an audited owner gets one trail row per changed owned column, named `Navigation.Property` (for example `Address.City`) under the owner's type and key. EF tracks the change on the owned entry and kept the owner unchanged, so neither interceptor saw it. Clearing an optional owned reference to null is still not detected (no owned entry remains to read). (M181)
+- Same-key outbox rows deferred behind a delivered head row now ask for an immediate re-poll, so a key drains one row per cycle instead of one row per `Outbox:PollingIntervalSeconds` (300s in deployed environments). A head row that fails makes no progress and still waits for its backoff. (M182)
+- An unresolvable stored event or internal-command type name is no longer cached as null, so the retry the outbox grants an unresolvable row really scans the loaded assemblies again. (M183)
+- Integration event handlers built on `ScopedIntegrationEventHandlerBase` now run under the delivery's restored tenant, principal and correlation id. The handler opens its own scope from the root factory, which never saw the restore; `AmbientOrigin.Restore` now also publishes the restored origin on the async flow for the duration of the row or message, and `TenantContext`, `ScopedUserOverride` and `CorrelationContext` seed themselves from it when constructed. HTTP requests publish nothing and are unaffected. (M184)
+- `AddTypedServiceClient` no longer retries POST or PATCH in its own resilience handler, matching the host defaults and the promise in `HttpResilienceDefaults`. (M185)
+- A keyset cursor's `DateTime` and `DateTimeOffset` sort values parse back with their kind and offset (`DateTimeStyles.RoundtripKind`) instead of being converted to local time, which moved the seek boundary by the host's UTC offset. (L122)
+- `IRepository.ExecuteUpdateAsync` re-stamps `RowVersion` on PostgreSQL and SQLite, so a bulk update invalidates a stale `If-Match` token as a tracked update does. SQL Server is unchanged. (L123)
+- The audit trail no longer records the client-stamped `RowVersion` on every update, and renders a changed `byte[]` column as hexadecimal instead of `System.Byte[]`. (L124)
+
+### Changed
+
+- `OwnsMoney` maps the amount as `decimal(18,2)` (`HasPrecision(18, 2)`) on every engine, the SQL Server default made explicit. SQL Server data and DDL are unchanged; the EF model snapshot of a consumer that maps `OwnsMoney` moves, so it needs one snapshot-only migration per affected context (see UPGRADING.md). (L125)
+
 ## [1.231.0] - 2026-10-06
 
 ### Breaking

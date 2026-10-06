@@ -31,7 +31,8 @@ internal static class ConsumerOriginRestore
     /// <param name="headers">The consume context's headers.</param>
     /// <param name="services">The per-message scope to restore onto.</param>
     /// <param name="authenticationType">The authentication type to stamp on the rebuilt identity.</param>
-    internal static void Apply(Headers headers, IServiceProvider services, string authenticationType)
+    /// <returns>The handle that withdraws the published origin; hold it for the whole consume.</returns>
+    internal static IDisposable Apply(Headers headers, IServiceProvider services, string authenticationType)
     {
         // The id is transported as text and parsed back rather than read as a typed header: a broker
         // is free to widen an integer header (Azure Service Bus hands back a long), and a parse of
@@ -46,7 +47,7 @@ internal static class ConsumerOriginRestore
                 ? parsedUserId
                 : null;
 
-        AmbientOrigin.Restore(
+        return AmbientOrigin.Restore(
             services,
             userId,
             headers.Get<string>(MessageHeaders.UserRoles, null),

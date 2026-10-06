@@ -10,7 +10,9 @@ namespace MMCA.Common.Domain.Interfaces;
 /// The outbox copies the value onto the row it writes, and the processor refuses to claim a row
 /// while an EARLIER unprocessed, non-dead-lettered row carrying the same key exists in the same
 /// data source. Ordering therefore holds across batches and across scaled-out processor replicas,
-/// not merely within one batch.
+/// not merely within one batch. One cycle delivers one row per key; when it delivers anything, the
+/// key-mates it deferred are picked up on an immediate re-poll rather than after the polling
+/// interval.
 /// </para>
 /// <para>
 /// This is head-of-line blocking by design: a keyed row that is failing and backing off blocks

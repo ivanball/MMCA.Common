@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -211,7 +211,7 @@ public sealed partial class OutboxProcessor(
             return (new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending), pendingDepth);
         }
 
-        var toProcess = await ClaimEligibleAsync(context, messages, eligibleCount, now, cancellationToken)
+        var (toProcess, deferredKeyMates) = await ClaimEligibleAsync(context, messages, eligibleCount, now, cancellationToken)
             .ConfigureAwait(false);
 
         if (toProcess.Count == 0)
@@ -245,11 +245,14 @@ public sealed partial class OutboxProcessor(
         // here: OutboxMessage is not an aggregate root, so no events are captured.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // A full eligible batch with progress means more eligible rows may be waiting; the
-        // progress requirement stops a fully-failing batch from hot-spinning the processor.
+        // A full eligible batch with progress means more eligible rows may be waiting, and so do
+        // key-mates this cycle deferred behind their key's head row: once that row is delivered
+        // they are claimable at once, and waiting out the polling interval (300s in deployed
+        // environments) for each successor would serialize a key at one row per poll. The progress
+        // requirement stops a fully-failing batch from hot-spinning the processor.
         return (
             new OutboxCycleResult(
-                HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
+                HasMoreEligibleWork: processedAny && (eligibleCount == _settings.BatchSize || deferredKeyMates),
                 earliestPending),
             pendingDepth);
     }
@@ -364,7 +367,7 @@ public sealed partial class OutboxProcessor(
     /// blocks the other in SQL, because <see cref="Guid"/> has no order that both .NET and every
     /// provider agree on. A tie at tick resolution is not an ordering the outbox claims to observe.
     /// </remarks>
-    private async Task<List<OutboxMessage>> ClaimEligibleAsync(
+    private async Task<(List<OutboxMessage> Claimed, bool DeferredKeyMates)> ClaimEligibleAsync(
         ApplicationDbContext context,
         List<OutboxMessage> messages,
         int eligibleCount,
@@ -374,8 +377,12 @@ public sealed partial class OutboxProcessor(
         var lockToken = Guid.NewGuid();
         var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
         var candidates = SelectOrderedCandidates(messages, eligibleCount);
+
+        // Key-mates dropped by SelectOrderedCandidates wait only for this cycle's head row, so the
+        // caller asks for an immediate re-poll when it delivers anything.
+        var deferredKeyMates = candidates.Count < eligibleCount;
         if (candidates.Count == 0)
-            return [];
+            return ([], deferredKeyMates);
 
         var eligibleIds = candidates.Select(m => m.Id).ToArray();
         var outbox = context.Set<OutboxMessage>();
@@ -394,10 +401,10 @@ public sealed partial class OutboxProcessor(
             .ConfigureAwait(false);
 
         if (claimedCount == 0)
-            return [];
+            return ([], deferredKeyMates);
 
         if (claimedCount == eligibleIds.Length)
-            return candidates;
+            return (candidates, deferredKeyMates);
 
         // Partial claim: process only the rows carrying this replica's token.
         var claimedIds = await outbox.AsNoTracking()
@@ -407,7 +414,7 @@ public sealed partial class OutboxProcessor(
             .ConfigureAwait(false);
 
         var claimedSet = claimedIds.ToHashSet();
-        return [.. candidates.Where(m => claimedSet.Contains(m.Id))];
+        return ([.. candidates.Where(m => claimedSet.Contains(m.Id))], deferredKeyMates);
     }
 
     /// <summary>
@@ -510,8 +517,9 @@ public sealed partial class OutboxProcessor(
             try
             {
                 // Before anything reads the scope: the publish path stamps headers from these
-                // services and the in-process path hands them to the handlers.
-                Context.AmbientOrigin.Restore(
+                // services and the in-process path hands them to the handlers. The handle keeps the
+                // origin published for scopes the handlers open themselves, until this row is done.
+                using var origin = Context.AmbientOrigin.Restore(
                     rowScope.ServiceProvider,
                     message.UserId,
                     message.UserRoles,

@@ -105,6 +105,24 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
         written.Should().Be(2, "the unit of work flushes every change staged through its repositories");
     }
 
+    // L123: ExecuteUpdate bypasses the audit interceptor, so on a client-stamped engine the
+    // repository must re-stamp RowVersion itself or a stale If-Match token keeps matching.
+    [Fact]
+    public async Task ExecuteUpdateAsync_OnAClientStampedEngine_WritesAFreshRowVersion()
+    {
+        var sut = CreateUnitOfWork(CurrentUser(ActingUserId));
+        await sut.GetRepository<StampedEntity, int>().AddAsync(new StampedEntity { Id = 7 });
+        await sut.SaveChangesAsync();
+        var before = (await _context.Set<StampedEntity>().AsNoTracking().SingleAsync(e => e.Id == 7)).RowVersion;
+
+        await sut.GetRepository<StampedEntity, int>()
+            .ExecuteUpdateAsync(e => e.Id == 7, s => s.Set(e => e.LastModifiedBy, 99));
+
+        var after = (await _context.Set<StampedEntity>().AsNoTracking().SingleAsync(e => e.Id == 7)).RowVersion;
+        after.Should().HaveCount(16);
+        after.Should().NotEqual(before, "a bulk update is a write, so it must invalidate the old concurrency token");
+    }
+
     /// <summary>
     /// Builds the real save path over the in-memory context: only the physical factory, the source
     /// registry, and the repository factory are doubled, so the user id travels through the same

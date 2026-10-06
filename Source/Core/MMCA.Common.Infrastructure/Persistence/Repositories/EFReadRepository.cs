@@ -510,7 +510,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// <see cref="DbContext"/> that is not a framework context (a directly-constructed test double),
     /// which is read as a relational engine that sorts nulls first.
     /// </summary>
-    private DataSourceEngineCapabilities? EngineCapabilities =>
+    private protected DataSourceEngineCapabilities? EngineCapabilities =>
         (_context as DbContexts.ApplicationDbContext)?.Engine.Capabilities;
 
     /// <summary>Gets a value indicating whether the engine's LINQ provider translates a predicated <c>Any</c>.</summary>

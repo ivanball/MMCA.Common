@@ -82,6 +82,20 @@ public sealed class OwnsMoneyTests : IDisposable
         currency.GetValueConverter()!.ProviderClrType.Should().Be<string>();
     }
 
+    // L125: one cross-engine precision, the SQL Server default made explicit (decimal(18,2)), so
+    // PostgreSQL and SQLite round amounts the same way SQL Server does.
+    [Theory]
+    [InlineData(nameof(HelperOwner.Total))]
+    [InlineData(nameof(HelperOwner.UnitPrice))]
+    [InlineData(nameof(HelperOwner.Price))]
+    public void OwnsMoney_MapsTheAmountWithPrecision18Scale2(string navigationName)
+    {
+        var amount = OwnedType<HelperOwner>(navigationName).FindProperty(nameof(Money.Amount))!;
+
+        amount.GetPrecision().Should().Be(18);
+        amount.GetScale().Should().Be(2);
+    }
+
     [Fact]
     public async Task OwnsMoney_RoundTripsARealCurrency()
     {

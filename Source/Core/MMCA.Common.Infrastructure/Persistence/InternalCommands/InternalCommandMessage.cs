@@ -27,8 +27,9 @@ public sealed class InternalCommandMessage
 
     /// <summary>
     /// Caches resolved command types per STORED name (an assembly-qualified name, or an
-    /// <see cref="InternalCommandNameAttribute"/> identity). Unresolvable names cache as null, so a
-    /// dead-lettering row pays the reflection scan once per process rather than once per attempt.
+    /// <see cref="InternalCommandNameAttribute"/> identity). Only a successful resolution is cached:
+    /// an unresolvable name is re-scanned on each attempt, so an assembly that loads late can still
+    /// resolve it before the row dead-letters (a bounded cost: <c>MaxAttempts</c> scans per row).
     /// </summary>
     private static readonly ConcurrentDictionary<string, Type?> CommandTypeCache = new(StringComparer.Ordinal);
 
@@ -174,17 +175,33 @@ public sealed class InternalCommandMessage
         return JsonSerializer.Deserialize(Payload, type, SerializerOptions) as IInternalCommand;
     }
 
+    /// <summary>Whether a stored command name currently has a cached resolution (a test hook).</summary>
+    /// <param name="storedName">The stored <see cref="CommandType"/> value.</param>
+    /// <returns><see langword="true"/> when the name is in the resolution cache.</returns>
+    internal static bool IsCommandTypeCached(string storedName) => CommandTypeCache.ContainsKey(storedName);
+
     /// <summary>
     /// Resolves the stored <see cref="CommandType"/> to a CLR type: as a CLR name first, then as an
-    /// <see cref="InternalCommandNameAttribute"/> identity. The result, including a failure, caches
-    /// under the stored name.
+    /// <see cref="InternalCommandNameAttribute"/> identity. A successful resolution caches under the
+    /// stored name; a failure does not, so a later attempt scans again.
     /// </summary>
     /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
-    private Type? ResolveCommandType() =>
+    private Type? ResolveCommandType()
+    {
+        if (CommandTypeCache.TryGetValue(CommandType, out var cached))
+        {
+            return cached;
+        }
+
         // Order is load-bearing, exactly as in OutboxMessage: Type.GetType stays first so a row
         // storing an assembly-qualified name resolves by a direct lookup, and the attribute scan
         // only runs for a stored name that is not a CLR name.
-        CommandTypeCache.GetOrAdd(
-            CommandType,
-            static typeName => Type.GetType(typeName) ?? InternalCommandNameResolver.FindTypeByDeclaredName(typeName));
+        var resolved = Type.GetType(CommandType) ?? InternalCommandNameResolver.FindTypeByDeclaredName(CommandType);
+        if (resolved is not null)
+        {
+            CommandTypeCache[CommandType] = resolved;
+        }
+
+        return resolved;
+    }
 }

@@ -19,6 +19,19 @@ namespace MMCA.Common.Infrastructure.Context;
 internal static class AmbientOrigin
 {
     /// <summary>
+    /// The origin restored by the hop currently running on this async flow, or null outside one.
+    /// </summary>
+    private static readonly AsyncLocal<OriginSnapshot?> CurrentOrigin = new();
+
+    /// <summary>
+    /// Gets the origin the enclosing background hop restored, or null when no hop is running on
+    /// this async flow (every HTTP request, and every background service outside a delivery). The
+    /// three scoped carriers read it once, at construction, so a scope a handler opens for itself
+    /// from the root factory inside the delivery still runs as the original interaction.
+    /// </summary>
+    internal static OriginSnapshot? Current => CurrentOrigin.Value;
+
+    /// <summary>
     /// Column width of every stored roles list (<c>InternalCommands.UserRoles</c> and
     /// <c>OutboxMessages.UserRoles</c>); a longer list is truncated to fit.
     /// </summary>
@@ -117,6 +130,16 @@ internal static class AmbientOrigin
     /// <c>AddInfrastructure</c> has all three, and a bare provider (a directly-constructed test
     /// fixture) simply restores nothing rather than failing the hop.
     /// </para>
+    /// <para>
+    /// <b>Scopes opened inside the hop inherit it.</b> Integration event handlers are singletons
+    /// that open their own scope from the ROOT factory (<c>ScopedIntegrationEventHandlerBase</c>),
+    /// a scope that never sees this restore. The restored values are therefore also published as
+    /// <see cref="Current"/> on the async flow until the returned handle is disposed, and
+    /// <see cref="TenantContext"/>, <see cref="ScopedUserOverride"/> and
+    /// <see cref="CorrelationContext"/> seed themselves from it when constructed. The published
+    /// tenant and correlation id are the ones the restored scope ends up with, so a scope whose
+    /// tenant was already fixed (a database-per-tenant target) hands down that tenant.
+    /// </para>
     /// </remarks>
     /// <param name="services">The scope to restore the context onto.</param>
     /// <param name="userId">The captured user id, or null.</param>
@@ -124,7 +147,11 @@ internal static class AmbientOrigin
     /// <param name="tenantId">The captured tenant, or null.</param>
     /// <param name="correlationId">The captured correlation id, or null.</param>
     /// <param name="authenticationType">The authentication type to stamp on the rebuilt identity.</param>
-    internal static void Restore(
+    /// <returns>
+    /// A handle that puts back the previously published origin; dispose it when the hop's work for
+    /// this message or row is done, so the next one cannot inherit it.
+    /// </returns>
+    internal static IDisposable Restore(
         IServiceProvider services,
         UserIdentifierType? userId,
         string? userRoles,
@@ -132,8 +159,38 @@ internal static class AmbientOrigin
         string? correlationId,
         string authenticationType)
     {
+        // Withdraw any enclosing origin while this one is restored: a carrier constructed below
+        // belongs to this hop and must not seed itself from the previous one.
+        var previous = CurrentOrigin.Value;
+        CurrentOrigin.Value = null;
+
         // Tenant first: it routes the scoped context factory to the right database, and every
         // repository resolved afterwards reads its query filter from it.
+        RestoreTenant(services, tenantId);
+        RestorePrincipal(services, BuildPrincipal(userId, userRoles, authenticationType));
+
+        var correlationContext = services.GetService<ICorrelationContext>();
+        if (correlationId is { Length: > 0 } correlation)
+        {
+            correlationContext?.SetCorrelationId(correlation);
+        }
+
+        CurrentOrigin.Value = new OriginSnapshot(
+            userId,
+            userRoles,
+            services.GetService<ITenantContext>()?.TenantId ?? NullIfEmpty(tenantId),
+            correlationContext?.CorrelationId ?? NullIfEmpty(correlationId),
+            authenticationType);
+
+        return new RestoreHandle(previous);
+    }
+
+    /// <summary>
+    /// Sets the captured tenant on the scope unless the scope already resolved a different one
+    /// (a tenant cannot change within a scope, see <see cref="ITenantContext"/>).
+    /// </summary>
+    private static void RestoreTenant(IServiceProvider services, string? tenantId)
+    {
         if (tenantId is { Length: > 0 } tenant
             && services.GetService<ITenantContext>() is { } tenantContext
             && (!tenantContext.IsResolved
@@ -141,23 +198,50 @@ internal static class AmbientOrigin
         {
             tenantContext.SetTenant(tenant);
         }
+    }
 
-        if (services.GetService<ScopedUserOverride>() is { } userOverride)
+    /// <summary>Sets, or clears when nothing was captured, the principal the scope acts as.</summary>
+    private static void RestorePrincipal(IServiceProvider services, ClaimsPrincipal? principal)
+    {
+        if (services.GetService<ScopedUserOverride>() is not { } userOverride)
         {
-            var principal = BuildPrincipal(userId, userRoles, authenticationType);
-            if (principal is null)
-            {
-                userOverride.Clear();
-            }
-            else
-            {
-                userOverride.Set(principal);
-            }
+            return;
         }
 
-        if (correlationId is { Length: > 0 } correlation)
+        if (principal is null)
         {
-            services.GetService<ICorrelationContext>()?.SetCorrelationId(correlation);
+            userOverride.Clear();
+        }
+        else
+        {
+            userOverride.Set(principal);
         }
     }
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
+
+    /// <summary>Puts back the origin that was published before a <see cref="Restore"/>.</summary>
+    /// <param name="previous">The origin to put back, or null.</param>
+    private sealed class RestoreHandle(OriginSnapshot? previous) : IDisposable
+    {
+        public void Dispose() => CurrentOrigin.Value = previous;
+    }
+}
+
+/// <summary>The origin a background hop restored, as published on the async flow.</summary>
+/// <param name="UserId">The captured user id, or null for system-raised work.</param>
+/// <param name="UserRoles">The captured roles as a comma-separated list, or null.</param>
+/// <param name="TenantId">The tenant the restored scope runs as, or null.</param>
+/// <param name="CorrelationId">The correlation id the restored scope carries, or null.</param>
+/// <param name="AuthenticationType">The authentication type stamped on a rebuilt identity.</param>
+internal sealed record OriginSnapshot(
+    UserIdentifierType? UserId,
+    string? UserRoles,
+    string? TenantId,
+    string? CorrelationId,
+    string AuthenticationType)
+{
+    /// <summary>Rebuilds the captured principal, or null when no user was captured.</summary>
+    /// <returns>The principal, or null.</returns>
+    public ClaimsPrincipal? BuildPrincipal() => AmbientOrigin.BuildPrincipal(UserId, UserRoles, AuthenticationType);
 }

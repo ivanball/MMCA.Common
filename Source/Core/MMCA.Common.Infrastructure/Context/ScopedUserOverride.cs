@@ -17,14 +17,17 @@ namespace MMCA.Common.Infrastructure.Context;
 /// <remarks>
 /// Scoped, and written only by a background hop restoring a captured identity. Nothing in the
 /// request pipeline ever writes to it, so an HTTP request resolves an empty carrier and reads
-/// straight through to the HTTP principal. It is deliberately not an ambient (<c>AsyncLocal</c>)
-/// value: an ambient override would leak across a scope boundary the moment a handler started work
-/// on another thread.
+/// straight through to the HTTP principal. The principal itself is never an ambient value: a scope
+/// created while a hop is being delivered (a handler opening its own scope from the root factory)
+/// reads the hop's published origin (<see cref="AmbientOrigin.Current"/>) ONCE, at construction,
+/// and owns its copy from then on. Nothing is shared or mutated across scopes, which is the leak a
+/// live ambient override would have caused; the published origin is withdrawn when the hop's row or
+/// message is done, and HTTP requests never publish one.
 /// </remarks>
 internal sealed class ScopedUserOverride
 {
     /// <summary>Gets the principal to act as for this scope, or null to read through to HTTP.</summary>
-    public ClaimsPrincipal? Principal { get; private set; }
+    public ClaimsPrincipal? Principal { get; private set; } = AmbientOrigin.Current?.BuildPrincipal();
 
     /// <summary>
     /// Sets the principal this scope acts as. Called before any handler is resolved.

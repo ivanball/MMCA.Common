@@ -264,6 +264,60 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
             "the context resolves the interceptor with GetService, so its absence is a silent no-op");
     }
 
+    // -- L124: the client-stamped RowVersion is bookkeeping, not a change --
+    [Fact]
+    public async Task SaveChanges_ModifiedAggregate_DoesNotRecordTheRowVersionStamp()
+    {
+        var thing = new AuditedAggregateThing { Id = 1, Name = "Original" };
+        _context.AuditedAggregateThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        // Same user and same (frozen) clock, so the audit stamps do not move: the only columns the
+        // update writes are Name and the client-stamped RowVersion.
+        thing.Name = "Renamed";
+        await _context.SaveChangesAsync(userId: 1);
+
+        var rows = await ModifiedRowsAsync();
+        rows.Should().ContainSingle().Which.PropertyName.Should().Be(nameof(AuditedAggregateThing.Name));
+        rows.Should().NotContain(r => r.PropertyName == "RowVersion",
+            "the concurrency token is re-stamped on every update on SQLite and PostgreSQL, so recording it is noise");
+    }
+
+    // -- L124: a byte-array value is rendered readably --
+    [Fact]
+    public async Task SaveChanges_ChangedByteArray_RendersHex()
+    {
+        var thing = new AuditedAggregateThing { Id = 2, Name = "Hashed", Hash = [1, 2] };
+        _context.AuditedAggregateThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        thing.Hash = [3, 4];
+        await _context.SaveChangesAsync(userId: 2);
+
+        var row = (await ModifiedRowsAsync()).Single(r => r.PropertyName == nameof(AuditedAggregateThing.Hash));
+        row.OldValue.Should().Be("0102");
+        row.NewValue.Should().Be("0304");
+    }
+
+    // -- M181: a change confined to an owned value object is recorded under its owner --
+    [Fact]
+    public async Task SaveChanges_OwnedPropertyChanged_WritesARowUnderTheOwner()
+    {
+        var thing = new AuditedThing { Name = "Owner", Address = new ThingAddress("A") };
+        _context.AuditedThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        thing.Address = new ThingAddress("B");
+        await _context.SaveChangesAsync(userId: 2);
+
+        var row = (await ModifiedRowsAsync()).Should().ContainSingle().Subject;
+        row.PropertyName.Should().Be("Address.City");
+        row.OldValue.Should().Be("A");
+        row.NewValue.Should().Be("B");
+        row.EntityType.Should().Be(typeof(AuditedThing).FullName);
+        row.EntityKey.Should().Be(thing.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     // ── Helpers ──
     private async Task<AuditedThing> SeedAsync()
     {

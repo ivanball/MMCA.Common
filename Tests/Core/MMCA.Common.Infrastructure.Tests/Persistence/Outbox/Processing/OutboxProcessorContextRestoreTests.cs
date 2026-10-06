@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.DomainEvents;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -202,6 +203,23 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         observed.Roles.Should().BeEmpty();
     }
 
+    // M184: a singleton handler opens its own scope from the ROOT factory; the restored origin
+    // must still reach that scope, or the handler runs with no tenant, the system sentinel user and
+    // a fresh correlation id.
+    [Fact]
+    public async Task DispatchMessages_RestoredOriginReachesTheScopeAScopedHandlerOpens()
+    {
+        var handler = new RecordingScopedHandler(_rootProvider.GetRequiredService<IServiceScopeFactory>());
+        _messageBus.Forward = handler;
+        Seed(Row(new OutboxOrigin(7, "Admin", "globex", "corr-1")));
+
+        await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        handler.TenantId.Should().Be("globex");
+        handler.UserId.Should().Be(7);
+        handler.CorrelationId.Should().Be("corr-1");
+    }
+
     /// <summary>An integration event, so the batch routes through <see cref="IMessageBus"/>.</summary>
     public sealed class TestIntegrationEvent : IIntegrationEvent
     {
@@ -224,7 +242,10 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
 
         public List<Observation> Observations { get; } = [];
 
-        public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
+        /// <summary>When set, each published event is also handed to this handler, as the in-process bus would.</summary>
+        public RecordingScopedHandler? Forward { get; set; }
+
+        public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
         {
             var services = Scope!;
             var user = services.GetRequiredService<ICurrentUserService>();
@@ -235,13 +256,38 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
                 user.UserId,
                 [.. user.Roles]));
 
-            return Task.CompletedTask;
+            if (Forward is not null && integrationEvent is TestIntegrationEvent forwarded)
+            {
+                await Forward.HandleAsync(forwarded, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         public async Task PublishAsync(IEnumerable<IIntegrationEvent> integrationEvents, CancellationToken cancellationToken = default)
         {
             foreach (var integrationEvent in integrationEvents)
                 await PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// A singleton-style handler on the framework base: it opens its own scope per delivery and
+    /// records what that scope answers.
+    /// </summary>
+    private sealed class RecordingScopedHandler(IServiceScopeFactory scopeFactory)
+        : ScopedIntegrationEventHandlerBase<TestIntegrationEvent>(scopeFactory, NullLogger.Instance)
+    {
+        public string? TenantId { get; private set; }
+
+        public int? UserId { get; private set; }
+
+        public string? CorrelationId { get; private set; }
+
+        protected override Task HandleScopedAsync(TestIntegrationEvent integrationEvent, IServiceProvider services, CancellationToken cancellationToken)
+        {
+            TenantId = services.GetRequiredService<ITenantContext>().TenantId;
+            UserId = services.GetRequiredService<ICurrentUserService>().UserId;
+            CorrelationId = services.GetRequiredService<ICorrelationContext>().CorrelationId;
+            return Task.CompletedTask;
         }
     }
 

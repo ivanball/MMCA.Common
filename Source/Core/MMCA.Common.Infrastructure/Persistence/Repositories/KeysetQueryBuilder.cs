@@ -199,7 +199,10 @@ internal static class KeysetQueryBuilder
     };
 
     /// <summary>
-    /// Parses a cursor segment back into the target type with invariant culture.
+    /// Parses a cursor segment back into the target type with invariant culture. Date and time
+    /// values parse with <see cref="DateTimeStyles.RoundtripKind"/>, the inverse of the "O" format
+    /// <see cref="ToInvariantString"/> writes, so a UTC stamp comes back UTC rather than converted to
+    /// the host's local time.
     /// </summary>
     /// <param name="targetType">The type to convert to.</param>
     /// <param name="text">The rendered value.</param>
@@ -214,6 +217,28 @@ internal static class KeysetQueryBuilder
         {
             value = text;
             return true;
+        }
+
+        if (underlying == typeof(DateTime))
+        {
+            if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dateTime))
+            {
+                value = dateTime;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (underlying == typeof(DateTimeOffset))
+        {
+            if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dateTimeOffset))
+            {
+                value = dateTimeOffset;
+                return true;
+            }
+
+            return false;
         }
 
         var converter = TypeDescriptor.GetConverter(underlying);

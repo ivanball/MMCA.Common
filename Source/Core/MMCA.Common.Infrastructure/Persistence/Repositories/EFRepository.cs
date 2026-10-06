@@ -4,6 +4,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
@@ -153,6 +154,24 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
             builder.Set(e => e.LastModifiedBy, currentUserService?.UserId ?? default);
         }
 
+        StampRowVersion(builder);
+
         return await Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Re-stamps <c>RowVersion</c> for a set-based update on an engine with no server-generated row
+    /// version (PostgreSQL, SQLite). There the token is written by the audit interceptor, which
+    /// ExecuteUpdate also bypasses, so without a fresh value a client still holding the pre-update
+    /// token would pass its If-Match check. SQL Server's <c>rowversion</c> moves by itself.
+    /// </summary>
+    private void StampRowVersion(UpdatePropertySetterBuilder<TEntity> builder)
+    {
+        if (EngineCapabilities?.RowVersion == RowVersionStrategy.ClientStamped
+            && !builder.SetsProperty(nameof(IRowVersioned.RowVersion))
+            && _context.Model.FindEntityType(typeof(TEntity))?.FindProperty(nameof(IRowVersioned.RowVersion)) is not null)
+        {
+            builder.Set(e => e.RowVersion, Guid.NewGuid().ToByteArray());
+        }
     }
 }
