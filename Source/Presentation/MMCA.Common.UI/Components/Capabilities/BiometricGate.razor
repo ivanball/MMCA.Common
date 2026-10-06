@@ -25,7 +25,7 @@
        behind the dark backdrop (WCAG 2.4.3, and a genuine app-lock defect rather than a cosmetic
        one). DefaultFocus.FirstChild lands on Unlock, the only action this panel exists to offer;
        the explicit focus below restores it after a declined platform prompt. *@
-    <MudOverlay Visible="true" DarkBackground="true" Style="z-index: 2000;">
+    <MudOverlay Visible="true" DarkBackground="true" Class="mmca-app-lock-overlay">
         <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
             <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
                 <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />

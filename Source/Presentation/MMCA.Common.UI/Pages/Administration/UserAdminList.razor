@@ -21,7 +21,7 @@
                   Placeholder="@T("Placeholder.Search")"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                   Immediate="true" DebounceInterval="300" Clearable="true"
-                  Variant="Variant.Outlined" Class="mb-2" Style="max-width: min(400px, 100%);" />
+                  Variant="Variant.Outlined" Class="mb-2 mmca-search-field" />
 }
 
 @if (IsMobile)
@@ -35,7 +35,7 @@
                role="button" with these controls inside it would be axe nested-interactive. That
                leaves the affordances to be explicit, which is why the details link below is a
                labelled button of its own rather than a whole-card tap an operator has to guess at. *@
-            <div style="min-width: 0;">
+            <div class="mmca-min-w-0">
                 <MudLink Href="@DetailHref(item)">
                     <MudText Typo="Typo.subtitle2">@item.Email</MudText>
                 </MudLink>
@@ -140,7 +140,7 @@ else
             @TrailingColumns
             @* The cell's context is named so the row actions read as row.Item rather than the bare
                "context" the nested MudMenu templates also bind. *@
-            <TemplateColumn Sortable="false" Filterable="false" CellStyle="width: 110px; text-align: center;">
+            <TemplateColumn Sortable="false" Filterable="false" CellClass="mmca-actions-cell">
                 <CellTemplate Context="row">
                     @if (CanAdminister(row.Item))
                     {

@@ -18,7 +18,7 @@
         {
             case ConfirmationState.Working:
                 <MudCardContent Class="pa-6">
-                    <div class="d-flex align-center" style="gap: 0.75rem;" role="status" data-testid="confirm-email-working">
+                    <div class="d-flex align-center mmca-auth-status" role="status" data-testid="confirm-email-working">
                         <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
                         <MudText Typo="Typo.body2">@L["Auth.Confirm.Confirming"]</MudText>
                     </div>
@@ -29,7 +29,7 @@
                 <MudCardContent Class="pa-6">
                     <MudAlert Severity="Severity.Success" Dense="true" role="status" data-testid="confirm-email-success">@L["Auth.Confirm.Success"]</MudAlert>
                 </MudCardContent>
-                <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Href="/login" Size="Size.Large"
                                data-testid="confirm-email-go-to-login">
                         @L["Auth.Reset.GoToLogin"]
@@ -85,7 +85,7 @@
                                   autocomplete="one-time-code"
                                   data-testid="confirm-email-token" />
                 </MudCardContent>
-                <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                Disabled="_isBusy" OnClick="ConfirmAsync" Size="Size.Large"
                                aria-busy="@(_isBusy ? "true" : "false")"

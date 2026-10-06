@@ -32,3 +32,12 @@ abstract MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.Map.get 
 abstract MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.MinimumForwardedJwtHosts.get -> int
 virtual MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.SourceRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ForwardedJwtBearerAudienceIsFailClosed(System.Collections.Generic.IReadOnlyCollection<string!>! sourceRoots, int minimumCalls) -> void
+MMCA.Common.Testing.Architecture.InlineStyleTestsBase
+MMCA.Common.Testing.Architecture.InlineStyleTestsBase.InlineStyleTestsBase() -> void
+MMCA.Common.Testing.Architecture.InlineStyleTestsBase.RazorMarkup_CarriesNoInlineStyles() -> void
+abstract MMCA.Common.Testing.Architecture.InlineStyleTestsBase.MinimumRazorFiles.get -> int
+abstract MMCA.Common.Testing.Architecture.InlineStyleTestsBase.RepoRoot.get -> string!
+virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.AllowedInlineStyles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.InlineStyleViolations(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.RazorMarkupCarriesNoInlineStyles(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots, int minimumRazorFiles, System.Collections.Generic.IReadOnlyCollection<string!>? allowedViolations = null) -> void

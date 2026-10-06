@@ -460,3 +460,67 @@ h1:focus:not(:focus-visible) {
 .mud-breadcrumbs .mud-breadcrumb-item.mud-disabled .mud-typography {
     color: var(--mud-palette-text-secondary);
 }
+
+/* ── Framework component layout (rubric section 20: no inline styles in markup) ──
+   These classes replace the inline style attributes the framework's own pages and components
+   carried. Each declaration is !important because an inline style outranked every class rule on
+   the same element (MudBlazor's own included), and keeping that precedence keeps the rendering
+   identical. */
+.mmca-auth-actions {
+    gap: 0.75rem !important;
+}
+
+.mmca-auth-status {
+    gap: 0.75rem !important;
+}
+
+.mmca-auth-links {
+    gap: 1rem !important;
+}
+
+/* NotFound and Forbidden: the large outcome icon above the page heading. */
+.mmca-status-icon {
+    font-size: 5rem !important;
+}
+
+/* Home: vertically center the landing content in the first screen. */
+.mmca-hero {
+    min-height: 60vh !important;
+}
+
+/* BiometricGate: the app-lock overlay sits above drawers, dialogs and the snackbar. */
+.mmca-app-lock-overlay {
+    z-index: 2000 !important;
+}
+
+/* QrCodeButton: a long url wraps anywhere instead of widening the dialog. */
+.mmca-break-all {
+    word-break: break-all !important;
+}
+
+/* UserAdminList: the search box, the mobile card text column and the row-actions cell. */
+.mmca-search-field {
+    max-width: min(400px, 100%) !important;
+}
+
+.mmca-min-w-0 {
+    min-width: 0 !important;
+}
+
+.mmca-actions-cell {
+    width: 110px !important;
+    text-align: center !important;
+}
+
+/* NotificationInbox card chrome, from MudBlazor palette tokens only so both themes stay legible:
+   the unread marker is a primary left border, the deep-link marker a secondary-colored ring plus a
+   faint surface tint, so the two read as different things when a deep-linked card is also unread.
+   The ring replaces the card's elevation shadow, exactly as the inline style did. */
+.notification-card.unread {
+    border-left: 4px solid var(--mud-palette-primary) !important;
+}
+
+.notification-card.deep-linked {
+    box-shadow: 0 0 0 2px var(--mud-palette-secondary) !important;
+    background-color: var(--mud-palette-action-default-hover) !important;
+}

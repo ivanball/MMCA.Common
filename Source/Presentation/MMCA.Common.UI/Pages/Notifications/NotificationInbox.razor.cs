@@ -167,27 +167,19 @@ public partial class NotificationInbox : IDisposable
         return notification.IsRead ? 0 : 1;
     }
 
+    /// <summary>
+    /// Card state classes. The chrome they select lives in <c>wwwroot/app.css</c>
+    /// (<c>.notification-card.unread</c>, <c>.notification-card.deep-linked</c>), built from MudBlazor
+    /// palette tokens only so both themes stay legible: the unread marker is a primary left border and
+    /// the deep-link marker is a secondary-colored ring plus a faint surface tint, so the two read as
+    /// different things when a deep-linked card is also unread.
+    /// </summary>
     private string CardClass(UserNotificationDTO notification)
     {
         var state = notification.IsRead ? "read" : "unread";
         return IsDeepLinkTarget(notification)
             ? "notification-card " + state + " deep-linked"
             : "notification-card " + state;
-    }
-
-    /// <summary>
-    /// Card chrome, built from MudBlazor palette tokens only so both themes stay legible. The unread
-    /// marker is a primary left border; the deep-link marker is a secondary-colored ring plus a faint
-    /// surface tint, so the two read as different things when a deep-linked card is also unread.
-    /// </summary>
-    private string CardStyle(UserNotificationDTO notification)
-    {
-        var unread = notification.IsRead
-            ? string.Empty
-            : "border-left: 4px solid var(--mud-palette-primary);";
-        return IsDeepLinkTarget(notification)
-            ? unread + "box-shadow: 0 0 0 2px var(--mud-palette-secondary);background-color: var(--mud-palette-action-default-hover);"
-            : unread;
     }
 
     private void HandleRefreshRequested(object? sender, EventArgs e)

@@ -54,7 +54,7 @@
                         @L["Auth.Register.EmailAlreadyRegistered", _rejectedEmail ?? string.Empty]
                         @* Underline.Always: an in-text link must be distinguishable without relying on
                            colour alone (WCAG 2.1 AA / axe link-in-text-block). *@
-                        <div class="d-flex flex-wrap mt-1" style="gap: 1rem;">
+                        <div class="d-flex flex-wrap mt-1 mmca-auth-links">
                             <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
                             <MudLink Href="/forgot-password" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.ResetPassword"]</MudLink>
                         </div>
@@ -163,7 +163,7 @@
                     </div>
                 }
             </MudCardContent>
-            <MudCardActions Class="d-flex flex-column pa-6 pt-2" Style="gap: 0.75rem;">
+            <MudCardActions Class="d-flex flex-column pa-6 pt-2 mmca-auth-actions">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                            Disabled="@(_isLoading || (RequiresTerms && !_model.AcceptedTerms))" ButtonType="ButtonType.Submit" Size="Size.Large"
                            aria-busy="@(_isLoading ? "true" : "false")"
