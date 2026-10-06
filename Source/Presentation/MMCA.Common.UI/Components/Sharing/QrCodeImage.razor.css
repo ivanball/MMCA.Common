@@ -1,0 +1,10 @@
+/* The bitmap's intrinsic width is modules x PixelsPerModule (about 300 px at the default, more for
+   a long payload), so on a narrow phone it overflowed its card and was clipped, which can make it
+   unscannable. The image shrinks to its container and keeps its square aspect ratio whatever class
+   the caller passes. !important keeps the precedence of the inline style this rule replaced, which
+   also outranks a parent's sizing rule (QrCodeButton pins a 260px frame through ::deep img).
+   Rubric section 20: no inline styles in markup. */
+img {
+    max-width: 100% !important;
+    height: auto !important;
+}

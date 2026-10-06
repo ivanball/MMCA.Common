@@ -1,1 +1,12 @@
 ﻿#nullable enable
+MMCA.Common.API.Startup.Auth.JwtAudience
+const MMCA.Common.API.Startup.Auth.JwtAudience.ConfigKey = "Jwt:Audience" -> string!
+static MMCA.Common.API.Startup.Auth.JwtAudience.RequireConfigured(string? configuredValue) -> string!
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.EmailConfirmationControllerBase(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TSendCommand, MMCA.Common.Shared.Abstractions.Result!>! sendHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TConfirmCommand, MMCA.Common.Shared.Abstractions.Result!>! confirmHandler) -> void
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.SendHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TSendCommand, MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.ConfirmHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TConfirmCommand, MMCA.Common.Shared.Abstractions.Result!>!
+abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateSendCommand(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest request) -> TSendCommand
+abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateConfirmCommand(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request) -> TConfirmCommand
+virtual MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.SendEmailConfirmationAsync(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.ConfirmEmailAsync(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!

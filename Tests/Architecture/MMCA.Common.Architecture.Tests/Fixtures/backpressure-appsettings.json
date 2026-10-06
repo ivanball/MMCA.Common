@@ -1,0 +1,9 @@
+{
+  // Fixture for MessageBusBackpressureTestsBaseTests: comments and trailing commas are legal in
+  // appsettings.json, and the binder matches keys case-insensitively.
+  "messageBus": {
+    "EnableInbox": true,
+    "prefetchCount": 16,
+    "ConcurrentMessageLimit": "8",
+  },
+}

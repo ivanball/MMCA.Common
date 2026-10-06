@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Responses;
+using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services.Administration;
 
 namespace MMCA.Common.UI.Pages.Administration;
@@ -117,7 +118,7 @@ public partial class RoleAdminList : ComponentBase, IDisposable
 
         try
         {
-            var result = await Roles.GetAllAsync(_cts.Token);
+            var result = await Roles.GetAllAsync(_cts.LifetimeToken());
             _loadResult = result;
             _roles = result.IsSuccess ? result.Value! : [];
         }

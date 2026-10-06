@@ -76,7 +76,7 @@ public partial class Sessions : IDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Session times render on the viewer's clock; the zone is only readable once JS is available.
-        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.LifetimeToken()))
         {
             StateHasChanged();
         }
@@ -89,7 +89,7 @@ public partial class Sessions : IDisposable
 
         try
         {
-            var result = await AuthService.GetSessionsAsync(_cts.Token);
+            var result = await AuthService.GetSessionsAsync(_cts.LifetimeToken());
             _loadResult = result;
 
             if (result.TryGetValue(out var sessions))
@@ -141,7 +141,7 @@ public partial class Sessions : IDisposable
 
         try
         {
-            var result = await AuthService.RevokeSessionAsync(session.SessionId, _cts.Token);
+            var result = await AuthService.RevokeSessionAsync(session.SessionId, _cts.LifetimeToken());
 
             if (result.IsSuccess)
             {
@@ -200,7 +200,7 @@ public partial class Sessions : IDisposable
 
         try
         {
-            var result = await AuthService.RevokeAllSessionsAsync(_cts.Token);
+            var result = await AuthService.RevokeAllSessionsAsync(_cts.LifetimeToken());
             if (result.IsSuccess)
             {
                 Navigation.NavigateTo(LoginRoute, forceLoad: true);

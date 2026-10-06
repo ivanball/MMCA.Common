@@ -108,7 +108,7 @@ public partial class NotificationInbox : IDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Sent times render on the viewer's clock; the zone is only readable once JS is available.
-        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.LifetimeToken()))
         {
             StateHasChanged();
         }
@@ -167,27 +167,19 @@ public partial class NotificationInbox : IDisposable
         return notification.IsRead ? 0 : 1;
     }
 
+    /// <summary>
+    /// Card state classes. The chrome they select lives in <c>wwwroot/app.css</c>
+    /// (<c>.notification-card.unread</c>, <c>.notification-card.deep-linked</c>), built from MudBlazor
+    /// palette tokens only so both themes stay legible: the unread marker is a primary left border and
+    /// the deep-link marker is a secondary-colored ring plus a faint surface tint, so the two read as
+    /// different things when a deep-linked card is also unread.
+    /// </summary>
     private string CardClass(UserNotificationDTO notification)
     {
         var state = notification.IsRead ? "read" : "unread";
         return IsDeepLinkTarget(notification)
             ? "notification-card " + state + " deep-linked"
             : "notification-card " + state;
-    }
-
-    /// <summary>
-    /// Card chrome, built from MudBlazor palette tokens only so both themes stay legible. The unread
-    /// marker is a primary left border; the deep-link marker is a secondary-colored ring plus a faint
-    /// surface tint, so the two read as different things when a deep-linked card is also unread.
-    /// </summary>
-    private string CardStyle(UserNotificationDTO notification)
-    {
-        var unread = notification.IsRead
-            ? string.Empty
-            : "border-left: 4px solid var(--mud-palette-primary);";
-        return IsDeepLinkTarget(notification)
-            ? unread + "box-shadow: 0 0 0 2px var(--mud-palette-secondary);background-color: var(--mud-palette-action-default-hover);"
-            : unread;
     }
 
     private void HandleRefreshRequested(object? sender, EventArgs e)
@@ -224,7 +216,7 @@ public partial class NotificationInbox : IDisposable
         IsLoading = true;
         try
         {
-            var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.Token);
+            var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.LifetimeToken());
             if (result.TryGetValue(out var page))
             {
                 _notifications = [.. page.Items];
@@ -276,7 +268,7 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.Token);
+            var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.LifetimeToken());
             if (markRead.IsFailure)
             {
                 markRead.NotifyOnFailure(Toast, L);
@@ -291,7 +283,7 @@ public partial class NotificationInbox : IDisposable
             }
 
             // Refresh the unread count; a failed count means "unknown", so the badge keeps its value.
-            var count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            var count = await InboxService.GetUnreadCountAsync(_cts.LifetimeToken());
             if (count.TryGetValue(out var unread))
             {
                 NotificationState.SetUnreadCount(unread);
@@ -312,7 +304,7 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            var markAllRead = await InboxService.MarkAllReadAsync(_cts.Token);
+            var markAllRead = await InboxService.MarkAllReadAsync(_cts.LifetimeToken());
             if (markAllRead.IsFailure)
             {
                 markAllRead.NotifyOnFailure(Toast, L);

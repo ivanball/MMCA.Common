@@ -77,7 +77,9 @@ public sealed class QrCodeImageTests : BunitTestBase
     // OBS-9: the bitmap's intrinsic width is modules x PixelsPerModule (about 300 px at the default,
     // more for a long payload or a larger module size), so on a narrow phone the code overflowed its
     // card and was clipped, which can make it unscannable. The image must shrink to its container
-    // while keeping its aspect ratio, whatever class the caller passes.
+    // while keeping its aspect ratio, whatever class the caller passes. The rule lives in the
+    // component's scoped stylesheet (rubric section 20 bans inline styles), declared !important so it
+    // keeps the precedence the inline style had over a caller's class and a parent's ::deep sizing.
     [Fact]
     public void Image_ShrinksToItsContainer_KeepingItsAspectRatio()
     {
@@ -86,9 +88,26 @@ public sealed class QrCodeImageTests : BunitTestBase
             .Add(c => c.AltText, "code")
             .Add(c => c.PixelsPerModule, 14));
 
-        var style = (cut.Find("img").GetAttribute("style") ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal);
+        cut.Find("img").Should().NotBeNull("the scoped rule targets the img the component renders itself");
 
-        style.Should().Contain("max-width:100%", "the code must never be wider than the space it is given");
-        style.Should().Contain("height:auto", "shrinking the width must not distort the square code");
+        var css = File.ReadAllText(ScopedStylesheetPath()).Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        css.Should().Contain("img{", "the scoped rule must target the component's own img");
+        css.Should().Contain("max-width:100%!important", "the code must never be wider than the space it is given");
+        css.Should().Contain("height:auto!important", "shrinking the width must not distort the square code");
+    }
+
+    private static string ScopedStylesheetPath()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "MMCA.Common.slnx")))
+            {
+                return Path.Combine(
+                    directory.FullName, "Source", "Presentation", "MMCA.Common.UI", "Components", "Sharing", "QrCodeImage.razor.css");
+            }
+        }
+
+        throw new InvalidOperationException("MMCA.Common.slnx not found above the test output directory.");
     }
 }

@@ -135,7 +135,7 @@ public partial class NotificationBell : IDisposable
     {
         try
         {
-            while (await _pollTimer!.WaitForNextTickAsync(_cts.Token))
+            while (await _pollTimer!.WaitForNextTickAsync(_cts.LifetimeToken()))
             {
                 await RefreshUnreadCountAsync();
             }
@@ -146,7 +146,7 @@ public partial class NotificationBell : IDisposable
         }
         catch (ObjectDisposedException)
         {
-            // Disposed between the timer creation and the first wait: reading _cts.Token throws
+            // Disposed between the timer creation and the first wait: reading Token off the disposed source throws
             // rather than cancelling. Nothing to observe, and this task is discarded.
         }
     }
@@ -194,7 +194,7 @@ public partial class NotificationBell : IDisposable
 
         try
         {
-            var count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            var count = await InboxService.GetUnreadCountAsync(_cts.LifetimeToken());
             if (!count.TryGetValue(out var unread))
             {
                 // The authoritative count is unknown (expired session, transient failure). Leave the

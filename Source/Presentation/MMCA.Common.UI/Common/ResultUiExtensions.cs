@@ -39,7 +39,7 @@ namespace MMCA.Common.UI.Common;
 /// <code>
 /// try
 /// {
-///     var dto = await Service.GetByIdAsync(id, cancellationToken: _cts.Token);
+///     var dto = await Service.GetByIdAsync(id, cancellationToken: _cts.LifetimeToken());
 ///     if (dto is null)
 ///     {
 ///         _errorMessage = L["Entity.NotFound"];
@@ -55,7 +55,7 @@ namespace MMCA.Common.UI.Common;
 /// </code>
 /// After (Result-based):
 /// <code>
-/// var result = await Service.GetByIdAsync(id, cancellationToken: _cts.Token);
+/// var result = await Service.GetByIdAsync(id, cancellationToken: _cts.LifetimeToken());
 /// if (result.TryGetValue(out var dto))
 /// {
 ///     _model = dto;
@@ -271,7 +271,7 @@ public static class ResultUiExtensions
     /// </code>
     /// After:
     /// <code>
-    /// (await Service.AddAsync(dto, _cts.Token)).NotifyOnFailure(Toast, L);
+    /// (await Service.AddAsync(dto, _cts.LifetimeToken())).NotifyOnFailure(Toast, L);
     /// </code>
     /// </example>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]

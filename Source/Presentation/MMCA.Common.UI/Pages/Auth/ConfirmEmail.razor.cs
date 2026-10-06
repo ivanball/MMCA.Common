@@ -187,7 +187,7 @@ public sealed partial class ConfirmEmail : IDisposable
 
         try
         {
-            var result = await ConfirmationService.ConfirmEmailAsync(_email.Trim(), _token.Trim(), _cts.Token);
+            var result = await ConfirmationService.ConfirmEmailAsync(_email.Trim(), _token.Trim(), _cts.LifetimeToken());
             if (result.IsSuccess)
             {
                 _state = ConfirmationState.Confirmed;
@@ -229,7 +229,7 @@ public sealed partial class ConfirmEmail : IDisposable
 
         try
         {
-            var result = await ConfirmationService.ResendEmailConfirmationAsync(_email.Trim(), _cts.Token);
+            var result = await ConfirmationService.ResendEmailConfirmationAsync(_email.Trim(), _cts.LifetimeToken());
             if (result.IsSuccess)
             {
                 // The endpoint answers 202 whether or not the address holds an unconfirmed account, so

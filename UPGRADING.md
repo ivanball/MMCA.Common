@@ -32,6 +32,52 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**`ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase`
+changes its `RequiredMarkers` default and gains two facts, and an AppHost that keeps a local
+`WithSelectedBroker` extension no longer compiles.** No runtime API changes; every item is a test base
+or an AppHost helper, and each fix is mechanical.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `ConstructorDependencyCountTestsBase` fails only above a ceiling | also fails when the widest class of a population sits below its ceiling (`*_ConstructorDependencyCeilingIsTight`) |
+| `FormsConventionTestsBase.RequiredMarkers` default: guard markers + `Required="true"` + `RequiredError` | guard markers + `Model="_model"`, `Validation="@_validate"`, `<ErrorSummary`, `Result="_saveResult"`, `Messages="_form?.Errors"`, `Validation.CorrectFollowing` |
+| subclass-authored `AdminCreateForms_ReadRequirednessOffTheirModel` and `ProfileForm_KeepsErrorSummaryAndPasswordValidation` | inherited from `FormsConventionTestsBase` (same names; a local copy now hides the base member, CS0108) |
+| app-local `BrokerSelection.WithSelectedBroker(attach)` in the AppHost | `MMCA.Common.Aspire.Hosting.BrokerSelection.WithSelectedBroker(attach)` (both imported is an ambiguous call, CS0121) |
+| app-local `JwtAudience` (MMCA.ADC: `MMCA.ADC.Identity.Shared.Authorization.JwtAudience`) | `MMCA.Common.API.Startup.Auth.JwtAudience`, same members (a host importing both namespaces gets CS0104) |
+
+The fix:
+
+1. **Constructor-dependency ceilings.** Run the subclass's `*ConstructorDependencyCountTests*`; each
+   `*_ConstructorDependencyCeilingIsTight` failure names the ceiling property, its value and the
+   observed maximum. Lower the ceiling to that number (MMCA.ADC's service ceiling 10 to 8 and
+   MMCA.Store's 9 to 6 at the time of this release; re-check the controller and handler marks the
+   same way). Never raise a ceiling to make the fact pass.
+2. **Forms convention.** Delete the subclass's `RequiredMarkers` override when it equals the new
+   default, and delete its local `AdminCreateForms_ReadRequirednessOffTheirModel`,
+   `ProfileForm_KeepsErrorSummaryAndPasswordValidation` and `CountOccurrences`, leaving `Map` and
+   `MinimumCreateForms`. A Profile page outside
+   `Source/Modules/Identity/{RepoToken}.Identity.UI/Pages/Users/Profile/Profile.razor` overrides
+   `ProfileFormPath`. A subclass that relied on the old `Required="true"` default overrides
+   `RequiredMarkers` with it explicitly.
+3. **Broker selection.** Delete the AppHost's local `BrokerSelection.cs`. Optionally replace the
+   hand-written `withBroker` switch with
+   `var withBroker = builder.AddSelectedBroker("MYAPP_BROKER", sqlServer);`; the
+   `.WithSelectedBroker(withBroker)` calls stay as they are.
+4. **JWT audience.** Delete the app-local `JwtAudience` class and its `using`; the hosts already import
+   `MMCA.Common.API.Startup.Auth` for `GetRequiredJwtAuthority`, so
+   `JwtAudience.RequireConfigured(builder.Configuration[JwtAudience.ConfigKey])` compiles unchanged.
+   Keep the old `using` where the file still needs other types from that namespace.
+
+The new bases (`CostTagConventionTestsBase`, `MessageBusBackpressureTestsBase`,
+`ForwardedJwtAudienceTestsBase`, `InlineStyleTestsBase`, `LifetimeTokenConventionTestsBase`) change
+nothing until a repo subclasses them. `LifetimeTokenConventionTestsBase` fails on every raw
+`_cts.Token` read, so migrate those reads to `_cts.LifetimeToken()` (`MMCA.Common.UI.Common`) before
+adopting it.
+
 ## [1.218.0] - 2026-10-01
 
 **Constructor changes on `AuthenticationServiceBase<TUser>` and six infrastructure services, a
