@@ -127,6 +127,29 @@ public sealed class RegisterTermsTests : BunitTestBase
         block.QuerySelectorAll("a").Select(a => a.GetAttribute("href")).Should().Contain(ConductUrl);
     }
 
+    /// <summary>
+    /// The sentence is assembled from localized fragments and link components; Razor drops the
+    /// whitespace around a code block, so the words either side of a link must stay separated by
+    /// exactly one space ("Privacy Policyand to follow theCode of Conduct" was the regression).
+    /// </summary>
+    [Theory]
+    [InlineData(false, "I agree to the Terms of Service and the Privacy Policy")]
+    [InlineData(true, "I agree to the Terms of Service and the Privacy Policy and to follow the Code of Conduct")]
+    public void TheSentence_ReadsWithASpaceBetweenEveryWord(bool withCodeOfConduct, string expected)
+    {
+        UseLegal(new LegalSettings
+        {
+            TermsUrl = TermsUrl,
+            PrivacyUrl = PrivacyUrl,
+            CodeOfConductUrl = withCodeOfConduct ? ConductUrl : string.Empty,
+        });
+        var cut = RenderUnderTest<Register>(_ => { });
+
+        var text = cut.Find(TermsSelector).TextContent;
+
+        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).Should().Be(expected);
+    }
+
     private static void TickTerms(IRenderedComponent<Register> cut) =>
         cut.Find(TermsSelector + " input[type='checkbox']").Change(true);
 
