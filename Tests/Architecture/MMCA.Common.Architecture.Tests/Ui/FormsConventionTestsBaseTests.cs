@@ -54,4 +54,13 @@ public sealed class FormsConventionTestsBaseTests
         FormsConventionTestsBase.MissingPasswordFormMarkers(
                 CompleteForm.Replace("ValidateConfirmPassword", "Other", StringComparison.Ordinal))
             .Should().ContainSingle().Which.Should().Be("ValidateConfirmPassword");
+
+    [Theory]
+    [InlineData("<ChangePasswordCard />", true)]
+    [InlineData("@* <ChangePasswordCard /> *@", false)]
+    [InlineData("<!-- <ChangePasswordCard /> -->", false)]
+    [InlineData("@* old *@ <ChangePasswordCard MinLength=\"8\" />", true)]
+    [InlineData("<MudText>no card</MudText>", false)]
+    public void RendersChangePasswordCard_IgnoresCommentedOutTags(string markup, bool expected) =>
+        FormsConventionTestsBase.RendersChangePasswordCard(markup).Should().Be(expected);
 }

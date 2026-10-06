@@ -197,7 +197,7 @@ public abstract class FormsConventionTestsBase
             because: $"the Identity Profile form must be discovered at {profileForm} so its §24 conventions are actually verified (override ProfileFormPath if it lives elsewhere)");
 
         var markup = File.ReadAllText(profileForm);
-        if (markup.Contains(ChangePasswordCardTag, StringComparison.Ordinal))
+        if (RendersChangePasswordCard(markup))
         {
             return;
         }
@@ -222,6 +222,41 @@ public abstract class FormsConventionTestsBase
             because: $"at least {MinimumCreateForms.ToString(CultureInfo.InvariantCulture)} admin create form(s) under Source/Modules must be discovered, so the convention is actually verified");
 
         return createForms;
+    }
+
+    /// <summary>
+    /// Whether the markup renders the shared <c>ChangePasswordCard</c>. Razor (<c>@* *@</c>) and HTML
+    /// (<c>&lt;!-- --&gt;</c>) comments are stripped first, so a commented-out tag does not stand in for
+    /// a password form.
+    /// </summary>
+    /// <param name="markup">The Razor markup of the Profile page.</param>
+    /// <returns><see langword="true"/> when an uncommented card tag is present.</returns>
+    public static bool RendersChangePasswordCard(string markup)
+    {
+        ArgumentNullException.ThrowIfNull(markup);
+        var uncommented = StripComments(StripComments(markup, "@*", "*@"), "<!--", "-->");
+        return uncommented.Contains(ChangePasswordCardTag, StringComparison.Ordinal);
+    }
+
+    private static string StripComments(string text, string open, string close)
+    {
+        var builder = new StringBuilder(text.Length);
+        var position = 0;
+        while (position < text.Length)
+        {
+            var start = text.IndexOf(open, position, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                builder.Append(text, position, text.Length - position);
+                break;
+            }
+
+            builder.Append(text, position, start - position);
+            var end = text.IndexOf(close, start + open.Length, StringComparison.Ordinal);
+            position = end < 0 ? text.Length : end + close.Length;
+        }
+
+        return builder.ToString();
     }
 
     private static int CountOccurrences(string text, string token)

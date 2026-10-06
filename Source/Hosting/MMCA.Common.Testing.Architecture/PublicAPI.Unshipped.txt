@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ApplicationServices_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Controllers_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Handlers_ConstructorDependencyCeilingIsTight() -> void
@@ -24,6 +24,7 @@ MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_ReadR
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileForm_KeepsErrorSummaryAndPasswordValidation() -> void
 const MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ChangePasswordCardTag = "<ChangePasswordCard" -> string!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingPasswordFormMarkers(string! markup) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.RendersChangePasswordCard(string! markup) -> bool
 virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileFormPath.get -> string?
 MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase
 MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.ForwardedJwtAudienceTestsBase() -> void
