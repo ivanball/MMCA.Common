@@ -8,7 +8,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Breaking
 
-- **Breaking:** `ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase` changes its `RequiredMarkers` default and gains the two facts both consumers re-authored, and an AppHost that keeps a local `WithSelectedBroker` extension no longer compiles against `BrokerSelection`. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking:** `ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase` changes its `RequiredMarkers` default and gains the two facts both consumers re-authored, an AppHost that keeps a local `WithSelectedBroker` extension no longer compiles against `BrokerSelection`, and a host that keeps an app-local `JwtAudience` beside `MMCA.Common.API.Startup.Auth` gets an ambiguous reference. Map and fix: UPGRADING.md, [Unreleased].
 
 ### Added
 

@@ -47,6 +47,7 @@ Old-to-new map:
 | `FormsConventionTestsBase.RequiredMarkers` default: guard markers + `Required="true"` + `RequiredError` | guard markers + `Model="_model"`, `Validation="@_validate"`, `<ErrorSummary`, `Result="_saveResult"`, `Messages="_form?.Errors"`, `Validation.CorrectFollowing` |
 | subclass-authored `AdminCreateForms_ReadRequirednessOffTheirModel` and `ProfileForm_KeepsErrorSummaryAndPasswordValidation` | inherited from `FormsConventionTestsBase` (same names; a local copy now hides the base member, CS0108) |
 | app-local `BrokerSelection.WithSelectedBroker(attach)` in the AppHost | `MMCA.Common.Aspire.Hosting.BrokerSelection.WithSelectedBroker(attach)` (both imported is an ambiguous call, CS0121) |
+| app-local `JwtAudience` (MMCA.ADC: `MMCA.ADC.Identity.Shared.Authorization.JwtAudience`) | `MMCA.Common.API.Startup.Auth.JwtAudience`, same members (a host importing both namespaces gets CS0104) |
 
 The fix:
 
@@ -66,6 +67,10 @@ The fix:
    hand-written `withBroker` switch with
    `var withBroker = builder.AddSelectedBroker("MYAPP_BROKER", sqlServer);`; the
    `.WithSelectedBroker(withBroker)` calls stay as they are.
+4. **JWT audience.** Delete the app-local `JwtAudience` class and its `using`; the hosts already import
+   `MMCA.Common.API.Startup.Auth` for `GetRequiredJwtAuthority`, so
+   `JwtAudience.RequireConfigured(builder.Configuration[JwtAudience.ConfigKey])` compiles unchanged.
+   Keep the old `using` where the file still needs other types from that namespace.
 
 The new bases (`CostTagConventionTestsBase`, `MessageBusBackpressureTestsBase`,
 `ForwardedJwtAudienceTestsBase`, `InlineStyleTestsBase`, `LifetimeTokenConventionTestsBase`) change
