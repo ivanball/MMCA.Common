@@ -11,12 +11,15 @@ namespace MMCA.Common.UI.Components.Auth;
 /// first (all three fields required, the new password at least <see cref="MinLength"/> characters, the
 /// confirmation equal to it), each message tied to its field and listed in the form's ErrorSummary, so
 /// the user sees what to fix without a server round trip. Only a valid form calls
-/// <see cref="MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync"/>; the outcome is
-/// toasted with the component's own localized text and reported through <see cref="OnChanged"/> or
-/// <see cref="OnFailed"/>.
+/// <see cref="MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync"/>; a success is toasted
+/// with the component's own localized text, a refusal with the server's reason, and the outcome is
+/// reported through <see cref="OnChanged"/> or <see cref="OnFailed"/>.
 /// </summary>
 public partial class ChangePasswordCard
 {
+    // MudTextField's own default MaxLength (the HTML maxlength ceiling), used when MaxLength is unset.
+    private const int NoMaxLength = 524288;
+
     private readonly CancellationTokenSource _cts = new();
 
     // Set by @ref after first render; the renderer owns its lifecycle, so it is not disposed here.
@@ -33,6 +36,20 @@ public partial class ChangePasswordCard
     /// </summary>
     [Parameter]
     public int MinLength { get; set; } = 8;
+
+    /// <summary>
+    /// An optional maximum new-password length enforced by the input itself; <see langword="null"/>
+    /// (the default) leaves the field unbounded and the limit to the server.
+    /// </summary>
+    [Parameter]
+    public int? MaxLength { get; set; }
+
+    /// <summary>
+    /// Optional extra actions (for example a link to the device-management page) rendered in the same
+    /// actions row after the submit button.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? AdditionalActions { get; set; }
 
     /// <summary>Raised after the password was changed (the success toast has already been shown).</summary>
     [Parameter]
@@ -107,7 +124,10 @@ public partial class ChangePasswordCard
             }
             else
             {
-                Toast.Error(L["ChangePassword.Failed"].Value);
+                // The server's own reason (for example "the current password is incorrect") beats a guess;
+                // client-synthesized transport and status failures are localized by code. The fixed text
+                // is only the fallback for a failure that carries no message at all.
+                Toast.Error(result.LocalizedErrorMessage(L) ?? L["ChangePassword.Failed"].Value);
                 await OnFailed.InvokeAsync(result);
             }
         }

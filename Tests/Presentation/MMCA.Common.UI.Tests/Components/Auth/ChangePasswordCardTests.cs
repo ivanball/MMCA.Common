@@ -97,7 +97,7 @@ public sealed class ChangePasswordCardTests : BunitTestBase
     }
 
     [Fact]
-    public void RefusedChange_ToastsFailure_AndRaisesOnFailedWithTheResult()
+    public void RefusedChange_ToastsTheServersReason_AndRaisesOnFailedWithTheResult()
     {
         var refusal = Result.Failure(Error.Validation("Auth.InvalidCurrentPassword", "The current password is incorrect."));
         _auth.Setup(a => a.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -109,8 +109,27 @@ public sealed class ChangePasswordCardTests : BunitTestBase
         SubmitButton(cut).Click();
 
         cut.WaitForAssertion(() => reported.Should().BeSameAs(refusal));
-        _toast.Verify(t => t.Error("Failed to change password. Check your current password."), Times.Once);
+        _toast.Verify(t => t.Error("The current password is incorrect."), Times.Once);
+        _toast.Verify(t => t.Error(It.IsAny<string>()), Times.Once);
         _toast.Verify(t => t.Success(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void MaxLength_WhenSet_BoundsTheNewPasswordInput()
+    {
+        var cut = RenderUnderTest<ChangePasswordCard>(p => p.Add(c => c.MaxLength, 128));
+
+        cut.FindAll("input[type=password]")[1].GetAttribute("maxlength").Should().Be("128");
+    }
+
+    [Fact]
+    public void AdditionalActions_RenderAfterTheSubmitButton()
+    {
+        var cut = RenderUnderTest<ChangePasswordCard>(p => p.Add(
+            c => c.AdditionalActions,
+            b => b.AddMarkupContent(0, "<a id=\"manage-devices\">Manage devices</a>")));
+
+        cut.Find("#manage-devices").TextContent.Should().Be("Manage devices");
     }
 
     [Fact]

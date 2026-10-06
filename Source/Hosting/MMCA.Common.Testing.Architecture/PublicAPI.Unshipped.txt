@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ApplicationServices_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Controllers_ConstructorDependencyCeilingIsTight() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Handlers_ConstructorDependencyCeilingIsTight() -> void
