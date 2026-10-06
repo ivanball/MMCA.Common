@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Attributes;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -47,6 +48,24 @@ public sealed class AuditedThing : IAuditedEntity
     public string Email { get; set; } = string.Empty;
 
     public int Quantity { get; set; }
+
+    /// <summary>An optional owned value object (the Address shape of an owned type).</summary>
+    public ThingAddress? Address { get; set; }
+}
+
+/// <summary>An owned value object mapped onto its owners row.</summary>
+/// <param name="City">The one column the owned type carries.</param>
+public sealed record ThingAddress(string City);
+
+/// <summary>
+/// An opted-in aggregate with the production shape: audit stamps and an application-stamped
+/// <c>RowVersion</c> (SQLite is client-stamped), plus a byte-array column that is a real change.
+/// </summary>
+public sealed class AuditedAggregateThing : AuditableAggregateRootEntity<int>, IAuditedEntity
+{
+    public string Name { get; set; } = string.Empty;
+
+    public byte[] Hash { get; set; } = [];
 }
 
 /// <summary>An unmapped base that marks a personal-data property.</summary>
@@ -94,6 +113,8 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
     }
 
     public DbSet<AuditedThing> AuditedThings => Set<AuditedThing>();
+
+    public DbSet<AuditedAggregateThing> AuditedAggregateThings => Set<AuditedAggregateThing>();
 
     public DbSet<OverridingPiiThing> OverridingPiiThings => Set<OverridingPiiThing>();
 
@@ -155,6 +176,15 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.OwnsOne(e => e.Address);
+        });
+
+        modelBuilder.Entity<AuditedAggregateThing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.RowVersion).IsConcurrencyToken();
+            entity.Ignore(e => e.DomainEvents);
         });
 
         modelBuilder.Entity<OverridingPiiThing>(entity =>

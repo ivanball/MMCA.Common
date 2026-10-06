@@ -13,7 +13,11 @@ public sealed class PushNotificationSettings
     /// <summary>Gets a value indicating whether push notifications are enabled.</summary>
     public bool Enabled { get; init; }
 
-    /// <summary>Gets the SignalR hub endpoint path.</summary>
+    /// <summary>
+    /// Gets the SignalR hub endpoint path. The JWT bearer handlers accept the query-string
+    /// <c>access_token</c> on this path (and under <c>/hubs</c>); a host moving the hub elsewhere
+    /// must also set <c>RateLimiting:HubPathPrefixes</c>, which the rate limiter reads separately.
+    /// </summary>
     public string HubPath { get; init; } = "/hubs/notifications";
 
     /// <summary>

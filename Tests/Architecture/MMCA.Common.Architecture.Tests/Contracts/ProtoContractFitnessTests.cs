@@ -108,4 +108,22 @@ public sealed class ProtoContractFitnessTests
             FrozenContract,
             "a block comment closed on its own line, a trailing one, one inside a line comment and a multi-line one must not swallow the declarations after them");
     }
+
+    // L141: the closing brace of an rpc option body must not pop the service, and a one-line
+    // message or enum body must still pin its members.
+    [Fact]
+    public void Parser_PinsMembersBehindAnRpcBodyAndInsideOneLineBodies()
+    {
+        var repoRoot = ArchitectureMapBase.FindRepoRoot(SolutionFileName);
+        var contract = ArchitectureRules.BuildProtoContract(
+            [Path.Combine(repoRoot, $"{TestDataDirectory}/fitness-shapes.proto")]);
+
+        contract.Should().Equal(
+            "enum mmca.shapes.Kind.KIND_ROUND = 1",
+            "enum mmca.shapes.Kind.KIND_UNSPECIFIED = 0",
+            "message mmca.shapes.Reply.kind = 1 : Kind",
+            "message mmca.shapes.Req.id = 1 : string",
+            "service mmca.shapes.ShapeService.First(Req) returns (Reply)",
+            "service mmca.shapes.ShapeService.Second(Req) returns (Reply)");
+    }
 }

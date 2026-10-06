@@ -85,12 +85,14 @@ public sealed class AndSpecification<TEntity, TIdentifierType>(
     where TEntity : IBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
+    private readonly ISpecification<TEntity, TIdentifierType> _spec1 = SpecificationComposer.RejectShaped(spec1, nameof(spec1));
+    private readonly ISpecification<TEntity, TIdentifierType> _spec2 = SpecificationComposer.RejectShaped(spec2, nameof(spec2));
     private Expression<Func<TEntity, bool>>? _criteria;
 
     /// <inheritdoc />
     public override Expression<Func<TEntity, bool>> Criteria =>
         _criteria ??= SpecificationComposer.Combine<TEntity, TIdentifierType>(
-            spec1, spec2, Expression.AndAlso);
+            _spec1, _spec2, Expression.AndAlso);
 }
 
 /// <summary>
@@ -109,12 +111,14 @@ public sealed class OrSpecification<TEntity, TIdentifierType>(
     where TEntity : IBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
+    private readonly ISpecification<TEntity, TIdentifierType> _spec1 = SpecificationComposer.RejectShaped(spec1, nameof(spec1));
+    private readonly ISpecification<TEntity, TIdentifierType> _spec2 = SpecificationComposer.RejectShaped(spec2, nameof(spec2));
     private Expression<Func<TEntity, bool>>? _criteria;
 
     /// <inheritdoc />
     public override Expression<Func<TEntity, bool>> Criteria =>
         _criteria ??= SpecificationComposer.Combine<TEntity, TIdentifierType>(
-            spec1, spec2, Expression.OrElse);
+            _spec1, _spec2, Expression.OrElse);
 }
 
 /// <summary>
@@ -131,11 +135,12 @@ public sealed class NotSpecification<TEntity, TIdentifierType>(
     where TEntity : IBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
+    private readonly ISpecification<TEntity, TIdentifierType> _spec = SpecificationComposer.RejectShaped(spec, nameof(spec));
     private Expression<Func<TEntity, bool>>? _criteria;
 
     /// <inheritdoc />
     public override Expression<Func<TEntity, bool>> Criteria =>
-        _criteria ??= SpecificationComposer.Negate<TEntity, TIdentifierType>(spec);
+        _criteria ??= SpecificationComposer.Negate<TEntity, TIdentifierType>(_spec);
 }
 
 /// <summary>
@@ -145,6 +150,44 @@ public sealed class NotSpecification<TEntity, TIdentifierType>(
 /// </summary>
 internal static class SpecificationComposer
 {
+    /// <summary>
+    /// Refuses a <see cref="QuerySpecification{TEntity, TIdentifierType}"/> that carries query
+    /// shape (includes, ordering, paging, tracking or soft-delete scope): the composed specification
+    /// is criteria-only, so that shape would be dropped without an error. An unshaped query
+    /// specification (no builder call made) composes like any other.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type the specification applies to.</typeparam>
+    /// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>
+    /// <param name="spec">The specification to compose.</param>
+    /// <param name="parameterName">The composer parameter it was passed as.</param>
+    /// <returns><paramref name="spec"/> unchanged.</returns>
+    /// <exception cref="ArgumentException">The specification carries query shape.</exception>
+    internal static ISpecification<TEntity, TIdentifierType> RejectShaped<TEntity, TIdentifierType>(
+        ISpecification<TEntity, TIdentifierType> spec,
+        string parameterName)
+        where TEntity : IBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull
+    {
+        if (spec is QuerySpecification<TEntity, TIdentifierType> query && HasShape(query))
+        {
+            throw new ArgumentException(
+                "The specification carries includes, ordering, paging, tracking or soft-delete scope that And/Or/Not cannot forward (the composed specification is criteria-only). Compose the predicates inside the QuerySpecification's own Criteria instead.",
+                parameterName);
+        }
+
+        return spec;
+    }
+
+    private static bool HasShape<TEntity, TIdentifierType>(QuerySpecification<TEntity, TIdentifierType> query)
+        where TEntity : IBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull =>
+        query.OrderBy.Count > 0
+        || query.IncludePaths.Count > 0
+        || query.Skip is not null
+        || query.Take is not null
+        || query.AsTracking
+        || query.IgnoreQueryFilters;
+
     /// <summary>Joins two specifications' criteria with a binary operator.</summary>
     /// <typeparam name="TEntity">The entity type the specifications apply to.</typeparam>
     /// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>

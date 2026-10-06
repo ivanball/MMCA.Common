@@ -38,6 +38,40 @@ public sealed class SpecificationCompositionTests
 
     private static readonly CompositionTestEntity Alice = new() { Id = 1, Name = "Alice", Age = 25 };
 
+    /// <summary>A query specification carrying paging, which a composer cannot forward.</summary>
+    private sealed class PagedSpecification : QuerySpecification<CompositionTestEntity, int>
+    {
+        public PagedSpecification() => ApplyPaging(0, 10);
+
+        public override Expression<Func<CompositionTestEntity, bool>> Criteria => e => e.Age > 0;
+    }
+
+    /// <summary>A query specification with no builder call: criteria only, so it composes.</summary>
+    private sealed class UnshapedQuerySpecification : QuerySpecification<CompositionTestEntity, int>
+    {
+        public override Expression<Func<CompositionTestEntity, bool>> Criteria => e => e.Age > 0;
+    }
+
+    // -- M179: composing a shaped QuerySpecification fails fast instead of dropping its shape --
+    [Fact]
+    public void And_WithAShapedQuerySpecification_Throws() =>
+        FluentActions.Invoking(() => new PagedSpecification().And(new AgeGreaterThanSpecification(18)))
+            .Should().Throw<ArgumentException>();
+
+    [Fact]
+    public void Or_WithAShapedQuerySpecificationOnTheRight_Throws() =>
+        FluentActions.Invoking(() => new AgeGreaterThanSpecification(18).Or(new PagedSpecification()))
+            .Should().Throw<ArgumentException>();
+
+    [Fact]
+    public void Not_OfAShapedQuerySpecification_Throws() =>
+        FluentActions.Invoking(() => new PagedSpecification().Not())
+            .Should().Throw<ArgumentException>();
+
+    [Fact]
+    public void And_WithAnUnshapedQuerySpecification_StillComposes() =>
+        new UnshapedQuerySpecification().And(new AgeGreaterThanSpecification(18)).IsSatisfiedBy(Alice).Should().BeTrue();
+
     // ── No Expression.Invoke survives composition ──
     [Fact]
     public void AndSpecification_Criteria_ContainsNoInvocation()

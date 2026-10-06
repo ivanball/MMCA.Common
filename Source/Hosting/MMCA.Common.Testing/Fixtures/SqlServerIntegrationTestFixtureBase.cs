@@ -78,10 +78,15 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
 
         _factory = CreateFactory();
 
+        // Set BEFORE the host builds: the flag means "may exist", not "exists". The drop in
+        // DisposeAsync is IF DB_ID(...) guarded, so dropping a database that was never created is a
+        // no-op, while a host that fails AFTER its migration created the database still gets it
+        // dropped instead of leaking it on the shared server.
+        _databaseCreated = true;
+
         // Creating the client forces the host to build and run Program.cs's
         // InitializeDatabaseAsync (Migrate creates the database + applies the module's migrations).
         Client = _factory.CreateClient();
-        _databaseCreated = true;
 
         var connection = new SqlConnection(ConnectionString);
         await using (connection.ConfigureAwait(false))

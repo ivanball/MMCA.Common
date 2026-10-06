@@ -29,8 +29,8 @@ public static partial class ArchitectureRules
             "use Shared contracts, not another module's Infrastructure");
 
     /// <summary>
-    /// The complete internal-layer cross product: every module's Domain, Application, Infrastructure
-    /// and Api against every OTHER module's Domain, Application, Infrastructure and Api.
+    /// The complete internal-layer cross product: every module's Domain, Application, Infrastructure,
+    /// Api, Shared and UI against every OTHER module's Domain, Application, Infrastructure and Api.
     /// <para>
     /// The six named rules above cover the pairs worth their own failure message; this covers the
     /// rest, which nothing checked before. A per-module layer rule
@@ -40,14 +40,20 @@ public static partial class ArchitectureRules
     /// compile-coupling two modules that ADR-007/008 promise can be extracted separately.
     /// </para>
     /// <para>
-    /// <see cref="Layer.Ui"/> is deliberately NOT in the product: a module's UI composing another
-    /// module's UI is a real, intended arrangement in the shipped apps.
+    /// Shared and UI are SOURCES only. The per-layer <c>SharedDoesNotDependOn*</c> and
+    /// <c>UiDoesNotDependOn*</c> rules forbid only the same module's internal layers, so a module's
+    /// Shared or UI reaching another module's Domain, Application, Infrastructure or Api was
+    /// unchecked. As TARGETS they stay out of the product: a module's UI composing another module's
+    /// UI, and any layer consuming another module's Shared contracts, are real, intended
+    /// arrangements in the shipped apps (Shared to other Shared has its own rule,
+    /// <see cref="ModuleSharedAreIsolated"/>).
     /// </para>
     /// </summary>
     public static void ModuleInternalLayersAreIsolated(IArchitectureMap map)
     {
+        Layer[] sourceLayers = [Layer.Domain, Layer.Application, Layer.Infrastructure, Layer.Api, Layer.Shared, Layer.Ui];
         Layer[] internalLayers = [Layer.Domain, Layer.Application, Layer.Infrastructure, Layer.Api];
-        foreach (var from in internalLayers)
+        foreach (var from in sourceLayers)
         {
             foreach (var to in internalLayers)
             {

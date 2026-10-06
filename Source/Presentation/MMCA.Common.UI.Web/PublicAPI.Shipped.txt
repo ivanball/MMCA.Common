@@ -73,6 +73,7 @@ MMCA.Common.UI.Web.Services.ServerTokenStorageService.ClearTokensAsync() -> Syst
 MMCA.Common.UI.Web.Services.ServerTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Web.Services.ServerTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Web.Services.ServerTokenStorageService.ServerTokenStorageService(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor, MMCA.Common.API.SessionCookies.CookieTokenReader! cookieTokenReader, MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.ServerTokenStorageService(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor, MMCA.Common.API.SessionCookies.CookieTokenReader! cookieTokenReader, MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider) -> void
 MMCA.Common.UI.Web.Services.ServerTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Web.Services.WebFormFactor
 MMCA.Common.UI.Web.Services.WebFormFactor.GetFormFactor() -> string!

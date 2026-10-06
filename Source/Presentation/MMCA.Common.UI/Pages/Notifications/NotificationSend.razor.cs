@@ -106,25 +106,28 @@ public partial class NotificationSend : IDisposable
 
     private async Task SendNotificationAsync()
     {
-        if (_form is null)
+        // Re-entrancy guard, raised BEFORE the first await: each send mints its own idempotency key,
+        // so a second click that slips in while the first is still validating (or before the
+        // disabled render reaches the browser) would broadcast twice.
+        if (_form is null || IsSaving)
             return;
-
-        _sendResult = null;
-
-        // MudForm has no OnValidSubmit, so the submit still triggers a pass; WHAT it checks comes from
-        // the model's annotations, not from per-field attributes in the markup.
-        await _form.ValidateAsync();
-        if (!_form.IsValid)
-        {
-            // The per-field messages are already on screen; the ErrorSummary above the form collects
-            // them in one place (deduplicated) and the snackbar stays the summary cue it always was.
-            Toast.Warning(ErrorMessages.ValidationError);
-            return;
-        }
 
         IsSaving = true;
         try
         {
+            _sendResult = null;
+
+            // MudForm has no OnValidSubmit, so the submit still triggers a pass; WHAT it checks comes
+            // from the model's annotations, not from per-field attributes in the markup.
+            await _form.ValidateAsync();
+            if (!_form.IsValid)
+            {
+                // The per-field messages are already on screen; the ErrorSummary above the form
+                // collects them in one place (deduplicated) and the snackbar stays the summary cue.
+                Toast.Warning(ErrorMessages.ValidationError);
+                return;
+            }
+
             var request = new SendPushNotificationRequest(_model.Title, _model.Body);
             var result = await NotificationService.SendAsync(request, _cts.LifetimeToken());
             _sendResult = result;

@@ -21,6 +21,13 @@ namespace MMCA.Common.UI.Maui.Services;
 /// browser-host siblings are <c>WasmTokenStorageService</c> (MMCA.Common.UI) and
 /// <c>ServerTokenStorageService</c> (MMCA.Common.UI.Web).
 /// </para>
+/// <para>
+/// The refresh single-flight is process-wide (static), not per instance: the service is scoped, and
+/// the <c>AuthDelegatingHandler</c> built by <c>IHttpClientFactory</c> resolves its own instance in
+/// its handler scope, so a per-instance slot let the handler scope and the component scope each
+/// rotate the same refresh token (the second rotation reads as reuse and revokes the session,
+/// BR-206). A device runs one user session per process, so one slot is the correct scope.
+/// </para>
 /// </summary>
 public sealed class MauiTokenStorageService(
     ISecureTokenStore store,
@@ -28,9 +35,9 @@ public sealed class MauiTokenStorageService(
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
-    private readonly Lock _hydrateSync = new();
+    private static readonly Lock HydrateSync = new();
 
-    private Task<string?>? _hydrateInFlight;
+    private static Task<string?>? _hydrateInFlight;
 
     /// <inheritdoc />
     public async Task<string?> GetAccessTokenAsync()
@@ -41,17 +48,13 @@ public sealed class MauiTokenStorageService(
             return stored;
         }
 
-        // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one
-        // acquisition. The lock is what makes it single: an unguarded "??=" lets two callers each
-        // start a refresh, and every extra refresh rotates the refresh token again, invalidating the
-        // pair the other caller is still holding. HydrateAsync reaches its first await immediately,
-        // so nothing slow runs under the lock.
-        Task<string?> inFlight;
-        lock (_hydrateSync)
-        {
-            _hydrateInFlight ??= HydrateAsync();
-            inFlight = _hydrateInFlight;
-        }
+        // Single-flight across every instance in the process (see the class remarks): concurrent
+        // callers (delegating handler, auth-state, SignalR) share one acquisition. The lock is what
+        // makes it single: an unguarded "??=" lets two callers each start a refresh, and every extra
+        // refresh rotates the refresh token again, invalidating the pair the other caller is still
+        // holding. HydrateAsync reaches its first await immediately, so nothing slow runs under the
+        // lock.
+        Task<string?> inFlight = JoinOrStartHydrate(HydrateAsync);
 
         try
         {
@@ -59,14 +62,30 @@ public sealed class MauiTokenStorageService(
         }
         finally
         {
-            // Only clear our own task: an unguarded clear can drop a NEWER hydrate started after
-            // this one completed, splitting the next set of callers again.
-            lock (_hydrateSync)
+            ClearHydrateIfCurrent(inFlight);
+        }
+    }
+
+    /// <summary>Joins the process-wide hydrate in flight, or starts one with <paramref name="start"/>.</summary>
+    private static Task<string?> JoinOrStartHydrate(Func<Task<string?>> start)
+    {
+        lock (HydrateSync)
+        {
+            return _hydrateInFlight ??= start();
+        }
+    }
+
+    /// <summary>
+    /// Clears the slot only when it still holds <paramref name="inFlight"/>: an unguarded clear can
+    /// drop a NEWER hydrate started after this one completed, splitting the next set of callers again.
+    /// </summary>
+    private static void ClearHydrateIfCurrent(Task<string?> inFlight)
+    {
+        lock (HydrateSync)
+        {
+            if (ReferenceEquals(_hydrateInFlight, inFlight))
             {
-                if (ReferenceEquals(_hydrateInFlight, inFlight))
-                {
-                    _hydrateInFlight = null;
-                }
+                _hydrateInFlight = null;
             }
         }
     }

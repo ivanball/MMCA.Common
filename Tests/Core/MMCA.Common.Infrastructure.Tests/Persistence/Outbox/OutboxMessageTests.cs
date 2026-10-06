@@ -89,6 +89,7 @@ public sealed class OutboxMessageTests
         // each iteration back into a full assembly scan, which cannot fit inside it.
         var warmup = OutboxMessage.FromDomainEvent(new NamedDomainEvent("warm"));
         warmup.DeserializeEvent().Should().BeOfType<NamedDomainEvent>();
+        OutboxMessage.IsEventTypeCached(NamedEventIdentity).Should().BeTrue("a successful resolution is cached");
 
         var message = new OutboxMessage
         {
@@ -104,6 +105,18 @@ public sealed class OutboxMessageTests
 
         stopwatch.Stop();
         stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5));
+    }
+
+    // -- M183: an unresolvable name is not cached, so the one-shot retry can still resolve it --
+    [Fact]
+    public void DeserializeEvent_DoesNotCacheAnUnresolvableName()
+    {
+        const string neverDeclared = "MMCA.Tests.Never.Declared.Name.v1";
+
+        new OutboxMessage { EventType = neverDeclared, Payload = "{}" }.DeserializeEvent().Should().BeNull();
+
+        OutboxMessage.IsEventTypeCached(neverDeclared).Should().BeFalse(
+            "a cached null would make the retry for a late-loading assembly a guaranteed dead letter");
     }
 
     // ── Ordering key ──

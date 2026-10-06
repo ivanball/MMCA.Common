@@ -107,6 +107,15 @@ public static partial class ArchitectureRules
     /// <summary>Parses one proto3 file into its signature lines.</summary>
     /// <param name="fileLines">The file's raw lines.</param>
     /// <returns>The signature lines contributed by this file.</returns>
+    /// <remarks>
+    /// Parsed by STATEMENT, not by line: comments are stripped line by line, the remainder is joined
+    /// and split at <c>{</c>, <c>}</c> and <c>;</c> outside quoted strings (see
+    /// <see cref="SplitStatements"/>). A one-line body (<c>message Req { string id = 1; }</c>) then
+    /// pins its members, and an rpc with an option body (<c>rpc A (B) returns (C) { option ...; }</c>)
+    /// opens a scope of its own, so its closing brace no longer pops the enclosing service. One
+    /// limitation remains: braces inside a FIELD option aggregate (<c>[(x) = {a: 1}]</c>) are not
+    /// supported.
+    /// </remarks>
     private static List<string> DescribeProtoFile(IReadOnlyList<string> fileLines)
     {
         var signatures = new List<string>();
@@ -114,15 +123,15 @@ public static partial class ArchitectureRules
         var package = string.Empty;
         var inBlockComment = false;
 
+        var text = new StringBuilder();
         foreach (var rawLine in fileLines)
         {
-            var line = StripComments(rawLine, ref inBlockComment);
-            if (line.Length == 0)
-            {
-                continue;
-            }
+            text.Append(StripComments(rawLine, ref inBlockComment)).Append(' ');
+        }
 
-            if (line.StartsWith('}'))
+        foreach (var statement in SplitStatements(text.ToString()))
+        {
+            if (statement == "}")
             {
                 if (scopes.Count > 0)
                 {
@@ -132,32 +141,111 @@ public static partial class ArchitectureRules
                 continue;
             }
 
-            var packageMatch = PackageLine.Match(line);
+            var packageMatch = PackageLine.Match(statement);
             if (packageMatch.Success)
             {
                 package = packageMatch.Groups["name"].Value;
                 continue;
             }
 
-            if (TryPushScope(line, scopes))
+            if (TryPushScope(statement, scopes))
             {
                 continue;
             }
 
-            var scope = scopes.Count > 0 ? scopes.Peek() : null;
-            if (scope is null)
-            {
-                continue;
-            }
-
-            var signature = DescribeMember(line, package, scopes, scope.Kind);
-            if (signature is not null)
+            if (DescribeStatement(statement, package, scopes) is { } signature)
             {
                 signatures.Add(signature);
+            }
+
+            if (statement.EndsWith('{'))
+            {
+                // Any other block (an rpc's option body, an aggregate option value) opens an
+                // anonymous scope, so its closing brace pops it rather than the enclosing scope.
+                scopes.Push(new ProtoScope(ProtoScopeKind.Block, string.Empty));
             }
         }
 
         return signatures;
+    }
+
+    /// <summary>Renders one statement against the innermost open scope, or null outside every scope.</summary>
+    /// <param name="statement">The trimmed statement.</param>
+    /// <param name="package">The file's proto package.</param>
+    /// <param name="scopes">The open scope stack (innermost first).</param>
+    /// <returns>The signature line, or null.</returns>
+    private static string? DescribeStatement(string statement, string package, Stack<ProtoScope> scopes) =>
+        scopes.Count > 0 ? DescribeMember(statement, package, scopes, scopes.Peek().Kind) : null;
+
+    /// <summary>
+    /// Splits comment-free proto text into statements: a statement ends at <c>;</c> (kept), at
+    /// <c>{</c> (kept, so a block header ends with it), and <c>}</c> is a statement of its own.
+    /// Delimiters inside single- or double-quoted strings do not split. Blank statements are dropped.
+    /// </summary>
+    /// <param name="text">The file text with comments removed.</param>
+    /// <returns>The trimmed statements in order.</returns>
+    private static List<string> SplitStatements(string text)
+    {
+        var statements = new List<string>();
+        var current = new StringBuilder();
+        char? quote = null;
+        var escaped = false;
+
+        foreach (var c in text)
+        {
+            if (quote is not null)
+            {
+                current.Append(c);
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (c == '\\')
+                {
+                    escaped = true;
+                }
+                else if (c == quote)
+                {
+                    quote = null;
+                }
+
+                continue;
+            }
+
+            switch (c)
+            {
+                case '"' or '\'':
+                    quote = c;
+                    current.Append(c);
+                    break;
+                case ';' or '{':
+                    current.Append(c);
+                    Flush(current, statements);
+                    break;
+                case '}':
+                    Flush(current, statements);
+                    statements.Add("}");
+                    break;
+                default:
+                    current.Append(c);
+                    break;
+            }
+        }
+
+        Flush(current, statements);
+        return statements;
+    }
+
+    /// <summary>Emits the accumulated statement when it is not blank, then resets the buffer.</summary>
+    private static void Flush(StringBuilder current, List<string> statements)
+    {
+        var statement = current.ToString().Trim();
+        if (statement.Length > 0)
+        {
+            statements.Add(statement);
+        }
+
+        current.Clear();
     }
 
     /// <summary>Pushes a service / message / enum / oneof scope when the line opens one.</summary>
@@ -194,6 +282,12 @@ public static partial class ArchitectureRules
     /// <returns>The signature line, or null.</returns>
     private static string? DescribeMember(string line, string package, Stack<ProtoScope> scopes, ProtoScopeKind kind)
     {
+        if (kind == ProtoScopeKind.Block)
+        {
+            // An rpc body or an aggregate option value: options only, nothing on the wire.
+            return null;
+        }
+
         var owner = QualifiedName(package, scopes);
 
         if (kind == ProtoScopeKind.Service)
@@ -302,6 +396,9 @@ public static partial class ArchitectureRules
         Message,
         Enum,
         Oneof,
+
+        /// <summary>Any other braced block (an rpc option body, an aggregate option value).</summary>
+        Block,
     }
 
     /// <summary>One open proto block.</summary>
@@ -313,7 +410,7 @@ public static partial class ArchitectureRules
     private static partial Regex PackageLine { get; }
 
     [GeneratedRegex(
-        @"^(?<kind>service|message|enum|oneof)\s+(?<name>\w+)\s*\{?\s*$",
+        @"^(?<kind>service|message|enum|oneof)\s+(?<name>\w+)\s*\{$",
         RegexOptions.ExplicitCapture,
         matchTimeoutMilliseconds: 1000)]
     private static partial Regex ScopeHeader { get; }

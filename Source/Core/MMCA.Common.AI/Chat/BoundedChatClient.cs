@@ -178,6 +178,18 @@ public sealed class BoundedChatClient : DelegatingChatClient
         return estimator is null ? (text.Length + 3) / 4 : estimator.EstimateTokenCount(text);
     }
 
+    /// <summary>
+    /// Whether the provider can honor the request's tool mode with the tools left after filtering.
+    /// A tool mode without tools cannot be honored (and RequireAny would make it an error rather
+    /// than a plain answer), and neither can a RequireSpecific mode naming a tool the filter
+    /// stripped: the provider rejects a tool_choice for a tool the request does not offer. In both
+    /// cases the mode falls back to auto, so the model answers plainly.
+    /// </summary>
+    private static bool CanHonorToolMode(ChatOptions options) =>
+        options.Tools is { } tools
+        && (options.ToolMode is not RequiredChatToolMode { RequiredFunctionName: { } required }
+            || tools.Any(tool => string.Equals(tool.Name, required, StringComparison.Ordinal)));
+
     private ChatOptions Bound(ChatOptions? options)
     {
         var bounded = options?.Clone() ?? new ChatOptions();
@@ -194,10 +206,8 @@ public sealed class BoundedChatClient : DelegatingChatClient
         else
         {
             bounded.Tools = FilterTools(bounded);
-            if (bounded.Tools is null)
+            if (!CanHonorToolMode(bounded))
             {
-                // A tool mode without tools is a request the provider cannot honor, and
-                // RequireAny would make it an error rather than a plain answer.
                 bounded.ToolMode = null;
             }
         }

@@ -7,7 +7,9 @@ namespace MMCA.Common.UI.Services.Auth;
 /// HTTP message handler that attaches the stored JWT Bearer token to every outgoing API request.
 /// Registered in the <c>"APIClient"</c> HttpClient pipeline via <c>AddHttpMessageHandler</c>.
 /// A request that sets <see cref="SkipBearer"/> to <see langword="true"/> passes through untouched,
-/// without reading the token storage at all.
+/// without reading the token storage at all, and so does a request that already carries an
+/// <c>Authorization</c> header: the forced-refresh replay sets the token it just acquired, and
+/// replacing it with the stored one would resend the token the server just rejected.
 /// </summary>
 public sealed class AuthDelegatingHandler(
     ITokenStorageService tokenStorageService) : DelegatingHandler
@@ -29,10 +31,13 @@ public sealed class AuthDelegatingHandler(
             return await base.SendAsync(request, cancellationToken);
         }
 
-        var token = await tokenStorageService.GetAccessTokenAsync();
-        if (!string.IsNullOrWhiteSpace(token))
+        if (request.Headers.Authorization is null)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var token = await tokenStorageService.GetAccessTokenAsync();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
         }
 
         return await base.SendAsync(request, cancellationToken);

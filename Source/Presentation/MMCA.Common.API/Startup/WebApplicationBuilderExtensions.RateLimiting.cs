@@ -3,9 +3,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.RateLimiting;
+using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Shared.Auth;
 using StackExchange.Redis;
 
@@ -187,6 +191,20 @@ public static partial class WebApplicationBuilderExtensions
     }
 
     /// <summary>
+    /// The namespace that qualifies a distributed rate-limit key: the configured
+    /// <c>Cache:KeyPrefix</c> without its trailing colon when one is set, else the application
+    /// namespace (<see cref="ApplicationNamespace"/>), exactly as the distributed cache resolves its
+    /// own prefix.
+    /// </summary>
+    private static string RateLimitKeyNamespace(IServiceProvider services)
+    {
+        var configured = services.GetService<IOptions<CacheKeyPrefixOptions>>()?.Value.KeyPrefix;
+        return string.IsNullOrEmpty(configured)
+            ? ApplicationNamespace.Resolve(services.GetService<IConfiguration>(), services.GetService<IHostEnvironment>())
+            : configured.TrimEnd(':');
+    }
+
+    /// <summary>
     /// Builds one limited partition for <paramref name="partitionKey"/>, choosing between the
     /// shared Redis counter and the in-memory fixed or sliding window.
     /// </summary>
@@ -226,9 +244,16 @@ public static partial class WebApplicationBuilderExtensions
                 var logger = (ILogger?)requestServices?.GetService<ILogger<RedisFixedWindowRateLimiter>>()
                     ?? NullLogger<RedisFixedWindowRateLimiter>.Instance;
 
+                // The application namespace keeps two MMCA apps on one Redis from sharing counters,
+                // under the same rule the distributed cache keys follow (SEC-Common-53). Resolved in
+                // the factory, which runs once per partition, not on every request.
                 return RateLimitPartition.Get(
                     partitionKey,
-                    key => new RedisFixedWindowRateLimiter(connection, $"{redisScope}:{key}", permitLimit, logger));
+                    key => new RedisFixedWindowRateLimiter(
+                        connection,
+                        $"{RateLimitKeyNamespace(requestServices!)}:{redisScope}:{key}",
+                        permitLimit,
+                        logger));
             }
 
             // No multiplexer registered: fall through to the in-memory limiters rather than failing

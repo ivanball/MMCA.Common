@@ -77,6 +77,60 @@ public sealed class NotificationInboxServiceTests
                 new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(37, 5, 2))),
         };
 
+    // L134: two reads that both land on a rejected token share ONE forced refresh. On MAUI a second
+    // rotation presenting the same refresh token reads as reuse and revokes the session (BR-206).
+    [Fact]
+    public async Task ConcurrentReadsThatBothGet401_ShareOneForcedRefresh()
+    {
+        var pending = new TaskCompletionSource<string?>();
+        var refresher = new Mock<ITokenRefresher>();
+        refresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>())).Returns(pending.Task);
+        var (sut, _) = CreateSut(
+            AcceptingOnly("refreshed-access-token", () => StubHttpMessageHandler.CreateResponse(HttpStatusCode.OK, "7")),
+            tokenRefresher: refresher.Object);
+
+        var count = sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+        var inbox = sut.GetInboxAsync(pageNumber: 1, pageSize: 5, TestContext.Current.CancellationToken);
+        pending.SetResult("refreshed-access-token");
+        await count;
+        await inbox;
+
+        refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // L134 review follow-up: the shared refresh must not run under the first caller's token, so a
+    // caller that gives up (a disposed bell) cannot cancel the refresh another caller is awaiting.
+    [Fact]
+    public async Task TheFirstCallerCancelling_DoesNotCancelTheSharedRefreshForTheSecond()
+    {
+        var pending = new TaskCompletionSource<string?>();
+        var refresher = new Mock<ITokenRefresher>();
+        refresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(ct => pending.Task.WaitAsync(ct));
+        var (sut, _) = CreateSut(
+            AcceptingOnly("refreshed-access-token", () => StubHttpMessageHandler.CreateResponse(HttpStatusCode.OK, "7")),
+            tokenRefresher: refresher.Object);
+        using var firstCaller = new CancellationTokenSource();
+
+        var first = sut.GetUnreadCountAsync(firstCaller.Token);
+        var second = sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+        await firstCaller.CancelAsync();
+        pending.SetResult("refreshed-access-token");
+
+        try
+        {
+            await first;
+        }
+        catch (OperationCanceledException)
+        {
+            // The caller that cancelled may observe its own cancellation; that is its business.
+        }
+
+        var result = await second;
+        result.IsSuccess.Should().BeTrue("the second caller never cancelled, so its read completes with the refreshed token");
+        result.Value.Should().Be(7);
+    }
+
     // == GetInboxAsync ==
     [Fact]
     public async Task GetInboxAsync_RequestsPagedInboxWithBearerToken_AndDeserializes()

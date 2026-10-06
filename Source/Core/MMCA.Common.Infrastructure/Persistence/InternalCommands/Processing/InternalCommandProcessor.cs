@@ -480,7 +480,7 @@ public sealed partial class InternalCommandProcessor(
         // One shared restore for every background hop (see AmbientOrigin): tenant first, because it
         // routes the scoped context factory to the right database and every repository the handler
         // resolves reads its query filter from it, then the principal, then the correlation id.
-        AmbientOrigin.Restore(
+        using var origin = AmbientOrigin.Restore(
             executionScope.ServiceProvider,
             row.UserId,
             row.UserRoles,

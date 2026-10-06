@@ -189,6 +189,40 @@ public sealed class EntityServiceBaseCachingTests
         handler.CallCount.Should().Be(2);
     }
 
+    // L131: a 412 on a conditional write can mean the write landed and only its response was lost
+    // (the retry then saw the new row version), so the cached pre-write copy must not survive it.
+    [Fact]
+    public async Task AConditionalWriteAnsweredPreconditionFailed_InvalidatesTheEndpoint()
+    {
+        var (sut, handler) = CreateSut(
+            request => request.Method == HttpMethod.Get
+                ? PagedResponse(Widget(1))
+                : new HttpResponseMessage(HttpStatusCode.PreconditionFailed),
+            CreateCache());
+
+        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+        (await sut.UpdateAsync(Widget(1, "Renamed"), TestContext.Current.CancellationToken)).IsFailure.Should().BeTrue();
+        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        handler.CallCount.Should().Be(3, "the write's outcome is unknown, so the next read goes back to the API");
+    }
+
+    [Fact]
+    public async Task AWriteRejectedByValidation_LeavesTheCacheAlone()
+    {
+        var (sut, handler) = CreateSut(
+            request => request.Method == HttpMethod.Get
+                ? PagedResponse(Widget(1))
+                : new HttpResponseMessage(HttpStatusCode.BadRequest),
+            CreateCache());
+
+        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+        (await sut.UpdateAsync(Widget(1, "Renamed"), TestContext.Current.CancellationToken)).IsFailure.Should().BeTrue();
+        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        handler.CallCount.Should().Be(2, "a refusal before any state changed keeps the cached reads");
+    }
+
     // == Failures are never cached ==
     [Fact]
     public async Task AFailedRead_IsNotCached()
@@ -248,10 +282,12 @@ public sealed class EntityServiceBaseCachingTests
     }
 
     [Fact]
-    public async Task AWriteThatFailed_LeavesTheCacheAlone()
+    public async Task AWriteAnsweredConflict_InvalidatesTheEndpoint()
     {
-        // A rejected write changed nothing on the server, so the cached reads are still accurate;
-        // invalidating there would throw away entries for no reason.
+        // L131: a 409 is not proof that nothing changed. A retried DELETE whose first attempt landed
+        // answers 409 Error.AlreadyDeleted, so the cached pre-write reads must not survive it. Only a
+        // refusal before the write (validation, 422, 401, 403, 429) keeps them; see
+        // AWriteRejectedByValidation_LeavesTheCacheAlone.
         var (sut, handler) = CreateSut(
             request => request.Method == HttpMethod.Get
                 ? PagedResponse(Widget(1))
@@ -264,7 +300,7 @@ public sealed class EntityServiceBaseCachingTests
         await sut.GetAllAsync(cancellationToken: token);
 
         rejected.IsFailure.Should().BeTrue();
-        handler.CallCount.Should().Be(2, "only the read and the rejected write reached the wire");
+        handler.CallCount.Should().Be(3, "the write's outcome is unknown, so the next read goes back to the API");
     }
 
     [Fact]

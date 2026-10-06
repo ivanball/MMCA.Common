@@ -18,8 +18,9 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// <b>Read-only and silent.</b> <see cref="ITokenStorageService.GetAccessTokenAsync"/> is the READ
 /// path: it hydrates when there is a session and answers null when there is not, and it never forces
 /// a refresh, so an anonymous visitor gets a no-op. Nothing escapes: boot behaves identically
-/// whether the warm-up succeeds, fails or finds nothing, and the first real call re-runs the same
-/// hydration with its own error handling around it.
+/// whether the warm-up succeeds, fails or finds nothing. After a failure the first real call re-runs
+/// the same hydration with its own error handling around it; after a definitive "no session" it is
+/// answered from memory for the storage's short anonymous grace, which is the same answer.
 /// </para>
 /// </remarks>
 public static partial class TokenHydrationWarmup

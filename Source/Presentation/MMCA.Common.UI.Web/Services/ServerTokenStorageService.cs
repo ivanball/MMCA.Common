@@ -14,19 +14,54 @@ namespace MMCA.Common.UI.Web.Services;
 /// token is never readable by JS. Hoisted from the app Blazor Web hosts (it carries no app-specific
 /// state); its WASM sibling is <see cref="WasmTokenStorageService"/> in MMCA.Common.UI. Register via
 /// <c>AddCommonServerTokenStorage()</c>.
+/// <para>
+/// On the circuit, a visitor with no session is answered from memory for
+/// <see cref="AnonymousGrace"/> after a hydrate comes back with a DEFINITIVE "no session" (see
+/// <see cref="ISessionAwareTokenRefresher"/>), instead of one token round trip per API call; a
+/// session created in another tab is seen within that window, and <see cref="SetTokensAsync"/> ends
+/// it at once. A transient failure is never remembered: the next read hydrates again.
+/// </para>
 /// </summary>
+/// <param name="httpContextAccessor">Tells the SSR prerender apart from the interactive circuit.</param>
+/// <param name="cookieTokenReader">Reads the HttpOnly cookies during SSR.</param>
+/// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
+/// <param name="tokenRefresher">Acquires an access token from the session cookies on the circuit.</param>
+/// <param name="timeProvider">The clock for the anonymous grace; <see cref="TimeProvider.System"/> when null.</param>
 public sealed class ServerTokenStorageService(
     IHttpContextAccessor httpContextAccessor,
     CookieTokenReader cookieTokenReader,
     ISessionCookieSync sessionCookieSync,
-    ITokenRefresher tokenRefresher) : ITokenStorageService
+    ITokenRefresher tokenRefresher,
+    TimeProvider? timeProvider) : ITokenStorageService
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
+    /// <summary>How long a "no session" answer is remembered on the circuit before the next hydrate.</summary>
+    private static readonly TimeSpan AnonymousGrace = TimeSpan.FromSeconds(15);
+
     private readonly Lock _hydrateSync = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     private string? _accessToken;
     private Task<string?>? _hydrateInFlight;
+    private DateTimeOffset _anonymousUntil;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServerTokenStorageService"/> class on the system
+    /// clock. Kept so code compiled against the original four-argument constructor keeps binding.
+    /// </summary>
+    /// <param name="httpContextAccessor">Tells the SSR prerender apart from the interactive circuit.</param>
+    /// <param name="cookieTokenReader">Reads the HttpOnly cookies during SSR.</param>
+    /// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
+    /// <param name="tokenRefresher">Acquires an access token from the session cookies on the circuit.</param>
+    public ServerTokenStorageService(
+        IHttpContextAccessor httpContextAccessor,
+        CookieTokenReader cookieTokenReader,
+        ISessionCookieSync sessionCookieSync,
+        ITokenRefresher tokenRefresher)
+        : this(httpContextAccessor, cookieTokenReader, sessionCookieSync, tokenRefresher, timeProvider: null)
+    {
+    }
 
     public async Task<string?> GetAccessTokenAsync()
     {
@@ -41,6 +76,11 @@ public sealed class ServerTokenStorageService(
         if (JwtTokenInfo.IsFresh(_accessToken, ExpirySkew))
         {
             return _accessToken;
+        }
+
+        if (_accessToken is null && _timeProvider.GetUtcNow() < _anonymousUntil)
+        {
+            return null;
         }
 
         // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one
@@ -81,6 +121,8 @@ public sealed class ServerTokenStorageService(
 
     public async Task SetTokensAsync(string accessToken, string refreshToken)
     {
+        // A login right after anonymous browsing must not wait out the grace.
+        _anonymousUntil = default;
         _accessToken = accessToken;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
         // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
@@ -103,7 +145,27 @@ public sealed class ServerTokenStorageService(
 
     private async Task<string?> HydrateAsync()
     {
-        _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+        // Only a DEFINITIVE "no session" starts the grace. A refresher that can tell (the browser
+        // ones) reports a 429, a 5xx, a dropped connection or unavailable interop as unavailable, and
+        // the next read then hydrates again instead of treating a signed-in user as anonymous. A
+        // refresher without that capability keeps the previous reading: its null means "no session".
+        var unavailable = false;
+        if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
+        {
+            var acquisition = await sessionAware.TryAcquireAccessTokenAsync().ConfigureAwait(false);
+            _accessToken = acquisition.AccessToken;
+            unavailable = acquisition.IsUnavailable;
+        }
+        else
+        {
+            _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+        }
+
+        if (_accessToken is null && !unavailable)
+        {
+            _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
+        }
+
         return _accessToken;
     }
 }

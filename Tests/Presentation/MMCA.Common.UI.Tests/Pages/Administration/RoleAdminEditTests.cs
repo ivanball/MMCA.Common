@@ -184,6 +184,38 @@ public sealed class RoleAdminEditTests : BunitTestBase
         _toast.Verify(x => x.Error("Failed to save the stored permissions."), Times.Once);
     }
 
+    // M192: a late answer for the previous Role must not overwrite the current one, or the save
+    // posts one role's stored permissions onto another.
+    [Fact]
+    public async Task WhenTheRoleChangesMidLoad_TheLateFirstLoadDoesNotOverwriteTheSecond()
+    {
+        const string editor = "Editor";
+        var slowAdmin = new TaskCompletionSource<Result<RolePermissionsResponse>>();
+        _roles.Setup(x => x.GetAsync(Role, It.IsAny<CancellationToken>())).Returns(slowAdmin.Task);
+        _roles.Setup(x => x.GetAsync(editor, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new RolePermissionsResponse(editor, [], [OrdersWrite])));
+        _roles.Setup(x => x.GetCatalogAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PermissionCatalogResponse([Role, editor], [OrdersRead, OrdersWrite, ReportsRun, AdministrationPermissions.ManageRoles])));
+        _roles.Setup(x => x.SetStoredPermissionsAsync(editor, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new RolePermissionsResponse(editor, [], [OrdersWrite])));
+
+        var cut = RenderEdit();
+        cut.Render(p => p.Add(x => x.Role, editor));
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        // Completed on the renderer's dispatcher, so any re-render it causes has settled before the
+        // save button is looked up again.
+        await cut.InvokeAsync(() => slowAdmin.SetResult(Result.Success(new RolePermissionsResponse(Role, [OrdersRead], [ReportsRun]))));
+        await cut.Find("[data-testid=\"save-permissions\"]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        _roles.Verify(
+            x => x.SetStoredPermissionsAsync(
+                editor,
+                It.Is<IReadOnlyList<string>>(set => set.SequenceEqual(new[] { OrdersWrite })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // -- Unsaved-changes guard --
     [Fact]
     public async Task OnLoad_TheUnsavedChangesGuardIsStoodDown()

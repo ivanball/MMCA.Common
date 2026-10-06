@@ -37,10 +37,20 @@ public sealed class CurrencyJsonConverterTests
         FluentActions.Invoking(() => ReadCurrency("\"XYZ\""u8))
             .Should().Throw<JsonException>().WithMessage("Invalid currency code*");
 
+    // L144 (decision D6): the empty code Write emits for the zero sentinel reads back as it.
     [Fact]
-    public void Read_EmptyCurrencyCode_ThrowsJsonException() =>
-        FluentActions.Invoking(() => ReadCurrency("\"\""u8))
-            .Should().Throw<JsonException>().WithMessage("Invalid currency code*");
+    public void Read_EmptyCurrencyCode_ReturnsTheZeroSentinel() =>
+        ReadCurrency("\"\""u8).Should().BeSameAs(Money.Zero().Currency);
+
+    [Fact]
+    public void Read_EmptyCode_RoundTripsTheZeroSentinel() =>
+        JsonSerializer.Deserialize<Money>(JsonSerializer.Serialize(Money.Zero(), _options), _options)!.Should().Be(Money.Zero());
+
+    // L144 (option C): the MVC read path refuses a non-zero amount with no currency (a 400).
+    [Fact]
+    public void Read_NonZeroAmountWithAnEmptyCode_ThrowsJsonException() =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>("""{"Amount":5,"Currency":""}""", _options))
+            .Should().Throw<JsonException>();
 
     [Fact]
     public void Read_NumberToken_ThrowsJsonException() =>

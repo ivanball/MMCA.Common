@@ -32,6 +32,85 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.232.0] - 2026-10-06
+
+**Behavior changes from the ninth bug-hunt wave.** No public signature is removed or renamed; the
+items below either need one mechanical step in a consumer or change what a consumer observes.
+
+1. **`OwnsMoney` precision (L125).** The amount column is now configured `HasPrecision(18, 2)`. A
+   consumer that maps `OwnsMoney` gets a model-snapshot change with no schema change on SQL Server
+   (the column was already `decimal(18,2)`). Add one migration per affected context and confirm its
+   `Up()`/`Down()` are empty, for example
+   `dotnet ef migrations add OwnsMoneyPrecision -- --datasource Catalog`; the EF model-drift gate
+   fails the version bump until it exists. MMCA.Store needs one for Catalog and one for Sales.
+2. **Owned value objects stamp their owner (M181).** Editing only an owned value (an address, a
+   money amount) now moves the owner's `LastModifiedOn/By`, re-stamps its `RowVersion` on PostgreSQL
+   and SQLite, and writes trail rows named `Navigation.Property` for an `IAuditedEntity` owner. A
+   client holding the owner's old concurrency token after such an edit now gets a conflict, as for
+   any other update. No code change.
+3. **Scoped integration event handlers see the restored origin (M184).** A handler built on
+   `ScopedIntegrationEventHandlerBase` now resolves the delivery's tenant, principal and correlation
+   id in its own scope: audit stamps name the original user instead of the system sentinel, and on a
+   tenancy host its unit of work routes to the original tenant. A handler that relied on running as
+   the system user must be reviewed. A scope created inside the delivery with
+   `CreateTenantScope(target)` keeps the target's tenant (or the shared source for a tenantless
+   target), as before; only a plain `CreateScope()` inherits the delivery's tenant. No code change
+   otherwise.
+4. **Typed REST clients no longer retry POST or PATCH (M185).** A POST or PATCH through
+   `AddTypedServiceClient` that times out or gets a 5xx, 408 or 429 now fails on the first attempt
+   instead of being replayed once. Make the endpoint idempotent (`[Idempotent]` plus an
+   `Idempotency-Key`) and retry explicitly where a replay is wanted.
+5. **Shaped query specifications no longer compose (M179).** `And`/`Or`/`Not` throw
+   `ArgumentException` for a `QuerySpecification` that called `AddInclude`, `AddOrderBy`,
+   `ApplyPaging`, `WithTracking` or `WithSoftDeleted`. Move the extra predicate into that
+   specification's own `Criteria` (or compose plain `Specification` types and pass the shaped one
+   alone). No first-party consumer composes one.
+6. **Concurrent duplicate push sends (M180).** The losing request of two concurrent sends with the
+   same dedup key now gets 409 instead of 200 with the winner's DTO; a retry gets the winner. A
+   client that treats 409 as final should retry once on a dedup-keyed send.
+7. **Sort column (L120).** A comma-separated `sortColumn` is now 400. Send one column.
+8. **Session cookie lifetime (L126).** The cookies now follow `Jwt:RefreshTokenExpirationDays` when
+   the host binds `Jwt`. A UI host that does not bind `Jwt` and runs a non-default refresh lifetime
+   sets `SessionCookieSettings.Lifetime` (for example in the same `Configure<SessionCookieSettings>`
+   call the same-origin proxy uses).
+9. **Distributed rate-limit keys (L127).** Only for `RateLimiting:Distributed=true`: the Redis key
+   format becomes `rl:{namespace}:{scope}:{partition}:{window}`. The first deploy abandons the
+   in-flight counters, so every partition gets one fresh one-minute allowance; the old keys expire on
+   their own TTL. Nothing to migrate.
+10. **Zero `Money` on the wire (L144).** `{"amount":0,"currency":""}` now deserializes to
+    `Money.Zero()` instead of throwing. Only a zero amount may carry the empty code: a non-zero
+    amount with an empty currency (`{"amount":5,"currency":""}`) is still a `JsonException`, so a
+    400 on the MVC path, as before.
+11. **Token storage anonymous grace (L132).** `WasmTokenStorageService` and
+    `ServerTokenStorageService` gain a constructor overload with a trailing `TimeProvider?`; the
+    existing constructors stay, so nothing breaks at compile or bind time. A definitive "no session"
+    (the token endpoint's 401) is remembered for 15 seconds, so a session created in another tab
+    shows up within that window; a transient failure is not remembered. A custom `ITokenRefresher`
+    on a browser host keeps working (its null is read as "no session"); implement
+    `ISessionAwareTokenRefresher` to report transient failures as `TokenAcquisition.Unavailable`.
+    The `mmcaAuthSession.getToken` / `mmcaAuthHandoff.getToken` scripts now throw for any failure
+    other than a 401, so a host script calling them directly must catch.
+12. **User-admin search placeholder (L154).** The placeholder text is now "Search by exact email
+    address..." (and the matching Spanish text). An E2E page object that locates the box by its
+    placeholder (MMCA.ADC `PageObjects/Identity/UserListPage.cs`) must use the new text.
+13. **Proxied traffic and the UI edge limiter (M190).** A proxied request whose last segment has a
+    file extension (`/api/report.csv`) now counts against the per-IP window and the concurrency
+    ceiling. Proxied hub traffic stays exempt at whatever `SameOriginApiProxy:PathPrefix` the host
+    configures.
+14. **Path-prefix settings fail fast (M193).** A `GatewayRateLimiting:BypassPathPrefixes` or
+    `SecurityHeaders:CredentialPathPrefixes` entry without a leading `/` now fails startup with a
+    validation error naming the entry. Add the slash. No first-party consumer sets either list.
+15. **Explicit authorization decisions are on by default (L143).**
+    `AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision` now defaults to `true`. A
+    subclass that never overrode it gets `Endpoints_DeclareAnAuthorizationDecision` failures naming
+    each undecorated controller or routable page: give each an authorization attribute, list it in
+    `EndpointsWithoutAuthorizationAttribute`, or override the property to `false` to opt out
+    knowingly. The first-party consumers already opt in, so they change nothing.
+16. **Module isolation covers Shared and UI as sources (M194).** A module's Shared or UI project
+    that references another module's Domain, Application, Infrastructure or Api now fails
+    `ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers`. Reach the other module through
+    its Shared contracts (or its UI for composition) instead.
+
 ## [1.231.0] - 2026-10-06
 
 **`ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase`

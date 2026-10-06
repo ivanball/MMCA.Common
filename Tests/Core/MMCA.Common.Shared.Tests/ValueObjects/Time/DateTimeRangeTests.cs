@@ -49,6 +49,26 @@ public class DateTimeRangeTests
         a.Overlaps(b).Should().BeTrue();
     }
 
+    // L145: both ends are inclusive, so two ranges sharing only a boundary instant overlap, as
+    // Contains and DateRange already treat them.
+    [Fact]
+    public void Overlaps_RangesSharingOnlyABoundaryInstant_ReturnsTrue()
+    {
+        var a = DateTimeRange.Create(T1, T2).Value!;
+        var b = DateTimeRange.Create(T2, T3).Value!;
+
+        a.Overlaps(b).Should().BeTrue();
+        b.Overlaps(a).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Overlaps_ZeroLengthRange_OverlapsItself()
+    {
+        var instant = DateTimeRange.Create(T2, T2).Value!;
+
+        instant.Overlaps(instant).Should().BeTrue();
+    }
+
     [Fact]
     public void Overlaps_NonOverlappingRanges_ReturnsFalse()
     {

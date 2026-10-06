@@ -40,9 +40,11 @@ public sealed class SecurityHeadersSettings
     /// SECURITY: these are the pages a credential arrives on. A reset or completion URL that a user
     /// opens must not travel onward in a <c>Referer</c> header to whatever the page loads next, and
     /// must not sit in the browser's or a proxy's cache after the token has been spent. Matching is
-    /// segment-based and case-insensitive.
+    /// segment-based and case-insensitive. Every entry must start with <c>/</c>; a bad entry fails
+    /// options validation at startup instead of failing every request.
     /// </para>
     /// </summary>
+    [LeadingSlashPathPrefixes]
     public IList<string> CredentialPathPrefixes { get; } = ["/reset-password", "/auth/oauth-complete"];
 
     /// <summary>Value of the <c>Strict-Transport-Security</c> header when <see cref="EnableHsts"/> applies.</summary>
@@ -176,7 +178,7 @@ public sealed class SecurityHeadersMiddleware
     // Segment-based so "/reset-password" covers "/reset-password/anything" but never "/reset-passwords".
     private bool IsCredentialPath(PathString path) =>
         _settings.CredentialPathPrefixes
-            .Where(prefix => !string.IsNullOrEmpty(prefix))
+            .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
             .Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Sets the security headers, then invokes the rest of the pipeline.</summary>
@@ -269,7 +271,10 @@ public static class SecurityHeadersExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
 
+            // Validated on start, so a malformed credential prefix fails the host once (ADR-070)
+            // rather than every request that reaches the matcher.
             var optionsBuilder = services.AddOptions<SecurityHeadersSettings>();
+            optionsBuilder.ValidateDataAnnotations().ValidateOnStart();
             if (configuration is not null)
             {
                 optionsBuilder.Bind(configuration.GetSection(SecurityHeadersSettings.SectionName));

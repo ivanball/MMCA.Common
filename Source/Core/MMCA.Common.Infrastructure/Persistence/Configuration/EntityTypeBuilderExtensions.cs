@@ -44,6 +44,11 @@ public static class EntityTypeBuilderExtensions
         /// a materialization-time <see cref="NullReferenceException"/> waiting for the first read.
         /// Falling back to the sentinel keeps them readable.
         /// </para>
+        /// <para>
+        /// <b>Precision:</b> the amount is <c>decimal(18,2)</c> on every engine. That is the SQL
+        /// Server default made explicit, so PostgreSQL (an unbounded <c>numeric</c> otherwise) and
+        /// SQLite store and round amounts the way SQL Server does.
+        /// </para>
         /// </summary>
         /// <param name="navigationExpression">The <see cref="Money"/> navigation to map.</param>
         /// <param name="amountColumnName">Column name for <see cref="Money.Amount"/>.</param>
@@ -70,6 +75,7 @@ public static class EntityTypeBuilderExtensions
             {
                 moneyBuilder.Property(m => m.Amount)
                     .HasColumnName(amountColumnName)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 moneyBuilder.Property(m => m.Currency)

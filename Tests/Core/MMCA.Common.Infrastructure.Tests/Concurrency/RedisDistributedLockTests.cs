@@ -178,4 +178,26 @@ public sealed class RedisDistributedLockTests
 
         await act.Should().NotThrowAsync("a lapsed TTL is logged, not surfaced to the guarded work");
     }
+
+    // M186: the release runs after the guarded work committed (the idempotency filter's action, a
+    // password-reset token), so a Redis fault there must not turn that work into a failure.
+    [Fact]
+    public async Task DisposeAsync_WhenRedisFaultsOnRelease_DoesNotThrow()
+    {
+        SetupAcquire(true);
+        _database
+            .Setup(x => x.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisTimeoutException(CommandFlags.None, "Timeout awaiting response", CommandStatus.Unknown));
+
+        IAsyncDisposable? handle = await _sut.TryAcquireAsync(
+            Key, Ttl, TimeSpan.Zero, TestContext.Current.CancellationToken);
+
+        Func<Task> act = async () => await handle!.DisposeAsync();
+
+        await act.Should().NotThrowAsync("the lock expires on its own TTL; the holder's committed work is not failed");
+    }
 }

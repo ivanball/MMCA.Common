@@ -69,6 +69,8 @@ public sealed class CultureEndpointTests
     [InlineData("https%3A%2F%2Fevil.example")]
     [InlineData("%2F%2Fevil.example")]
     [InlineData("%2F%5Cevil.example")]
+    [InlineData("%2F%0A")] // L128: a control character LocalRedirect would reject at execution.
+    [InlineData("%2Fsessions%0D%0ASet-Cookie%3A+x%3Dy")]
     public async Task MapCultureEndpoint_WithANonLocalRedirectUri_RedirectsToTheRootAndStillWritesTheCookie(string redirectUri)
     {
         await using var app = await StartAsync(static app => app.MapCultureEndpoint());

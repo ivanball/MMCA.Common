@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MMCA.Common.Aspire.Security;
 
 namespace MMCA.Common.Aspire.Gateway;
 
@@ -77,8 +78,10 @@ public sealed class GatewayRateLimitingSettings
     /// Empty by default. The health endpoints (<c>/health</c>, <c>/alive</c>) and
     /// <c>/.well-known</c> are ALWAYS exempt regardless of this list: probes and JWKS discovery run
     /// at high frequency by design, and rate-limiting them turns a traffic spike into a failed
-    /// liveness probe and a container restart.
+    /// liveness probe and a container restart. Every entry must start with <c>/</c>; a bad entry
+    /// fails registration instead of failing every request.
     /// </summary>
+    [LeadingSlashPathPrefixes]
     public IReadOnlyList<string> BypassPathPrefixes { get; init; } = [];
 
     /// <summary>

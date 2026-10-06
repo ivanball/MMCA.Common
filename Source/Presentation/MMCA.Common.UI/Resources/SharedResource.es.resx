@@ -496,6 +496,9 @@
   <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
     <value>El inicio de sesión externo no se completó. Inténtalo de nuevo.</value>
   </data>
+  <data name="Auth.Login.ExternalSignInStorageUnavailable" xml:space="preserve">
+    <value>El inicio de sesión externo necesita el almacenamiento del navegador. Permite los datos del sitio (o sal del modo privado) y recarga la página para continuar con un proveedor.</value>
+  </data>
   <data name="Auth.Login.ExternalError.Failed" xml:space="preserve">
     <value>No se pudo iniciar sesión con ese proveedor. Inténtalo de nuevo o usa otro método de inicio de sesión.</value>
   </data>

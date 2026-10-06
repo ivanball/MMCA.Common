@@ -232,6 +232,10 @@ public sealed class QueryFieldService
         if (string.IsNullOrWhiteSpace(sortColumn))
             return null;
 
+        // Validation trims (ValidateSortColumn), so application must too: otherwise a padded name
+        // passes validation and is then silently ignored here.
+        sortColumn = sortColumn.Trim();
+
         string? resolved;
         if (dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped))
         {
@@ -429,6 +433,44 @@ public sealed class QueryFieldService
         bool allowWriteableFields,
         Query.QueryFieldContract? fieldContract)
         => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap, allowWriteableFields, fieldContract);
+
+    /// <summary>
+    /// Validates a single sort column with exactly the rules
+    /// <see cref="ApplySorting{TEntity}(IQueryable{TEntity}, string, string, IReadOnlyDictionary{string, string}, Query.QueryFieldContract, Expression{Func{TEntity, object}}, string)"/>
+    /// applies: one name (a comma-separated list is refused, because sorting honors one column),
+    /// trimmed, resolved through <paramref name="dtoToEntityPropertyMap"/>, the response contract and
+    /// the entity's properties. The field-list validator is not used for this, since it splits and
+    /// trims a list the sort would then ignore.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type to validate the column against.</typeparam>
+    /// <param name="sortColumn">The requested sort column, or null for the default order.</param>
+    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored), or null.</param>
+    /// <param name="fieldContract">The response contract an unmapped name must belong to, or null.</param>
+    /// <returns>A success result, or a failure with validation errors.</returns>
+    public static Result ValidateSortColumn<TEntity>(
+        string? sortColumn,
+        IReadOnlyDictionary<string, string>? dtoToEntityPropertyMap,
+        Query.QueryFieldContract? fieldContract)
+    {
+        if (string.IsNullOrWhiteSpace(sortColumn))
+            return Result.Success();
+
+        if (sortColumn.Contains(',', StringComparison.Ordinal))
+        {
+            return Result.Failure(Error.InvalidEntityField with
+            {
+                Message = "Only one sort column is accepted.",
+                Target = typeof(TEntity).Name,
+            });
+        }
+
+        List<Error> errors = [];
+        ValidateSingleField<TEntity>(sortColumn.Trim(), GetProperties<TEntity>(), dtoToEntityPropertyMap, allowWriteableFields: true, fieldContract, errors);
+
+        return errors.Count == 0
+            ? Result.Success()
+            : Result.Failure(errors);
+    }
 
     /// <summary>
     /// Shared body of both <c>Validate</c> overloads. See the map-aware overload for why a map hit

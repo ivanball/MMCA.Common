@@ -59,10 +59,11 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
         // scoped factory, and under database-per-tenant that routing is decided by the tenant this
         // restores. A message published by an older service carries no headers, and then nothing is
         // restored and this scope keeps the defaults it already had.
-        if (serviceProvider is not null)
-        {
-            ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
-        }
+        // The handle stays open for the whole consume, so a handler that opens its own scope from the
+        // root factory (ScopedIntegrationEventHandlerBase) still runs as the publisher's origin.
+        using var origin = serviceProvider is not null
+            ? ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType)
+            : null;
 
         // The inbox key is the event's [EventName] identity when it declares one, and its short type
         // name otherwise, which is what every row written so far holds. An unannotated event
@@ -73,11 +74,11 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
         // If the inbox already recorded it, skip the handlers and ack. (Always true when the inbox
         // is disabled, so the handlers run exactly as they did before the inbox existed.)
         //
-        // TryBegin also STAGES the inbox row in the scope's unit of work, unsaved. A handler that
-        // calls SaveChangesAsync on that same scope therefore commits the row in the same
-        // transaction as its own mutations: the window where a crash between "handler committed"
-        // and "inbox written" reprocessed the whole event is closed by construction rather than by
-        // asking every handler to be idempotent.
+        // TryBegin also STAGES the inbox row in this scope's unit of work, unsaved. The framework's
+        // handlers do not save on this scope: they are singletons that open their own scope per
+        // delivery (ScopedIntegrationEventHandlerBase), so the row is written by CompleteAsync below,
+        // once every handler has succeeded. A crash between a handler's commit and that write
+        // redelivers the event, which is why handlers must be idempotent.
         if (!await inbox.TryBeginAsync(integrationEvent.MessageId, eventTypeName, context.CancellationToken).ConfigureAwait(false))
         {
             LogDuplicateSkipped(logger, eventTypeName, integrationEvent.MessageId);

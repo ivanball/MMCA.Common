@@ -228,6 +228,32 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
         entity.DeletedBy.Should().Be(21);
     }
 
+    // -- M181: a change confined to an owned value object stamps its owner --
+    [Fact]
+    public async Task SavingChangesAsync_OwnedValueReplaced_StampsTheOwner()
+    {
+        var createTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        _timeProvider.SetUtcNow(createTime);
+        _dbContext.SetCurrentSaveUserId(10);
+
+        var entity = new TestOwnedAuditEntity { Id = 1, Address = new TestAddress("A") };
+        _dbContext.OwnedEntities.Add(entity);
+        await _dbContext.SaveChangesAsync();
+        var rowVersionAfterInsert = entity.RowVersion.ToArray();
+
+        var modifyTime = new DateTimeOffset(2026, 3, 15, 10, 0, 0, TimeSpan.Zero);
+        _timeProvider.SetUtcNow(modifyTime);
+        _dbContext.SetCurrentSaveUserId(99);
+
+        entity.Address = new TestAddress("B");
+        await _dbContext.SaveChangesAsync();
+
+        entity.LastModifiedOn.Should().Be(modifyTime.UtcDateTime);
+        entity.LastModifiedBy.Should().Be(99);
+        entity.CreatedBy.Should().Be(10);
+        entity.RowVersion.Should().NotEqual(rowVersionAfterInsert, "an owned-only edit is an update of the owner's row");
+    }
+
     private async Task<TestAuditEntity> CreateSavedEntityAsync(int id)
     {
         _timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
@@ -256,9 +282,18 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
         public Shared.Abstractions.Result Restore() => Undelete();
     }
 
+    public sealed class TestOwnedAuditEntity : AuditableBaseEntity<int>
+    {
+        public TestAddress Address { get; set; } = new(string.Empty);
+    }
+
+    public sealed record TestAddress(string City);
+
     public sealed class TestAuditDbContext : ApplicationDbContext
     {
         public DbSet<TestAuditEntity> TestEntities => Set<TestAuditEntity>();
+
+        public DbSet<TestOwnedAuditEntity> OwnedEntities => Set<TestOwnedAuditEntity>();
 
         private TestAuditDbContext(DbContextOptions<TestAuditDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
@@ -294,13 +329,23 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
             return context;
         }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<TestAuditEntity>(e =>
             {
                 e.HasKey(x => x.Id);
                 e.Property(x => x.Id).ValueGeneratedNever();
                 e.Property(x => x.RowVersion).IsConcurrencyToken();
             });
+
+            modelBuilder.Entity<TestOwnedAuditEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.RowVersion).IsConcurrencyToken();
+                e.OwnsOne(x => x.Address);
+            });
+        }
     }
 
     private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider

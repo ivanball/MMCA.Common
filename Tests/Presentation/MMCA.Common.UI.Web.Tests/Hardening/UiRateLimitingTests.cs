@@ -56,22 +56,30 @@ public sealed class UiRateLimitingTests
     /// own window.
     /// </summary>
     [Theory]
-    [InlineData("/health", true)]
-    [InlineData("/alive", true)]
-    [InlineData("/_framework/blazor.web.js", true)]
-    [InlineData("/_content/MudBlazor/MudBlazor.min.css", true)]
-    [InlineData("/hubs/notifications", true)]
-    [InlineData("/api/hubs/notifications", true)]
-    [InlineData("/api/hubs/notifications/negotiate", true)]
-    [InlineData("/api/events", false)]
-    [InlineData("/app.css", true)]
-    [InlineData("/", false)]
-    [InlineData("/login", false)]
-    [InlineData("/_blazor", false)]
-    [InlineData("/_blazor/negotiate", false)]
-    [InlineData("/healthz", false)]
-    public void IsExempt_SeparatesInfrastructureFromPages(string path, bool expected) =>
-        UiRateLimitingExtensions.IsExempt(new PathString(path)).Should().Be(expected);
+    [InlineData("/health", "/api", true)]
+    [InlineData("/alive", "/api", true)]
+    [InlineData("/_framework/blazor.web.js", "/api", true)]
+    [InlineData("/_content/MudBlazor/MudBlazor.min.css", "/api", true)]
+    [InlineData("/hubs/notifications", "/api", true)]
+    [InlineData("/api/hubs/notifications", "/api", true)]
+    [InlineData("/api/hubs/notifications/negotiate", "/api", true)]
+    [InlineData("/api/events", "/api", false)]
+    [InlineData("/app.css", "/api", true)]
+    [InlineData("/", "/api", false)]
+    [InlineData("/login", "/api", false)]
+    [InlineData("/_blazor", "/api", false)]
+    [InlineData("/_blazor/negotiate", "/api", false)]
+    [InlineData("/healthz", "/api", false)]
+    // M190: proxied API traffic is counted whatever its last segment looks like, and the proxied
+    // hub exemption follows the configured proxy prefix rather than a literal /api.
+    [InlineData("/api/x.js", "/api", false)]
+    [InlineData("/api/anything.a", "/api", false)]
+    [InlineData("/gw/hubs/notifications", "/gw", true)]
+    [InlineData("/api/hubs/notifications", "/gw", false)]
+    public void IsExempt_SeparatesInfrastructureFromPages(string path, string proxyPathPrefix, bool expected) =>
+        UiRateLimitingExtensions.IsExempt(new PathString(path), new PathString(proxyPathPrefix)).Should().Be(expected);
+
+    private static readonly PathString Proxy = new("/api");
 
     /// <summary>
     /// Two different callers must land in two different windows, and one caller must land in the
@@ -83,9 +91,9 @@ public sealed class UiRateLimitingTests
     {
         var settings = new UiRateLimitingSettings();
 
-        var first = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/", "203.0.113.7"), settings);
-        var firstAgain = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/cart", "203.0.113.7"), settings);
-        var second = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/", "203.0.113.8"), settings);
+        var first = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/", "203.0.113.7"), settings, Proxy);
+        var firstAgain = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/cart", "203.0.113.7"), settings, Proxy);
+        var second = UiRateLimitingExtensions.ClientIpPartition(ContextFor("/", "203.0.113.8"), settings, Proxy);
 
         first.PartitionKey.Should().Be(firstAgain.PartitionKey);
         first.PartitionKey.Should().NotBe(second.PartitionKey);
@@ -102,10 +110,10 @@ public sealed class UiRateLimitingTests
         var probe = ContextFor("/alive", "203.0.113.7");
         var page = ContextFor("/", "203.0.113.7");
 
-        UiRateLimitingExtensions.ClientIpPartition(probe, settings).PartitionKey
-            .Should().NotBe(UiRateLimitingExtensions.ClientIpPartition(page, settings).PartitionKey);
-        UiRateLimitingExtensions.ConcurrencyPartition(probe, settings).PartitionKey
-            .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings).PartitionKey);
+        UiRateLimitingExtensions.ClientIpPartition(probe, settings, Proxy).PartitionKey
+            .Should().NotBe(UiRateLimitingExtensions.ClientIpPartition(page, settings, Proxy).PartitionKey);
+        UiRateLimitingExtensions.ConcurrencyPartition(probe, settings, Proxy).PartitionKey
+            .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings, Proxy).PartitionKey);
     }
 
     /// <summary>
@@ -121,10 +129,10 @@ public sealed class UiRateLimitingTests
         var transport = ContextFor(transportPath, "203.0.113.7");
         var page = ContextFor("/", "203.0.113.7");
 
-        UiRateLimitingExtensions.ConcurrencyPartition(transport, settings).PartitionKey
-            .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings).PartitionKey);
-        UiRateLimitingExtensions.ClientIpPartition(transport, settings).PartitionKey
-            .Should().Be(UiRateLimitingExtensions.ClientIpPartition(page, settings).PartitionKey);
+        UiRateLimitingExtensions.ConcurrencyPartition(transport, settings, Proxy).PartitionKey
+            .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings, Proxy).PartitionKey);
+        UiRateLimitingExtensions.ClientIpPartition(transport, settings, Proxy).PartitionKey
+            .Should().Be(UiRateLimitingExtensions.ClientIpPartition(page, settings, Proxy).PartitionKey);
     }
 
     private static RateLimiterOptions ResolveLimiterOptions(bool enabled)

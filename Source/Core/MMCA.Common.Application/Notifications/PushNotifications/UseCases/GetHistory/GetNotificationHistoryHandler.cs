@@ -43,8 +43,10 @@ public sealed class GetNotificationHistoryHandler(
         IReadOnlyCollection<PushNotificationDTO> dtos = dtoMapper.MapToDTOs(paged);
 
         // The floor mirrors what PagingMath.Clamp already applied for the read, so the metadata
-        // reports the page actually served instead of throwing on a sub-1 page number.
-        var metadata = new PaginationMetadata(totalCount, take, Math.Max(query.PageNumber, 1));
+        // reports the page actually served instead of throwing on a sub-1 page number. The page
+        // size is the clamped REQUEST, not take: a page past the 32-bit offset range reads nothing
+        // (take 0), and a zero size would report zero pages for a non-empty inbox.
+        var metadata = new PaginationMetadata(totalCount, Math.Clamp(query.PageSize, 1, MaxPageSize), Math.Max(query.PageNumber, 1));
 
         return Result.Success(new PagedCollectionResult<PushNotificationDTO>(dtos, metadata));
     }

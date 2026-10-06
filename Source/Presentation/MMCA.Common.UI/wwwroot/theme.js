@@ -10,7 +10,13 @@ export function get() {
             continue;
         }
         if (cookie.substring(0, separator) === KEY) {
-            return decodeURIComponent(cookie.substring(separator + 1));
+            try {
+                return decodeURIComponent(cookie.substring(separator + 1));
+            } catch {
+                // A malformed cookie value (URIError): fall through to localStorage; set() rewrites
+                // the cookie on the next toggle.
+                break;
+            }
         }
     }
     try {

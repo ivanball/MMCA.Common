@@ -212,12 +212,10 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             var (items, totalCount) = page;
 
             _currentPage = targetPage;
-            _items.AddRange(items);
-            _totalCount = totalCount;
 
-            // Stop fetching once the rendered-item cap is reached so the DOM (and memory) stay
-            // bounded even for very large result sets.
-            _hasMore = _items.Count < _totalCount && _items.Count < MaxRenderedItems;
+            var appended = AppendNew(items);
+            _totalCount = totalCount;
+            _hasMore = HasMoreAfter(appended);
 
             MarkReobserveAfterAppend(isInitial);
         }
@@ -252,6 +250,31 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             }
         }
     }
+
+    /// <summary>
+    /// Appends the rows of a fetched page that are not already shown and returns how many were new.
+    /// Offset paging plus an insert ahead of the window repeats a row across pages; rows are keyed by
+    /// value (<c>@key="item"</c>), so a repeat would be two siblings with one key and a render error.
+    /// Records compare by value, which is exactly the equality <c>@key</c> uses.
+    /// </summary>
+    private int AppendNew(IEnumerable<TItem> items)
+    {
+        var before = _items.Count;
+
+        // Evaluated lazily while adding, so a row repeated inside the same page is caught too.
+        _items.AddRange(items.Where(item => !_items.Contains(item)));
+
+        return _items.Count - before;
+    }
+
+    /// <summary>
+    /// Whether to keep fetching after an append. Stops once the rendered-item cap is reached, so the
+    /// DOM (and memory) stay bounded even for very large result sets, and when a page added nothing
+    /// new (an empty page, or a window shifted by a whole page), rather than re-requesting the same
+    /// page forever from the re-observed sentinel; <c>ResetAsync</c> starts over.
+    /// </summary>
+    private bool HasMoreAfter(int appended) =>
+        appended > 0 && _items.Count < _totalCount && _items.Count < MaxRenderedItems;
 
     /// <summary>
     /// Queues a re-observe after a non-initial append that left more pages, so a sentinel still in

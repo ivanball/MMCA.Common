@@ -1,5 +1,7 @@
 using System.Globalization;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -170,6 +172,30 @@ public sealed class WebApplicationBuilderExtensionsTests
         resolve.Should().NotThrow();
     }
 
+    // L129: the SignalR query-string token is accepted on the hub path the host configured
+    // (PushNotifications:HubPath), not only under the literal /hubs.
+    [Fact]
+    public async Task AddCommonAuthentication_AcceptsTheQueryStringTokenOnTheConfiguredHubPath()
+    {
+        var services = new ServiceCollection();
+        services.AddCommonAuthentication(CreateValidJwtConfiguration(
+            KeyValuePair.Create<string, string?>("Jwt:SigningAlgorithm", "HS256"),
+            KeyValuePair.Create<string, string?>("PushNotifications:HubPath", "/notify")));
+
+        (await HubTokenFromQueryAsync(services, "/notify")).Should().Be("abc");
+    }
+
+    [Fact]
+    public async Task AddCommonAuthentication_StillAcceptsTheQueryStringTokenUnderHubs()
+    {
+        var services = new ServiceCollection();
+        services.AddCommonAuthentication(CreateValidJwtConfiguration(
+            KeyValuePair.Create<string, string?>("Jwt:SigningAlgorithm", "HS256"),
+            KeyValuePair.Create<string, string?>("PushNotifications:HubPath", "/notify")));
+
+        (await HubTokenFromQueryAsync(services, "/hubs/anything")).Should().Be("abc");
+    }
+
     [Fact]
     public void AddCommonAuthentication_ReturnsSameServiceCollection()
     {
@@ -317,7 +343,7 @@ public sealed class WebApplicationBuilderExtensionsTests
         WebApplicationBuilderExtensions.CorsPolicyAllowAll
             .Should().Be("_allowAll");
 
-    private static IConfiguration CreateValidJwtConfiguration() =>
+    private static IConfiguration CreateValidJwtConfiguration(params KeyValuePair<string, string?>[] extra) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -327,7 +353,25 @@ public sealed class WebApplicationBuilderExtensionsTests
                 { "Jwt:AccessTokenExpirationMinutes", "15" },
                 { "Jwt:RefreshTokenExpirationDays", "7" },
             })
+            .AddInMemoryCollection(extra)
             .Build();
+
+    private static async Task<string?> HubTokenFromQueryAsync(IServiceCollection services, string path)
+    {
+        await using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+
+        var http = new DefaultHttpContext();
+        http.Request.Path = path;
+        http.Request.QueryString = new QueryString("?access_token=abc");
+        var context = new MessageReceivedContext(
+            http,
+            new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler)),
+            options);
+
+        await options.Events.OnMessageReceived(context);
+        return context.Token;
+    }
 
     private static IConfiguration CreateCorsConfiguration(params string[] allowedOrigins) =>
         new ConfigurationBuilder()

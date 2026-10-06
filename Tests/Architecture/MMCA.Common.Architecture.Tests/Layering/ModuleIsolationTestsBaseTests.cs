@@ -32,6 +32,24 @@ public sealed class ModuleIsolationTestsBaseTests
         act.Should().Throw<Exception>("the full internal-layer cross product covers Domain to another module's Application");
     }
 
+    // M194: a module's UI or Shared reaching another module's internal layers is the same breach as
+    // Domain doing it; both are SOURCES the cross product must cover (as targets they stay legal).
+    [Theory]
+    [InlineData(Layer.Ui)]
+    [InlineData(Layer.Shared)]
+    public void ModuleInternalLayersAreIsolated_CatchesAUiOrSharedReachingAnotherModulesApplication(Layer fromLayer)
+    {
+        var violation = new StubMap(
+            fromLayer: fromLayer,
+            forbiddenLayer: Layer.Application,
+            forbiddenNamespace: "MMCA.Common.Application",
+            assembly: typeof(Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext).Assembly);
+
+        var act = () => ArchitectureRules.ModuleInternalLayersAreIsolated(violation);
+
+        act.Should().Throw<Exception>($"a module's {fromLayer} must reach another module only through its Shared contracts");
+    }
+
     [Fact]
     public void TheSixNamedRules_DoNotCoverThatPair()
     {

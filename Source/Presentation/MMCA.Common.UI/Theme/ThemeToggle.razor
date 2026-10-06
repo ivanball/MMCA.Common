@@ -17,7 +17,12 @@
 
     private async Task ToggleAsync()
     {
-        await ThemeService.ToggleAsync();
+        // A failed toggle (asset missing, interop gone) is a no-op, not a circuit error: ThemeService
+        // leaves the mode unchanged when it cannot persist it.
+        if (!await ThemeInterop.TryAsync(ThemeService.ToggleAsync))
+        {
+            return;
+        }
 
         // Persist to the signed-in user's profile (best-effort; no-op when anonymous).
         var writer = Services.GetService<IUserPreferenceWriter>();

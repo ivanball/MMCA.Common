@@ -93,6 +93,35 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
             "loose JSInterop reports no stored value and no OS dark preference");
     }
 
+    // L135: a JS failure in the theme init (a malformed mmca_theme cookie makes decodeURIComponent
+    // throw URIError) must not escape OnAfterRenderAsync and kill the circuit.
+    [Fact]
+    public async Task FirstInteractiveRender_WhenTheThemeModuleThrows_StillRendersAndKeepsTheInitialMode()
+    {
+        var themeModule = JSInterop.SetupModule(ThemeModulePath);
+        themeModule.Setup<string?>("get").SetException(new Microsoft.JSInterop.JSException("URIError: URI malformed"));
+
+        var cut = RenderUnderTest<MmcaThemeProviders>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => themeModule.Invocations["get"].Should().ContainSingle());
+        ((bool)IsDarkModeField.GetValue(cut.Instance)!).Should().BeFalse("a failed init keeps the initial mode");
+    }
+
+    [Fact]
+    public async Task SetDarkModeAsync_WhenPersistingFails_LeavesIsDarkModeUnchanged()
+    {
+        // bUnit cannot fail the module import itself, so the persisting call fails instead: either
+        // way nothing was stored, and the flag must not claim otherwise.
+        var themeModule = JSInterop.SetupModule(ThemeModulePath);
+        themeModule.SetupVoid("set", _ => true).SetException(new Microsoft.JSInterop.JSException("storage blocked"));
+        var themeService = Services.GetRequiredService<ThemeService>();
+
+        Func<Task> act = () => themeService.SetDarkModeAsync(true);
+
+        await act.Should().ThrowAsync<Microsoft.JSInterop.JSException>();
+        themeService.IsDarkMode.Should().BeFalse("nothing was persisted, so the flag must not claim it was");
+    }
+
     [Fact]
     public void FirstInteractiveRender_StampsTheE2eInteractivityMarker()
     {

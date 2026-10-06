@@ -329,6 +329,8 @@ MMCA.Common.API.SessionCookies.SessionCookieEndpoints.extension(Microsoft.AspNet
 MMCA.Common.API.SessionCookies.SessionCookieSettings
 MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.get -> bool
 MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.set -> void
+MMCA.Common.API.SessionCookies.SessionCookieSettings.Lifetime.get -> System.TimeSpan?
+MMCA.Common.API.SessionCookies.SessionCookieSettings.Lifetime.set -> void
 MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.get -> Microsoft.AspNetCore.Http.SameSiteMode
 MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.set -> void
 MMCA.Common.API.SessionCookies.SessionCookieSettings.SessionCookieSettings() -> void

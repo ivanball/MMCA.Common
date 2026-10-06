@@ -6,10 +6,18 @@ namespace MMCA.Common.Infrastructure.Context;
 /// <summary>
 /// Scoped service holding the tenant the current request runs as. Unresolved until
 /// <see cref="SetTenant"/> is called, which is the state every background service, seeder and
-/// design-time tool stays in.
+/// design-time tool stays in. A scope created while a background hop (an outbox row, a broker
+/// message, an internal command) is being delivered starts with the tenant that hop restored, so a
+/// handler that opens its own scope runs under the original tenant.
 /// </summary>
 public sealed class TenantContext : ITenantContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantContext"/> class, seeded with the tenant
+    /// of the enclosing background hop when there is one.
+    /// </summary>
+    public TenantContext() => TenantId = AmbientOrigin.Current?.TenantId;
+
     /// <inheritdoc />
     public string? TenantId { get; private set; }
 

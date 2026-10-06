@@ -174,7 +174,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             idempotencyKey: NewIdempotencyKey()
         );
 
-        InvalidateOnSuccess(result);
+        InvalidateAfterWrite(result);
         return result;
     }
 
@@ -196,7 +196,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             ifMatch: ConcurrencyTagOf(entity)
         );
 
-        InvalidateOnSuccess(result);
+        InvalidateAfterWrite(result);
         return result;
     }
 
@@ -222,7 +222,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             cancellationToken
         );
 
-        InvalidateOnSuccess(result);
+        InvalidateAfterWrite(result);
         return result;
     }
 
@@ -289,18 +289,29 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             cancellationToken);
 
     /// <summary>
-    /// Drops this endpoint's cached reads after a write actually succeeded. Only on success: a
-    /// rejected write changed nothing, and invalidating there would throw away entries that are
-    /// still accurate.
+    /// Drops this endpoint's cached reads after a write, unless the server refused it BEFORE
+    /// touching state (validation, unprocessable, unauthorized, forbidden, rate limited): those
+    /// changed nothing, and invalidating would throw away entries that are still accurate. Every
+    /// other outcome invalidates, because the server state is changed or unknown: a 412, 404 or 409
+    /// can answer the retry of a write whose first attempt landed and only lost its response, and a
+    /// 5xx or transport failure says nothing about whether it landed.
     /// </summary>
     /// <param name="result">The write's outcome.</param>
-    private void InvalidateOnSuccess(Result result)
+    private void InvalidateAfterWrite(Result result)
     {
-        if (result.IsSuccess)
+        if (result.IsSuccess || !result.Errors.All(error => IsRejectedBeforeWrite(error.Type)))
         {
             ReadCache?.InvalidatePrefix(Endpoint);
         }
     }
+
+    /// <summary>Whether a failure of this type means the server refused the write before changing state.</summary>
+    private static bool IsRejectedBeforeWrite(ErrorType type) =>
+        type is ErrorType.Validation
+            or ErrorType.UnprocessableEntity
+            or ErrorType.Unauthorized
+            or ErrorType.Forbidden
+            or ErrorType.TooManyRequests;
 
     /// <summary>
     /// Presents a deserialized <c>Items</c> collection as an <see cref="IReadOnlyList{T}"/> without
@@ -406,7 +417,10 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         {
             // Same reasoning as the idempotency key: every retry states the same precondition, so a
             // write that lost the race fails the precondition on each attempt instead of succeeding
-            // on a later one against a version the caller never saw.
+            // on a later one against a version the caller never saw. The same holds when the first
+            // attempt landed and only its response was lost: the retry then answers 412 (or 404 for a
+            // soft-deleted row) for a write that happened, which is why such an outcome still
+            // invalidates the cached reads (InvalidateAfterWrite) so the user's reload is fresh.
             httpClient.DefaultRequestHeaders.Add(ConcurrencyETag.IfMatchHeaderName, ifMatch);
         }
 

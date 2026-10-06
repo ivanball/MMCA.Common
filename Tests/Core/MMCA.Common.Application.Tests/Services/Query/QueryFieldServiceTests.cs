@@ -77,6 +77,34 @@ public class QueryFieldServiceTests
     }
 
     // ── ApplySorting ──
+    // L120: validation trims the sort column, so application must too, or a validated column is
+    // silently ignored and the list falls back to the tie-break order.
+    [Fact]
+    public void ApplySorting_TrimsTheSortColumn()
+    {
+        var query = new List<ProductDto>
+        {
+            new() { Id = 1, Name = "Zed" },
+            new() { Id = 2, Name = "Alice" },
+        }.AsQueryable();
+
+        var sorted = QueryFieldService.ApplySorting(query, " Name", "asc", new Dictionary<string, string>());
+
+        sorted.First().Name.Should().Be("Alice");
+    }
+
+    [Fact]
+    public void ValidateSortColumn_WithACommaList_ReturnsFailure() =>
+        QueryFieldService.ValidateSortColumn<ProductDto>("Name,Price", null, null).IsFailure.Should().BeTrue();
+
+    [Fact]
+    public void ValidateSortColumn_WithAPaddedKnownColumn_Succeeds() =>
+        QueryFieldService.ValidateSortColumn<ProductDto>(" Name", null, null).IsSuccess.Should().BeTrue();
+
+    [Fact]
+    public void ValidateSortColumn_WithAnUnknownColumn_ReturnsFailure() =>
+        QueryFieldService.ValidateSortColumn<ProductDto>("Nope", null, null).IsFailure.Should().BeTrue();
+
     [Fact]
     public void ApplySorting_Ascending_SortsByColumn()
     {

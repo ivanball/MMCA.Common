@@ -2,8 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MMCA.Common.UI.Web.SameOriginProxy;
 
 namespace MMCA.Common.UI.Web.Hardening;
 
@@ -45,22 +48,26 @@ public static class UiRateLimitingExtensions
     /// from, and <c>/hubs</c>. The hub prefix mirrors the Gateway's own
     /// <c>GatewayRateLimiting:BypassPathPrefixes</c>: a SignalR connection is long-lived and its
     /// negotiate and reconnect traffic must never be throttled, so a host that ever fronts a hub on
-    /// this origin is covered by declaration rather than by accident. <c>/api/hubs</c> is the same hub
-    /// traffic arriving through the same-origin API proxy at its default prefix: without it every open
-    /// hub WebSocket would hold a concurrency lease for its whole lifetime and exhaust the ceiling.
+    /// this origin is covered by declaration rather than by accident. The same hub traffic arriving
+    /// through the same-origin API proxy (<c>{SameOriginApiProxy:PathPrefix}/hubs</c>) is exempt too,
+    /// at whatever prefix the host configured: without it every open hub WebSocket would hold a
+    /// concurrency lease for its whole lifetime and exhaust the ceiling.
     /// </summary>
-    private static readonly string[] ExemptPrefixes = ["/health", "/alive", "/_framework", "/_content", "/hubs", "/api/hubs"];
+    private static readonly string[] ExemptPrefixes = ["/health", "/alive", "/_framework", "/_content", "/hubs"];
 
     /// <summary>
     /// Whether this request is exempt from both limiters.
     /// </summary>
     /// <param name="path">The request path.</param>
+    /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix (<c>/api</c> by default).</param>
     /// <returns><see langword="true"/> when the request must not be limited.</returns>
     /// <remarks>
-    /// Two rules. The prefix list above, matched on whole segments so <c>/healthz</c> is not matched
-    /// by <c>/health</c>; and any path whose last segment carries a file extension, which is how a
-    /// static asset is told apart from a page route or the SignalR negotiate without depending on
-    /// middleware ordering. Static files are served from disk with an ETag and cost almost nothing,
+    /// Two rules. The prefix list above (plus the proxied hub prefix), matched on whole segments so
+    /// <c>/healthz</c> is not matched by <c>/health</c>; and any path OUTSIDE the proxy prefix whose
+    /// last segment carries a file extension, which is how a static asset is told apart from a page
+    /// route or the SignalR negotiate without depending on middleware ordering. Proxied traffic is
+    /// API traffic whatever its last segment looks like (the proxy serves no static files), so
+    /// <c>/api/report.csv</c> is counted. Static files are served from disk with an ETag and cost almost nothing,
     /// while a single page load pulls dozens of them: counting those against the window would
     /// throttle the first visitor rather than an attacker. <c>/_blazor</c> deliberately has NO
     /// extension and NO exemption from the per-IP window, because the negotiate endpoint is exactly what
@@ -72,15 +79,18 @@ public static class UiRateLimitingExtensions
     /// rather than only through a full request flood.
     /// </para>
     /// </remarks>
-    internal static bool IsExempt(PathString path)
+    internal static bool IsExempt(PathString path, PathString proxyPathPrefix)
     {
-        if (ExemptPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
+        if (ExemptPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
+            || path.StartsWithSegments(proxyPathPrefix.Add("/hubs"), StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
         var value = path.Value;
-        return !string.IsNullOrEmpty(value) && Path.HasExtension(value);
+        return !string.IsNullOrEmpty(value)
+            && !path.StartsWithSegments(proxyPathPrefix, StringComparison.OrdinalIgnoreCase)
+            && Path.HasExtension(value);
     }
 
     /// <summary>
@@ -89,16 +99,18 @@ public static class UiRateLimitingExtensions
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound settings.</param>
+    /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix.</param>
     /// <returns>The partition this request counts against.</returns>
     /// <remarks>Internal so the partition key is unit-testable via <c>InternalsVisibleTo</c>.</remarks>
     internal static RateLimitPartition<string> ClientIpPartition(
         HttpContext httpContext,
-        UiRateLimitingSettings settings)
+        UiRateLimitingSettings settings,
+        PathString proxyPathPrefix)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (IsExempt(httpContext.Request.Path))
+        if (IsExempt(httpContext.Request.Path, proxyPathPrefix))
         {
             return RateLimitPartition.GetNoLimiter(ExemptPartitionKey);
         }
@@ -129,17 +141,19 @@ public static class UiRateLimitingExtensions
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound settings.</param>
+    /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix.</param>
     /// <returns>The partition this request counts against.</returns>
     /// <remarks>Internal so the partition key is unit-testable via <c>InternalsVisibleTo</c>.</remarks>
     internal static RateLimitPartition<string> ConcurrencyPartition(
         HttpContext httpContext,
-        UiRateLimitingSettings settings)
+        UiRateLimitingSettings settings,
+        PathString proxyPathPrefix)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
         var path = httpContext.Request.Path;
-        return IsExempt(path) || path.StartsWithSegments(BlazorTransportPrefix, StringComparison.OrdinalIgnoreCase)
+        return IsExempt(path, proxyPathPrefix) || path.StartsWithSegments(BlazorTransportPrefix, StringComparison.OrdinalIgnoreCase)
             ? RateLimitPartition.GetNoLimiter(ExemptPartitionKey)
             : RateLimitPartition.GetConcurrencyLimiter(ConcurrencyPartitionKey, _ => new ConcurrencyLimiterOptions
             {
@@ -174,23 +188,31 @@ public static class UiRateLimitingExtensions
             var settings = configuration.GetSection(UiRateLimitingSettings.SectionName)
                 .Get<UiRateLimitingSettings>() ?? new UiRateLimitingSettings();
 
-            return services.AddRateLimiter(options =>
+            services.AddRateLimiter(options => options.RejectionStatusCode = StatusCodes.Status429TooManyRequests);
+
+            if (!settings.Enabled)
             {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                return services;
+            }
 
-                if (!settings.Enabled)
+            // The proxy prefix the hub exemption and the extension carve-out key on, read through
+            // the proxy's own options (Bind plus any Configure<> the host adds), so the limiter and
+            // the proxy can never disagree. Resolved once, when the limiter options are built.
+            services.AddOptions<RateLimiterOptions>()
+                .Configure<IOptions<SameOriginApiProxySettings>>((options, proxyOptions) =>
                 {
-                    return;
-                }
+                    var proxyPathPrefix = new PathString(proxyOptions.Value.PathPrefix);
 
-                // Chained, so a request must satisfy the per-IP window AND the replica-wide
-                // concurrency ceiling: they answer different questions.
-                options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
-                    PartitionedRateLimiter.Create<HttpContext, string>(
-                        httpContext => ClientIpPartition(httpContext, settings)),
-                    PartitionedRateLimiter.Create<HttpContext, string>(
-                        httpContext => ConcurrencyPartition(httpContext, settings)));
-            });
+                    // Chained, so a request must satisfy the per-IP window AND the replica-wide
+                    // concurrency ceiling: they answer different questions.
+                    options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
+                        PartitionedRateLimiter.Create<HttpContext, string>(
+                            httpContext => ClientIpPartition(httpContext, settings, proxyPathPrefix)),
+                        PartitionedRateLimiter.Create<HttpContext, string>(
+                            httpContext => ConcurrencyPartition(httpContext, settings, proxyPathPrefix)));
+                });
+
+            return services;
         }
     }
 

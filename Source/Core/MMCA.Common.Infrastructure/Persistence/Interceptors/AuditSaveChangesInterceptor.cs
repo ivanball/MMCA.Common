@@ -25,6 +25,14 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// UPDATE still carries it in its WHERE clause and a concurrent writer is detected. SQL Server's
 /// <c>rowversion</c> column is database-generated and is never touched here.
 /// </para>
+/// <para>
+/// An owner whose only change is inside an owned value object (an <c>OwnsOne</c> address, an
+/// <c>OwnsMoney</c> amount) is stamped as modified too: EF tracks that edit on the owned entry and
+/// leaves the owner unchanged, so without the owner-side walk the row would be rewritten with stale
+/// <c>LastModifiedOn/By</c> and, on PostgreSQL and SQLite, an unchanged <c>RowVersion</c>. Clearing
+/// an optional owned reference to <see langword="null"/> leaves no owned entry to see and is not
+/// stamped.
+/// </para>
 /// </summary>
 /// <param name="timeProvider">Provides UTC timestamps for audit fields.</param>
 public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : SaveChangesInterceptor
@@ -60,7 +68,13 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditableEntity>())
         {
-            switch (entry.State)
+            // An edit confined to an owned value object leaves the owner Unchanged (the owned entry
+            // carries the state), yet it is an update of the owner's row: stamp it as one.
+            var state = entry.State == EntityState.Unchanged && OwnedDependents.HaveChanges(entry)
+                ? EntityState.Modified
+                : entry.State;
+
+            switch (state)
             {
                 case EntityState.Added:
                     entry.Property(nameof(IAuditableEntity.CreatedBy)).CurrentValue = resolvedUserId;

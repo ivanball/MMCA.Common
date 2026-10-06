@@ -12,7 +12,9 @@ namespace MMCA.Common.API.Middleware;
 /// The correlation ID is echoed back in the response header for client-side tracing.
 /// A blank header value is treated as absent, and a value longer than <see cref="MaxLength"/> is
 /// cut to that length (the width of every persisted correlation column), so the id the client sees
-/// echoed is exactly the one stored.
+/// echoed is exactly the one stored. A value with a non-ASCII or control character is replaced by
+/// the generated id, because Kestrel refuses to echo it in a response header and the request would
+/// fail after its handler ran.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
 public sealed class CorrelationIdMiddleware(RequestDelegate next)
@@ -36,9 +38,9 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(correlationContext);
 
         var header = context.Request.Headers[HeaderName].FirstOrDefault();
-        var correlationId = string.IsNullOrWhiteSpace(header)
-            ? Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier
-            : Truncate(header);
+        var correlationId = (string.IsNullOrWhiteSpace(header) ? null : Sanitize(header))
+            ?? Activity.Current?.TraceId.ToString()
+            ?? context.TraceIdentifier;
 
         correlationContext.SetCorrelationId(correlationId);
         context.Response.OnStarting(() =>
@@ -50,8 +52,15 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
         await next(context).ConfigureAwait(false);
     }
 
-    /// <summary>Cuts a caller-supplied id to <see cref="MaxLength"/> characters.</summary>
+    /// <summary>
+    /// Cuts a caller-supplied id to <see cref="MaxLength"/> characters and keeps it only when every
+    /// character is printable ASCII.
+    /// </summary>
     /// <param name="value">The header value.</param>
-    /// <returns>The value, at most <see cref="MaxLength"/> characters long.</returns>
-    private static string Truncate(string value) => value.Length > MaxLength ? value[..MaxLength] : value;
+    /// <returns>The value, at most <see cref="MaxLength"/> characters long, or null when it cannot be echoed.</returns>
+    private static string? Sanitize(string value)
+    {
+        var cut = value.Length > MaxLength ? value[..MaxLength] : value;
+        return cut.All(static c => c is >= ' ' and <= '~') ? cut : null;
+    }
 }

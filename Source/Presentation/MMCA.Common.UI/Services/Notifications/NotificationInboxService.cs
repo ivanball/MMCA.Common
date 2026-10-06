@@ -35,6 +35,9 @@ public sealed class NotificationInboxService(
 {
     private const string Endpoint = "notifications/inbox";
 
+    private readonly Lock _refreshSync = new();
+    private Task<string?>? _refreshInFlight;
+
     /// <inheritdoc />
     public async Task<Result<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
         int pageNumber = 1,
@@ -153,8 +156,51 @@ public sealed class NotificationInboxService(
     /// Forces one access-token re-acquisition, returning <see langword="null"/> when the session can
     /// no longer be refreshed or when the host cannot refresh from here (SSR prerender).
     /// </summary>
+    /// <remarks>
+    /// Single-flight, with the same shape as the token storage's hydrate: two reads that both land
+    /// on a rejected token (the bell poll and the inbox page share this scoped instance) share one
+    /// rotation, because on MAUI a second rotation presenting the same refresh token is read as
+    /// reuse and revokes the whole session (BR-206). This does not coordinate with the storage's own
+    /// expiry-driven hydrate, which would need a clock-fresh token the server rejects at the same
+    /// instant as an expiry; that residual is left as is.
+    /// </remarks>
     /// <param name="cancellationToken">A cancellation token.</param>
     private async Task<string?> TryAcquireRefreshedTokenAsync(CancellationToken cancellationToken)
+    {
+        // The shared refresh runs under no caller's token: one caller giving up (a disposed bell)
+        // must not cancel the refresh another caller is awaiting. Each caller stops waiting on its own
+        // token instead. A completed task left in the slot (every waiter gave up before it finished)
+        // is never reused: the next caller starts a fresh refresh.
+        Task<string?> inFlight;
+        lock (_refreshSync)
+        {
+            if (_refreshInFlight is null || _refreshInFlight.IsCompleted)
+            {
+                _refreshInFlight = AcquireRefreshedTokenAsync(CancellationToken.None);
+            }
+
+            inFlight = _refreshInFlight;
+        }
+
+        try
+        {
+            return await inFlight.WaitAsync(cancellationToken);
+        }
+        finally
+        {
+            // Only clear our own, finished task: a refresh still running for other callers stays, and
+            // a newer refresh started after this one is not dropped.
+            lock (_refreshSync)
+            {
+                if (inFlight.IsCompleted && ReferenceEquals(_refreshInFlight, inFlight))
+                {
+                    _refreshInFlight = null;
+                }
+            }
+        }
+    }
+
+    private async Task<string?> AcquireRefreshedTokenAsync(CancellationToken cancellationToken)
     {
         try
         {

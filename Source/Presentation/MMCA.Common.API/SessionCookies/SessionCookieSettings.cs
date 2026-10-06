@@ -27,4 +27,13 @@ public sealed class SessionCookieSettings
     /// writer of the cookies. Defaults to <see langword="false"/>.
     /// </summary>
     public bool ClaimsOnlyBrowserTokens { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>Max-Age</c> of both session cookies. <see langword="null"/> (the default)
+    /// derives it from <c>Jwt:RefreshTokenExpirationDays</c> when that section is bound in this host,
+    /// and otherwise uses 7 days, so a cookie neither outlives nor undershoots the refresh token it
+    /// carries. A UI host that does not bind <c>Jwt</c> and runs a non-default refresh lifetime sets
+    /// it here.
+    /// </summary>
+    public TimeSpan? Lifetime { get; set; }
 }

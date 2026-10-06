@@ -89,14 +89,29 @@ public static class TenantDataSourceTargets
     /// <param name="scopeFactory">The root scope factory.</param>
     /// <param name="target">The target the scope will work against.</param>
     /// <returns>The new scope; the caller owns its disposal.</returns>
+    /// <remarks>
+    /// The explicit target always wins over an enclosing background hop's origin
+    /// (<c>AmbientOrigin.Current</c>, which a scope created inside an outbox, broker or internal
+    /// command delivery otherwise inherits): the scope's tenant context is created with that origin
+    /// withdrawn, so a scope for another tenant does not collide with the hop's tenant, and a
+    /// shared-target scope stays unresolved and routes to the shared source.
+    /// </remarks>
     public static IServiceScope CreateTenantScope(this IServiceScopeFactory scopeFactory, TenantDataSourceTarget target)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
 
         var scope = scopeFactory.CreateScope();
-        if (target.TenantId is { } tenantId)
+        using (Context.AmbientOrigin.Suppress())
         {
-            scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
+            if (target.TenantId is { } tenantId)
+            {
+                scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
+            }
+            else
+            {
+                // Resolved now, while the origin is withdrawn, so the shared target stays unresolved.
+                _ = scope.ServiceProvider.GetService<ITenantContext>();
+            }
         }
 
         return scope;

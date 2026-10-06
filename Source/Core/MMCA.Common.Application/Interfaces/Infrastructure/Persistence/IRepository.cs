@@ -466,7 +466,9 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// <para>
     /// WARNING: bypasses domain events. Global query filters (soft delete) DO apply to
     /// <paramref name="where"/>. Audit fields are NOT bypassed: <c>LastModifiedOn</c> and
-    /// <c>LastModifiedBy</c> are stamped automatically unless the caller sets them explicitly.
+    /// <c>LastModifiedBy</c> are stamped automatically unless the caller sets them explicitly, and
+    /// on an engine with an application-stamped row version (PostgreSQL, SQLite) <c>RowVersion</c>
+    /// is re-stamped too, so a client holding the pre-update token gets a concurrency conflict.
     /// Runs on the ambient transaction when one is active (see
     /// <c>IUnitOfWork.ExecuteInTransactionAsync</c>), so decrements roll back with the caller.
     /// </para>

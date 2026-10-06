@@ -207,6 +207,33 @@ public sealed class OutboxProcessorOrderingTests : IDisposable
             "a failing key blocks only its own stream");
     }
 
+    // -- M182: key-mates deferred behind a delivered head row ask for an immediate re-poll --
+    [Fact]
+    public async Task SameOrderingKey_DeferredKeyMates_RequestAnImmediateRePoll()
+    {
+        await SeedAsync(Row("cart-42", minutesAgo: 30), Row("cart-42", minutesAgo: 20), Row("cart-42", minutesAgo: 10));
+
+        var first = await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+        first.HasMoreEligibleWork.Should().BeTrue("two key-mates were deferred behind the row just delivered");
+
+        var second = await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+        second.HasMoreEligibleWork.Should().BeTrue("one key-mate is still deferred");
+
+        var third = await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+        third.HasMoreEligibleWork.Should().BeFalse("the last row of the key has been delivered");
+    }
+
+    // -- M182 companion: a failing head row makes no progress, so it must not spin the loop --
+    [Fact]
+    public async Task SameOrderingKey_FailingHeadRow_DoesNotRequestAnImmediateRePoll()
+    {
+        await SeedAsync(Row("cart-43", minutesAgo: 30, marker: BoomMarker), Row("cart-43", minutesAgo: 20));
+
+        var cycle = await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        cycle.HasMoreEligibleWork.Should().BeFalse("no row was delivered, so an immediate re-poll would hot-spin");
+    }
+
     // ── Helpers ──
     private static OutboxMessage Row(string? orderingKey, int minutesAgo, string marker = "ok") => new()
     {

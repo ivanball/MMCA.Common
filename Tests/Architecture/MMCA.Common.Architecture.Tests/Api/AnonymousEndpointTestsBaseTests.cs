@@ -113,13 +113,15 @@ public sealed class AnonymousEndpointTestsBaseTests
             .Which.Message.Should().Contain("NoLongerUndecorated");
     }
 
+    // L143 (decision D7): the gate is on by default. The old off-by-default branch asserted that two
+    // disjoint-by-construction scans did not intersect, which could never fail.
     [Fact]
-    public void Base_WhenNotOptedIn_StillAssertsTheTwoScansCannotOverlap()
+    public void Base_RequiresAnExplicitDecisionByDefault()
     {
         var assert = new DriftedTests().Endpoints_DeclareAnAuthorizationDecision;
 
-        assert.Should().NotThrow(
-            "an endpoint is either explicitly anonymous or undecorated, never reported as both");
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain(nameof(UndecoratedFixtureController));
     }
 
     /// <summary>Carries no authorization attribute at all: the forgotten-[Authorize] shape.</summary>

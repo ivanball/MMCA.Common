@@ -53,9 +53,11 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
     /// <param name="isDarkMode"><see langword="true"/> for dark, <see langword="false"/> for light.</param>
     public async Task SetDarkModeAsync(bool isDarkMode)
     {
-        IsDarkMode = isDarkMode;
+        // Persist first: a failed import or call leaves the flag (and every subscriber) on the
+        // mode that is actually stored, instead of flipped with nothing persisted and no OnChange.
         var module = await GetModuleAsync();
         await module.InvokeVoidAsync("set", isDarkMode ? "dark" : "light");
+        IsDarkMode = isDarkMode;
         OnChange?.Invoke(this, EventArgs.Empty);
     }
 

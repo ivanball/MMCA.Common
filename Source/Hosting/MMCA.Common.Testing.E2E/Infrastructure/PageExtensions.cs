@@ -113,15 +113,23 @@ public static class PageExtensions
         /// Navigates using Blazor's client-side router instead of a full page load.
         /// Use this for auth-protected pages when already logged in — avoids the server-side
         /// prerender which lacks the JWT token stored in browser storage.
-        /// Requires Blazor to already be initialised on the current page.
+        /// Requires Blazor to already be initialised on the current page. The path may carry a query
+        /// string or a fragment; only its path portion is awaited, and the value is passed to the page
+        /// as an argument rather than interpolated into script, so quotes are safe.
         /// </summary>
         public async Task BlazorNavigateAsync(string path)
         {
+            ArgumentNullException.ThrowIfNull(path);
+
+            // window.location.pathname never carries the query or fragment, so compare against the
+            // path portion only.
+            var pathname = path.Split('?', 2)[0].Split('#', 2)[0];
+
             // Trigger client-side navigation. A forceLoad navigateTo can tear the JS context down
             // synchronously, so tolerate the evaluate racing with that reload.
             try
             {
-                await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')").ConfigureAwait(false);
+                await page.EvaluateAsync("p => Blazor.navigateTo(p)", path).ConfigureAwait(false);
             }
             catch (PlaywrightException)
             {
@@ -134,7 +142,8 @@ public static class PageExtensions
             // blocking later actions). Poll window.location instead — Playwright re-injects this across
             // a full reload too, so it settles on the target pathname either way.
             await page.WaitForFunctionAsync(
-                $"() => window.location.pathname === '{path}'",
+                "expected => window.location.pathname === expected",
+                pathname,
                 new PageWaitForFunctionOptions { Timeout = 15_000 }).ConfigureAwait(false);
 
             // Re-assert Blazor interactivity (fast no-op after a pure SPA nav; waits for re-init after a

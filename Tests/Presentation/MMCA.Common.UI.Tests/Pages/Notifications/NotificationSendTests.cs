@@ -146,6 +146,36 @@ public sealed class NotificationSendTests : BunitTestBase
             Times.Never());
     }
 
+    // M191: each send mints its own idempotency key, so a second click while the first send is in
+    // flight must not reach the service at all.
+    [Fact]
+    public async Task ClickingSendTwiceWhileTheFirstSendIsInFlight_SendsOnce()
+    {
+        var pending = new TaskCompletionSource<Result<PushNotificationDTO>>();
+        _service
+            .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(pending.Task);
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
+
+        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "Hello" });
+        await cut.Find("textarea").InputAsync(new ChangeEventArgs { Value = "World body" });
+
+        // Driven through the button's OnClick directly: the first click relabels the button
+        // ("Sending...") and disables it on the next render, and the window this pins is the one
+        // BEFORE that render reaches the browser.
+        var send = cut.FindComponents<MudBlazor.MudButton>()
+            .Single(b => b.Markup.Contains("Send to All Recipients", StringComparison.Ordinal));
+        var first = cut.InvokeAsync(() => send.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+        var second = cut.InvokeAsync(() => send.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+        pending.SetResult(Accepted(3));
+        await first;
+        await second;
+
+        _service.Verify(
+            x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once());
+    }
+
     // ── Auto-target caption ──
     [Fact]
     public void WithAScopedProvider_CaptionsTheAutoAppliedTarget()

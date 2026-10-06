@@ -32,6 +32,11 @@ namespace MMCA.Common.Domain.Specifications;
 /// on a property literally named <c>Criteria</c>, so a query specification is analyzed by exactly
 /// the same rule as a plain one.
 /// </para>
+/// <para>
+/// <c>And</c>/<c>Or</c>/<c>Not</c> refuse a query specification that called any builder method
+/// (the composed specification is criteria-only and could not forward the shape); compose the
+/// predicates inside this specification's own <c>Criteria</c> instead.
+/// </para>
 /// </summary>
 /// <typeparam name="TEntity">The entity type this specification applies to.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>

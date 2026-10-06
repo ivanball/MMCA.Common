@@ -11,6 +11,7 @@ using MMCA.Common.Domain.Privacy;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
 
@@ -221,12 +222,22 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>
     /// Whether a tracked entry belongs in the trail: it opted in, it is not one of the framework's
-    /// own bookkeeping entities, and it is actually being written.
+    /// own bookkeeping entities, and it is actually being written. An owner left
+    /// <see cref="EntityState.Unchanged"/> whose owned value object changed is being written too.
     /// </summary>
     private static bool ShouldAudit(EntityEntry entry) =>
         entry.Entity is IAuditedEntity
         && !IsFrameworkEntity(entry.Metadata.ClrType)
-        && entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted;
+        && IsBeingWritten(entry);
+
+    /// <summary>Whether this save inserts, updates or deletes the entry's row.</summary>
+    private static bool IsBeingWritten(EntityEntry entry) => entry.State switch
+    {
+        EntityState.Added or EntityState.Modified or EntityState.Deleted => true,
+        EntityState.Unchanged => OwnedDependents.HaveChanges(entry),
+        EntityState.Detached => false,
+        _ => false,
+    };
 
     /// <summary>
     /// Records one changed entry: a row per changed property for an update, one summary row for an
@@ -244,9 +255,10 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         var entityType = ColumnWidth.Truncate(entry.Metadata.ClrType.FullName ?? entry.Metadata.ClrType.Name, MaxEntityTypeLength)!;
         var entityKey = BuildEntityKey(entry);
 
-        if (entry.State == EntityState.Modified)
+        if (entry.State is EntityState.Modified or EntityState.Unchanged)
         {
             CaptureModifiedProperties(context, entry, entityType, entityKey, capture);
+            CaptureOwnedChanges(context, entry, entityType, entityKey, capture);
             return null;
         }
 
@@ -274,6 +286,8 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
     /// Adds one row per property whose value actually changed. A property EF flagged as modified but
     /// whose value is unchanged (the whole-entity <c>Update</c> idiom) writes nothing: a trail that
     /// records non-changes is noise, and the volume is the reason the feature is opt-in per entity.
+    /// A concurrency token is skipped too: on PostgreSQL and SQLite the audit interceptor writes a
+    /// fresh <c>RowVersion</c> on every update, so it would add a bookkeeping row to every change.
     /// </summary>
     private static void CaptureModifiedProperties(
         ApplicationDbContext context,
@@ -288,7 +302,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
         foreach (var property in entry.Properties)
         {
-            if (!property.IsModified)
+            if (!property.IsModified || property.Metadata.IsConcurrencyToken)
             {
                 continue;
             }
@@ -316,6 +330,109 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 TenantId = capture.TenantId,
             });
         }
+    }
+
+    /// <summary>
+    /// Adds one row per changed column of each owned value object the owner carries (an
+    /// <c>OwnsOne</c> address, an <c>OwnsMoney</c> amount), named <c>Navigation.Property</c> and
+    /// recorded under the owner's type and key. EF tracks an owned edit on the owned entry, and a
+    /// replaced instance arrives as a new Added entry beside the Deleted one it replaces, so the
+    /// previous value is read from that Deleted entry.
+    /// </summary>
+    /// <remarks>
+    /// Clearing an optional owned reference to <see langword="null"/> leaves no owned entry on the
+    /// owner's navigation and is not recorded.
+    /// </remarks>
+    private static void CaptureOwnedChanges(
+        ApplicationDbContext context,
+        EntityEntry entry,
+        string entityType,
+        string entityKey,
+        CaptureContext capture)
+    {
+        foreach (var reference in entry.References)
+        {
+            if (reference.Metadata.TargetEntityType.IsOwned()
+                && reference.TargetEntry is { State: EntityState.Added or EntityState.Modified } target)
+            {
+                CaptureOwnedReference(context, reference.Metadata.Name, target, entityType, entityKey, capture);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds one row per changed value column of one owned entry, named after its navigation.
+    /// </summary>
+    private static void CaptureOwnedReference(
+        ApplicationDbContext context,
+        string navigationName,
+        EntityEntry target,
+        string entityType,
+        string entityKey,
+        CaptureContext capture)
+    {
+        var replaced = target.State == EntityState.Added ? FindReplacedOwnedEntry(context, target) : null;
+        var typeHasPii = PiiRedactor.HasPii(target.Metadata.ClrType);
+
+        foreach (var property in target.Properties.Where(p => IsOwnedValueColumn(p.Metadata)))
+        {
+            var original = target.State == EntityState.Added
+                ? replaced?.Property(property.Metadata.Name).OriginalValue
+                : property.OriginalValue;
+            var current = property.CurrentValue;
+            if (ValuesEqual(original, current))
+            {
+                continue;
+            }
+
+            var isPii = typeHasPii && IsPiiProperty(property);
+
+            AddRow(context, new AuditTrailEntry
+            {
+                EntityType = entityType,
+                EntityKey = entityKey,
+                PropertyName = ColumnWidth.Truncate($"{navigationName}.{property.Metadata.Name}", MaxKeyLength),
+                OldValue = isPii ? PiiRedactor.RedactedToken : FormatValue(original),
+                NewValue = isPii ? PiiRedactor.RedactedToken : FormatValue(current),
+                Operation = OperationModified,
+                ChangedBy = capture.ChangedBy,
+                ChangedOn = capture.ChangedOn,
+                CorrelationId = capture.CorrelationId,
+                TenantId = capture.TenantId,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Whether an owned entry's property is a value the owner exposes, rather than the shadow key it
+    /// shares with its owner or a concurrency token.
+    /// </summary>
+    private static bool IsOwnedValueColumn(Microsoft.EntityFrameworkCore.Metadata.IProperty property) =>
+        !property.IsKey() && !property.IsForeignKey() && !property.IsConcurrencyToken;
+
+    /// <summary>
+    /// Finds the Deleted owned entry a newly Added one replaces: same owned entity type, same key
+    /// (an owned reference shares its owner's key). Null when the owned value is new, not replaced.
+    /// </summary>
+    private static EntityEntry? FindReplacedOwnedEntry(ApplicationDbContext context, EntityEntry added)
+    {
+        var key = added.Metadata.FindPrimaryKey();
+        if (key is null)
+        {
+            return null;
+        }
+
+        foreach (var candidate in context.ChangeTracker.Entries())
+        {
+            if (candidate.State == EntityState.Deleted
+                && candidate.Metadata == added.Metadata
+                && key.Properties.All(k => Equals(candidate.Property(k.Name).CurrentValue, added.Property(k.Name).CurrentValue)))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -508,10 +625,16 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>
     /// Renders a value for storage. Culture-invariant on purpose: a trail read years later, or on a
-    /// replica with a different locale, must show the value that was written.
+    /// replica with a different locale, must show the value that was written. A byte array (a hash,
+    /// a salt) renders as hexadecimal, because the invariant <c>Convert.ToString</c> would record
+    /// its type name on both sides and lose the change.
     /// </summary>
-    private static string? FormatValue(object? value) =>
-        value is null ? null : Convert.ToString(value, CultureInfo.InvariantCulture);
+    private static string? FormatValue(object? value) => value switch
+    {
+        null => null,
+        byte[] bytes => Convert.ToHexString(bytes),
+        _ => Convert.ToString(value, CultureInfo.InvariantCulture),
+    };
 
     /// <summary>
     /// Compares two property values structurally. Byte arrays (row versions, hashes) need explicit

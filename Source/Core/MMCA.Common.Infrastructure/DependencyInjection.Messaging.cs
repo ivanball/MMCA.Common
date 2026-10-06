@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Configuration;
@@ -142,7 +143,9 @@ public static partial class DependencyInjection
         /// The client's standard resilience handler takes its timeouts and retry budget from
         /// <see cref="HttpResilienceDefaults"/>, the values the Aspire host defaults apply, rather than
         /// the library defaults (the gRPC sibling had the same drift fixed). The host defaults still
-        /// stack one retry on top, so the worst case is 4 attempts, not 8.
+        /// stack one retry on top, so the worst case is 4 attempts, not 8. Like the host defaults,
+        /// it never replays a POST or PATCH: neither verb is idempotent, so a retried timeout could
+        /// apply the write twice.
         /// </para>
         /// </summary>
         /// <typeparam name="TInterface">The contract interface that consumer code depends on.</typeparam>
@@ -169,6 +172,9 @@ public static partial class DependencyInjection
                 options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
                 options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
                 options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
+
+                // The same two verbs MMCA.Common.Aspire's AddServiceDefaults switches off.
+                options.Retry.DisableFor(HttpMethod.Post, HttpMethod.Patch);
                 options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
             });
             return builder;

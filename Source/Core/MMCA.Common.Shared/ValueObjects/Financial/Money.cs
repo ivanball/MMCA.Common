@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using MMCA.Common.Shared.Abstractions;
 
@@ -18,7 +19,7 @@ namespace MMCA.Common.Shared.ValueObjects.Financial;
 /// currency round-trip fallback every hand-rolled block has to repeat.
 /// </remarks>
 [DataContract]
-public sealed record Money : ValueObject
+public sealed record Money : ValueObject, IJsonOnDeserialized
 {
     /// <summary>Validation error returned when <see cref="Create"/> is called with <see cref="Currency.None"/>.</summary>
     public static readonly Error NoCurrency = Error.Validation("Money.NoCurrency", "Currency is required.");
@@ -55,6 +56,23 @@ public sealed record Money : ValueObject
 
         Amount = amount;
         Currency = currency;
+    }
+
+    /// <summary>
+    /// JSON-only guard on the round-trip constructor, which bypasses <see cref="Create"/>. The JSON
+    /// currency converters read the empty code back as <see cref="Financial.Currency.None"/> so a
+    /// serialized <see cref="Zero()"/> round-trips, but only a ZERO amount may carry that sentinel:
+    /// a non-zero amount with no currency is refused as invalid JSON (a 400 on the MVC path) instead
+    /// of becoming a value whose amount the arithmetic silently drops. EF materialization does not
+    /// run this callback, so a stored row is never refused here.
+    /// </summary>
+    /// <exception cref="JsonException">The payload carries a non-zero amount without a currency.</exception>
+    void IJsonOnDeserialized.OnDeserialized()
+    {
+        if (Currency == Currency.None && Amount != 0)
+        {
+            throw new JsonException("A non-zero amount requires a currency.");
+        }
     }
 
     /// <summary>

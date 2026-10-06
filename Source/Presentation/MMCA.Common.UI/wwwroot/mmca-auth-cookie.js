@@ -38,23 +38,24 @@ window.mmcaAuthCookie = {
 
 // Same-origin "validate-or-refresh": returns a currently-valid access token, refreshed server-side from
 // the HttpOnly refresh cookie when the access cookie has expired. The refresh token never reaches JS.
-// Returns the access token string, or null when there is no valid session.
+// Returns the access token string, or null ONLY when the endpoint answers 401 (no valid session). Any
+// other failure (a 429 from the host limiter, a 5xx, a dropped connection) throws, because it says
+// nothing about the session and the caller must not treat it as "signed out".
 window.mmcaAuthSession = {
     getToken: async function () {
-        try {
-            const response = await fetch('/auth/session/token', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Accept': 'application/json' }
-            });
-            if (!response.ok) {
-                return null;
-            }
-            const data = await response.json();
-            return data && data.accessToken ? data.accessToken : null;
-        } catch (e) {
+        const response = await fetch('/auth/session/token', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (response.status === 401) {
             return null;
         }
+        if (!response.ok) {
+            throw new Error('mmcaAuthSession.getToken: HTTP ' + response.status);
+        }
+        const data = await response.json();
+        return data && data.accessToken ? data.accessToken : null;
     }
 };
 
@@ -79,21 +80,21 @@ window.mmcaAuthHandoff = {
         }
     },
     // Validate-or-refresh from the session cookies; returns a protected access token for the circuit,
-    // or null when there is no valid session.
+    // or null ONLY when the endpoint answers 401 (no valid session). Any other failure throws, for the
+    // same reason as mmcaAuthSession.getToken.
     getToken: async function () {
-        try {
-            const response = await fetch('/auth/session/handoff', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Accept': 'application/json', 'X-CSRF': '1' }
-            });
-            if (!response.ok) {
-                return null;
-            }
-            const data = await response.json();
-            return data && data.handoff ? data.handoff : null;
-        } catch (e) {
+        const response = await fetch('/auth/session/handoff', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-CSRF': '1' }
+        });
+        if (response.status === 401) {
             return null;
         }
+        if (!response.ok) {
+            throw new Error('mmcaAuthHandoff.getToken: HTTP ' + response.status);
+        }
+        const data = await response.json();
+        return data && data.handoff ? data.handoff : null;
     }
 };

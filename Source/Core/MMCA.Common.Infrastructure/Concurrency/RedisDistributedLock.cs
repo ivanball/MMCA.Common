@@ -84,6 +84,9 @@ internal sealed partial class RedisDistributedLock(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Distributed lock '{Key}' had already expired when its holder released it: the guarded section ran longer than the lock's time-to-live and was not exclusive for all of it.")]
     private static partial void LogLockAlreadyExpired(ILogger logger, string key);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Distributed lock '{Key}' could not be released; it expires on its own time-to-live, so the guarded section stays correct and the holder's work is not failed.")]
+    private static partial void LogLockReleaseFailed(ILogger logger, string key, Exception exception);
+
     /// <summary>Releases exactly the acquisition it was created for, once.</summary>
     private sealed class RedisLockHandle(
         IDatabase database,
@@ -100,15 +103,29 @@ internal sealed partial class RedisDistributedLock(
                 return;
             }
 
-            RedisResult result = await database
-                .ScriptEvaluateAsync(ReleaseScript, [key], [token], CommandFlags.None)
-                .ConfigureAwait(false);
-
-            // 0 means the key was gone or held by someone else, i.e. this holder's TTL lapsed
-            // mid-section. Nothing to release, but worth surfacing: the section was not exclusive.
-            if ((long)result == 0)
+            // The release runs after the guarded work (an idempotent action that already committed
+            // and stored its response, a password-reset token that was already issued), so a Redis
+            // fault here must not turn that work into a failure. The lock expires on its own TTL,
+            // which keeps the guarded section correct; RedisTimeoutException is not a RedisException,
+            // hence the broad catch, logged rather than swallowed silently.
+            try
             {
-                LogLockAlreadyExpired(logger, key.ToString());
+                RedisResult result = await database
+                    .ScriptEvaluateAsync(ReleaseScript, [key], [token], CommandFlags.None)
+                    .ConfigureAwait(false);
+
+                // 0 means the key was gone or held by someone else, i.e. this holder's TTL lapsed
+                // mid-section. Nothing to release, but worth surfacing: the section was not exclusive.
+                if ((long)result == 0)
+                {
+                    LogLockAlreadyExpired(logger, key.ToString());
+                }
+            }
+#pragma warning disable CA1031 // Do not catch general exception types: the release is best-effort by contract (IDistributedLock) and logs the fault
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                LogLockReleaseFailed(logger, key.ToString(), ex);
             }
         }
     }
