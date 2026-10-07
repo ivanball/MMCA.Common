@@ -80,6 +80,8 @@ jobs:
         uses: ./.github/actions/nuget-vulnerability-audit
         with:
           solution: MMCA.Common.slnx
+          # Restore above already resolved this solution's graph in locked mode; read it as-is.
+          no-restore: 'true'
 
       - name: Test
         # Same floor as ci.yml build-and-test: a discovery/filter regression that silently drops
