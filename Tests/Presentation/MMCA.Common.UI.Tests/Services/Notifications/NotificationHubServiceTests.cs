@@ -367,6 +367,30 @@ public sealed class NotificationHubServiceTests
         delay.Should().BeNull("retrying with the credentials the server just refused cannot succeed");
     }
 
+    // With negotiation skipped there is no negotiate response to carry the status: the hub's own
+    // WebSocket factory rethrows the refused handshake as HttpRequestException(status) around the
+    // WebSocketException, and the policy must still stop on it.
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public void UnboundedReconnectPolicy_WhenTheWebSocketHandshakeIsRefused_Stops(HttpStatusCode status)
+    {
+        var policy = new UnboundedReconnectPolicy();
+        var refusal = new HttpRequestException(
+            "handshake refused",
+            new System.Net.WebSockets.WebSocketException("The server returned status code '401' when status code '101' was expected."),
+            status);
+
+        TimeSpan? delay = policy.NextRetryDelay(new Microsoft.AspNetCore.SignalR.Client.RetryContext
+        {
+            PreviousRetryCount = 1,
+            ElapsedTime = TimeSpan.FromSeconds(2),
+            RetryReason = refusal,
+        });
+
+        delay.Should().BeNull("a refused WebSocket handshake is the same expired session a refused negotiate was");
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.ServiceUnavailable)]
     [InlineData(HttpStatusCode.BadGateway)]

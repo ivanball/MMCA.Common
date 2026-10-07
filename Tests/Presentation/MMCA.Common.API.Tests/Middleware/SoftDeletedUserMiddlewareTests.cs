@@ -366,6 +366,74 @@ public sealed class SoftDeletedUserMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
+    // ── Multi-replica: the marker is read from the shared store, and a live answer is never cached ──
+    // Every replica keeps its own local copy of a read; a "not deleted" entry cached there outlived the
+    // delete on every replica but the one that wrote the marker.
+    [Fact]
+    public async Task InvokeAsync_ReadsTheDeletedMarkerFromTheSharedStore_NeverFromALocalCopy()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var nextCalled = false;
+        var context = CreateContext();
+        var sut = new SoftDeletedUserMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await InvokeAsync(sut, context);
+
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _cacheService.Verify(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheService.Verify(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LiveUserFoundByTheValidator_IsNotWrittenBackToTheCache()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
+        _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var nextCalled = false;
+        var sut = new SoftDeletedUserMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await InvokeAsync(sut, CreateContext());
+
+        nextCalled.Should().BeTrue();
+        _cacheService.Verify(
+            c => c.SetAsync(CacheKey, false, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a cached 'not deleted' answer would outlive a delete made on another replica");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_DeletedUserFoundByTheValidator_StillWritesTheSharedMarker()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
+        _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var context = CreateContext();
+        var sut = new SoftDeletedUserMiddleware(_ => Task.CompletedTask);
+
+        await InvokeAsync(sut, context);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _cacheService.Verify(
+            c => c.SetAsync(CacheKey, true, SoftDeletedUserCache.MarkerDuration, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // ── Helpers ──
 
     /// <summary>

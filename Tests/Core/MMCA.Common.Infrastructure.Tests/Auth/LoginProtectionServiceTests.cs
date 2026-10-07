@@ -45,6 +45,35 @@ public sealed class LoginProtectionServiceTests
             e.Code == "Auth.TooManyAttempts" && e.Type == ErrorType.TooManyRequests);
     }
 
+    // A reset removes the lockout from the shared store and from THIS replica's local copy only, so a
+    // lockout read through the local tier stayed live on every other replica for up to its L1 lifetime.
+    [Fact]
+    public async Task CheckLockoutAsync_ReadsTheLockoutFromTheSharedStore_NeverFromALocalCopy()
+    {
+        var cache = new Mock<ICacheService>();
+        cache.Setup(c => c.GetFromSharedStoreAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var sut = new LoginProtectionService(cache.Object, Options.Create(new LoginProtectionSettings()));
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsFailure.Should().BeTrue("the shared store holds the lockout");
+        cache.Verify(c => c.GetFromSharedStoreAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>()), Times.Once);
+        cache.Verify(c => c.GetAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_WhenOnlyAStaleLocalCopySaysLocked_Succeeds()
+    {
+        var cache = new Mock<ICacheService>();
+        cache.Setup(c => c.GetAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        cache.Setup(c => c.GetFromSharedStoreAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>())).ReturnsAsync((bool?)null);
+        var sut = new LoginProtectionService(cache.Object, Options.Create(new LoginProtectionSettings()));
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsSuccess.Should().BeTrue("a reset on another replica cleared the shared lockout");
+    }
+
     // ── Failed-attempt counting ──
     [Fact]
     public async Task IncrementFailedAttemptsAsync_FirstAttempt_WritesCountOfOneWithWindowTtl()

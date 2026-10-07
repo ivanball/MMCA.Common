@@ -744,6 +744,105 @@ public sealed class OAuthControllerBaseTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(authResponse);
     }
 
+    // ── ExchangeAsync under a distributed lock (multi-replica) ──
+    // Two replicas redeeming one code at the same instant could both read it before either removed
+    // it, minting the token pair twice. The read and the burn are one critical section under
+    // IDistributedLock "lock:" + the exchange key; a contended redeem is an invalid code.
+    [Fact]
+    public async Task ExchangeAsync_WhenTheRedeemLockIsContended_ReturnsInvalidCode_WithoutReadingOrBurning()
+    {
+        const string code = "ABCDEF0123456789";
+        var (sut, cache, distributedLock) = CreateLockingSut();
+        cache
+            .Setup(x => x.GetFromSharedStoreAsync<AuthenticationResponse>(ExchangeCodePrefix + code, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateAuthResponse());
+        distributedLock
+            .Setup(x => x.TryAcquireAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IAsyncDisposable?)null);
+
+        var result = await sut.ExchangeAsync(new OAuthCodeExchangeRequest(code), CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should().BeOfType<ProblemDetails>()
+            .Which.Title.Should().Be("Invalid sign-in code");
+        distributedLock.Verify(
+            x => x.TryAcquireAsync("lock:" + ExchangeCodePrefix + code, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        cache.Verify(x => x.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExchangeAsync_UnderTheRedeemLock_RedeemsACodeOnce_AndASecondExchangeFails()
+    {
+        const string code = "ABCDEF0123456789";
+        const string exchangeKey = ExchangeCodePrefix + code;
+        var (sut, cache, distributedLock) = CreateLockingSut();
+        AuthenticationResponse authResponse = CreateAuthResponse();
+        var steps = new List<string>();
+        var burned = false;
+
+        cache
+            .Setup(x => x.GetFromSharedStoreAsync<AuthenticationResponse>(exchangeKey, It.IsAny<CancellationToken>()))
+            .Callback(() => steps.Add("read"))
+            .ReturnsAsync(() => burned ? default : authResponse);
+        cache
+            .Setup(x => x.RemoveAsync(exchangeKey, It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                steps.Add("burn");
+                burned = true;
+            })
+            .Returns(Task.CompletedTask);
+        distributedLock
+            .Setup(x => x.TryAcquireAsync("lock:" + exchangeKey, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .Callback(() => steps.Add("acquire"))
+            .ReturnsAsync(() => new RecordingHandle(() => steps.Add("release")));
+
+        var first = await sut.ExchangeAsync(new OAuthCodeExchangeRequest(code), CancellationToken.None);
+        var second = await sut.ExchangeAsync(new OAuthCodeExchangeRequest(code), CancellationToken.None);
+
+        first.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(authResponse);
+        second.Should().BeOfType<BadRequestObjectResult>("the code was burned by the first exchange");
+        steps.Should().Equal(
+            ["acquire", "read", "burn", "release", "acquire", "read", "release"],
+            "the read and the burn both happen inside the lock, and every acquired lock is released");
+    }
+
+    private static (LockingTestOAuthController Sut, Mock<ICacheService> Cache, Mock<IDistributedLock> Lock) CreateLockingSut()
+    {
+        var cacheService = new Mock<ICacheService>();
+        var distributedLock = new Mock<IDistributedLock>();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal) { ["OAuth:UIBaseUrl"] = UIBaseUrl })
+            .Build();
+
+        var sut = new LockingTestOAuthController(
+            new Mock<IAuthenticationService>().Object,
+            cacheService.Object,
+            configuration,
+            distributedLock.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    RequestServices = new SingleServiceProvider(new Mock<AspNetAuthenticationService>().Object),
+                },
+            },
+        };
+
+        return (sut, cacheService, distributedLock);
+    }
+
+    private sealed class RecordingHandle(Action onRelease) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            onRelease();
+            return ValueTask.CompletedTask;
+        }
+    }
+
     // ── Test double: minimal request-services provider for the authentication extensions ──
     private sealed class SingleServiceProvider(AspNetAuthenticationService authenticationService) : IServiceProvider
     {
@@ -760,3 +859,13 @@ internal sealed class TestOAuthController(
     ICacheService cacheService,
     IConfiguration configuration)
     : OAuthControllerBase(authenticationService, cacheService, configuration);
+
+// The same controller handed an IDistributedLock through the base's optional constructor parameter,
+// the way a consumer's DI-activated subclass receives it.
+[ApiController]
+internal sealed class LockingTestOAuthController(
+    IAuthenticationService authenticationService,
+    ICacheService cacheService,
+    IConfiguration configuration,
+    IDistributedLock distributedLock)
+    : OAuthControllerBase(authenticationService, cacheService, configuration, distributedLock);
