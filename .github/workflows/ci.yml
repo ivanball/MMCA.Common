@@ -207,7 +207,8 @@ jobs:
       # windows runner), and `dotnet workload install maui` re-downloaded the android/ios/
       # maccatalyst packs on every single run. Cache the SDK's workload directories, keyed on the
       # resolved SDK version so an SDK feature-band bump busts it.
-      # A cache saved by a pull_request run is scoped to that PR's ref, so it hits on re-runs and later pushes within the same PR, not across PRs.
+      # A cache saved by a pull_request run is scoped to that PR's ref, so it hits on re-runs and
+      # later pushes within the same PR, not across PRs.
       - name: Resolve SDK version and root (workload cache key)
         if: needs.changes.outputs.code == 'true'
         id: sdk
@@ -381,11 +382,11 @@ jobs:
         # updating the baseline file in the same PR.
         run: dotnet run --project build/perfgate -- BenchmarkDotNet.Artifacts/results Tests/Performance/perf-baseline.json
 
-  # Merge the unit/architecture/bUnit + E2E coverage tiers into one report, publish it to the run
-  # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
-  # Runs after both test jobs regardless of their outcome.
+  # Turn the unit/architecture/bUnit coverage into a report, publish it to the run summary, and
+  # enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor"). Runs after
+  # build-and-test regardless of its outcome.
   coverage:
-    needs: [changes, build-and-test, ui-e2e]
+    needs: [changes, build-and-test]
     if: always()
     runs-on: ubuntu-latest
     # Recent runs take 19s-27s (measured 2026-09-30), so 2x is under a minute; 5 matches the
@@ -415,7 +416,7 @@ jobs:
             -reporttypes:'Html;TextSummary;MarkdownSummaryGithub' \
             -assemblyfilters:'+MMCA.*;-*.Tests' \
             -filefilters:'-**/*.generated.cs;-**/*.g.cs'
-          echo "## Test coverage (unit + bUnit + E2E)" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Test coverage (unit + architecture + bUnit)" >> "$GITHUB_STEP_SUMMARY"
           cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
           cat coverage-report/Summary.txt
 
