@@ -30,6 +30,28 @@
     <NoWarn>$(NoWarn);RMG020;S8970;RS0041</NoWarn>
   </PropertyGroup>
 
+  <!-- Accepted NuGet advisories. Each entry names its reachability argument; the CI audit step
+       (.github/actions/nuget-vulnerability-audit) re-applies exactly this list.
+       SixLabors.ImageSharp 3.1.12, five advisories published 2026-10-07, patched only in 4.1.2, which
+       the v3 license pin rules out (see Directory.Packages.props). The only decode path,
+       ImageSharpImageProcessor, registers JPEG/PNG/WebP/GIF decoders only and encodes JPEG only, and
+       every caller sniffs the bytes first (ImageContentSniffer):
+       - GHSA-j9gm-c75j-xc9q, GHSA-jjfr-hcj7-qf5w (high): TIFF CCITT T4/T6 ENCODER overruns; nothing
+         encodes TIFF.
+       - GHSA-wmxv-xphr-5c9g (moderate): BigTIFF IFD decoder loop; the TIFF decoder is not registered.
+       - GHSA-j3p4-wp97-rph4 (high): HistogramEqualization; no code calls it.
+       - GHSA-gwg2-r3hj-4w44 (moderate): ICC CLUT parsing allocates from unvalidated dimensions. The one
+         advisory reachable in principle, through an authenticated avatar upload carrying an ICC
+         profile; accepted as a bounded denial-of-service risk until a patched 3.x or a v4 license
+         exists. Revisit both on the next ImageSharp release. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+  </ItemGroup>
+
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>

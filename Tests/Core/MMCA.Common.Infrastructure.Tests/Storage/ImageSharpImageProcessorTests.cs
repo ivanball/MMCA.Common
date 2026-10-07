@@ -1,7 +1,13 @@
 using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Storage;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Tiff;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -141,5 +147,80 @@ public sealed class ImageSharpImageProcessorTests
         var result = await _sut.NormalizeToSquareJpegAsync(input, 256, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
+    }
+
+    // ── Accepted and refused input formats ──
+    private static async Task<MemoryStream> CreateSolidImageAsync(IImageEncoder encoder, int size = 16)
+    {
+        using var image = new Image<Rgba32>(size, size, new Rgba32(30, 120, 200));
+        var stream = new MemoryStream();
+        await image.SaveAsync(stream, encoder, TestContext.Current.CancellationToken);
+        stream.Position = 0;
+        return stream;
+    }
+
+    private async Task AssertNormalizedToSquareJpegAsync(MemoryStream input)
+    {
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 128, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        using var output = Image.Load(result.Value);
+        output.Width.Should().Be(128);
+        output.Height.Should().Be(128);
+        Image.DetectFormat(result.Value).Name.Should().Be("JPEG");
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithATiffImage_FailsAsUndecodable()
+    {
+        await using var input = await CreateSolidImageAsync(new TiffEncoder());
+
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 128, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Image.Undecodable");
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithABmpImage_FailsAsUndecodable()
+    {
+        await using var input = await CreateSolidImageAsync(new BmpEncoder());
+
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 128, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Image.Undecodable");
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithAJpegImage_Succeeds()
+    {
+        await using var input = await CreateSolidImageAsync(new JpegEncoder());
+
+        await AssertNormalizedToSquareJpegAsync(input);
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithAPngImage_Succeeds()
+    {
+        await using var input = await CreateSolidImageAsync(new PngEncoder());
+
+        await AssertNormalizedToSquareJpegAsync(input);
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithAWebpImage_Succeeds()
+    {
+        await using var input = await CreateSolidImageAsync(new WebpEncoder());
+
+        await AssertNormalizedToSquareJpegAsync(input);
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithAGifImage_Succeeds()
+    {
+        await using var input = await CreateSolidImageAsync(new GifEncoder());
+
+        await AssertNormalizedToSquareJpegAsync(input);
     }
 }
