@@ -38,8 +38,11 @@ public static partial class ArchitectureRules
     /// <remarks>
     /// <para>
     /// <b>How it looks.</b> IL, through the Mono.Cecil NetArchTest already carries: every method body
-    /// of every type (lambdas and async state machines included, since they are nested types of their
-    /// own) is searched for a call to one of the five getters.
+    /// of every type the module defines, nested and compiler-generated types included
+    /// (<c>ModuleDefinition.GetTypes()</c> flattens them), is searched for a call to one of the five
+    /// getters. That reaches a lambda or local function whichever shape the compiler gave it (a method
+    /// on a generated closure class, or a method on the declaring type itself) and the
+    /// <c>MoveNext</c> of an async or iterator state machine.
     /// </para>
     /// <para>
     /// <b>Allowlist entries</b> are a type full name, a namespace prefix, or one member written as

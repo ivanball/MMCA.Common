@@ -15,8 +15,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
 /// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
-/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (30 s TTL, best
-/// effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
+/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (15-minute TTL,
+/// <c>SoftDeletedUserCache.MarkerDuration</c>, best effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
 /// idempotent, retry-safe work there, or schedule an internal command inside the unit (as ADC does for
 /// the avatar blob).
 /// </summary>

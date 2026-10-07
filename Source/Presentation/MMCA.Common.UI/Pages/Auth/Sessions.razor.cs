@@ -154,8 +154,9 @@ public partial class Sessions : IDisposable
             }
             else if (result.IsNotFound())
             {
-                // Already gone (a duplicate click, or the device signed itself out): the user's
-                // intent is satisfied, so this is not an error to shout about.
+                // 404: the session is already revoked (the server answers Auth.SessionAlreadyRevoked
+                // after a duplicate click or once the device signed itself out) or no longer exists.
+                // Either way the user's intent is satisfied, so this is not an error to shout about.
                 Toast.Info(L["Auth.Sessions.AlreadyRevoked"]);
             }
             else

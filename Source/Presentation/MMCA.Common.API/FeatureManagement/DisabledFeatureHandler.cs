@@ -7,8 +7,9 @@ namespace MMCA.Common.API.FeatureManagement;
 
 /// <summary>
 /// Returns an RFC 9457 Problem Details 404 response when a <see cref="FeatureGateAttribute"/>-protected
-/// endpoint is accessed while its feature flag is disabled. Ensures disabled-feature responses
-/// are consistent with the standard <c>ApiControllerBase.HandleFailure</c> format.
+/// endpoint is accessed while its feature flag is disabled. The body is built here, not by
+/// <c>ApiControllerBase.HandleFailure</c>: a fixed title and detail with no <c>errors</c> extension,
+/// so every disabled feature answers with the same 404 whichever endpoint it guards.
 /// </summary>
 public sealed class DisabledFeatureHandler : IDisabledFeaturesHandler
 {

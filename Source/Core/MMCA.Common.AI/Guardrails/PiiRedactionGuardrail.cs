@@ -24,10 +24,9 @@ namespace MMCA.Common.AI.Guardrails;
 /// </para>
 /// </summary>
 /// <remarks>
-/// The two patterns are copied verbatim from the MMCA.ADC session scorer
-/// (<c>AnthropicScoringService.Redact</c>), so this framework guardrail removes exactly what that
-/// scorer removes today and the application-level copy can be deleted without changing what leaves
-/// the process. Names are NOT redacted: a speaker's name is the published conference record, and it
+/// The two patterns were copied verbatim from the redaction the MMCA.ADC session scorer used to do
+/// in-app. That application-level copy is gone: the scorer (now <c>SessionScoringService</c>)
+/// registers this guardrail instead, so what leaves the process did not change. Names are NOT redacted: a speaker's name is the published conference record, and it
 /// is the only handle a credibility judgement has on a track record. The phone pattern is
 /// deliberately narrow (a ten-digit North American shape with the usual separators and an optional
 /// country code) rather than "any run of digits": prose legitimately contains years, team sizes and

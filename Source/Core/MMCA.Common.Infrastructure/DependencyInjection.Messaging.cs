@@ -96,7 +96,7 @@ public static partial class DependencyInjection
 
             // Also replace IEventBus so application code that publishes integration events
             // (via IEventBus.PublishAsync) writes to the outbox
-            // and signals the OutboxProcessor — but does NOT dispatch in-process. The
+            // and signals the OutboxProcessor, but does NOT dispatch in-process. The
             // OutboxProcessor's broker-publish path becomes the only delivery channel.
             services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());
 

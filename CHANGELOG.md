@@ -80,7 +80,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Breaking
 
-- **Breaking:** `ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase` changes its `RequiredMarkers` default and gains the two facts both consumers re-authored, an AppHost that keeps a local `WithSelectedBroker` extension no longer compiles against `BrokerSelection`, and a host that keeps an app-local `JwtAudience` beside `MMCA.Common.API.Startup.Auth` gets an ambiguous reference. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking:** `ConstructorDependencyCountTestsBase` also fails when a ceiling is loose, `FormsConventionTestsBase` changes its `RequiredMarkers` default and gains the two facts both consumers re-authored, an AppHost that keeps a local `WithSelectedBroker` extension no longer compiles against `BrokerSelection`, and a host that keeps an app-local `JwtAudience` beside `MMCA.Common.API.Startup.Auth` gets an ambiguous reference. Map and fix: UPGRADING.md, [1.231.0].
 
 ### Added
 
@@ -433,7 +433,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Fixed
 
-- **Breaking:** `ChangePasswordHandlerBase` takes a required `ILoginProtectionService` (before `timeProvider`), `ITwoFactorService` gains `VerifyCode(secret, code, out long matchedStep)`, and `PasswordResetTokenService` takes a required `IDistributedLock`. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking:** `ChangePasswordHandlerBase` takes a required `ILoginProtectionService` (before `timeProvider`), `ITwoFactorService` gains `VerifyCode(secret, code, out long matchedStep)`, and `PasswordResetTokenService` takes a required `IDistributedLock`. Map and fix: UPGRADING.md, [1.213.0].
 - Fixed: a wrong second-factor code at sign-in now counts against the account lockout like a wrong password; a missing code still does not (M105).
 - Fixed: an accepted time-based code is remembered per account (`ICacheService`, for the life of the verification window) and a replay inside the window is refused (L56).
 - Fixed: change-password counts a wrong current password against a per-account lockout keyed `password-change:{userId}`, checks the lockout before verifying, and resets it on success (M108).
@@ -456,7 +456,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: `AddTypedServiceClient` configures its standard resilience handler from `HttpResilienceDefaults` instead of the library defaults (L58).
 - Fixed: `JwtForwardingClientInterceptor` forwards the access token saved on the authentication ticket when the inbound request has no `Authorization` header (a SignalR hub token sent as `?access_token=`); a present header still wins (H39).
 - Documented: `IHasOrderingKey` notes that a key with `BatchSize` or more pending rows fills the fetch window (L55); `SendPushNotificationHandler` notes that its live legs are at-least-once under an execution-strategy retry (M107); `DeleteUserHandlerBase` describes its marker and `afterCommit` tail as post-save, not post-commit, under an `ITransactional` command (L48).
-- **Breaking (C-3):** `ICacheService` gains `TryGetAsync<T>` (a default interface member, so implementations keep compiling) and `MarkAllNotificationsReadHandler` no longer takes an `IQueryableExecutor`. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking (C-3):** `ICacheService` gains `TryGetAsync<T>` (a default interface member, so implementations keep compiling) and `MarkAllNotificationsReadHandler` no longer takes an `IQueryableExecutor`. Map and fix: UPGRADING.md, [1.213.0].
 - Fixed: stored permission grants are cached under an upper-cased role key, so a role read with different casing than the stored row still finds its grants (M109).
 - Fixed: a cached permission-grant snapshot lives three refresh intervals instead of one, so it no longer expires in the gap before the next rebuild and survives two failed reloads before stored grants fail closed (M111).
 - Fixed: a concurrent duplicate `IPermissionGrantStore.GrantAsync` that loses the unique-index race answers success and detaches its failed insert instead of throwing (L52).

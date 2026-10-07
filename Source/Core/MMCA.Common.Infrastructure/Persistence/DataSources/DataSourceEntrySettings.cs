@@ -29,8 +29,10 @@ public sealed class DataSourceEntrySettings
 
     /// <summary>
     /// Gets the assembly containing EF Core migrations for this source's PostgreSQL database.
-    /// Falls back to the top-level <c>PostgreSQLMigrationsAssembly</c> when empty, exactly as
-    /// <see cref="SQLServerMigrationsAssembly"/> falls back to its top-level value.
+    /// When empty, a source that collapses onto <c>Default</c> takes the top-level
+    /// <c>PostgreSQLMigrationsAssembly</c>. A separate named PostgreSQL source does not fall back the
+    /// way <see cref="SQLServerMigrationsAssembly"/> does (to the Default value, with a warning): it
+    /// gets no migrations assembly unless its entry declares one here.
     /// </summary>
     public string PostgreSQLMigrationsAssembly { get; init; } = string.Empty;
 
@@ -43,10 +45,10 @@ public sealed class DataSourceEntrySettings
     /// holds no migrations, so a host that migrates its SQLite database declares this the same way
     /// a SQL Server host declares <see cref="SQLServerMigrationsAssembly"/>.
     /// <para>
-    /// There is deliberately no top-level fallback: <c>ConnectionStrings</c> carries only the SQL
-    /// Server migrations assembly, so a SQLite <c>Default</c> source declares its own here through a
-    /// <c>DataSources</c> entry that collapses onto Default (an entry whose connection string equals
-    /// the top-level one). That keeps a mixed-engine host from silently applying its SQL Server
+    /// There is deliberately no top-level fallback: <c>ConnectionStrings</c> carries SQL Server and
+    /// PostgreSQL migrations assemblies but no SQLite one, so a SQLite <c>Default</c> source declares
+    /// its own here through a <c>DataSources</c> entry that collapses onto Default (an entry whose
+    /// connection string equals the top-level one). That keeps a mixed-engine host from silently applying its SQL Server
     /// migrations assembly to a SQLite database.
     /// </para>
     /// </summary>

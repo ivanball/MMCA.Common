@@ -11,7 +11,7 @@ namespace MMCA.Common.API.Middleware;
 /// ProblemDetails response. Must be registered last in the exception handler pipeline so
 /// that more specific handlers (domain, validation, etc.) get first chance.
 /// <para>
-/// It maps one exception by type before falling back to 500: a
+/// It maps two exception types before falling back to 500. A
 /// <see cref="CrossTenantWriteException"/> is a caller fault, not a server fault, and is answered
 /// with <c>400 Bad Request</c>. The mapping lives here rather than in its own handler because the
 /// exception derives from <see cref="InvalidOperationException"/>, so nothing ahead of this handler
@@ -19,8 +19,10 @@ namespace MMCA.Common.API.Middleware;
 /// </para>
 /// <para>
 /// A <see cref="BadHttpRequestException"/> (a body over the endpoint's request size limit, or an
-/// unreadable request) is also a caller fault: it is answered with the status the exception carries
-/// (413 or 400) and logged at Warning.
+/// unreadable request) is also a caller fault: it is answered with the status the exception carries,
+/// passed through unchanged (413 for an oversize body, typically 400 otherwise, and any other client
+/// status the server set), titled "Payload Too Large" for a 413 and "Bad Request" for everything
+/// else, and logged at Warning.
 /// </para>
 /// </summary>
 /// <param name="problemDetailsService">The service used to write RFC 9457 problem details.</param>
@@ -73,7 +75,8 @@ public sealed class GlobalExceptionHandler(
         {
             // Warning, not error: the server (Kestrel or model binding) rejected a malformed or
             // oversize request, which is a caller fault. The exception already carries the status
-            // to answer (413 for a body over the endpoint's size limit, 400 otherwise).
+            // to answer, and it is passed through unchanged: 413 for a body over the endpoint's size
+            // limit, typically 400 otherwise, and whatever other client status the server set.
             logger.LogWarning(badRequest, "Bad request rejected with status {StatusCode}", badRequest.StatusCode);
 
             httpContext.Response.StatusCode = badRequest.StatusCode;

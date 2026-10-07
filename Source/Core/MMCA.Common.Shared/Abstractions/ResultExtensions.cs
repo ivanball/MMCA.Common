@@ -3,9 +3,13 @@ namespace MMCA.Common.Shared.Abstractions;
 /// <summary>
 /// Task-returning counterparts of the <see cref="Result{T}"/> combinators, so an asynchronous
 /// pipeline composes end to end without an intermediate <see langword="await"/> (and its temporary local)
-/// between every step. Each method awaits the incoming task once, then delegates to the same
-/// instance combinator, preserving its short-circuit behaviour: a failed result never runs the
-/// supplied delegate.
+/// between every step. Each method awaits the incoming task once and then applies one step:
+/// <c>BindAsync</c> delegates to the instance <c>BindAsync</c> (asynchronous binder) or <c>Bind</c>
+/// (synchronous binder), <c>MapAsync</c> to <c>Map</c>, and <c>MatchAsync</c> to the synchronous
+/// instance <c>Match</c>, since its branches are synchronous. <c>TapAsync</c> checks for success
+/// itself and awaits its action inline, because the instance <c>Tap</c> takes only a synchronous
+/// action. Every path keeps the short-circuit behaviour: a failed result never runs the supplied
+/// success delegate.
 /// </summary>
 public static class ResultExtensions
 {

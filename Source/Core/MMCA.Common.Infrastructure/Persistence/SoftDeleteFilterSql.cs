@@ -11,8 +11,9 @@ namespace MMCA.Common.Infrastructure.Persistence;
 /// <see cref="Conventions.SoftDeleteUniqueIndexConvention"/> (which applies it automatically to
 /// unique indexes) and by
 /// <see cref="Configuration.IndexBuilderExtensions.HasSoftDeleteFilter(Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder, DataSource, string?)"/>
-/// (which a hand-authored non-unique index opts into), so the two never disagree about identifier
-/// quoting or about which column carries the soft-delete flag.
+/// (which a hand-authored index opts into, unique or not: the push-notification dedup index is a
+/// unique one that calls it, and the convention then leaves its filter as it is), so the two never
+/// disagree about identifier quoting or about which column carries the soft-delete flag.
 /// </summary>
 internal static class SoftDeleteFilterSql
 {

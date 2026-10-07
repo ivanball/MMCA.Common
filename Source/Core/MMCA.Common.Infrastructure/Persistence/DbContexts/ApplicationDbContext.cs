@@ -388,7 +388,8 @@ public abstract class ApplicationDbContext(
 
         // Unique indexes on soft-deletable entities exclude deleted rows (runs at finalization,
         // after module configurations have declared their indexes), so a soft-deleted row does
-        // not block re-creating the "same" record. Hand-authored index filters are respected.
+        // not block re-creating the "same" record. A hand-authored index filter is kept and extended:
+        // the soft-delete clause is appended with AND unless the filter already constrains IsDeleted.
         configurationBuilder.Conventions.Add(_ => new SoftDeleteUniqueIndexConvention(DataSourceKey.Engine));
 
         // Restrict-by-default delete behavior (runs last of the three finalizing conventions, so it

@@ -10,9 +10,11 @@ using MMCA.Common.Shared.ValueObjects.Financial;
 namespace MMCA.Common.API.Export;
 
 /// <summary>
-/// Minimal RFC 4180 CSV writer used by the generic <c>/export</c> endpoint. It writes straight into a
-/// caller-supplied <see cref="TextWriter"/> one row at a time, so an export can stream to the response
-/// body without ever holding the full result set in memory.
+/// Minimal RFC 4180 CSV writer used by the generic <c>/export</c> endpoint. It writes into a
+/// caller-supplied <see cref="TextWriter"/> one row at a time. <c>EntityCsvExporter</c> points that
+/// writer at a per-page <see cref="MemoryStream"/> and drains it to the response body with awaited
+/// writes after each page, so an export holds at most one page of rendered CSV in memory, never the
+/// full result set.
 /// </summary>
 /// <remarks>
 /// <para>

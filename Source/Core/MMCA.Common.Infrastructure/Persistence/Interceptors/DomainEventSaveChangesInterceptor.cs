@@ -40,7 +40,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// resolved from the container <c>AddInfrastructure</c> registers it in, so tests can drive the stamp
 /// deterministically.</param>
 /// <param name="messageBusOptions">Transport posture supplying <c>IsOutboxEnabled</c>. When the
-/// outbox is off (<c>MessageBus:EnableOutbox=false</c>, the in-process default) no rows are written
+/// outbox is off (<c>MessageBus:EnableOutbox</c> resolving to false: set to false, or left unset,
+/// which is the in-process default) no rows are written
 /// and every captured event is dispatched in-process, exactly as a context without outbox support
 /// already behaves. A host that resolves no options keeps the outbox path.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(

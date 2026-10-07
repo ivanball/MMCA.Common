@@ -25,7 +25,8 @@ public static class SessionCookieEndpoints
             ArgumentNullException.ThrowIfNull(endpoints);
 
             // Both endpoints run before or after a session exists (the POST seeds the cookie jar at
-            // login, the DELETE clears it at logout), so they declare anonymity explicitly: under the
+            // login, except on a claims-only host, where it writes nothing and answers 204; the
+            // DELETE clears it at logout), so they declare anonymity explicitly: under the
             // default fallback authorization policy (SEC-Common-16) an undeclared endpoint requires an
             // authenticated caller, which would make sign-in impossible on a Blazor host.
             var group = endpoints.MapGroup("/auth/session-cookie")
@@ -54,7 +55,8 @@ public static class SessionCookieEndpoints
             // Same-origin validate-or-refresh. The browser calls this (credentials:'same-origin') to hydrate
             // its in-memory access token from the HttpOnly cookies; the refresh token never leaves the server.
             // 401 (JSON) when there is no valid session. AllowAnonymous (it authenticates via the cookies),
-            // antiforgery disabled (no token cookie), CSRF-guarded by POST + SameSite=Lax + Sec-Fetch-Site.
+            // antiforgery disabled (no token cookie), CSRF-guarded by POST + the cookies' configured SameSite
+            // (SessionCookieSettings.SameSite: Lax by default, Strict on the same-origin API proxy) + Sec-Fetch-Site.
             endpoints.MapPost("/auth/session/token", async (
                 HttpContext httpContext, ICookieSessionRefresher refresher, IOptions<SessionCookieSettings> settings, CancellationToken cancellationToken) =>
             {
@@ -83,8 +85,9 @@ public static class SessionCookieEndpoints
         }
     }
 
-    // Reject obvious cross-site POSTs (defense-in-depth alongside the cookie's SameSite=Lax, which already
-    // blocks cross-site cookie attachment). Absent header → allow (older browsers).
+    // Reject obvious cross-site POSTs (defense-in-depth alongside the cookies' configured SameSite, which
+    // at its Lax default, or Strict, already blocks cross-site cookie attachment on a POST). An absent
+    // header is allowed (older browsers).
     private static bool IsCrossSite(HttpRequest request) =>
         request.Headers.TryGetValue("Sec-Fetch-Site", out var site) &&
         string.Equals(site.ToString(), "cross-site", StringComparison.OrdinalIgnoreCase);

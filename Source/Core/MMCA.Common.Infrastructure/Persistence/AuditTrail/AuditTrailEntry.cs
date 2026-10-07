@@ -9,8 +9,10 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// Deliberately <b>not</b> an <c>IAuditableEntity</c>, exactly like <c>OutboxMessage</c> and
 /// <c>ScheduledJobEntry</c>: this is framework bookkeeping, not domain state. It carries no
 /// soft-delete flag (so no global query filter applies to it), no audit stamps of its own, and no
-/// concurrency token. Rows are append-only: nothing in the framework ever updates one, and the only
-/// deletion is the retention sweep in <see cref="AuditTrailCleanupJob"/>.
+/// concurrency token. Rows are append-only in substance: the one update the framework makes is
+/// <see cref="AuditTrailSaveChangesInterceptor"/> rewriting <see cref="EntityKey"/> once a
+/// store-generated key has been assigned (see that property), no other column ever changes, and the
+/// only deletion is the retention sweep in <see cref="AuditTrailCleanupJob"/>.
 /// </para>
 /// <para>
 /// <b>Row shape.</b> A <c>Modified</c> save produces one row per property whose value actually

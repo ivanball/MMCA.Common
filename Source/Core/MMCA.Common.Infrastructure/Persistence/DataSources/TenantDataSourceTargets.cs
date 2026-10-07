@@ -29,8 +29,9 @@ public readonly record struct TenantDataSourceTarget(DataSourceKey Source, strin
 /// <remarks>
 /// <para>
 /// A shared-schema tenant needs nothing here: its rows live in the shared database, which the
-/// null-tenant target already drains, and the outbox has no tenant column precisely so adopting
-/// tenancy never forces a migration on a consumer.
+/// null-tenant target already drains. The outbox's <c>TenantId</c> column does not partition that
+/// drain: it records the raising scope's tenant, which the processor restores around each row's
+/// delivery, so one batch can hold rows of several shared-schema tenants.
 /// </para>
 /// <para>
 /// A tenant with its own database is invisible to the shared sweep: its outbox rows, and its trail

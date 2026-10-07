@@ -24,8 +24,8 @@ public abstract class ApiControllerBase : ControllerBase
     /// downgraded by error ordering: a 403 or 500 travelling alongside a validation error still
     /// answers 403 or 500. Ranking, most to least severe:
     /// <see cref="ErrorType.Unexpected"/> (500) &gt; <see cref="ErrorType.Unauthorized"/> (401) &gt;
-    /// <see cref="ErrorType.Forbidden"/> (403) &gt; <see cref="ErrorType.Conflict"/> (409) &gt;
-    /// <see cref="ErrorType.NotFound"/> (404) &gt; <see cref="ErrorType.UnprocessableEntity"/> (422) &gt;
+    /// <see cref="ErrorType.Forbidden"/> (403) &gt; <see cref="ErrorType.TooManyRequests"/> (429) &gt;
+    /// <see cref="ErrorType.Conflict"/> (409) &gt; <see cref="ErrorType.NotFound"/> (404) &gt; <see cref="ErrorType.UnprocessableEntity"/> (422) &gt;
     /// <see cref="ErrorType.Invariant"/> / <see cref="ErrorType.Validation"/> /
     /// <see cref="ErrorType.Failure"/> (400). Equal ranks keep the earliest error.
     /// </para>
