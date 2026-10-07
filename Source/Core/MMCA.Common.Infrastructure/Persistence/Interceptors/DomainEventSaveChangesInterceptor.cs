@@ -16,7 +16,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// <list type="bullet">
 ///   <item><b>Local domain events</b> are dispatched in-process via
 ///   <see cref="IDomainEventDispatcher"/> and their outbox rows marked processed; the
-///   <see cref="OutboxProcessor"/> acts as a safety net if that dispatch fails.</item>
+///   <see cref="OutboxProcessor"/> acts as a safety net if that dispatch fails. On the async path
+///   their rows are inserted already leased (<c>Outbox:LeaseSeconds</c>), so no replica's poller
+///   delivers an event a second time while this process is still handling it; a failed dispatch
+///   releases the lease so the processor retries promptly, and a crash leaves the rows to be
+///   retried once the lease expires.</item>
 ///   <item><b>Integration events</b> (<see cref="IIntegrationEvent"/>) are NOT dispatched
 ///   in-process: their outbox rows stay unprocessed and the <see cref="OutboxProcessor"/>
 ///   publishes them via <c>IMessageBus</c>, so the registered transport (in-process for the
@@ -44,16 +48,22 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// which is the in-process default) no rows are written
 /// and every captured event is dispatched in-process, exactly as a context without outbox support
 /// already behaves. A host that resolves no options keeps the outbox path.</param>
+/// <param name="outboxOptions">Supplies <c>Outbox:LeaseSeconds</c>, the lease a local event's row is
+/// inserted under while its in-process dispatch runs. A host that resolves no options gets the
+/// setting's default.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
     Outbox.Processing.IOutboxSignal outboxSignal,
     TimeProvider timeProvider,
-    Microsoft.Extensions.Options.IOptions<Messaging.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
+    Microsoft.Extensions.Options.IOptions<Messaging.MessageBusSettings>? messageBusOptions = null,
+    Microsoft.Extensions.Options.IOptions<Outbox.Administration.OutboxSettings>? outboxOptions = null) : SaveChangesInterceptor
 {
     private readonly TimeProvider _timeProvider = timeProvider;
 
     private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
+
+    private readonly int _localLeaseSeconds = (outboxOptions?.Value ?? new Outbox.Administration.OutboxSettings()).LeaseSeconds;
 
     /// <summary>
     /// Per-context state captured before save and consumed after save.
@@ -83,8 +93,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
+        // Only the async path dispatches in-process, so only it leases the local rows it writes.
         if (eventData.Context is ApplicationDbContext context)
-            CaptureEventsAndPersistToOutbox(context, _outboxEnabled);
+            CaptureEventsAndPersistToOutbox(context, _outboxEnabled, NewLocalLease());
 
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
@@ -94,8 +105,10 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         DbContextEventData eventData,
         InterceptionResult<int> result)
     {
+        // No lease: the sync path never dispatches in-process (see SavedChanges), so its rows belong
+        // to the processor from the start and must not wait out a lease nobody will release.
         if (eventData.Context is ApplicationDbContext context)
-            CaptureEventsAndPersistToOutbox(context, _outboxEnabled);
+            CaptureEventsAndPersistToOutbox(context, _outboxEnabled, localLease: null);
 
         return base.SavingChanges(eventData, result);
     }
@@ -141,7 +154,8 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// <summary>
     /// Flushes any post-save work that was deferred while <paramref name="context"/> had an
     /// active transaction. Called by <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/> after a successful
-    /// commit; a missed flush is safe (rows stay unprocessed and the outbox delivers them).
+    /// commit; a missed flush is safe (rows stay unprocessed and the outbox delivers them once
+    /// their lease expires).
     /// </summary>
     internal static async Task FlushDeferredAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
@@ -205,7 +219,13 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// a context with no outbox table: every captured event is dispatched in-process and nothing is
     /// persisted.
     /// </param>
-    private static void CaptureEventsAndPersistToOutbox(ApplicationDbContext context, bool outboxEnabled)
+    /// <param name="localLease">
+    /// The lease local-event rows are inserted under, or <see langword="null"/> to insert them
+    /// unleased. A leased row is skipped by every replica's <see cref="OutboxProcessor"/> while this
+    /// process dispatches the event in-process, so no poller delivers it a second time meanwhile.
+    /// Integration-event rows are never leased: nothing in-process delivers them.
+    /// </param>
+    private static void CaptureEventsAndPersistToOutbox(ApplicationDbContext context, bool outboxEnabled, LocalLease? localLease)
     {
         // A previous SavingChanges that never reached SavedChanges (a failed save, then an
         // execution-strategy retry of the same operation) left its outbox rows tracked as Added
@@ -250,9 +270,6 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             foreach (var domainEvent in domainEvents)
             {
                 var entry = OutboxMessage.FromDomainEvent(domainEvent, origin);
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
-                context.Set<OutboxMessage>().Add(entry);
-#pragma warning restore VSTHRD103
 
                 if (domainEvent is IIntegrationEvent)
                 {
@@ -260,9 +277,14 @@ public sealed partial class DomainEventSaveChangesInterceptor(
                 }
                 else
                 {
+                    ApplyLocalLease(entry, localLease);
                     locals.Add(domainEvent);
                     localOutboxEntries.Add(entry);
                 }
+
+#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
+                context.Set<OutboxMessage>().Add(entry);
+#pragma warning restore VSTHRD103
             }
 
             localEvents = [.. locals];
@@ -275,9 +297,23 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             localEvents = domainEvents;
         }
 
-        var state = new CapturedState(captures, localEvents, localOutboxEntries, hasIntegrationEvents);
+        var state = new CapturedState(captures, localEvents, localOutboxEntries, hasIntegrationEvents, localLease?.Token);
         StateTable.AddOrUpdate(context, state);
     }
+
+    /// <summary>Leases a fresh local row; a null <paramref name="localLease"/> leaves it unleased.</summary>
+    private static void ApplyLocalLease(OutboxMessage entry, LocalLease? localLease)
+    {
+        if (localLease is not { } lease)
+            return;
+
+        entry.LockedUntil = lease.Until;
+        entry.LockToken = lease.Token;
+    }
+
+    /// <summary>A fresh lease for the local rows of one save: now plus <c>Outbox:LeaseSeconds</c>, under a new token.</summary>
+    private LocalLease NewLocalLease() =>
+        new(_timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_localLeaseSeconds), Guid.NewGuid());
 
     /// <summary>
     /// Detaches the outbox rows written by a capture whose save never completed, so the next
@@ -348,8 +384,11 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         {
             LogDispatchError(logger, ex);
 
-            // In-process dispatch failed — signal the outbox processor to pick up
-            // the unprocessed entries once the processing delay has elapsed.
+            // In-process dispatch failed. Release the lease the local rows were inserted under, so
+            // the processor can take them once the processing delay has elapsed rather than after
+            // the full lease, then signal it to pick up the unprocessed entries.
+            await ReleaseLocalLeaseAsync(context, state).ConfigureAwait(false);
+
             if (state.LocalOutboxEntries.Count > 0 || state.HasIntegrationEvents)
                 outboxSignal.Signal();
         }
@@ -357,6 +396,28 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         {
             // Idempotent — covers the dispatch-failure path.
             ClearDomainEvents(state);
+        }
+    }
+
+    /// <summary>
+    /// Clears the lease on this save's local rows, guarded by the save's lease token. Best effort:
+    /// when it fails the rows simply wait out the lease, and a failure here must not escape the
+    /// save that already committed. <see cref="CancellationToken.None"/> on purpose, because a
+    /// dispatch that failed by cancellation still has to hand its rows back.
+    /// </summary>
+    private async Task ReleaseLocalLeaseAsync(ApplicationDbContext context, CapturedState state)
+    {
+        if (state.LocalLeaseToken is not { } leaseToken || state.LocalOutboxEntries.Count == 0)
+            return;
+
+        try
+        {
+            await OutboxFinalizer.ReleaseLeaseAsync(context, state.LocalOutboxEntries, leaseToken, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogLeaseReleaseFailed(logger, ex);
         }
     }
 
@@ -375,6 +436,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     [LoggerMessage(Level = LogLevel.Warning, Message = "In-process domain event dispatch failed; the outbox processor will retry")]
     private static partial void LogDispatchError(ILogger logger, Exception exception);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not release the outbox lease after a failed in-process dispatch; the outbox processor will retry once the lease expires")]
+    private static partial void LogLeaseReleaseFailed(ILogger logger, Exception exception);
+
     /// <summary>One tracked aggregate root and the exact events captured from it for this save.</summary>
     /// <param name="Entry">The tracked aggregate root.</param>
     /// <param name="Events">The events snapshotted at capture time, removed again after dispatch.</param>
@@ -387,11 +451,18 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// <param name="LocalEvents">Events to dispatch in-process (excludes integration events on outbox-enabled contexts).</param>
     /// <param name="LocalOutboxEntries">Outbox rows backing <paramref name="LocalEvents"/>, marked processed after successful dispatch.</param>
     /// <param name="HasIntegrationEvents">Whether any captured event routes through the outbox to <c>IMessageBus</c>.</param>
+    /// <param name="LocalLeaseToken">The token <paramref name="LocalOutboxEntries"/> were leased under, or null when they were inserted unleased.</param>
     private sealed record CapturedState(
         AggregateCapture[] Captures,
         IDomainEvent[] LocalEvents,
         List<OutboxMessage> LocalOutboxEntries,
-        bool HasIntegrationEvents);
+        bool HasIntegrationEvents,
+        Guid? LocalLeaseToken);
+
+    /// <summary>The lease one save's local rows are inserted under.</summary>
+    /// <param name="Until">When the lease expires and pollers may take the rows.</param>
+    /// <param name="Token">The token the release on a failed dispatch is guarded by.</param>
+    private readonly record struct LocalLease(DateTime Until, Guid Token);
 
     /// <summary>A unit of post-commit work: the interceptor that captured it plus its state.</summary>
     private sealed record DeferredDispatch(DomainEventSaveChangesInterceptor Owner, CapturedState State);

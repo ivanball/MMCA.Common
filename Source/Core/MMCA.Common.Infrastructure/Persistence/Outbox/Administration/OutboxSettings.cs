@@ -76,7 +76,9 @@ public sealed class OutboxSettings
     /// Gets how long, in seconds, a processor replica's claim on a batch of outbox rows lasts.
     /// Other replicas skip rows with an unexpired lease, so concurrent replicas never
     /// double-dispatch; if a replica dies mid-batch, its rows become claimable again once the
-    /// lease expires. Must comfortably exceed the time to dispatch one batch. Defaults to <c>300</c>.
+    /// lease expires. The lease is renewed just before each row is dispatched, so it must
+    /// comfortably exceed the time to dispatch one message. Local domain-event rows are also
+    /// inserted under this lease while their in-process dispatch runs. Defaults to <c>300</c>.
     /// </summary>
     [Range(10, 3600)]
     public int LeaseSeconds { get; init; } = 300;
