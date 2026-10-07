@@ -438,4 +438,106 @@ public sealed class SessionsTests : BunitTestBase
         navigation.Uri.Should().Be(uriBefore);
         _auth.Verify(a => a.LogoutAsync(), Times.Never());
     }
+
+    // ==================== Busy state behind a real (asynchronous) confirm dialog ====================
+    // A-35 (local test run 7): a real confirm dialog completes asynchronously, so the click handler has
+    // already yielded (and Blazor has already rendered once) by the time the user answers. The busy
+    // flag is set only after that await and nothing re-renders before the long revoke call, so the
+    // button showed no busy state for the whole revoke. The constructor's synchronous ConfirmAsync
+    // double hides this, so these tests answer the dialog through a pending task instead.
+    private static readonly TimeSpan BusyRenderTimeout = TimeSpan.FromSeconds(2);
+
+    private TaskCompletionSource<bool> ArrangePendingConfirm()
+    {
+        var confirm = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(confirm.Task);
+        return confirm;
+    }
+
+    private static bool IsAriaBusy(IElement element) =>
+        string.Equals(element.GetAttribute("aria-busy"), "true", StringComparison.Ordinal);
+
+    [Fact]
+    public void SignOutEverywhere_AfterAnAsynchronousConfirm_RendersTheBusyStateBeforeTheRevokeCompletes()
+    {
+        var confirm = ArrangePendingConfirm();
+        var revoke = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _auth.Setup(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>())).Returns(revoke.Task);
+
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(SignOutEverywhereSelector).Click();
+        confirm.SetResult(true);
+
+        // The revoke is now in flight (and stays there until the test completes it).
+        cut.WaitForAssertion(() => _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Once()));
+
+        cut.WaitForAssertion(
+            () =>
+            {
+                var button = cut.Find(SignOutEverywhereSelector);
+                IsAriaBusy(button).Should().BeTrue(
+                    "A-35: the sign-out-everywhere button must render its busy state (aria-busy) while the revoke is in flight");
+                IsDisabled(button).Should().BeTrue(
+                    "A-35: the sign-out-everywhere button must render disabled while the revoke is in flight");
+                button.QuerySelector(".mud-progress-circular").Should().NotBeNull(
+                    "A-35: the sign-out-everywhere button must show its progress indicator while the revoke is in flight");
+            },
+            BusyRenderTimeout);
+        IsDisabled(cut.Find(OtherDeviceButtonSelector)).Should().BeTrue(
+            "A-35: every revoke button must be locked while the account-wide revoke is in flight");
+
+        // A refused revoke keeps the user on the page, so the busy state must visibly clear.
+        revoke.SetResult(Result.Failure(Error.Failure("Auth.Sessions.RevokeAllFailed", "Your other devices could not be signed out.")));
+
+        cut.WaitForAssertion(() =>
+        {
+            var button = cut.Find(SignOutEverywhereSelector);
+            IsAriaBusy(button).Should().BeFalse();
+            IsDisabled(button).Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public void ARowsRevoke_AfterAnAsynchronousConfirm_RendersTheBusyStateBeforeTheRevokeCompletes()
+    {
+        var confirm = ArrangePendingConfirm();
+        var revoke = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _auth.Setup(a => a.RevokeSessionAsync(OtherSessionId, It.IsAny<CancellationToken>())).Returns(revoke.Task);
+
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(OtherDeviceButtonSelector).Click();
+        confirm.SetResult(true);
+
+        cut.WaitForAssertion(() =>
+            _auth.Verify(a => a.RevokeSessionAsync(OtherSessionId, It.IsAny<CancellationToken>()), Times.Once()));
+
+        cut.WaitForAssertion(
+            () =>
+            {
+                var button = cut.Find(OtherDeviceButtonSelector);
+                IsAriaBusy(button).Should().BeTrue(
+                    "A-35: the row's sign-out button must render its busy state (aria-busy) while its revoke is in flight");
+                IsDisabled(button).Should().BeTrue(
+                    "A-35: the row's sign-out button must render disabled while its revoke is in flight");
+                button.QuerySelector(".mud-progress-circular").Should().NotBeNull(
+                    "A-35: the row's sign-out button must show its progress indicator while its revoke is in flight");
+            },
+            BusyRenderTimeout);
+        IsDisabled(cut.Find(SignOutEverywhereSelector)).Should().BeTrue(
+            "A-35: the account-wide button must be locked while a row's revoke is in flight");
+
+        revoke.SetResult(Result.Success());
+
+        cut.WaitForAssertion(() =>
+        {
+            var button = cut.Find(OtherDeviceButtonSelector);
+            IsAriaBusy(button).Should().BeFalse();
+            IsDisabled(button).Should().BeFalse();
+        });
+    }
 }
