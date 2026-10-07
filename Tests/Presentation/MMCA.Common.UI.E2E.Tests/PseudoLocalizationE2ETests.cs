@@ -17,7 +17,7 @@ namespace MMCA.Common.UI.E2E.Tests;
 /// <item><description>the page does not overflow horizontally under the pseudo pass's ~40% text
 /// expansion — the rubric's layout-tolerance criterion, previously unevidenced.</description></item>
 /// </list>
-/// Running in the required chromium <c>ui-e2e</c> job promotes the pseudo pass from a developer
+/// Running in every leg of the required <c>ui-e2e</c> matrix (chromium, firefox and webkit) promotes the pseudo pass from a developer
 /// diagnostic to a CI gate. A leak-guard test also asserts the sentinel is absent under the default
 /// culture, so pseudo text can never ship to a real locale unnoticed.
 /// </summary>
