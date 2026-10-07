@@ -754,6 +754,7 @@ MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders
 MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! tokenStore) -> void
+MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.ClearTokensAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
