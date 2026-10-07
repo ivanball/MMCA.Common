@@ -89,6 +89,26 @@ public sealed class AuthSessionIssuerReuseGraceTests
         otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
     }
 
+    // The loser re-reads the row and finds a sign-out of that same row won the race: the device lost
+    // its session, which is not a theft signal, so only this request fails, exactly as the lookup
+    // path answers a signed-out row.
+    [Fact]
+    public async Task RotateAsync_WhenTheRotationLosesTheRaceToASignOut_FailsAlone_AndKeepsTheFamily()
+    {
+        var store = new RaceStore();
+        var presented = store.SeedLive(PresentedToken);
+        var otherDevice = store.SeedLive("phone-token");
+        store.RotationClaimed = false;
+        store.SetUntrackedView(RevokedCopyOf(presented, Now.AddSeconds(-1), RefreshSession.ReasonSignedOut, replacedBy: null));
+
+        Result<AuthenticationResponse> result = await RotateAsync(store);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken" && e.Type == ErrorType.Unauthorized);
+        otherDevice.IsRevoked.Should().BeFalse("a sign-out is not token reuse, so the user's other sessions stay live");
+        store.FamilyReads.Should().Be(0, "no family revocation runs for a lost race to a sign-out");
+    }
+
     // (c) The token was already rotated a moment ago (the lookup finds the revoked row): a 409.
     [Fact]
     public async Task RotateAsync_WhenTheTokenWasRotatedWithinTheGrace_ReturnsConflict_AndKeepsTheFamily()

@@ -41,6 +41,16 @@ public sealed class DirectApiTokenRefresherTests
             Content = JsonContent.Create(new AuthenticationResponse(accessToken, refreshToken, DateTime.UtcNow.AddMinutes(15))),
         };
 
+    /// <summary>The API's answer when the presented token was rotated by another request inside the reuse grace.</summary>
+    private static HttpResponseMessage SupersededResponse() =>
+        new(HttpStatusCode.Conflict)
+        {
+            Content = new StringContent(
+                """{ "title": "Conflict", "status": 409, "errors": [ { "code": "Auth.RefreshSuperseded", "message": "The refresh token was already rotated by a concurrent request; retry with the current session.", "type": "Conflict" } ] }""",
+                System.Text.Encoding.UTF8,
+                "application/problem+json"),
+        };
+
     // == Happy path ==
     [Fact]
     public async Task AcquireAccessTokenAsync_WithStoredPair_ExchangesAtAuthRefreshAndRotates()
@@ -116,6 +126,65 @@ public sealed class DirectApiTokenRefresherTests
 
         result.Should().BeNull();
         mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    // == 409 refresh superseded: transient, never a sign-out ==
+    // Someone else rotated this client's refresh token inside the server's reuse grace. If the client
+    // dropped its token here it would never present it again, and the server's reuse detection
+    // (BR-206) would never revoke the other holder's family. So the stored pair is kept, the outcome
+    // is transient, and the next attempt presents the same token again.
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRefreshIsSuperseded_IsTransient_KeepsTheStoredPair_AndPresentsItAgain()
+    {
+        var (sut, mocks) = CreateSut(_ => SupersededResponse());
+        ITokenRefresher refresher = sut;
+        var sessionAware = refresher.Should().BeAssignableTo<ISessionAwareTokenRefresher>().Subject;
+
+        var acquisition = await sessionAware.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+        await sessionAware.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeTrue("a 409 says nothing about whether this client's session is gone");
+        acquisition.AccessToken.Should().BeNull();
+        mocks.TokenStore.Verify(s => s.ClearTokensAsync(), Times.Never);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        mocks.Handler.CallCount.Should().Be(2);
+        mocks.Handler.LastRequest.Body.Should().Contain("old-refresh", "the next attempt presents the same refresh token again");
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRefreshIsSuperseded_ByANewerPairAlreadyStored_UsesTheStoredPair()
+    {
+        // Another refresh in this process won the race and stored its rotated pair while this one
+        // was in flight: the store is re-read and the newer pair is the answer.
+        Mocks? captured = null;
+        var (sut, mocks) = CreateSut(_ =>
+        {
+            captured!.TokenStore.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("winner-access");
+            captured.TokenStore.Setup(s => s.GetRefreshTokenAsync()).ReturnsAsync("winner-refresh");
+            return SupersededResponse();
+        });
+        captured = mocks;
+        ITokenRefresher refresher = sut;
+        var sessionAware = refresher.Should().BeAssignableTo<ISessionAwareTokenRefresher>().Subject;
+
+        var acquisition = await sessionAware.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.AccessToken.Should().Be("winner-access");
+        mocks.TokenStore.Verify(s => s.ClearTokensAsync(), Times.Never);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRefreshEndpointRejects_ReportsNoSession()
+    {
+        var (sut, _) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized));
+        ITokenRefresher refresher = sut;
+        var sessionAware = refresher.Should().BeAssignableTo<ISessionAwareTokenRefresher>().Subject;
+
+        var acquisition = await sessionAware.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeFalse("a 401 is the definitive answer that the session is gone");
+        acquisition.AccessToken.Should().BeNull();
     }
 
     [Fact]

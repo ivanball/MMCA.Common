@@ -153,7 +153,26 @@ public sealed class AuthUIService(
         // Delegates to the host-specific refresher: browser hosts refresh via the same-origin cookie proxy
         // (refresh token stays server-side); MAUI refreshes directly from SecureStorage. A null result means
         // the session can no longer be refreshed (missing/expired/revoked credential) -> treat as logout.
-        var accessToken = await tokenRefresher.AcquireAccessTokenAsync(cancellationToken);
+        // A refresher that reports WHY (ISessionAwareTokenRefresher) can also answer "transient": the
+        // attempt says nothing about the session (for the direct refresher, a 409 refresh-superseded),
+        // so the stored credential is kept for the next attempt rather than cleared. Clearing it would
+        // stop this client from ever presenting a token someone else rotated, which is what lets the
+        // server's reuse detection (BR-206) revoke the other holder's session.
+        string? accessToken;
+        if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
+        {
+            var acquisition = await sessionAware.TryAcquireAccessTokenAsync(cancellationToken);
+            if (acquisition.IsUnavailable)
+            {
+                return false;
+            }
+
+            accessToken = acquisition.AccessToken;
+        }
+        else
+        {
+            accessToken = await tokenRefresher.AcquireAccessTokenAsync(cancellationToken);
+        }
 
         if (string.IsNullOrWhiteSpace(accessToken))
         {

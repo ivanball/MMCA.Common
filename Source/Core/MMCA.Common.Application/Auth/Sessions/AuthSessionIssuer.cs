@@ -383,7 +383,8 @@ public sealed class AuthSessionIssuer(
     /// in-memory mutation: two requests presenting the same still-live token both read an un-revoked
     /// row, and the store is what decides which of them owns the rotation. The loser re-reads the row
     /// untracked (<see cref="IRefreshSessionStore.FindByIdUntrackedAsync"/>): a rotation within
-    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> is answered 409 with nothing revoked, and
+    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> is answered 409 with nothing revoked, a
+    /// sign-out or cap eviction of the same row fails that request alone (as the lookup path does), and
     /// anything else is answered exactly like a replay (family revoked, BR-206).
     /// </para>
     /// </summary>
@@ -424,12 +425,20 @@ public sealed class AuthSessionIssuer(
             var current = await refreshSessions
                 .FindByIdUntrackedAsync(session.Id, cancellationToken)
                 .ConfigureAwait(false);
+            if (current is not null && !IsReuseSignal(current))
+            {
+                // The race was lost to a sign-out or a cap eviction of this same row: that device
+                // lost its session, which is not a theft signal, so only this request fails, exactly
+                // as the lookup path answers the same row (ResolveRotatableSessionAsync).
+                return Result.Failure<IssuedSession>(InvalidRefreshTokenError());
+            }
+
             if (current is not null && IsWithinRotationGrace(current, now))
             {
                 return Result.Failure<IssuedSession>(RefreshSupersededError());
             }
 
-            // Rotated longer ago than the grace, revoked for another reason, or unreadable: that is
+            // Rotated longer ago than the grace, already flagged as reuse, or unreadable: that is
             // indistinguishable from a replay, and it gets the replay answer: the whole live family
             // goes (BR-206).
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)

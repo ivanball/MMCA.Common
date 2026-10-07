@@ -126,6 +126,28 @@ public sealed class OutboxProcessorPerRowStampTests : IDisposable
         persisted[third].ProcessedOn.Should().BeNull("the third row was never attempted");
     }
 
+    // A shutdown signalled while row 1's delivery is in flight, by a handler that finishes anyway
+    // (it never observes the token). The row WAS delivered, so its stamp must still land in the
+    // database, and only then does the shutdown continue.
+    [Fact]
+    public async Task ShutdownDuringADeliveryThatCompletesAnyway_StillLeavesTheRowProcessedInTheDatabase()
+    {
+        using var cts = new CancellationTokenSource();
+        var (first, second, third) = await SeedThreeRowsAsync();
+
+        _dispatcher
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .Returns<IEnumerable<IDomainEvent>, CancellationToken>(async (_, _) => await cts.CancelAsync());
+
+        Func<Task> act = () => _sut.ProcessPendingMessagesAsync(cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>("the shutdown continues once the outcome is recorded");
+
+        var persisted = await ReadAllAsync();
+        persisted[first].ProcessedOn.Should().NotBeNull("the delivery completed, so the shutdown must not cost the row its stamp");
+        persisted[second].ProcessedOn.Should().BeNull("the shutdown stops the batch before the next row");
+        persisted[third].ProcessedOn.Should().BeNull("the third row was never attempted");
+    }
+
     // A batch whose end-of-batch save fails (the connection drops after the last publish) still
     // leaves every delivered row stamped: each stamp landed as its row was sent.
     [Fact]

@@ -527,6 +527,69 @@ public sealed class AuthUIServiceTests : IDisposable
         _authStates[0].User.Identity!.IsAuthenticated.Should().BeFalse();
     }
 
+    // The direct (MAUI) refresher answered 409: someone else rotated this client's refresh token
+    // inside the server's reuse grace. That is transient, not a sign-out: the stored pair must survive
+    // so the next attempt presents the same token again and trips the server's reuse detection.
+    [Fact]
+    public async Task TryRefreshTokenAsync_WithTheDirectRefresher_WhenTheRefreshIsSuperseded_KeepsTheStoredTokens()
+    {
+        var secureStore = SecureStoreHolding("r1-access", "r1-refresh");
+        var sut = CreateSutWithDirectRefresher(secureStore, HttpStatusCode.Conflict);
+
+        var refreshedOk = await sut.TryRefreshTokenAsync(Ct);
+
+        refreshedOk.Should().BeFalse("no token was acquired this time");
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Never);
+        secureStore.Verify(s => s.ClearTokensAsync(), Times.Never);
+        secureStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        (await secureStore.Object.GetRefreshTokenAsync()).Should().Be("r1-refresh");
+        _authStates.Should().BeEmpty("a transient refresh failure is not a sign-out");
+    }
+
+    [Fact]
+    public async Task TryRefreshTokenAsync_WithTheDirectRefresher_WhenTheRefreshIsRejected_ClearsTheTokens()
+    {
+        var secureStore = SecureStoreHolding("r1-access", "r1-refresh");
+        var sut = CreateSutWithDirectRefresher(secureStore, HttpStatusCode.Unauthorized);
+
+        var refreshedOk = await sut.TryRefreshTokenAsync(Ct);
+
+        refreshedOk.Should().BeFalse();
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Once);
+        secureStore.Verify(s => s.ClearTokensAsync(), Times.Once);
+        _authStates.Should().ContainSingle();
+        _authStates[0].User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    private static Mock<ISecureTokenStore> SecureStoreHolding(string accessToken, string refreshToken)
+    {
+        var secureStore = new Mock<ISecureTokenStore>();
+        secureStore.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync(accessToken);
+        secureStore.Setup(s => s.GetRefreshTokenAsync()).ReturnsAsync(refreshToken);
+        return secureStore;
+    }
+
+    /// <summary>
+    /// The MAUI composition: the real <see cref="DirectApiTokenRefresher"/> over a secure store, with
+    /// the token storage clearing that same store (as <c>MauiTokenStorageService</c> does).
+    /// </summary>
+    private AuthUIService CreateSutWithDirectRefresher(Mock<ISecureTokenStore> secureStore, HttpStatusCode refreshStatus)
+    {
+        _handler.Dispose();
+        _handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.CreateResponse(refreshStatus));
+        _tokenStorage.Setup(s => s.ClearTokensAsync()).Returns(() => secureStore.Object.ClearTokensAsync());
+        var factory = new StubHttpClientFactory(_handler);
+
+        return new AuthUIService(
+            factory,
+            _tokenStorage.Object,
+            new DirectApiTokenRefresher(factory, secureStore.Object),
+            _authStateProvider,
+            _pushRegistration.Object,
+            readCache: null,
+            _localCache.Object);
+    }
+
     // ==================== Password ====================
     [Fact]
     public async Task ChangePasswordAsync_PutsToAuthPasswordWithTheBearerToken()
