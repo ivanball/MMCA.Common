@@ -30,6 +30,12 @@ public static class DatabaseInitializationExtensions
     /// <summary>The configuration switch build-time OpenAPI generation sets on the host it starts.</summary>
     private const string OpenApiDesignTimeKey = "MmcaOpenApiDesignTime";
 
+    /// <summary>
+    /// The command timeout migration and seeding run under: long enough for a replica to wait out
+    /// another replica's migration on EF's migrations lock instead of failing at the 30-second default.
+    /// </summary>
+    private static readonly TimeSpan InitializationCommandTimeout = TimeSpan.FromMinutes(5);
+
     extension(IServiceProvider services)
     {
         /// <summary>
@@ -99,29 +105,44 @@ public static class DatabaseInitializationExtensions
                     .EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            // Apply schema initialisation based on the configured strategy:
-            //   "Migrate": auto-apply pending EF Core migrations per migrated source (development/testing).
-            //   "None":    production, validate no pending migrations on any source, throw if behind.
-            switch (applicationSettings.DatabaseInitStrategy)
+            // Migration and seeding run under a long command timeout. With several replicas starting
+            // together, every replica but one waits on EF's migrations lock (__EFMigrationsLock), and a
+            // wait past the 30-second default would kill that replica's startup. The seeders resolve
+            // the same scoped context factory, so raising it on this scope's contexts covers them too.
+            var raisedTimeouts = RaiseCommandTimeouts(dbContextFactory, resolver, sourcesInUse);
+            try
             {
-                case "Migrate":
-                    await dbContextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
-                    break;
-                case "None":
-                    await ThrowIfPendingMigrationsAsync(dbContextFactory, resolver, sourcesInUse, cancellationToken).ConfigureAwait(false);
-                    break;
-                default:
-                    throw UnknownStrategy(applicationSettings.DatabaseInitStrategy);
+                // Apply schema initialisation based on the configured strategy:
+                //   "Migrate": auto-apply pending EF Core migrations per migrated source (development/testing).
+                //   "None":    production, validate no pending migrations on any source, throw if behind.
+                switch (applicationSettings.DatabaseInitStrategy)
+                {
+                    case "Migrate":
+                        await dbContextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
+                        break;
+                    case "None":
+                        await ThrowIfPendingMigrationsAsync(dbContextFactory, resolver, sourcesInUse, cancellationToken).ConfigureAwait(false);
+                        break;
+                    default:
+                        throw UnknownStrategy(applicationSettings.DatabaseInitStrategy);
+                }
+
+                await InitializeTenantDatabasesAsync(services, applicationSettings, resolver, sourcesInUse, cancellationToken)
+                    .ConfigureAwait(false);
+
+                // Module seeding runs on the default scope only. A seeder writes reference data an
+                // application needs to boot; running it per tenant would need a per-tenant notion of
+                // "which seeders apply", which no module declares today, and running it twice against a
+                // shared database is worse than not running it per tenant at all.
+                await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
             }
-
-            await InitializeTenantDatabasesAsync(services, applicationSettings, resolver, sourcesInUse, cancellationToken)
-                .ConfigureAwait(false);
-
-            // Module seeding runs on the default scope only. A seeder writes reference data an
-            // application needs to boot; running it per tenant would need a per-tenant notion of
-            // "which seeders apply", which no module declares today, and running it twice against a
-            // shared database is worse than not running it per tenant at all.
-            await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
+            finally
+            {
+                foreach (var (database, previous) in raisedTimeouts)
+                {
+                    database.SetCommandTimeout(previous);
+                }
+            }
         }
     }
 
@@ -193,6 +214,13 @@ public static class DatabaseInitializationExtensions
             var factory = tenantScope.ServiceProvider.GetRequiredService<IDbContextFactory>();
             var database = factory.GetDbContext(target.Source).Database;
 
+            // The same long timeout as the shared pass; this scope and its context end with the loop
+            // iteration, so there is nothing to restore.
+            if (database.IsRelational())
+            {
+                database.SetCommandTimeout(InitializationCommandTimeout);
+            }
+
             // The tenant's copy of a source is the same schema on a different connection, so it is
             // migrated exactly when the shared source is. The migrations assembly is declared once,
             // on the source, and a per-tenant override only replaces the connection string.
@@ -219,6 +247,37 @@ public static class DatabaseInitializationExtensions
                     throw UnknownStrategy(applicationSettings.DatabaseInitStrategy);
             }
         }
+    }
+
+    /// <summary>
+    /// Raises the command timeout of this scope's context for every relational source in use that has
+    /// a connection string, to <see cref="InitializationCommandTimeout"/>.
+    /// </summary>
+    /// <returns>Each raised database with the timeout it had before, so the caller can restore it.</returns>
+    private static List<(DatabaseFacade Database, int? Previous)> RaiseCommandTimeouts(
+        IDbContextFactory dbContextFactory,
+        IDataSourceResolver resolver,
+        IReadOnlyCollection<DataSourceKey> sourcesInUse)
+    {
+        var raised = new List<(DatabaseFacade Database, int? Previous)>();
+        foreach (var key in sourcesInUse)
+        {
+            if (string.IsNullOrEmpty(resolver.GetPhysical(key).ConnectionString))
+            {
+                continue;
+            }
+
+            var database = dbContextFactory.GetDbContext(key).Database;
+            if (!database.IsRelational())
+            {
+                continue;
+            }
+
+            raised.Add((database, database.GetCommandTimeout()));
+            database.SetCommandTimeout(InitializationCommandTimeout);
+        }
+
+        return raised;
     }
 
     /// <summary>

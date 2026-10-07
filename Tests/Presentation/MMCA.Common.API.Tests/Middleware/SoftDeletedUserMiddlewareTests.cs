@@ -44,7 +44,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_NoValidatorRegistered_CacheMiss_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         var nextCalled = false;
         var context = CreateContext(includeValidator: false);
@@ -68,7 +68,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_NoValidatorRegistered_MarkerSet_Returns401WithoutCallingNext()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         var nextCalled = false;
         var context = CreateContext(includeValidator: false);
@@ -88,7 +88,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_NoValidatorRegistered_CachedFalse_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         var nextCalled = false;
         var sut = new SoftDeletedUserMiddleware(_ =>
@@ -106,7 +106,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_NoValidatorRegistered_CacheReadThrows_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("cache down"));
         var nextCalled = false;
         var context = CreateContext(includeValidator: false);
@@ -127,7 +127,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_DeletedUserFoundByTheValidator_CachesTheMarkerForTheMarkerDuration()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -145,7 +145,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_NonDeletedUser_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -160,8 +160,9 @@ public sealed class SoftDeletedUserMiddlewareTests
 
         nextCalled.Should().BeTrue();
         _cacheService.Verify(
-            c => c.SetAsync(CacheKey, false, TimeSpan.FromSeconds(30), It.IsAny<CancellationToken>()),
-            Times.Once);
+            c => c.SetAsync(CacheKey, false, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a live answer is not cached: a replica's local copy of it would outlive a delete made elsewhere");
     }
 
     // ── Deleted user returns 401 ──
@@ -169,7 +170,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_DeletedUser_Returns401()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -186,7 +187,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CachedDeletedUser_Returns401WithoutDbCall()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         var context = CreateContext();
         var sut = new SoftDeletedUserMiddleware(_ => Task.CompletedTask);
@@ -204,7 +205,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CachedNonDeletedUser_PassesThroughWithoutDbCall()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         var nextCalled = false;
         var sut = new SoftDeletedUserMiddleware(_ =>
@@ -226,7 +227,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CacheReadThrowsAndUserIsDeleted_Returns401()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("cache down"));
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -245,7 +246,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CacheReadThrowsAndUserIsLive_PassesThroughWithoutWritingTheCache()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("cache down"));
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -273,7 +274,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CacheAndValidatorBothThrow_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("cache down"));
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("database down"));
@@ -296,7 +297,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_ValidatorThrows_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("database down"));
@@ -319,7 +320,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CacheWriteThrows_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _cacheService.Setup(c => c.SetAsync(
                 CacheKey,
@@ -348,7 +349,7 @@ public sealed class SoftDeletedUserMiddlewareTests
     public async Task InvokeAsync_CacheWriteThrowsForDeletedUser_Returns401()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
-        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((bool?)null);
         _cacheService.Setup(c => c.SetAsync(
                 CacheKey,

@@ -24,7 +24,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <para>
 /// <b>Tracked reads.</b> Every read here is tracked on purpose: the caller revokes by mutating the
 /// instances this returns, and a no-tracking query would take those revocations and silently drop
-/// them at save time.
+/// them at save time. The one exception is <see cref="FindByIdUntrackedAsync"/>, a read-only re-read
+/// for the rotation loser.
 /// </para>
 /// </summary>
 internal sealed class EFRefreshSessionStore(
@@ -81,6 +82,18 @@ internal sealed class EFRefreshSessionStore(
         CancellationToken cancellationToken = default) =>
         await Sessions
             .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The one no-tracking read in this store, and deliberately so: it exists to see past the tracked
+    /// copy (which the identity map would otherwise hand back unchanged) to the row the database holds
+    /// after a concurrent rotation. Nothing revokes through the instance it returns.
+    /// </remarks>
+    public async Task<RefreshSession?> FindByIdUntrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await Sessions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
     /// <inheritdoc />

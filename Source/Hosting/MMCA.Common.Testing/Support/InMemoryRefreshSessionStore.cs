@@ -95,6 +95,14 @@ public sealed class InMemoryRefreshSessionStore : IRefreshSessionStore
             s.Id == id && EqualityComparer<UserIdentifierType>.Default.Equals(s.UserId, userId)));
 
     /// <inheritdoc />
+    /// <remarks>
+    /// This store has no tracked copy to see past: every read hands out the one persisted instance,
+    /// which already reflects any rotation, so the "fresh" read is the same instance.
+    /// </remarks>
+    public Task<RefreshSession?> FindByIdUntrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_sessions.Find(s => s.Id == id));
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         SaveCount++;

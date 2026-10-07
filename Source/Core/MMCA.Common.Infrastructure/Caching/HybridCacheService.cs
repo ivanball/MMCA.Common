@@ -40,7 +40,9 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// usable a second time for up to the local expiration. Counters get the same treatment: they are
 /// incremented through <see cref="IncrementAsync"/>, which reads and writes L2 only, and a caller
 /// that reads a counter without incrementing it (the registration rate-limit check in
-/// <c>LoginProtectionService</c>) reads it through <see cref="GetFromSharedStoreAsync{T}"/> too.
+/// <c>LoginProtectionService</c>) reads it through <see cref="GetFromSharedStoreAsync{T}"/> too, as do
+/// the reads whose correctness depends on seeing a removal at once (the login lockout flag and the
+/// soft-deleted-user marker).
 /// </para>
 /// </remarks>
 internal sealed partial class HybridCacheService(
@@ -186,7 +188,12 @@ internal sealed partial class HybridCacheService(
         hybrid.SetAsync(HybridKey(key), value, WriteOptions(expiration), tags: null, cancellationToken).AsTask();
 
     /// <inheritdoc />
-    /// <remarks>Removes both levels: <see cref="HybridCache"/> clears this process's L1 copy along with the L2 entry.</remarks>
+    /// <remarks>
+    /// Removes both levels for this process: <see cref="HybridCache"/> clears this process's L1 copy
+    /// along with the L2 entry. Other replicas' L1 copies are not reached and keep serving the removed
+    /// value until they expire, up to <c>Cache:LocalCacheDuration</c> (30 seconds by default); a read
+    /// that must see the removal everywhere goes through <see cref="GetFromSharedStoreAsync{T}"/>.
+    /// </remarks>
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
         hybrid.RemoveAsync(HybridKey(key), cancellationToken).AsTask();
 
@@ -200,7 +207,9 @@ internal sealed partial class HybridCacheService(
     /// <para>
     /// Matched keys are deleted through <see cref="HybridCache.RemoveAsync(string, CancellationToken)"/>
     /// rather than by raw key: a raw delete would clear L2 and leave this process's own L1 copy
-    /// serving the value it just invalidated.
+    /// serving the value it just invalidated. Other replicas' L1 copies of the matched keys are not
+    /// reached and persist until they expire, up to <c>Cache:LocalCacheDuration</c> (30 seconds by
+    /// default).
     /// </para>
     /// <para>
     /// Without an <see cref="IConnectionMultiplexer"/> prefix eviction cannot run at all and is

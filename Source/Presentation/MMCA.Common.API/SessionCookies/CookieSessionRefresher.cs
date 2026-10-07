@@ -113,7 +113,11 @@ internal sealed partial class CookieSessionRefresher(
     /// <summary>
     /// Maps a non-success status from <c>auth/refresh</c>: 400, 401 and 403 are the identity endpoint
     /// refusing the refresh token, so the session is over. Anything else (5xx, 429, 408, a 404 from a
-    /// misrouted gateway) says nothing about the token, so the session is kept for a later retry.
+    /// misrouted gateway) says nothing about the token, so the session is kept for a later retry. That
+    /// includes 409 (<c>Auth.RefreshSuperseded</c>): another request (a second tab, or the same browser
+    /// served by another replica) rotated this token a moment ago, inside
+    /// <c>RefreshSessions:ReuseGraceSeconds</c>, and the browser picks up the winner's cookie on its
+    /// next request.
     /// </summary>
     internal static SessionRefreshStatus ClassifyFailure(HttpStatusCode statusCode) =>
         statusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden

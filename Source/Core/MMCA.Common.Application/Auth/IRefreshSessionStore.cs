@@ -61,6 +61,24 @@ public interface IRefreshSessionStore
         UserIdentifierType userId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Re-reads a session by its identifier as the database holds it now, bypassing any tracked copy,
+    /// revoked and expired rows included. The rotation loser needs this: its tracked instance was read
+    /// before the winner's conditional update and still shows the row live, so only a fresh read can
+    /// tell when (and why) the row was revoked. The returned instance is for reading only; it is not
+    /// tracked, so a mutation on it is never persisted.
+    /// <para>
+    /// The default returns <see langword="null"/>, which the caller treats as "cannot tell" and answers
+    /// with the conservative BR-206 family revocation. The shipped EF store overrides it with a
+    /// no-tracking query.
+    /// </para>
+    /// </summary>
+    /// <param name="id">The session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A fresh, untracked copy of the session, or null when no such row exists.</returns>
+    Task<RefreshSession?> FindByIdUntrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult<RefreshSession?>(null);
+
     /// <summary>Persists staged inserts and revocations.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of rows written.</returns>

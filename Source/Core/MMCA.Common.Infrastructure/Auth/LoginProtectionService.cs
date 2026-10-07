@@ -53,7 +53,10 @@ public sealed partial class LoginProtectionService(
         bool isLockedOut;
         try
         {
-            isLockedOut = await cacheService.GetAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
+            // Read from the shared store, never from this replica's L1 copy: a reset clears only the
+            // resetting replica's L1, so a local read would keep another replica locking the account
+            // out for up to the local cache duration after the lockout was lifted.
+            isLockedOut = await cacheService.GetFromSharedStoreAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
         }
         catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
         {
