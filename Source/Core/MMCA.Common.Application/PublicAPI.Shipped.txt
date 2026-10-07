@@ -106,6 +106,7 @@ MMCA.Common.Application.Auth.IPasswordResetTokenService.ValidateAndConsumeAsync(
 MMCA.Common.Application.Auth.IRefreshSessionStore
 MMCA.Common.Application.Auth.IRefreshSessionStore.AddAsync(MMCA.Common.Domain.Auth.RefreshSession! session, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdAsync(System.Guid id, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdUntrackedAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
@@ -165,6 +166,8 @@ MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.ini
 MMCA.Common.Application.Auth.RefreshSessionSettings.RefreshSessionSettings() -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.RetentionDays.get -> int
 MMCA.Common.Application.Auth.RefreshSessionSettings.RetentionDays.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.get -> int
+MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.init -> void
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider) -> void
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.IssueAsync(int userId, System.Func<System.Guid, string!>! mintAccessToken, string? ipAddress, string? userAgent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!

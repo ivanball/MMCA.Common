@@ -1,2 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.API.Controllers.OAuthControllerBase.OAuthControllerBase(MMCA.Common.Application.Auth.IAuthenticationService! authenticationService, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Configuration.IConfiguration! configuration, MMCA.Common.Application.Interfaces.IDistributedLock? distributedLock) -> void
