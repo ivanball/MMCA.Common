@@ -39,7 +39,7 @@ public static class JwtAuthorityExtensions
             return configuration[JwtAuthorityConfigKey]
                 ?? throw new InvalidOperationException(
                     "Authentication:JwtBearer:Authority is not configured. " +
-                    "Wire .WithJwksDiscovery(identityService) in the AppHost.");
+                    "Wire .WithJwksDiscovery(identityService, gateway) in the AppHost.");
         }
     }
 }

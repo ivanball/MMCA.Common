@@ -14,7 +14,7 @@ public sealed class JwtAuthorityExtensionsTests
 {
     private const string ExpectedMessage =
         "Authentication:JwtBearer:Authority is not configured. " +
-        "Wire .WithJwksDiscovery(identityService) in the AppHost.";
+        "Wire .WithJwksDiscovery(identityService, gateway) in the AppHost.";
 
     private static IConfiguration Config(string? authority) =>
         new ConfigurationBuilder()

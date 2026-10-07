@@ -949,7 +949,7 @@ public sealed partial class OutboxProcessor(
 
     // Logged once per batch, not once per message: an open circuit rejects every remaining row in
     // the same instant. Warning rather than Error because nothing is lost, only deferred.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Broker circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Message bus circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
     private static partial void LogBrokerCircuitOpen(ILogger logger, string dataSourceName);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} was skipped: another replica took over its claim before it was dispatched")]

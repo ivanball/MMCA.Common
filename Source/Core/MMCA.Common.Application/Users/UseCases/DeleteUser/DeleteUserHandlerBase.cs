@@ -196,6 +196,6 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} account deleted and personal data anonymized")]
     private static partial void UserErased(ILogger logger, UserIdentifierType userId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the deleted user's existing access token stays usable until it expires")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the Identity host still rejects the deleted user's access token, but a host without the account-status query accepts it until it expires")]
     private static partial void SoftDeletedMarkerFailed(ILogger logger, UserIdentifierType userId, Exception exception);
 }
