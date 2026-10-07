@@ -24,8 +24,10 @@ namespace MMCA.Common.Domain.Auth;
 /// <para>
 /// <b>Framework bookkeeping, not an aggregate.</b> Like <c>OutboxMessage</c> and
 /// <c>AuditTrailEntry</c>, this is a flat record with no audit stamps, no soft-delete flag and no
-/// concurrency token: rows are never deleted or edited except to be revoked, and no global query
-/// filter should hide a revoked row from the reuse check. It is mapped only where a consumer opts in
+/// concurrency token. A row is edited only to be revoked or anonymized (<see cref="Anonymize"/>
+/// clears the client metadata for an erasure) and is deleted only by the retention sweep once it
+/// has been revoked or expired past the retention window; no global query filter should hide a
+/// revoked row from the reuse check while it is kept. It is mapped only where a consumer opts in
 /// (<c>ApplyRefreshSessionConfiguration</c>), because sessions belong to the Identity module's
 /// database rather than to every data source.
 /// </para>

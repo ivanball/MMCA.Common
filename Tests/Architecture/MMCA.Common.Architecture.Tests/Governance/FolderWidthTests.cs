@@ -7,12 +7,10 @@ namespace MMCA.Common.Architecture.Tests.Governance;
 /// this repo's <c>Source/</c> or <c>Tests/</c> tree holds more than the allowed number of direct code
 /// files, so the layout stays feature by folder rather than drifting into technical buckets.
 /// <para>
-/// The exemptions are the framework's deliberately horizontal public namespaces: the application
-/// contracts (<c>Application/Interfaces*</c>), the CQRS primitives (<c>Application/UseCases*</c>), the
-/// shared auth contracts, the API startup extensions and the integration-test package root. Each is a
-/// flat namespace that every consumer imports, so splitting it would rename public API for no locality
-/// gain (the scorecard records this as the accepted §5 implementation cap). The decorator test folder
-/// mirrors the exempt decorator source folder.
+/// Three one-concept folders are exempt: the CQRS decorators (<c>Application/UseCases/Decorators</c>),
+/// their test twin (<c>Application.Tests/Decorators</c>), and the entity marker interfaces
+/// (<c>Domain/Interfaces</c>). Every other formerly flat public namespace was split by concern in the
+/// second rubric §5 pass (see <see cref="ExemptFolderSuffixes"/> and UPGRADING.md).
 /// </para>
 /// </summary>
 public sealed class FolderWidthTests : FolderWidthTestsBase

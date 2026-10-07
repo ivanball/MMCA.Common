@@ -9,8 +9,10 @@ public static partial class ArchitectureRules
     private const string ErrorTypeFullName = "MMCA.Common.Shared.Abstractions.Error";
 
     /// <summary>
-    /// The <c>Error</c> members whose first argument is the machine-readable code: every static
-    /// factory on <c>Error</c>, plus the primary constructor for the rare <c>new Error(...)</c>.
+    /// The <c>Error</c> members whose first argument is the machine-readable code: the static
+    /// factories listed below, plus the primary constructor for the rare <c>new Error(...)</c>. The
+    /// list does not include <c>Error.TooManyRequests</c>, so a code built through that factory is not
+    /// read into the catalog.
     /// The record's copy constructor is excluded by the first-parameter-is-string check in
     /// <c>IsErrorFactory</c>, so <c>error with { Source = ... }</c> is not mistaken for a new code.
     /// </summary>

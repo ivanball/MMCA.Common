@@ -83,7 +83,7 @@ public static partial class DependencyInjection
                 ServiceDescriptor.Singleton<IValidateOptions<ConnectionStringSettings>, ConnectionStringSettingsValidator>());
 
             // Named data sources for database-per-microservice routing. A root-level dictionary
-            // section does not bind through the options pipeline — build the settings directly.
+            // section does not bind through the options pipeline, so build the settings directly.
             var dataSourcesSettings = new DataSourcesSettings(
                 configuration.GetSection(DataSourcesSettings.SectionName)
                     .Get<Dictionary<string, DataSourceEntrySettings>>());
@@ -314,10 +314,10 @@ public static partial class DependencyInjection
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
             services.TryAddScoped<IEventBus, InProcessEventBus>();
 
-            // IMessageBus is the new abstraction used by OutboxProcessor (and, going forward, by
-            // application code that publishes integration events). The default registration is
-            // InProcessMessageBus — call AddBrokerMessaging(...) from a service host's Program.cs
-            // to swap in MassTransit-backed BrokerMessageBus for microservice deployments.
+            // IMessageBus is the transport abstraction integration events are published through:
+            // OutboxProcessor drains outbox rows through it. The default registration is
+            // InProcessMessageBus; a service host calls AddBrokerMessaging(...) from its Program.cs
+            // to swap in the MassTransit-backed BrokerMessageBus for microservice deployments.
             services.TryAddScoped<IMessageBus, InProcessMessageBus>();
 
             services.TryAddSingleton(TimeProvider.System);

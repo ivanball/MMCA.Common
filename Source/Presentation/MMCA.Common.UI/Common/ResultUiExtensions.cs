@@ -1,8 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Resources;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Api;
 
 namespace MMCA.Common.UI.Common;
@@ -24,8 +27,10 @@ namespace MMCA.Common.UI.Common;
 /// resource key (ADR-027). The failures the client synthesized itself, with no server-phrased
 /// message to pass through (a bodiless HTTP status, a transport failure, a client timeout), are
 /// looked up by their error CODE instead (<c>Http.{status}</c>, then the generic
-/// <c>Http.Status</c> format, <c>Http.TransportFailure</c>, <c>Http.Timeout</c>), falling back to
-/// the English message when the localizer has no such key.
+/// <c>Http.Status</c> format, <c>Http.TransportFailure</c>, <c>Http.Timeout</c>). A code the
+/// supplied localizer does not hold resolves from the framework's own <c>SharedResource</c> pair for
+/// the current UI culture, so a page that passes its own <c>IStringLocalizer&lt;PageType&gt;</c>
+/// still shows the translated sentence; the English message is the last resort.
 /// </para>
 /// <para>
 /// <b>Deduplication and order.</b> Messages are made distinct (ordinal) and ordered most severe
@@ -71,6 +76,12 @@ public static class ResultUiExtensions
     // Format resource ({0} = the status code) for a synthesized HTTP failure whose status has no
     // Http.{status} resource of its own.
     private const string HttpStatusFallbackKey = "Http.Status";
+
+    // The framework's own SharedResource pair (Resources/SharedResource.resx and its culture
+    // siblings), read directly rather than through DI so every call site gets the fallback without
+    // passing a second localizer. A consumer page localizes through its own resource pair, which
+    // holds no Http.* keys, so the synthesized failures resolve their translation here.
+    private static readonly ResourceManager SharedResources = new(typeof(SharedResource));
 
     /// <summary>
     /// Unwraps a successful <see cref="Result{T}"/> inside a conditional, the way
@@ -343,25 +354,45 @@ public static class ResultUiExtensions
             return error.Message;
         }
 
+        // The more specific key wins whichever resource pair holds it: the status's own
+        // Http.{status} sentence, from the caller and then the shared pair, before the generic
+        // Http.Status format, from the caller and then the shared pair.
         if (ProblemDetailsResultReader.TryGetSynthesizedStatus(error, out var statusCode))
         {
-            var specific = localizer[error.Code];
-            if (!specific.ResourceNotFound)
-            {
-                return specific.Value;
-            }
-
-            var generic = localizer[HttpStatusFallbackKey, statusCode];
-            return generic.ResourceNotFound ? error.Message : generic.Value;
+            return LookUpByCode(error.Code, localizer)
+                ?? FormatByCode(HttpStatusFallbackKey, localizer, statusCode)
+                ?? error.Message;
         }
 
         if (IsSynthesizedTransportFailure(error))
         {
-            var byCode = localizer[error.Code];
-            return byCode.ResourceNotFound ? error.Message : byCode.Value;
+            return LookUpByCode(error.Code, localizer) ?? error.Message;
         }
 
         return Localize(error.Message, localizer);
+    }
+
+    // A synthesized failure's code resolved through the caller's localizer, then through the
+    // framework's own SharedResource pair; null when neither holds the key.
+    private static string? LookUpByCode(string code, IStringLocalizer localizer)
+    {
+        var fromCaller = localizer[code];
+        return fromCaller.ResourceNotFound
+            ? SharedResources.GetString(code, CultureInfo.CurrentUICulture)
+            : fromCaller.Value;
+    }
+
+    // As LookUpByCode, for a format resource whose single argument is the HTTP status code.
+    private static string? FormatByCode(string code, IStringLocalizer localizer, int statusCode)
+    {
+        var fromCaller = localizer[code, statusCode];
+        if (!fromCaller.ResourceNotFound)
+        {
+            return fromCaller.Value;
+        }
+
+        var format = SharedResources.GetString(code, CultureInfo.CurrentUICulture);
+        return format is null ? null : string.Format(CultureInfo.CurrentCulture, format, statusCode);
     }
 
     // Only the executor's own English sentence is replaced: a caller that reused one of these codes

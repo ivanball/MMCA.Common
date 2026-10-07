@@ -134,7 +134,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// Override in derived pages to expose the <see cref="MudDataGrid{T}"/> component reference
     /// (typically a <c>private MudDataGrid&lt;TDto&gt;? _dataGrid;</c> field captured via
     /// <c>@ref="_dataGrid"</c> in the Razor markup). The base class needs this to programmatically
-    /// restore <c>RowsPerPage</c> after first render — see <see cref="OnAfterRenderAsync"/>.
+    /// restore <c>RowsPerPage</c> after first render; see <see cref="OnAfterRenderAsync"/>.
     /// Returns <see langword="null"/> by default for pages that don't need rows-per-page restoration
     /// (e.g., mobile-only pages).
     /// </summary>
@@ -221,7 +221,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         var urlHasState = HasListPageState(urlState);
 
         // When the URL carries state (browser back/forward, shareable link), use it.
-        // Otherwise, fall back to in-memory state from the current circuit — this
+        // Otherwise, fall back to in-memory state from the current circuit: this
         // restores page, pageSize, sort, and filters when the user navigates back
         // to the list via sidebar, breadcrumbs, or "Back to List" buttons instead
         // of the browser back button.
@@ -247,7 +247,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // overwritten by the first LoadServerDataAsync call.
         _deferSessionPersist = !urlHasState && savedState is null;
 
-        // Scroll position is not in the URL — fall back to the in-memory snapshot.
+        // Scroll position is not in the URL, so fall back to the in-memory snapshot.
         if (savedState is { ScrollPosition: > 0 })
         {
             _pendingScrollRestore = savedState.ScrollPosition;
@@ -488,7 +488,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         RestoreCurrentPageAfterRowsPerPageReset();
 
         // Session restore changed pagination state after the grid's initial ServerData
-        // call already returned defaults — reload with the correct parameters.
+        // call already returned defaults: reload with the correct parameters.
         if (needsReload && GridRef is { } reloadGrid)
         {
             await reloadGrid.ReloadServerData();
@@ -975,11 +975,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         };
         ListPageStateService.SaveState(routePath, state);
 
-        // Mirror to URL (replace current entry — filter changes must not pollute the back stack)
+        // Mirror to URL (replace current entry: filter changes must not pollute the back stack)
         // and to sessionStorage so the state survives circuit teardown / forceLoad navigations.
         _suppressNextLocationChanged = true;
         QueryStateService.ReplaceState(routePath, state);
-        // Fire-and-forget the sessionStorage write — it tolerates SSR/JSDisconnected internally.
+        // Fire-and-forget the sessionStorage write: it tolerates SSR/JSDisconnected internally.
         // Skip during the deferred window so OnAfterRenderAsync can still hydrate the original
         // sessionStorage values before they are overwritten.
         if (!_deferSessionPersist)
@@ -1069,7 +1069,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         catch (JSDisconnectedException)
         {
-            // Circuit already torn down — nothing to clean up.
+            // Circuit already torn down: nothing to clean up.
         }
         catch (JSException)
         {

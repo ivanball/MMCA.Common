@@ -1,5 +1,6 @@
 // Persists and reads the Day/Dark theme preference (ADR-028). The value ("dark"/"light") is stored in a
-// non-HttpOnly cookie (so SSR can read it for a no-flash first paint) and mirrored to localStorage.
+// non-HttpOnly cookie, because this module writes and reads it from script (no server-side code reads
+// it, so the theme is applied once the interactive runtime calls get()), and mirrored to localStorage.
 const KEY = 'mmca_theme';
 
 export function get() {

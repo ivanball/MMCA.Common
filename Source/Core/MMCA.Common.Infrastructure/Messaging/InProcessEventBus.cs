@@ -68,9 +68,10 @@ public sealed class InProcessEventBus(
     /// unprocessed for the <see cref="OutboxProcessor"/> to retry (at-least-once delivery;
     /// handlers are idempotent via the inbox store).
     /// <para>
-    /// With the outbox turned off (<c>MessageBus:EnableOutbox=false</c>, the in-process default) the
-    /// direct-dispatch branch below is taken instead: no rows, no save, no processor to retry. That
-    /// is the same path a context without outbox support already takes.
+    /// With the outbox turned off (<c>MessageBus:EnableOutbox</c> resolving to false: set to false, or
+    /// left unset, which is the in-process default) the direct-dispatch branch below is taken
+    /// instead: no rows, no save, no processor to retry. That is the same path a context without
+    /// outbox support already takes.
     /// </para>
     /// </summary>
     private async Task PublishBatchAsync(IIntegrationEvent[] events, CancellationToken cancellationToken)

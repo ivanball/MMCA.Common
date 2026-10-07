@@ -37,8 +37,10 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// email-confirmation token, the last accepted second-factor time step). Those are read through
 /// <see cref="GetFromSharedStoreAsync{T}"/>, which never answers from L1 and never promotes into
 /// it, so a record consumed on one replica is a miss on every other replica at once rather than
-/// usable a second time for up to the local expiration. Counters get the same treatment in
-/// <see cref="IncrementAsync"/>.
+/// usable a second time for up to the local expiration. Counters get the same treatment: they are
+/// incremented through <see cref="IncrementAsync"/>, which reads and writes L2 only, and a caller
+/// that reads a counter without incrementing it (the registration rate-limit check in
+/// <c>LoginProtectionService</c>) reads it through <see cref="GetFromSharedStoreAsync{T}"/> too.
 /// </para>
 /// </remarks>
 internal sealed partial class HybridCacheService(

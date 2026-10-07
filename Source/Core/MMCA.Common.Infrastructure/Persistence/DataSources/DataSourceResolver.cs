@@ -58,8 +58,9 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// <param name="dataSources">The named data source entries.</param>
     /// <param name="logger">Logger for configuration warnings.</param>
     /// <exception cref="InvalidOperationException">
-    /// Two logical names collapse to the same physical database but declare different
-    /// <c>SQLServerMigrationsAssembly</c> values.
+    /// Two logical names collapse to the same physical database but declare different migrations
+    /// assemblies for its engine (<c>SQLServerMigrationsAssembly</c>,
+    /// <c>PostgreSQLMigrationsAssembly</c> or <c>SqliteMigrationsAssembly</c>).
     /// </exception>
     public DataSourceResolver(
         IOptions<ConnectionStringSettings> connectionStringOptions,

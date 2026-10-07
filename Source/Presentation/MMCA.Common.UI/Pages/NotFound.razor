@@ -1,21 +1,48 @@
 ﻿@page "/not-found"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Http
 @layout MainLayout
 @inject IStringLocalizer<SharedResource> L
 @attribute [AllowAnonymous]
 
-<PageTitle>@L["Page.NotFound.Title"]</PageTitle>
+@* Hosts re-execute error statuses to this route (UseStatusCodePagesWithReExecute("/not-found")), so a
+   full page load the server answered with 403 (a signed-in user lacking the permission) also lands
+   here, with the original status still on the response. That request renders the Access Denied view
+   of Forbidden under its 403; a 404, and an interactive render with no HttpContext, render Page Not
+   Found. *@
+@if (IsForbiddenReExecution)
+{
+    <Forbidden />
+}
+else
+{
+    <PageTitle>@L["Page.NotFound.Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center mt-16">
-    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large"
-             Color="Color.Secondary" Class="mb-4 mmca-status-icon" />
-    <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2">@L["Page.NotFound.Title"]</MudText>
-    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
-        @L["Page.NotFound.Message"]
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Home"
-               Href="/" Size="Size.Large">
-        @L["Page.BackToHome"]
-    </MudButton>
-</MudContainer>
+    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center mt-16">
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large"
+                 Color="Color.Secondary" Class="mb-4 mmca-status-icon" />
+        <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2">@L["Page.NotFound.Title"]</MudText>
+        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
+            @L["Page.NotFound.Message"]
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Home"
+                   Href="/" Size="Size.Large">
+            @L["Page.BackToHome"]
+        </MudButton>
+    </MudContainer>
+}
+
+@code {
+    /// <summary>
+    /// The request being rendered during static server rendering; <see langword="null"/> in an
+    /// interactive render, where there is no request to read.
+    /// </summary>
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    /// <summary>
+    /// True when this render answers a request whose status is already 403: status-code-pages
+    /// re-execution keeps the original status on the response, so it is read there.
+    /// </summary>
+    private bool IsForbiddenReExecution => HttpContext?.Response.StatusCode == StatusCodes.Status403Forbidden;
+}

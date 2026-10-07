@@ -26,8 +26,10 @@ namespace MMCA.Common.UI.Services.Api;
 /// <b>Messages are English.</b> A transport failure never reached a server, so nothing localized it
 /// on the way back, exactly as with the reader's own synthesized messages.
 /// <c>ResultUiExtensions.LocalizedErrorMessage</c> translates these two by their code
-/// (<see cref="TransportErrorCode"/>, <see cref="TimeoutErrorCode"/>) against the shared UI
-/// resources; a page can also branch on the code or supply a resource key of its own.
+/// (<see cref="TransportErrorCode"/>, <see cref="TimeoutErrorCode"/>): first through the localizer
+/// the page passes, then, when that localizer has no such key, through the framework's own
+/// <c>SharedResource</c> pair for the current UI culture. A page can also branch on the code or
+/// override the translation by holding the same key in its own resource pair.
 /// </para>
 /// </summary>
 public static class HttpResultExecutor

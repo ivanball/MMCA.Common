@@ -99,8 +99,10 @@ public abstract class OAuthControllerBase(
     /// Native heads (ADR-043): when the stashed <c>returnUrl</c> uses a custom scheme listed in
     /// <c>OAuth:AllowedReturnUrlSchemes</c> (e.g. <c>myapp://oauth-complete</c>), the redirect
     /// targets that URL instead of <c>OAuth:UIBaseUrl</c>, so the system-browser
-    /// <c>WebAuthenticator</c> window captures the single-use code and closes. An empty allowlist
-    /// (the default) preserves the web-only behavior exactly.
+    /// <c>WebAuthenticator</c> window captures the single-use code and closes. Both redirects carry
+    /// the single-use <c>code</c> and, when the challenge stashed one, the client's opaque
+    /// <c>state</c> value echoed back, so the client can bind the completion to the attempt it
+    /// started. An empty allowlist (the default) preserves the web-only behavior exactly.
     /// </para>
     /// </summary>
     [HttpGet("complete")]

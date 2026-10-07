@@ -73,7 +73,7 @@ public sealed class BrokerEventBus(
             // datasource. Throwing here surfaces the misconfiguration loudly rather than
             // silently dropping events.
             throw new InvalidOperationException(
-                $"BrokerEventBus requires an outbox-enabled data source. The configured outbox target '{target}' (Outbox:DataSource='{outboxOptions.Value.DataSource}', Outbox:DatabaseName='{outboxOptions.Value.DatabaseName}') does not support OutboxMessage. Configure SQL Server or SQLite, or fall back to InProcessEventBus.");
+                $"BrokerEventBus requires an outbox-enabled data source. The configured outbox target '{target}' (Outbox:DataSource='{outboxOptions.Value.DataSource}', Outbox:DatabaseName='{outboxOptions.Value.DatabaseName}') does not support OutboxMessage. Configure SQL Server, PostgreSQL or SQLite, or fall back to InProcessEventBus.");
         }
 
         // One read of the scope's ambient context for the whole batch, through the live accessor the

@@ -494,7 +494,7 @@ public static class PageExtensions
     [SuppressMessage(
         "Style",
         "IDE0051:Remove unused private members",
-        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above; same cross-block analyzer false positive as CompactHtml.")]
+        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string DescribeChecks(AxeResultNode node)
     {
         var messages = (node.Any ?? []).Concat(node.All ?? []).Concat(node.None ?? [])

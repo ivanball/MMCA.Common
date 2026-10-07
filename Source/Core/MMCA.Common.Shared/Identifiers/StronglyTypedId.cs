@@ -185,8 +185,8 @@ internal static class StronglyTypedIdValueParser<TValue>
         Justification = "The private method being bound is declared on THIS type, a few lines below, and is bound once per closed generic to avoid a per-request reflection cost. Nothing outside the class is reached and no caller supplies the name.")]
     private static StronglyTypedIdValueParserDelegate<TValue>? Build()
     {
-        // string is the one supported primitive that does NOT implement IParsable<string>, so it
-        // takes the identity path: the route segment IS the value.
+        // string implements IParsable<string> too, but parsing a string is the identity, so it takes a
+        // direct path ahead of the reflective IParsable binding below: the route segment IS the value.
         if (typeof(TValue) == typeof(string))
             return ParseString;
 

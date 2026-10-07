@@ -826,9 +826,11 @@ indent_size = 4
 
 # CA2007: MMCA.Common ships as NuGet libraries; packaged non-UI code must not
 # capture the caller's synchronization context (ADR-049), so every await takes
-# ConfigureAwait(false). UI component packages are excluded: Blazor and MAUI
-# components must resume on the renderer context. Apps (Store/ADC/Helpdesk)
-# keep the baseline (CA2007 off): ASP.NET Core has no synchronization context.
+# ConfigureAwait(false). The UI packages (every MMCA.Common.UI* project) are
+# excluded by path: their Blazor and MAUI components must resume on the renderer
+# context, and the path match also exempts the non-component code in those
+# projects (services, and UI.Web host code such as the same-origin proxy).
+# Apps (Store/ADC/Helpdesk) keep the baseline (CA2007 off): ASP.NET Core has no synchronization context.
 [Source/**.cs]
 dotnet_diagnostic.CA2007.severity = warning
 

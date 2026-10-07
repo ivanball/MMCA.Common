@@ -38,9 +38,10 @@ public interface ICacheService
     }
 
     /// <summary>
-    /// Reads a key from the shared backing store, bypassing any process-local copy. For single-use
-    /// records (an OAuth exchange code, a password-reset or email-confirmation token, a second-factor
-    /// time step) whose consumption on one replica must be visible to every other replica at once.
+    /// Reads a key from the shared backing store, bypassing any process-local copy. For values whose
+    /// change on one replica must be visible to every other replica at once: single-use records (an
+    /// OAuth exchange code, a password-reset or email-confirmation token, a second-factor time step)
+    /// and counters maintained by <see cref="IncrementAsync"/> (a registration rate-limit count).
     /// </summary>
     /// <typeparam name="T">The cached value type.</typeparam>
     /// <param name="key">The cache key.</param>
@@ -49,7 +50,9 @@ public interface ICacheService
     /// <remarks>
     /// <para>
     /// Use it when the record is consumed or invalidated after one use, so a stale local copy would
-    /// let it be used twice: read the record through this member, then remove it. Use
+    /// let it be used twice: read the record through this member, then remove it. Use it too to read
+    /// a counter that <see cref="IncrementAsync"/> maintains: a store with a process-local tier
+    /// increments in the shared store, so a local copy would pin the first count it saw. Use
     /// <see cref="GetAsync{T}"/> for everything else; a value that is read many times (a query
     /// result, a replay cache, a flag) loses only the local hit rate by coming here.
     /// </para>

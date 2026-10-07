@@ -120,7 +120,7 @@
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation
          or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
          enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
-         and reintroduced the crash — do NOT bump past v8 without configuring a license. -->
+         and reintroduced the crash: do NOT bump past v8 without configuring a license. -->
     <PackageVersion Include="MassTransit" Version="8.5.11" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
     <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.11" />

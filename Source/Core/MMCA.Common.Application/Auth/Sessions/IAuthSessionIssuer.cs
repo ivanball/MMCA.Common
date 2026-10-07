@@ -53,8 +53,11 @@ public interface IAuthSessionIssuer
     /// <summary>
     /// Rotates the session behind a presented refresh token (BR-205): revokes it, links it to a new
     /// successor session and returns the successor's token pair. An unknown or expired token fails
-    /// alone; an already-revoked token, or one a concurrent request rotated first, is the BR-206
-    /// reuse signal and revokes every live session the user holds. Every rejection carries the same
+    /// alone, and so does a token whose session was revoked by a sign-out or evicted by the session
+    /// cap (that device simply lost its session). A token that was already rotated, or already
+    /// flagged as reuse, or one a concurrent request rotated first, is the BR-206 reuse signal and
+    /// revokes every live session the user holds; a revoked row with any other or no recorded reason
+    /// is treated as reuse too. Every rejection carries the same
     /// <c>Auth.InvalidRefreshToken</c> error.
     /// </summary>
     /// <param name="userId">The user the presented access token names.</param>

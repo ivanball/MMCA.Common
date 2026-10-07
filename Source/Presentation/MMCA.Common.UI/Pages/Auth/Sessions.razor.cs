@@ -139,6 +139,11 @@ public partial class Sessions : IDisposable
 
         _revokingSessionId = session.SessionId;
 
+        // The confirm dialog completed asynchronously, so Blazor already rendered once for this click
+        // and will not render again until the handler returns. Render the busy state now, before the
+        // revoke call, or the button shows no progress for as long as that call takes.
+        StateHasChanged();
+
         try
         {
             var result = await AuthService.RevokeSessionAsync(session.SessionId, _cts.LifetimeToken());
@@ -149,8 +154,9 @@ public partial class Sessions : IDisposable
             }
             else if (result.IsNotFound())
             {
-                // Already gone (a duplicate click, or the device signed itself out): the user's
-                // intent is satisfied, so this is not an error to shout about.
+                // 404: the session is already revoked (the server answers Auth.SessionAlreadyRevoked
+                // after a duplicate click or once the device signed itself out) or no longer exists.
+                // Either way the user's intent is satisfied, so this is not an error to shout about.
                 Toast.Info(L["Auth.Sessions.AlreadyRevoked"]);
             }
             else
@@ -197,6 +203,9 @@ public partial class Sessions : IDisposable
         }
 
         IsRevokingAll = true;
+
+        // Same as the per-device revoke: render the busy state before the long call, not after it.
+        StateHasChanged();
 
         try
         {

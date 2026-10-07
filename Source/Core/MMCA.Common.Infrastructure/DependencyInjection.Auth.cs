@@ -103,6 +103,9 @@ public static partial class DependencyInjection
         /// </remarks>
         public IServiceCollection AddLegalAcceptance(IConfiguration configuration)
         {
+            // No ValidateOnStart, unlike the sibling registrations: the one setting has no invalid
+            // value (any version string turns the feature on, null or whitespace turns it off), so
+            // there is nothing to fail fast on at startup.
             services.AddOptions<LegalAcceptanceOptions>()
                 .Bind(configuration.GetSection(LegalAcceptanceOptions.SectionName));
 

@@ -13,12 +13,15 @@ namespace MMCA.Common.Infrastructure.Persistence.Inbox;
 /// EF-backed <see cref="IInboxStore"/> that records processed messages in the consumer service's
 /// own database (the configured outbox data source), so a redelivered message is skipped.
 /// <para>
-/// The row is STAGED at the start of the consume (<see cref="TryBeginAsync"/>) into the same scoped
-/// <see cref="ApplicationDbContext"/> the handlers write through, not written after they finish.
-/// A handler's own <c>SaveChangesAsync</c> therefore commits the inbox row in the same transaction
-/// as its mutations, which closes the window where a crash between the two reprocessed the whole
-/// event. <see cref="CompleteAsync"/> saves the row afterwards only when nothing else has, which is
-/// the case for an event whose handlers write nothing.
+/// The row is STAGED at the start of the consume (<see cref="TryBeginAsync"/>) into the consume
+/// scope's <see cref="ApplicationDbContext"/>, not written after the handlers finish. A handler that
+/// writes through that same scoped context (services resolved from the consume scope itself)
+/// commits the inbox row in the same transaction as its mutations with its own
+/// <c>SaveChangesAsync</c>, which closes the window where a crash between the two reprocessed the
+/// whole event. A handler built on the framework's <c>ScopedIntegrationEventHandlerBase</c> opens
+/// its own DI scope per delivery and so saves through a different context instance: its mutations
+/// and the inbox row are two transactions. <see cref="CompleteAsync"/> saves the row afterwards
+/// whenever nothing else has, which covers that handler and an event whose handlers write nothing.
 /// </para>
 /// <para>
 /// Atomicity holds when the handler writes to the SAME physical source this store resolves (the

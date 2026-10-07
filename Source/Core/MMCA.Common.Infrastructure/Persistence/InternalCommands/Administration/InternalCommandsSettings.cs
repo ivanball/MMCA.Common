@@ -40,10 +40,11 @@ public sealed class InternalCommandsSettings
 
     /// <summary>
     /// Gets the fallback polling interval in seconds. The processor normally sleeps until the
-    /// earliest scheduled row becomes due (the smart wait) or until a signal wakes it, so this only
-    /// bounds how long a row scheduled inside a transaction waits: that row is enrolled rather than
-    /// saved, so no signal is raised for it and the commit is discovered by the next poll. Raise it
-    /// to cut idle polling, and accept that much latency on transaction-scheduled work.
+    /// earliest scheduled row becomes due (the smart wait) or until a signal wakes it. That includes a
+    /// row scheduled inside a transaction: it is enrolled rather than saved, and the unit of work
+    /// raises its signal once the commit succeeds. This interval is therefore only the backstop for a
+    /// wake that never arrives (a row another process wrote, a commit path that released no signal).
+    /// Raise it to cut idle polling, and accept that much worst-case latency on such rows.
     /// </summary>
     [Range(1, 3600)]
     public int PollingIntervalSeconds { get; init; } = 2;

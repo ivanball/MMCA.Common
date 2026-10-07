@@ -88,7 +88,7 @@ public sealed class WasmTokenStorageService(
         }
     }
 
-    // The refresh token is never held client-side in the browser — it lives only in the HttpOnly cookie.
+    // The refresh token is never held client-side in the browser: it lives only in the HttpOnly cookie.
     public Task<string?> GetRefreshTokenAsync() => Task.FromResult<string?>(null);
 
     public async Task SetTokensAsync(string accessToken, string refreshToken)
