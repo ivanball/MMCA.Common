@@ -3,8 +3,12 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Shared.Abstractions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
+using ImageSharpConfiguration = SixLabors.ImageSharp.Configuration;
 
 namespace MMCA.Common.Infrastructure.Storage;
 
@@ -45,7 +49,7 @@ public sealed class ImageSharpImageProcessor : IImageProcessor
             // Reading the header first also keeps the failure a 400 (Error.Validation) rather than
             // the OutOfMemoryException that escaped the catch clause below as a 500.
             var startPosition = content.CanSeek ? content.Position : 0L;
-            var info = await Image.IdentifyAsync(content, cancellationToken).ConfigureAwait(false);
+            var info = await Image.IdentifyAsync(CreateDecoderOptions(maxFrames: uint.MaxValue), content, cancellationToken).ConfigureAwait(false);
 
             if (TooLargeToDecode(info.Width, info.Height))
             {
@@ -63,7 +67,7 @@ public sealed class ImageSharpImageProcessor : IImageProcessor
             // One frame only: the output is a single JPEG built from the first frame, and decoding
             // every frame of an animated file is how a small upload becomes hundreds of megabytes of
             // pixel buffers. MaxFrames is what bounds the multi-frame case.
-            using var image = await Image.LoadAsync(new DecoderOptions { MaxFrames = 1 }, content, cancellationToken).ConfigureAwait(false);
+            using var image = await Image.LoadAsync(CreateDecoderOptions(maxFrames: 1), content, cancellationToken).ConfigureAwait(false);
 
             // Second gate, on the DECODED frame. A format whose header understates its real size
             // would otherwise slip past the header check.
@@ -104,6 +108,34 @@ public sealed class ImageSharpImageProcessor : IImageProcessor
                 source: nameof(ImageSharpImageProcessor)));
         }
     }
+
+    /// <summary>
+    /// Decoder options whose configuration registers only the formats an upload may legitimately be:
+    /// JPEG, PNG and WebP (what <see cref="ImageContentSniffer"/> admits) plus GIF. Every other format
+    /// ImageSharp ships, TIFF and BMP among them, stays unregistered, so a payload in one of them fails
+    /// as <see cref="UnknownImageFormatException"/> (a validation failure) before any of that format's
+    /// decoder code runs. The ImageSharp 3.x TIFF advisories of 2026-10-07 are accepted as unreachable
+    /// on that basis (see the NuGetAuditSuppress list in Directory.Build.props).
+    /// </summary>
+    /// <param name="maxFrames">The frame ceiling for this decode.</param>
+    /// <returns>Options bound to the restricted configuration.</returns>
+    /// <remarks>
+    /// Built per call rather than cached so the configuration takes the CURRENT
+    /// <see cref="ImageSharpConfiguration.Default"/> memory allocator, which the frame-bound tests
+    /// swap for a counting one.
+    /// </remarks>
+    private static DecoderOptions CreateDecoderOptions(uint maxFrames) => new()
+    {
+        Configuration = new ImageSharpConfiguration(
+            new JpegConfigurationModule(),
+            new PngConfigurationModule(),
+            new WebpConfigurationModule(),
+            new GifConfigurationModule())
+        {
+            MemoryAllocator = ImageSharpConfiguration.Default.MemoryAllocator,
+        },
+        MaxFrames = maxFrames,
+    };
 
     /// <summary>
     /// Whether a frame of these dimensions is refused: either edge past
