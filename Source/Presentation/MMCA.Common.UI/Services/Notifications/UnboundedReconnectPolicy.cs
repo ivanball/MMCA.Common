@@ -13,7 +13,7 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// connection exists; the service ends the loop by disposing or stopping the connection.
 /// </para>
 /// <para>
-/// The one failure it does not retry is a refused authentication: a negotiate answered 401 or 403
+/// The one failure it does not retry is a refused authentication: a WebSocket handshake answered 401 or 403
 /// (<see cref="IsAuthenticationRefused"/>) means the session expired or lost access, which another
 /// attempt with the same credentials cannot fix, so the policy stops and the service does not restart.
 /// </para>
@@ -48,7 +48,7 @@ internal sealed class UnboundedReconnectPolicy : IRetryPolicy
 
     /// <summary>
     /// Whether a connection failure is the server refusing authentication: an HTTP 401 or 403 answer
-    /// (the negotiate request), found on the exception, its inner exceptions, or an aggregate's members.
+    /// (the WebSocket handshake, rethrown with its status by the connection's socket factory), found on the exception, its inner exceptions, or an aggregate's members.
     /// </summary>
     /// <param name="exception">The failure, or <see langword="null"/>.</param>
     /// <returns><see langword="true"/> when the server answered 401 or 403.</returns>

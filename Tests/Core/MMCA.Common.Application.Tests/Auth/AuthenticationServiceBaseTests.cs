@@ -608,11 +608,13 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     // BR-206: a token that has already been rotated away comes back only if a copy outlived the
-    // rotation, so the whole live family goes.
+    // rotation, so the whole live family goes. The replay here arrives at the same instant as the
+    // rotation, so the reuse grace is switched off to keep it a replay rather than a rotation race
+    // (the grace itself is covered by AuthSessionIssuerReuseGraceTests).
     [Fact]
     public async Task RefreshTokenAsync_WhenARotatedTokenIsReplayed_RevokesTheWholeFamily()
     {
-        var (sut, mocks) = CreateSut();
+        var (sut, mocks) = CreateSut(reuseGraceSeconds: 0);
         var user = CreateTestUser(id: 1);
         SeedSession(mocks, userId: 1, token: "stored-refresh");
         var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
@@ -928,7 +930,8 @@ public sealed class AuthenticationServiceBaseTests
         bool loginRequestValid = true,
         bool registerRequestValid = true,
         bool refreshRequestValid = true,
-        int maxActiveSessionsPerUser = 10)
+        int maxActiveSessionsPerUser = 10,
+        int reuseGraceSeconds = 10)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestAuthUser, UserIdentifierType>>();
@@ -978,7 +981,11 @@ public sealed class AuthenticationServiceBaseTests
             new FixedTimeProvider(FixedNow),
             validators,
             sessions,
-            Options.Create(new RefreshSessionSettings { MaxActiveSessionsPerUser = maxActiveSessionsPerUser }));
+            Options.Create(new RefreshSessionSettings
+            {
+                MaxActiveSessionsPerUser = maxActiveSessionsPerUser,
+                ReuseGraceSeconds = reuseGraceSeconds,
+            }));
 
         var mocks = new ServiceMocks(unitOfWork, repository, tokenService, passwordHasher, loginProtection, sessions);
         return (sut, mocks);

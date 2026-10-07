@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdUntrackedAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.get -> int
+MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.init -> void

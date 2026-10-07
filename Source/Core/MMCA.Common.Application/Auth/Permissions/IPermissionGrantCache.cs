@@ -44,9 +44,11 @@ public interface IPermissionGrantCache
 /// <remarks>
 /// Invalidation is per process. With several replicas over one database, the replica that made the
 /// edit is immediately correct and the others catch up on their own refresh interval, which is what
-/// <c>PermissionGrantSettings.CacheSeconds</c> bounds. That is deliberate: a cross-replica push would
-/// need a broker on the authorization path, and the window it would close is a grant taking effect a
-/// few seconds late, never a revoked grant staying live past the interval.
+/// <c>PermissionGrantSettings.CacheSeconds</c> bounds. The bound is per replica: a revoked grant is
+/// gone at once on the replica that made the edit and can stay live on every other replica for up to
+/// <c>CacheSeconds</c>, until that replica's own refresh runs. That is deliberate: a cross-replica push
+/// would need a broker on the authorization path, so a host that cannot accept the window lowers
+/// <c>CacheSeconds</c> instead.
 /// </remarks>
 public interface IPermissionGrantCacheInvalidator
 {

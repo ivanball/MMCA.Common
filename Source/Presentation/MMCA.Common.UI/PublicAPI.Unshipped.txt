@@ -1,1 +1,2 @@
 ﻿#nullable enable
+MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!

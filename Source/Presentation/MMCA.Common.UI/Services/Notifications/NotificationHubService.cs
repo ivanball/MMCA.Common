@@ -1,9 +1,13 @@
+using System.Globalization;
+using System.Net;
+using System.Net.WebSockets;
+using System.Runtime.Versioning;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
-using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Notifications;
@@ -91,7 +95,8 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
         // Same-origin proxy (WebAssembly client of an opted-in host): the hub is reached through the UI
         // host's /api path, whose proxy attaches the bearer from the HttpOnly session cookie on the
-        // negotiate POST and on the WebSocket upgrade, so the connection carries no client-held token.
+        // WebSocket upgrade (the only request, since negotiation is skipped), so the connection carries
+        // no client-held token.
         _sameOriginProxyEndpoint = apiSettings.Value.SameOriginApiEndpoint;
         string endpoint = _sameOriginProxyEndpoint ?? apiSettings.Value.ApiEndpoint ?? throw new ArgumentNullException(nameof(apiSettings));
         _hubUrl = endpoint.TrimEnd('/') + "/hubs/notifications";
@@ -503,31 +508,117 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     }
 
     /// <summary>
-    /// Clears and disposes the connection built for a start attempt that never succeeded, leaving the
-    /// field null so the next <see cref="StartAsync"/> builds a fresh one. Tolerates
-    /// <see cref="StopAsync"/> having already cleared the field.
-    /// </summary>
-    /// <summary>
-    /// Applies the transport options: a client-held access token for a direct gateway connection, or,
-    /// through the same-origin proxy, no token at all plus the proxy's CSRF header (the negotiate call
-    /// is a POST, and the proxy refuses an unsafe method without it; the browser cannot add headers to
-    /// the WebSocket upgrade, a GET over HTTP/1.1 or an extended CONNECT over HTTP/2, which the proxy
-    /// instead accepts only with the page's own
-    /// <c>Origin</c>, which a same-origin browser connection always sends).
+    /// Applies the transport options. Both modes skip negotiation and connect over WebSockets only:
+    /// negotiate and connect are two separate requests, and behind a non-sticky ingress with more than
+    /// one hub replica the connect can land on a replica that never issued the connection id and is
+    /// refused with a 404. Without negotiation the connection is the single WebSocket request, so there
+    /// is nothing to pin to a replica. WebSockets are therefore required; there is no Server-Sent Events
+    /// or long-polling fallback.
+    /// <para>
+    /// Through the same-origin proxy (the browser path) the connection carries no token and no extra
+    /// header: the browser cannot add headers to the WebSocket upgrade, a GET over HTTP/1.1 or an
+    /// extended CONNECT over HTTP/2, which the proxy instead accepts only with the page's own
+    /// <c>Origin</c> and authenticates with the bearer from the HttpOnly session cookie. A browser cannot
+    /// read the status of a refused handshake either, so a refusal there looks like any other failure
+    /// and the reconnect schedule keeps retrying until the user signs in again.
+    /// </para>
+    /// <para>
+    /// A direct gateway connection (server-side Blazor, MAUI) builds its own socket
+    /// (<see cref="ConnectWebSocketAsync"/>) carrying the client-held bearer, because a refused
+    /// handshake otherwise surfaces as a bare <see cref="WebSocketException"/> with no status code. The
+    /// factory rethrows it as <see cref="HttpRequestException"/> with the handshake status, which
+    /// <see cref="UnboundedReconnectPolicy.IsAuthenticationRefused"/> recognises as a 401 or 403.
+    /// </para>
     /// </summary>
     internal void ConfigureConnection(HttpConnectionOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        options.SkipNegotiation = true;
+        options.Transports = HttpTransportType.WebSockets;
+
         if (UsesSameOriginProxy)
         {
-            options.Headers[SameOriginProxyHeaders.CsrfHeaderName] = SameOriginProxyHeaders.CsrfHeaderValue;
             return;
         }
 
         options.AccessTokenProvider = _tokenStorageService.GetAccessTokenAsync;
+
+        if (!OperatingSystem.IsBrowser())
+        {
+            options.WebSocketFactory = ConnectWebSocketAsync;
+        }
     }
 
+    /// <summary>
+    /// Maps an http or https address to its WebSocket scheme. The transport hands the factory a ws or
+    /// wss address already; this keeps the socket from ever receiving a scheme it rejects.
+    /// </summary>
+    private static Uri ToWebSocketUri(Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return uri;
+        }
+
+        var builder = new UriBuilder(uri)
+        {
+            Scheme = uri.Scheme == Uri.UriSchemeHttps ? Uri.UriSchemeWss : Uri.UriSchemeWs,
+        };
+        return builder.Uri;
+    }
+
+    /// <summary>
+    /// Opens the hub WebSocket for a direct (non-browser) connection: applies the configured headers
+    /// and the bearer from token storage, and keeps the handshake response details so a refused upgrade
+    /// is rethrown as <see cref="HttpRequestException"/> carrying its HTTP status.
+    /// </summary>
+    [UnsupportedOSPlatform("browser")]
+    private async ValueTask<WebSocket> ConnectWebSocketAsync(WebSocketConnectionContext context, CancellationToken cancellationToken)
+    {
+        var webSocket = new ClientWebSocket();
+        try
+        {
+            webSocket.Options.CollectHttpResponseDetails = true;
+            foreach (KeyValuePair<string, string> header in context.Options.Headers)
+            {
+                webSocket.Options.SetRequestHeader(header.Key, header.Value);
+            }
+
+            context.Options.WebSocketConfiguration?.Invoke(webSocket.Options);
+
+            string? accessToken = await _tokenStorageService.GetAccessTokenAsync().ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                webSocket.Options.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+            }
+
+            await webSocket.ConnectAsync(ToWebSocketUri(context.Uri), cancellationToken).ConfigureAwait(false);
+            return webSocket;
+        }
+        catch (WebSocketException ex) when (webSocket.HttpStatusCode >= HttpStatusCode.Continue)
+        {
+            // The server answered the upgrade with a status other than 101 (a status of zero means no
+            // answer arrived at all, which is a network failure and is rethrown as it is below).
+            HttpStatusCode statusCode = webSocket.HttpStatusCode;
+            webSocket.Dispose();
+            throw new HttpRequestException(
+                $"The notification hub refused the WebSocket handshake with HTTP {((int)statusCode).ToString(CultureInfo.InvariantCulture)}.",
+                ex,
+                statusCode);
+        }
+        catch
+        {
+            webSocket.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Clears and disposes the connection built for a start attempt that never succeeded, leaving the
+    /// field null so the next <see cref="StartAsync"/> builds a fresh one. Tolerates
+    /// <see cref="StopAsync"/> having already cleared the field.
+    /// </summary>
     private async Task DiscardUnstartedConnectionAsync()
     {
         HubConnection? failed = _hubConnection;

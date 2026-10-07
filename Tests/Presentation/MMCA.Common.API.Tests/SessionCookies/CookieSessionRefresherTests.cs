@@ -412,6 +412,40 @@ public sealed class CookieSessionRefresherTests
         outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
     }
 
+    // A 409 is the identity endpoint saying another request (another tab, another replica) rotated this
+    // refresh token a moment ago, inside the reuse grace. The session is fine: the browser picks up the
+    // winner's cookie on its next request, so this must never be read as a refusal that clears cookies.
+    [Fact]
+    public async Task ValidateOrRefreshAsync_RotationRaceConflict_IsUnavailable_AndKeepsTheCookies()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(RespondWith(HttpStatusCode.Conflict));
+        var context = CreateContext(accessToken: expired, refreshToken: "old-refresh");
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(context);
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable, "a lost rotation race is transient, not a refused token");
+        outcome.Session.Should().BeNull();
+        context.Response.Headers.SetCookie.Count.Should().Be(0, "neither a new cookie nor a deletion is written");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_RotationRaceConflict_IsUnavailable()
+    {
+        using var harness = CreateSut(RespondWith(HttpStatusCode.Conflict));
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(
+            CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(10)), refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Conflict, SessionRefreshStatus.Unavailable)]
+    [InlineData(HttpStatusCode.Unauthorized, SessionRefreshStatus.Rejected)]
+    public void ClassifyFailure_MapsTheRotationRaceToUnavailable_AndARefusalToRejected(HttpStatusCode status, SessionRefreshStatus expected) =>
+        CookieSessionRefresher.ClassifyFailure(status).Should().Be(expected);
+
     [Fact]
     public async Task RefreshAsync_NetworkFailure_IsUnavailable()
     {

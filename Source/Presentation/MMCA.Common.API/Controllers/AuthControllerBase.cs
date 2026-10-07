@@ -113,12 +113,19 @@ public abstract class AuthControllerBase(
 
     /// <summary>
     /// Exchanges an expired access token and valid refresh token for a new token pair.
+    /// <para>
+    /// A refresh token that a concurrent request rotated less than
+    /// <c>RefreshSessions:ReuseGraceSeconds</c> ago is answered <c>409 Conflict</c>
+    /// (<c>Auth.RefreshSuperseded</c>) with nothing revoked: the session is still live, and the client
+    /// should retry with the winner's token rather than sign out.
+    /// </para>
     /// </summary>
     [HttpPost("refresh")]
     [NonIdempotent("Refresh rotates the refresh token and issues a new pair. Replaying a stored response would return a token the rotation has already invalidated, so the client would be handed dead credentials instead of live ones.")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
     public virtual async Task<ActionResult<AuthenticationResponse>> RefreshAsync(
         [FromBody] RefreshTokenRequest request,
         CancellationToken cancellationToken)

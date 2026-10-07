@@ -10,9 +10,13 @@ namespace MMCA.Common.API.Middleware;
 /// <summary>
 /// Middleware that validates authenticated users have not been soft-deleted (BR-133).
 /// If <c>User.IsDeleted = true</c> for the authenticated user's ID, the request is rejected with HTTP 401.
-/// The deleted-user marker in <see cref="SoftDeletedUserCache"/> is honored on every host; a host that
-/// registers an <see cref="ISoftDeletedUserValidator"/> (the Identity host) also falls back to that
-/// query on a cache miss and caches the answer, so most requests skip the database.
+/// The deleted-user marker in <see cref="SoftDeletedUserCache"/> is honored on every host and is read
+/// from the shared store (never a replica's local copy), so a delete handled on one replica is seen by
+/// all of them at once. A host that registers an <see cref="ISoftDeletedUserValidator"/> (the Identity
+/// host) also falls back to that query when no marker is set, and writes the marker when the query
+/// finds the user deleted. A "not deleted" answer is never cached, since a replica's local copy of it
+/// would outlive a delete made elsewhere; the cost is one shared-store read and one query per
+/// authenticated request on that host.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
 /// <remarks>
@@ -32,12 +36,6 @@ namespace MMCA.Common.API.Middleware;
 /// </remarks>
 public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
 {
-    /// <summary>
-    /// How long a "not deleted" validator answer is cached. Kept short: it is only a lookup
-    /// shortcut, and a live user's entry should not linger.
-    /// </summary>
-    private static readonly TimeSpan NotDeletedLookupDuration = TimeSpan.FromSeconds(30);
-
     /// <summary>
     /// Checks if the authenticated user has been soft-deleted and rejects the request if so.
     /// </summary>
@@ -87,7 +85,12 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
         var cacheReachable = true;
         try
         {
-            cachedResult = await cacheService.GetAsync<bool?>(cacheKey, context.RequestAborted).ConfigureAwait(false);
+            // Read from the shared store, never from this replica's L1 copy: the marker is written by
+            // whichever replica handled the delete, and a local read could miss it for up to the
+            // local cache duration.
+            cachedResult = await cacheService
+                .GetFromSharedStoreAsync<bool?>(cacheKey, context.RequestAborted)
+                .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -118,50 +121,55 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
             return;
         }
 
-        if (cachedResult is null)
+        if (cachedResult is false)
         {
-            // Cache miss (or unreachable cache): check the database.
-            bool isDeleted;
-            try
-            {
-                isDeleted = await softDeletedUserValidator
-                    .IsUserSoftDeletedAsync(userId.Value, context.RequestAborted)
-                    .ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // Both lookups are unavailable, so there is no evidence either way. Proceed
-                // (see the fail-open rationale on the class), bounded by access-token lifetime.
-                LogValidatorFailed(logger, userId.Value, ex);
-                await next(context).ConfigureAwait(false);
-                return;
-            }
+            // An explicit "not deleted" entry in the shared store (written only by an earlier framework
+            // version; this one never writes it). It is safe to honor because it was read from the
+            // shared store, where a later delete overwrites it with the marker.
+            await next(context).ConfigureAwait(false);
+            return;
+        }
 
+        // No marker (or an unreachable cache): check the database. A "not deleted" answer is never
+        // cached: every replica keeps its own local copy of a cached value, so a cached live answer
+        // would outlive a delete made on another replica.
+        bool isDeleted;
+        try
+        {
+            isDeleted = await softDeletedUserValidator
+                .IsUserSoftDeletedAsync(userId.Value, context.RequestAborted)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Both lookups are unavailable, so there is no evidence either way. Proceed
+            // (see the fail-open rationale on the class), bounded by access-token lifetime.
+            LogValidatorFailed(logger, userId.Value, ex);
+            await next(context).ConfigureAwait(false);
+            return;
+        }
+
+        if (isDeleted)
+        {
             if (cacheReachable)
             {
                 try
                 {
-                    // A positive answer is the deleted-user marker and must outlive the access
-                    // token; a negative one is only a lookup shortcut and keeps its short lifetime,
-                    // so a live user's entry never goes stale for long.
-                    var duration = isDeleted ? SoftDeletedUserCache.MarkerDuration : NotDeletedLookupDuration;
+                    // The deleted-user marker must outlive the access token.
                     await cacheService
-                        .SetAsync(cacheKey, isDeleted, duration, context.RequestAborted)
+                        .SetAsync(cacheKey, true, SoftDeletedUserCache.MarkerDuration, context.RequestAborted)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // The authoritative answer is already in hand, so a failed cache write only
-                    // costs the next request another database lookup. The request proceeds.
+                    // costs the next request another database lookup.
                     LogCacheWriteFailed(logger, cacheKey, ex);
                 }
             }
 
-            if (isDeleted)
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return;
-            }
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
         }
 
         await next(context).ConfigureAwait(false);

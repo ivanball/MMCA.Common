@@ -31,11 +31,27 @@ namespace MMCA.Common.API.Controllers;
 /// <c>IAuthenticationService</c> that implements <c>ExternalLoginAsync</c>. The sealed app subclass
 /// carries the class-level routing/versioning attributes (not reliably inherited):
 /// <c>[ApiController][Route("auth/oauth")][ApiVersion("1.0")]</c>.
+/// <para>
+/// Multi-replica hosts: give the subclass an <see cref="IDistributedLock"/> constructor parameter and
+/// pass it to the four-argument base constructor (<c>AddCaching</c> registers a Redis-backed lock when
+/// an <c>IConnectionMultiplexer</c> is present). <see cref="ExchangeAsync"/> then reads and burns the
+/// single-use code inside that lock, so two replicas redeeming the same code at the same instant
+/// cannot both mint the token pair. A subclass that keeps the three-argument constructor gets no lock
+/// and the unlocked read-then-burn, which is single-use only per replica.
+/// </para>
 /// </summary>
+/// <param name="authenticationService">Issues the local token pair for an external sign-in.</param>
+/// <param name="cacheService">Holds the single-use exchange codes.</param>
+/// <param name="configuration">Supplies the <c>OAuth</c> settings (UI base URL, allowed return schemes).</param>
+/// <param name="distributedLock">
+/// The lock that makes the code exchange atomic across replicas, or <see langword="null"/> to redeem
+/// without one.
+/// </param>
 public abstract class OAuthControllerBase(
     IAuthenticationService authenticationService,
     ICacheService cacheService,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration,
+    IDistributedLock? distributedLock) : ControllerBase
 {
     private const string ExternalLoginScheme = ExternalAuthExtensions.ExternalLoginScheme;
 
@@ -57,6 +73,27 @@ public abstract class OAuthControllerBase(
     private const string PlaceholderLastName = "User";
 
     private static readonly TimeSpan OAuthExchangeCodeLifetime = TimeSpan.FromMinutes(2);
+
+    // Lease and wait for the exchange-code redeem lock, matching PasswordResetTokenService: the
+    // critical section is one cache read and one remove, so ten seconds is far past its length, and a
+    // caller that cannot get the lock within five is answered as an invalid code.
+    private static readonly TimeSpan RedeemLockTimeToLive = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan RedeemLockWait = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthControllerBase"/> class without a distributed
+    /// lock: the exchange code is read and burned unlocked, which is single-use per replica only.
+    /// </summary>
+    /// <param name="authenticationService">Issues the local token pair for an external sign-in.</param>
+    /// <param name="cacheService">Holds the single-use exchange codes.</param>
+    /// <param name="configuration">Supplies the <c>OAuth</c> settings.</param>
+    protected OAuthControllerBase(
+        IAuthenticationService authenticationService,
+        ICacheService cacheService,
+        IConfiguration configuration)
+        : this(authenticationService, cacheService, configuration, distributedLock: null)
+    {
+    }
 
     /// <summary>
     /// Initiates the Google OAuth2 login flow by redirecting to Google's consent screen.
@@ -182,6 +219,11 @@ public abstract class OAuthControllerBase(
     /// Exchanges a single-use OAuth completion code for the access/refresh token pair. Called by the
     /// UI's <c>/auth/oauth-complete</c> page out-of-band so tokens are never exposed in the redirect URL.
     /// The code is burned on first use; a missing, already-used, or expired code yields HTTP 400.
+    /// <para>
+    /// With a distributed lock (the four-argument constructor), the read and the burn run inside
+    /// <c>lock:oauth-exchange:{code}</c>, so a code is redeemed once across every replica; a redeem
+    /// that cannot take the lock within five seconds also yields the HTTP 400 invalid-code answer.
+    /// </para>
     /// </summary>
     /// <param name="request">The exchange request carrying the single-use code.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -200,6 +242,30 @@ public abstract class OAuthControllerBase(
 
         var cacheKey = OAuthExchangeCodePrefix + request.Code;
 
+        if (distributedLock is null)
+        {
+            return await RedeemExchangeCodeAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        }
+
+        // The read and the burn are one critical section: without it, two replicas that both read
+        // before either removes would both hand out the token pair. A contended redeem is answered
+        // as an invalid code, never as a second success.
+        var handle = await distributedLock
+            .TryAcquireAsync($"lock:{cacheKey}", RedeemLockTimeToLive, RedeemLockWait, cancellationToken)
+            .ConfigureAwait(false);
+        if (handle is null)
+        {
+            return InvalidCode();
+        }
+
+        await using (handle.ConfigureAwait(false))
+        {
+            return await RedeemExchangeCodeAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<IActionResult> RedeemExchangeCodeAsync(string cacheKey, CancellationToken cancellationToken)
+    {
         // AuthenticationResponse is a struct, so a cache miss yields default(AuthenticationResponse)
         // (null AccessToken) rather than null — detect the miss via the token, matching AuthUIService.
         // Read from the shared store: a code already burned on another replica must be a miss here,

@@ -1,1 +1,2 @@
 #nullable enable
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByIdUntrackedAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!

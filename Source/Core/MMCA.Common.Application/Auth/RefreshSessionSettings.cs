@@ -78,4 +78,22 @@ public sealed class RefreshSessionSettings
     /// </summary>
     [Range(1, 168)]
     public int CleanupIntervalHours { get; init; } = 6;
+
+    /// <summary>
+    /// How long, in seconds, after a session was rotated a second presentation of its token is treated
+    /// as a rotation race rather than token reuse. Two tabs, or one browser served by two replicas, can
+    /// present the same refresh token a moment apart; the later request then finds the row already
+    /// rotated (or loses the rotation claim) and is answered <c>409 Conflict</c>
+    /// (<c>Auth.RefreshSuperseded</c>) without revoking anything, so the client retries with the
+    /// winner's token. Defaults to <c>10</c>, matching the cookie refresher's rotation grace.
+    /// <para>
+    /// <b>It is a security trade-off.</b> A replay of a stolen token that arrives within this window of
+    /// a legitimate rotation is answered 409 instead of revoking the user's whole session family
+    /// (BR-206). Past the window the BR-206 answer applies unchanged, and only a row revoked as
+    /// <c>Rotated</c> qualifies: a row already flagged as reuse still revokes the family however recent.
+    /// Set to <c>0</c> to treat every rotated token that comes back as reuse.
+    /// </para>
+    /// </summary>
+    [Range(0, 300)]
+    public int ReuseGraceSeconds { get; init; } = 10;
 }

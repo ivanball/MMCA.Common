@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,8 +58,11 @@ public sealed class SameOriginProxyClientTests
         capture.Request.Headers.Contains(SameOriginProxyHeaders.CsrfHeaderName).Should().BeFalse();
     }
 
+    // The CSRF header only ever served the negotiate POST. With negotiation skipped the connection is a
+    // single WebSocket upgrade, which a browser cannot put headers on; the proxy's Origin and
+    // Sec-Fetch-Site checks gate that upgrade instead.
     [Fact]
-    public void HubConnection_InProxyMode_UsesTheProxyUrl_WithNoTokenProvider_AndTheCsrfHeader()
+    public void HubConnection_InProxyMode_UsesTheProxyUrl_WithNoTokenProvider_AndNoCsrfHeader()
     {
         var sut = CreateHub(new ApiSettings { ApiEndpoint = Gateway, SameOriginApiEndpoint = Proxy });
         var options = new HttpConnectionOptions();
@@ -67,7 +71,7 @@ public sealed class SameOriginProxyClientTests
 
         sut.UsesSameOriginProxy.Should().BeTrue();
         options.AccessTokenProvider.Should().BeNull("no client-held token may reach the hub connection");
-        options.Headers[SameOriginProxyHeaders.CsrfHeaderName].Should().Be(SameOriginProxyHeaders.CsrfHeaderValue);
+        options.Headers.Should().NotContainKey(SameOriginProxyHeaders.CsrfHeaderName, "no negotiate POST is sent any more");
     }
 
     [Fact]
@@ -81,6 +85,47 @@ public sealed class SameOriginProxyClientTests
         sut.UsesSameOriginProxy.Should().BeFalse();
         options.AccessTokenProvider.Should().NotBeNull();
         options.Headers.Should().NotContainKey(SameOriginProxyHeaders.CsrfHeaderName);
+    }
+
+    // Negotiate and connect are two requests; behind a non-sticky ingress with more than one hub
+    // replica the connect lands on a replica that never issued the connection id and gets a 404.
+    // Skipping negotiation makes the connection one WebSocket request, so there is nothing to pin.
+    [Fact]
+    public void HubConnection_InProxyMode_SkipsNegotiation_AndUsesWebSocketsOnly()
+    {
+        var sut = CreateHub(new ApiSettings { ApiEndpoint = Gateway, SameOriginApiEndpoint = Proxy });
+        var options = new HttpConnectionOptions();
+
+        sut.ConfigureConnection(options);
+
+        options.SkipNegotiation.Should().BeTrue("a negotiate and a connect can land on different replicas");
+        options.Transports.Should().Be(HttpTransportType.WebSockets, "SkipNegotiation is only valid with WebSockets alone");
+    }
+
+    [Fact]
+    public void HubConnection_WithoutProxy_SkipsNegotiation_AndUsesWebSocketsOnly()
+    {
+        var sut = CreateHub(new ApiSettings { ApiEndpoint = Gateway });
+        var options = new HttpConnectionOptions();
+
+        sut.ConfigureConnection(options);
+
+        options.SkipNegotiation.Should().BeTrue("a negotiate and a connect can land on different replicas");
+        options.Transports.Should().Be(HttpTransportType.WebSockets, "SkipNegotiation is only valid with WebSockets alone");
+    }
+
+    // Without negotiate, a refused handshake surfaces as a bare WebSocketException with no status
+    // code. The direct (non-browser) connection builds its own socket so it can rethrow the refusal
+    // as HttpRequestException(401/403), which the reconnect policy recognises.
+    [Fact]
+    public void HubConnection_WithoutProxy_SuppliesItsOwnWebSocketFactory()
+    {
+        var sut = CreateHub(new ApiSettings { ApiEndpoint = Gateway });
+        var options = new HttpConnectionOptions();
+
+        sut.ConfigureConnection(options);
+
+        options.WebSocketFactory.Should().NotBeNull("the factory is what keeps a refused handshake classifiable as 401/403");
     }
 
     [Fact]

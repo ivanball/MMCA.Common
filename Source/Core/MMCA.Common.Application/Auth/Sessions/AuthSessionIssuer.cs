@@ -20,9 +20,11 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// already-rotated token lands on that revoked row, which is the reuse signal that revokes the user's
 /// whole live family (BR-206). Two requests presenting the same live token at the same instant are
 /// covered by the same rule: the rotation is claimed atomically through
-/// <see cref="IRefreshSessionStore.TryRotateAsync"/>, and the request that loses the claim is answered
-/// as a replay rather than being handed a second successor. An expired session is not a reuse signal
-/// and fails alone. A per-user cap (<see cref="RefreshSessionSettings.MaxActiveSessionsPerUser"/>)
+/// <see cref="IRefreshSessionStore.TryRotateAsync"/>, and the request that loses the claim is never
+/// handed a second successor. Both paths share one carve-out: a token rotated less than
+/// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> ago (default 10) is a rotation race between
+/// sibling requests, answered <c>409 Conflict</c> (<c>Auth.RefreshSuperseded</c>) with nothing revoked;
+/// past the grace it is a replay. An expired session is not a reuse signal and fails alone. A per-user cap (<see cref="RefreshSessionSettings.MaxActiveSessionsPerUser"/>)
 /// evicts the oldest live session on a new sign-in so one account cannot grow the table without bound.
 /// </para>
 /// <para>
@@ -267,13 +269,26 @@ public sealed class AuthSessionIssuer(
             nameof(IAuthenticationService.RefreshTokenAsync));
 
     /// <summary>
+    /// The answer to a token that a sibling request rotated within
+    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/>: a transient <c>409 Conflict</c>, so the
+    /// client keeps its session and retries with the winner's token instead of being signed out.
+    /// </summary>
+    private static Error RefreshSupersededError() =>
+        Error.Conflict(
+            "Auth.RefreshSuperseded",
+            "The refresh token was already rotated by a concurrent request; retry with the current session.",
+            nameof(IAuthenticationService.RefreshTokenAsync));
+
+    /// <summary>
     /// Resolves the session behind a presented refresh token and decides whether it may be rotated.
     /// The three rejections are deliberately different in what they do behind an identical error:
     /// an unknown hash (or one belonging to another account) says nothing about a live session and is
     /// failed alone, since revoking the family on it would let anyone holding one of this user's
     /// expired access tokens sign them out everywhere by posting a random token; a <b>revoked</b> row
     /// splits by why it was revoked: one already rotated away (or already flagged as reuse) has come
-    /// back, which is the BR-206 reuse signal that revokes every live session the user holds, while one
+    /// back, which is the BR-206 reuse signal that revokes every live session the user holds (unless it
+    /// was rotated within <see cref="RefreshSessionSettings.ReuseGraceSeconds"/>, a race answered 409
+    /// with nothing revoked), while one
     /// that was signed out or evicted by the session cap only lost its session, so that request fails
     /// alone; an <b>expired</b> row is an ordinary end of life, so that device re-authenticates and
     /// the user's other devices keep working.
@@ -306,6 +321,13 @@ public sealed class AuthSessionIssuer(
                 // this device simply lost its session, which is not a theft signal, so only this
                 // request fails and the user's other live sessions keep working.
                 return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
+            }
+
+            if (IsWithinRotationGrace(session, now))
+            {
+                // A sibling request (another tab, or this browser served by another replica) rotated
+                // this token a moment ago: a race, not a replay, so nothing is revoked.
+                return Result.Failure<RefreshSession>(RefreshSupersededError());
             }
 
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
@@ -359,8 +381,11 @@ public sealed class AuthSessionIssuer(
     /// <para>
     /// The revocation is a <see cref="IRefreshSessionStore.TryRotateAsync"/> claim rather than an
     /// in-memory mutation: two requests presenting the same still-live token both read an un-revoked
-    /// row, and the store is what decides which of them owns the rotation. The loser is answered
-    /// exactly like a replay (family revoked, BR-206), since a caller cannot tell the two apart.
+    /// row, and the store is what decides which of them owns the rotation. The loser re-reads the row
+    /// untracked (<see cref="IRefreshSessionStore.FindByIdUntrackedAsync"/>): a rotation within
+    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> is answered 409 with nothing revoked, a
+    /// sign-out or cap eviction of the same row fails that request alone (as the lookup path does), and
+    /// anything else is answered exactly like a replay (family revoked, BR-206).
     /// </para>
     /// </summary>
     /// <returns>The plaintext successor token to hand to the client, and the successor's session id.</returns>
@@ -393,9 +418,29 @@ public sealed class AuthSessionIssuer(
 
         if (!rotated)
         {
-            // Another request rotated this exact token in the same instant, so this one is holding a
-            // token that has already been spent. That is indistinguishable from a replay, and it
-            // gets the replay answer: the whole live family goes (BR-206).
+            // Another request claimed this exact token first, so this one is holding a token that has
+            // already been spent. The tracked copy was read before that claim and still shows the row
+            // live, so the row is re-read as the database holds it now: a rotation inside the grace
+            // is a race and is answered 409 with nothing revoked.
+            var current = await refreshSessions
+                .FindByIdUntrackedAsync(session.Id, cancellationToken)
+                .ConfigureAwait(false);
+            if (current is not null && !IsReuseSignal(current))
+            {
+                // The race was lost to a sign-out or a cap eviction of this same row: that device
+                // lost its session, which is not a theft signal, so only this request fails, exactly
+                // as the lookup path answers the same row (ResolveRotatableSessionAsync).
+                return Result.Failure<IssuedSession>(InvalidRefreshTokenError());
+            }
+
+            if (current is not null && IsWithinRotationGrace(current, now))
+            {
+                return Result.Failure<IssuedSession>(RefreshSupersededError());
+            }
+
+            // Rotated longer ago than the grace, already flagged as reuse, or unreadable: that is
+            // indistinguishable from a replay, and it gets the replay answer: the whole live family
+            // goes (BR-206).
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
                 .ConfigureAwait(false);
             await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -420,6 +465,23 @@ public sealed class AuthSessionIssuer(
         }
 
         return session.ReasonRevoked is not (RefreshSession.ReasonSignedOut or RefreshSession.ReasonSessionCap);
+    }
+
+    /// <summary>
+    /// Whether a revoked session was rotated less than
+    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> ago, which makes a second presentation of
+    /// its token a rotation race rather than token reuse. Only the <c>Rotated</c> reason qualifies: a
+    /// row already flagged as reuse, signed out or evicted never does, however recent. A revocation
+    /// stamped slightly ahead of this clock (another replica's) counts as inside the grace.
+    /// </summary>
+    private bool IsWithinRotationGrace(RefreshSession session, DateTime now)
+    {
+        var grace = TimeSpan.FromSeconds(refreshSessionSettings.Value.ReuseGraceSeconds);
+
+        return grace > TimeSpan.Zero
+            && string.Equals(session.ReasonRevoked, RefreshSession.ReasonRotated, StringComparison.Ordinal)
+            && session.RevokedAt is { } revokedAt
+            && now - revokedAt < grace;
     }
 
     /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>

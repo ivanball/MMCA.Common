@@ -42,7 +42,10 @@ public interface IAuthUIService
     /// Attempts to exchange the current refresh token for a new access token. Stays a
     /// <see cref="bool"/>: it makes no API call of its own (the host's
     /// <see cref="ITokenRefresher"/> owns the exchange) and its two states are "session still
-    /// live" and "session gone", neither of which is an error to render.
+    /// live" and "session gone", neither of which is an error to render. One <see langword="false"/>
+    /// is not a sign-out: when an <see cref="ISessionAwareTokenRefresher"/> reports the attempt as
+    /// transient (<see cref="TokenAcquisition.IsUnavailable"/>), the stored credential is kept and a
+    /// later call tries again.
     /// </summary>
     Task<bool> TryRefreshTokenAsync(CancellationToken cancellationToken = default);
 

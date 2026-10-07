@@ -32,12 +32,15 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// for each other's messages.
 /// </para>
 /// <para>
-/// Delivery is at-least-once. A message dispatched but not yet stamped processed (a crash, or a
-/// cancellation landing mid-batch) is redelivered only once its claim lease expires, after
-/// <c>Outbox:LeaseSeconds</c> (300s by default) rather than immediately on restart, because the
-/// claim is persisted before dispatch and the poll skips leased rows. On a graceful shutdown the
-/// cancelled batch flushes the stamps it already collected on the way out, which closes that
-/// duplicate window for the messages it did deliver.
+/// Delivery is at-least-once. Each row's outcome (processed, retry or dead letter) is written as
+/// soon as that row is done, by an update guarded on this replica's lease token, and the lease is
+/// renewed just before each row is dispatched. So a batch that outlives its lease, or stops partway
+/// (a crash, a shutdown), never leaves a delivered row looking undelivered, and a row another
+/// replica has taken over is neither dispatched again nor stamped by the replica that lost it. A
+/// shutdown signalled while a row is in flight still records that row's outcome, under its own short
+/// budget, before the shutdown continues. Only the row in flight at a crash (or one whose shutdown
+/// write fails) is redelivered, once its lease expires after <c>Outbox:LeaseSeconds</c> (300s by
+/// default), because the poll skips leased rows.
 /// </para>
 /// </summary>
 /// <param name="scopeFactory">Factory for creating DI scopes per processing cycle.</param>
@@ -79,11 +82,11 @@ public sealed partial class OutboxProcessor(
     private const int MaxErrorLength = 4000;
 
     /// <summary>
-    /// Budget for the best-effort save that flushes ProcessedOn stamps when a batch is cancelled
-    /// mid-flight. Deliberately short: the work is one small UPDATE against an already-open
-    /// connection, and anything slower is a dependency that must not delay host shutdown.
+    /// Budget for writing the outcome of the row in flight when the host signals shutdown. Deliberately
+    /// short: the work is one small UPDATE against an already-open connection, and anything slower is a
+    /// dependency that must not delay host shutdown.
     /// </summary>
-    private static readonly TimeSpan ShutdownSaveTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ShutdownStampTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
 
@@ -211,7 +214,8 @@ public sealed partial class OutboxProcessor(
             return (new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending), pendingDepth);
         }
 
-        var (toProcess, deferredKeyMates) = await ClaimEligibleAsync(context, messages, eligibleCount, now, cancellationToken)
+        var lockToken = Guid.NewGuid();
+        var (toProcess, deferredKeyMates) = await ClaimEligibleAsync(context, messages, eligibleCount, now, lockToken, cancellationToken)
             .ConfigureAwait(false);
 
         if (toProcess.Count == 0)
@@ -222,28 +226,11 @@ public sealed partial class OutboxProcessor(
 
         LogProcessingBatch(logger, toProcess.Count, sourceName);
 
-        bool processedAny;
-        try
-        {
-            processedAny = await DispatchMessagesAsync(toProcess, target, cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            // Shutdown landed mid-batch. Every message dispatched before the cancellation carries
-            // its ProcessedOn stamp in the change tracker only, and the batch save below is now
-            // unreachable, so without this the delivered messages stay unprocessed and are
-            // redelivered once their lease expires (LeaseSeconds, 300s by default). Persisting the
-            // stamps on the way out shrinks that duplicate window to nothing on a graceful
-            // shutdown; delivery stays at-least-once for an ungraceful one.
-            await TryPersistStampsOnCancellationAsync(context, sourceName).ConfigureAwait(false);
-            throw;
-        }
-
-        // Plain DbContext.SaveChangesAsync, without a user id: the audit interceptor stamps its
-        // system sentinel rather than a caller's identity. The EF interceptors still run (they are
-        // registered on the context, not selected per call), but there is nothing for them to do
-        // here: OutboxMessage is not an aggregate root, so no events are captured.
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Every row's outcome is persisted as the row completes (see DispatchMessagesAsync), so there
+        // is no batch save here: a cancellation or crash partway through leaves the rows already
+        // delivered stamped in the database rather than only in the change tracker.
+        var processedAny = await DispatchMessagesAsync(context, toProcess, target, lockToken, cancellationToken)
+            .ConfigureAwait(false);
 
         // A full eligible batch with progress means more eligible rows may be waiting, and so do
         // key-mates this cycle deferred behind their key's head row: once that row is delivered
@@ -286,33 +273,6 @@ public sealed partial class OutboxProcessor(
                 && (m.LockedUntil == null || m.LockedUntil < now))
             .LongCountAsync(cancellationToken)
             .ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Best-effort save of the ProcessedOn stamps collected before a cancellation, run on the way
-    /// out of a cancelled batch. Two deliberate constraints:
-    /// <list type="bullet">
-    ///   <item>Its own try/catch. A failure here must never replace the propagating
-    ///   <see cref="OperationCanceledException"/>: the loop in <c>ExecuteAsync</c> recognizes
-    ///   shutdown by that exception type, and swapping it for a save failure would turn a clean
-    ///   stop into a logged error plus another polling cycle.</item>
-    ///   <item>Its own short-lived token rather than <see cref="CancellationToken.None"/>. The
-    ///   caller's token is already cancelled, so it cannot be reused, but an uncancellable save
-    ///   against a dead connection would hold host shutdown open until the command timeout.</item>
-    /// </list>
-    /// </summary>
-    private async Task TryPersistStampsOnCancellationAsync(ApplicationDbContext context, string sourceName)
-    {
-        using var timeout = new CancellationTokenSource(ShutdownSaveTimeout, _timeProvider);
-
-        try
-        {
-            await context.SaveChangesAsync(timeout.Token).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LogShutdownSaveFailed(logger, sourceName, ex);
-        }
     }
 
     /// <summary>
@@ -372,9 +332,9 @@ public sealed partial class OutboxProcessor(
         List<OutboxMessage> messages,
         int eligibleCount,
         DateTime now,
+        Guid lockToken,
         CancellationToken cancellationToken)
     {
-        var lockToken = Guid.NewGuid();
         var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
         var candidates = SelectOrderedCandidates(messages, eligibleCount);
 
@@ -488,15 +448,27 @@ public sealed partial class OutboxProcessor(
     /// scope carries the original request's identity across the hop: <c>BrokerMessageBus</c> reads
     /// the restored values through the row scope's services when it stamps its headers, and the
     /// in-process path (<c>InProcessMessageBus</c> to <see cref="IDomainEventDispatcher"/>) gets the
-    /// right ambient context for free. The cycle scope's context keeps tracking the rows for the
-    /// batch save; only delivery moves to the row scope.
+    /// right ambient context for free. The cycle scope's context holds the claimed rows and writes
+    /// each row's lease renewal and outcome; only delivery moves to the row scope.
+    /// <para>
+    /// The claim lease covers the whole batch, so a slow batch could outlive it and let another
+    /// replica claim a later row while this one is still busy. Each row's lease is therefore renewed
+    /// just before it is dispatched, in a statement guarded on this batch's lock token, and a row
+    /// that no longer carries the token is skipped. The row's outcome is written the same guarded
+    /// way as soon as the row is done, so a replica that lost the row mid-dispatch drops its stale
+    /// outcome instead of overwriting the new owner's.
+    /// </para>
     /// </remarks>
+    /// <param name="context">The cycle scope's context holding the claimed rows.</param>
     /// <param name="messages">The claimed rows to deliver.</param>
     /// <param name="target">The target the batch was claimed from; each row scope is created for it.</param>
+    /// <param name="lockToken">This batch's claim token, which every renewal and stamp is guarded by.</param>
     /// <param name="cancellationToken">Cancels the batch.</param>
     private async Task<bool> DispatchMessagesAsync(
+        ApplicationDbContext context,
         IEnumerable<OutboxMessage> messages,
         TenantDataSourceTarget target,
+        Guid lockToken,
         CancellationToken cancellationToken)
     {
         var source = target.Source;
@@ -509,134 +481,332 @@ public sealed partial class OutboxProcessor(
 
         foreach (var message in messages)
         {
+            if (!await RenewLeaseAsync(context, message, lockToken, cancellationToken).ConfigureAwait(false))
+            {
+                LogLeaseLostBeforeDispatch(logger, message.Id);
+                continue;
+            }
+
             using var activity = StartOutboxActivity(message, source);
 
+            var delivered = false;
+
             // Tenant-owned targets keep their tenant; the shared target starts unresolved, so the
-            // restore below can set this row's tenant (or leave it unset for a tenantless row).
-            using var rowScope = scopeFactory.CreateTenantScope(target);
-            try
+            // restore below can set this row's tenant (or leave it unset for a tenantless row). The
+            // scope only carries the delivery, so it is disposed before the outcome is written
+            // through the cycle context.
+            using (var rowScope = scopeFactory.CreateTenantScope(target))
             {
-                // Before anything reads the scope: the publish path stamps headers from these
-                // services and the in-process path hands them to the handlers. The handle keeps the
-                // origin published for scopes the handlers open themselves, until this row is done.
-                using var origin = Context.AmbientOrigin.Restore(
-                    rowScope.ServiceProvider,
-                    message.UserId,
-                    message.UserRoles,
-                    message.TenantId,
-                    message.CorrelationId,
-                    OutboxPrincipalAuthenticationType);
-
-                var domainEvent = message.DeserializeEvent();
-                if (domainEvent is null)
+                try
                 {
-                    processedAny |= HandleUnresolvableType(message);
-                    continue;
+                    // Before anything reads the scope: the publish path stamps headers from these
+                    // services and the in-process path hands them to the handlers. The handle keeps the
+                    // origin published for scopes the handlers open themselves, until this row is done.
+                    using var origin = Context.AmbientOrigin.Restore(
+                        rowScope.ServiceProvider,
+                        message.UserId,
+                        message.UserRoles,
+                        message.TenantId,
+                        message.CorrelationId,
+                        OutboxPrincipalAuthenticationType);
+
+                    var domainEvent = message.DeserializeEvent();
+                    if (domainEvent is null)
+                    {
+                        processedAny |= HandleUnresolvableType(message);
+                    }
+                    else
+                    {
+                        await DeliverAsync(domainEvent, rowScope.ServiceProvider, cancellationToken).ConfigureAwait(false);
+                        delivered = true;
+                    }
                 }
-
-                // Integration events route through IMessageBus so the registered transport
-                // (in-process for the monolith, MassTransit broker for extracted services)
-                // determines delivery. Pure domain events keep the legacy in-process dispatch.
-                if (domainEvent is IIntegrationEvent integrationEvent)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    var messageBus = rowScope.ServiceProvider.GetRequiredService<IMessageBus>();
-
-                    // Only the broker hop is wrapped. The in-process dispatcher branch below is a
-                    // direct method call into this same process: it has no transport to be dead,
-                    // so a breaker there would only add a way to reject work that would have
-                    // succeeded.
-                    await _brokerPublishPipeline.ExecuteAsync(
-                        static async (state, ct) =>
-                            await state.Bus.PublishAsync(state.Event, ct).ConfigureAwait(false),
-                        (Bus: messageBus, Event: integrationEvent),
-                        cancellationToken).ConfigureAwait(false);
+                    // Host shutdown, not a delivery failure. Falling into the generic handler below
+                    // would increment RetryCount and stamp LastError on this message and, since every
+                    // later await fails the same way, on the whole remainder of the batch: a graceful
+                    // restart could dead-letter messages that were never actually attempted.
+                    throw;
                 }
-                else
+                catch (Exception ex)
                 {
-                    var dispatcher = rowScope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
-                    await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
-                }
+                    message.RetryCount++;
+                    message.LastError = ColumnWidth.Truncate(ex.Message, MaxErrorLength);
 
-                var processedOn = _timeProvider.GetUtcNow().UtcDateTime;
-                message.ProcessedOn = processedOn;
-                processedAny = true;
+                    // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
+                    // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
+                    // that kept the original lease was retried only after the full LeaseSeconds (300s by
+                    // default) no matter what the polling interval or a signal said. That made the retry
+                    // cadence an accident of the lease. Capping at the lease keeps a permanently failing
+                    // message from becoming unclaimable for longer than a dead replica's rows would.
+                    message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
+                        .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
 
-                var eventTypeTag = new KeyValuePair<string, object?>("event_type", message.EventType);
-                OutboxMetrics.ProcessedCounter.Add(1, eventTypeTag);
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
-                // End-to-end delivery lag in seconds. Clamped at zero: OccurredOn is stamped by the
-                // writing host and ProcessedOn by this one, so clock skew between them must not
-                // publish a negative duration into the histogram.
-                OutboxMetrics.DispatchLagHistogram.Record(
-                    Math.Max((processedOn - message.OccurredOn).TotalSeconds, 0),
-                    eventTypeTag);
+                    // An open circuit is a rejection, not a delivery attempt: the publish never left
+                    // the process. It still follows the normal failure path above (retry increment and
+                    // re-lease) so the row is retried on a later cycle exactly like any other failure,
+                    // but it gets its own counter and its own log line, because "the broker refused
+                    // 50 messages" and "we did not try, the broker is known-dead" are different
+                    // operational facts.
+                    var circuitOpen = ex is BrokenCircuitException;
+                    if (circuitOpen)
+                    {
+                        BrokerMetrics.CircuitOpenCounter.Add(
+                            1,
+                            new KeyValuePair<string, object?>("event_type", message.EventType));
+                    }
 
-                LogMessageProcessed(logger, message.Id, message.EventType);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                // Host shutdown, not a delivery failure. Falling into the generic handler below
-                // would increment RetryCount and stamp LastError on this message and, since every
-                // later await fails the same way, on the whole remainder of the batch: a graceful
-                // restart could dead-letter messages that were never actually attempted.
-                throw;
-            }
-            catch (Exception ex)
-            {
-                message.RetryCount++;
-                message.LastError = ColumnWidth.Truncate(ex.Message, MaxErrorLength);
+                    if (circuitOpen && !circuitOpenLogged)
+                    {
+                        circuitOpenLogged = true;
+                        LogBrokerCircuitOpen(logger, source.ToString());
+                    }
 
-                // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
-                // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
-                // that kept the original lease was retried only after the full LeaseSeconds (300s by
-                // default) no matter what the polling interval or a signal said. That made the retry
-                // cadence an accident of the lease. Capping at the lease keeps a permanently failing
-                // message from becoming unclaimable for longer than a dead replica's rows would.
-                message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
-                    .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
-
-                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-                // An open circuit is a rejection, not a delivery attempt: the publish never left
-                // the process. It still follows the normal failure path above (retry increment and
-                // re-lease) so the row is retried on a later cycle exactly like any other failure,
-                // but it gets its own counter and its own log line, because "the broker refused
-                // 50 messages" and "we did not try, the broker is known-dead" are different
-                // operational facts.
-                var circuitOpen = ex is BrokenCircuitException;
-                if (circuitOpen)
-                {
-                    BrokerMetrics.CircuitOpenCounter.Add(
-                        1,
-                        new KeyValuePair<string, object?>("event_type", message.EventType));
-                }
-
-                if (circuitOpen && !circuitOpenLogged)
-                {
-                    circuitOpenLogged = true;
-                    LogBrokerCircuitOpen(logger, source.ToString());
-                }
-
-                if (message.RetryCount >= _settings.MaxRetries)
-                {
-                    // The moment of exhaustion is the operator's last loud signal: from here the
-                    // row leaves the poll (RetryCount filter) and is eventually purged by
-                    // OutboxCleanupService after the dead-letter retention window.
-                    OutboxMetrics.DeadLetterCounter.Add(
-                        1,
-                        new KeyValuePair<string, object?>("event_type", message.EventType),
-                        new KeyValuePair<string, object?>("reason", "retries_exhausted"));
-                    LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
-                }
-                else if (!circuitOpen)
-                {
-                    // Circuit-open rejections already reported themselves above, once per batch.
-                    LogMessageRetry(logger, message.Id, message.RetryCount, ex);
+                    if (message.RetryCount >= _settings.MaxRetries)
+                    {
+                        // The moment of exhaustion is the operator's last loud signal: from here the
+                        // row leaves the poll (RetryCount filter) and is eventually purged by
+                        // OutboxCleanupService after the dead-letter retention window.
+                        OutboxMetrics.DeadLetterCounter.Add(
+                            1,
+                            new KeyValuePair<string, object?>("event_type", message.EventType),
+                            new KeyValuePair<string, object?>("reason", "retries_exhausted"));
+                        LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
+                    }
+                    else if (!circuitOpen)
+                    {
+                        // Circuit-open rejections already reported themselves above, once per batch.
+                        LogMessageRetry(logger, message.Id, message.RetryCount, ex);
+                    }
                 }
             }
+
+            // Outside the try on purpose: a database failure while recording the outcome is not a
+            // delivery failure, so it must not be charged to the row as a retry. It propagates and
+            // fails the source for this cycle, as the batch save it replaces did. A shutdown signalled
+            // mid-delivery does not skip this write (see RecordOutcomeAsync).
+            processedAny |= delivered;
+            await RecordOutcomeAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
         }
 
         return processedAny;
+    }
+
+    /// <summary>
+    /// Persists one row's outcome: the processed stamp when delivered, otherwise its retry state.
+    /// <para>
+    /// A shutdown signalled while the row was in flight must not cost a finished delivery its stamp
+    /// (a handler that never observes the token completes anyway), so once the batch token is
+    /// cancelled the outcome is written under its own short budget (<see cref="ShutdownStampTimeout"/>)
+    /// instead, and the shutdown then continues by rethrowing the cancellation. Two constraints carry
+    /// over from the batch-end save this replaced: a failure of that last write is logged rather than
+    /// allowed to replace the propagating <see cref="OperationCanceledException"/> (the polling loop
+    /// recognizes shutdown by that exception type), and the budget is short rather than
+    /// <see cref="CancellationToken.None"/>, so a dead connection cannot hold host shutdown open until
+    /// the command timeout. Without a shutdown a database failure propagates exactly as before.
+    /// </para>
+    /// </summary>
+    private async Task RecordOutcomeAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        bool delivered,
+        Guid lockToken,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await WriteOutcomeAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The shutdown arrived during the write itself. The guarded update is idempotent, so
+                // it is simply written again under the shutdown budget.
+            }
+        }
+
+        await RecordOutcomeOnShutdownAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Writes one row's outcome under the shutdown budget, logging (never throwing) a failure so it
+    /// cannot replace the cancellation, which is then rethrown so the shutdown continues.
+    /// </summary>
+    private async Task RecordOutcomeOnShutdownAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        bool delivered,
+        Guid lockToken,
+        CancellationToken cancellationToken)
+    {
+        using var budget = new CancellationTokenSource(ShutdownStampTimeout, _timeProvider);
+        try
+        {
+            await WriteOutcomeAsync(context, message, delivered, lockToken, budget.Token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogShutdownStampFailed(logger, message.Id, ex);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    /// <summary>Writes one row's outcome under <paramref name="cancellationToken"/>.</summary>
+    private Task WriteOutcomeAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        bool delivered,
+        Guid lockToken,
+        CancellationToken cancellationToken) =>
+        delivered
+            ? RecordDeliveredAsync(context, message, lockToken, cancellationToken)
+            : RecordFailureAsync(context, message, lockToken, cancellationToken);
+
+    /// <summary>
+    /// Delivers one deserialized event. Integration events route through <see cref="IMessageBus"/>
+    /// so the registered transport (in-process for the monolith, MassTransit broker for extracted
+    /// services) determines delivery; pure domain events keep the in-process dispatch.
+    /// </summary>
+    private async Task DeliverAsync(IDomainEvent domainEvent, IServiceProvider rowServices, CancellationToken cancellationToken)
+    {
+        if (domainEvent is IIntegrationEvent integrationEvent)
+        {
+            var messageBus = rowServices.GetRequiredService<IMessageBus>();
+
+            // Only the broker hop is wrapped. The in-process dispatcher branch below is a direct
+            // method call into this same process: it has no transport to be dead, so a breaker there
+            // would only add a way to reject work that would have succeeded.
+            await _brokerPublishPipeline.ExecuteAsync(
+                static async (state, ct) =>
+                    await state.Bus.PublishAsync(state.Event, ct).ConfigureAwait(false),
+                (Bus: messageBus, Event: integrationEvent),
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var dispatcher = rowServices.GetRequiredService<IDomainEventDispatcher>();
+            await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Renews this replica's lease on one claimed row just before it is dispatched, in a statement
+    /// guarded on the batch's lock token, so a row another replica has taken over since the claim is
+    /// skipped rather than dispatched a second time. Returns whether the row is still this replica's.
+    /// </summary>
+    private async Task<bool> RenewLeaseAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        Guid lockToken,
+        CancellationToken cancellationToken)
+    {
+        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+
+        var kept = await context.Set<OutboxMessage>()
+            .Where(m => m.Id == message.Id && m.LockToken == lockToken)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.LockedUntil, leaseUntil), cancellationToken)
+            .ConfigureAwait(false);
+
+        return kept > 0;
+    }
+
+    /// <summary>
+    /// Stamps a delivered row processed, guarded by the lock token, then records the processed
+    /// count, the dispatch lag and the success log line.
+    /// </summary>
+    private async Task RecordDeliveredAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        Guid lockToken,
+        CancellationToken cancellationToken)
+    {
+        var processedOn = _timeProvider.GetUtcNow().UtcDateTime;
+        message.ProcessedOn = processedOn;
+
+        await StampAsync(
+            context,
+            message,
+            lockToken,
+            guarded => guarded.ExecuteUpdateAsync(
+                s => s.SetProperty(m => m.ProcessedOn, processedOn),
+                cancellationToken)).ConfigureAwait(false);
+
+        var eventTypeTag = new KeyValuePair<string, object?>("event_type", message.EventType);
+        OutboxMetrics.ProcessedCounter.Add(1, eventTypeTag);
+
+        // End-to-end delivery lag in seconds. Clamped at zero: OccurredOn is stamped by the writing
+        // host and ProcessedOn by this one, so clock skew between them must not publish a negative
+        // duration into the histogram.
+        OutboxMetrics.DispatchLagHistogram.Record(
+            Math.Max((processedOn - message.OccurredOn).TotalSeconds, 0),
+            eventTypeTag);
+
+        LogMessageProcessed(logger, message.Id, message.EventType);
+    }
+
+    /// <summary>
+    /// Persists a failed row's retry state (count, last error and the backoff or dead-letter lease
+    /// set in memory by the failure handling), guarded by the lock token.
+    /// </summary>
+    private Task RecordFailureAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        Guid lockToken,
+        CancellationToken cancellationToken)
+    {
+        var retryCount = message.RetryCount;
+        var lastError = message.LastError;
+        var lockedUntil = message.LockedUntil;
+
+        return StampAsync(
+            context,
+            message,
+            lockToken,
+            guarded => guarded.ExecuteUpdateAsync(
+                s => s.SetProperty(m => m.RetryCount, retryCount)
+                      .SetProperty(m => m.LastError, lastError)
+                      .SetProperty(m => m.LockedUntil, lockedUntil),
+                cancellationToken));
+    }
+
+    /// <summary>
+    /// Writes one row's outcome as a set-based update guarded by the lock token: a replica whose
+    /// lease expired mid-dispatch matches nothing here and drops its stale outcome rather than
+    /// overwriting the record of the replica that has since taken the row. The tracked instance is
+    /// then synced (accepted when stamped, detached when not), so nothing later writes the outcome
+    /// through the change tracker without the guard.
+    /// </summary>
+    /// <param name="context">The cycle scope's context holding the row.</param>
+    /// <param name="message">The tracked row, already carrying its outcome in memory.</param>
+    /// <param name="lockToken">This batch's claim token, which the update is guarded by.</param>
+    /// <param name="update">Applies the outcome to the guarded query.</param>
+    private async Task StampAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        Guid lockToken,
+        Func<IQueryable<OutboxMessage>, Task<int>> update)
+    {
+        var guarded = context.Set<OutboxMessage>()
+            .Where(m => m.Id == message.Id && m.LockToken == lockToken);
+
+        var stamped = await update(guarded).ConfigureAwait(false);
+
+        var entry = context.Entry(message);
+        if (stamped == 0)
+        {
+            LogLeaseLost(logger, message.Id);
+            entry.State = EntityState.Detached;
+            return;
+        }
+
+        entry.OriginalValues.SetValues(entry.CurrentValues);
+        entry.State = EntityState.Unchanged;
     }
 
     /// <summary>
@@ -746,9 +916,6 @@ public sealed partial class OutboxProcessor(
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox processing failed for data source {DataSourceName}")]
     private static partial void LogSourceProcessingError(ILogger logger, string dataSourceName, Exception exception);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox shutdown save failed for data source {DataSourceName}: messages delivered in the cancelled batch will be redelivered when their lease expires")]
-    private static partial void LogShutdownSaveFailed(ILogger logger, string dataSourceName, Exception exception);
-
     [LoggerMessage(Level = LogLevel.Debug, Message = "Processing {Count} pending outbox messages from {DataSourceName}")]
     private static partial void LogProcessingBatch(ILogger logger, int count, string dataSourceName);
 
@@ -777,4 +944,13 @@ public sealed partial class OutboxProcessor(
     // the same instant. Warning rather than Error because nothing is lost, only deferred.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Broker circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
     private static partial void LogBrokerCircuitOpen(ILogger logger, string dataSourceName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} was skipped: another replica took over its claim before it was dispatched")]
+    private static partial void LogLeaseLostBeforeDispatch(ILogger logger, Guid messageId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} outlived its claim lease; its outcome was discarded because another replica now owns the row")]
+    private static partial void LogLeaseLost(ILogger logger, Guid messageId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId}: its outcome could not be written during shutdown; a delivered message will be redelivered when its lease expires")]
+    private static partial void LogShutdownStampFailed(ILogger logger, Guid messageId, Exception exception);
 }
