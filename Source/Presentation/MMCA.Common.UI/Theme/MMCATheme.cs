@@ -96,6 +96,16 @@ public static class MMCATheme
             // are effectively invisible to a low-vision user; rgba(255,255,255,0.5) is 4.59:1 on
             // Surface and 5.10:1 on Background without turning the hairline into a hard outline.
             LinesInputs = "rgba(255,255,255,0.5)",
+            // Table row overlays darken rather than lighten. A row's striped or hover overlay is
+            // composited over the table's own background, and a link in that row sits on the result:
+            // MudBlazor's dark default white striping turns Surface #27303A into rgb(82,89,97), where
+            // the link colour #42A5F5 is only about 2.66:1, and any white overlay above roughly 3%
+            // already drops it under the 4.5:1 text floor. A black overlay moves the row AWAY from
+            // the light link and text colours instead: striped rgba(0,0,0,0.2) reads 5.77:1 on Surface
+            // and 6.61:1 on Background, hover rgba(0,0,0,0.32) 6.15:1 / 6.87:1, and the two stay
+            // visibly distinct from the plain row and from each other. LinkContrastTests pins both.
+            TableStriped = "rgba(0,0,0,0.2)",
+            TableHover = "rgba(0,0,0,0.32)",
             AppbarBackground = BrandColors.ChromeBackground,
             AppbarText = BrandColors.ChromeText,
             Background = BrandColors.DarkBackground,

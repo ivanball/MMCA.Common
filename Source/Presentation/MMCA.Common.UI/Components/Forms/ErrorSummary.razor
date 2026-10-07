@@ -57,7 +57,9 @@
     /// <summary>
     /// Resolves every message as a resource key, passing unknown keys through verbatim. Defaults
     /// to the framework's own <c>SharedResource</c> localizer; a page whose keys live in its own
-    /// resource pair passes its <c>IStringLocalizer</c> here (ADR-027).
+    /// resource pair passes its <c>IStringLocalizer</c> here (ADR-027). The client-synthesized HTTP
+    /// failures (a bodiless status, a transport failure, a client timeout) still render the
+    /// <c>SharedResource</c> translation when this localizer has no <c>Http.*</c> key of its own.
     /// </summary>
     [Parameter] public IStringLocalizer? Localizer { get; set; }
 

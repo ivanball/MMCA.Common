@@ -4,6 +4,15 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- A client-synthesized HTTP failure (a bodiless status such as the gateway rate limiter's 429, a transport failure, a client timeout) now renders the framework's `SharedResource` translation for the current UI culture when the localizer a page passes to `LocalizedErrorMessage`, `NotifyOnFailure`, `OnFailureSetError` or `<ErrorSummary Localizer=...>` has no `Http.*` key of its own. A page localizing through its own `IStringLocalizer<PageType>` previously showed the English synthesized sentence to a Spanish user. Lookup order is the page's `Http.{status}`, the shared `Http.{status}`, the page's `Http.Status`, the shared `Http.Status`, then the English message; a server-phrased message is still shown verbatim. No consumer change is needed. (X-01)
+- The dark palette now sets `TableStriped` (`rgba(0,0,0,0.2)`) and `TableHover` (`rgba(0,0,0,0.32)`). MudBlazor's default white striping turned a striped row on Surface into a grey where the dark link colour was about 2.66:1; the darkening overlays keep links at 5.77:1 or better on striped and hovered rows over both Surface and Background. The light palette is unchanged. (X-02)
+- The signed-in devices page (`/profile/sessions`) now renders a revoke button's busy state (disabled, `aria-busy="true"`, progress indicator) as soon as the confirm dialog is answered, for both a per-device sign-out and sign-out everywhere. With a real (asynchronous) confirm dialog the button previously showed no busy state for the whole revoke call. (A-35)
+- `/not-found` now renders the Access Denied view of `Forbidden` when it answers a request whose status is already 403, which is what a host's `UseStatusCodePagesWithReExecute("/not-found")` produces for a signed-in user lacking a permission on a full page load. The page previously prerendered "Page Not Found" under the 403 until the client caught up. A 404, and an interactive render with no `HttpContext`, still render Page Not Found, and the response status stays 403. (O-23)
+
 ## [1.232.0] - 2026-10-06
 
 ### Fixed
