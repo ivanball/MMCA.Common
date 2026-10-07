@@ -7,14 +7,14 @@ using MMCA.Common.AI.Chat;
 namespace MMCA.Common.AI.Guardrails;
 
 /// <summary>
-/// The one content policy the framework does ship: direct contact details are removed from every
+/// The contact-details redaction the framework ships: direct contact details are removed from every
 /// outgoing message before the provider sees them.
 /// <para>
-/// ADR-120 says the framework ships extension points and no content policy, because what counts as
-/// a prompt injection or a disallowed topic is an application decision. Contact details are the
-/// exception that proves the rule: an email address and a phone number are never evidence for
-/// anything a model is being asked, so sending them is pure exposure with no offsetting value, and
-/// the judgement does not change between applications or jurisdictions.
+/// It is one of two shipped guardrails. The other, <see cref="ContentPolicyGuardrail"/>, is the
+/// configurable prompt-injection floor; what counts as a disallowed topic beyond that floor stays an
+/// application decision. Contact details need no configuration: an email address and a phone number
+/// are never evidence for anything a model is being asked, so sending them is pure exposure with no
+/// offsetting value, and the judgement does not change between applications or jurisdictions.
 /// </para>
 /// <para>
 /// It implements both halves deliberately. As an <see cref="IChatRequestRedactor"/> it rewrites the

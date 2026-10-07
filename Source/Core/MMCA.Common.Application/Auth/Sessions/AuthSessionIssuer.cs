@@ -259,8 +259,10 @@ public sealed class AuthSessionIssuer(
     }
 
     /// <summary>
-    /// The refresh rejection, shared by every failing branch so a caller cannot tell an unknown token
-    /// from an expired one from a replayed one (the reuse case still revokes the family internally).
+    /// The refresh rejection, shared by every failing branch except a rotation race inside the reuse
+    /// grace (answered with <see cref="RefreshSupersededError"/>), so a caller cannot tell an unknown
+    /// token from an expired one from a replayed one (the reuse case still revokes the family
+    /// internally).
     /// </summary>
     private static Error InvalidRefreshTokenError() =>
         Error.Unauthorized(

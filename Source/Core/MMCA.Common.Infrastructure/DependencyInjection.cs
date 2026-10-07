@@ -176,7 +176,8 @@ public static partial class DependencyInjection
             services.TryAddScoped<Application.Auth.Sessions.IAuthSessionIssuer, Application.Auth.Sessions.AuthSessionIssuer>();
 
             // Retention sweep, gated on the same flag that maps the table. Registering it
-            // unconditionally would start an hourly sweep in every service of a modular host, all but
+            // unconditionally would start a periodic sweep (every CleanupIntervalHours, default 6) in
+            // every service of a modular host, all but
             // one of which has no RefreshSessions table to sweep.
             if (configuration.GetSection(Application.Auth.RefreshSessionSettings.SectionName)
                     .Get<Application.Auth.RefreshSessionSettings>()?.Enabled == true)
@@ -392,7 +393,8 @@ public static partial class DependencyInjection
     /// Registers <see cref="IRawSqlQueryExecutor"/> only when the host's default source, the one the
     /// executor runs every statement on, is on an engine that can run raw SQL (a relational one). A
     /// Cosmos-default host gets no registration, so a service that injects the executor there fails
-    /// when the container validates rather than on its first statement.
+    /// at resolution rather than on its first statement (at container build in Development, where
+    /// the default host validates the container; on first resolution elsewhere).
     /// </summary>
     /// <param name="services">The collection being configured.</param>
     /// <param name="configuration">Application configuration carrying the <c>ConnectionStrings</c> section.</param>

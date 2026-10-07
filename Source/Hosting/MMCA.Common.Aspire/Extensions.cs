@@ -54,7 +54,9 @@ public static partial class Extensions
                     options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
 
                     // Never replay a POST or PATCH: an attempt that timed out may still be running
-                    // server-side, and a server-to-server hop carries no idempotency key. GET, PUT,
+                    // server-side, and most hops carry no idempotency key (a server-to-server call
+                    // never does; the UI's "APIClient" stamps one only on EntityServiceBase creates,
+                    // whose replay the UI service base classes own). GET, PUT,
                     // DELETE and the other idempotent verbs keep their one retry, which is why this
                     // names the two verbs rather than using DisableForUnsafeHttpMethods (that helper
                     // also switches the retry off for PUT and DELETE).

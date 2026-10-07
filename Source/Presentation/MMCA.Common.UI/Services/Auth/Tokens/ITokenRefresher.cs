@@ -5,7 +5,11 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// <list type="bullet">
 /// <item>Browser (Server + WASM): <see cref="SameOriginProxyTokenRefresher"/> calls the same-origin
 /// <c>/auth/session/token</c> endpoint, where the refresh token lives in an HttpOnly cookie and the
-/// rotation happens server-side — the refresh token is never exposed to JS.</item>
+/// rotation happens server-side, so the refresh token is never exposed to JS.</item>
+/// <item>Blazor Server on a host with the same-origin API proxy enabled
+/// (<c>AddCommonSameOriginApiProxy</c>): the circuit resolves <c>HandoffTokenRefresher</c> instead,
+/// which opens a protected <c>/auth/session/handoff</c> on the server so the access token stays in
+/// circuit memory.</item>
 /// <item>MAUI: <see cref="DirectApiTokenRefresher"/> exchanges the refresh token held in OS SecureStorage
 /// directly against the API's <c>auth/refresh</c> endpoint.</item>
 /// </list>

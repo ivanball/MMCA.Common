@@ -146,8 +146,10 @@ jobs:
   publish-maui:
     runs-on: windows-latest
     # Kept at 40, not cut to 2x the slowest recent run (11m40s-14m57s, measured 2026-09-30): this
-    # job publishes after the main package set is already on nuget.org, so a timeout here leaves a
-    # half-published release. No MAUI workload cache on this job, unlike ci.yml build-maui.
+    # job declares no `needs:` on `publish` and runs in parallel with it, so the main package set is
+    # usually already on nuget.org by the time this job pushes (nothing enforces that order), and a
+    # timeout here leaves a half-published release. No MAUI workload cache on this job, unlike ci.yml
+    # build-maui.
     timeout-minutes: 40
     # Same irreversible-publish gate as the `publish` job (SEC-Common-64); both jobs push to
     # nuget.org, so both wait on the `release` environment.

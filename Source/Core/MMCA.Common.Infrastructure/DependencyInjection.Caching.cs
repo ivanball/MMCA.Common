@@ -79,9 +79,11 @@ public static partial class DependencyInjection
                     sp.GetService<IOptions<CacheSettings>>());
             });
 
-            // Cross-replica mutual exclusion, registered alongside the cache because both in-framework
-            // callers pair the two: the API idempotency filter guards its execute-then-store window, and
-            // password-reset token redemption guards its read, compare and remove of one cache record. Redis when a multiplexer is
+            // Cross-replica mutual exclusion, registered alongside the cache because all three
+            // in-framework callers pair the two: the API idempotency filter guards its execute-then-store
+            // window, password-reset token redemption guards its read, compare and remove of one cache
+            // record, and OAuthControllerBase (when given a lock) guards its read-and-burn of a
+            // single-use exchange code. Redis when a multiplexer is
             // registered, process-local (and warn-once) otherwise, mirroring the cache above.
             services.TryAddSingleton<IDistributedLock>(sp =>
             {

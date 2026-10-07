@@ -91,10 +91,12 @@ public interface ICacheService
     Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically increments a counter and returns its new value, setting <paramref name="expiration"/>
-    /// when the counter is created. Used by rate-limit and brute-force counters (ADR-029), where the
-    /// read-modify-write shape of <see cref="GetAsync{T}"/> + <see cref="SetAsync{T}"/> lets
-    /// concurrent requests overwrite each other's increments and undercount.
+    /// Increments a counter and returns its new value, setting <paramref name="expiration"/>
+    /// when the counter is created. Used by rate-limit and brute-force counters (ADR-029). Not
+    /// atomic in any shipped implementation: the default member, <c>DistributedCacheService</c> and
+    /// <c>HybridCacheService</c> are all a read-modify-write of <see cref="GetAsync{T}"/> +
+    /// <see cref="SetAsync{T}"/>, so concurrent requests can overwrite each other's increments and
+    /// undercount.
     /// </summary>
     /// <param name="key">The counter key.</param>
     /// <param name="expiration">Time-to-live applied when the counter is first created.</param>
@@ -103,7 +105,9 @@ public interface ICacheService
     /// <remarks>
     /// The default implementation is the non-atomic read-modify-write, preserving behavior for
     /// implementations with no native counter primitive (and keeping this a non-breaking addition).
-    /// Backing stores that can do better (Redis <c>INCR</c>) override it.
+    /// No shipped implementation overrides it with Redis <c>INCR</c>: the distributed cache stores
+    /// entries as Redis hashes, so an <c>INCR</c> string at the same key would fail the next read
+    /// with <c>WRONGTYPE</c> (see <c>DistributedCacheService.IncrementAsync</c>).
     /// </remarks>
     async Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
     {

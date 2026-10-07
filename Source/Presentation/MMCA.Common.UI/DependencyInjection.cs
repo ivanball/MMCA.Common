@@ -212,11 +212,12 @@ public static class DependencyInjection
 
         /// <summary>
         /// Registers the vendor-neutral toast and confirm-dialog facades over MudBlazor:
-        /// <c>IToastService</c> and <c>IAppDialogService</c>. These two implementations are the ONLY
-        /// types in the framework that name MudBlazor's <c>ISnackbar</c> / <c>IDialogService</c>:
-        /// every page, component and <c>Result</c> helper depends on the contracts instead, so the
-        /// component library stays swappable and a test can record toasts without a rendered
-        /// snackbar host. Scoped, to match the MudBlazor services they wrap.
+        /// <c>IToastService</c> and <c>IAppDialogService</c>. Apart from these two implementations,
+        /// the only framework type that names MudBlazor's <c>ISnackbar</c> / <c>IDialogService</c> is
+        /// the <c>DeleteConfirmation</c> component, which injects <c>IDialogService</c> directly to
+        /// show its typed dialog; pages, other components and the <c>Result</c> helpers depend on the
+        /// contracts instead, so a test can record toasts without a rendered snackbar host. Scoped,
+        /// to match the MudBlazor services they wrap.
         /// <para>
         /// Called by <c>AddUIShared</c>, and separately by the shipped bUnit base
         /// (<c>MMCA.Common.Testing.UI</c>) so a component test resolves the facades without the rest
