@@ -203,43 +203,12 @@ jobs:
             **/packages.lock.json
             Directory.Packages.props
 
-      # This job is the critical path of the whole CI run (measured 7.1-8.2 min, and the only
-      # windows runner), and `dotnet workload install maui` re-downloaded the android/ios/
-      # maccatalyst packs on every single run. Cache the SDK's workload directories, keyed on the
-      # resolved SDK version so an SDK feature-band bump busts it.
-      # A cache saved by a pull_request run is scoped to that PR's ref, so it hits on re-runs and
-      # later pushes within the same PR, not across PRs.
-      - name: Resolve SDK version and root (workload cache key)
-        if: needs.changes.outputs.code == 'true'
-        id: sdk
-        shell: bash
-        run: |
-          echo "version=$(dotnet --version)" >> "$GITHUB_OUTPUT"
-          # Resolve the root from dotnet itself rather than trusting $DOTNET_ROOT to be exported:
-          # an empty value here would silently turn the cache paths into garbage and always miss.
-          # cygpath -m turns the MSYS form (/c/Program Files/dotnet) into C:/Program Files/dotnet,
-          # the only form actions/cache can resolve on windows.
-          root=$(cygpath -m "$(dirname "$(command -v dotnet)")")
-          echo "root=$root" >> "$GITHUB_OUTPUT"
-          echo "sdk=$(dotnet --version)  root=$root"
-
-      - name: Cache MAUI workload packs
-        if: needs.changes.outputs.code == 'true'
-        id: maui-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            ${{ steps.sdk.outputs.root }}/sdk-manifests
-            ${{ steps.sdk.outputs.root }}/packs
-            ${{ steps.sdk.outputs.root }}/metadata
-            ${{ steps.sdk.outputs.root }}/library-packs
-            ${{ steps.sdk.outputs.root }}/template-packs
-          key: maui-workload-${{ runner.os }}-${{ steps.sdk.outputs.version }}
-
+      # No workload cache, by measurement (2026-10-07, PR #523): saving the 2.2 GB of packs took
+      # 430s, a hit still spent 225s restoring plus 192s in this install, and a cache saved by a
+      # pull_request run is only visible to that same PR. Every variant was slower than the plain
+      # install below (~380s).
       - name: Install MAUI workload
         if: needs.changes.outputs.code == 'true'
-        # Still run on a cache hit: it is a no-op that reconciles the manifest, and it is the only
-        # thing that makes a partially-restored cache self-heal rather than fail the build below.
         run: dotnet workload install maui
 
       - name: Build (android + ios + maccatalyst + windows)
