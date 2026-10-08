@@ -15,10 +15,16 @@ public static class OwnershipHelper
     /// is always supplied by the caller, normally from
     /// <see cref="OwnerOrAdminFilterOptions.BypassRole"/>: the framework declares no role names.
     /// </summary>
+    /// <remarks>
+    /// Checks every role the caller holds through <see cref="ICurrentUserService.IsInRole"/>, the same
+    /// check a controller makes inline. <see cref="ICurrentUserService.Role"/> is the first role claim
+    /// only, so comparing against it alone treated a caller holding the bypass role second as a
+    /// non-privileged user here while an inline check said otherwise.
+    /// </remarks>
     public static bool IsAdmin(ICurrentUserService currentUserService, string bypassRole)
     {
         ArgumentNullException.ThrowIfNull(currentUserService);
-        return string.Equals(currentUserService.Role, bypassRole, StringComparison.OrdinalIgnoreCase);
+        return currentUserService.IsInRole(bypassRole);
     }
 
     /// <summary>

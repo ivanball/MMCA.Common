@@ -608,10 +608,18 @@ public abstract class AuthenticationServiceBase<TUser>(
         user.PasswordHash.Length > 0 && user.PasswordSalt.Length > 0;
 
     /// <summary>
-    /// Runs one throwaway verification so a login branch that never reaches the real one still pays
-    /// the key-derivation cost. Without it the 401 for an address with no usable credential comes
-    /// back in a fraction of the time a real check takes, which is a membership oracle.
+    /// Runs one throwaway key derivation so a login branch that never reaches the real verification
+    /// still pays its cost. Without it the 401 for an address with no usable credential comes back
+    /// in a fraction of the time a real check takes, which is a membership oracle.
     /// </summary>
+    /// <remarks>
+    /// The derivation is a <see cref="IPasswordHasher.HashPassword"/> of the submitted password,
+    /// discarded. Hashing and verifying each run the hasher's own key derivation once, so the cost
+    /// matches a real verification for whichever hasher is registered. A verification against fixed
+    /// decoy material would not: a hasher that rejects material of the wrong size before deriving
+    /// anything (the shipped one does) answers it instantly once the decoy's sizes stop matching its
+    /// own, which silently reopens the timing gap.
+    /// </remarks>
     private void BurnPasswordVerificationCost(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
@@ -619,9 +627,7 @@ public abstract class AuthenticationServiceBase<TUser>(
             return;
         }
 
-        // Canonical-shaped material that matches no password: allocated per call rather than held
-        // statically, because a static field on a generic base is per-closed-type anyway.
-        _ = passwordHasher.VerifyPassword(password, new byte[64], new byte[32]);
+        _ = passwordHasher.HashPassword(password);
     }
 
     /// <summary>

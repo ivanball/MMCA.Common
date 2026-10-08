@@ -16,7 +16,7 @@ public sealed class OwnerOrAdminFilterTests
 {
     private const string BypassRole = "Admin";
 
-    private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new() { CallBase = true };
 
     private static (ActionExecutingContext Context, bool NextCalled) CreateContext(
         RouteValueDictionary? routeData = null,

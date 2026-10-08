@@ -285,6 +285,85 @@ public sealed class HybridCacheServiceTests
         read.Should().BeNull("the record was consumed on another replica; only B's stale local copy still holds it");
     }
 
+    // ── TryGetAsync: presence reported separately from the value ──
+    [Fact]
+    public async Task TryGetAsync_OnAValueTypeMiss_ReportsNotFound()
+    {
+        var (sut, l2, _) = CreateSut();
+
+        var (found, value) = await sut.TryGetAsync<int>("absent", TestContext.Current.CancellationToken);
+
+        found.Should().BeFalse("default(int) is not null, so inferring presence from the value reported every miss as a hit");
+        value.Should().Be(0);
+        l2.Writes.Should().Be(0, "a presence probe must never populate the cache");
+    }
+
+    [Fact]
+    public async Task TryGetAsync_OnACachedDefaultValue_ReportsFound()
+    {
+        var (sut, _, _) = CreateSut();
+        await sut.SetAsync("zero", 0, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+
+        var (found, value) = await sut.TryGetAsync<int>("zero", TestContext.Current.CancellationToken);
+
+        found.Should().BeTrue("a cached 0 is a hit, and only presence can tell it from a miss");
+        value.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TryGetAsync_ReadsAnEntryOnlyTheDistributedCacheHolds()
+    {
+        var l2 = new RecordingDistributedCache();
+        var writer = new HybridCacheService(BuildHybridCache(l2), NullLogger<HybridCacheService>.Instance);
+        await writer.SetAsync("shared", 42, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var reader = new HybridCacheService(BuildHybridCache(l2), NullLogger<HybridCacheService>.Instance);
+
+        var (found, value) = await reader.TryGetAsync<int>("shared", TestContext.Current.CancellationToken);
+
+        found.Should().BeTrue();
+        value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task TryGetAsync_DoesNotJoinAGetOrCreateInFlightOnTheSameKey()
+    {
+        // If the probe joined the in-flight GetOrCreateAsync it would wait on the blocked factory;
+        // if the GetOrCreateAsync joined a probe it would be handed the probe's miss sentinel.
+        var (sut, _, _) = CreateSut();
+        var release = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var factoryStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var creating = sut.GetOrCreateAsync(
+            "k",
+            _ =>
+            {
+                factoryStarted.TrySetResult();
+                return release.Task;
+            },
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken);
+        await factoryStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        var (found, _) = await sut.TryGetAsync<string>("k", TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        found.Should().BeFalse("nothing is cached yet, and the probe must answer without waiting on another caller's factory");
+        release.SetResult("fresh");
+        (await creating).Should().Be("fresh");
+    }
+
+    [Fact]
+    public async Task TryGetAsync_WhenTheCacheFaults_ReportsNotFoundAndDropsTheEntry()
+    {
+        var faulting = new FaultingHybridCache();
+        var sut = new HybridCacheService(faulting, NullLogger<HybridCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
+
+        var (found, _) = await sut.TryGetAsync<int>("poison", TestContext.Current.CancellationToken);
+
+        found.Should().BeFalse();
+        faulting.Removed.Should().ContainSingle().Which.Should().Be($"{Prefix}hc:poison");
+    }
+
     // ── GetOrCreateAsync override ──
     [Fact]
     public async Task GetOrCreateAsync_OnAMiss_RunsTheFactoryAndCachesIt()
