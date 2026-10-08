@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.234.0] - 2026-10-08
+
 ### Security
 
 - `ImageSharpImageProcessor` decodes with a configuration that registers only the JPEG, PNG, WebP and GIF decoders, so any other format (TIFF and BMP among them) is refused as `Image.Undecodable` before its decoder runs. Five ImageSharp 3.x advisories published 2026-10-07 (patched only in 4.1.2, outside the v3 license pin) are accepted in `Directory.Build.props` with a per-advisory reachability note: four are unreachable here (TIFF encoder and decoder, `HistogramEqualization`), and the ICC CLUT one (GHSA-gwg2-r3hj-4w44, moderate) is accepted as a bounded risk. Consumers inherit the package transitively and need the same five `NuGetAuditSuppress` entries if their own audit fails.

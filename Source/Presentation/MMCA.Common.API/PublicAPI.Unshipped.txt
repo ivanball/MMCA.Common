@@ -1,2 +1,1 @@
 ﻿#nullable enable
-virtual MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest>.GetByIdRouteName.get -> string!
