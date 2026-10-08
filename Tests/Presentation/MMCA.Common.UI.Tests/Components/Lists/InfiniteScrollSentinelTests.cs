@@ -1,7 +1,10 @@
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
 using MMCA.Common.UI.Components.Lists;
+using Moq;
 
 namespace MMCA.Common.UI.Tests.Components.Lists;
 
@@ -13,6 +16,8 @@ namespace MMCA.Common.UI.Tests.Components.Lists;
 /// </summary>
 public sealed class InfiniteScrollSentinelTests : BunitTestBase
 {
+    private const string InfiniteScrollModulePath = "./_content/MMCA.Common.UI/infinite-scroll.js";
+
     [Fact]
     public void RendersTheSentinelElement()
     {
@@ -87,6 +92,60 @@ public sealed class InfiniteScrollSentinelTests : BunitTestBase
         appended.Should().Be(0);
     }
 
+    // ── U-20 (ADC local test run 8) ──
+    // The host stops rendering the sentinel the moment the last page arrives, which can land while
+    // the module import is still in flight. The import's continuation must then see the disposal and
+    // attach nothing; and an observe call the browser refuses (a JSException, e.g. the element is
+    // already gone) must not escape the component: the list simply stops loading.
+    [Fact]
+    public async Task DisposedWhileTheModuleImportIsPending_ObservesNothing_WhenTheImportCompletes()
+    {
+        // bUnit answers a module import immediately (SetupModule) and refuses a hand-rolled
+        // IJSObjectReference setup, so the import is held open by a runtime that delegates every
+        // other call to bUnit's.
+        var runtime = new PendingImportJSRuntime(JSInterop.JSRuntime, InfiniteScrollModulePath);
+        Services.AddSingleton<IJSRuntime>(runtime);
+        var lateModule = new Mock<IJSObjectReference>();
+
+        var cut = RenderUnderTest<InfiniteScrollSentinel>(p => p.Add(c => c.IsLoading, false));
+        await cut.WaitForAssertionAsync(() => runtime.ImportCalls.Should().Be(1, "the premise is a pending import"));
+
+        await cut.Instance.DisposeAsync();
+        var complete = async () =>
+        {
+            await cut.InvokeAsync(() => runtime.Import.SetResult(lateModule.Object));
+
+            // Two dispatcher round trips: the import's continuation and anything it awaits in turn.
+            await cut.InvokeAsync(() => { });
+            await cut.InvokeAsync(() => { });
+        };
+
+        await complete.Should().NotThrowAsync("a late import must not fault the disposed component");
+        Renderer.UnhandledException.IsCompleted.Should().BeFalse(
+            "nothing may escape the after-render of a disposed sentinel");
+        lateModule.Invocations
+            .Where(i => i.Method.Name == nameof(IJSObjectReference.InvokeAsync))
+            .Select(i => i.Arguments[0] as string)
+            .Should().NotContain(
+                "observe",
+                "a sentinel disposed before its import resolved must not attach an observer nobody will ever detach");
+    }
+
+    [Fact]
+    public void WhenObserveThrowsAJSException_NothingEscapesTheComponent()
+    {
+        var module = JSInterop.SetupModule(InfiniteScrollModulePath);
+        module.SetupVoid("observe", _ => true).SetException(new JSException("Cannot read properties of null (reading 'isConnected')"));
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var render = () => RenderUnderTest<InfiniteScrollSentinel>(p => p.Add(c => c.IsLoading, false));
+
+        render.Should().NotThrow("a refused observe is best effort: the list stops loading, the page keeps rendering");
+        module.Invocations["observe"].Should().HaveCount(1, "the premise is that observe was attempted and refused");
+        Renderer.UnhandledException.IsCompleted.Should().BeFalse(
+            "a JSException from observe must not reach the renderer's unhandled-exception path");
+    }
+
     [Fact]
     public async Task DisposingTwiceIsSilent()
     {
@@ -96,5 +155,35 @@ public sealed class InfiniteScrollSentinelTests : BunitTestBase
         var act = async () => await cut.Instance.DisposeAsync();
 
         await act.Should().NotThrowAsync();
+    }
+
+    /// <summary>
+    /// Holds the one module import it was built for open until the test completes
+    /// <see cref="Import"/>; every other call goes to bUnit's runtime unchanged.
+    /// </summary>
+    private sealed class PendingImportJSRuntime(IJSRuntime inner, string modulePath) : IJSRuntime
+    {
+        public TaskCompletionSource<IJSObjectReference> Import { get; } = new();
+
+        public int ImportCalls { get; private set; }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (identifier == "import"
+                && args is [string path]
+                && path == modulePath
+                && typeof(TValue) == typeof(IJSObjectReference))
+            {
+                ImportCalls++;
+                return new ValueTask<TValue>(AwaitImportAsync<TValue>());
+            }
+
+            return inner.InvokeAsync<TValue>(identifier, cancellationToken, args);
+        }
+
+        private async Task<TValue> AwaitImportAsync<TValue>() => (TValue)await Import.Task;
     }
 }
