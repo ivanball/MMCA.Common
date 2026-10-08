@@ -14,8 +14,9 @@ namespace MMCA.Common.Application.Auth;
 /// needs a write the store itself decides the outcome of.
 /// </para>
 /// <para>
-/// Implementations must return <b>tracked</b> instances: a no-tracking read would take revocations and
-/// rotations and drop them silently at save time.
+/// Implementations must return <b>tracked</b> instances from every lookup except
+/// <see cref="FindByIdUntrackedAsync"/>, which is untracked by design and for reading only: a
+/// no-tracking read elsewhere would take revocations and rotations and drop them silently at save time.
 /// </para>
 /// </summary>
 public interface IRefreshSessionStore
@@ -92,8 +93,10 @@ public interface IRefreshSessionStore
     /// The return value is the whole point: two requests presenting the SAME still-live token both
     /// read an un-revoked row, so a check-then-act rotation mints two successors from one token and
     /// the presented row can never fire reuse detection again (BR-206). Returning
-    /// <see langword="false"/> tells the caller it lost that claim, which is indistinguishable from
-    /// a replay and gets the same answer.
+    /// <see langword="false"/> tells the caller it lost that claim; the caller then re-reads the row
+    /// (<see cref="FindByIdUntrackedAsync"/>) to tell a sibling rotation inside the reuse grace (a 409
+    /// with nothing revoked) or a sign-out or cap eviction (that request fails alone) from a replay
+    /// (the family is revoked).
     /// </para>
     /// <para>
     /// The default implementation is the shape the interface always had (revoke in memory, add,

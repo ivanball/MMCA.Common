@@ -21,7 +21,7 @@ namespace MMCA.Common.AI;
 /// </para>
 /// <code>
 /// BoundedChatClient            -- what the call is allowed to do (tokens, timeout, tools, input size, model)
-///   GuardrailChatClient        -- optional: only when an IChatGuardrail is registered
+///   GuardrailChatClient        -- optional: only when an IChatGuardrail or IChatRequestRedactor is registered
 ///     UsageRecordingChatClient -- what the call cost and how long it took
 ///       DistributedCaching     -- optional: Ai:EnableCache AND a registered IDistributedCache
 ///         OpenTelemetry        -- traces under the MMCA.Common.AI source

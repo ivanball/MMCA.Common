@@ -12,11 +12,13 @@ namespace MMCA.Common.Aspire.Warmup;
 /// succeeds" pattern on Container Apps Consumption plan.
 /// </summary>
 /// <remarks>
-/// This warms the underlying network path (DNS, TCP, TLS, <see cref="HttpClient"/> pool) and
-/// the authority's own discovery-doc cache. The <c>JwtBearer</c> middleware's
-/// <c>ConfigurationManager</c> caches discovery state separately, so on the very first
-/// authenticated request it still performs its own fetch — but because the connection is now
-/// warm, that fetch completes in single-digit milliseconds.
+/// This warms the authority's own discovery-doc cache and the host-level DNS path, and opens a
+/// connection in this task's own <see cref="IHttpClientFactory"/> client pool. The <c>JwtBearer</c>
+/// middleware's <c>ConfigurationManager</c> caches discovery state separately and fetches through
+/// its own default backchannel <see cref="HttpClient"/> (no <c>Backchannel</c> or
+/// <c>BackchannelHttpHandler</c> is configured), so on the very first authenticated request it
+/// still performs its own fetch over a connection of its own; what it gains is a warmed authority,
+/// not a shared warm connection.
 /// </remarks>
 internal sealed partial class OpenIdConnectMetadataWarmupTask(
     IHttpClientFactory httpClientFactory,

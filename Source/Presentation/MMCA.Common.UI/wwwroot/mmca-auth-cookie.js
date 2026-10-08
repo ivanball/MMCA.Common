@@ -1,6 +1,9 @@
-// Mirrors the in-memory JWT (supplied as an argument by ISessionCookieSync — never read from
+// Mirrors the in-memory JWT (supplied as an argument by ISessionCookieSync, never read from
 // localStorage) into an HttpOnly cookie on the UI host's origin so SSR prerender of [Authorize] pages
-// works after right-click → "Open in new tab" or F5. Invoked via JS interop in Blazor Server and WebAssembly.
+// works after right-click -> "Open in new tab" or F5. Invoked via JS interop in Blazor Server and
+// WebAssembly in the default mode. On a host with the same-origin API proxy enabled, the Server
+// circuit uses mmcaAuthHandoff.setCookie (below) instead, and a POST here writes nothing (the host is
+// claims-only and answers 204).
 // Both helpers return whether the endpoint answered 2xx, so the caller can tell a written cookie from
 // a failed one (a 429 from the host limiter, a dropped connection). The clear is tried twice.
 window.mmcaAuthCookie = {

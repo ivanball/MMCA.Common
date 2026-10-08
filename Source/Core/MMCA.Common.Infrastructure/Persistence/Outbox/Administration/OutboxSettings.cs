@@ -32,8 +32,9 @@ public sealed class OutboxSettings
 
     /// <summary>
     /// Gets the delay in seconds after message creation before it becomes eligible for processing.
-    /// This bounds the duplicate-dispatch window: the in-process pipeline (save → dispatch → mark
-    /// processed) must complete within this delay or the processor may re-dispatch the event.
+    /// It does not bound the duplicate-dispatch window: on the async save path local domain-event
+    /// rows are inserted under the <see cref="LeaseSeconds"/> lease, so the in-process pipeline
+    /// (save -> dispatch -> mark processed) races the processor only once that lease expires.
     /// Handlers are required to be idempotent regardless (at-least-once delivery).
     /// </summary>
     [Range(0, 600)]

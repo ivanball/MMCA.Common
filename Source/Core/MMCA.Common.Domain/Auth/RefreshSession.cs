@@ -19,7 +19,9 @@ namespace MMCA.Common.Domain.Auth;
 /// <b>Rotation leaves a chain.</b> Using a session revokes it and records the successor in
 /// <see cref="ReplacedByTokenHash"/>. Presenting an already-rotated token therefore lands on a revoked
 /// row rather than on nothing, which is exactly the signal that a token was replayed: the whole family
-/// is revoked in response (BR-206 reuse detection).
+/// is revoked in response (BR-206 reuse detection), unless the token was rotated less than the reuse
+/// grace (<c>RefreshSessions:ReuseGraceSeconds</c>) ago, which is treated as a race between sibling
+/// requests and answered 409 with nothing revoked.
 /// </para>
 /// <para>
 /// <b>Framework bookkeeping, not an aggregate.</b> Like <c>OutboxMessage</c> and

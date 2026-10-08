@@ -42,7 +42,8 @@ public interface ICookieSessionRefresher
     /// <see cref="GetOrRefreshAsync"/> with the failure kept apart:
     /// <see cref="SessionRefreshStatus.Rejected"/> when there is no refresh cookie or the identity
     /// endpoint refused it (the session is over), <see cref="SessionRefreshStatus.Unavailable"/> when
-    /// the refresh could not be decided right now (5xx, 429, timeout, network), so a caller that
+    /// the refresh could not be decided right now (any other status, such as 5xx, 429, 408, a
+    /// misrouted 404 or a 409 <c>Auth.RefreshSuperseded</c>, plus a timeout or network failure), so a caller that
     /// clears cookies on failure does so only for a session that is really dead.
     /// </summary>
     Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default);

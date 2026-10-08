@@ -18,7 +18,8 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 /// <b>Relational only.</b> The implementation targets the host's default physical data source and
 /// is registered only when that source is on a relational engine. A host whose default source is
 /// Cosmos DB (its own query language, no SQL command surface to parameterize) has no registration,
-/// so a service that injects this interface there fails when the container is validated.
+/// so a service that injects this interface there fails to resolve: at container build in
+/// Development, where the default host validates the container, and on first resolution elsewhere.
 /// </para>
 /// </summary>
 public interface IRawSqlQueryExecutor

@@ -23,14 +23,14 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <remarks>
 /// <para>
 /// The marker write is part of this shared workflow rather than each app's tail, so every app gets
-/// the identical revocation window: without it a deleted account keeps making authenticated requests
-/// until its access token expires, because the API middleware reads
-/// <see cref="SoftDeletedUserCache"/> and only falls back to a database lookup once the marker has
-/// gone. It is written <b>best effort</b>: the erasure is already saved by this point, so a cache
+/// the identical revocation window: the API middleware reads <see cref="SoftDeletedUserCache"/> on
+/// every host, and on a host with no soft-deleted-user validator query (any host that does not run
+/// Identity) the marker is the only thing that rejects a deleted account's still-valid access token.
+/// It is written <b>best effort</b>: the erasure is already saved by this point, so a cache
 /// fault must not turn a successful, irreversible deletion into a failure the caller would retry
-/// against an account that no longer holds the personal data. A failed write costs only the
-/// shortening: the token keeps working until it expires, exactly as it did before the marker existed,
-/// and the failure is logged as a warning.
+/// against an account that no longer holds the personal data. A failed write is logged as a warning;
+/// on the Identity host the uncached validator query still rejects the token on its next request,
+/// while on a host without that query the token keeps working until it expires.
 /// </para>
 /// <para>
 /// It runs <b>before</b> the app's post-save tail because that tail is unbounded app work (deleting
@@ -196,6 +196,6 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} account deleted and personal data anonymized")]
     private static partial void UserErased(ILogger logger, UserIdentifierType userId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the deleted user's existing access token stays usable until it expires")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the Identity host still rejects the deleted user's access token, but a host without the account-status query accepts it until it expires")]
     private static partial void SoftDeletedMarkerFailed(ILogger logger, UserIdentifierType userId, Exception exception);
 }

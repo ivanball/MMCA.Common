@@ -27,7 +27,7 @@ public static class SoftDeletedUserCache
     /// (15 minutes). This is a constant rather than a read of the JWT settings because the marker
     /// is written through this static helper, where those settings are not reachable; a host that
     /// raises the access-token lifetime should write its own marker with a matching duration.
-    /// Only positive markers live this long: the middleware caches a "not deleted" answer briefly.
+    /// Only positive markers are written: the middleware never caches a "not deleted" answer.
     /// </remarks>
     public static TimeSpan MarkerDuration => TimeSpan.FromMinutes(15);
 

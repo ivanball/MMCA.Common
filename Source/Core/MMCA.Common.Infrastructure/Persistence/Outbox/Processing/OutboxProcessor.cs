@@ -91,7 +91,10 @@ public sealed partial class OutboxProcessor(
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
 
     /// <summary>
-    /// Circuit breaker guarding the broker-publish call only (never the database calls: a breaker
+    /// Circuit breaker guarding the integration-event <see cref="IMessageBus"/> publish call only:
+    /// the broker hop on a host that registers broker messaging, and the in-process handler
+    /// dispatch on a monolith, where the default <c>InProcessMessageBus</c> calls
+    /// <see cref="IDomainEventDispatcher"/> inside the breaker (never the database calls: a breaker
     /// on those would open exactly when the processor most needs to persist retry state). Tuned by
     /// <see cref="BrokerResilienceDefaults"/> and carrying NO retry strategy, because the outbox
     /// already owns retry via <c>RetryCount</c> and <see cref="ComputeRetryBackoffSeconds"/>.
@@ -679,9 +682,11 @@ public sealed partial class OutboxProcessor(
         {
             var messageBus = rowServices.GetRequiredService<IMessageBus>();
 
-            // Only the broker hop is wrapped. The in-process dispatcher branch below is a direct
-            // method call into this same process: it has no transport to be dead, so a breaker there
-            // would only add a way to reject work that would have succeeded.
+            // Only the IMessageBus publish is wrapped. With broker messaging that is the broker hop;
+            // on a monolith the default InProcessMessageBus runs the integration-event handlers
+            // in-process inside this breaker, so failing handlers can open it too. The pure
+            // domain-event branch below is not wrapped: it is a direct method call into this same
+            // process with no transport to be dead.
             await _brokerPublishPipeline.ExecuteAsync(
                 static async (state, ct) =>
                     await state.Bus.PublishAsync(state.Event, ct).ConfigureAwait(false),
@@ -776,9 +781,11 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// Writes one row's outcome as a set-based update guarded by the lock token: a replica whose
-    /// lease expired mid-dispatch matches nothing here and drops its stale outcome rather than
-    /// overwriting the record of the replica that has since taken the row. The tracked instance is
+    /// Writes one row's outcome as a set-based update guarded by the lock token: once another
+    /// replica has re-claimed the row under a new token (possible only after this replica's lease
+    /// expired mid-dispatch), this update matches nothing and drops its stale outcome rather than
+    /// overwriting the record of the replica that has since taken the row. An expired lease nobody
+    /// has re-claimed still carries this token, so the outcome is stamped. The tracked instance is
     /// then synced (accepted when stamped, detached when not), so nothing later writes the outcome
     /// through the change tracker without the guard.
     /// </summary>
@@ -942,7 +949,7 @@ public sealed partial class OutboxProcessor(
 
     // Logged once per batch, not once per message: an open circuit rejects every remaining row in
     // the same instant. Warning rather than Error because nothing is lost, only deferred.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Broker circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Message bus circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
     private static partial void LogBrokerCircuitOpen(ILogger logger, string dataSourceName);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} was skipped: another replica took over its claim before it was dispatched")]

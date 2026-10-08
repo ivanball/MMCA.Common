@@ -131,8 +131,9 @@ public static partial class Extensions
 
                     // Cost control (rubric §31): head-based trace sampling. Unset by default, so a
                     // host samples everything (no behavior change). A deployed host sets
-                    // Telemetry:TracesSampleRatio in (0,1) — e.g. 0.1 to keep 10% of traces — to cut
-                    // trace-ingestion cost, the largest observability line item. ParentBased so a
+                    // Telemetry:TracesSampleRatio in (0,1) (e.g. 0.1 to keep 10% of traces) to cut
+                    // trace-ingestion cost, the largest observability line item when unsampled (once
+                    // sampled, metrics can outweigh traces; see ADR-041). ParentBased so a
                     // sampled-in request keeps its whole trace intact across service boundaries.
                     if (TryGetTraceSampleRatio(builder.Configuration, out var traceSampleRatio))
                         tracing.SetSampler(new ParentBasedSampler(new TraceIdRatioBasedSampler(traceSampleRatio)));

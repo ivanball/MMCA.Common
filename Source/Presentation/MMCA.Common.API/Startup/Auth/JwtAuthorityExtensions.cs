@@ -16,7 +16,7 @@ public static class JwtAuthorityExtensions
 {
     /// <summary>
     /// Configuration key carrying the JWT bearer authority, set by the AppHost's
-    /// <c>WithJwksDiscovery(identityService)</c> (and by the deployment template in Azure).
+    /// <c>WithJwksDiscovery(identityService, gateway)</c> (and by the deployment template in Azure).
     /// </summary>
     public const string JwtAuthorityConfigKey = "Authentication:JwtBearer:Authority";
 
@@ -30,7 +30,7 @@ public static class JwtAuthorityExtensions
         /// <exception cref="ArgumentNullException"><paramref name="configuration"/> is null.</exception>
         /// <exception cref="InvalidOperationException">
         /// The authority is not configured, meaning nothing wired
-        /// <c>WithJwksDiscovery(identityService)</c> in the AppHost (or its deployment equivalent).
+        /// <c>WithJwksDiscovery(identityService, gateway)</c> in the AppHost (or its deployment equivalent).
         /// </exception>
         public string GetRequiredJwtAuthority()
         {
@@ -39,7 +39,7 @@ public static class JwtAuthorityExtensions
             return configuration[JwtAuthorityConfigKey]
                 ?? throw new InvalidOperationException(
                     "Authentication:JwtBearer:Authority is not configured. " +
-                    "Wire .WithJwksDiscovery(identityService) in the AppHost.");
+                    "Wire .WithJwksDiscovery(identityService, gateway) in the AppHost.");
         }
     }
 }

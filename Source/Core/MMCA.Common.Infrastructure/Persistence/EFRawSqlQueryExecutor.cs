@@ -19,8 +19,9 @@ namespace MMCA.Common.Infrastructure.Persistence;
 /// <para>
 /// Registered only when that default source is on a relational engine (Cosmos DB speaks its own
 /// query language and exposes no parameterized SQL command surface), so a Cosmos-default host that
-/// injects <see cref="IRawSqlQueryExecutor"/> fails at container validation rather than on its
-/// first statement.
+/// injects <see cref="IRawSqlQueryExecutor"/> fails at resolution rather than on its first
+/// statement (at container build in Development, where the default host validates the container;
+/// on first resolution elsewhere).
 /// </para>
 /// </summary>
 /// <param name="dbContextFactory">Supplies the scope's context for the resolved source.</param>

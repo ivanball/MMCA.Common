@@ -95,6 +95,7 @@ public abstract class AuthControllerBase(
     [AllowAnonymous]
     [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]

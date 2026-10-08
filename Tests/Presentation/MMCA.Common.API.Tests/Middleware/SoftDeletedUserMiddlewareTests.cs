@@ -315,9 +315,12 @@ public sealed class SoftDeletedUserMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
-    // ── Fail open: a failed cache write does not fail the request ──
+    // ── A failed marker write does not fail the request or lose the rejection ──
+    // The only cache write is the deleted-user marker, written after the validator finds the user
+    // deleted, so that is the path a throwing SetAsync must exercise: the authoritative answer is
+    // already in hand, and the request is still rejected.
     [Fact]
-    public async Task InvokeAsync_CacheWriteThrows_PassesThrough()
+    public async Task InvokeAsync_DeletedUserAndMarkerWriteThrows_StillReturns401()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
         _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
@@ -329,7 +332,7 @@ public sealed class SoftDeletedUserMiddlewareTests
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("cache down"));
         _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .ReturnsAsync(true);
         var nextCalled = false;
         var context = CreateContext();
         var sut = new SoftDeletedUserMiddleware(_ =>
@@ -340,8 +343,11 @@ public sealed class SoftDeletedUserMiddlewareTests
 
         await InvokeAsync(sut, context);
 
-        nextCalled.Should().BeTrue();
-        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _cacheService.Verify(
+            c => c.SetAsync(CacheKey, true, SoftDeletedUserCache.MarkerDuration, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ── A deleted user is still rejected when only the cache write fails ──
