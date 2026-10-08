@@ -49,25 +49,7 @@ public sealed class AggregateRootEntityControllerBaseTests
 
     // ── CreateAsync ──
     [Fact]
-    public async Task CreateAsync_Success_ReturnsCreatedAtRoute()
-    {
-        var request = new TestCreateRequest();
-        var dto = new TestAggDTO { Id = 7 };
-        _createHandlerMock
-            .Setup(h => h.HandleAsync(request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(dto));
-        TestAggregateRootController sut = CreateController();
-
-        ActionResult<TestAggDTO> result = await sut.CreateAsync(request, CancellationToken.None);
-
-        var createdResult = result.Result as CreatedAtRouteResult;
-        createdResult.Should().NotBeNull();
-        createdResult!.StatusCode.Should().Be(StatusCodes.Status201Created);
-        createdResult.Value.Should().Be(dto);
-    }
-
-    [Fact]
-    public async Task CreateAsync_Success_RouteName_IsGetEntityNameById()
+    public async Task CreateAsync_WhenTheNamedByIdRouteResolves_ReturnsCreatedWithItsLink()
     {
         var request = new TestCreateRequest();
         var dto = new TestAggDTO { Id = 10 };
@@ -75,13 +57,65 @@ public sealed class AggregateRootEntityControllerBaseTests
             .Setup(h => h.HandleAsync(request, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(dto));
         TestAggregateRootController sut = CreateController();
+        var url = new Mock<IUrlHelper>();
+        url.Setup(u => u.Link($"Get{nameof(TestAggregateEntity)}ById", It.IsAny<object?>()))
+            .Returns("https://api.example.com/TestAggregateRoot/10");
+        sut.Url = url.Object;
 
         ActionResult<TestAggDTO> result = await sut.CreateAsync(request, CancellationToken.None);
 
-        var createdResult = result.Result as CreatedAtRouteResult;
-        createdResult.Should().NotBeNull();
-        createdResult!.RouteName.Should().Be($"Get{nameof(TestAggregateEntity)}ById");
-        createdResult.RouteValues!["id"].Should().Be(10);
+        var created = result.Result.Should().BeOfType<CreatedResult>().Subject;
+        created.StatusCode.Should().Be(StatusCodes.Status201Created);
+        created.Location.Should().Be("https://api.example.com/TestAggregateRoot/10");
+        created.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenNoRouteHasTheConventionalName_FallsBackToTheCollectionMemberPath()
+    {
+        // The derived controller declares no Get{Entity}ById route. A CreatedAtRoute naming it threw
+        // at result execution, AFTER the entity was saved, so a successful create answered 500.
+        var request = new TestCreateRequest();
+        var dto = new TestAggDTO { Id = 7 };
+        _createHandlerMock
+            .Setup(h => h.HandleAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(dto));
+        TestAggregateRootController sut = CreateController();
+        sut.HttpContext.Request.PathBase = "/api";
+        sut.HttpContext.Request.Path = "/v1/TestAggregateRoot/";
+        sut.Url = new Mock<IUrlHelper>().Object;
+
+        ActionResult<TestAggDTO> result = await sut.CreateAsync(request, CancellationToken.None);
+
+        var created = result.Result.Should().BeOfType<CreatedResult>().Subject;
+        created.Location.Should().Be("/api/v1/TestAggregateRoot/7");
+        created.Value.Should().Be(dto);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UsesTheOverriddenByIdRouteName()
+    {
+        var request = new TestCreateRequest();
+        var dto = new TestAggDTO { Id = 3 };
+        _createHandlerMock
+            .Setup(h => h.HandleAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(dto));
+        var sut = new RenamedRouteController(
+            _queryServiceMock.Object,
+            _createHandlerMock.Object,
+            _deleteHandlerMock.Object,
+            _loggerMock.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+        var url = new Mock<IUrlHelper>();
+        url.Setup(u => u.Link("GetThingById", It.IsAny<object?>())).Returns("https://api.example.com/Things/3");
+        sut.Url = url.Object;
+
+        ActionResult<TestAggDTO> result = await sut.CreateAsync(request, CancellationToken.None);
+
+        result.Result.Should().BeOfType<CreatedResult>()
+            .Which.Location.Should().Be("https://api.example.com/Things/3");
     }
 
     [Fact]
@@ -145,6 +179,17 @@ public sealed class TestAggregateRootController(
     ILogger<EntityControllerBase<TestAggregateEntity, TestAggDTO, int>> logger)
     : AggregateRootEntityControllerBase<TestAggregateEntity, TestAggDTO, int, TestCreateRequest>(
         queryService, createHandler, deleteHandler, logger);
+
+public sealed class RenamedRouteController(
+    IEntityQueryService<TestAggregateEntity, TestAggDTO, int> queryService,
+    ICommandHandler<TestCreateRequest, Result<TestAggDTO>> createHandler,
+    ICommandHandler<DeleteEntityCommand<TestAggregateEntity, int>, Result> deleteHandler,
+    ILogger<EntityControllerBase<TestAggregateEntity, TestAggDTO, int>> logger)
+    : AggregateRootEntityControllerBase<TestAggregateEntity, TestAggDTO, int, TestCreateRequest>(
+        queryService, createHandler, deleteHandler, logger)
+{
+    protected override string GetByIdRouteName => "GetThingById";
+}
 
 public sealed class TestAggregateEntity : AuditableAggregateRootEntity<int>;
 

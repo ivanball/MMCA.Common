@@ -58,6 +58,9 @@ internal sealed partial class HybridCacheService(
     /// </summary>
     internal const string KeyspaceSegment = "hc:";
 
+    /// <summary><see cref="Exception.Data"/> key marking the miss <see cref="TryGetAsync{T}"/> throws to itself.</summary>
+    private const string MissMarker = "MMCA.Common.HybridCacheService.Miss";
+
     /// <summary>
     /// Default in-process (L1) lifetime, and the ceiling applied to every entry: a replica that never
     /// sees an invalidation still re-reads L2 within this window. Matches the default
@@ -88,6 +91,18 @@ internal sealed partial class HybridCacheService(
         Flags = HybridCacheEntryFlags.DisableUnderlyingData
             | HybridCacheEntryFlags.DisableLocalCacheRead
             | HybridCacheEntryFlags.DisableLocalCacheWrite,
+    };
+
+    /// <summary>
+    /// The presence probe behind <see cref="TryGetAsync{T}"/>: the factory runs on a miss (that is
+    /// the signal), and the flag exists to keep this read's flags distinct from every other call this
+    /// service makes, so <see cref="HybridCache"/> never joins it with a real
+    /// <see cref="GetOrCreateAsync{T}"/>. It changes nothing else: the factory never returns, so
+    /// there is no value to write to L2 either way.
+    /// </summary>
+    private static readonly HybridCacheEntryOptions PresenceProbeOptions = new()
+    {
+        Flags = HybridCacheEntryFlags.DisableDistributedCacheWrite,
     };
 
     /// <summary>
@@ -133,6 +148,53 @@ internal sealed partial class HybridCacheService(
             LogReadFailed(logger, key, ex);
             await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
             return default;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Overrides the interface default, which infers presence from a non-null
+    /// <see cref="GetAsync{T}"/> result and so reports a value-type miss (<c>default(T)</c>, which is
+    /// not null) as found. <see cref="HybridCache"/> has no presence-reporting read, so presence is
+    /// read from whether it had to call the factory: a hit (L1, or L2 promoted into L1 exactly as
+    /// <see cref="GetAsync{T}"/> promotes) never calls it, and on a miss it throws a
+    /// <see cref="KeyNotFoundException"/> tagged with <see cref="MissMarker"/>, caught here as "not
+    /// found". A thrown sentinel, rather than a flag the factory sets, because a concurrent read of
+    /// the same key joins the first caller's in-flight lookup and never runs its own factory; the
+    /// exception reaches every joined caller, and nothing is written for it.
+    /// </para>
+    /// <para>
+    /// The read carries <see cref="PresenceProbeOptions"/>, whose flags no other call here uses:
+    /// <see cref="HybridCache"/> only joins callers with identical flags, so a
+    /// <see cref="GetOrCreateAsync{T}"/> in flight on the same key can never be handed that miss.
+    /// Faults are fail-soft exactly like <see cref="GetAsync{T}"/>.
+    /// </para>
+    /// </remarks>
+    public async Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var fullKey = HybridKey(key);
+
+        try
+        {
+            var value = await hybrid.GetOrCreateAsync<T?>(
+                fullKey,
+                static _ => throw CacheMiss(),
+                PresenceProbeOptions,
+                tags: null,
+                cancellationToken).ConfigureAwait(false);
+
+            return (true, value);
+        }
+        catch (KeyNotFoundException ex) when (ex.Data.Contains(MissMarker))
+        {
+            return (false, default);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogReadFailed(logger, key, ex);
+            await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
+            return (false, default);
         }
     }
 
@@ -310,6 +372,18 @@ internal sealed partial class HybridCacheService(
             WriteOptions(expiration),
             tags: null,
             cancellationToken).AsTask();
+    }
+
+    /// <summary>
+    /// The miss <see cref="TryGetAsync{T}"/>'s factory throws, tagged so it cannot be confused with a
+    /// <see cref="KeyNotFoundException"/> raised anywhere else. Never escapes this class.
+    /// </summary>
+    /// <returns>A tagged <see cref="KeyNotFoundException"/>.</returns>
+    private static KeyNotFoundException CacheMiss()
+    {
+        var miss = new KeyNotFoundException("Cache miss reported by the presence probe.");
+        miss.Data[MissMarker] = true;
+        return miss;
     }
 
     /// <summary>Qualifies a caller-supplied key into this service's disjoint keyspace.</summary>

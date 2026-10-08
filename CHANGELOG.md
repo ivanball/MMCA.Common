@@ -6,9 +6,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.234.0] - 2026-10-08
+
 ### Security
 
 - `ImageSharpImageProcessor` decodes with a configuration that registers only the JPEG, PNG, WebP and GIF decoders, so any other format (TIFF and BMP among them) is refused as `Image.Undecodable` before its decoder runs. Five ImageSharp 3.x advisories published 2026-10-07 (patched only in 4.1.2, outside the v3 license pin) are accepted in `Directory.Build.props` with a per-advisory reachability note: four are unreachable here (TIFF encoder and decoder, `HistogramEqualization`), and the ICC CLUT one (GHSA-gwg2-r3hj-4w44, moderate) is accepted as a bounded risk. Consumers inherit the package transitively and need the same five `NuGetAuditSuppress` entries if their own audit fails.
+- The login path's cost burn for an unknown address (or an account with no stored credential) now runs `IPasswordHasher.HashPassword` on the submitted password and discards the result, instead of verifying it against fixed 64-byte hash and 32-byte salt material. Those sizes were the shipped hasher's, and the shipped hasher rejects material of any other size before deriving anything, so registering a hasher with different sizes would have made that 401 answer instantly again: a membership oracle reopened with no error. A hash and a verification each cost one key derivation for any hasher, so the burn now tracks whichever one is registered.
+
+### Fixed
+
+- `AggregateRootEntityControllerBase.CreateAsync` resolves the `Location` before it returns, and no longer depends on the derived controller declaring a route named `Get{Entity}ById`. It used `CreatedAtRoute` with that name, and a controller without the route got a 500 when the result executed, after the entity had already been saved (no current consumer controller was affected). The named route is still preferred when it resolves, so existing Locations are unchanged; otherwise the Location is the new id appended to the collection path the POST targeted. A new `protected virtual string GetByIdRouteName` overrides the name for a controller whose by-id route is named differently. The result is now a `CreatedResult` rather than a `CreatedAtRouteResult`, so a consumer test asserting the result type needs updating.
+- `HybridCacheService` overrides `ICacheService.TryGetAsync`. The interface default infers presence from a non-null `GetAsync` result, so a value-type miss (`default(T)`, never null) was reported as found. The override reports presence from whether `HybridCache` had to call the factory, so a miss is a miss and a cached `0` or `false` is still a hit. An L2 hit is promoted into L1 just as `GetAsync` promotes it.
+- `OwnershipHelper.IsAdmin` (and with it `OwnerOrAdminFilter`, `GetOwnershipSpecification`, `RequireResolvableOwner` and `ValidateOwnershipAsync`) checks the bypass role through `ICurrentUserService.IsInRole`, which reads every role claim. It compared against `Role`, the first role claim only, so a caller holding the bypass role as a second role was treated as non-privileged here while an inline `IsInRole` check on the same caller said otherwise. A test mock of `ICurrentUserService` that stubs only `Role` needs `CallBase = true` so the default `Roles`/`IsInRole` members run.
 
 ## [1.233.0] - 2026-10-07
 

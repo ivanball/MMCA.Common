@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Security.Claims;
 using AwesomeAssertions;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -13,7 +14,7 @@ public sealed class OwnershipHelperTests
     // The framework declares no role names, so the bypass role is the suite's own.
     private const string BypassRole = "Admin";
 
-    private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new() { CallBase = true };
 
     // ── Test specification ──
     private sealed class TestOwnerSpecification(int customerId) : Specification<AuditableBaseEntity<int>, int>
@@ -63,6 +64,23 @@ public sealed class OwnershipHelperTests
         bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsAdmin_WhenTheBypassRoleIsNotTheFirstRoleClaim_ReturnsTrue()
+    {
+        // Role is the FIRST role claim only; the bypass role arriving second must still count, or
+        // the helper disagrees with an inline IsInRole check on the same caller.
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.Role, "Member"), new Claim(ClaimTypes.Role, "Admin")],
+            "Test"));
+        _currentUserService.Setup(s => s.User).Returns(principal);
+        _currentUserService.Setup(s => s.Role).Returns("Member");
+
+        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
+
+        result.Should().BeTrue();
+        _currentUserService.Object.IsInRole(BypassRole).Should().Be(result, "the helper and IsInRole must agree on who is privileged");
     }
 
     [Fact]

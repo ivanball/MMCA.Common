@@ -155,9 +155,41 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsFailure.Should().BeTrue();
         mocks.PasswordHasher.Verify(
-            x => x.VerifyPassword("pw", It.IsAny<byte[]>(), It.IsAny<byte[]>()),
+            x => x.HashPassword("pw"),
             Times.Once,
             "an unknown address must answer on the same timescale as a known one, or the response time is a membership oracle");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenTheEmailIsUnknown_PaysTheCostWithoutAssumingTheHashersMaterialSizes()
+    {
+        // A hasher that derives only for material of its own sizes (the shipped one rejects anything
+        // else before deriving). Burning against fixed decoy material would cost nothing here.
+        var (sut, mocks) = CreateSut();
+        sut.UntrackedUser = null;
+        var derivations = 0;
+        mocks.PasswordHasher
+            .Setup(x => x.HashPassword(It.IsAny<string>()))
+            .Returns(() =>
+            {
+                derivations++;
+                return (new byte[16], new byte[16]);
+            });
+        mocks.PasswordHasher
+            .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
+            .Returns((string _, byte[] hash, byte[] salt) =>
+            {
+                if (hash.Length == 16 && salt.Length == 16)
+                {
+                    derivations++;
+                }
+
+                return false;
+            });
+
+        await sut.LoginAsync(new LoginRequest("unknown@example.com", "pw"));
+
+        derivations.Should().Be(1, "the burn must cost one key derivation whatever material sizes the registered hasher uses");
     }
 
     [Fact]

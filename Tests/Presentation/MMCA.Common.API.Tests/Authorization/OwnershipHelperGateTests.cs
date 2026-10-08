@@ -22,7 +22,7 @@ public sealed class OwnershipHelperGateTests
     private const string Source = "OrdersController";
     private const string Target = "Order";
 
-    private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new() { CallBase = true };
 
     // -- RequireResolvableOwner --
     [Fact]
