@@ -478,6 +478,12 @@
   <data name="Auth.Login.InvalidCredentials" xml:space="preserve">
     <value>Invalid email or password.</value>
   </data>
+  <data name="Auth.InvalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="Auth.AccountLocked" xml:space="preserve">
+    <value>This account has been locked by an administrator. Contact the organizers.</value>
+  </data>
   <data name="Error.RequestId" xml:space="preserve">
     <value>Request ID:</value>
   </data>

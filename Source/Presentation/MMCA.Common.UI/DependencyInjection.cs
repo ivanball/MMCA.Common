@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
@@ -75,12 +76,19 @@ public static class DependencyInjection
             // clears it (AuthUIService.LogoutAsync): otherwise one account's reads outlive its session.
             services.TryAddScoped<IUiReadCache, UiReadCache>();
 
-            // The notification pages' authorization policy: [Authorize] semantics, except that a host
-            // hiding those pages (Layout:HideNotificationPagesWhenUnregistered) lets the request reach
-            // the router, which answers 404 instead of the sign-in challenge.
-            services.AddAuthorizationCore(options => options.AddPolicy(
-                NotificationPageRequirement.PolicyName,
-                policy => policy.AddRequirements(new NotificationPageRequirement())));
+            // The notification pages' authorization policies: [Authorize] semantics (plus
+            // notifications:manage for the history and compose pages), except that a host hiding
+            // those pages (Layout:HideNotificationPagesWhenUnregistered) lets the request reach the
+            // router, which answers 404 instead of the sign-in challenge or Access Denied.
+            services.AddAuthorizationCore(options =>
+            {
+                options.AddPolicy(
+                    NotificationPageRequirement.PolicyName,
+                    policy => policy.AddRequirements(new NotificationPageRequirement()));
+                options.AddPolicy(
+                    NotificationPageRequirement.ManagePolicyName,
+                    policy => policy.AddRequirements(new NotificationPageRequirement(NotificationPermissions.Manage)));
+            });
             services.TryAddEnumerable(
                 ServiceDescriptor.Transient<IAuthorizationHandler, NotificationPageAuthorizationHandler>());
 

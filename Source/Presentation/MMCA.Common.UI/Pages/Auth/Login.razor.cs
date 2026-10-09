@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Components;
+using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Common;
 
 namespace MMCA.Common.UI.Pages.Auth;
 
 /// <summary>
-/// Code-behind for the <c>/login</c> page: the external sign-in refusal it is sent back with.
+/// Code-behind for the <c>/login</c> page: the external sign-in refusal it is sent back with, and the
+/// words for a refused password sign-in.
 /// </summary>
 public partial class Login
 {
@@ -41,6 +44,29 @@ public partial class Login
     {
         var specific = L["Auth.Login.ExternalError." + errorCode];
         return specific.ResourceNotFound ? L["Auth.Login.ExternalError.Refused"].Value : specific.Value;
+    }
+
+    /// <summary>
+    /// Words for a refused password sign-in. The API's message is an English sentence, not a resource
+    /// key, so a refusal whose error code has a resource of its own (<c>Auth.InvalidCredentials</c>,
+    /// <c>Auth.AccountLocked</c>) is shown in the active culture by that code. Any other refusal keeps
+    /// the previous chain: the API's message, localized when it can be, then the generic
+    /// invalid-credentials wording when the failure carried nothing renderable.
+    /// </summary>
+    /// <param name="result">The failed sign-in result.</param>
+    /// <returns>The message for the alert.</returns>
+    private string PasswordLoginErrorMessage(Result result)
+    {
+        if (result.Errors is [var error] && !string.IsNullOrEmpty(error.Code))
+        {
+            var byCode = L[error.Code];
+            if (!byCode.ResourceNotFound)
+            {
+                return byCode.Value;
+            }
+        }
+
+        return result.LocalizedErrorMessage(L) ?? L["Auth.Login.InvalidCredentials"].Value;
     }
 
     /// <summary>

@@ -4,7 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.234.1] - 2026-10-08
+
+### Changed
+
+- The notification history (`/notifications`) and compose (`/notifications/send`) pages now require `notifications:manage` at the page-authorization level, through a new `mmca:notification-manage-pages` policy that `AddUIShared` registers next to the existing `mmca:notification-pages` one. A signed-in caller without the permission is refused at authorization, so a full page load answers 403 with the in-shell Access Denied page instead of a 200 that rendered Forbidden inside the page. The inbox (`/notifications/inbox`) stays open to every signed-in user, and a host that hides the notification pages (`Layout:HideNotificationPagesWhenUnregistered`) still lets every caller through to the not-found answer. The in-page permission check stays as a second layer. Consumers call `AddUIShared` already, so no registration change is needed. (O-23)
+- On a head that registers an `IInitialThemeModeSource` (the MAUI head, from device preferences), a known native Day/Dark value is now authoritative at startup: `MmcaThemeProviders` adopts it after the first render instead of the WebView cookie/localStorage value, and reseeds the WebView store with it. A stale WebView value could previously flip the theme a moment after launch and then be mirrored back over the user's native choice by `NativeThemeSync`. Web heads, which register no source, keep resolving the stored or OS preference as before. (X-27)
+
+### Fixed
+
+- `InfiniteScrollSentinel` and `MobileInfiniteScrollList` no longer attach an observer when they were disposed while the `infinite-scroll.js` import was still in flight (the late module is released instead), and treat a `JSException` from `observe` as best effort: the list stops at the pages already loaded instead of the exception escaping the render. `infinite-scroll.js` `observe()` returns early for a missing or disconnected element. (U-20)
+- A failed password sign-in on the login page is localized by its error code first, so `Auth.InvalidCredentials` and `Auth.AccountLocked` show the active culture's wording (new `Auth.InvalidCredentials` and `Auth.AccountLocked` resources in English and Spanish) instead of the API's English sentence. English text is unchanged, and any other error code keeps the previous message chain. (X-01)
 
 ## [1.234.0] - 2026-10-08
 

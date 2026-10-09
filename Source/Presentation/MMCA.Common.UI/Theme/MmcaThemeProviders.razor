@@ -38,13 +38,17 @@
     private bool _isDarkMode;
     private bool _disposed;
 
+    // The native store's mode at startup; null on a web head or when the native store holds nothing.
+    private bool? _nativeIsDarkMode;
+
     protected override void OnInitialized()
     {
         // A head that knows the stored preference without JS (MAUI, from device preferences)
         // registers an IInitialThemeModeSource, so the first render already has the right palette
         // instead of light-then-dark. Optional: web heads register none, and null means "unknown",
         // both leaving the mode to the JS path in OnAfterRenderAsync as before.
-        if (ServiceProvider.GetService<IInitialThemeModeSource>()?.IsDarkMode is bool initialIsDark)
+        _nativeIsDarkMode = ServiceProvider.GetService<IInitialThemeModeSource>()?.IsDarkMode;
+        if (_nativeIsDarkMode is bool initialIsDark)
         {
             _isDarkMode = initialIsDark;
         }
@@ -59,7 +63,8 @@
             // JS interop (cookie/localStorage read) is only available after the first interactive render.
             // A failure (asset missing, a malformed theme cookie) must not escape the root layout's
             // lifecycle and kill the circuit: the page keeps its initial mode instead.
-            if (await ThemeInterop.TryAsync(ThemeService.InitializeAsync))
+            // A known native value is authoritative at startup over a possibly stale WebView value.
+            if (await ThemeInterop.TryAsync(() => ThemeService.InitializeAtStartupAsync(_nativeIsDarkMode)))
             {
                 _isDarkMode = ThemeService.IsDarkMode;
                 StateHasChanged();

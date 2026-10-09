@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Components.Lists;
@@ -118,6 +119,28 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
 
         await cut.WaitForAssertionAsync(() => cut.FindAll(".infinite-scroll-sentinel").Should().BeEmpty());
         cut.FindComponents<MudCard>().Count.Should().Be(2);
+    }
+
+    // U-20 (ADC local test run 8): an observe call the browser refuses (a JSException, e.g. the
+    // sentinel element is already gone) is best effort. It must not escape the list's after-render:
+    // the cards already loaded stay, and the list simply stops loading more.
+    [Fact]
+    public async Task WhenObserveThrowsAJSException_NothingEscapesTheList()
+    {
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetException(new JSException("Cannot read properties of null (reading 'isConnected')"));
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var render = () => RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 2)
+            .Add(c => c.FetchPageResult, Fetch(["a", "b"], 6)));
+
+        var cut = render.Should().NotThrow("a refused observe must not fail the render").Subject;
+        await cut.WaitForAssertionAsync(() => module.Invocations["observe"].Should().HaveCount(1));
+        Renderer.UnhandledException.IsCompleted.Should().BeFalse(
+            "a JSException from observe must not reach the renderer's unhandled-exception path");
+        cut.FindComponents<MudCard>().Count.Should().Be(2, "the page already loaded stays rendered");
     }
 
     private static string PageItem(int page, string suffix) =>

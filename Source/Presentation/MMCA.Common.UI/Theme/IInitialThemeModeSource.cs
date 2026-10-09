@@ -7,8 +7,10 @@ namespace MMCA.Common.UI.Theme;
 /// runs after the first interactive render, so without a source <c>MmcaThemeProviders</c> paints the
 /// light palette first and flips a moment later. A head that already knows the stored preference
 /// without JS (a MAUI Blazor Hybrid head reading device preferences) registers an implementation,
-/// and <c>MmcaThemeProviders</c> reads it during initialization. The JS path still runs afterwards
-/// and stays authoritative. Web heads register nothing and keep today's behavior.
+/// and <c>MmcaThemeProviders</c> reads it during initialization. A known value is authoritative at
+/// startup: after the first render the service adopts it and reseeds the WebView cookie/localStorage
+/// from it, so a stale WebView value cannot override it. A <see langword="null"/> value leaves the JS
+/// path in charge. Web heads register nothing and keep today's behavior.
 /// </para>
 /// </summary>
 public interface IInitialThemeModeSource
