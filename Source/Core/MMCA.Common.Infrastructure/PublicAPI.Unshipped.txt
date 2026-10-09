@@ -1,2 +1,1 @@
 #nullable enable
-MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.IdentityModuleDbSeederBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, Microsoft.Extensions.Logging.ILogger! logger) -> void
