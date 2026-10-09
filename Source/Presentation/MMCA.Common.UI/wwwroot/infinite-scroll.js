@@ -3,6 +3,11 @@ const observers = new Map();
 export function observe(dotNetRef, sentinelElement, id) {
     unobserve(id);
 
+    // The host can stop rendering the sentinel before this call lands: there is nothing to watch.
+    if (!sentinelElement || !sentinelElement.isConnected) {
+        return;
+    }
+
     const observer = new IntersectionObserver(entries => {
         if (entries[0].isIntersecting) {
             dotNetRef.invokeMethodAsync('OnSentinelVisible');

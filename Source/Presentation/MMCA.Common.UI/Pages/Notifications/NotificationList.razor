@@ -2,9 +2,11 @@
 @using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.PushNotifications
 @using MMCA.Common.UI.Common
-@* The notification-page policy, not a bare [Authorize]: it lets the request through to the router's
-   not-found answer when the host hides these pages (Layout:HideNotificationPagesWhenUnregistered). *@
-@attribute [Authorize(Policy = MMCA.Common.UI.Notifications.NotificationPageRequirement.PolicyName)]
+@* The notification MANAGE-page policy, not a bare [Authorize]: a signed-in caller without
+   notifications:manage is refused at authorization (403, the in-shell Access Denied, on a full page
+   load too), and the request still reaches the router's not-found answer when the host hides these
+   pages (Layout:HideNotificationPagesWhenUnregistered). *@
+@attribute [Authorize(Policy = MMCA.Common.UI.Notifications.NotificationPageRequirement.ManagePolicyName)]
 
 @* Same gate as the navigation entry (RequiredPermission on NotificationUIModule): the API refuses
    every call without notifications:manage, so a signed-in account that lacks it gets the shell's

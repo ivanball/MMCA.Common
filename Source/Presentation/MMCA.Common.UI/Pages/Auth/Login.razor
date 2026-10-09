@@ -241,9 +241,7 @@
             var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password));
             if (result.IsFailure)
             {
-                // The API's own message when it sent one; the generic invalid-credentials wording
-                // when the failure carried nothing renderable.
-                _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Login.InvalidCredentials"];
+                _errorMessage = PasswordLoginErrorMessage(result);
                 return;
             }
 

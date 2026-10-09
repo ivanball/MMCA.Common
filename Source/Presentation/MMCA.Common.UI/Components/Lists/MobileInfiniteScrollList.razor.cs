@@ -74,11 +74,8 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     private string? _loadErrorMessage;
 
     private ElementReference _sentinelRef;
-    private IJSObjectReference? _jsModule;
-    private DotNetObjectReference<MobileInfiniteScrollList<TItem>>? _dotNetRef;
-    private readonly string _observerId = Guid.NewGuid().ToString("N");
+    private InfiniteScrollObserver<MobileInfiniteScrollList<TItem>>? _observer;
     private CancellationTokenSource? _cts;
-    private bool _observerAttached;
 
     // Set after a successful append that left more pages: the IntersectionObserver reports threshold
     // CROSSINGS only, so a sentinel still inside the viewport after the append would never fire again.
@@ -113,42 +110,10 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         var reobserve = _reobservePending;
         _reobservePending = false;
 
-        if (!_disposed && _hasMore && (!_observerAttached || reobserve) && _items.Count > 0 && !_isInitialLoad)
+        if (!_disposed && _hasMore && (_observer?.IsObserving != true || reobserve) && _items.Count > 0 && !_isInitialLoad)
         {
-            await AttachObserverAsync();
-        }
-    }
-
-    private async Task AttachObserverAsync()
-    {
-        try
-        {
-            _jsModule ??= await JS.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/MMCA.Common.UI/infinite-scroll.js");
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            await _jsModule.InvokeVoidAsync("observe", _dotNetRef, _sentinelRef, _observerId);
-            _observerAttached = true;
-        }
-        catch (JSDisconnectedException)
-        {
-            // Expected during app shutdown or prerendering
-        }
-    }
-
-    private async Task DetachObserverAsync()
-    {
-        if (_jsModule is not null && _observerAttached)
-        {
-            try
-            {
-                await _jsModule.InvokeVoidAsync("unobserve", _observerId);
-            }
-            catch (JSDisconnectedException)
-            {
-                // Expected during app shutdown
-            }
-
-            _observerAttached = false;
+            _observer ??= new InfiniteScrollObserver<MobileInfiniteScrollList<TItem>>(JS, this);
+            await _observer.ObserveAsync(_sentinelRef);
         }
     }
 
@@ -354,8 +319,10 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         _loadErrorMessage = null;
         _isInitialLoad = true;
 
-        await DetachObserverAsync();
-        _observerAttached = false;
+        if (_observer is not null)
+        {
+            await _observer.UnobserveAsync();
+        }
 
         StateHasChanged();
 
@@ -381,20 +348,9 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             _cts.Dispose();
         }
 
-        await DetachObserverAsync();
-
-        if (_jsModule is not null)
+        if (_observer is not null)
         {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Expected during app shutdown
-            }
+            await _observer.DisposeAsync();
         }
-
-        _dotNetRef?.Dispose();
     }
 }

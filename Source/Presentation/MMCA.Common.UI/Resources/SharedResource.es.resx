@@ -478,6 +478,12 @@
   <data name="Auth.Login.InvalidCredentials" xml:space="preserve">
     <value>Correo electrónico o contraseña no válidos.</value>
   </data>
+  <data name="Auth.InvalidCredentials" xml:space="preserve">
+    <value>Correo electrónico o contraseña no válidos.</value>
+  </data>
+  <data name="Auth.AccountLocked" xml:space="preserve">
+    <value>Un administrador ha bloqueado esta cuenta. Ponte en contacto con los organizadores.</value>
+  </data>
   <data name="Error.RequestId" xml:space="preserve">
     <value>Id. de solicitud:</value>
   </data>

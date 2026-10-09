@@ -49,6 +49,35 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
         OnChange?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Resolves the initial mode, preferring a native store the head read before the WebView painted
+    /// (an <see cref="IInitialThemeModeSource"/>). A known native value is authoritative: it is adopted
+    /// as is, and the WebView cookie/localStorage is reseeded with it, so a stale value there can
+    /// neither win now nor be mirrored back over the native one. A <see langword="null"/> value
+    /// resolves exactly as <see cref="InitializeAsync"/> does. Only the first initialization does work.
+    /// </summary>
+    /// <param name="nativeIsDarkMode">The native store's mode, or <see langword="null"/> when unknown.</param>
+    /// <returns>A task that completes when the mode is resolved.</returns>
+    internal Task InitializeAtStartupAsync(bool? nativeIsDarkMode) =>
+        nativeIsDarkMode is bool isDark ? InitializeFromNativeAsync(isDark) : InitializeAsync();
+
+    private async Task InitializeFromNativeAsync(bool isDarkMode)
+    {
+        if (IsInitialized)
+        {
+            return;
+        }
+
+        IsDarkMode = isDarkMode;
+        IsInitialized = true;
+        OnChange?.Invoke(this, EventArgs.Empty);
+
+        // Reseeding is the last step: a failure leaves the native value in force, and the caller's
+        // best-effort guard reports it.
+        var module = await GetModuleAsync();
+        await module.InvokeVoidAsync("set", isDarkMode ? "dark" : "light");
+    }
+
     /// <summary>Sets the mode, persists it, and notifies subscribers.</summary>
     /// <param name="isDarkMode"><see langword="true"/> for dark, <see langword="false"/> for light.</param>
     public async Task SetDarkModeAsync(bool isDarkMode)

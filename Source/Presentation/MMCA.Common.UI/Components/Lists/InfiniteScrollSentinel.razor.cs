@@ -31,11 +31,8 @@ public partial class InfiniteScrollSentinel : IAsyncDisposable
     /// <summary>Accessible name for the progress row (ADR-027: localized by the host).</summary>
     [Parameter] public string? LoadingLabel { get; set; }
 
-    private readonly string _observerId = Guid.NewGuid().ToString("N");
     private ElementReference _sentinelRef;
-    private IJSObjectReference? _module;
-    private DotNetObjectReference<InfiniteScrollSentinel>? _dotNetRef;
-    private bool _observing;
+    private InfiniteScrollObserver<InfiniteScrollSentinel>? _observer;
 
     // The previous render IsLoading value. When a load finishes the sentinel may still be inside the
     // viewport, and the observer reports threshold crossings only, so it is re-observed to get a fresh
@@ -54,12 +51,13 @@ public partial class InfiniteScrollSentinel : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var loadJustFinished = _wasLoading && !IsLoading && _observing;
+        var loadJustFinished = _wasLoading && !IsLoading && _observer?.IsObserving == true;
         _wasLoading = IsLoading;
 
         if (!_disposed && (firstRender || loadJustFinished))
         {
-            await AttachObserverAsync();
+            _observer ??= new InfiniteScrollObserver<InfiniteScrollSentinel>(JS, this);
+            await _observer.ObserveAsync(_sentinelRef);
         }
 
         await base.OnAfterRenderAsync(firstRender);
@@ -77,46 +75,9 @@ public partial class InfiniteScrollSentinel : IAsyncDisposable
 
         _disposed = true;
 
-        try
+        if (_observer is not null)
         {
-            if (_module is not null)
-            {
-                if (_observing)
-                {
-                    await _module.InvokeVoidAsync("unobserve", _observerId);
-                }
-
-                await _module.DisposeAsync();
-            }
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit already gone; nothing to detach.
-        }
-        catch (JSException)
-        {
-            // Best-effort: ignore shutdown-time interop races.
-        }
-        finally
-        {
-            _dotNetRef?.Dispose();
-        }
-    }
-
-    private async Task AttachObserverAsync()
-    {
-        try
-        {
-            _module ??= await JS.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/MMCA.Common.UI/infinite-scroll.js");
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            await _module.InvokeVoidAsync("observe", _dotNetRef, _sentinelRef, _observerId);
-            _observing = true;
-        }
-        catch (JSDisconnectedException)
-        {
-            // Expected during prerendering or circuit teardown: the list then simply stops at the
-            // pages already loaded rather than failing the render.
+            await _observer.DisposeAsync();
         }
     }
 }
