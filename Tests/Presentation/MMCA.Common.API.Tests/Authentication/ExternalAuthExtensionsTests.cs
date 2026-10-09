@@ -1,13 +1,17 @@
+using System.Security.Claims;
+using System.Text.Json;
 using AspNet.Security.OAuth.Apple;
 using AspNet.Security.OAuth.GitHub;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using MMCA.Common.API.Authentication;
 
 namespace MMCA.Common.API.Tests.Authentication;
@@ -182,6 +186,47 @@ public sealed class ExternalAuthExtensionsTests
         var pem = await options.PrivateKey!("KEY1234567", CancellationToken.None);
 
         pem.ToString().Should().Contain("BEGIN PRIVATE KEY");
+    }
+
+    [Fact]
+    public async Task AddExternalAuthProviders_AppleCreatingTicket_AddsTheNameFromTheFirstSignInUserField()
+    {
+        var services = CreateServices();
+        services.AddExternalAuthProviders(BuildConfiguration(AppleConfig()));
+        await using var provider = services.BuildServiceProvider();
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<AppleAuthenticationOptions>>()
+            .Get(AppleAuthenticationDefaults.AuthenticationScheme);
+
+        // Apple form-posts the callback; the name rides only in the "user" field, never in the ID token.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.ContentType = "application/x-www-form-urlencoded";
+        httpContext.Request.Form = new FormCollection(new Dictionary<string, StringValues>(StringComparer.Ordinal)
+        {
+            ["code"] = "authorization-code",
+            ["user"] = """{"name":{"firstName":"Jane","lastName":"Appleseed"},"email":"jane@example.com"}""",
+        });
+        var identity = new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "apple-subject"), new Claim(ClaimTypes.Email, "jane@example.com")],
+            AppleAuthenticationDefaults.AuthenticationScheme);
+        using var tokenResponse = JsonDocument.Parse("""{"id_token":"unused"}""");
+        using var backchannel = new HttpClient();
+        var scheme = new AuthenticationScheme(
+            AppleAuthenticationDefaults.AuthenticationScheme, displayName: null, typeof(AppleAuthenticationHandler));
+        var context = new OAuthCreatingTicketContext(
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties(),
+            httpContext,
+            scheme,
+            options,
+            backchannel,
+            OAuthTokenResponse.Success(tokenResponse),
+            tokenResponse.RootElement);
+
+        await options.Events.CreatingTicket(context);
+
+        identity.FindFirst(ClaimTypes.GivenName)?.Value.Should().Be("Jane");
+        identity.FindFirst(ClaimTypes.Surname)?.Value.Should().Be("Appleseed");
     }
 
     // ── External-login cookie hardening ──
