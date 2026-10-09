@@ -148,18 +148,18 @@ public sealed class RedisFixedWindowRateLimiterTests
             Times.Never);
     }
 
-    // The synchronous path exists only to satisfy the base contract: the ASP.NET Core middleware
-    // uses AcquireAsync, and blocking a request thread on a Redis round trip would be worse than
-    // the fail-open posture the limiter already takes.
+    // The ASP.NET Core middleware tries AttemptAcquire FIRST and falls through to AcquireAsync only
+    // when that lease is not acquired. A granting synchronous path therefore admitted every request
+    // uncounted; it must decline without a Redis round trip so the shared counter decides.
     [Fact]
-    public async Task AttemptAcquire_AlwaysPermits()
+    public async Task AttemptAcquire_IsNotAcquiredAndNeverTouchesRedis()
     {
-        var (connection, database) = CreateConnection(incrementResult: 99);
-        await using var sut = CreateLimiter(connection.Object, permitLimit: 1);
+        var (connection, database) = CreateConnection(incrementResult: 1);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
 
         using var lease = sut.AttemptAcquire();
 
-        lease.IsAcquired.Should().BeTrue();
+        lease.IsAcquired.Should().BeFalse();
         database.Verify(
             d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
             Times.Never);
