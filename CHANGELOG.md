@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.234.2] - 2026-10-08
+
+### Fixed
+
+- Sign in with Apple now keeps the user's name. Apple never puts the name in the ID token: it posts it once, in the callback's `user` form field, on the first authorization only, and the AspNet.Security.OAuth.Apple handler reads only the ID token. `AddExternalAuthProviders` now sets the Apple scheme's `OnCreatingTicket` to copy `name.firstName` and `name.lastName` from that field into the `GivenName` and `Surname` claims (trimmed; a claim already present is left alone), so `OAuthControllerBase` creates the account with the real name instead of the "User User" placeholders. A missing or malformed field adds nothing and never fails the sign-in. Accounts already created through Apple keep their placeholder name: a later sign-in matches the existing account and does not rewrite its name, so the user edits it on their profile. Google and GitHub are unaffected. Consumers need no change.
+
 ## [1.234.1] - 2026-10-08
 
 ### Changed

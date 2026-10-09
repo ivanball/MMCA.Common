@@ -142,5 +142,9 @@ public static class ExternalAuthExtensions
             options.SignInScheme = ExternalLoginScheme;
             options.CallbackPath = "/auth/callback/apple";
             options.SaveTokens = true;
+
+            // The handler reads only the ID token, which never carries the name; Apple posts it once,
+            // in the callback's "user" form field, on the first authorization (AppleUserNameClaims).
+            options.Events.OnCreatingTicket = AppleUserNameClaims.AddFromCallbackFormAsync;
         });
 }
