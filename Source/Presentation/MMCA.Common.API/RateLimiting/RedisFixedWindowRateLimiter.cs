@@ -104,17 +104,25 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
     public override RateLimiterStatistics? GetStatistics() => null;
 
     /// <summary>
-    /// Synchronous acquisition always permits. The ASP.NET Core rate-limiting middleware uses the
-    /// asynchronous path exclusively, so this exists only to satisfy the base contract, and
-    /// blocking a request thread on a Redis round trip to serve it would be strictly worse than
-    /// the fail-open posture the whole limiter already takes on a Redis fault.
+    /// Synchronous acquisition never decides: it returns a lease that is NOT acquired, without
+    /// touching Redis, so the caller falls through to <see cref="RateLimiter.AcquireAsync"/>, where
+    /// the shared counter makes the real decision.
+    /// <para>
+    /// This is load-bearing for the ASP.NET Core rate-limiting middleware, which calls the
+    /// synchronous <c>AttemptAcquire</c> FIRST on every request and calls <c>AcquireAsync</c> only
+    /// when that lease is not acquired, disposing the synchronous lease without reading its
+    /// metadata. Granting here would admit every request uncounted, so the limit would never be
+    /// enforced; deciding here would block a request thread on a Redis round trip. A caller that
+    /// uses only the synchronous path is therefore always refused: the middleware is the supported
+    /// consumer.
+    /// </para>
     /// </summary>
     /// <param name="permitCount">The permits requested.</param>
-    /// <returns>An acquired lease.</returns>
+    /// <returns>A lease that is not acquired and carries no metadata.</returns>
     protected override RateLimitLease AttemptAcquireCore(int permitCount)
     {
         Volatile.Write(ref _lastUsedTimestamp, Stopwatch.GetTimestamp());
-        return RedisRateLimitLease.Acquired;
+        return RedisRateLimitLease.Undecided;
     }
 
     /// <inheritdoc />
@@ -165,9 +173,9 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
 }
 
 /// <summary>
-/// The two leases <see cref="RedisFixedWindowRateLimiter"/> hands out. Both are stateless and
-/// carry no metadata, so one shared instance of each serves every request rather than allocating
-/// a lease per call.
+/// The leases <see cref="RedisFixedWindowRateLimiter"/> hands out. All are stateless and carry no
+/// metadata, so one shared instance of each serves every request rather than allocating a lease
+/// per call.
 /// </summary>
 internal sealed class RedisRateLimitLease : RateLimitLease
 {
@@ -176,6 +184,13 @@ internal sealed class RedisRateLimitLease : RateLimitLease
 
     /// <summary>The lease returned when the window's allowance is exhausted.</summary>
     internal static readonly RedisRateLimitLease Rejected = new(isAcquired: false);
+
+    /// <summary>
+    /// The lease the synchronous path returns. Not acquired, so the middleware falls through to the
+    /// asynchronous path; kept distinct from <see cref="Rejected"/> because nothing was counted and
+    /// nothing was refused. Like the others it carries no retry-after metadata.
+    /// </summary>
+    internal static readonly RedisRateLimitLease Undecided = new(isAcquired: false);
 
     private RedisRateLimitLease(bool isAcquired) => IsAcquired = isAcquired;
 

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
@@ -106,6 +107,60 @@ public sealed class IdentityModuleDbSeederBaseTests
         sut.CreatedUsers[0].Role.Should().Be("Admin");
     }
 
+    // Two replicas starting together on a database missing an account both pass the existence
+    // check and both insert; the slower save is rejected by the unique index on the email. That is
+    // a lost race, not a fault: the run must go on to the next account, and the rejected insert must
+    // be detached so the next account's save does not replay it.
+    [Fact]
+    public async Task SeedAsync_WhenAnAccountSaveLosesAUniqueIndexRace_DoesNotThrowAndSeedsTheNextAccount()
+    {
+        var (sut, mocks) = CreateSut(TwoAccounts);
+        await using var context = new RaceProbeContext();
+        var rejectedRow = new RaceProbeRow { Id = 1 };
+        context.Add(rejectedRow);
+        mocks.UnitOfWork.SetupSequence(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException(
+                "An error occurred while saving the entity changes. See the inner exception for details.",
+                new InvalidOperationException(
+                    "Cannot insert duplicate key row in object 'Identity.User' with unique index 'IX_User_Email'. The duplicate key value is (admin@example.com)."),
+                [context.Entry(rejectedRow)]))
+            .ReturnsAsync(1);
+
+        var seeding = () => sut.SeedAsync(CancellationToken.None);
+
+        await seeding.Should().NotThrowAsync();
+        sut.CreatedUsers.Should().HaveCount(2);
+        mocks.Repository.Verify(
+            x => x.AddAsync(It.Is<TestSeedUser>(u => u == sut.CreatedUsers[1]), It.IsAny<CancellationToken>()),
+            Times.Once);
+        mocks.UnitOfWork.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(2),
+            "the account after the lost race is still saved");
+        context.Entry(rejectedRow).State.Should().Be(
+            EntityState.Detached,
+            "the rejected insert must not be replayed by the next account's save");
+    }
+
+    [Fact]
+    public async Task SeedAsync_WhenAnAccountSaveFailsForAnotherReason_Throws()
+    {
+        var (sut, mocks) = CreateSut(TwoAccounts);
+        mocks.UnitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException(
+                "An error occurred while saving the entity changes. See the inner exception for details.",
+                new InvalidOperationException(
+                    "The INSERT statement conflicted with the FOREIGN KEY constraint \"FK_User_Tenant\".")));
+
+        var seeding = () => sut.SeedAsync(CancellationToken.None);
+
+        await seeding.Should().ThrowAsync<DbUpdateException>();
+        mocks.UnitOfWork.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once,
+            "a failure that is not a lost race stops seeding");
+    }
+
     private sealed record SeederMocks(
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<TestSeedUser, UserIdentifierType>> Repository,
@@ -125,6 +180,21 @@ public sealed class IdentityModuleDbSeederBaseTests
 
         var sut = new TestIdentityModuleDbSeeder(unitOfWork.Object, passwordHasher.Object, accounts, shouldSeed);
         return (sut, new SeederMocks(unitOfWork, repository, passwordHasher));
+    }
+
+    /// <summary>
+    /// A real change tracker, so the rejected save can carry a genuine <see cref="Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry"/>
+    /// and the test can observe that it was detached. Never opened: tracking needs no connection.
+    /// </summary>
+    private sealed class RaceProbeContext() : DbContext(
+        new DbContextOptionsBuilder<RaceProbeContext>().UseSqlite("DataSource=:memory:").Options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.Entity<RaceProbeRow>();
+    }
+
+    private sealed class RaceProbeRow
+    {
+        public int Id { get; set; }
     }
 }
 

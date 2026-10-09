@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- Distributed rate limiting (`RateLimiting:Distributed` with an `IConnectionMultiplexer` registered) now enforces its limits. The ASP.NET Core middleware calls the synchronous `AttemptAcquire` first and only falls through to `AcquireAsync` when that lease is not acquired, and `RedisFixedWindowRateLimiter` granted it, so every request was admitted and the Redis counter never ran. The synchronous path now returns a not-acquired lease without touching Redis, so the shared counter decides. Affects the global per-user limiter, the anonymous hub limiter and "UserPolicy"; the fail-open behavior on a Redis fault is unchanged. Consumers need no change.
+- `IdentityModuleDbSeederBase<TUser>` no longer crashes startup when two replicas seed the same missing account at once (#532). A unique or primary-key violation on an account's save is treated as a lost race: it is logged, the failed save's pending entries are detached, and seeding continues with the next account; any other save failure still throws. A new constructor overload takes an `ILogger` for that log line; the existing two-argument constructor logs nothing. Consumers need no change.
+- A new pinned toast is now always visible. Pinned toasts (`IToastService.ShowPersistent`, which `NotificationListener` uses for announcements, and `ShowAction` with `requireInteraction: true`) never expire, and MudBlazor displays at most `MaxDisplayedSnackbars` at once, so once that many pinned toasts were open every newer one queued out of sight until the user closed an older one. `MudToastService` now tracks the pinned toasts it raised and, when the ones still open have reached the cap, removes the oldest of them before showing the new one. Timed toasts and snackbars raised outside the service are never removed, and a toast the user already closed is not counted. Tracking is per circuit (Server) or per app (WebAssembly). Consumers need no change.
+
 ## [1.234.2] - 2026-10-08
 
 ### Fixed
