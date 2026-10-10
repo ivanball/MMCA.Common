@@ -14,13 +14,34 @@ public sealed class UserSessionsAdministrationService(
     TimeProvider timeProvider) : IUserSessionsAdministrationService
 {
     /// <inheritdoc />
-    public Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+    /// <remarks>
+    /// The same read the signed-in devices page makes: the store's un-revoked rows for the user, with
+    /// the expired ones dropped in memory (the store returns expired-but-unrevoked rows on purpose),
+    /// newest first. No user lookup is made, so an unknown user is an empty list rather than a 404:
+    /// the endpoint reveals nothing about an account that <c>GET Admin/Users/{userId}</c> does not.
+    /// </remarks>
+    public async Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
-        // TEST-FIRST STUB: the implementation lands in a separate change.
-        ArgumentNullException.ThrowIfNull(refreshSessions);
-        ArgumentNullException.ThrowIfNull(timeProvider);
-        throw new NotImplementedException();
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<RefreshSessionSummaryResponse> live =
+        [
+            .. sessions
+                .Where(s => s.UserId == userId && s.IsActiveAt(now))
+                .OrderByDescending(s => s.CreatedAt)
+                .ThenByDescending(s => s.Id)
+                .Select(s => new RefreshSessionSummaryResponse(
+                    s.Id,
+                    s.CreatedAt,
+                    s.ExpiresAt,
+                    s.IpAddress,
+                    s.UserAgent,
+                    IsCurrent: false)),
+        ];
+
+        return Result.Success(live);
     }
 }

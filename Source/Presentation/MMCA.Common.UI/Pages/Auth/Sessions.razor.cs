@@ -231,22 +231,10 @@ public partial class Sessions : IDisposable
     }
 
     /// <summary>
-    /// The device label: browser and platform read out of the user agent, composed through a
-    /// resource format so the word order translates (ADR-027), and an explicit "unknown device"
-    /// when the header identified neither.
+    /// The device label (the native app, or browser and platform), shared with the administrator's
+    /// sessions table through <see cref="UserAgentSummary.Describe"/>.
     /// </summary>
-    private string DescribeDevice(RefreshSessionSummaryResponse session)
-    {
-        var (browser, platform) = UserAgentSummary.Parse(session.UserAgent);
-
-        return (browser, platform) switch
-        {
-            (not null, not null) => L["Auth.Sessions.Device.Format", browser, platform].Value,
-            (not null, null) => browser,
-            (null, not null) => platform,
-            _ => L["Auth.Sessions.Device.Unknown"].Value,
-        };
-    }
+    private string DescribeDevice(RefreshSessionSummaryResponse session) => UserAgentSummary.Describe(session.UserAgent, L);
 
     /// <summary>
     /// Formats a UTC instant in the VIEWER's browser time zone and current culture: the sessions

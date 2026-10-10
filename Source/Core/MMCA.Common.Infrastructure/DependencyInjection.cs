@@ -175,6 +175,10 @@ public static partial class DependencyInjection
             // delegates every session decision to it. Scoped for the same reason as the store.
             services.TryAddScoped<Application.Auth.Sessions.IAuthSessionIssuer, Application.Auth.Sessions.AuthSessionIssuer>();
 
+            // The administrator's read-only view of another account's live sessions, over the same
+            // store (UsersAdminControllerBase resolves it per action). Scoped for the same reason.
+            services.TryAddScoped<Application.Auth.Administration.IUserSessionsAdministrationService, Application.Auth.Administration.UserSessionsAdministrationService>();
+
             // Retention sweep, gated on the same flag that maps the table. Registering it
             // unconditionally would start a periodic sweep (every CleanupIntervalHours, default 6) in
             // every service of a modular host, all but

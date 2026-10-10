@@ -628,6 +628,12 @@
   <data name="Auth.Sessions.Device.Unknown" xml:space="preserve">
     <value>Dispositivo no reconocido</value>
   </data>
+  <data name="Auth.Sessions.Device.AppFormat" xml:space="preserve">
+    <value>App {0} en {1}</value>
+  </data>
+  <data name="Auth.Sessions.Admin.Empty" xml:space="preserve">
+    <value>Sin sesión iniciada en ningún dispositivo</value>
+  </data>
   <data name="Auth.Sessions.Revoke" xml:space="preserve">
     <value>Cerrar sesión</value>
   </data>

@@ -10,3 +10,6 @@ MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSessionsAsy
 MMCA.Common.UI.Services.Auth.Devices.AppUserAgent
 const MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Marker = "MmcaApp" -> string!
 static MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Build(string! appName, string! appVersion, string! platform, string? osVersion) -> string!
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose() -> void
+override MMCA.Common.UI.Components.Auth.UserSessionsTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose(bool disposing) -> void

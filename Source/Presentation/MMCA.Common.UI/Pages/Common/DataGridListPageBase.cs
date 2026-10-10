@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
@@ -594,7 +595,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             async token =>
             {
                 var filters = ExtractGridFilters(state.FilterDefinitions);
-                additionalFilters?.Invoke(filters);
+                ApplyAdditionalFilters(filters, additionalFilters);
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
 
@@ -655,7 +656,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             async token =>
             {
                 var filters = ExtractGridFilters(state.FilterDefinitions);
-                additionalFilters?.Invoke(filters);
+                ApplyAdditionalFilters(filters, additionalFilters);
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
                 var window = ComputeVirtualWindow(state.StartIndex, state.Count);
@@ -922,6 +923,41 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 },
                 StringComparer.Ordinal
             ) ?? [];
+
+    /// <summary>
+    /// Runs the page's <c>additionalFilters</c> callback (search box, status dropdown) over the grid's
+    /// own filters without letting it overwrite them. Pages inject the search term under a column's
+    /// own key (<c>filters["Name"] = ("contains", search)</c>); when the grid already filters that
+    /// column, the column keeps its key and the injected filter moves to the aliased key
+    /// <see cref="QueryFilterKeys.Alias"/> builds (<c>Name~search</c>), which the server resolves to
+    /// the same property and ANDs. Every other edit the callback makes (a new key, a removal, a
+    /// rewrite to the same value) stands as it did.
+    /// </summary>
+    /// <param name="filters">The grid's filters, which the callback edits in place.</param>
+    /// <param name="additionalFilters">The page's callback, when it has one.</param>
+    private static void ApplyAdditionalFilters(
+        Dictionary<string, (string Operator, string Value)> filters,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters)
+    {
+        if (additionalFilters is null)
+        {
+            return;
+        }
+
+        var gridFilters = filters.ToList();
+        additionalFilters(filters);
+
+        foreach (var (key, gridFilter) in gridFilters)
+        {
+            if (!filters.TryGetValue(key, out var injected) || injected == gridFilter)
+            {
+                continue;
+            }
+
+            filters[key] = gridFilter;
+            filters[QueryFilterKeys.Alias(key, QueryFilterKeys.SearchTag)] = injected;
+        }
+    }
 
     private static (string? SortColumn, string? SortDirection) ExtractSortParameters(
         IEnumerable<SortDefinition<TDto>>? sortDefinitions)

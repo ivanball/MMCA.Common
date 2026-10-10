@@ -12,9 +12,9 @@ namespace MMCA.Common.API.ModelBinders;
 /// ?filters[PropertyName].operator=eq&amp;filters[PropertyName].value=SomeValue
 /// </code>
 /// <para>
-/// Multiple properties can be filtered simultaneously. Incomplete entries (missing either
-/// the operator or value component) are silently discarded. Property name matching is
-/// case-insensitive.
+/// Multiple properties can be filtered simultaneously. Incomplete entries (a missing operator,
+/// or a missing value for an operator other than the value-less IS EMPTY / IS NOT EMPTY) are
+/// silently discarded. Property name matching is case-insensitive.
 /// </para>
 /// <para>
 /// Example: <c>?filters[Name].operator=contains&amp;filters[Name].value=shirt&amp;filters[Price].operator=gte&amp;filters[Price].value=10</c>
@@ -70,9 +70,11 @@ public sealed class QueryFilterModelBinder : IModelBinder
                 : (tuple.Operator, value);
         }
 
-        // Remove incomplete filter entries missing operator or value
+        // Remove incomplete filter entries: a missing operator, or a missing value for an operator
+        // that compares against one. IS EMPTY / IS NOT EMPTY take no value, so a grid sends the
+        // operator alone and that entry is complete as it stands.
         foreach (var key in filters
-            .Where(f => string.IsNullOrEmpty(f.Value.Operator) || string.IsNullOrEmpty(f.Value.Value))
+            .Where(f => IsIncomplete(f.Value))
             .Select(f => f.Key)
             .ToList())
         {
@@ -81,6 +83,30 @@ public sealed class QueryFilterModelBinder : IModelBinder
 
         bindingContext.Result = ModelBindingResult.Success(filters);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Whether a bound entry cannot be applied: no operator, or no value for an operator that
+    /// compares against one.
+    /// </summary>
+    /// <param name="filter">The bound operator and value.</param>
+    /// <returns><see langword="true"/> when the entry is to be discarded.</returns>
+    private static bool IsIncomplete((string Operator, string Value) filter) =>
+        string.IsNullOrEmpty(filter.Operator)
+        || string.IsNullOrEmpty(filter.Value) && !IsValueLessOperator(filter.Operator);
+
+    /// <summary>
+    /// Whether <paramref name="op"/> is a presence check that takes no value (IS EMPTY, IS NOT EMPTY,
+    /// in any casing, so MudBlazor's lower-case <c>"is empty"</c> counts too).
+    /// </summary>
+    /// <param name="op">The operator as sent.</param>
+    /// <returns><see langword="true"/> when the operator is complete without a value.</returns>
+    private static bool IsValueLessOperator(string op)
+    {
+        var trimmed = op.Trim();
+
+        return trimmed.Equals("IS EMPTY", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Equals("IS NOT EMPTY", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -126,11 +126,17 @@ public abstract class UsersAdminControllerBase<TUserDto>(
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
-    public virtual Task<ActionResult<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+    public virtual async Task<ActionResult<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         UserIdentifierType userId,
         [FromServices] IUserSessionsAdministrationService sessions,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+
+        var result = await sessions.GetSessionsAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+    }
 
     /// <summary>
     /// Locks an account, so it can no longer sign in.

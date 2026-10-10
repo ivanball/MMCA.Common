@@ -1,1 +1,27 @@
-@* TEST-FIRST STUB: renders nothing yet; the read-only sessions table lands in a separate change. *@
+@using MMCA.Common.Shared.Auth.Responses
+
+@if (Sessions.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Devices" Message="@L["Auth.Sessions.Admin.Empty"]" />
+}
+else
+{
+    @* Same layout as the signed-in devices page, minus the actions column: this view is read-only.
+       role="region" names the table's wrapper div, which MudTable splats unmatched attributes onto. *@
+    <MudTable Items="Sessions" T="RefreshSessionSummaryResponse" Hover="true" Elevation="1"
+              Breakpoint="Breakpoint.Sm"
+              role="region" aria-label="@L["Auth.Sessions.TableLabel"]">
+        <HeaderContent>
+            <MudTh>@L["Auth.Sessions.Column.Device"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.IpAddress"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.SignedIn"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.Expires"]</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.Device"]">@DescribeDevice(context)</MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.IpAddress"]">@DescribeIpAddress(context)</MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.SignedIn"]">@FormatInstant(context.CreatedAt)</MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.Expires"]">@FormatInstant(context.ExpiresAt)</MudTd>
+        </RowTemplate>
+    </MudTable>
+}

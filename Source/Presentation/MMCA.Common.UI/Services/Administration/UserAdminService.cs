@@ -96,10 +96,25 @@ public sealed class UserAdminService<TUserDto>(
     }
 
     /// <inheritdoc />
-    public Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+    public async Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         UserIdentifierType userId,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
+        CancellationToken cancellationToken = default)
+    {
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}/sessions");
+
+        return await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await RetryPolicy.ExecuteAsync(
+                    _ => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
+                    cancellationToken);
+
+                return await ProblemDetailsResultReader.ReadAsync<IReadOnlyList<RefreshSessionSummaryResponse>>(
+                    response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task<Result> LockAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>

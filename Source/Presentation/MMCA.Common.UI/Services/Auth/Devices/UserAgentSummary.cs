@@ -58,6 +58,23 @@ internal static class UserAgentSummary
     ];
 
     /// <summary>
+    /// The one-word platform names a native app header carries (see <see cref="AppUserAgent"/>),
+    /// including MAUI's names for the desktop heads, mapped to the names <see cref="Platforms"/> shows.
+    /// </summary>
+    private static readonly (string Word, string Name)[] AppPlatforms =
+    [
+        ("Android", "Android"),
+        ("iOS", "iOS"),
+        ("iPadOS", "iPadOS"),
+        ("Windows", "Windows"),
+        ("WinUI", "Windows"),
+        ("macOS", "macOS"),
+        ("MacCatalyst", "macOS"),
+        ("tvOS", "tvOS"),
+        ("watchOS", "watchOS"),
+    ];
+
+    /// <summary>
     /// Reads the browser and platform out of a user-agent header.
     /// </summary>
     /// <param name="userAgent">The raw header, which may be missing, empty, or unrecognizable.</param>
@@ -82,8 +99,86 @@ internal static class UserAgentSummary
     /// <param name="userAgent">The raw header, which may be missing, empty, or unrecognizable.</param>
     /// <param name="localizer">The localizer the label's resource formats are read through.</param>
     /// <returns>The localized device label.</returns>
-    public static string Describe(string? userAgent, IStringLocalizer localizer) =>
-        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
+    public static string Describe(string? userAgent, IStringLocalizer localizer)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
+
+        // The native app marker is read BEFORE the browser tokens: an app header that also carries a
+        // WebView's "Chrome/" token is still the app.
+        var (appName, appPlatform) = ParseApp(userAgent);
+        if (appName is not null)
+        {
+            return appPlatform is null
+                ? appName
+                : localizer["Auth.Sessions.Device.AppFormat", appName, appPlatform].Value;
+        }
+
+        var (browser, platform) = Parse(userAgent);
+
+        return (browser, platform) switch
+        {
+            (not null, not null) => localizer["Auth.Sessions.Device.Format", browser, platform].Value,
+            (not null, null) => browser,
+            (null, not null) => platform,
+            _ => localizer["Auth.Sessions.Device.Unknown"].Value,
+        };
+    }
+
+    /// <summary>
+    /// Reads a native MMCA app header (<see cref="AppUserAgent"/>): the app name is the product token's
+    /// name and the platform is the first word of the comment that carries the marker.
+    /// </summary>
+    private static (string? AppName, string? Platform) ParseApp(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return (null, null);
+        }
+
+        var commentStart = userAgent.IndexOf('(', StringComparison.Ordinal);
+        if (commentStart <= 0)
+        {
+            return (null, null);
+        }
+
+        var commentEnd = userAgent.IndexOf(')', commentStart);
+        var comment = commentEnd < 0 ? userAgent[(commentStart + 1)..] : userAgent[(commentStart + 1)..commentEnd];
+        var parts = comment.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (!parts.Contains(AppUserAgent.Marker, StringComparer.Ordinal))
+        {
+            return (null, null);
+        }
+
+        var product = userAgent[..commentStart].Trim();
+        var slash = product.IndexOf('/', StringComparison.Ordinal);
+        var appName = slash < 0 ? product : product[..slash];
+        if (appName.Length == 0)
+        {
+            return (null, null);
+        }
+
+        var platformWord = parts[0].Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+        return platformWord.Equals(AppUserAgent.Marker, StringComparison.Ordinal)
+            ? (appName, null)
+            : (appName, MatchAppPlatform(platformWord));
+    }
+
+    /// <summary>
+    /// The app header names its platform with one word (the OS name, or MAUI's name for the desktop
+    /// heads); the label uses the platform table's name for it.
+    /// </summary>
+    private static string MatchAppPlatform(string platformWord)
+    {
+        foreach (var (word, name) in AppPlatforms)
+        {
+            if (platformWord.Equals(word, StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
+        }
+
+        return Match(platformWord, Platforms) ?? platformWord;
+    }
 
     private static string? Match(string userAgent, (string Token, string Name)[] candidates)
     {
