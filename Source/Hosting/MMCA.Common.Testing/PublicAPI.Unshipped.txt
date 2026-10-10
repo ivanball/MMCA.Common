@@ -1,3 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetUserIdsWithLiveSessionsAsync(System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
-MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.CountLiveSessionsByUserAsync(System.Collections.Generic.IReadOnlyCollection<int>! userIds, System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<int, int>!>!
