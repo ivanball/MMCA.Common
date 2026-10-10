@@ -101,7 +101,7 @@ public sealed class QueryFilterServiceGridOperatorTests
         var bySymbol = QueryFilterService.ApplyFilters(Products(), One(property, symbol, "25"), EmptyMap).ToList();
         var byWord = QueryFilterService.ApplyFilters(Products(), One(property, word, "25"), EmptyMap).ToList();
 
-        bySymbol.Should().Equal(byWord, $"'{symbol}' must mean exactly what '{word}' means");
+        bySymbol.Should().BeEquivalentTo(byWord, o => o.WithStrictOrdering(), $"'{symbol}' must mean exactly what '{word}' means");
         bySymbol.Count.Should().BeLessThan(Products().Count(), $"'{symbol}' 25 must narrow the set, not be ignored");
     }
 
