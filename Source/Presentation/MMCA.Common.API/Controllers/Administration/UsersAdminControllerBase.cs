@@ -7,6 +7,7 @@ using MMCA.Common.Application.Auth.Administration;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 
 namespace MMCA.Common.API.Controllers.Administration;
 
@@ -113,6 +114,23 @@ public abstract class UsersAdminControllerBase<TUserDto>(
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
+
+    /// <summary>
+    /// Returns the account's live (signed-in) sessions, newest first. View only.
+    /// </summary>
+    /// <param name="userId">The account whose sessions to read.</param>
+    /// <param name="sessions">The framework's session administration service, resolved per action.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The live sessions, or a Problem Details failure.</returns>
+    [HttpGet("{userId}/sessions")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    public virtual Task<ActionResult<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+        UserIdentifierType userId,
+        [FromServices] IUserSessionsAdministrationService sessions,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
 
     /// <summary>
     /// Locks an account, so it can no longer sign in.

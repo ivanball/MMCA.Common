@@ -1,1 +1,6 @@
 ﻿#nullable enable
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.UserSessionsAdministrationService(MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider! timeProvider) -> void

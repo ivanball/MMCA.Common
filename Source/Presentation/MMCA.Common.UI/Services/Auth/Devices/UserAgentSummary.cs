@@ -1,4 +1,6 @@
-namespace MMCA.Common.UI.Services.Auth;
+using Microsoft.Extensions.Localization;
+
+namespace MMCA.Common.UI.Services.Auth.Devices;
 
 /// <summary>
 /// Turns a raw <c>User-Agent</c> header into the two words a person recognizes their own device by:
@@ -72,6 +74,16 @@ internal static class UserAgentSummary
 
         return (Match(userAgent, Browsers), Match(userAgent, Platforms));
     }
+
+    /// <summary>
+    /// The device label the signed-in devices views show for a session's user agent (the logic shared
+    /// by the Sessions page and the administrator's sessions table).
+    /// </summary>
+    /// <param name="userAgent">The raw header, which may be missing, empty, or unrecognizable.</param>
+    /// <param name="localizer">The localizer the label's resource formats are read through.</param>
+    /// <returns>The localized device label.</returns>
+    public static string Describe(string? userAgent, IStringLocalizer localizer) =>
+        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
 
     private static string? Match(string userAgent, (string Token, string Name)[] candidates)
     {

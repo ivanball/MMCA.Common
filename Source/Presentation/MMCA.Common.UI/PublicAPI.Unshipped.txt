@@ -1,2 +1,12 @@
-﻿#nullable enable
+#nullable enable
 const MMCA.Common.UI.Theme.BrandColors.DarkPrimaryDarken = "#1E88E5" -> string!
+MMCA.Common.UI.Components.Auth.UserSessionsTable
+MMCA.Common.UI.Components.Auth.UserSessionsTable.UserSessionsTable() -> void
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.set -> void
+~override MMCA.Common.UI.Components.Auth.UserSessionsTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.Devices.AppUserAgent
+const MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Marker = "MmcaApp" -> string!
+static MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Build(string! appName, string! appVersion, string! platform, string? osVersion) -> string!

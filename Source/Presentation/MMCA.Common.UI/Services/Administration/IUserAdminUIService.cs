@@ -1,4 +1,5 @@
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.Responses;
 
 namespace MMCA.Common.UI.Services.Administration;
 
@@ -36,4 +37,15 @@ public interface IUserAdminUIService<TUserDto> : IUserAdminActionsUIService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The account, or the API's own refusal.</returns>
     Task<Result<TUserDto>> GetAsync(UserIdentifierType userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the account's live (signed-in) sessions, newest first, from
+    /// <c>GET Admin/Users/{userId}/sessions</c>. View only.
+    /// </summary>
+    /// <param name="userId">The account whose sessions to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The live sessions, or the API's own refusal.</returns>
+    Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default);
 }

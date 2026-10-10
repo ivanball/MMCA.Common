@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth.Tokens;
@@ -93,6 +94,12 @@ public sealed class UserAdminService<TUserDto>(
             },
             cancellationToken);
     }
+
+    /// <inheritdoc />
+    public Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException("TEST-FIRST STUB: the implementation lands in a separate change.");
 
     /// <inheritdoc />
     public Task<Result> LockAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>

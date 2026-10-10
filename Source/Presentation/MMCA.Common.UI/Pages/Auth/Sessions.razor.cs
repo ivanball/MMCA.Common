@@ -6,6 +6,7 @@ using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Devices;
 using MMCA.Common.UI.Services.Culture;
 using MudBlazor;
 

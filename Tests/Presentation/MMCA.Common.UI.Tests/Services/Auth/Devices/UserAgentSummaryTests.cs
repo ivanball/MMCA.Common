@@ -1,7 +1,7 @@
 using AwesomeAssertions;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Devices;
 
-namespace MMCA.Common.UI.Tests.Services.Auth;
+namespace MMCA.Common.UI.Tests.Services.Auth.Devices;
 
 /// <summary>
 /// Pins <see cref="UserAgentSummary"/>, the two-word device label behind the signed-in devices page.
