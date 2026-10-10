@@ -246,7 +246,7 @@ public sealed class UserAdminListTests : BunitTestBase
         var cut = RenderList();
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("ada@example.com"));
 
-        cut.Find("input[placeholder='Search by exact email address...']").Input("smith");
+        cut.Find("input[placeholder='Search by email...']").Input("smith");
 
         // The search box debounces for 300ms before reloading the grid.
         cut.WaitForAssertion(
@@ -269,7 +269,7 @@ public sealed class UserAdminListTests : BunitTestBase
 
         var grid = cut.FindComponent<MudDataGrid<TestUser>>();
         await cut.InvokeAsync(() => grid.Instance.FilterDefinitions.Add(Filter("Email", "contains", "@x")));
-        await cut.Find("input[placeholder='Search by exact email address...']")
+        await cut.Find("input[placeholder='Search by email...']")
             .InputAsync(new ChangeEventArgs { Value = "bob" });
 
         var searchKey = QueryFilterKeys.Alias(nameof(IUserAdminDTO.Email), QueryFilterKeys.SearchTag);
@@ -536,7 +536,7 @@ public sealed class UserAdminListTests : BunitTestBase
             cut.Markup.Should().NotContain(">Users<");
 
             // Not in the app localizer, so the component's own resources answer it.
-            cut.Markup.Should().Contain("Search by exact email address...");
+            cut.Markup.Should().Contain("Search by email...");
         });
     }
 
