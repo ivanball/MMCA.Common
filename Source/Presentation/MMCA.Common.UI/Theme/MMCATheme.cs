@@ -58,7 +58,12 @@ public static class MMCATheme
             // Brand palette tuned for dark surfaces — primary lightened for contrast on dark
             // backgrounds. Enables dark mode via MudThemeProvider's IsDarkMode (rubric §20).
             Primary = BrandColors.PrimaryLight,
-            PrimaryDarken = BrandColors.Primary,
+            // MudBlazor repaints a filled primary control with PrimaryDarken on :hover, :focus-visible
+            // and :active while the label keeps PrimaryContrastText, so the darken has to carry the
+            // same dark label. The brand #1565C0 left it at ~3.4:1, under the WCAG 2.1 AA 4.5:1 floor;
+            // Blue 600 #1E88E5 holds 5.14:1 and still reads as a darker state than #42A5F5.
+            // PrimaryFillContrastTests pins both fills.
+            PrimaryDarken = BrandColors.DarkPrimaryDarken,
             PrimaryLighten = BrandColors.DarkPrimaryLighten,
             // Material dark-theme treatment: a lightened primary takes DARK on-color text. The default
             // white label is ~2.65:1 on #42A5F5 and fails the WCAG 2.1 AA 4.5:1 floor on every filled

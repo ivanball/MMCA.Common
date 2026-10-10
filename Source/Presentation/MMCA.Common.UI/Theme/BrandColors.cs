@@ -88,6 +88,13 @@ public static class BrandColors
     /// <summary>Dark-palette lightened primary (Blue 200).</summary>
     public const string DarkPrimaryLighten = "#90CAF9";
 
+    /// <summary>
+    /// Dark-palette darkened primary (Blue 600), the hover/focus/active fill of a filled primary
+    /// control. Dark enough to read as a state change against <see cref="PrimaryLight"/> (Blue 400),
+    /// light enough that the dark on-colour label rgba(0,0,0,0.87) still reaches 5.14:1 on it.
+    /// </summary>
+    public const string DarkPrimaryDarken = "#1E88E5";
+
     /// <summary>Dark-palette darkened secondary (Teal 600).</summary>
     public const string DarkSecondaryDarken = "#00897B";
 
