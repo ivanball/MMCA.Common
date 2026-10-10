@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- A cached public endpoint no longer answers 500 when another caller of the same URL disconnects. `PublicEndpointOutputCachePolicy` (MMCA.Common.API) set `AllowLocking`, so ASP.NET Core output caching coalesced concurrent cache misses for one key onto the first request's execution, which runs under that request's `RequestAborted` token: when that client went away mid-query, EF Core threw `TaskCanceledException` and every coalesced waiter got a 500 although its own client was still connected. Seen in production on paged session and speaker lists. The policy now sets `AllowLocking = false`, so each simultaneous miss runs its own query (the only cost: no stampede protection inside one expiry window), and cache lookup, storage, expiry, tags and the tenant vary rule are unchanged. Consumers need no change.
+
 ## [1.237.0] - 2026-10-10
 
 ### Added

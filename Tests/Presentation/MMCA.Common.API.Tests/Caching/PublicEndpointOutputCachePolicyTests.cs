@@ -130,7 +130,7 @@ public class PublicEndpointOutputCachePolicyTests
         context.EnableOutputCaching.Should().BeTrue();
         context.AllowCacheLookup.Should().BeTrue("a Bearer token on a public endpoint must not bypass the cache");
         context.AllowCacheStorage.Should().BeTrue();
-        context.AllowLocking.Should().BeTrue();
+        context.AllowLocking.Should().BeFalse("a coalesced waiter would inherit the first caller's cancellation and answer 500");
         context.ResponseExpirationTimeSpan.Should().Be(Expiration);
         context.Tags.Should().Contain("conference:sessions");
     }

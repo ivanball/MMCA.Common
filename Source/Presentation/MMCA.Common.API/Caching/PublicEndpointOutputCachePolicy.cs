@@ -88,7 +88,12 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
         context.EnableOutputCaching = true;
         context.AllowCacheLookup = attemptOutputCaching;
         context.AllowCacheStorage = attemptOutputCaching;
-        context.AllowLocking = true;
+
+        // No request coalescing. With locking on, concurrent misses for the same key wait on the
+        // first request's execution, which runs under that request's RequestAborted token, so one
+        // client disconnecting cancels the shared query and every waiter answers 500 with a
+        // TaskCanceledException. The cost is that simultaneous misses each run the query once.
+        context.AllowLocking = false;
         context.ResponseExpirationTimeSpan = _expiration;
 
         // Same rule as the built-in default policy: every query-string variant of the path
