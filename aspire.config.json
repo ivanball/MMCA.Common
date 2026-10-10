@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "Tests/Hosting/MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost/MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost.csproj"
+  }
+}

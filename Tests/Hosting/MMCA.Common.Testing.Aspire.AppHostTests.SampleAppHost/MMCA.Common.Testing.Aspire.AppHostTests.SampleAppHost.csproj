@@ -1,6 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.0" />
+<Project Sdk="Aspire.AppHost.Sdk/13.6.1">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -15,12 +13,10 @@
     DELIBERATELY OUTSIDE MMCA.Common.slnx: an AppHost's committed lock file carries a RID-specific
     Aspire.Dashboard.Sdk RID-specific entry, so a lock committed from Windows fails the solution's
     locked-mode restore on ubuntu, and the fast solution-wide unit loop must not build an
-    orchestrator. The apphost-testing CI job restores and builds this by path.
+    orchestrator. The apphost-testing CI job restores and builds this by path. The Aspire.AppHost.Sdk
+    project SDK references Aspire.Hosting.AppHost (and with it the DCP orchestrator the testing builder
+    starts) at its own version, so neither this project nor Directory.Packages.props pins it.
   -->
-  <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Testing.Aspire.AppHostTests.SampleService\MMCA.Common.Testing.Aspire.AppHostTests.SampleService.csproj" />
     <!-- A library, not a project resource: without this the Aspire SDK would generate a Projects
