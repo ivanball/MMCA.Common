@@ -281,6 +281,18 @@ public sealed class AuthSessionIssuerReuseGraceTests
             return Task.FromResult(live);
         }
 
+        // The roster queries play no part in a refresh race.
+        public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
+            DateTime now,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
+            IReadOnlyCollection<UserIdentifierType> userIds,
+            DateTime now,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<RefreshSession?> FindByIdAsync(
             Guid id,
             UserIdentifierType userId,

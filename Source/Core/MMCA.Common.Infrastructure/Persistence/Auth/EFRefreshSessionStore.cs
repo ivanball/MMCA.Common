@@ -71,6 +71,19 @@ internal sealed class EFRefreshSessionStore(
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
+        DateTime now,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
+        IReadOnlyCollection<UserIdentifierType> userIds,
+        DateTime now,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
     /// <remarks>
     /// The user is part of the predicate, not a check after the fact: the id arrives from a client, so
     /// filtering in the query is what makes another account's session unreadable rather than merely

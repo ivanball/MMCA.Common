@@ -44,4 +44,15 @@ public sealed class UserSessionsAdministrationService(
 
         return Result.Success(live);
     }
+
+    /// <inheritdoc />
+    public Task<Result<IReadOnlyList<UserIdentifierType>>> GetSignedInUserIdsAsync(
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public Task<Result<IReadOnlyDictionary<UserIdentifierType, int>>> CountLiveSessionsAsync(
+        IReadOnlyCollection<UserIdentifierType> userIds,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }

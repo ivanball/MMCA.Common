@@ -87,6 +87,19 @@ public sealed class InMemoryRefreshSessionStore : IRefreshSessionStore
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
+        DateTime now,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
+        IReadOnlyCollection<UserIdentifierType> userIds,
+        DateTime now,
+        CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
     public Task<RefreshSession?> FindByIdAsync(
         Guid id,
         UserIdentifierType userId,

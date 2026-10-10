@@ -4,3 +4,4 @@ const MMCA.Common.Shared.Http.QueryFilterKeys.AliasSeparator = '~' -> char
 const MMCA.Common.Shared.Http.QueryFilterKeys.SearchTag = "search" -> string!
 static MMCA.Common.Shared.Http.QueryFilterKeys.Alias(string! property, string! tag) -> string!
 static MMCA.Common.Shared.Http.QueryFilterKeys.PropertyOf(string! key) -> string!
+*REMOVED*MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.UserId.get -> int

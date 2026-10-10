@@ -32,49 +32,6 @@ public sealed class UserAdminService<TUserDto>(
     private const string Endpoint = "Admin/Users";
 
     /// <inheritdoc />
-    public async Task<Result<(IReadOnlyList<TUserDto> Items, int TotalItems)>> GetPagedAsync(
-        int pageNumber,
-        int pageSize,
-        string? searchTerm,
-        string? role,
-        CancellationToken cancellationToken = default)
-    {
-        var queryParams = new List<string>
-        {
-            string.Create(CultureInfo.InvariantCulture, $"pageNumber={pageNumber}"),
-            string.Create(CultureInfo.InvariantCulture, $"pageSize={pageSize}"),
-        };
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(role))
-        {
-            queryParams.Add($"role={Uri.EscapeDataString(role)}");
-        }
-
-        var url = $"{Endpoint}/paged?{string.Join("&", queryParams)}";
-
-        var page = await HttpResultExecutor.ExecuteAsync(
-            async () =>
-            {
-                using var httpClient = await CreateAuthenticatedClientAsync();
-                using var response = await RetryPolicy.ExecuteAsync(
-                    _ => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
-                    cancellationToken);
-
-                return await ProblemDetailsResultReader.ReadAsync<PagedCollectionResult<TUserDto>>(
-                    response, cancellationToken: cancellationToken);
-            },
-            cancellationToken);
-
-        return page.Map<(IReadOnlyList<TUserDto> Items, int TotalItems)>(
-            value => ([.. value.Items], value.PaginationMetadata.TotalItemCount));
-    }
-
-    /// <inheritdoc />
     public async Task<Result<TUserDto>> GetAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)

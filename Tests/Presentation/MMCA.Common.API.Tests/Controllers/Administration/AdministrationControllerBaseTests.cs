@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,8 +15,8 @@ using Moq;
 namespace MMCA.Common.API.Tests.Controllers.Administration;
 
 /// <summary>
-/// Covers the opt-in administration controller bases: the Result-to-ActionResult mapping, the paging
-/// conventions, and the capability attribute that is the whole protection on both surfaces.
+/// Covers the opt-in administration controller bases: the Result-to-ActionResult mapping
+/// and the capability attribute that is the whole protection on both surfaces.
 /// </summary>
 public sealed class AdministrationControllerBaseTests
 {
@@ -26,62 +25,6 @@ public sealed class AdministrationControllerBaseTests
     private readonly Mock<IUserAdministrationService<TestUserDto>> _users = new();
     private readonly Mock<IRoleAdministrationService> _roles = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
-
-    // ── Users: listing and paging ──
-    [Fact]
-    public async Task GetPagedAsync_PassesThePagingAndFilterThroughAndEchoesThePaginationHeader()
-    {
-        var page = new PagedCollectionResult<TestUserDto>(
-            [new TestUserDto(TargetUserId, "user@example.com")],
-            new PaginationMetadata(totalItemCount: 1, pageSize: 25, currentPage: 2));
-        _users.Setup(x => x.ListAsync(It.IsAny<UserAdministrationQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(page));
-        var sut = CreateUsersController();
-
-        var result = await sut.GetPagedAsync("ada", "Admin", pageNumber: 2, pageSize: 25);
-
-        result.Result.Should().BeOfType<OkObjectResult>();
-        sut.Response.Headers.Should().ContainKey("X-Pagination");
-        JsonSerializer.Deserialize<PaginationMetadata>(sut.Response.Headers["X-Pagination"]!, JsonSerializerOptions.Web)!
-            .CurrentPage.Should().Be(2);
-        _users.Verify(
-            x => x.ListAsync(
-                It.Is<UserAdministrationQuery>(q =>
-                    q.PageNumber == 2 && q.PageSize == 25 && q.SearchTerm == "ada" && q.Role == "Admin"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task GetPagedAsync_ClampsAnOversizedPageRequest()
-    {
-        _users.Setup(x => x.ListAsync(It.IsAny<UserAdministrationQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(new PagedCollectionResult<TestUserDto>([], new PaginationMetadata())));
-        var sut = CreateUsersController();
-
-        await sut.GetPagedAsync(pageSize: 100_000);
-
-        _users.Verify(
-            x => x.ListAsync(
-                It.Is<UserAdministrationQuery>(q => q.PageSize == UsersAdminControllerBase<TestUserDto>.MaxPageSize),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task GetPagedAsync_Failure_ReturnsProblemDetails()
-    {
-        _users.Setup(x => x.ListAsync(It.IsAny<UserAdministrationQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<PagedCollectionResult<TestUserDto>>(
-                Error.Forbidden("Admin.Denied", "Not allowed.")));
-        var sut = CreateUsersController();
-
-        var result = await sut.GetPagedAsync();
-
-        var objectResult = result.Result as ObjectResult;
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        objectResult.Value.Should().BeOfType<ProblemDetails>();
-    }
 
     // ── Users: read, lock, roles ──
     [Fact]
