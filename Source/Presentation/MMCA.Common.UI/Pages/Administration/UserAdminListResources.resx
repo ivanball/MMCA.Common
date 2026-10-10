@@ -19,7 +19,7 @@
     <value>User</value>
   </data>
   <data name="Placeholder.Search" xml:space="preserve">
-    <value>Search by exact email address...</value>
+    <value>Search by email...</value>
   </data>
   <data name="Aria.CancelLoading" xml:space="preserve">
     <value>Cancel loading users</value>

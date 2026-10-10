@@ -18,7 +18,7 @@ public sealed class UserAdminListSpanishResourcesTests
 
     [Theory]
     [InlineData("Column.Email", "Correo electrónico")]
-    [InlineData("Placeholder.Search", "Buscar por dirección de correo exacta...")]
+    [InlineData("Placeholder.Search", "Buscar por correo electrónico...")]
     public void SpanishEmailWording_IsAccented(string key, string expected) =>
         Resources.GetString(key, Spanish).Should().Be(expected);
 

@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.DTOs;
+
 namespace MMCA.Common.Shared.Auth.Administration;
 
 /// <summary>
@@ -7,16 +9,21 @@ namespace MMCA.Common.Shared.Auth.Administration;
 /// answers them.
 /// </summary>
 /// <remarks>
-/// Implement it on the administration DTO the app already serves from its <c>Admin/Users</c>
-/// endpoints. An explicit implementation is fine and is usually the right one: the component reads
-/// through the interface, so a DTO that spells the lock state its own way (ADC's <c>LockedOn</c>
-/// timestamp, Store's <c>IsActive</c> flag) maps it here instead of renaming its wire contract.
+/// <para>
+/// Implement it on the user DTO the app's generic paged entity endpoint serves. It is an
+/// <see cref="IBaseDTO{TIdentifierType}"/>, so the account identifier is the DTO's own
+/// <see cref="IBaseDTO{TIdentifierType}.Id"/>, used for the detail route and for every
+/// administration call.
+/// </para>
+/// <para>
+/// An explicit implementation of the remaining members is fine and is usually the right one: the
+/// component reads through the interface, so a DTO that spells the lock state its own way (ADC's
+/// <c>LockedOn</c> timestamp, Store's <c>IsActive</c> flag) maps it here instead of renaming its
+/// wire contract.
+/// </para>
 /// </remarks>
-public interface IUserAdminDTO
+public interface IUserAdminDTO : IBaseDTO<UserIdentifierType>
 {
-    /// <summary>Gets the account identifier, used for the detail route and for every administration call.</summary>
-    UserIdentifierType UserId { get; }
-
     /// <summary>Gets the account's email address, which the list renders as the row's primary label.</summary>
     string Email { get; }
 

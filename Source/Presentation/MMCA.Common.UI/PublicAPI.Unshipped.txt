@@ -1,2 +1,21 @@
-﻿#nullable enable
+#nullable enable
 const MMCA.Common.UI.Theme.BrandColors.DarkPrimaryDarken = "#1E88E5" -> string!
+MMCA.Common.UI.Components.Auth.UserSessionsTable
+MMCA.Common.UI.Components.Auth.UserSessionsTable.UserSessionsTable() -> void
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.set -> void
+~override MMCA.Common.UI.Components.Auth.UserSessionsTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.Devices.AppUserAgent
+const MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Marker = "MmcaApp" -> string!
+static MMCA.Common.UI.Services.Auth.Devices.AppUserAgent.Build(string! appName, string! appVersion, string! platform, string? osVersion) -> string!
+MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose() -> void
+override MMCA.Common.UI.Components.Auth.UserSessionsTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose(bool disposing) -> void
+*REMOVED*MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.get -> System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUser>! Items, int TotalItems)>!>!>?
+*REMOVED*MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetPagedAsync(int pageNumber, int pageSize, string? searchTerm, string? role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUserDto>! Items, int TotalItems)>!>!
+*REMOVED*MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetPagedAsync(int pageNumber, int pageSize, string? searchTerm, string? role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUserDto>! Items, int TotalItems)>!>!
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.get -> System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUser>! Items, int TotalItems)>!>!>!
+*REMOVED*const MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SearchFilterKey = "Search" -> string!
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnParametersSet() -> void

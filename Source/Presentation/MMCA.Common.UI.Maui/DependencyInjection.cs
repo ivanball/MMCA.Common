@@ -148,5 +148,25 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddMauiFormFactor() =>
             services.AddSingleton<IFormFactor, MauiFormFactor>();
+
+        /// <summary>
+        /// Makes the head identify itself on every <c>"APIClient"</c> call: registers
+        /// <see cref="MauiAppUserAgentHandler"/> and appends it to that client's pipeline, so the
+        /// request carries the app's <c>User-Agent</c> (app name and version from <c>AppInfo</c>,
+        /// platform and OS version from <c>DeviceInfo</c>, with the <c>MmcaApp</c> marker). The
+        /// server records it on the refresh session at login, register and refresh, and the
+        /// signed-in devices list then reads "{App} app on {Platform}" instead of
+        /// "Unrecognized device".
+        /// <para>
+        /// Call it AFTER <c>AddUIShared</c>, which registers the <c>"APIClient"</c> itself; this only
+        /// adds a handler to that registration.
+        /// </para>
+        /// </summary>
+        public IServiceCollection AddCommonMauiAppUserAgent()
+        {
+            services.AddTransient<MauiAppUserAgentHandler>();
+            services.AddHttpClient("APIClient").AddHttpMessageHandler<MauiAppUserAgentHandler>();
+            return services;
+        }
     }
 }

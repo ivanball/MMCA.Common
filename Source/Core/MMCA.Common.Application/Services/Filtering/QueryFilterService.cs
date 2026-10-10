@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Application.Services.Filtering;
 
@@ -45,6 +47,7 @@ public static class QueryFilterService
             [typeof(decimal?)] = new DecimalFilterStrategy(),
             [typeof(Guid)] = new GuidFilterStrategy(),
             [typeof(Guid?)] = new GuidFilterStrategy(),
+            [typeof(Email)] = new ValueObjects.EmailFilterStrategy(),
         });
 
     /// <summary>
@@ -105,8 +108,12 @@ public static class QueryFilterService
         ArgumentNullException.ThrowIfNull(filters);
         ArgumentNullException.ThrowIfNull(dtoToEntityPropertyMap);
 
-        foreach (var (property, (op, value)) in filters)
+        foreach (var (key, (op, value)) in filters)
         {
+            // An aliased key ("Name~search") is a second filter on the same property: resolve it as
+            // the bare key and let it AND with that key's own filter (QueryFilterKeys).
+            var property = QueryFilterKeys.PropertyOf(key);
+
             // Resolve DTO property name to entity property path (e.g. "CategoryName" -> "Category.Name")
             var mappedByServer = dtoToEntityPropertyMap.TryGetValue(property, out var mapped);
             var entityProperty = mappedByServer ? mapped! : property;
@@ -129,7 +136,7 @@ public static class QueryFilterService
             if (valueType is null)
                 continue;
 
-            var opUpper = op.ToUpperInvariant();
+            var opUpper = NormalizeOperator(op);
 
             // A flat CLIENT key is applied under the property's declared name, so the Dynamic LINQ
             // member access never depends on how the client cased it. A server-authored map entry is
@@ -184,8 +191,8 @@ public static class QueryFilterService
 
         List<Error> errors = [];
 
-        foreach (var (property, (op, value)) in filters)
-            ValidateSingleFilter<TEntity>(property, op, value, dtoToEntityPropertyMap, fieldContract, errors);
+        foreach (var (key, (op, value)) in filters)
+            ValidateSingleFilter<TEntity>(QueryFilterKeys.PropertyOf(key), op, value, dtoToEntityPropertyMap, fieldContract, errors);
 
         return errors.Count == 0
             ? Result.Success()
@@ -251,7 +258,7 @@ public static class QueryFilterService
             return;
         }
 
-        var opUpper = op.ToUpperInvariant();
+        var opUpper = NormalizeOperator(op);
 
         // Resolve the type the filter VALUE is compared against, walking a nested path to its leaf.
         // Validation and application must agree on this: a nested non-string leaf routed to the
@@ -415,6 +422,27 @@ public static class QueryFilterService
             ? Strategies.GetOrAdd(propertyType, identifierStrategy)
             : null;
     }
+
+    /// <summary>
+    /// Puts an operator into the vocabulary the strategies speak: upper case (so MudBlazor's
+    /// lower-case <c>"contains"</c> and <c>"is empty"</c> match) and the comparison SYMBOLS a grid's
+    /// number column sends (MudBlazor <c>FilterOperator.Number</c>: <c>=</c>, <c>!=</c>, <c>&gt;</c>,
+    /// <c>&gt;=</c>, <c>&lt;</c>, <c>&lt;=</c>) mapped onto their word forms. Done once here, ahead of
+    /// both validation and application, so every strategy (int, long, decimal, and any registered
+    /// one) accepts both spellings with identical meaning and no client has to translate.
+    /// </summary>
+    /// <param name="op">The operator as the client sent it.</param>
+    /// <returns>The strategy-facing operator.</returns>
+    private static string NormalizeOperator(string op) => op.Trim().ToUpperInvariant() switch
+    {
+        "=" or "==" => "EQUALS",
+        "!=" or "<>" => "NOT EQUALS",
+        ">" => "GREATER THAN",
+        ">=" => "GREATER THAN OR EQUAL",
+        "<" => "LESS THAN",
+        "<=" => "LESS THAN OR EQUAL",
+        var word => word,
+    };
 
     private static void ValidateOperatorSupported(
         IFilterStrategy strategy,

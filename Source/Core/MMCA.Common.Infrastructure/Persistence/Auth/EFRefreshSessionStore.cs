@@ -72,6 +72,47 @@ internal sealed class EFRefreshSessionStore(
 
     /// <inheritdoc />
     /// <remarks>
+    /// A scalar projection, so nothing is tracked: no caller revokes through these rows. The live
+    /// predicate is <see cref="RefreshSession.IsActiveAt"/> spelled out so it translates to SQL.
+    /// </remarks>
+    public async Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
+        DateTime now,
+        CancellationToken cancellationToken = default) =>
+        await Sessions
+            .Where(s => s.RevokedAt == null && s.ExpiresAt > now)
+            .Select(s => s.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// One grouped query over a <c>Contains</c> of the distinct requested ids, so a duplicate id
+    /// cannot double a count; an empty request answers empty without touching the database.
+    /// </remarks>
+    public async Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
+        IReadOnlyCollection<UserIdentifierType> userIds,
+        DateTime now,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        UserIdentifierType[] ids = [.. userIds.Distinct()];
+        if (ids.Length == 0)
+        {
+            return new Dictionary<UserIdentifierType, int>();
+        }
+
+        return await Sessions
+            .Where(s => ids.Contains(s.UserId) && s.RevokedAt == null && s.ExpiresAt > now)
+            .GroupBy(s => s.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
     /// The user is part of the predicate, not a check after the fact: the id arrives from a client, so
     /// filtering in the query is what makes another account's session unreadable rather than merely
     /// rejected after being read.

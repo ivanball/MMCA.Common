@@ -2,11 +2,13 @@ using System.Globalization;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Administration;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Administration;
 using MMCA.Common.UI.Services.Administration;
@@ -18,11 +20,11 @@ namespace MMCA.Common.UI.Tests.Pages.Administration;
 
 /// <summary>
 /// bUnit tests for the shared <see cref="UserAdminList{TUser}"/> component (the UI half of
-/// ADR-116): rows and the empty/failed states, the debounced search box and the Email column filter
-/// both mapping onto the administration endpoint's one search parameter, the accessible shape of the
-/// row action menu, the confirm-then-act flows for lock and role change, the own-row guard, the
-/// opt-in delete, the <c>FetchPage</c> data-source override, the app-localizer override, and the
-/// mobile card layout.
+/// ADR-116): rows and the empty/failed states, the one data path (the required <c>FetchPage</c>
+/// delegate, which receives every column filter with its operator and the search box beside it),
+/// the accessible shape of the row action menu, the confirm-then-act flows for lock and role change,
+/// the own-row guard, the opt-in delete, the extra-column extension point, the app-localizer
+/// override, and the mobile card layout.
 /// </summary>
 public sealed class UserAdminListTests : BunitTestBase
 {
@@ -36,15 +38,18 @@ public sealed class UserAdminListTests : BunitTestBase
 
     private static readonly BrowserWindowSize PhoneViewport = new() { Width = 390, Height = 844 };
 
-    private readonly Mock<IUserAdminUIService<TestUser>> _admin = new();
+    private readonly Mock<IUserAdminActionsUIService> _actions = new();
     private readonly Mock<IAppDialogService> _dialogs = new();
+
+    // Every filter bag FetchPage was called with, copied at call time, newest last.
+    private readonly List<Dictionary<string, (string Operator, string Value)>> _fetchedFilters = [];
+
+    private Result<(IReadOnlyList<TestUser> Items, int TotalItems)> _page =
+        Result.Success<(IReadOnlyList<TestUser> Items, int TotalItems)>(([], 0));
 
     public UserAdminListTests()
     {
-        // One mock answers both contracts: the component reads through the generic service and acts
-        // through the non-generic one, exactly as AddUserAdministrationUI forwards them in a host.
-        Services.AddSingleton(_admin.Object);
-        Services.AddSingleton<IUserAdminActionsUIService>(_admin.Object);
+        Services.AddSingleton(_actions.Object);
         Services.AddSingleton(_dialogs.Object);
 
         // Wires the list-page state services, the inert IBrowserViewportService stub (keeping
@@ -55,23 +60,22 @@ public sealed class UserAdminListTests : BunitTestBase
 
         SetupUsers(Ada, Grace);
 
-        _admin.Setup(x => x.LockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+        _actions.Setup(x => x.LockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
-        _admin.Setup(x => x.UnlockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+        _actions.Setup(x => x.UnlockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
-        _admin.Setup(x => x.SetRoleAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _actions.Setup(x => x.SetRoleAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
     }
 
     /// <summary>
-    /// The app's own administration DTO. Public so Moq can proxy a generic service closed over it,
-    /// and it maps its own spelling of the identifier and lock state onto
-    /// <see cref="IUserAdminDTO"/> explicitly, which is the adoption path a consumer takes.
+    /// The app's own administration DTO. Public so the generic component can be closed over it. Its
+    /// identifier is the <c>IBaseDTO</c> <c>Id</c> the positional record already declares, and it
+    /// maps its own spelling of the lock state onto <see cref="IUserAdminDTO"/> explicitly, which is
+    /// the adoption path a consumer takes.
     /// </summary>
     public sealed record TestUser(int Id, string Email, string Role, bool Locked) : IUserAdminDTO
     {
-        UserIdentifierType IUserAdminDTO.UserId => Id;
-
         bool IUserAdminDTO.IsLocked => Locked;
     }
 
@@ -79,30 +83,43 @@ public sealed class UserAdminListTests : BunitTestBase
 
     private static TestUser Grace => new(2, "grace@example.com", "Member", Locked: false);
 
-    // Every Result-returning member needs an explicit setup: an unstubbed Task<Result<T>> hands
-    // back null rather than a success, which the component would dereference.
     private void SetupUsers(params TestUser[] users) =>
-        _admin
-            .Setup(x => x.GetPagedAsync(
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<(IReadOnlyList<TestUser> Items, int TotalItems)>((users, users.Length)));
+        _page = Result.Success<(IReadOnlyList<TestUser> Items, int TotalItems)>((users, users.Length));
+
+    /// <summary>The FetchPage delegate every render passes: records the filter bag, answers the arranged page.</summary>
+    private Task<Result<(IReadOnlyList<TestUser> Items, int TotalItems)>> FetchPage(
+        Dictionary<string, (string Operator, string Value)> filters,
+        int pageNumber,
+        int pageSize,
+        string? sortColumn,
+        string? sortDirection,
+        CancellationToken cancellationToken)
+    {
+        _fetchedFilters.Add(new Dictionary<string, (string Operator, string Value)>(filters, StringComparer.Ordinal));
+        return Task.FromResult(_page);
+    }
 
     private IRenderedComponent<UserAdminList<TestUser>> RenderList(
         ClaimsPrincipal? principal = null,
-        Action<ComponentParameterCollectionBuilder<UserAdminList<TestUser>>>? extra = null) =>
+        Action<ComponentParameterCollectionBuilder<UserAdminList<TestUser>>>? extra = null,
+        bool withFetchPage = true) =>
         RenderAs<UserAdminList<TestUser>>(
             principal ?? Anonymous,
             p =>
             {
                 p.Add(x => x.DetailHref, u => string.Create(CultureInfo.InvariantCulture, $"/users/{u.Id}"));
                 p.Add(x => x.AssignableRoles, ["Member", "Admin"]);
+                if (withFetchPage)
+                {
+                    p.Add(x => x.FetchPage, FetchPage);
+                }
+
                 extra?.Invoke(p);
             });
 
     // ── Rows and states ──
     [Fact]
-    public void RendersRowsFromTheAdministrationService()
+    public void RendersRowsFromFetchPage()
     {
         RenderMudProviders();
 
@@ -153,12 +170,8 @@ public sealed class UserAdminListTests : BunitTestBase
     [Fact]
     public void WhenTheFetchFails_RendersTheInlineLoadFailureInsteadOfTheEmptyState()
     {
-        _admin
-            .Setup(x => x.GetPagedAsync(
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<(IReadOnlyList<TestUser> Items, int TotalItems)>(
-                Error.Failure("Users.LoadFailed", "boom")));
+        _page = Result.Failure<(IReadOnlyList<TestUser> Items, int TotalItems)>(
+            Error.Failure("Users.LoadFailed", "boom"));
         RenderMudProviders();
 
         var cut = RenderList();
@@ -181,47 +194,143 @@ public sealed class UserAdminListTests : BunitTestBase
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("Locked"));
     }
 
-    // ── Search and filtering ──
+    // ── The one data path: FetchPage ──
+    /// <summary>
+    /// There is no default data path any more, so a list rendered without its data source must say
+    /// so at once, naming the parameter, rather than painting an empty or failed grid that reads as
+    /// "no users".
+    /// </summary>
     [Fact]
-    public void TypingSearch_RequeriesWithTheSearchTerm()
+    public void WithoutFetchPage_FailsLoudly_NamingTheParameter()
+    {
+        RenderMudProviders();
+
+        var render = () => RenderList(withFetchPage: false);
+
+        render.Should().Throw<InvalidOperationException>().WithMessage("*FetchPage*");
+    }
+
+    /// <summary>
+    /// Every column filter reaches the app's paged endpoint exactly as the grid states it, operator
+    /// included: the removed search-and-role path dropped the operator, so "Role not equals
+    /// Organizer" arrived as "Role = Organizer" and a value-less operator arrived as nothing at all.
+    /// </summary>
+    /// <param name="property">The filtered column.</param>
+    /// <param name="operator">The MudBlazor filter operator.</param>
+    /// <param name="value">The filter value (blank for a value-less operator).</param>
+    [Theory]
+    [InlineData("Role", "not equals", "Organizer")]
+    [InlineData("Email", "contains", "@x")]
+    [InlineData("Role", "is empty", "")]
+    public async Task AColumnFilter_ReachesFetchPageVerbatim(string property, string @operator, string value)
+    {
+        RenderMudProviders();
+        var cut = RenderList();
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("ada@example.com"));
+
+        await ApplyColumnFilterAsync(cut, property, @operator, value);
+
+        _fetchedFilters[^1].Should().ContainKey(property)
+            .WhoseValue.Should().Be((@operator, value));
+    }
+
+    /// <summary>
+    /// The search box maps onto the Email column, so with no column filter it travels under the
+    /// plain property key the generic paged endpoint resolves (a user DTO has no "Search" field for
+    /// the server to filter by).
+    /// </summary>
+    [Fact]
+    public void TheSearchBox_ReachesFetchPageUnderTheEmailKey()
     {
         RenderMudProviders();
         var cut = RenderList();
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("ada@example.com"));
 
-        cut.Find("input[placeholder='Search by exact email address...']").Input("smith");
+        cut.Find("input[placeholder='Search by email...']").Input("smith");
 
         // The search box debounces for 300ms before reloading the grid.
         cut.WaitForAssertion(
-            () => _admin.Verify(
-                x => x.GetPagedAsync(
-                    It.IsAny<int>(), It.IsAny<int>(), "smith", null, It.IsAny<CancellationToken>()),
-                Times.AtLeastOnce()),
+            () => _fetchedFilters[^1].Should().ContainKey(nameof(IUserAdminDTO.Email))
+                .WhoseValue.Should().Be(("contains", "smith")),
             TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
-    /// The endpoint takes ONE search parameter, so the Email column filter has to reach it too;
-    /// the free-text box wins only while it holds something.
+    /// The search box and the Email column's own filter are two filters on one property: the column
+    /// keeps the plain key and the search box moves to the aliased key the server ANDs with it, so
+    /// neither overwrites the other.
     /// </summary>
     [Fact]
-    public async Task AnEmailColumnFilter_MapsToTheSearchTerm_WhenTheSearchBoxIsBlank()
+    public async Task TheSearchBoxAndAnEmailColumnFilter_BothReachFetchPage()
     {
         RenderMudProviders();
         var cut = RenderList();
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("ada@example.com"));
 
         var grid = cut.FindComponent<MudDataGrid<TestUser>>();
+        await cut.InvokeAsync(() => grid.Instance.FilterDefinitions.Add(Filter("Email", "contains", "@x")));
+        await cut.Find("input[placeholder='Search by email...']")
+            .InputAsync(new ChangeEventArgs { Value = "bob" });
+
+        var searchKey = QueryFilterKeys.Alias(nameof(IUserAdminDTO.Email), QueryFilterKeys.SearchTag);
+        await cut.WaitForAssertionAsync(
+            () =>
+            {
+                var filters = _fetchedFilters[^1];
+                filters.Should().ContainKey(nameof(IUserAdminDTO.Email))
+                    .WhoseValue.Should().Be(("contains", "@x"));
+                filters.Should().ContainKey(searchKey)
+                    .WhoseValue.Should().Be(("contains", "bob"));
+            },
+            TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task TheMobileList_FetchesThroughFetchPage()
+    {
+        RenderMudProviders();
+        var cut = RenderList();
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("ada@example.com"));
+
+        var before = _fetchedFilters.Count;
+        await GoToPhoneAsync(cut);
+
+        _fetchedFilters.Count.Should().BeGreaterThan(before, "the mobile card list fetches through the same delegate");
+    }
+
+    // ── Extra columns ──
+    /// <summary>
+    /// The extension point a consumer uses for its own grid columns (ADC's "Signed in" column):
+    /// whatever <c>TrailingColumns</c> carries renders inside the grid, between the status and the
+    /// actions columns.
+    /// </summary>
+    [Fact]
+    public void TrailingColumns_RenderInsideTheGrid()
+    {
+        RenderMudProviders();
+
+        var cut = RenderList(extra: p => p.Add(x => x.TrailingColumns, builder =>
+        {
+            builder.OpenComponent<TemplateColumn<TestUser>>(0);
+            builder.AddAttribute(1, nameof(TemplateColumn<>.Title), "Signed in");
+            builder.CloseComponent();
+        }));
+
+        cut.WaitForAssertion(() => cut.Find(".mud-table-head").TextContent.Should().Contain("Signed in"));
+    }
+
+    private static async Task ApplyColumnFilterAsync(
+        IRenderedComponent<UserAdminList<TestUser>> cut,
+        string property,
+        string @operator,
+        string value)
+    {
+        var grid = cut.FindComponent<MudDataGrid<TestUser>>();
         await cut.InvokeAsync(() =>
         {
-            grid.Instance.FilterDefinitions.Add(Filter("Email", "contains", "grace"));
+            grid.Instance.FilterDefinitions.Add(Filter(property, @operator, value));
             return grid.Instance.ReloadServerData();
         });
-
-        _admin.Verify(
-            x => x.GetPagedAsync(
-                It.IsAny<int>(), It.IsAny<int>(), "grace", null, It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce());
     }
 
     private static IFilterDefinition<TestUser> Filter(string propertyName, string @operator, string value)
@@ -288,7 +397,7 @@ public sealed class UserAdminListTests : BunitTestBase
         var cut = OpenTheActionsMenu(providers);
         providers.Popover.Find("[data-testid=toggle-lock]").Click();
 
-        cut.WaitForAssertion(() => _admin.Verify(x => x.LockAsync(2, It.IsAny<CancellationToken>()), Times.Once()));
+        cut.WaitForAssertion(() => _actions.Verify(x => x.LockAsync(2, It.IsAny<CancellationToken>()), Times.Once()));
     }
 
     [Fact]
@@ -304,8 +413,8 @@ public sealed class UserAdminListTests : BunitTestBase
         cut.WaitForAssertion(() => _dialogs.Verify(
             x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
             Times.Once()));
-        _admin.Verify(x => x.LockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
-        _admin.Verify(x => x.UnlockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
+        _actions.Verify(x => x.LockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
+        _actions.Verify(x => x.UnlockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
     }
 
     /// <summary>
@@ -324,7 +433,7 @@ public sealed class UserAdminListTests : BunitTestBase
         roleItems.Should().HaveCount(2, "the account's own role is offered as a disabled entry beside the move it can make");
         roleItems[1].Click();
 
-        cut.WaitForAssertion(() => _admin.Verify(
+        cut.WaitForAssertion(() => _actions.Verify(
             x => x.SetRoleAsync(2, "Admin", It.IsAny<CancellationToken>()), Times.Once()));
     }
 
@@ -403,62 +512,6 @@ public sealed class UserAdminListTests : BunitTestBase
         cut.WaitForAssertion(() => deleted.Should().ContainSingle(u => u.Id == 2));
     }
 
-    // ── The FetchPage data-source override ──
-    [Fact]
-    public void FetchPageOverride_FeedsTheGrid_AndIsGivenTheSearchFilter()
-    {
-        Dictionary<string, (string Operator, string Value)>? seenFilters = null;
-        RenderMudProviders();
-
-        var cut = RenderList(extra: p => p.Add(x => x.FetchPage, (filters, _, _, _, _, _) =>
-        {
-            seenFilters = filters;
-            return Task.FromResult(Result.Success<(IReadOnlyList<TestUser> Items, int TotalItems)>(
-                ([new TestUser(7, "own@example.com", "Member", Locked: false)], 1)));
-        }));
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("own@example.com"));
-
-        cut.Find("input[placeholder='Search by exact email address...']").Input("smith");
-
-        cut.WaitForAssertion(
-            () => seenFilters.Should().ContainKey(UserAdminList<TestUser>.SearchFilterKey)
-                .WhoseValue.Should().Be(("contains", "smith")),
-            TimeSpan.FromSeconds(5));
-
-        _admin.Verify(
-            x => x.GetPagedAsync(
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never(),
-            "a component given its own data source must never resolve the administration read service");
-    }
-
-    [Fact]
-    public async Task FetchPageOverride_AlsoFeedsTheMobileList()
-    {
-        var calls = 0;
-        RenderMudProviders();
-
-        var cut = RenderList(extra: p => p.Add(x => x.FetchPage, (_, _, _, _, _, _) =>
-        {
-            calls++;
-            return Task.FromResult(Result.Success<(IReadOnlyList<TestUser> Items, int TotalItems)>(
-                ([new TestUser(7, "own@example.com", "Member", Locked: false)], 1)));
-        }));
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("own@example.com"));
-
-        var before = calls;
-        await GoToPhoneAsync(cut);
-
-        calls.Should().BeGreaterThan(before, "the mobile card list fetches through the same override");
-        _admin.Verify(
-            x => x.GetPagedAsync(
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never());
-    }
-
     // ── Wording override ──
     /// <summary>
     /// An app keeps its own vocabulary by passing its localizer, without a parameter per word: a key
@@ -483,7 +536,7 @@ public sealed class UserAdminListTests : BunitTestBase
             cut.Markup.Should().NotContain(">Users<");
 
             // Not in the app localizer, so the component's own resources answer it.
-            cut.Markup.Should().Contain("Search by exact email address...");
+            cut.Markup.Should().Contain("Search by email...");
         });
     }
 

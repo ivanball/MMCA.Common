@@ -48,6 +48,32 @@ public interface IRefreshSessionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the distinct users holding at least one LIVE session at <paramref name="now"/>: not
+    /// revoked and <c>ExpiresAt</c> strictly after <paramref name="now"/>
+    /// (<see cref="RefreshSession.IsActiveAt"/>). One query, evaluated in the store.
+    /// </summary>
+    /// <param name="now">The UTC instant that decides which sessions have expired.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Each such user exactly once, in no particular order.</returns>
+    Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
+        DateTime now,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the LIVE sessions (as <see cref="GetUserIdsWithLiveSessionsAsync"/> defines them) of each
+    /// of <paramref name="userIds"/> in one grouped query, never one query per user. A requested user
+    /// with no live session is absent from the result.
+    /// </summary>
+    /// <param name="userIds">The users to count; duplicates count once.</param>
+    /// <param name="now">The UTC instant that decides which sessions have expired.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The live-session count per requested user that has at least one.</returns>
+    Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
+        IReadOnlyCollection<UserIdentifierType> userIds,
+        DateTime now,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds one of <paramref name="userId"/>'s sessions by its identifier, revoked and expired rows
     /// included. The user is part of the lookup rather than a check the caller does afterwards: a
     /// session id is a value a client hands back, so scoping the query to the owner is what makes

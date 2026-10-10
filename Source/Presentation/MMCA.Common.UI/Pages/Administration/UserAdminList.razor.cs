@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
@@ -23,19 +22,17 @@ namespace MMCA.Common.UI.Pages.Administration;
 /// <remarks>
 /// <para>
 /// What the app supplies: a DTO implementing <see cref="IUserAdminDTO"/>, the required
-/// <see cref="DetailHref"/> route builder, and optionally the roles an operator may assign, extra
-/// columns or card lines, a delete callback, and its own <see cref="Localizer"/> for wording. Every
-/// string this component renders is looked up in that localizer FIRST and falls back to
-/// <see cref="UserAdminListResources"/>, so an app keeps its own vocabulary ("Deactivate" rather
-/// than "Lock") without a parameter per word.
+/// <see cref="DetailHref"/> route builder and <see cref="FetchPage"/> data source, and optionally
+/// the roles an operator may assign, extra columns or card lines, a delete callback, and its own
+/// <see cref="Localizer"/> for wording. Every string this component renders is looked up in that
+/// localizer FIRST and falls back to <see cref="UserAdminListResources"/>, so an app keeps its own
+/// vocabulary ("Deactivate" rather than "Lock") without a parameter per word.
 /// </para>
 /// <para>
-/// Two data paths. By default the list reads through
-/// <see cref="IUserAdminUIService{TUserDto}"/> (registered by <c>AddUserAdministrationUI</c>),
-/// whose endpoint takes a search term and a role. An app whose roster lives on its own endpoint,
-/// with per-column filters and server sort, passes <see cref="FetchPage"/> instead and the service
-/// is never resolved for reads. The three account ACTIONS always go through
-/// <see cref="IUserAdminActionsUIService"/>, because they are the framework's endpoints either way.
+/// One data path: the roster is read through <see cref="FetchPage"/>, the standard paged
+/// entity-service shape (per-column filters with their operators, server sort), typically the app's
+/// generic paged users endpoint. The three account ACTIONS go through
+/// <see cref="IUserAdminActionsUIService"/>, because they are the framework's endpoints.
 /// </para>
 /// <para>
 /// The administration actions are hidden on the signed-in operator's own row. An operator who
@@ -47,13 +44,6 @@ namespace MMCA.Common.UI.Pages.Administration;
 public partial class UserAdminList<TUser>
     where TUser : IUserAdminDTO
 {
-    /// <summary>
-    /// The filter-bag key the search box is injected under when <see cref="FetchPage"/> owns the
-    /// fetch. The app's delegate reads it to map the free-text box onto whatever its own endpoint
-    /// calls that filter.
-    /// </summary>
-    public const string SearchFilterKey = "Search";
-
     /// <summary>The page title. Defaults to the localized "Users" when not supplied.</summary>
     [Parameter] public string? Heading { get; set; }
 
@@ -87,13 +77,13 @@ public partial class UserAdminList<TUser>
     [Parameter] public RenderFragment<TUser>? CardContent { get; set; }
 
     /// <summary>
-    /// Overrides the data source with the app's own paged endpoint (per-column filters and server
-    /// sort included). When null the list reads through
-    /// <see cref="IUserAdminUIService{TUserDto}"/>; the account actions always go through
-    /// <see cref="IUserAdminActionsUIService"/> either way. The free-text search box is passed
-    /// through the filter bag under <see cref="SearchFilterKey"/>.
+    /// The roster's data source, in the standard paged entity-service shape (filters with their
+    /// operators, page number, page size, sort column, sort direction). Required: there is no
+    /// default path, so a list rendered without one fails loudly rather than showing nothing. The
+    /// account actions go through <see cref="IUserAdminActionsUIService"/>.
     /// </summary>
     [Parameter]
+    [EditorRequired]
     public Func<
         Dictionary<string, (string Operator, string Value)>,
         int,
@@ -101,13 +91,14 @@ public partial class UserAdminList<TUser>
         string?,
         string?,
         CancellationToken,
-        Task<Result<(IReadOnlyList<TUser> Items, int TotalItems)>>>? FetchPage
-    { get; set; }
+        Task<Result<(IReadOnlyList<TUser> Items, int TotalItems)>>> FetchPage
+    { get; set; } = default!;
 
     /// <summary>
-    /// Whether the Email and Role columns are sortable. Defaults to <see langword="false"/>, because
-    /// the framework's administration endpoint ignores sort and a sortable header would lie; an app
-    /// listing through <see cref="FetchPage"/> from a sorting endpoint turns it on.
+    /// Whether the Email and Role columns are sortable. Defaults to <see langword="false"/>; turn it
+    /// on when the endpoint behind <see cref="FetchPage"/> honors the sort column and direction (the
+    /// generic paged entity endpoint does), so a sortable header never claims an order the server
+    /// does not apply.
     /// </summary>
     [Parameter] public bool Sortable { get; set; }
 
@@ -134,8 +125,6 @@ public partial class UserAdminList<TUser>
 
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
 
-    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
-
     [Inject] private IStringLocalizer<UserAdminListResources> L { get; set; } = default!;
 
     private UserIdentifierType? _currentUserId;
@@ -151,15 +140,23 @@ public partial class UserAdminList<TUser>
     /// <inheritdoc />
     protected override MudDataGrid<TUser>? GridRef => _dataGrid;
 
-    /// <summary>
-    /// The reading service, resolved on demand rather than injected so an app that supplies
-    /// <see cref="FetchPage"/> never needs it registered at all.
-    /// </summary>
-    private IUserAdminUIService<TUser> Users =>
-        ServiceProvider.GetService<IUserAdminUIService<TUser>>()
-            ?? throw new InvalidOperationException(
-                $"UserAdminList<{typeof(TUser).Name}> lists through IUserAdminUIService<{typeof(TUser).Name}>, which is not registered. "
-                + $"Call services.AddUserAdministrationUI<{typeof(TUser).Name}>() after AddUIShared, or supply the FetchPage parameter to list from your own endpoint.");
+    /// <inheritdoc />
+    /// <remarks>
+    /// Validates <see cref="FetchPage"/> here rather than at the first fetch: the grid's load
+    /// pipeline reports a throwing fetch as an inline "could not load" state, which would hide a
+    /// missing data source behind what reads as a transient failure.
+    /// </remarks>
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (FetchPage is null)
+        {
+            throw new InvalidOperationException(
+                $"UserAdminList<{typeof(TUser).Name}> requires the {nameof(FetchPage)} parameter: pass a delegate over the app's "
+                + "generic paged users endpoint (for example an IEntityService's GetPagedAsync).");
+        }
+    }
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -202,7 +199,7 @@ public partial class UserAdminList<TUser>
     /// </summary>
     /// <param name="user">The row.</param>
     private bool CanAdminister(TUser user) =>
-        _currentUserId is null || !EqualityComparer<UserIdentifierType>.Default.Equals(user.UserId, _currentUserId.Value);
+        _currentUserId is null || !EqualityComparer<UserIdentifierType>.Default.Equals(user.Id, _currentUserId.Value);
 
     /// <inheritdoc />
     protected override void SaveFilters(Dictionary<string, string> filters) =>
@@ -224,73 +221,31 @@ public partial class UserAdminList<TUser>
         await ReloadActiveLayoutAsync();
     }
 
-    private Task<GridData<TUser>> LoadServerData(GridState<TUser> state, CancellationToken cancellationToken)
-    {
-        if (FetchPage is { } fetch)
-        {
-            return LoadServerDataAsync(state, fetch, InjectSearchFilter);
-        }
-
-        return LoadServerDataAsync(
-            state,
-            (filters, page, size, _, _, ct) => Users.GetPagedAsync(
-                page,
-                size,
-                SearchTermFrom(filters),
-                FilterValue(filters, nameof(IUserAdminDTO.Role)),
-                ct));
-    }
+    private Task<GridData<TUser>> LoadServerData(GridState<TUser> state, CancellationToken cancellationToken) =>
+        LoadServerDataAsync(state, FetchPage, InjectSearchFilter);
 
     // ── Mobile ──
     private Task<Result<(IReadOnlyList<TUser> Items, int TotalItems)>> FetchMobilePage(int page, int pageSize, CancellationToken ct)
     {
-        if (FetchPage is { } fetch)
-        {
-            var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.Ordinal);
-            InjectSearchFilter(filters);
-            return fetch(filters, page, pageSize, "Email", "asc", ct);
-        }
-
-        var searchTerm = !string.IsNullOrWhiteSpace(_searchString) ? _searchString : null;
-        return Users.GetPagedAsync(page, pageSize, searchTerm, role: null, ct);
+        var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.Ordinal);
+        InjectSearchFilter(filters);
+        return FetchPage(filters, page, pageSize, "Email", "asc", ct);
     }
 
     /// <summary>
-    /// Adds the free-text box to the filter bag the app's own fetch delegate reads, under the
-    /// documented <see cref="SearchFilterKey"/>. A blank box adds nothing, so the delegate never has
-    /// to distinguish "empty" from "absent".
+    /// Adds the free-text box to the filter bag as a "contains" filter on the Email column, under
+    /// the plain property key the generic paged endpoint resolves. When the grid already filters
+    /// Email, the base's additional-filter step keeps the column's filter on that key and moves this
+    /// one to the aliased search key, so the server ANDs both. A blank box adds nothing.
     /// </summary>
     /// <param name="filters">The grid's filter bag.</param>
     private void InjectSearchFilter(Dictionary<string, (string Operator, string Value)> filters)
     {
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
-            filters[SearchFilterKey] = ("contains", _searchString);
+            filters[nameof(IUserAdminDTO.Email)] = ("contains", _searchString);
         }
     }
-
-    /// <summary>
-    /// The search term the administration endpoint is called with: the free-text box when it holds
-    /// anything, otherwise the Email column's own filter, so both affordances reach the one
-    /// parameter the endpoint takes.
-    /// </summary>
-    /// <param name="filters">The grid's filter bag.</param>
-    private string? SearchTermFrom(Dictionary<string, (string Operator, string Value)> filters) =>
-        !string.IsNullOrWhiteSpace(_searchString)
-            ? _searchString
-            : FilterValue(filters, nameof(IUserAdminDTO.Email));
-
-    /// <summary>
-    /// Reads one column filter's value out of the grid's filter bag. The operator is ignored: the
-    /// administration endpoint takes a search term and a role, not a per-column comparison, so the
-    /// value is all it can honor.
-    /// </summary>
-    /// <param name="filters">The grid's filter bag.</param>
-    /// <param name="property">The column's property name.</param>
-    private static string? FilterValue(Dictionary<string, (string Operator, string Value)> filters, string property) =>
-        filters is not null && filters.TryGetValue(property, out var filter) && !string.IsNullOrWhiteSpace(filter.Value)
-            ? filter.Value
-            : null;
 
     // ── Administration (ADR-116) ──
     private async Task ToggleLockAsync(TUser user)
@@ -309,8 +264,8 @@ public partial class UserAdminList<TUser>
         }
 
         var result = locking
-            ? await Actions.LockAsync(user.UserId)
-            : await Actions.UnlockAsync(user.UserId);
+            ? await Actions.LockAsync(user.Id)
+            : await Actions.UnlockAsync(user.Id);
 
         if (result.IsFailure)
         {
@@ -337,7 +292,7 @@ public partial class UserAdminList<TUser>
             return;
         }
 
-        var result = await Actions.SetRoleAsync(user.UserId, role);
+        var result = await Actions.SetRoleAsync(user.Id, role);
         if (result.IsFailure)
         {
             Toast.Error(T("Snackbar.RoleChangeFailed"));
