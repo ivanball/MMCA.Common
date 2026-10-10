@@ -366,10 +366,9 @@
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.1" />
-    <!-- Sample AppHost + sample service behind the apphost-testing CI tier only (the three projects
-         under Tests/Hosting that sit OUTSIDE MMCA.Common.slnx). Aspire.Hosting.AppHost brings the DCP
-         orchestrator the testing builder starts. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
+    <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
+         MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
+         SDK's own version, the same shape as the consumer AppHosts. -->
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
