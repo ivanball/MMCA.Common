@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- The same-origin API proxy can accept uploads larger than the server's default body cap. Large uploads through `MapCommonSameOriginApiProxy` (WebAssembly mode) were refused 413 by the UI host before a byte reached the gateway once they passed Kestrel's default `MaxRequestBodySize` of 30,000,000 bytes, whatever the API behind it accepted. The new `SameOriginApiProxy:MaxRequestBodySizeByPath` setting (`SameOriginApiProxySettings.MaxRequestBodySizeByPath`, MMCA.Common.UI.Web) maps a gateway-root-relative path, shaped like `RefreshPath` and matched case-insensitively, to a byte limit: a request whose path equals it or sits below it on a whole-segment boundary gets `IHttpMaxRequestBodySizeFeature.MaxRequestBodySize` set to that limit before the body is read (the longest matching path wins), and every other path keeps the server default. A non-positive limit or a blank or invalid path key fails startup validation with a message naming the key. A key containing `/` cannot be set from an environment variable, so configure it in JSON. Hosts that set nothing see no change. (S-10)
+
+### Fixed
+
+- Signed-in users' saved culture and theme now load and save in Blazor Server. `ApiUserPreferenceReader` and `ApiUserPreferenceWriter` read a fresh token from `ITokenStorageService` but left the bearer to `AuthDelegatingHandler`, which in Server mode resolves in a separate DI scope with an empty token store, so the GET and PUT to `auth/preferences` went out anonymous and were answered 401. Both now attach `Authorization: Bearer` on their own request message (never on the factory client's shared default headers); the fresh-token guard, the writer's rejected-token latch and the swallowed transport errors are unchanged, and WebAssembly and MAUI behave as before because the handler leaves an existing header alone. Consumers need no change. (A-03)
+- Every MudBlazor button and menu activator now shows a visible keyboard focus ring (WCAG 2.4.7). MudBlazor 9.11 strips the outline from `.mud-button-root` and leaves only a faint hover tint on focus, and the framework restored a ring only on the desktop app bar, so in-content buttons (a form's submit button, for one) and the phone-width top-row icon buttons showed no focus indicator. `wwwroot/app.css` now declares `.mud-button-root:focus-visible, .mud-menu-activator:focus-visible` with a 2px outline in the active palette's primary, offset 2px, matching the link ring; `NavMenu.razor.css` gives the buttons in `.toprow-actions` the white ring the dark chrome already uses. The scoped app-bar and top-row rules outrank the global one, so no button gets two rings. Consumers need no change. (X-03)
+
 ## [1.236.0] - 2026-10-10
 
 ### Breaking

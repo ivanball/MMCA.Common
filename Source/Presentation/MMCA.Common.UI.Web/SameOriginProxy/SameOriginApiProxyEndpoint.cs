@@ -57,6 +57,14 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             .Select(Normalize),
         StringComparer.OrdinalIgnoreCase);
 
+    // Longest first, so the most specific configured path wins when several cover a request.
+    private readonly (PathString Path, long Limit)[] _bodySizeLimits =
+    [
+        .. settings.Value.MaxRequestBodySizeByPath
+            .Select(entry => (Path: new PathString("/" + Normalize(entry.Key)), Limit: entry.Value))
+            .OrderByDescending(entry => entry.Path.Value!.Length),
+    ];
+
     public async Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -73,7 +81,12 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             return;
         }
 
-        var mode = ResolveMode(context.Request.Method, Normalize(RemainingPath(context)));
+        var relativePath = Normalize(RemainingPath(context));
+
+        // Nothing above reads the body, so the cap can still move; the forward below is the first read.
+        ApplyBodySizeLimit(context, relativePath);
+
+        var mode = ResolveMode(context.Request.Method, relativePath);
         if (mode is null)
         {
             await RefreshLocallyAsync(context).ConfigureAwait(false);
@@ -326,6 +339,31 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         }
 
         await ForwardAsync(context, CreateTransformer(refreshed.AccessToken, mode, captureUnauthorized: false)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Raises (or lowers) the request body cap when <see cref="SameOriginApiProxySettings.MaxRequestBodySizeByPath"/>
+    /// covers the request's gateway-relative path, so an upload the API accepts is not refused 413 here
+    /// first. Left alone when no entry matches, when the server exposes no
+    /// <see cref="IHttpMaxRequestBodySizeFeature"/>, or when the body has already started to be read.
+    /// </summary>
+    private void ApplyBodySizeLimit(HttpContext context, string relativePath)
+    {
+        if (_bodySizeLimits.Length == 0
+            || context.Features.Get<IHttpMaxRequestBodySizeFeature>() is not { IsReadOnly: false } bodySize)
+        {
+            return;
+        }
+
+        var path = new PathString("/" + relativePath);
+        foreach (var (configuredPath, limit) in _bodySizeLimits)
+        {
+            if (path.StartsWithSegments(configuredPath, StringComparison.OrdinalIgnoreCase))
+            {
+                bodySize.MaxRequestBodySize = limit;
+                return;
+            }
+        }
     }
 
     private string RemainingPath(HttpContext context) =>

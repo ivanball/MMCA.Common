@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
@@ -5,12 +6,19 @@ namespace MMCA.Common.UI.Services.Preferences;
 
 /// <summary>
 /// Default <see cref="IUserPreferenceReader"/>: GETs <c>auth/preferences</c> via the shared
-/// <c>"APIClient"</c> (bearer token attached by the auth handler). Returns empty preferences for
-/// anonymous users or on any transport error, so login reconciliation is strictly best-effort
-/// (ADR-027 / ADR-028).
+/// <c>"APIClient"</c>, attaching the bearer token it read itself on the request message. Returns empty
+/// preferences for anonymous users or on any transport error, so login reconciliation is strictly
+/// best-effort (ADR-027 / ADR-028).
+/// <para>
+/// The bearer goes on the request rather than being left to <c>AuthDelegatingHandler</c>: in Blazor
+/// Server that handler resolves in a separate DI scope whose token store is empty, so relying on it
+/// sends the read anonymous (the same scope problem <c>AuthenticatedServiceBase</c> documents). The
+/// handler leaves an existing <c>Authorization</c> header alone, so WASM and MAUI see no change. The
+/// header is set per request, never on the factory client's shared default headers.
+/// </para>
 /// </summary>
 /// <param name="httpClientFactory">Factory for the named <c>"APIClient"</c>.</param>
-/// <param name="tokenStorageService">Used to detect whether a user is signed in.</param>
+/// <param name="tokenStorageService">Supplies the token this reader decides against and attaches.</param>
 public sealed class ApiUserPreferenceReader(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService) : IUserPreferenceReader
@@ -36,9 +44,15 @@ public sealed class ApiUserPreferenceReader(
         try
         {
             var client = httpClientFactory.CreateClient("APIClient");
-            var preferences = await client.GetFromJsonAsync<UserPreferences>(
-                new Uri("auth/preferences", UriKind.Relative),
-                cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("auth/preferences", UriKind.Relative));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return Empty;
+            }
+
+            var preferences = await response.Content.ReadFromJsonAsync<UserPreferences>(cancellationToken);
             return preferences ?? Empty;
         }
         catch (HttpRequestException)
