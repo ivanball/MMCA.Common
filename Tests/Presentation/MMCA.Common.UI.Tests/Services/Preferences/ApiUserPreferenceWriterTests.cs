@@ -47,6 +47,25 @@ public sealed class ApiUserPreferenceWriterTests
     }
 
     [Fact]
+    public async Task SaveAsync_WithFreshToken_SendsTheBearerItself_WhenTheClientHasNoAuthHandler()
+    {
+        // Defect A-03: in Blazor Server the "APIClient"'s AuthDelegatingHandler resolves in a separate DI
+        // scope with an empty token store, so relying on it sends the PUT anonymous (401). The stub factory
+        // here has no auth handler, which is that Server-mode shape: the writer must attach the token it read.
+        var token = FreshJwt();
+        var (writer, handler) = CreateSut(token);
+
+        await writer.SaveAsync(culture: "es", theme: null, TestContext.Current.CancellationToken);
+
+        handler.CallCount.Should().Be(1);
+        handler.LastRequest.Method.Should().Be(HttpMethod.Put);
+        handler.LastRequest.Authorization.Should().NotBeNull(
+            "the writer holds the fresh token and must attach it, not depend on a handler in another DI scope");
+        handler.LastRequest.Authorization!.Scheme.Should().Be("Bearer");
+        handler.LastRequest.Authorization.Parameter.Should().Be(token);
+    }
+
+    [Fact]
     public async Task SaveAsync_WhenAnonymous_DoesNotCallTheApi()
     {
         var (writer, handler) = CreateSut(token: null);
