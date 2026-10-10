@@ -46,13 +46,31 @@ public sealed class UserSessionsAdministrationService(
     }
 
     /// <inheritdoc />
-    public Task<Result<IReadOnlyList<UserIdentifierType>>> GetSignedInUserIdsAsync(
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public async Task<Result<IReadOnlyList<UserIdentifierType>>> GetSignedInUserIdsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var ids = await refreshSessions.GetUserIdsWithLiveSessionsAsync(now, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(ids);
+    }
 
     /// <inheritdoc />
-    public Task<Result<IReadOnlyDictionary<UserIdentifierType, int>>> CountLiveSessionsAsync(
+    public async Task<Result<IReadOnlyDictionary<UserIdentifierType, int>>> CountLiveSessionsAsync(
         IReadOnlyCollection<UserIdentifierType> userIds,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        if (userIds.Count == 0)
+        {
+            IReadOnlyDictionary<UserIdentifierType, int> none = new Dictionary<UserIdentifierType, int>();
+            return Result.Success(none);
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var counts = await refreshSessions.CountLiveSessionsByUserAsync(userIds, now, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(counts);
+    }
 }

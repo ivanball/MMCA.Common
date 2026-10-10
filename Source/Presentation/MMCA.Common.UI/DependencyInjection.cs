@@ -263,8 +263,9 @@ public static class DependencyInjection
         /// <summary>
         /// The UI opt-in of ADR-116's user administration: registers the HTTP client for the app's
         /// <c>Admin/Users</c> endpoints, which is what
-        /// <c>MMCA.Common.UI.Pages.Administration.UserAdminList&lt;TUser&gt;</c> lists and acts
-        /// through. Call it once per app, after <c>AddUIShared</c>, with the app's own
+        /// <c>MMCA.Common.UI.Pages.Administration.UserAdminList&lt;TUser&gt;</c> acts through (the
+        /// roster itself comes from the component's <c>FetchPage</c> delegate over the app's generic
+        /// paged users endpoint). Call it once per app, after <c>AddUIShared</c>, with the app's own
         /// administration DTO (the DTO stays app-owned; it only has to implement
         /// <c>IUserAdminDTO</c> for the shared component to render it).
         /// <para>
@@ -279,7 +280,7 @@ public static class DependencyInjection
             services.TryAddScoped<IUserAdminUIService<TUserDto>, UserAdminService<TUserDto>>();
 
             // Forwarded rather than registered a second time, so the actions the component performs
-            // and the page it lists go through ONE instance (and one substitute, in a test).
+            // and the reads the app makes go through ONE instance (and one substitute, in a test).
             services.TryAddScoped<IUserAdminActionsUIService>(
                 sp => sp.GetRequiredService<IUserAdminUIService<TUserDto>>());
 

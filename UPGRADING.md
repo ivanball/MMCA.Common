@@ -32,6 +32,50 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**The user-administration roster moves onto the generic paged entity path.** The search-and-role
+list path is removed end to end, `IUserAdminDTO` takes its identifier from `IBaseDTO`,
+`UserAdminList.FetchPage` becomes required, and `IRefreshSessionStore` gains two members. The
+single-account actions (`GET Admin/Users/{userId}`, `{userId}/sessions`, lock, unlock, roles) are
+unchanged.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `UserAdministrationQuery` (MMCA.Common.Application) | removed; the roster is the app's generic paged entity endpoint |
+| `IUserAdministrationService<TUserDto>.ListAsync(query)` | removed; delete the implementation (an `EntityQueryService<User, TUserDto>` serves the page) |
+| `UsersAdminControllerBase<TUserDto>.GetPagedAsync` (`GET Admin/Users/paged`) and `MaxPageSize` | removed; an `EntityControllerBase` paged action over the user DTO, capped by `ApplicationSettings.MaxPageSize` |
+| `IUserAdminUIService<TUserDto>.GetPagedAsync` / `UserAdminService<TUserDto>.GetPagedAsync` | removed; an `IEntityService`-style client's `GetPagedAsync` |
+| `IUserAdminDTO.UserId` | `IUserAdminDTO.Id`, inherited from `IBaseDTO<UserIdentifierType>` |
+| `UserAdminList<TUser>.FetchPage` optional (null = default path) | `[EditorRequired]`, non-nullable; rendering without it throws `InvalidOperationException` naming `FetchPage` |
+| `UserAdminList<TUser>.SearchFilterKey` (`"Search"`) | removed; the search box arrives as `filters["Email"] = ("contains", term)`, or under `Email~search` (`QueryFilterKeys.Alias("Email", QueryFilterKeys.SearchTag)`) when the Email column is also filtered |
+| `IRefreshSessionStore` with no roster queries | adds abstract `GetUserIdsWithLiveSessionsAsync(now)` and `CountLiveSessionsByUserAsync(userIds, now)` |
+
+The fix:
+
+1. **Serve the roster generically.** Register an `EntityQueryService<User, TUserDto>` for the user
+   DTO and expose its paged endpoint through an `EntityControllerBase` controller gated on the same
+   users-management permission as the administration controller. Filtering and sorting then work
+   on the DTO's property names with every operator the grid offers.
+2. **Make the DTO an `IBaseDTO`.** Rename the DTO's account identifier to `Id` (or add `Id` and map
+   it), and drop any explicit `IUserAdminDTO.UserId` implementation. Every `user.UserId` read
+   through the interface becomes `user.Id`.
+3. **Delete the old list path.** Remove the `ListAsync` implementation from the app's
+   `IUserAdministrationService<TUserDto>`, every `UserAdministrationQuery` reference, any
+   `GetPagedAsync` override on the `UsersAdminControllerBase` subclass and any reference to its
+   `MaxPageSize`.
+4. **Pass `FetchPage`.** Every `<UserAdminList>` passes
+   `FetchPage="UsersService.GetPagedAsync"` (or a lambda over it) from an `IEntityService`-style
+   client of the new endpoint. A delegate that read `filters["Search"]` reads `filters["Email"]`
+   and `filters["Email~search"]` instead, or simply forwards the bag unchanged to the generic
+   endpoint.
+5. **Custom refresh-session stores.** An app with its own `IRefreshSessionStore` implements the two
+   new members: live means `RevokedAt` is null and `ExpiresAt` is strictly after `now`; a user
+   with no live session is absent from the count dictionary, and duplicate ids count once. The
+   framework's EF store and `InMemoryRefreshSessionStore` already implement them.
+
 ## [1.232.0] - 2026-10-06
 
 **Behavior changes from the ninth bug-hunt wave.** No public signature is removed or renamed; the

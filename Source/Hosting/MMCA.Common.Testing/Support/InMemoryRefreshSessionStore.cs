@@ -89,15 +89,35 @@ public sealed class InMemoryRefreshSessionStore : IRefreshSessionStore
     /// <inheritdoc />
     public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
         DateTime now,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<UserIdentifierType> ids =
+        [
+            .. _sessions
+                .Where(s => s.IsActiveAt(now))
+                .Select(s => s.UserId)
+                .Distinct()
+        ];
+
+        return Task.FromResult(ids);
+    }
 
     /// <inheritdoc />
     public Task<IReadOnlyDictionary<UserIdentifierType, int>> CountLiveSessionsByUserAsync(
         IReadOnlyCollection<UserIdentifierType> userIds,
         DateTime now,
-        CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        var requested = userIds.ToHashSet();
+        IReadOnlyDictionary<UserIdentifierType, int> counts = _sessions
+            .Where(s => requested.Contains(s.UserId) && s.IsActiveAt(now))
+            .GroupBy(s => s.UserId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return Task.FromResult(counts);
+    }
 
     /// <inheritdoc />
     public Task<RefreshSession?> FindByIdAsync(

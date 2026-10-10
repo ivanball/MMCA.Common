@@ -44,13 +44,6 @@ namespace MMCA.Common.UI.Pages.Administration;
 public partial class UserAdminList<TUser>
     where TUser : IUserAdminDTO
 {
-    /// <summary>
-    /// The filter-bag key the search box is injected under when <see cref="FetchPage"/> owns the
-    /// fetch. The app's delegate reads it to map the free-text box onto whatever its own endpoint
-    /// calls that filter.
-    /// </summary>
-    public const string SearchFilterKey = "Search";
-
     /// <summary>The page title. Defaults to the localized "Users" when not supplied.</summary>
     [Parameter] public string? Heading { get; set; }
 
@@ -102,9 +95,10 @@ public partial class UserAdminList<TUser>
     { get; set; } = default!;
 
     /// <summary>
-    /// Whether the Email and Role columns are sortable. Defaults to <see langword="false"/>, because
-    /// the framework's administration endpoint ignores sort and a sortable header would lie; an app
-    /// listing through <see cref="FetchPage"/> from a sorting endpoint turns it on.
+    /// Whether the Email and Role columns are sortable. Defaults to <see langword="false"/>; turn it
+    /// on when the endpoint behind <see cref="FetchPage"/> honors the sort column and direction (the
+    /// generic paged entity endpoint does), so a sortable header never claims an order the server
+    /// does not apply.
     /// </summary>
     [Parameter] public bool Sortable { get; set; }
 
@@ -145,6 +139,24 @@ public partial class UserAdminList<TUser>
 
     /// <inheritdoc />
     protected override MudDataGrid<TUser>? GridRef => _dataGrid;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Validates <see cref="FetchPage"/> here rather than at the first fetch: the grid's load
+    /// pipeline reports a throwing fetch as an inline "could not load" state, which would hide a
+    /// missing data source behind what reads as a transient failure.
+    /// </remarks>
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (FetchPage is null)
+        {
+            throw new InvalidOperationException(
+                $"UserAdminList<{typeof(TUser).Name}> requires the {nameof(FetchPage)} parameter: pass a delegate over the app's "
+                + "generic paged users endpoint (for example an IEntityService's GetPagedAsync).");
+        }
+    }
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -221,16 +233,17 @@ public partial class UserAdminList<TUser>
     }
 
     /// <summary>
-    /// Adds the free-text box to the filter bag the app's own fetch delegate reads, under the
-    /// documented <see cref="SearchFilterKey"/>. A blank box adds nothing, so the delegate never has
-    /// to distinguish "empty" from "absent".
+    /// Adds the free-text box to the filter bag as a "contains" filter on the Email column, under
+    /// the plain property key the generic paged endpoint resolves. When the grid already filters
+    /// Email, the base's additional-filter step keeps the column's filter on that key and moves this
+    /// one to the aliased search key, so the server ANDs both. A blank box adds nothing.
     /// </summary>
     /// <param name="filters">The grid's filter bag.</param>
     private void InjectSearchFilter(Dictionary<string, (string Operator, string Value)> filters)
     {
         if (!string.IsNullOrWhiteSpace(_searchString))
         {
-            filters[SearchFilterKey] = ("contains", _searchString);
+            filters[nameof(IUserAdminDTO.Email)] = ("contains", _searchString);
         }
     }
 
