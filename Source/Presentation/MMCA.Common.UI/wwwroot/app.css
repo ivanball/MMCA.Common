@@ -110,6 +110,19 @@ a {
     color: var(--mud-palette-primary, var(--mmca-primary));
 }
 
+/* Keyboard focus needs a visible indicator on every link (WCAG 2.4.7). MudBlazor ships
+   a:focus-visible { outline: none }, which left a link rendered with Underline.Always or
+   Underline.None (the footer legal links, ExternalLink, the auth page links) with no indicator
+   at all. This file loads after MudBlazor.min.css, so these same-specificity selectors win. The
+   ring matches h1:focus-visible below and follows the active palette's primary, which clears the
+   3:1 non-text floor on the content surfaces of both themes. Links on the dark chrome (sidebar,
+   app bar, brand) keep their own higher-specificity white rings. */
+a:focus-visible,
+.mud-link:focus-visible {
+    outline: 2px solid var(--mud-palette-primary, var(--mmca-primary));
+    outline-offset: 2px;
+}
+
 /* Two element defaults carried over from the Bootstrap reboot this RCL no longer ships, so layouts
    built while it was loaded render unchanged: tables collapse their borders (MudBlazor tables and
    grids are sized on that), and a divider rule is drawn at a quarter of its colour. */

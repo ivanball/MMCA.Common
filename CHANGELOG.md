@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- Every link now shows a visible keyboard focus ring (WCAG 2.4.7). MudBlazor 9.11 ships `a:focus-visible { outline: none }`, and the framework restored a ring only for the page heading, the sidebar nav links and the app bar, so a link rendered with `Underline.Always` or `Underline.None` (the footer legal links, `ExternalLink`, the sign-in and registration page links) had no focus indicator at all. `wwwroot/app.css` now declares `a:focus-visible, .mud-link:focus-visible` with a 2px outline in the active palette's primary, offset 2px, matching the heading ring; links on the dark chrome keep their white rings. Consumers need no change.
+- In the dark palette, the label of a hovered, focused or pressed filled primary control now meets the 4.5:1 text contrast floor (WCAG 1.4.3). MudBlazor repaints those states with `PrimaryDarken` while the label keeps the dark `PrimaryContrastText`, and the dark palette's `PrimaryDarken` was the brand `#1565C0`, where that label is only about 3.4:1. It is now the new `BrandColors.DarkPrimaryDarken` (Blue 600, `#1E88E5`, 5.14:1), which still reads as a darker state than the resting `#42A5F5`. The light palette is unchanged. Consumers need no change.
+
 ## [1.235.0] - 2026-10-09
 
 ### Fixed
