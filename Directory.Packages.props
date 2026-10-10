@@ -294,7 +294,7 @@
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
          resolving the 6.1.6 that EF Core SqlServer 10.0.11 floors. On the 7.0 line since 2026-08-28:
-         Aspire.Hosting 13.5.4 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
+         Aspire.Hosting already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
          the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
@@ -348,28 +348,28 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Redis client integrations (MMCA.Common.Aspire.Caching.RedisCachingExtensions). Held at the
-         same 13.5.4 the hosting stack sits on, and matching the pins both consumer apps already
+         same version the hosting stack sits on, and matching the pins both consumer apps already
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.0" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.1" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.1" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.12" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
-         boots a real AppHost in-process. Held at the SAME 13.5.4 as every other Aspire entry on
+         boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.1" />
     <!-- Sample AppHost + sample service behind the apphost-testing CI tier only (the three projects
          under Tests/Hosting that sit OUTSIDE MMCA.Common.slnx). Aspire.Hosting.AppHost brings the DCP
          orchestrator the testing builder starts. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
