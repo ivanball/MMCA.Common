@@ -123,6 +123,19 @@ a:focus-visible,
     outline-offset: 2px;
 }
 
+/* Buttons need the same visible keyboard indicator (WCAG 2.4.7). MudBlazor 9.11 strips the outline
+   from .mud-button-root (MudButton, MudIconButton) and menu activators and leaves only a hover tint
+   on focus, about 1.1-1.2:1 against the surface, so an in-content button such as a form's submit
+   showed nothing a keyboard user could see. Same ring as links: the active palette's primary, offset
+   so it sits outside a filled button's own fill. The dark chrome keeps its own higher-specificity
+   white rings (.appbar-container in MainLayout.razor.css, .toprow-actions in NavMenu.razor.css),
+   which override this one rather than stacking on it, since outline is a single property. */
+.mud-button-root:focus-visible,
+.mud-menu-activator:focus-visible {
+    outline: 2px solid var(--mud-palette-primary, var(--mmca-primary));
+    outline-offset: 2px;
+}
+
 /* Two element defaults carried over from the Bootstrap reboot this RCL no longer ships, so layouts
    built while it was loaded render unchanged: tables collapse their borders (MudBlazor tables and
    grids are sized on that), and a divider rule is drawn at a quarter of its colour. */

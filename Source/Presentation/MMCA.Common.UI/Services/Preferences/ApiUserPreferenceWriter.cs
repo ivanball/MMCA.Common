@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
@@ -6,10 +7,17 @@ namespace MMCA.Common.UI.Services.Preferences;
 
 /// <summary>
 /// Default <see cref="IUserPreferenceWriter"/>: PUTs the preference to <c>auth/preferences</c> via the
-/// shared <c>"APIClient"</c> (which already attaches the bearer token + Accept-Language). No-ops when
-/// there is no usable token and swallows transport errors, so persistence is strictly best-effort over
-/// the cookie-based runtime channel (ADR-027 / ADR-028). Hosts without that endpoint (e.g. the Helpdesk
-/// seed) simply do not register this writer.
+/// shared <c>"APIClient"</c> (whose handlers add Accept-Language), attaching the bearer token it read
+/// itself on the request message. No-ops when there is no usable token and swallows transport errors,
+/// so persistence is strictly best-effort over the cookie-based runtime channel (ADR-027 / ADR-028).
+/// Hosts without that endpoint (e.g. the Helpdesk seed) simply do not register this writer.
+/// <para>
+/// The bearer goes on the request rather than being left to <c>AuthDelegatingHandler</c>: in Blazor
+/// Server that handler resolves in a separate DI scope whose token store is empty, so relying on it
+/// sends the write anonymous and earns a 401. The handler leaves an existing <c>Authorization</c>
+/// header alone, so WASM and MAUI see no change. The header is set per request, never on the factory
+/// client's shared default headers.
+/// </para>
 /// <para>
 /// Best-effort means the caller never learns the write failed, which makes a doomed request pure cost:
 /// it cannot help the user and it still lands in failed-request telemetry. Both guards below exist to
@@ -60,10 +68,12 @@ public sealed class ApiUserPreferenceWriter(
         try
         {
             var client = httpClientFactory.CreateClient("APIClient");
-            using var response = await client.PutAsJsonAsync(
-                new Uri("auth/preferences", UriKind.Relative),
-                new UserPreferencesRequest(culture, theme),
-                cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Put, new Uri("auth/preferences", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new UserPreferencesRequest(culture, theme)),
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.SendAsync(request, cancellationToken);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {

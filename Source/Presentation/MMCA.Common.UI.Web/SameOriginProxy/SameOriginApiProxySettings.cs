@@ -13,7 +13,8 @@ namespace MMCA.Common.UI.Web.SameOriginProxy;
 /// "SameOriginApiProxy": {
 ///   "PathPrefix": "/api",
 ///   "GatewayAddress": "https+http://gateway",
-///   "AdditionalTokenIssuingPaths": [ "auth/2fa/verify" ]
+///   "AdditionalTokenIssuingPaths": [ "auth/2fa/verify" ],
+///   "MaxRequestBodySizeByPath": { "uploads/file": 52428800 }
 /// }
 /// </code>
 /// Validated at startup (<c>ValidateOnStart</c>); an invalid value fails the boot with a message naming it.
@@ -50,6 +51,29 @@ public sealed class SameOriginApiProxySettings
     /// to the gateway root, for example <c>auth/2fa/verify</c>). Empty by default.
     /// </summary>
     public IList<string> AdditionalTokenIssuingPaths { get; } = [];
+
+    /// <summary>
+    /// Gets the request body size limits, in bytes, that replace the server default (Kestrel's is
+    /// 30,000,000 bytes) for specific endpoints. Each key is a path relative to the gateway root, shaped
+    /// like <see cref="RefreshPath"/> (for example <c>uploads/file</c>, matched case-insensitively); it
+    /// covers that path and every path below it on a whole-segment boundary, so <c>uploads/file</c>
+    /// covers <c>uploads/file/5</c> but not <c>uploads/files</c>. Where several keys match, the longest
+    /// wins. Every other path keeps the server default, and every limit must be positive. Empty by
+    /// default.
+    /// </summary>
+    /// <remarks>
+    /// Without an entry, an upload larger than the server default is refused 413 by this host before a
+    /// byte reaches the gateway, whatever the API behind it accepts. Example (<c>appsettings.json</c>):
+    /// <code>
+    /// "SameOriginApiProxy": {
+    ///   "MaxRequestBodySizeByPath": { "uploads/file": 52428800 }
+    /// }
+    /// </code>
+    /// A key containing <c>/</c> cannot be set from an environment variable (the name has no way to
+    /// carry the slash), so set these in a JSON configuration file or another provider that accepts
+    /// arbitrary keys.
+    /// </remarks>
+    public IDictionary<string, long> MaxRequestBodySizeByPath { get; } = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets the refresh endpoint relative to the gateway root (default <c>auth/refresh</c>).

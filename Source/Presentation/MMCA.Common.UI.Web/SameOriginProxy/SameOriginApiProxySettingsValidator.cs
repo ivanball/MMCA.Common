@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -9,7 +10,8 @@ namespace MMCA.Common.UI.Web.SameOriginProxy;
 /// <c>AddCommonSameOriginApiProxy</c> with <c>ValidateOnStart</c>. The prefix becomes a route pattern
 /// and the gateway address the destination of every proxied request, so both are refused unless they
 /// are plain values; <c>SameSite=None</c> is refused because a cookie that authenticates data calls
-/// must never ride on a cross-site request.
+/// must never ride on a cross-site request. A body size limit must be positive and keyed by a plain
+/// relative path, since a zero or negative cap would refuse every body on that path.
 /// </summary>
 internal sealed class SameOriginApiProxySettingsValidator : IValidateOptions<SameOriginApiProxySettings>
 {
@@ -47,6 +49,21 @@ internal sealed class SameOriginApiProxySettingsValidator : IValidateOptions<Sam
                 .Concat(options.AdditionalTokenIssuingPaths)
                 .Where(path => !IsValidRelativePath(path))
                 .Select(path => $"{section}: the endpoint path '{path}' must be a non-empty relative path such as 'auth/login'."));
+
+        foreach (var (path, limit) in options.MaxRequestBodySizeByPath)
+        {
+            if (!IsValidRelativePath(path))
+            {
+                failures.Add(
+                    $"{section}:MaxRequestBodySizeByPath key '{path}' must be a non-empty relative path such as 'uploads/file'.");
+            }
+
+            if (limit <= 0)
+            {
+                failures.Add(
+                    $"{section}:MaxRequestBodySizeByPath:{path} is {limit.ToString(CultureInfo.InvariantCulture)}; the limit must be a positive number of bytes.");
+            }
+        }
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }

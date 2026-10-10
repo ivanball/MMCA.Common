@@ -1,1 +1,2 @@
 ﻿#nullable enable
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.MaxRequestBodySizeByPath.get -> System.Collections.Generic.IDictionary<string!, long>!

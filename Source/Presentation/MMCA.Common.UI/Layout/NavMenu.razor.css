@@ -282,6 +282,18 @@
     height: 36px !important;
 }
 
+/* Keyboard focus needs a visible indicator on the dark row (WCAG 2.4.7). Below 1024px the app bar
+   and its white button ring (MainLayout.razor.css) are hidden, so the culture, theme and app-bar
+   icon buttons render here instead with only MudBlazor's faint hover tint on focus. The global
+   primary ring in app.css is too dark to read on #141B2D in light mode, so this matches the white
+   ring the hamburger, brand and app bar use on the dark chrome; the scoped selector outranks the
+   global one, so the two never stack. */
+.toprow-actions ::deep .mud-button-root:focus-visible,
+.toprow-actions ::deep .mud-menu-activator:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
 /* Ensure the bell/cart icon is white on the dark top-row */
 .toprow-actions ::deep .mud-svg-icon {
     color: white !important;
