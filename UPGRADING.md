@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.236.0] - 2026-10-10
 
 **The user-administration roster moves onto the generic paged entity path.** The search-and-role
 list path is removed end to end, `IUserAdminDTO` takes its identifier from `IBaseDTO`,

@@ -31,22 +31,17 @@ MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.ListRoles
 MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.SetStoredPermissionsAsync(string! role, System.Collections.Generic.IReadOnlyList<string!>! permissions, string? changedBy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
 MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>
 MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
-MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.ListAsync(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<TUserDto>!>!>!
 MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.SetLockedAsync(int userId, bool locked, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Deconstruct(out int PageNumber, out int PageSize, out string? SearchTerm, out string? Role) -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Equals(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery other) -> bool
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageNumber.get -> int
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageNumber.init -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageSize.get -> int
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageSize.init -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Role.get -> string?
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Role.init -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.SearchTerm.get -> string?
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.SearchTerm.init -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdministrationQuery() -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdministrationQuery(int PageNumber, int PageSize, string? SearchTerm = null, string? Role = null) -> void
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService.CountLiveSessionsAsync(System.Collections.Generic.IReadOnlyCollection<int>! userIds, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyDictionary<int, int>!>!>!
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.Application.Auth.Administration.IUserSessionsAdministrationService.GetSignedInUserIdsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<int>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.CountLiveSessionsAsync(System.Collections.Generic.IReadOnlyCollection<int>! userIds, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyDictionary<int, int>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.GetSignedInUserIdsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<int>!>!>!
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.UserSessionsAdministrationService(MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider! timeProvider) -> void
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, MMCA.Common.Application.Auth.AuthenticationValidators! validators, MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer! sessionIssuer, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator? twoFactor = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings!>? emailConfirmationSettings = null) -> void
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CurrentTermsVersion.get -> string?
@@ -105,10 +100,12 @@ MMCA.Common.Application.Auth.IPasswordResetTokenService.IssueAsync(string! email
 MMCA.Common.Application.Auth.IPasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore
 MMCA.Common.Application.Auth.IRefreshSessionStore.AddAsync(MMCA.Common.Domain.Auth.RefreshSession! session, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.IRefreshSessionStore.CountLiveSessionsByUserAsync(System.Collections.Generic.IReadOnlyCollection<int>! userIds, System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<int, int>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdAsync(System.Guid id, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdUntrackedAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
+MMCA.Common.Application.Auth.IRefreshSessionStore.GetUserIdsWithLiveSessionsAsync(System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.TryRotateAsync(MMCA.Common.Domain.Auth.RefreshSession! presented, MMCA.Common.Domain.Auth.RefreshSession! successor, System.DateTime revokedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService
@@ -1145,7 +1142,6 @@ const MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectio
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.GetHashCode() -> int
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ToString() -> string!
-override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.GetHashCode() -> int
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.GetHashCode() -> int
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.ToString() -> string!
@@ -1220,8 +1216,6 @@ override abstract MMCA.Common.Application.UseCases.Crud.RemoveChildEntityHandler
 override sealed MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>.Equals(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>? other) -> bool
 static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator !=(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
 static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator ==(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
-static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator !=(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
-static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator ==(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidToken(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAccepted(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -1416,8 +1410,6 @@ virtual MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollm
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>.HandlerName.get -> string!
 ~MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>.UpdateEntityCommand(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>! original) -> void
-~override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Equals(object obj) -> bool
-~override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.ToString() -> string
 ~override MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey.Equals(object obj) -> bool
 ~override MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>.<Clone>$() -> MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>!
 ~static MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>.operator !=(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>? left, MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>? right) -> bool

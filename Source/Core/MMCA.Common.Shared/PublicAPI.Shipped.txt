@@ -100,7 +100,6 @@ MMCA.Common.Shared.Auth.Administration.IUserAdminDTO
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Email.get -> string!
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.IsLocked.get -> bool
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Role.get -> string!
-MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.UserId.get -> int
 MMCA.Common.Shared.Auth.AuthClaimTypes
 MMCA.Common.Shared.Auth.AuthErrorCodes
 MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions
@@ -417,6 +416,7 @@ MMCA.Common.Shared.Globalization.SupportedCultures
 MMCA.Common.Shared.Http.ConcurrencyETag
 MMCA.Common.Shared.Http.IdempotencyHeaders
 MMCA.Common.Shared.Http.ProblemDetailsResultReader
+MMCA.Common.Shared.Http.QueryFilterKeys
 MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>
 MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>.From(TValue value) -> TSelf
 MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>.Value.get -> TValue
@@ -630,6 +630,8 @@ const MMCA.Common.Shared.Http.IdempotencyHeaders.IdempotentReplay = "X-Idempoten
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.EmptyResponseCode = "Http.EmptyResponse" -> string!
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.MalformedResponseCode = "Http.MalformedResponse" -> string!
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.StatusErrorCodePrefix = "Http." -> string!
+const MMCA.Common.Shared.Http.QueryFilterKeys.AliasSeparator = '~' -> char
+const MMCA.Common.Shared.Http.QueryFilterKeys.SearchTag = "search" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceErrorCodes.VersionNotCurrent = "Legal.VersionNotCurrent" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Action = "me/legal-acceptance" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Path = "Users/me/legal-acceptance" -> string!
@@ -923,6 +925,8 @@ static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync(System.Net.H
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync<T>(System.Net.Http.HttpResponseMessage! response, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ToFailureResult(int statusCode, string? jsonBody) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.Http.ProblemDetailsResultReader.TryGetSynthesizedStatus(MMCA.Common.Shared.Abstractions.Error! error, out int statusCode) -> bool
+static MMCA.Common.Shared.Http.QueryFilterKeys.Alias(string! property, string! tag) -> string!
+static MMCA.Common.Shared.Http.QueryFilterKeys.PropertyOf(string! key) -> string!
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.CanParseValues<TValue>() -> bool
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.GetValueType(System.Type! type) -> System.Type?
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.IsStronglyTypedId(System.Type! type) -> bool
