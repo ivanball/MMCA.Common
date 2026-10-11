@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- The user administration list can filter on a phone. `UserAdminList<TUser>` (MMCA.Common.UI) shows the mobile card list without column headers, so a filter the desktop grid offers as a column filter had no control on a phone, and the card-list fetch carried only the search box. Three new members close that: `MobileFilters`, a slot rendered under the search box on a phone only, for the app's own controls; `InjectMobileFilters`, a callback that adds the app's choices to every card-list fetch under the same keys and operators the grid's column filters send (read at fetch time, never run for the desktop grid); and `ReloadAsync()`, which reloads the active layout from its first page after the choice changes. Apps that set none of them see no change.
+
 ## [1.238.0] - 2026-10-10
 
 ### Fixed

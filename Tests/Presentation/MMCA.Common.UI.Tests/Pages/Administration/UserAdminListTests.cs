@@ -600,6 +600,70 @@ public sealed class UserAdminListTests : BunitTestBase
         cut.FindAll(".mud-card[role='button']").Should().BeEmpty();
     }
 
+    // ── Mobile filters ──
+    // A phone has no grid header, so no column filter: the MobileFilters slot is where a consumer
+    // puts its own control (ADC's "Signed in" select), and InjectMobileFilters is how that choice
+    // reaches FetchPage on the card list.
+    [Fact]
+    public async Task OnAPhone_TheMobileFiltersSlot_Renders()
+    {
+        RenderMudProviders();
+        var cut = RenderList(extra: p => p.Add(x => x.MobileFilters, builder => builder.AddMarkupContent(0, "<span id='mobile-filter'>Signed in</span>")));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("grace@example.com"));
+
+        cut.FindAll("#mobile-filter").Should().BeEmpty("the desktop grid filters through its column headers");
+
+        await GoToPhoneAsync(cut);
+
+        cut.FindAll("#mobile-filter").Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task OnAPhone_InjectedMobileFilters_ReachFetchPage()
+    {
+        RenderMudProviders();
+        var cut = RenderList(extra: p => p.Add(
+            x => x.InjectMobileFilters,
+            filters => filters["ActiveSessionCount"] = (">", "0")));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("grace@example.com"));
+
+        _fetchedFilters.Should().NotContain(
+            f => f.ContainsKey("ActiveSessionCount"),
+            "the desktop grid filters through its column headers, never through the mobile injector");
+
+        await GoToPhoneAsync(cut);
+
+        _fetchedFilters[^1].Should().ContainKey("ActiveSessionCount")
+            .WhoseValue.Should().Be((">", "0"));
+    }
+
+    [Fact]
+    public async Task OnAPhone_ReloadAsync_RefetchesWithTheCurrentMobileFilter()
+    {
+        RenderMudProviders();
+        string? signedIn = null;
+        var cut = RenderList(extra: p => p.Add(
+            x => x.InjectMobileFilters,
+            filters =>
+            {
+                if (signedIn is not null)
+                {
+                    filters["ActiveSessionCount"] = (signedIn, "0");
+                }
+            }));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("grace@example.com"));
+        await GoToPhoneAsync(cut);
+        _fetchedFilters[^1].Should().NotContainKey("ActiveSessionCount");
+
+        signedIn = "=";
+        var before = _fetchedFilters.Count;
+        await cut.InvokeAsync(cut.Instance.ReloadAsync);
+
+        await cut.WaitForAssertionAsync(() => _fetchedFilters.Count.Should().BeGreaterThan(before));
+        _fetchedFilters[^1].Should().ContainKey("ActiveSessionCount")
+            .WhoseValue.Should().Be(("=", "0"));
+    }
+
     // ── Helpers ──
     private void Confirms(bool answer) =>
         _dialogs

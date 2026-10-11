@@ -26,6 +26,7 @@
 
 @if (IsMobile)
 {
+    @MobileFilters
     <MobileInfiniteScrollList TItem="TUser"
                               @ref="_infiniteList"
                               FetchPageResult="FetchMobilePage"

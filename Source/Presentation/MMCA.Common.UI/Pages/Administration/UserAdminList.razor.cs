@@ -106,6 +106,22 @@ public partial class UserAdminList<TUser>
     [Parameter] public bool ShowSearch { get; set; } = true;
 
     /// <summary>
+    /// The app's own filter controls for the mobile card list, rendered under the search box on a
+    /// phone only. The card list has no column headers, so a filter the desktop grid offers as a
+    /// column filter needs a control here; pair it with <see cref="InjectMobileFilters"/> and call
+    /// <see cref="ReloadAsync"/> when the choice changes.
+    /// </summary>
+    [Parameter] public RenderFragment? MobileFilters { get; set; }
+
+    /// <summary>
+    /// Adds the app's mobile filter choices to the filter bag of every mobile card-list fetch, under
+    /// the same keys and operators the desktop grid's column filters send. Read at fetch time, so it
+    /// reflects the app's current state. The desktop grid never runs it: its column filters own
+    /// those keys there.
+    /// </summary>
+    [Parameter] public Action<Dictionary<string, (string Operator, string Value)>>? InjectMobileFilters { get; set; }
+
+    /// <summary>
     /// The app's own delete call. When set, every row and card offers a Delete button behind the
     /// shared confirmation dialog; when null no delete is offered at all (account erasure is its own
     /// endpoint under its own authorization rule, so the framework does not assume one exists).
@@ -209,6 +225,13 @@ public partial class UserAdminList<TUser>
     protected override void RestoreFilters(IReadOnlyDictionary<string, string> filters) =>
         _searchString = filters.GetValueOrDefault("search") ?? string.Empty;
 
+    /// <summary>
+    /// Reloads the active layout from its first page: the mobile card list on a phone, the grid
+    /// otherwise. An app calls it after its <see cref="MobileFilters"/> choice changes.
+    /// </summary>
+    /// <returns>A task that completes when the reload has been requested.</returns>
+    public Task ReloadAsync() => ReloadActiveLayoutAsync();
+
     private Task ReloadActiveLayoutAsync()
         => ListPageActions.ReloadActiveLayoutAsync(IsMobile, _infiniteList, _dataGrid);
 
@@ -229,6 +252,7 @@ public partial class UserAdminList<TUser>
     {
         var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.Ordinal);
         InjectSearchFilter(filters);
+        InjectMobileFilters?.Invoke(filters);
         return FetchPage(filters, page, pageSize, "Email", "asc", ct);
     }
 
