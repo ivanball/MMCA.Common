@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.InjectMobileFilters.get -> System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.InjectMobileFilters.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.MobileFilters.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.MobileFilters.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.ReloadAsync() -> System.Threading.Tasks.Task!
