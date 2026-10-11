@@ -32,15 +32,17 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// for each other's messages.
 /// </para>
 /// <para>
-/// Delivery is at-least-once. Each row's outcome (processed, retry or dead letter) is written as
-/// soon as that row is done, by an update guarded on this replica's lease token, and the lease is
-/// renewed just before each row is dispatched. So a batch that outlives its lease, or stops partway
-/// (a crash, a shutdown), never leaves a delivered row looking undelivered, and a row another
-/// replica has taken over is neither dispatched again nor stamped by the replica that lost it. A
-/// shutdown signalled while a row is in flight still records that row's outcome, under its own short
-/// budget, before the shutdown continues. Only the row in flight at a crash (or one whose shutdown
-/// write fails) is redelivered, once its lease expires after <c>Outbox:LeaseSeconds</c> (300s by
-/// default), because the poll skips leased rows.
+/// Delivery is at-least-once. A failed row's retry or dead-letter state is written as soon as that
+/// row is done; delivered rows are buffered and stamped processed together, by one set-based update
+/// per flush, at the end of the batch, before any lease renewal, and on every early exit (a
+/// shutdown, a failed write). Every write is guarded on this replica's lease token, and the lease is
+/// renewed for the rest of the batch, in one statement, once less than half of it remains. So a
+/// batch that outlives its lease never has a row another replica has taken over stamped by the
+/// replica that lost it, and a row found lost at a renewal is not dispatched again. A shutdown
+/// signalled while a row is in flight still records the outcomes of the rows already done, under
+/// its own short budget, before the shutdown continues. The rows delivered since the last flush are
+/// redelivered after a crash (or when the exit flush fails), once their lease expires after
+/// <c>Outbox:LeaseSeconds</c> (300s by default), because the poll skips leased rows.
 /// </para>
 /// </summary>
 /// <param name="scopeFactory">Factory for creating DI scopes per processing cycle.</param>
@@ -80,6 +82,12 @@ public sealed partial class OutboxProcessor(
 
     /// <summary>Width of the <c>LastError</c> column; longer failure text is truncated to fit (the siblings' constant).</summary>
     private const int MaxErrorLength = 4000;
+
+    /// <summary>
+    /// Most ids one batched stamp or renewal statement carries, well under SQL Server's 2100-parameter
+    /// limit; a larger <c>Outbox:BatchSize</c> is written in chunks of this size.
+    /// </summary>
+    private const int MaxIdsPerStatement = 500;
 
     /// <summary>
     /// Budget for writing the outcome of the row in flight when the host signals shutdown. Deliberately
@@ -218,7 +226,8 @@ public sealed partial class OutboxProcessor(
         }
 
         var lockToken = Guid.NewGuid();
-        var (toProcess, deferredKeyMates) = await ClaimEligibleAsync(context, messages, eligibleCount, now, lockToken, cancellationToken)
+        var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
+        var (toProcess, deferredKeyMates) = await ClaimEligibleAsync(context, messages, eligibleCount, now, leaseUntil, lockToken, cancellationToken)
             .ConfigureAwait(false);
 
         if (toProcess.Count == 0)
@@ -229,10 +238,11 @@ public sealed partial class OutboxProcessor(
 
         LogProcessingBatch(logger, toProcess.Count, sourceName);
 
-        // Every row's outcome is persisted as the row completes (see DispatchMessagesAsync), so there
-        // is no batch save here: a cancellation or crash partway through leaves the rows already
-        // delivered stamped in the database rather than only in the change tracker.
-        var processedAny = await DispatchMessagesAsync(context, toProcess, target, lockToken, cancellationToken)
+        // Every outcome is persisted by DispatchMessagesAsync itself, through guarded set-based
+        // updates (failures per row, deliveries per flush), so there is no batch save here: a
+        // cancellation partway through still flushes the rows already delivered to the database
+        // rather than leaving them only in the change tracker.
+        var processedAny = await DispatchMessagesAsync(context, toProcess, target, lockToken, leaseUntil, cancellationToken)
             .ConfigureAwait(false);
 
         // A full eligible batch with progress means more eligible rows may be waiting, and so do
@@ -335,10 +345,10 @@ public sealed partial class OutboxProcessor(
         List<OutboxMessage> messages,
         int eligibleCount,
         DateTime now,
+        DateTime leaseUntil,
         Guid lockToken,
         CancellationToken cancellationToken)
     {
-        var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
         var candidates = SelectOrderedCandidates(messages, eligibleCount);
 
         // Key-mates dropped by SelectOrderedCandidates wait only for this cycle's head row, so the
@@ -452,26 +462,69 @@ public sealed partial class OutboxProcessor(
     /// the restored values through the row scope's services when it stamps its headers, and the
     /// in-process path (<c>InProcessMessageBus</c> to <see cref="IDomainEventDispatcher"/>) gets the
     /// right ambient context for free. The cycle scope's context holds the claimed rows and writes
-    /// each row's lease renewal and outcome; only delivery moves to the row scope.
+    /// the lease renewals and outcomes; only delivery moves to the row scope.
     /// <para>
     /// The claim lease covers the whole batch, so a slow batch could outlive it and let another
-    /// replica claim a later row while this one is still busy. Each row's lease is therefore renewed
-    /// just before it is dispatched, in a statement guarded on this batch's lock token, and a row
-    /// that no longer carries the token is skipped. The row's outcome is written the same guarded
-    /// way as soon as the row is done, so a replica that lost the row mid-dispatch drops its stale
-    /// outcome instead of overwriting the new owner's.
+    /// replica claim a later row while this one is still busy. Before each row is dispatched the
+    /// remaining lease is checked against the clock, and once less than half of
+    /// <c>Outbox:LeaseSeconds</c> is left the buffered stamps are flushed and every row of the batch
+    /// not yet dispatched is renewed in one statement guarded on this batch's lock token. A row that
+    /// renewal finds under another token is skipped. A lease that lapses during one long dispatch is
+    /// therefore caught by the next check, which renews or skips every remaining row before another
+    /// goes out.
+    /// </para>
+    /// <para>
+    /// A failed row's retry state is written the guarded way as soon as the row is done. Delivered
+    /// rows are buffered and stamped processed by one guarded set-based update per flush: at the end
+    /// of the batch, before a lease renewal, and on every early exit (under
+    /// <see cref="ShutdownStampTimeout"/>), so a replica that lost a row mid-dispatch drops its stale
+    /// stamp instead of overwriting the new owner's, and a shutdown does not cost the rows already
+    /// delivered their stamps.
     /// </para>
     /// </remarks>
     /// <param name="context">The cycle scope's context holding the claimed rows.</param>
     /// <param name="messages">The claimed rows to deliver.</param>
     /// <param name="target">The target the batch was claimed from; each row scope is created for it.</param>
     /// <param name="lockToken">This batch's claim token, which every renewal and stamp is guarded by.</param>
+    /// <param name="claimLeaseUntil">The lease expiry the claim wrote for this batch.</param>
     /// <param name="cancellationToken">Cancels the batch.</param>
     private async Task<bool> DispatchMessagesAsync(
         ApplicationDbContext context,
-        IEnumerable<OutboxMessage> messages,
+        List<OutboxMessage> messages,
         TenantDataSourceTarget target,
         Guid lockToken,
+        DateTime claimLeaseUntil,
+        CancellationToken cancellationToken)
+    {
+        var batch = new ClaimedBatch(messages, lockToken, claimLeaseUntil);
+        var batchCompleted = false;
+
+        try
+        {
+            var processedAny = await DispatchRowsAsync(context, batch, target, cancellationToken).ConfigureAwait(false);
+            await FlushDeliveredAsync(context, batch, cancellationToken).ConfigureAwait(false);
+            batchCompleted = true;
+            return processedAny;
+        }
+        finally
+        {
+            if (!batchCompleted)
+            {
+                await FlushDeliveredOnExitAsync(context, batch).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Dispatches the rows of <paramref name="batch"/> in order (see <see cref="DispatchMessagesAsync"/>):
+    /// renews the lease when it is due, skips a row the renewal found lost, delivers each row on its
+    /// own scope, then buffers a delivered row for the batched stamp or writes a failed row's retry
+    /// state. Returns whether any row made progress.
+    /// </summary>
+    private async Task<bool> DispatchRowsAsync(
+        ApplicationDbContext context,
+        ClaimedBatch batch,
+        TenantDataSourceTarget target,
         CancellationToken cancellationToken)
     {
         var source = target.Source;
@@ -482,9 +535,11 @@ public sealed partial class OutboxProcessor(
         // The per-row signal stays on the metric (BrokerMetrics.CircuitOpenCounter).
         var circuitOpenLogged = false;
 
-        foreach (var message in messages)
+        for (var index = 0; index < batch.Messages.Count; index++)
         {
-            if (!await RenewLeaseAsync(context, message, lockToken, cancellationToken).ConfigureAwait(false))
+            var message = batch.Messages[index];
+
+            if (!await RenewLeaseIfDueAsync(context, batch, index, cancellationToken).ConfigureAwait(false))
             {
                 LogLeaseLostBeforeDispatch(logger, message.Id);
                 continue;
@@ -589,33 +644,80 @@ public sealed partial class OutboxProcessor(
 
             // Outside the try on purpose: a database failure while recording the outcome is not a
             // delivery failure, so it must not be charged to the row as a retry. It propagates and
-            // fails the source for this cycle, as the batch save it replaces did. A shutdown signalled
-            // mid-delivery does not skip this write (see RecordOutcomeAsync).
+            // fails the source for this cycle. A delivered row only joins the stamp buffer; a failed
+            // row's retry state is written now, and a shutdown signalled mid-delivery does not skip
+            // that write (see RecordFailureOutcomeAsync).
             processedAny |= delivered;
-            await RecordOutcomeAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
+            await RecordOutcomeAsync(context, batch, message, delivered, cancellationToken).ConfigureAwait(false);
+
+            // A shutdown signalled while this row was in flight stops the batch here, after the row's
+            // outcome is recorded; DispatchMessagesAsync then stamps the rows already delivered.
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         return processedAny;
     }
 
     /// <summary>
-    /// Persists one row's outcome: the processed stamp when delivered, otherwise its retry state.
-    /// <para>
-    /// A shutdown signalled while the row was in flight must not cost a finished delivery its stamp
-    /// (a handler that never observes the token completes anyway), so once the batch token is
-    /// cancelled the outcome is written under its own short budget (<see cref="ShutdownStampTimeout"/>)
-    /// instead, and the shutdown then continues by rethrowing the cancellation. Two constraints carry
-    /// over from the batch-end save this replaced: a failure of that last write is logged rather than
-    /// allowed to replace the propagating <see cref="OperationCanceledException"/> (the polling loop
-    /// recognizes shutdown by that exception type), and the budget is short rather than
-    /// <see cref="CancellationToken.None"/>, so a dead connection cannot hold host shutdown open until
-    /// the command timeout. Without a shutdown a database failure propagates exactly as before.
-    /// </para>
+    /// Checks this replica's lease before the row at <paramref name="index"/> is dispatched. While
+    /// at least half of <c>Outbox:LeaseSeconds</c> remains (by the injected clock) nothing is
+    /// written. Once less remains, the buffered stamps are flushed and every row not yet dispatched
+    /// is renewed (<see cref="RenewRemainingLeasesAsync"/>). Returns whether the row is still this
+    /// replica's, so a row a renewal found under another token is never dispatched.
     /// </summary>
-    private async Task RecordOutcomeAsync(
+    private async Task<bool> RenewLeaseIfDueAsync(
         ApplicationDbContext context,
+        ClaimedBatch batch,
+        int index,
+        CancellationToken cancellationToken)
+    {
+        var remaining = batch.LeaseUntil - _timeProvider.GetUtcNow().UtcDateTime;
+        if (remaining < TimeSpan.FromSeconds(_settings.LeaseSeconds / 2.0))
+        {
+            await FlushDeliveredAsync(context, batch, cancellationToken).ConfigureAwait(false);
+            await RenewRemainingLeasesAsync(context, batch, index, cancellationToken).ConfigureAwait(false);
+        }
+
+        return !batch.LostIds.Contains(batch.Messages[index].Id);
+    }
+
+    /// <summary>
+    /// Records one row's outcome: a delivered row joins the batch's stamp buffer (written by
+    /// <see cref="FlushDeliveredAsync"/>), a failed row's retry state is written now
+    /// (<see cref="RecordFailureOutcomeAsync"/>).
+    /// </summary>
+    private Task RecordOutcomeAsync(
+        ApplicationDbContext context,
+        ClaimedBatch batch,
         OutboxMessage message,
         bool delivered,
+        CancellationToken cancellationToken)
+    {
+        if (!delivered)
+        {
+            return RecordFailureOutcomeAsync(context, message, batch.LockToken, cancellationToken);
+        }
+
+        batch.PendingStamps.Add(message);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Persists one failed row's retry state.
+    /// <para>
+    /// A shutdown signalled while the row was in flight must not cost the row its recorded attempt,
+    /// so once the batch token is cancelled the outcome is written under its own short budget
+    /// (<see cref="ShutdownStampTimeout"/>) instead, and the shutdown then continues by rethrowing
+    /// the cancellation. A failure of that last write is logged rather than allowed to replace the
+    /// propagating <see cref="OperationCanceledException"/> (the polling loop recognizes shutdown by
+    /// that exception type), and the budget is short rather than <see cref="CancellationToken.None"/>,
+    /// so a dead connection cannot hold host shutdown open until the command timeout. Without a
+    /// shutdown a database failure propagates.
+    /// </para>
+    /// </summary>
+    private async Task RecordFailureOutcomeAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
         Guid lockToken,
         CancellationToken cancellationToken)
     {
@@ -623,7 +725,7 @@ public sealed partial class OutboxProcessor(
         {
             try
             {
-                await WriteOutcomeAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
+                await RecordFailureAsync(context, message, lockToken, cancellationToken).ConfigureAwait(false);
                 return;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -633,24 +735,23 @@ public sealed partial class OutboxProcessor(
             }
         }
 
-        await RecordOutcomeOnShutdownAsync(context, message, delivered, lockToken, cancellationToken).ConfigureAwait(false);
+        await RecordFailureOnShutdownAsync(context, message, lockToken, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Writes one row's outcome under the shutdown budget, logging (never throwing) a failure so it
-    /// cannot replace the cancellation, which is then rethrown so the shutdown continues.
+    /// Writes one failed row's retry state under the shutdown budget, logging (never throwing) a
+    /// failure so it cannot replace the cancellation, which is then rethrown so the shutdown continues.
     /// </summary>
-    private async Task RecordOutcomeOnShutdownAsync(
+    private async Task RecordFailureOnShutdownAsync(
         ApplicationDbContext context,
         OutboxMessage message,
-        bool delivered,
         Guid lockToken,
         CancellationToken cancellationToken)
     {
         using var budget = new CancellationTokenSource(ShutdownStampTimeout, _timeProvider);
         try
         {
-            await WriteOutcomeAsync(context, message, delivered, lockToken, budget.Token).ConfigureAwait(false);
+            await RecordFailureAsync(context, message, lockToken, budget.Token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -659,17 +760,6 @@ public sealed partial class OutboxProcessor(
 
         cancellationToken.ThrowIfCancellationRequested();
     }
-
-    /// <summary>Writes one row's outcome under <paramref name="cancellationToken"/>.</summary>
-    private Task WriteOutcomeAsync(
-        ApplicationDbContext context,
-        OutboxMessage message,
-        bool delivered,
-        Guid lockToken,
-        CancellationToken cancellationToken) =>
-        delivered
-            ? RecordDeliveredAsync(context, message, lockToken, cancellationToken)
-            : RecordFailureAsync(context, message, lockToken, cancellationToken);
 
     /// <summary>
     /// Delivers one deserialized event. Integration events route through <see cref="IMessageBus"/>
@@ -701,46 +791,152 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// Renews this replica's lease on one claimed row just before it is dispatched, in a statement
-    /// guarded on the batch's lock token, so a row another replica has taken over since the claim is
-    /// skipped rather than dispatched a second time. Returns whether the row is still this replica's.
+    /// Renews this replica's lease on every row of the batch from <paramref name="fromIndex"/> on that
+    /// is not already known lost, in one statement guarded on the batch's lock token (per chunk of
+    /// <see cref="MaxIdsPerStatement"/> ids), and records the renewed expiry on the batch. When fewer
+    /// rows are renewed than asked for, one query finds the rows still carrying the token, and the
+    /// rest join <see cref="ClaimedBatch.LostIds"/> so they are skipped rather than dispatched a
+    /// second time.
     /// </summary>
-    private async Task<bool> RenewLeaseAsync(
+    private async Task RenewRemainingLeasesAsync(
         ApplicationDbContext context,
-        OutboxMessage message,
-        Guid lockToken,
+        ClaimedBatch batch,
+        int fromIndex,
         CancellationToken cancellationToken)
     {
         var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+        var lockToken = batch.LockToken;
+        var lostIds = batch.LostIds;
+        var outbox = context.Set<OutboxMessage>();
 
-        var kept = await context.Set<OutboxMessage>()
-            .Where(m => m.Id == message.Id && m.LockToken == lockToken)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.LockedUntil, leaseUntil), cancellationToken)
-            .ConfigureAwait(false);
+        Guid[] remainingIds = [.. batch.Messages
+            .Skip(fromIndex)
+            .Select(m => m.Id)
+            .Where(id => !lostIds.Contains(id))];
 
-        return kept > 0;
+        foreach (var ids in remainingIds.Chunk(MaxIdsPerStatement))
+        {
+            var renewed = await outbox
+                .Where(m => ids.Contains(m.Id) && m.LockToken == lockToken)
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.LockedUntil, leaseUntil), cancellationToken)
+                .ConfigureAwait(false);
+
+            if (renewed == ids.Length)
+            {
+                continue;
+            }
+
+            var keptIds = await outbox.AsNoTracking()
+                .Where(m => ids.Contains(m.Id) && m.LockToken == lockToken)
+                .Select(m => m.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var keptSet = keptIds.ToHashSet();
+            lostIds.UnionWith(ids.Where(id => !keptSet.Contains(id)));
+        }
+
+        batch.LeaseUntil = leaseUntil;
     }
 
     /// <summary>
-    /// Stamps a delivered row processed, guarded by the lock token, then records the processed
-    /// count, the dispatch lag and the success log line.
+    /// Stamps the buffered delivered rows processed with one set-based update per chunk of
+    /// <see cref="MaxIdsPerStatement"/> ids, guarded by the lock token and sharing one
+    /// <c>ProcessedOn</c> value (the flush time). A row another replica has re-claimed under a new
+    /// token (possible only after this replica's lease expired mid-dispatch) is not matched, so its
+    /// stale stamp is dropped rather than overwriting the new owner's record. When fewer rows are
+    /// stamped than buffered, one query finds the rows that carry the token. The tracked instances
+    /// are then synced the way <see cref="StampAsync"/> syncs one row (stamped rows accepted, the
+    /// rest detached), and the processed count, dispatch lag and success log are emitted for the
+    /// stamped rows only. Each chunk leaves the buffer once synced, so a retried flush never stamps
+    /// or counts a row twice.
     /// </summary>
-    private async Task RecordDeliveredAsync(
+    private async Task FlushDeliveredAsync(
         ApplicationDbContext context,
-        OutboxMessage message,
-        Guid lockToken,
+        ClaimedBatch batch,
         CancellationToken cancellationToken)
     {
-        var processedOn = _timeProvider.GetUtcNow().UtcDateTime;
-        message.ProcessedOn = processedOn;
+        var pending = batch.PendingStamps;
+        var lockToken = batch.LockToken;
+        var outbox = context.Set<OutboxMessage>();
 
-        await StampAsync(
-            context,
-            message,
-            lockToken,
-            guarded => guarded.ExecuteUpdateAsync(
-                s => s.SetProperty(m => m.ProcessedOn, processedOn),
-                cancellationToken)).ConfigureAwait(false);
+        while (pending.Count > 0)
+        {
+            var chunk = pending.GetRange(0, Math.Min(pending.Count, MaxIdsPerStatement));
+            var ids = chunk.ConvertAll(m => m.Id);
+            var processedOn = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var stamped = await outbox
+                .Where(m => ids.Contains(m.Id) && m.LockToken == lockToken)
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedOn, processedOn), cancellationToken)
+                .ConfigureAwait(false);
+
+            // A stamped row no longer satisfies the claim predicate (ProcessedOn is set), so no other
+            // replica can take it between the update and this read.
+            HashSet<Guid>? stampedIds = null;
+            if (stamped < ids.Count)
+            {
+                var matched = await outbox.AsNoTracking()
+                    .Where(m => ids.Contains(m.Id) && m.LockToken == lockToken)
+                    .Select(m => m.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                stampedIds = [.. matched];
+            }
+
+            foreach (var message in chunk)
+            {
+                SyncDelivered(context, message, processedOn, stampedIds?.Contains(message.Id) ?? true);
+            }
+
+            pending.RemoveRange(0, chunk.Count);
+        }
+    }
+
+    /// <summary>
+    /// Flushes the buffered delivered rows on an early exit from the batch (a shutdown, or a failed
+    /// write), under <see cref="ShutdownStampTimeout"/>. A failure is logged and never thrown, so it
+    /// cannot replace the exception already propagating (the polling loop recognizes shutdown by the
+    /// <see cref="OperationCanceledException"/> type), and the short budget keeps a dead connection
+    /// from holding host shutdown open until the command timeout.
+    /// </summary>
+    private async Task FlushDeliveredOnExitAsync(ApplicationDbContext context, ClaimedBatch batch)
+    {
+        if (batch.PendingStamps.Count == 0)
+        {
+            return;
+        }
+
+        using var budget = new CancellationTokenSource(ShutdownStampTimeout, _timeProvider);
+        try
+        {
+            await FlushDeliveredAsync(context, batch, budget.Token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogExitStampFailed(logger, batch.PendingStamps.Count, ex);
+        }
+    }
+
+    /// <summary>
+    /// Syncs one flushed row with the database. A stamped row carries its <c>ProcessedOn</c> into the
+    /// tracker as unchanged and records the processed count, the dispatch lag and the success log
+    /// line; a row whose token no longer matched is detached, so nothing later writes it through the
+    /// change tracker without the guard.
+    /// </summary>
+    private void SyncDelivered(ApplicationDbContext context, OutboxMessage message, DateTime processedOn, bool stamped)
+    {
+        var entry = context.Entry(message);
+        if (!stamped)
+        {
+            LogLeaseLost(logger, message.Id);
+            entry.State = EntityState.Detached;
+            return;
+        }
+
+        message.ProcessedOn = processedOn;
+        entry.OriginalValues.SetValues(entry.CurrentValues);
+        entry.State = EntityState.Unchanged;
 
         var eventTypeTag = new KeyValuePair<string, object?>("event_type", message.EventType);
         OutboxMetrics.ProcessedCounter.Add(1, eventTypeTag);
@@ -960,4 +1156,26 @@ public sealed partial class OutboxProcessor(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId}: its outcome could not be written during shutdown; a delivered message will be redelivered when its lease expires")]
     private static partial void LogShutdownStampFailed(ILogger logger, Guid messageId, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Count} delivered outbox messages could not be stamped processed as the batch stopped; they will be redelivered when their lease expires")]
+    private static partial void LogExitStampFailed(ILogger logger, int count, Exception exception);
+
+    /// <summary>
+    /// One claimed batch's progress through <see cref="DispatchMessagesAsync"/>: the claimed rows in
+    /// dispatch order, the lock token every renewal and stamp is guarded by, this replica's current
+    /// lease expiry, the delivered rows awaiting their batched stamp, and the rows a renewal found
+    /// under another token.
+    /// </summary>
+    private sealed class ClaimedBatch(List<OutboxMessage> messages, Guid lockToken, DateTime leaseUntil)
+    {
+        public List<OutboxMessage> Messages { get; } = messages;
+
+        public Guid LockToken { get; } = lockToken;
+
+        public DateTime LeaseUntil { get; set; } = leaseUntil;
+
+        public List<OutboxMessage> PendingStamps { get; } = [];
+
+        public HashSet<Guid> LostIds { get; } = [];
+    }
 }

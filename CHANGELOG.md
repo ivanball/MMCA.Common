@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- The outbox dispatches at its pre-1.233.0 rate again. Since 1.233.0 `OutboxProcessor` (MMCA.Common.Infrastructure) wrote two statements per row, a lease renewal before each dispatch and a processed stamp after it, which cut the load tier's 10,000-message drain from about 1,800 to about 50 messages per second on a local SQLite file (about 3,350 to 290 on CI). Delivered rows are now stamped together in one lease-token-guarded update per batch, written at batch end, before any lease renewal and on every early exit (shutdown or a database error) under the existing short shutdown budget; a row another replica has re-claimed is still never stamped by the replica that lost it. The lease is renewed only when less than half of `Outbox:LeaseSeconds` remains, in one statement covering the rest of the batch, and a row found taken over is skipped rather than dispatched. Failed rows keep their per-row retry write. The trade-off: a process killed mid-batch redelivers up to one batch of already-delivered rows when their lease expires (at-least-once, as before), and `ProcessedOn` is the time of the batch write rather than of each delivery. Consumers need no change.
+
 ## [1.239.0] - 2026-10-10
 
 ### Added
