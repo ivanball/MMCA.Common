@@ -469,10 +469,15 @@ MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.get -> System
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.set -> void
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Heading.get -> string?
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.InjectMobileFilters.get -> System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.InjectMobileFilters.set -> void
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.MobileFilters.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.MobileFilters.set -> void
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnDelete.get -> System.Func<TUser, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>?
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnDelete.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.ReloadAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RoleLabel.get -> System.Func<string!, string!>?
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RoleLabel.set -> void
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.ShowSearch.get -> bool
