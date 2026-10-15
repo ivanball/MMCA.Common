@@ -100,6 +100,5 @@ public sealed class MauiTokenStorageService(
     /// <inheritdoc />
     public Task ClearTokensAsync() => store.ClearTokensAsync();
 
-    private async Task<string?> HydrateAsync() =>
-        await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+    private Task<string?> HydrateAsync() => tokenRefresher.AcquireAccessTokenAsync();
 }
