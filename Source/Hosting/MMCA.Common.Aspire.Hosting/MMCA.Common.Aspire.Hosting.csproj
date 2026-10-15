@@ -12,6 +12,10 @@
     <!-- WithDataSource wires a service to its own SqlServerDatabaseResource (database per
          microservice). This pulls in Aspire.Hosting.SqlServer for the resource type. -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <!-- Direct reference lifting the System.Security.Cryptography.Pkcs transitive (10.0.12 from
+         Aspire.Hosting.SqlServer, 9.0.13 from SqlClient) off the vulnerable versions (NU1903); see
+         the pin note in Directory.Packages.props. Consumer AppHosts inherit the lift from here. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <!-- WithPostgreSQLDataSource wires a service to its own PostgresDatabaseResource (ADR-113).
          Pulls in Aspire.Hosting.PostgreSQL for the resource type. -->
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
