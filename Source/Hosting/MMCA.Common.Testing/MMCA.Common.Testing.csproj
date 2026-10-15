@@ -22,6 +22,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
+         vulnerable 9.0.18 (NU1903); see the pin note in Directory.Packages.props. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.FeatureManagement" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Respawn" />

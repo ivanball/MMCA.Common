@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Security
+
+- The October 2026 .NET servicing advisories are patched: every 10.0.12 Microsoft pin moves to 10.0.13 (ASP.NET Core, EF Core, Microsoft.Extensions; GHSA-334f-vvp4-7g6p in `Microsoft.AspNetCore.SignalR.Common`, GHSA-7hqp-7c5m-4vq6 / GHSA-c399-9853-6jmj / GHSA-r955-8q5j-3h83 in `System.Security.Cryptography.Xml`). `System.Security.Cryptography.Pkcs` (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7), which `Microsoft.Data.SqlClient` 7.x and `Aspire.Hosting.SqlServer` pull transitively at 9.0.13, 9.0.18 and 10.0.12, is lifted to 10.0.13 by a direct reference in MMCA.Common.Infrastructure, MMCA.Common.Testing and MMCA.Common.Aspire.Hosting, so consumers inherit the patched version. A consumer that pins these packages itself under Central Package Management needs the same 10.0.13 pins and a `System.Security.Cryptography.Pkcs` `PackageVersion` entry, or restore fails with NU1903 (and with NU1010 in source mode).
+
+### Fixed
+
+- The notification bell stops polling once the server has rejected the session. `NotificationBell` (MMCA.Common.UI) kept its periodic unread-count read running after `GetUnreadCountAsync` answered Unauthorized, which the inbox service reports only after its own forced token refresh and replay have failed. A Blazor Server tab left open on a dead session therefore sent one rejected read plus one failed refresh every poll interval for as long as it stayed open: in production one tab produced about 1,240 rejected reads and 1,150 failed refreshes in a day. An Unauthorized read now stops the periodic timer (the first read never starts it), navigation and push reads keep running, and the first of them that succeeds starts polling again. A transient failure (5xx, timeout, network) keeps polling exactly as before. Consumers need no change.
+- A database provider's own cancel report is answered 499 once the client has gone. `OperationCanceledExceptionHandler` (MMCA.Common.API) claimed only `OperationCanceledException`, but SqlClient can surface a command cancelled by `RequestAborted` as a `SqlException` ("Operation cancelled by user."), which then reached `GlobalExceptionHandler` and was logged at Error as an unhandled exception, although the response went nowhere. A `DbException` raised after the client disconnected is now handled like the cancellation it is: status 499, logged at Warning with its stack, so a database fault that coincides with a disconnect stays visible. Any other exception type still falls through to the generic handler, and a `DbException` while the client is connected still answers 500. Consumers need no change.
+
 ## [1.240.0] - 2026-10-11
 
 ### Fixed

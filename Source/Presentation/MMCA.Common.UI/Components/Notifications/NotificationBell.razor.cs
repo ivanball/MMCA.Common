@@ -18,6 +18,10 @@ namespace MMCA.Common.UI.Components.Notifications;
 /// older than the configured window, and a real-time push marks the count stale and reads
 /// regardless. Both the timer and the age comparison run off the injected <see cref="TimeProvider"/>.
 /// </para>
+/// <para>
+/// The periodic tick runs only while the session is accepted: an Unauthorized read stops it, and the
+/// next successful read (navigation or push) starts it again.
+/// </para>
 /// </summary>
 /// <remarks>
 /// Hosts commonly render the bell twice (a desktop app bar and a mobile nav) inside
@@ -80,13 +84,29 @@ public partial class NotificationBell : IDisposable
         State.OnRefreshRequested += HandleRefreshRequested;
 
         // The first read is unconditional: nothing has established the count yet.
-        await RefreshUnreadCountAsync();
+        var sessionRejected = await RefreshUnreadCountAsync();
 
-        // Re-check after the await: Dispose may have run while that read was in flight, and it has
-        // already disposed the (then null) timer and the token source. Starting the loop now would
-        // leak a PeriodicTimer nothing disposes and fault the discarded task on a disposed _cts. The
-        // slot was released by Dispose through UnregisterPoller, so there is nothing else to undo.
-        if (_disposed)
+        // Then the periodic backstop starts, even after a transient failure (retrying is its job),
+        // but not when the server rejected the session: a dead session never starts a timer at all.
+        if (!sessionRejected)
+        {
+            StartPollTimerIfStopped();
+        }
+    }
+
+    /// <summary>
+    /// Starts the periodic backstop when this bell holds the slot and no timer is running. Called
+    /// after the first read and after every successful one, on the renderer's synchronization
+    /// context, which is what makes
+    /// the null check a sufficient double-start guard, and what restarts polling after
+    /// <see cref="StopPollTimer"/> once a navigation or push read proves the session is back.
+    /// </summary>
+    private void StartPollTimerIfStopped()
+    {
+        // _disposed: Dispose may have run while the read was in flight, and it has already disposed
+        // the (then null) timer and the token source. Starting the loop now would leak a PeriodicTimer
+        // nothing disposes and fault the discarded task on a disposed _cts.
+        if (_disposed || !_isActivePoller || _pollTimer is not null)
         {
             return;
         }
@@ -101,7 +121,17 @@ public partial class NotificationBell : IDisposable
         // The TimeProvider overload rather than the ambient system clock, so a test drives the loop
         // deterministically instead of waiting out a real interval.
         _pollTimer = new PeriodicTimer(Options.Value.PollInterval, Clock);
-        _ = PollLoopAsync();
+        _ = PollLoopAsync(_pollTimer);
+    }
+
+    /// <summary>
+    /// Stops the periodic backstop. Disposing the timer makes the loop's pending
+    /// <see cref="PeriodicTimer.WaitForNextTickAsync"/> answer false, so the loop ends on its own.
+    /// </summary>
+    private void StopPollTimer()
+    {
+        _pollTimer?.Dispose();
+        _pollTimer = null;
     }
 
     // Event-handler signature; the takeover task observes its own failures internally, so the
@@ -131,11 +161,11 @@ public partial class NotificationBell : IDisposable
         }
     }
 
-    private async Task PollLoopAsync()
+    private async Task PollLoopAsync(PeriodicTimer pollTimer)
     {
         try
         {
-            while (await _pollTimer!.WaitForNextTickAsync(_cts.LifetimeToken()))
+            while (await pollTimer.WaitForNextTickAsync(_cts.LifetimeToken()))
             {
                 await RefreshUnreadCountAsync();
             }
@@ -185,11 +215,12 @@ public partial class NotificationBell : IDisposable
         _ = RefreshUnreadCountAsync();
     }
 
-    private async Task RefreshUnreadCountAsync()
+    /// <summary>Reads the authoritative count; answers true only when the server rejected the session.</summary>
+    private async Task<bool> RefreshUnreadCountAsync()
     {
         if (_disposed)
         {
-            return;
+            return false;
         }
 
         try
@@ -200,7 +231,18 @@ public partial class NotificationBell : IDisposable
                 // The authoritative count is unknown (expired session, transient failure). Leave the
                 // badge exactly as it is: zeroing it here is what used to erase a push increment.
                 // A failed read is silent by design; the bell has no surface to report it on.
-                return;
+                if (count.IsUnauthorized() && !_disposed)
+                {
+                    // The service has already tried a forced token refresh and replay before it
+                    // answers Unauthorized, so the session is gone. Stop the unattended backstop:
+                    // left running, it re-read with the dead token (and re-tried the refresh) every
+                    // interval for as long as the tab stayed open. Navigation and push reads still
+                    // run, and the first one that succeeds restarts polling.
+                    await InvokeAsync(StopPollTimer);
+                    return true;
+                }
+
+                return false;
             }
 
             if (!_disposed)
@@ -208,9 +250,12 @@ public partial class NotificationBell : IDisposable
                 await InvokeAsync(() =>
                 {
                     State.SetUnreadCount(unread);
+                    StartPollTimerIfStopped();
                     StateHasChanged();
                 });
             }
+
+            return false;
         }
         catch (OperationCanceledException)
         {
@@ -224,6 +269,8 @@ public partial class NotificationBell : IDisposable
         {
             // Network or deserialization error - badge stays at current value
         }
+
+        return false;
     }
 
     private void HandleStateChanged(object? sender, EventArgs e) =>

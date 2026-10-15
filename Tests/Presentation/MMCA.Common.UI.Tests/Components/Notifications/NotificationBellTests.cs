@@ -388,17 +388,110 @@ public sealed class NotificationBellTests : BunitTestBase
         _state.UnreadCount.Should().Be(7);
     }
 
+    [Fact]
+    public void WhenTheFirstReadIsUnauthorized_ThePollTimerNeverStarts()
+    {
+        // The service has already tried a forced refresh before it answers Unauthorized, so the
+        // session is gone. A bell left polling then re-read with the dead token every interval for as
+        // long as the tab stayed open (one 401 plus one failed refresh every 30 s in production).
+        var counting = new TimerCountingTimeProvider(_clock);
+        Services.AddSingleton<TimeProvider>(counting);
+        CountIsUnavailable();
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.FromSeconds(30));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        cut.Render();
+
+        counting.TimersCreated.Should().Be(0);
+        VerifyFetchCount(Times.Once());
+    }
+
+    [Fact]
+    public void WhenAPolledReadIsUnauthorized_ThePollTimerStops()
+    {
+        var counting = new TimerCountingTimeProvider(_clock);
+        Services.AddSingleton<TimeProvider>(counting);
+        _inbox
+            .SetupSequence(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(2))
+            .ReturnsAsync(Result.Failure<int>(Error.Unauthorized("Notif.Count.Unauthorized", "Your session expired.")))
+            .ReturnsAsync(Result.Success(2));
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.FromSeconds(30));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => counting.TimersCreated.Should().Be(1));
+
+        _clock.Advance(TimeSpan.FromSeconds(30));
+
+        // The disposal is the positive signal that the loop has ended; only after it can advancing
+        // the clock prove that no further tick reads.
+        cut.WaitForAssertion(() => counting.TimersDisposed.Should().Be(1));
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        cut.Render();
+
+        VerifyFetchCount(Times.Exactly(2));
+    }
+
+    [Fact]
+    public void AfterAnUnauthorizedRead_ASuccessfulReadRestartsPolling()
+    {
+        // Suspension is not terminal: a navigation or push read that succeeds (a new sign-in in
+        // another tab refreshed the session cookies) proves the session is back.
+        var counting = new TimerCountingTimeProvider(_clock);
+        Services.AddSingleton<TimeProvider>(counting);
+        _inbox
+            .SetupSequence(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<int>(Error.Unauthorized("Notif.Count.Unauthorized", "Your session expired.")))
+            .ReturnsAsync(Result.Success(3))
+            .ReturnsAsync(Result.Success(3));
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.FromSeconds(30));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => counting.TimersCreated.Should().Be(1));
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(3)));
+    }
+
+    [Fact]
+    public void ANonAuthFailure_KeepsPolling()
+    {
+        // Only a rejected session stops the backstop: a transient failure (5xx, timeout) must not
+        // leave the badge un-refreshed until the next navigation.
+        _inbox
+            .SetupSequence(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<int>(Error.Failure("Http.ServiceUnavailable", "Service unavailable.")))
+            .ReturnsAsync(Result.Success(4));
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.FromSeconds(30));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromSeconds(30));
+
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
+    }
+
     /// <summary>
     /// Delegates the clock to the driveable <see cref="FakeTimeProvider"/> and counts timer
-    /// creations: <c>new PeriodicTimer(TimeSpan, TimeProvider)</c> goes through
-    /// <see cref="TimeProvider.CreateTimer"/>, so the count is how a test observes whether the poll
-    /// loop was ever started.
+    /// creations and disposals: <c>new PeriodicTimer(TimeSpan, TimeProvider)</c> goes through
+    /// <see cref="TimeProvider.CreateTimer"/> and disposes that timer with itself, so the counts are
+    /// how a test observes whether the poll loop was ever started and whether it has stopped.
     /// </summary>
     private sealed class TimerCountingTimeProvider(FakeTimeProvider inner) : TimeProvider
     {
         private int _timersCreated;
+        private int _timersDisposed;
 
         public int TimersCreated => Volatile.Read(ref _timersCreated);
+
+        public int TimersDisposed => Volatile.Read(ref _timersDisposed);
 
         public override DateTimeOffset GetUtcNow() => inner.GetUtcNow();
 
@@ -411,7 +504,26 @@ public sealed class NotificationBellTests : BunitTestBase
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
             Interlocked.Increment(ref _timersCreated);
-            return inner.CreateTimer(callback, state, dueTime, period);
+            return new CountingTimer(inner.CreateTimer(callback, state, dueTime, period), this);
+        }
+
+        private void RecordDisposal() => Interlocked.Increment(ref _timersDisposed);
+
+        private sealed class CountingTimer(ITimer timer, TimerCountingTimeProvider owner) : ITimer
+        {
+            public bool Change(TimeSpan dueTime, TimeSpan period) => timer.Change(dueTime, period);
+
+            public void Dispose()
+            {
+                owner.RecordDisposal();
+                timer.Dispose();
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                owner.RecordDisposal();
+                return timer.DisposeAsync();
+            }
         }
     }
 }
