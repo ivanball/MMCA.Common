@@ -25,15 +25,15 @@ public sealed class EmailConfirmationUIService(IHttpClientFactory httpClientFact
     private const string ApiClientName = "APIClient";
 
     /// <inheritdoc />
-    public async Task<Result> ConfirmEmailAsync(string email, string token, CancellationToken cancellationToken = default) =>
-        await PostOnceAsync("auth/confirm-email", new ConfirmEmailRequest(email, token), cancellationToken);
+    public Task<Result> ConfirmEmailAsync(string email, string token, CancellationToken cancellationToken = default) =>
+        PostOnceAsync("auth/confirm-email", new ConfirmEmailRequest(email, token), cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> ResendEmailConfirmationAsync(string email, CancellationToken cancellationToken = default) =>
-        await PostOnceAsync("auth/send-email-confirmation", new SendEmailConfirmationRequest(email), cancellationToken);
+    public Task<Result> ResendEmailConfirmationAsync(string email, CancellationToken cancellationToken = default) =>
+        PostOnceAsync("auth/send-email-confirmation", new SendEmailConfirmationRequest(email), cancellationToken);
 
-    private async Task<Result> PostOnceAsync<TRequest>(string relativeUrl, TRequest body, CancellationToken cancellationToken) =>
-        await HttpResultExecutor.ExecuteAsync(
+    private Task<Result> PostOnceAsync<TRequest>(string relativeUrl, TRequest body, CancellationToken cancellationToken) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = httpClientFactory.CreateClient(ApiClientName);

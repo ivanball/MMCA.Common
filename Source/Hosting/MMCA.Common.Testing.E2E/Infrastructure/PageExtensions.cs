@@ -299,12 +299,12 @@ public static class PageExtensions
         /// state, and a helper that preconditions on rows turns it into a timeout.
         /// </summary>
         /// <param name="timeout">Budget in milliseconds.</param>
-        public async Task WaitForGridToSettleAsync(float timeout = 15_000)
+        public Task WaitForGridToSettleAsync(float timeout = 15_000)
         {
             ArgumentNullException.ThrowIfNull(page);
 
-            await Assertions.Expect(page.Locator("[role='progressbar']"))
-                .ToHaveCountAsync(0, new() { Timeout = timeout }).ConfigureAwait(false);
+            return Assertions.Expect(page.Locator("[role='progressbar']"))
+                .ToHaveCountAsync(0, new() { Timeout = timeout });
         }
 
         /// <summary>

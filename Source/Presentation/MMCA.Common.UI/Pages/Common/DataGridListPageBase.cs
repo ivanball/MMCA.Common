@@ -316,8 +316,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     }
 
     /// <inheritdoc />
-    public async Task NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs) =>
-        await InvokeAsync(async () =>
+    public Task NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs) =>
+        InvokeAsync(async () =>
         {
             var wasMobile = IsMobile;
             IsMobile = BreakpointConstants.IsMobileBreakpoint(browserViewportEventArgs.Breakpoint);

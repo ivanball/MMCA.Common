@@ -122,8 +122,8 @@ public sealed class SessionCookieEndpointsTests
     }
 
     // ── Helpers ──
-    private static async Task<IHost> CreateHostAsync(ICookieSessionRefresher refresher) =>
-        await new HostBuilder()
+    private static Task<IHost> CreateHostAsync(ICookieSessionRefresher refresher) =>
+        new HostBuilder()
             .ConfigureWebHost(webBuilder => webBuilder
                 .UseTestServer()
                 .UseEnvironment(Environments.Production)

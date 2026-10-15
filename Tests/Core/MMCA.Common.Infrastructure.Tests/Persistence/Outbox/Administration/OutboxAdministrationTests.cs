@@ -230,8 +230,8 @@ public sealed class OutboxAdministrationTests : IDisposable
         _context.ChangeTracker.Clear();
     }
 
-    private async Task<OutboxMessage> ReloadAsync(Guid id) =>
-        await _context.Set<OutboxMessage>().AsNoTracking().SingleAsync(m => m.Id == id, CancellationToken.None);
+    private Task<OutboxMessage> ReloadAsync(Guid id) =>
+        _context.Set<OutboxMessage>().AsNoTracking().SingleAsync(m => m.Id == id, CancellationToken.None);
 
     /// <summary>A test <see cref="ApplicationDbContext"/> mapping <see cref="OutboxMessage"/> only.</summary>
     private sealed class AdminTestContext : ApplicationDbContext

@@ -58,7 +58,7 @@ public sealed class DisabledFeatureHandlerTests
     }
 
     [Fact]
-    public async Task HandleDisabledFeatures_ReturnsCompletedTask()
+    public Task HandleDisabledFeatures_ReturnsCompletedTask()
     {
         var sut = new DisabledFeatureHandler();
         ActionExecutingContext context = CreateContext();
@@ -66,6 +66,6 @@ public sealed class DisabledFeatureHandlerTests
         Task result = sut.HandleDisabledFeatures(["SomeFeature"], context);
 
         result.IsCompleted.Should().BeTrue();
-        await result;
+        return result;
     }
 }

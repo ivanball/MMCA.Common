@@ -42,8 +42,8 @@ public sealed class RegisterPage
     public ILocator ZipCodeField => _page.GetByLabel("Zip Code");
     public ILocator CountryField => _page.GetByLabel("Country");
 
-    public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/register").ConfigureAwait(false);
+    public Task GotoAsync() =>
+        _page.GotoAndWaitForBlazorAsync("/register");
 
     public async Task RegisterAsync(string firstName, string lastName, string email, string password)
     {

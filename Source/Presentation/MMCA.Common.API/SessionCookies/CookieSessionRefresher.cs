@@ -90,25 +90,25 @@ internal sealed partial class CookieSessionRefresher(
     public async Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default) =>
         (await ValidateOrRefreshAsync(context, cancellationToken).ConfigureAwait(false)).Session;
 
-    public async Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
+    public Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var accessToken = context.Request.Cookies[SessionCookieEndpoints.AccessTokenCookieName];
         if (TryReadValidExpiry(accessToken, out var expiry))
         {
-            return SessionRefreshOutcome.Refreshed(new SessionTokenResult(accessToken!, expiry));
+            return Task.FromResult(SessionRefreshOutcome.Refreshed(new SessionTokenResult(accessToken!, expiry)));
         }
 
-        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+        return RefreshFromCookiesAsync(context, accessToken, cancellationToken);
     }
 
-    public async Task<SessionRefreshOutcome> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
+    public Task<SessionRefreshOutcome> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var accessToken = context.Request.Cookies[SessionCookieEndpoints.AccessTokenCookieName];
-        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+        return RefreshFromCookiesAsync(context, accessToken, cancellationToken);
     }
 
     /// <summary>

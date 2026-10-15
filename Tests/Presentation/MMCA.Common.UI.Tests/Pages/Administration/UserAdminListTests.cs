@@ -319,14 +319,14 @@ public sealed class UserAdminListTests : BunitTestBase
         cut.WaitForAssertion(() => cut.Find(".mud-table-head").TextContent.Should().Contain("Signed in"));
     }
 
-    private static async Task ApplyColumnFilterAsync(
+    private static Task ApplyColumnFilterAsync(
         IRenderedComponent<UserAdminList<TestUser>> cut,
         string property,
         string @operator,
         string value)
     {
         var grid = cut.FindComponent<MudDataGrid<TestUser>>();
-        await cut.InvokeAsync(() =>
+        return cut.InvokeAsync(() =>
         {
             grid.Instance.FilterDefinitions.Add(Filter(property, @operator, value));
             return grid.Instance.ReloadServerData();

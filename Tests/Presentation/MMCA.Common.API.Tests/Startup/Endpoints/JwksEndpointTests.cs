@@ -135,8 +135,8 @@ public sealed class JwksEndpointTests
             RsaPublicKeyPem = pem,
         }));
 
-    private static async Task<IHost> CreateHostAsync(IJwksProvider jwksProvider) =>
-        await new HostBuilder()
+    private static Task<IHost> CreateHostAsync(IJwksProvider jwksProvider) =>
+        new HostBuilder()
             .ConfigureWebHost(webBuilder => webBuilder
                 .UseTestServer()
                 .UseEnvironment(Environments.Production)

@@ -43,23 +43,23 @@ public sealed class InProcessEventBus(
     private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
 
     /// <inheritdoc />
-    public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
+    public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
-        await PublishBatchAsync([integrationEvent], cancellationToken).ConfigureAwait(false);
+        return PublishBatchAsync([integrationEvent], cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task PublishAsync(IEnumerable<IIntegrationEvent> integrationEvents, CancellationToken cancellationToken = default)
+    public Task PublishAsync(IEnumerable<IIntegrationEvent> integrationEvents, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(integrationEvents);
 
         var events = integrationEvents as IIntegrationEvent[] ?? [.. integrationEvents];
         if (events.Length == 0)
-            return;
+            return Task.CompletedTask;
 
-        await PublishBatchAsync(events, cancellationToken).ConfigureAwait(false);
+        return PublishBatchAsync(events, cancellationToken);
     }
 
     /// <summary>

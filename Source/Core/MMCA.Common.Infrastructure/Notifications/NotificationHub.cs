@@ -58,7 +58,7 @@ public sealed class NotificationHub(
     private static readonly ConcurrentDictionary<string, int> ConnectionsPerUser = new(StringComparer.Ordinal);
 
     /// <inheritdoc />
-    public override async Task OnConnectedAsync()
+    public override Task OnConnectedAsync()
     {
         var cap = settings.Value.MaxConnectionsPerUser;
         var userId = Context.UserIdentifier;
@@ -77,11 +77,11 @@ public sealed class NotificationHub(
             Context.Items[SlotItemKey] = true;
         }
 
-        await base.OnConnectedAsync().ConfigureAwait(false);
+        return base.OnConnectedAsync();
     }
 
     /// <inheritdoc />
-    public override async Task OnDisconnectedAsync(Exception? exception)
+    public override Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = Context.UserIdentifier;
         if (!string.IsNullOrEmpty(userId) && Context.Items.Remove(SlotItemKey))
@@ -89,7 +89,7 @@ public sealed class NotificationHub(
             Decrement(userId);
         }
 
-        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
+        return base.OnDisconnectedAsync(exception);
     }
 
     /// <summary>
@@ -142,13 +142,15 @@ public sealed class NotificationHub(
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="HubException">The channel key does not match the configured pattern.</exception>
     [HubMethodName(LeaveChannelMethod)]
-    public async Task LeaveChannelAsync(string channelKey)
+    public Task LeaveChannelAsync(string channelKey)
     {
         EnsureValidChannelKey(channelKey);
 
         // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted)
-            .ConfigureAwait(false);
+        return
+
+        // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
+        Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted);
     }
 
     // SECURITY: shape is not entitlement. Without an authorizer the hub keeps its historical

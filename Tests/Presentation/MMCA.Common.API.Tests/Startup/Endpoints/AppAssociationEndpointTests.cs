@@ -160,10 +160,10 @@ public sealed class AppAssociationEndpointTests
     }
 
     // ── Helpers ──
-    private static async Task<IHost> CreateHostAsync(
+    private static Task<IHost> CreateHostAsync(
         AppAssociationOptions options,
         Action<IEndpointRouteBuilder>? inspect = null) =>
-        await new HostBuilder()
+        new HostBuilder()
             .ConfigureWebHost(webBuilder => webBuilder
                 .UseTestServer()
                 .UseEnvironment(Environments.Production)

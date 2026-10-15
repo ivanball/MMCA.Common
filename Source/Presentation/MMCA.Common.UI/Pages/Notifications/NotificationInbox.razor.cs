@@ -72,7 +72,7 @@ public partial class NotificationInbox : IDisposable
     /// <summary>The <see cref="Id"/> the deep-link state was last computed for, to detect a re-navigation.</summary>
     private UserNotificationIdentifierType? _appliedId;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         // Breadcrumbs are built here (not in a field initializer) so the injected localizer is
         // available; labels re-resolve per circuit and follow the active culture (ADR-027).
@@ -84,7 +84,7 @@ public partial class NotificationInbox : IDisposable
 
         NotificationState.OnRefreshRequested += HandleRefreshRequested;
 
-        await LoadNotificationsAsync();
+        return LoadNotificationsAsync();
     }
 
     /// <summary>
@@ -257,10 +257,10 @@ public partial class NotificationInbox : IDisposable
         }
     }
 
-    private async Task OnPageChangedAsync(int page)
+    private Task OnPageChangedAsync(int page)
     {
         _currentPage = page;
-        await LoadNotificationsAsync();
+        return LoadNotificationsAsync();
     }
 
     private async Task MarkReadAsync(UserNotificationDTO notification)

@@ -53,13 +53,13 @@ public abstract class CreateEntityHandlerBase<TCreateRequest, TEntity, TIdentifi
     protected IUnitOfWork UnitOfWork => unitOfWork;
 
     /// <inheritdoc />
-    public virtual async Task<Result<TEntityDTO>> HandleAsync(
+    public virtual Task<Result<TEntityDTO>> HandleAsync(
         TCreateRequest command,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        return await CreateCoreAsync(unitOfWork, command, cancellationToken).ConfigureAwait(false);
+        return CreateCoreAsync(unitOfWork, command, cancellationToken);
     }
 
     /// <summary>

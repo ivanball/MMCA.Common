@@ -65,7 +65,7 @@ public sealed class MmcaCultureBootstrapTests : IDisposable
         CultureInfo.DefaultThreadCurrentUICulture = _originalUiCulture;
     }
 
-    private static async Task InvokeWithAllowPseudoAsync(IJSRuntime jsRuntime, bool allowPseudoLocale)
+    private static Task InvokeWithAllowPseudoAsync(IJSRuntime jsRuntime, bool allowPseudoLocale)
     {
         var overload = typeof(MmcaCultureBootstrap).GetMethod(
             nameof(MmcaCultureBootstrap.SetBrowserCultureAsync),
@@ -76,7 +76,7 @@ public sealed class MmcaCultureBootstrapTests : IDisposable
             "MmcaCultureBootstrap needs SetBrowserCultureAsync(IJSRuntime jsRuntime, bool allowPseudoLocale) so a "
             + "Development WASM host can keep the qps-Ploc culture its server prerendered");
 
-        await (Task)overload!.Invoke(null, [jsRuntime, allowPseudoLocale])!;
+        return (Task)overload!.Invoke(null, [jsRuntime, allowPseudoLocale])!;
     }
 
     // A JS runtime whose culture.js module reports the given culture cookie value.

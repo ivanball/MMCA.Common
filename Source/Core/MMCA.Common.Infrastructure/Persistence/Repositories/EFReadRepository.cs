@@ -93,7 +93,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<TEntity?> FirstOrDefaultAsync(
+    public virtual Task<TEntity?> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> where,
         IEnumerable<string>? includes = null,
         bool asTracking = false,
@@ -111,11 +111,11 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
             query = ApplyIncludes(query, includes);
 
         // TOP 1 at the database, not a materialized set narrowed in memory afterwards.
-        return await query.FirstOrDefaultAsync(where, cancellationToken).ConfigureAwait(false);
+        return query.FirstOrDefaultAsync(where, cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<TEntity?> FirstOrDefaultAsync(
+    public virtual Task<TEntity?> FirstOrDefaultAsync(
         ISpecification<TEntity, TIdentifierType> specification,
         CancellationToken cancellationToken = default)
     {
@@ -123,10 +123,9 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
         // The full shape, ordering included: "first" is only meaningful against a defined order, and
         // the specification is where that order is declared.
-        return await SpecificationEvaluator
+        return SpecificationEvaluator
             .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -400,7 +399,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<TEntity?> GetByIdAsync(
+    public virtual Task<TEntity?> GetByIdAsync(
         TIdentifierType id,
         CancellationToken cancellationToken = default)
     {
@@ -411,11 +410,11 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         // earlier in the same scope came back as if it were live. Table (tracked) is deliberate:
         // EFRepository inherits this member and the generic delete/update handlers load through it,
         // mutate, and save, so a no-tracking query would turn those into silent no-ops.
-        return await Table.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false);
+        return Table.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<TEntity?> GetByIdAsync(
+    public virtual Task<TEntity?> GetByIdAsync(
         TIdentifierType id,
         IEnumerable<string> includes,
         bool asTracking = false,
@@ -427,64 +426,63 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         var query = BaseQuery(asTracking);
         query = ApplyIncludes(query, includes);
 
-        return await query.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false);
+        return query.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
-        => await Entities.CountAsync(cancellationToken).ConfigureAwait(false);
+    public virtual Task<int> CountAsync(CancellationToken cancellationToken = default)
+        => Entities.CountAsync(cancellationToken);
 
     /// <inheritdoc />
-    public virtual async Task<int> CountAsync(
+    public virtual Task<int> CountAsync(
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(where);
 
-        return await Entities.CountAsync(where, cancellationToken).ConfigureAwait(false);
+        return Entities.CountAsync(where, cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<int> CountAsync(
+    public virtual Task<int> CountAsync(
         ISpecification<TEntity, TIdentifierType> specification,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(specification);
 
-        return await SpecificationEvaluator
+        return SpecificationEvaluator
             .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification, applyShape: false)
-            .CountAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .CountAsync(cancellationToken);
     }
 
     /// <summary>
     /// Checks whether an entity with the given ID exists.
     /// </summary>
-    public virtual async Task<bool> ExistsAsync(
+    public virtual Task<bool> ExistsAsync(
         TIdentifierType id,
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(id);
 
-        return await AnyAsync(
+        return AnyAsync(
             ignoreQueryFilters ? Entities.IgnoreQueryFilters(SoftDeleteFilterOnly) : Entities,
             e => e.Id.Equals(id),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<bool> ExistsAsync(
+    public virtual Task<bool> ExistsAsync(
         Expression<Func<TEntity, bool>> where,
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(where);
 
-        return await AnyAsync(
+        return AnyAsync(
             ignoreQueryFilters ? Entities.IgnoreQueryFilters(SoftDeleteFilterOnly) : Entities,
             where,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <summary>
@@ -615,17 +613,17 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<bool> AnyAsync(
+    public virtual Task<bool> AnyAsync(
         ISpecification<TEntity, TIdentifierType> specification,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(specification);
 
         // Criteria only, and through the same Cosmos-aware existence check the predicate overloads use.
-        return await AnyAsync(
+        return AnyAsync(
             BaseQueryFor(specification),
             specification.Criteria,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <inheritdoc />

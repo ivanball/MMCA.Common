@@ -238,10 +238,10 @@ public partial class UserAdminList<TUser>
     /// <summary>Retries a failed grid fetch from the inline error state (<c>LoadFailed</c>).</summary>
     private Task RetryLoadAsync() => GridRef?.ReloadServerData() ?? Task.CompletedTask;
 
-    private async Task OnSearchChanged(string value)
+    private Task OnSearchChanged(string value)
     {
         _searchString = value;
-        await ReloadActiveLayoutAsync();
+        return ReloadActiveLayoutAsync();
     }
 
     private Task<GridData<TUser>> LoadServerData(GridState<TUser> state, CancellationToken cancellationToken) =>

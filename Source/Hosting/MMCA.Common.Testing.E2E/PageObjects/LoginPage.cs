@@ -17,8 +17,8 @@ public sealed class LoginPage
     // "Create Account" is a MudButton with Href — renders as <a>, not <button>
     public ILocator CreateAccountLink => _page.GetByRole(AriaRole.Link, new() { Name = "Create Account" });
 
-    public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/login").ConfigureAwait(false);
+    public Task GotoAsync() =>
+        _page.GotoAndWaitForBlazorAsync("/login");
 
     public async Task LoginAsync(string email, string password)
     {

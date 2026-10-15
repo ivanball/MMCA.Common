@@ -56,20 +56,20 @@ public abstract class IntegrationTestBase<TFixture> : IAsyncLifetime
     }
 
     /// <summary>Sends a POST request with a JSON body.</summary>
-    protected async Task<HttpResponseMessage> PostAsync<T>(string url, T body) =>
-        await Client.PostAsJsonAsync(url, body).ConfigureAwait(false);
+    protected Task<HttpResponseMessage> PostAsync<T>(string url, T body) =>
+        Client.PostAsJsonAsync(url, body);
 
     /// <summary>Sends a PUT request with a JSON body.</summary>
-    protected async Task<HttpResponseMessage> PutAsync<T>(string url, T body) =>
-        await Client.PutAsJsonAsync(url, body).ConfigureAwait(false);
+    protected Task<HttpResponseMessage> PutAsync<T>(string url, T body) =>
+        Client.PutAsJsonAsync(url, body);
 
     /// <summary>Sends a PUT request with no body.</summary>
-    protected async Task<HttpResponseMessage> PutAsync(string url) =>
-        await Client.PutAsync(url, null).ConfigureAwait(false);
+    protected Task<HttpResponseMessage> PutAsync(string url) =>
+        Client.PutAsync(url, null);
 
     /// <summary>Sends a DELETE request.</summary>
-    protected async Task<HttpResponseMessage> DeleteAsync(string url) =>
-        await Client.DeleteAsync(url).ConfigureAwait(false);
+    protected Task<HttpResponseMessage> DeleteAsync(string url) =>
+        Client.DeleteAsync(url);
 
     /// <summary>Thread-safe counter for generating unique test IDs.</summary>
     protected static int NextId() => Interlocked.Increment(ref _nextId);

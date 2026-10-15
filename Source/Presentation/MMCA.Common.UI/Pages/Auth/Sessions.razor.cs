@@ -61,7 +61,7 @@ public partial class Sessions : IDisposable
     /// <summary>True while the account-wide sign-out is in flight.</summary>
     private bool IsRevokingAll { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
         _breadcrumbs =
@@ -70,7 +70,7 @@ public partial class Sessions : IDisposable
             new(L["Auth.Sessions.Title"].Value, href: null, disabled: true),
         ];
 
-        await LoadSessionsAsync();
+        return LoadSessionsAsync();
     }
 
     /// <inheritdoc />

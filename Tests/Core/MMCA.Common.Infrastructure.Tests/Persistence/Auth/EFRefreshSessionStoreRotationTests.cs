@@ -152,10 +152,10 @@ public sealed class EFRefreshSessionStoreRotationTests
             return session;
         }
 
-        public async Task<RefreshSession[]> ReadAllAsync()
+        public Task<RefreshSession[]> ReadAllAsync()
         {
             Participant reader = NewParticipant();
-            return await reader.Context.Set<RefreshSession>()
+            return reader.Context.Set<RefreshSession>()
                 .AsNoTracking()
                 .ToArrayAsync(CancellationToken.None);
         }

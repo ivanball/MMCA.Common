@@ -66,7 +66,7 @@ internal static class InternalCommandDispatcher
     /// and call it. <c>GetService</c> rather than <c>GetRequiredService</c>, so an unhandled command
     /// reads as a null result the processor can record instead of an exception it has to classify.
     /// </summary>
-    private static async Task<Result?> InvokeAsync<TCommand>(
+    private static Task<Result?> InvokeAsync<TCommand>(
         IServiceProvider serviceProvider,
         IInternalCommand command,
         CancellationToken cancellationToken)
@@ -75,9 +75,11 @@ internal static class InternalCommandDispatcher
         var handler = serviceProvider.GetService<ICommandHandler<TCommand, Result>>();
         if (handler is null)
         {
-            return null;
+            return Task.FromResult<Result?>(null);
         }
 
-        return await handler.HandleAsync((TCommand)command, cancellationToken).ConfigureAwait(false);
+        // Task<T> is not covariant in T's nullability, so the non-null Task<Result> needs the
+        // forgiving operator to flow out as Task<Result?>; the value itself is never null.
+        return handler.HandleAsync((TCommand)command, cancellationToken)!;
     }
 }

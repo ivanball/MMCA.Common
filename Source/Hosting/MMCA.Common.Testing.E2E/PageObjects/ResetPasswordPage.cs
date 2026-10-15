@@ -24,16 +24,16 @@ public sealed class ResetPasswordPage
     // "Go to Sign In" is a MudButton with Href, so it renders as <a>, not <button>
     public ILocator GoToLoginLink => _page.GetByRole(AriaRole.Link, new() { Name = "Go to Sign In" });
 
-    public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/reset-password").ConfigureAwait(false);
+    public Task GotoAsync() =>
+        _page.GotoAndWaitForBlazorAsync("/reset-password");
 
     /// <summary>
     /// Opens the page the way the emailed link does, with the address and token supplied as query
     /// parameters so both fields arrive prefilled.
     /// </summary>
-    public async Task GotoWithLinkAsync(string email, string token) =>
-        await _page.GotoAndWaitForBlazorAsync(
-            $"/reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}").ConfigureAwait(false);
+    public Task GotoWithLinkAsync(string email, string token) =>
+        _page.GotoAndWaitForBlazorAsync(
+            $"/reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}");
 
     public async Task ResetAsync(string email, string token, string newPassword)
     {

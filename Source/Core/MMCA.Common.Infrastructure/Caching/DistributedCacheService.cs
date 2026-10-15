@@ -105,7 +105,7 @@ internal sealed partial class DistributedCacheService(
     /// per-key delete and keeps the log messages, which name the caller-supplied prefix.
     /// </para>
     /// </remarks>
-    public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
         if (connectionMultiplexer is null)
         {
@@ -114,20 +114,20 @@ internal sealed partial class DistributedCacheService(
             // so this dead invalidation is visible without flooding the log on every mutating command.
             if (Interlocked.Exchange(ref _noMultiplexerWarned, 1) == 0)
                 LogPrefixEvictionNoMultiplexer(logger);
-            return;
+            return Task.CompletedTask;
         }
 
         // Resolved on the first delete rather than up front: a host whose multiplexer reports no
         // scannable server never asks for a database at all.
         IDatabase? db = null;
 
-        await RedisPrefixScanner.RemoveMatchingAsync(
+        return RedisPrefixScanner.RemoveMatchingAsync(
             connectionMultiplexer,
             $"{_keys.Qualify(prefix)}*",
             key => (db ??= connectionMultiplexer.GetDatabase()).KeyDeleteAsync(key),
             () => LogPrefixEvictionNoServer(logger, prefix),
             (server, ex) => LogPrefixEvictionServerFailed(logger, server, prefix, ex),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <inheritdoc />

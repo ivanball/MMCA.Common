@@ -39,11 +39,11 @@ public sealed class NotificationInboxService(
     private Task<string?>? _refreshInFlight;
 
     /// <inheritdoc />
-    public async Task<Result<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
+    public Task<Result<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
         int pageNumber = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 string scopeQuery = await ScopeQueryAsync("&", cancellationToken);
@@ -60,8 +60,8 @@ public sealed class NotificationInboxService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+    public Task<Result<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
@@ -78,10 +78,10 @@ public sealed class NotificationInboxService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> MarkReadAsync(
+    public Task<Result> MarkReadAsync(
         UserNotificationIdentifierType id,
         CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using HttpClient httpClient = await CreateAuthenticatedClientAsync();
@@ -97,8 +97,8 @@ public sealed class NotificationInboxService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> MarkAllReadAsync(CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+    public Task<Result> MarkAllReadAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 string scopeQuery = await ScopeQueryAsync("?", cancellationToken);

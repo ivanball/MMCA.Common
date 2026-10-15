@@ -60,7 +60,7 @@ public static class WebVitalsCollector
     /// Writes the sample as a citable JSON artifact under <c>WEB_VITALS_OUTPUT_DIR</c> (set by the CI
     /// workflow to the uploaded <c>artifacts/</c> dir) or, when unset, <c>artifacts/</c> under the CWD.
     /// </summary>
-    public static async Task WriteArtifactAsync(string label, string path, WebVitalsSample sample)
+    public static Task WriteArtifactAsync(string label, string path, WebVitalsSample sample)
     {
         var dir = Environment.GetEnvironmentVariable("WEB_VITALS_OUTPUT_DIR")
             ?? Path.Combine(Directory.GetCurrentDirectory(), "artifacts");
@@ -68,7 +68,7 @@ public static class WebVitalsCollector
 
         var payload = new WebVitalsArtifact(label, path, sample);
         var file = Path.Combine(dir, $"web-vitals-{label}.json");
-        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(payload, WriteOptions)).ConfigureAwait(false);
+        return File.WriteAllTextAsync(file, JsonSerializer.Serialize(payload, WriteOptions));
     }
 }
 

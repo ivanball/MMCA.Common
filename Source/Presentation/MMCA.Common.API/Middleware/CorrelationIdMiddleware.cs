@@ -32,7 +32,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
     /// <param name="context">The HTTP context for the current request.</param>
     /// <param name="correlationContext">The scoped correlation context to populate.</param>
     /// <returns>A task representing the middleware execution.</returns>
-    public async Task InvokeAsync(HttpContext context, ICorrelationContext correlationContext)
+    public Task InvokeAsync(HttpContext context, ICorrelationContext correlationContext)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(correlationContext);
@@ -49,7 +49,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
             return Task.CompletedTask;
         });
 
-        await next(context).ConfigureAwait(false);
+        return next(context);
     }
 
     /// <summary>

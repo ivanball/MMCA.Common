@@ -343,10 +343,10 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// Consumes the captured state after a successful save: defers when a transaction is
     /// active (delivery must not precede commit), otherwise flushes immediately.
     /// </summary>
-    private async Task DispatchAndFinalizeAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    private Task DispatchAndFinalizeAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
         if (!StateTable.TryGetValue(context, out var state))
-            return;
+            return Task.CompletedTask;
 
         StateTable.Remove(context);
 
@@ -356,10 +356,10 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             // re-capture them; the captured copies carry everything the flush needs.
             ClearDomainEvents(state);
             DeferredTable.GetOrCreateValue(context).Add(new DeferredDispatch(this, state));
-            return;
+            return Task.CompletedTask;
         }
 
-        await FlushStateAsync(context, state, cancellationToken).ConfigureAwait(false);
+        return FlushStateAsync(context, state, cancellationToken);
     }
 
     /// <summary>

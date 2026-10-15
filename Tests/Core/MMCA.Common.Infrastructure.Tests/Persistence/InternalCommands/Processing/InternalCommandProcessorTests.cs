@@ -390,10 +390,10 @@ public sealed class InternalCommandProcessorTests : IDisposable
         return row;
     }
 
-    private async Task<InternalCommandMessage> ReloadAsync(Guid id)
+    private Task<InternalCommandMessage> ReloadAsync(Guid id)
     {
         _context.ChangeTracker.Clear();
-        return await _context.Set<InternalCommandMessage>().AsNoTracking()
+        return _context.Set<InternalCommandMessage>().AsNoTracking()
             .SingleAsync(c => c.Id == id, TestContext.Current.CancellationToken);
     }
 

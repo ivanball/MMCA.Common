@@ -11,9 +11,8 @@ namespace MMCA.Common.Infrastructure.Notifications.Live;
 public sealed class SignalRLiveChannelPublisher(IHubContext<NotificationHub> hubContext) : ILiveChannelPublisher
 {
     /// <inheritdoc />
-    public async Task PublishAsync(string channelKey, string eventName, string payloadJson, CancellationToken cancellationToken = default) =>
-        await hubContext.Clients
+    public Task PublishAsync(string channelKey, string eventName, string payloadJson, CancellationToken cancellationToken = default) =>
+        hubContext.Clients
             .Group(channelKey)
-            .SendAsync(NotificationHub.ReceiveChannelEventMethod, channelKey, eventName, payloadJson, cancellationToken)
-            .ConfigureAwait(false);
+            .SendAsync(NotificationHub.ReceiveChannelEventMethod, channelKey, eventName, payloadJson, cancellationToken);
 }

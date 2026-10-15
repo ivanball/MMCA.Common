@@ -92,8 +92,8 @@ public sealed class OidcDiscoveryEndpointTests
     }
 
     // ── Helpers ──
-    private static async Task<IHost> CreateHostAsync(string? issuer) =>
-        await new HostBuilder()
+    private static Task<IHost> CreateHostAsync(string? issuer) =>
+        new HostBuilder()
             .ConfigureAppConfiguration(configurationBuilder =>
             {
                 var values = new Dictionary<string, string?>(StringComparer.Ordinal);

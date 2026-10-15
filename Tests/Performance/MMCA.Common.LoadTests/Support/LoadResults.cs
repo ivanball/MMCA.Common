@@ -17,11 +17,11 @@ internal static class LoadResults
             ? configured
             : Path.Combine(AppContext.BaseDirectory, "load-results");
 
-    public static async Task WriteAsync(string scenario, object summary, CancellationToken cancellationToken)
+    public static Task WriteAsync(string scenario, object summary, CancellationToken cancellationToken)
     {
         System.IO.Directory.CreateDirectory(Directory);
         var path = Path.Combine(Directory, $"{scenario}.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(summary, Options), cancellationToken);
+        return File.WriteAllTextAsync(path, JsonSerializer.Serialize(summary, Options), cancellationToken);
     }
 
     /// <summary>Nearest-rank percentile (no interpolation) of an unsorted sample.</summary>

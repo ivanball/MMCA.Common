@@ -21,16 +21,16 @@ public sealed class SoftDeletedUserValidator<TUser>(IUnitOfWork unitOfWork) : IS
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>
 {
     /// <inheritdoc />
-    public async Task<bool> IsUserSoftDeletedAsync(
+    public Task<bool> IsUserSoftDeletedAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
         var repository = unitOfWork.GetRepository<TUser, UserIdentifierType>();
 
         // Single query: check if user exists AND is soft-deleted, bypassing the global query filter.
-        return await repository.ExistsAsync(
+        return repository.ExistsAsync(
             u => u.Id == userId && u.IsDeleted,
             ignoreQueryFilters: true,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken);
     }
 }

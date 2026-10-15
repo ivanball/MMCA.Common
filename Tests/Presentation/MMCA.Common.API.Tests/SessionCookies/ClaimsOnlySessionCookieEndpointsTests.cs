@@ -69,8 +69,8 @@ public sealed class ClaimsOnlySessionCookieEndpointsTests
         response.Headers.GetValues("Set-Cookie").Should().OnlyContain(c => c.Contains("samesite=strict", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static async Task<IHost> CreateHostAsync(bool claimsOnly, SessionTokenResult? result) =>
-        await new HostBuilder()
+    private static Task<IHost> CreateHostAsync(bool claimsOnly, SessionTokenResult? result) =>
+        new HostBuilder()
             .ConfigureWebHost(webBuilder => webBuilder
                 .UseTestServer()
                 .UseEnvironment(Environments.Production)

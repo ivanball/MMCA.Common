@@ -18,8 +18,8 @@ public sealed class ForgotPasswordPage
     // "Back to Sign In" is a MudButton with Href, so it renders as <a>, not <button>
     public ILocator BackToLoginLink => _page.GetByRole(AriaRole.Link, new() { Name = "Back to Sign In" });
 
-    public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/forgot-password").ConfigureAwait(false);
+    public Task GotoAsync() =>
+        _page.GotoAndWaitForBlazorAsync("/forgot-password");
 
     public async Task RequestResetAsync(string email)
     {

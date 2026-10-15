@@ -52,13 +52,13 @@ public sealed class PushNotificationService(
     }
 
     /// <inheritdoc />
-    public async Task<Result<PagedCollectionResult<PushNotificationDTO>>> GetHistoryAsync(
+    public Task<Result<PagedCollectionResult<PushNotificationDTO>>> GetHistoryAsync(
         int pageNumber = 1,
         int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
         var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}");
-        return await SendRequestAsync<PagedCollectionResult<PushNotificationDTO>>(
+        return SendRequestAsync<PagedCollectionResult<PushNotificationDTO>>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken);
     }
