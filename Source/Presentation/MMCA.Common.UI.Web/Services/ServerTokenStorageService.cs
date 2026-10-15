@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
@@ -20,6 +21,19 @@ namespace MMCA.Common.UI.Web.Services;
 /// <see cref="ISessionAwareTokenRefresher"/>), instead of one token round trip per API call; a
 /// session created in another tab is seen within that window, and <see cref="SetTokensAsync"/> ends
 /// it at once. A transient failure is never remembered: the next read hydrates again.
+/// </para>
+/// <para>
+/// On the circuit <see cref="IHttpContextAccessor.HttpContext"/> is NOT null: it is the request that
+/// opened the Blazor hub connection, sent before any sign-in on that circuit and never updated, so its
+/// cookie is stale by construction. Two signals keep that cookie from answering for the circuit. Once
+/// this scoped instance has set, cleared or hydrated a token it is a circuit instance (the cookie sync
+/// and the refresher both need JS interop, which a prerender does not have, and the prerender and the
+/// circuit never share a DI scope), and from then on memory is the source of truth. Before that, a hub
+/// connection request (SignalR <see cref="HubMetadata"/> on its endpoint, or a WebSocket request) may
+/// still answer from its cookie while that token is fresh (or absent, as for an anonymous visitor),
+/// which is how a circuit starts, but an expired one is re-acquired through the refresher instead of
+/// being returned. A real page request
+/// (the SSR prerender) carries neither signal and reads the cookie exactly as before.
 /// </para>
 /// </summary>
 /// <param name="httpContextAccessor">Tells the SSR prerender apart from the interactive circuit.</param>
@@ -47,6 +61,12 @@ public sealed class ServerTokenStorageService(
     private DateTimeOffset _anonymousUntil;
 
     /// <summary>
+    /// Set once this instance has stored, cleared or hydrated a token, which only happens on the
+    /// circuit: from then on the in-memory token wins over the connection request's stale cookie.
+    /// </summary>
+    private volatile bool _memoryIsAuthoritative;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ServerTokenStorageService"/> class on the system
     /// clock. Kept so code compiled against the original four-argument constructor keeps binding.
     /// </summary>
@@ -65,11 +85,9 @@ public sealed class ServerTokenStorageService(
 
     public async Task<string?> GetAccessTokenAsync()
     {
-        // SSR prerender: the HttpOnly cookie (possibly just refreshed by the middleware / stashed in
-        // HttpContext.Items) is the source of truth; JS interop is unavailable here.
-        if (httpContextAccessor.HttpContext is not null)
+        if (TryAnswerFromCookie(out var cookieToken))
         {
-            return cookieTokenReader.ReadAccessToken();
+            return cookieToken;
         }
 
         // Interactive circuit: in-memory token, re-acquired from the cookie via JS when missing/near-expiry.
@@ -124,6 +142,7 @@ public sealed class ServerTokenStorageService(
         // A login right after anonymous browsing must not wait out the grace.
         _anonymousUntil = default;
         _accessToken = accessToken;
+        _memoryIsAuthoritative = true;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
         // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
         // set) so AuthUIService reports Auth.TokenStorageUnavailable instead of a login that silently signs
@@ -137,6 +156,9 @@ public sealed class ServerTokenStorageService(
     public async Task ClearTokensAsync()
     {
         _accessToken = null;
+        // A logout must not be undone by the connection request's cookie, which still holds the token
+        // the circuit started with: from here the next read re-acquires from the (cleared) session.
+        _memoryIsAuthoritative = true;
         // Best-effort by contract (IAuthUIService.LogoutAsync never fails), so a false is ignored. A caller
         // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
         // server-side revoke.
@@ -161,6 +183,8 @@ public sealed class ServerTokenStorageService(
             _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
         }
 
+        _memoryIsAuthoritative = true;
+
         if (_accessToken is null && !unavailable)
         {
             _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
@@ -168,4 +192,43 @@ public sealed class ServerTokenStorageService(
 
         return _accessToken;
     }
+
+    /// <summary>
+    /// Answers from the request's HttpOnly cookie when that cookie, not memory, is the source of truth.
+    /// </summary>
+    /// <param name="token">The cookie's access token (null when absent) when this returns true.</param>
+    /// <returns><see langword="false"/> when the in-memory path must answer instead.</returns>
+    private bool TryAnswerFromCookie(out string? token)
+    {
+        token = null;
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext is null || _memoryIsAuthoritative)
+        {
+            return false;
+        }
+
+        token = cookieTokenReader.ReadAccessToken();
+
+        // SSR prerender: the HttpOnly cookie (possibly just refreshed by the middleware / stashed in
+        // HttpContext.Items) is the source of truth; JS interop is unavailable here.
+        if (!IsHubConnection(httpContext))
+        {
+            return true;
+        }
+
+        // Circuit before any token was stored here: the connection request's cookie is the session the
+        // circuit started with. No cookie answers anonymous as before and a fresh one is used, but an
+        // expired one is never handed back (it would 401 every call for the life of the circuit): the
+        // refresher re-acquires instead.
+        return token is null || JwtTokenInfo.IsFresh(token, ExpirySkew);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="httpContext"/> is the request that opened the Blazor Server hub
+    /// connection (any transport: the endpoint carries SignalR's <see cref="HubMetadata"/>; a WebSocket
+    /// request is never a page render either) rather than a page request being prerendered.
+    /// </summary>
+    private static bool IsHubConnection(HttpContext httpContext) =>
+        httpContext.GetEndpoint()?.Metadata.GetMetadata<HubMetadata>() is not null
+        || httpContext.WebSockets.IsWebSocketRequest;
 }

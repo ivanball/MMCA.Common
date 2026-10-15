@@ -4,6 +4,21 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `[Sensitive]` (`MMCA.Common.Domain.Attributes.SensitiveAttribute`, MMCA.Common.Domain) marks a secret or credential that is not personal data, such as an API key or a signing secret. The audit trail records the redaction token in place of its old and new values. It is deliberately not a PII marker: it does not make `PiiRedactor.HasPii` true, `PiiRedactor.Redact` does not mask it, and it does not require `IAnonymizable`.
+
+### Security
+
+- The audit trail no longer records password hashes and salts. `AuditTrailSaveChangesInterceptor` (MMCA.Common.Infrastructure) redacted only `[Pii]` properties and rendered a byte array as hexadecimal, so on an audited entity implementing `IAuthUser` every password change wrote the old and new hash and salt into `AuditTrailEntries` in readable form. The members implementing `IAuthUser.PasswordHash` and `IAuthUser.PasswordSalt` (resolved through the interface map) and every `[Sensitive]` property now record the redaction token on every row that carries a value, with nothing to mark in the consumer. Rows already written keep their values; a consumer that audits its `User` entity should purge or redact the existing `PasswordHash` and `PasswordSalt` rows of its trail.
+
+### Fixed
+
+- The stored language and theme apply at the first Blazor Server sign-in on a fresh browser. On the interactive circuit `IHttpContextAccessor.HttpContext` is the request that opened the hub connection, sent before sign-in and never updated, and `ServerTokenStorageService` (MMCA.Common.UI.Web) answered every token read from that request's cookie whenever an HttpContext existed. A sign-in therefore stored its token in memory and the very next read (the preference read) got the connection's missing cookie, so the request was never sent; the second sign-in worked because the cookie then existed. The same read kept a circuit sending an expired token for as long as it stayed open. Once the instance has stored, cleared or hydrated a token, memory is now the source of truth on the circuit, an expired in-memory token is re-acquired through the token refresher, and a logout is no longer undone by the connection cookie. Before that, a hub connection request (SignalR hub metadata on its endpoint, or a WebSocket request) answers from its cookie only while that token is fresh or absent, and re-acquires an expired one. The SSR prerender reads the cookie exactly as before. Consumers need no change.
+- Dark-mode text alerts reach the WCAG 2.1 AA 4.5:1 text contrast. `MMCATheme` (MMCA.Common.UI) left the dark palette's `InfoDarken`, `SuccessDarken`, `WarningDarken` and `ErrorDarken` to MudBlazor, which darkens each accent; MudBlazor 9.11 paints a text or outlined alert's message in that colour, so on the dark Surface the darkened Info (#2094F3) read 3.82:1 on the alert's tint, Success 4.23:1 and Error 4.31:1. The dark palette now sets Blue 300 #64B5F6, Green 300 #81C784, Orange 300 #FFB74D and Red 200 #EF9A9A (new `BrandColors.Dark*Darken` constants), each at 5.49:1 or better on the tint and on Surface. The same four values are the hover, focus-visible and active fill of filled Info, Success, Warning and Error buttons, chips and FABs in dark mode, which now lighten rather than darken on interaction (the dark on-colour label reads 8.2:1 or better on them). The light palette is unchanged.
+
 ## [1.241.0] - 2026-10-14
 
 ### Changed

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Privacy;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
@@ -284,9 +285,16 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
     }
 
     // -- L124: a byte-array value is rendered readably --
+    // The property is a plain byte array: not an IAuthUser credential and not [Sensitive], so the
+    // hex rendering is what reaches the table. Credentials are covered by the redaction tests below.
     [Fact]
     public async Task SaveChanges_ChangedByteArray_RendersHex()
     {
+        typeof(AuditedAggregateThing).Should().NotBeAssignableTo<IAuthUser>(
+            "the hex rendering must be proven on a byte array that is not a credential");
+        typeof(AuditedAggregateThing).GetProperty(nameof(AuditedAggregateThing.Hash))!
+            .IsDefined(typeof(MMCA.Common.Domain.Attributes.SensitiveAttribute), inherit: true).Should().BeFalse();
+
         var thing = new AuditedAggregateThing { Id = 2, Name = "Hashed", Hash = [1, 2] };
         _context.AuditedAggregateThings.Add(thing);
         await _context.SaveChangesAsync(userId: 1);
@@ -297,6 +305,77 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
         var row = (await ModifiedRowsAsync()).Single(r => r.PropertyName == nameof(AuditedAggregateThing.Hash));
         row.OldValue.Should().Be("0102");
         row.NewValue.Should().Be("0304");
+    }
+
+    // -- Run 12: an IAuthUser's password hash and salt are redacted with no marker on them --
+    [Fact]
+    public async Task SaveChanges_AuthUserPasswordChanged_RecordsTheRedactionTokenForHashAndSalt()
+    {
+        var user = new CredentialUser { Name = "Account", PasswordHash = [0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89], PasswordSalt = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0] };
+        _context.CredentialUsers.Add(user);
+        await _context.SaveChangesAsync(userId: 1);
+
+        user.PasswordHash = [0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10];
+        user.PasswordSalt = [0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78];
+        await _context.SaveChangesAsync(userId: 2);
+
+        var rows = await ModifiedRowsAsync();
+        var hash = rows.Single(r => r.PropertyName == nameof(CredentialUser.PasswordHash));
+        hash.OldValue.Should().Be(PiiRedactor.RedactedToken);
+        hash.NewValue.Should().Be(PiiRedactor.RedactedToken);
+
+        var salt = rows.Single(r => r.PropertyName == nameof(CredentialUser.PasswordSalt));
+        salt.OldValue.Should().Be(PiiRedactor.RedactedToken);
+        salt.NewValue.Should().Be(PiiRedactor.RedactedToken);
+
+        AssertNoCredentialHex(await RowsAsync(), "ABCDEF0123456789", "123456789ABCDEF0", "FEDCBA9876543210", "0F1E2D3C4B5A6978");
+    }
+
+    // -- Run 12: inserting and deleting an IAuthUser never writes its credentials either --
+    [Fact]
+    public async Task SaveChanges_AuthUserAddedAndDeleted_NeverRecordsTheHashOrSalt()
+    {
+        var user = new CredentialUser { Name = "Account", PasswordHash = [0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89], PasswordSalt = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0] };
+        _context.CredentialUsers.Add(user);
+        await _context.SaveChangesAsync(userId: 1);
+
+        _context.CredentialUsers.Remove(user);
+        await _context.SaveChangesAsync(userId: 2);
+
+        var rows = await RowsAsync();
+        rows.Should().Contain(r => r.Operation == "Added").And.Contain(r => r.Operation == "Deleted");
+        AssertNoCredentialHex(rows, "ABCDEF0123456789", "123456789ABCDEF0");
+
+        // Added and Deleted write one summary row with no values, so any row that does name a
+        // credential property must carry the token on both sides.
+        string?[] allowed = [null, PiiRedactor.RedactedToken];
+        foreach (var row in rows.Where(r =>
+            string.Equals(r.PropertyName, nameof(CredentialUser.PasswordHash), StringComparison.Ordinal)
+            || string.Equals(r.PropertyName, nameof(CredentialUser.PasswordSalt), StringComparison.Ordinal)))
+        {
+            allowed.Should().Contain(row.OldValue);
+            allowed.Should().Contain(row.NewValue);
+        }
+    }
+
+    // -- Run 12: a [Sensitive] property on an ordinary entity is redacted on change --
+    [Fact]
+    public async Task SaveChanges_SensitiveProperty_RecordsTheRedactionToken()
+    {
+        var thing = new SensitiveThing { Name = "Integration", ApiKey = "key-original-1" };
+        _context.SensitiveThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        thing.ApiKey = "key-rotated-2";
+        await _context.SaveChangesAsync(userId: 2);
+
+        var row = (await ModifiedRowsAsync()).Should().ContainSingle().Subject;
+        row.PropertyName.Should().Be(nameof(SensitiveThing.ApiKey));
+        row.OldValue.Should().Be(PiiRedactor.RedactedToken);
+        row.NewValue.Should().Be(PiiRedactor.RedactedToken);
+        (await RowsAsync()).Should().NotContain(r =>
+            r.OldValue != null && r.OldValue.Contains("key-", StringComparison.Ordinal)
+            || r.NewValue != null && r.NewValue.Contains("key-", StringComparison.Ordinal));
     }
 
     // -- M181: a change confined to an owned value object is recorded under its owner --
@@ -319,6 +398,21 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
     }
 
     // ── Helpers ──
+    private static void AssertNoCredentialHex(List<AuditTrailEntry> rows, params string[] hexValues)
+    {
+        foreach (var row in rows)
+        {
+            string?[] everyColumn =
+            [
+                row.EntityType, row.EntityKey, row.PropertyName, row.OldValue, row.NewValue,
+                row.Operation, row.CorrelationId, row.TenantId,
+            ];
+            everyColumn.Should().NotContain(value => value != null
+                && hexValues.Any(hex => value.Contains(hex, StringComparison.OrdinalIgnoreCase)),
+                "a password hash or salt must never reach the trail in readable form");
+        }
+    }
+
     private async Task<AuditedThing> SeedAsync()
     {
         var thing = new AuditedThing { Name = "Original", Email = "original@example.com", Quantity = 1 };

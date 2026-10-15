@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using MMCA.Common.Domain.Attributes;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Privacy;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
@@ -41,6 +43,13 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// records <see cref="PiiRedactor.RedactedToken"/> on both sides of the change. Redaction happens
 /// at capture, not at read, so the trail cannot become a second copy of a data subject's personal
 /// data that erasure would have to chase (ADR-005).
+/// </para>
+/// <para>
+/// <b>Credentials never reach the table either.</b> The password hash and salt of an entity
+/// implementing <see cref="IAuthUser"/>, and any property carrying <see cref="SensitiveAttribute"/>,
+/// record the same token. The consumer marks nothing for the first: the implementing properties
+/// are found through the interface map, so a password change can never write the old and new
+/// hash and salt into the trail as hexadecimal.
 /// </para>
 /// <para>
 /// <b>Correlation.</b> The row records the ambient <see cref="Activity"/> trace id, not the scoped
@@ -105,6 +114,13 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>Caches the <see cref="PiiAttribute"/> verdict per (declaring type, property name).</summary>
     private static readonly ConcurrentDictionary<(Type DeclaringType, string PropertyName), bool> PiiCache = new();
+
+    /// <summary>
+    /// Caches, per CLR type, the names of the properties that always record the redaction token
+    /// whatever their PII marking: the <see cref="IAuthUser"/> credential members and every
+    /// <see cref="SensitiveAttribute"/> property. An empty set is the cheap common case.
+    /// </summary>
+    private static readonly ConcurrentDictionary<Type, HashSet<string>> CredentialCache = new();
 
     /// <summary>
     /// The framework's own bookkeeping entities, which are never audited whatever markers they
@@ -299,6 +315,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         // One reflection pass per entity type, cached by the redactor: when nothing on the type is
         // personal data, the per-property attribute lookup below is skipped entirely.
         var typeHasPii = PiiRedactor.HasPii(entry.Metadata.ClrType);
+        var credentials = CredentialPropertyNames(entry.Metadata.ClrType);
 
         foreach (var property in entry.Properties)
         {
@@ -314,15 +331,15 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 continue;
             }
 
-            var isPii = typeHasPii && IsPiiProperty(property);
+            var isRedacted = typeHasPii && IsPiiProperty(property) || credentials.Contains(property.Metadata.Name);
 
             AddRow(context, new AuditTrailEntry
             {
                 EntityType = entityType,
                 EntityKey = entityKey,
                 PropertyName = ColumnWidth.Truncate(property.Metadata.Name, MaxKeyLength),
-                OldValue = isPii ? PiiRedactor.RedactedToken : FormatValue(original),
-                NewValue = isPii ? PiiRedactor.RedactedToken : FormatValue(current),
+                OldValue = isRedacted ? PiiRedactor.RedactedToken : FormatValue(original),
+                NewValue = isRedacted ? PiiRedactor.RedactedToken : FormatValue(current),
                 Operation = OperationModified,
                 ChangedBy = capture.ChangedBy,
                 ChangedOn = capture.ChangedOn,
@@ -373,6 +390,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
     {
         var replaced = target.State == EntityState.Added ? FindReplacedOwnedEntry(context, target) : null;
         var typeHasPii = PiiRedactor.HasPii(target.Metadata.ClrType);
+        var credentials = CredentialPropertyNames(target.Metadata.ClrType);
 
         foreach (var property in target.Properties.Where(p => IsOwnedValueColumn(p.Metadata)))
         {
@@ -385,15 +403,15 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 continue;
             }
 
-            var isPii = typeHasPii && IsPiiProperty(property);
+            var isRedacted = typeHasPii && IsPiiProperty(property) || credentials.Contains(property.Metadata.Name);
 
             AddRow(context, new AuditTrailEntry
             {
                 EntityType = entityType,
                 EntityKey = entityKey,
                 PropertyName = ColumnWidth.Truncate($"{navigationName}.{property.Metadata.Name}", MaxKeyLength),
-                OldValue = isPii ? PiiRedactor.RedactedToken : FormatValue(original),
-                NewValue = isPii ? PiiRedactor.RedactedToken : FormatValue(current),
+                OldValue = isRedacted ? PiiRedactor.RedactedToken : FormatValue(original),
+                NewValue = isRedacted ? PiiRedactor.RedactedToken : FormatValue(current),
                 Operation = OperationModified,
                 ChangedBy = capture.ChangedBy,
                 ChangedOn = capture.ChangedOn,
@@ -622,6 +640,37 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
             static (_, propertyInfo) => Attribute.IsDefined(propertyInfo, typeof(PiiAttribute), inherit: true),
             info);
     }
+
+    /// <summary>
+    /// The names of the properties of <paramref name="clrType"/> whose values are credentials: the
+    /// members implementing <see cref="IAuthUser"/> (resolved through the interface map, so an
+    /// implementation inherited from a base class is found too) and every property carrying
+    /// <see cref="SensitiveAttribute"/>. Computed once per type.
+    /// </summary>
+    private static HashSet<string> CredentialPropertyNames(Type clrType) =>
+        CredentialCache.GetOrAdd(clrType, static type =>
+        {
+            var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            if (typeof(IAuthUser).IsAssignableFrom(type))
+            {
+                var map = type.GetInterfaceMap(typeof(IAuthUser));
+                names.UnionWith(map.TargetMethods
+                    .Select(target => Array.Find(properties, p => p.GetMethod?.MethodHandle == target.MethodHandle)?.Name)
+                    .OfType<string>());
+
+                // An explicit implementation is a private, differently named property that EF does
+                // not map; a mapped column then carries the interface member's own name.
+                names.UnionWith(typeof(IAuthUser).GetProperties().Select(member => member.Name));
+            }
+
+            names.UnionWith(properties
+                .Where(property => Attribute.IsDefined(property, typeof(SensitiveAttribute), inherit: true))
+                .Select(property => property.Name));
+
+            return names;
+        });
 
     /// <summary>
     /// Renders a value for storage. Culture-invariant on purpose: a trail read years later, or on a
