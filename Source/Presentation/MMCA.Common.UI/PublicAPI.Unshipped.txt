@@ -1,5 +1,1 @@
 #nullable enable
-const MMCA.Common.UI.Theme.BrandColors.DarkErrorDarken = "#EF9A9A" -> string!
-const MMCA.Common.UI.Theme.BrandColors.DarkInfoDarken = "#64B5F6" -> string!
-const MMCA.Common.UI.Theme.BrandColors.DarkSuccessDarken = "#81C784" -> string!
-const MMCA.Common.UI.Theme.BrandColors.DarkWarningDarken = "#FFB74D" -> string!
