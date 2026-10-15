@@ -11,6 +11,8 @@ MMCA.Common.Domain.Attributes.NavigationAttribute.IsCollection.init -> void
 MMCA.Common.Domain.Attributes.NavigationAttribute.NavigationAttribute() -> void
 MMCA.Common.Domain.Attributes.PiiAttribute
 MMCA.Common.Domain.Attributes.PiiAttribute.PiiAttribute() -> void
+MMCA.Common.Domain.Attributes.SensitiveAttribute
+MMCA.Common.Domain.Attributes.SensitiveAttribute.SensitiveAttribute() -> void
 MMCA.Common.Domain.Auth.IAuthUser
 MMCA.Common.Domain.Auth.IAuthUser.PasswordHash.get -> byte[]!
 MMCA.Common.Domain.Auth.IAuthUser.PasswordSalt.get -> byte[]!

@@ -54,6 +54,7 @@ MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.AdditionalTokenIssuingPaths.get -> System.Collections.Generic.IList<string!>!
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.GatewayAddress.get -> string?
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.GatewayAddress.set -> void
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.MaxRequestBodySizeByPath.get -> System.Collections.Generic.IDictionary<string!, long>!
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.PathPrefix.get -> string!
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.PathPrefix.set -> void
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.RefreshPath.get -> string!
@@ -105,4 +106,3 @@ static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions.M
 static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyServiceExtensions.AddCommonSameOriginApiProxy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.DefaultTokenIssuingPaths -> System.Collections.Generic.IReadOnlyList<string!>!
 ~override MMCA.Common.UI.Web.Components.Pages.Error.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.MaxRequestBodySizeByPath.get -> System.Collections.Generic.IDictionary<string!, long>!

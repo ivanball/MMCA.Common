@@ -96,6 +96,20 @@ public static class MMCATheme
             // Same treatment as Primary: white on a lightened dark-mode error fails AA on the filled
             // error alert's message text; rgba(0,0,0,0.87) on #FF8A80 is 7.94:1.
             ErrorContrastText = "rgba(0,0,0,0.87)",
+            // A text (default-variant) or outlined alert paints its message in the *Darken colour, over
+            // the base colour at HoverOpacity (0.06) composited on Surface. Left unset, MudBlazor darkens
+            // each accent, which on a dark surface moves the text TOWARDS the background: Info #2094F3
+            // is 3.82:1 on its tint and 4.20:1 on Surface, Success #4DAC52 4.23:1, Error #FF695C 4.31:1,
+            // all under the WCAG 2.1 AA 4.5:1 floor. The Material 300-level tints (Red 200 for Error,
+            // whose base is already lighter than Red 300) clear it on both: tint / Surface is
+            // Info 5.49 / 6.04, Success 6.01 / 6.65, Warning 6.93 / 7.73, Error 5.66 / 6.22.
+            // The same values are the hover/focus/active fill of filled Info/Success/Warning/Error
+            // buttons, chips and FABs, whose dark on-colour label reads 8.2:1 or better on them.
+            // AlertTextContrastTests pins all eight ratios.
+            InfoDarken = BrandColors.DarkInfoDarken,
+            SuccessDarken = BrandColors.DarkSuccessDarken,
+            WarningDarken = BrandColors.DarkWarningDarken,
+            ErrorDarken = BrandColors.DarkErrorDarken,
             // Non-text UI answers to the 3:1 floor (WCAG 1.4.11). MudBlazor's dark default
             // rgba(255,255,255,0.3) is only 2.6:1 on Surface #27303A, so outlined text-field borders
             // are effectively invisible to a low-vision user; rgba(255,255,255,0.5) is 4.59:1 on

@@ -95,4 +95,21 @@ public sealed class PiiRedactorTests
     [Fact]
     public void HasPii_IsFalse_WhenTypeHasNoPiiProperty() =>
         PiiRedactor.HasPii(typeof(NoPii)).Should().BeFalse();
+
+    private sealed class OnlySensitive
+    {
+        public int Id { get; init; } = 7;
+
+        [Sensitive]
+        public string ApiKey { get; init; } = "secret-value";
+    }
+
+    // Run 12: [Sensitive] marks a credential, not personal data, so it must not feed the PII paths.
+    [Fact]
+    public void HasPii_IsFalse_WhenTheOnlyMarkedMemberIsSensitive() =>
+        PiiRedactor.HasPii(typeof(OnlySensitive)).Should().BeFalse();
+
+    [Fact]
+    public void Redact_DoesNotTreatASensitiveMemberAsPii() =>
+        PiiRedactor.Redact(new OnlySensitive())["ApiKey"].Should().NotBe(PiiRedactor.RedactedToken);
 }

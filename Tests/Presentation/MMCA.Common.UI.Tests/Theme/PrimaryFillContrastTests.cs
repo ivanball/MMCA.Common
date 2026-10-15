@@ -55,7 +55,7 @@ public sealed class PrimaryFillContrastTests
 
     // Source-over alpha compositing of a (possibly translucent) colour onto an opaque #RRGGBB underlay,
     // per channel in sRGB, which is what a browser does for an rgba() colour over a solid one.
-    private static string Composite(MudColor overlay, string underlay)
+    internal static string Composite(MudColor overlay, string underlay)
     {
         var alpha = overlay.A / 255.0;
 
@@ -68,9 +68,9 @@ public sealed class PrimaryFillContrastTests
         return $"#{Channel(overlay.R, 1):X2}{Channel(overlay.G, 3):X2}{Channel(overlay.B, 5):X2}";
     }
 
-    private static string ToHex(MudColor color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+    internal static string ToHex(MudColor color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
-    private static double ContrastRatio(string foreground, string background)
+    internal static double ContrastRatio(string foreground, string background)
     {
         var lighter = Math.Max(RelativeLuminance(foreground), RelativeLuminance(background));
         var darker = Math.Min(RelativeLuminance(foreground), RelativeLuminance(background));

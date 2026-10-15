@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Attributes;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
@@ -83,6 +84,32 @@ public sealed class OverridingPiiThing : PiiBaseThing, IAuditedEntity
     public override string Email { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// An opted-in account entity implementing <see cref="IAuthUser"/> the way an Identity module's
+/// <c>User</c> does: the credential members carry no marker of any kind.
+/// </summary>
+public sealed class CredentialUser : IAuditedEntity, IAuthUser
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public byte[] PasswordHash { get; set; } = [];
+
+    public byte[] PasswordSalt { get; set; } = [];
+}
+
+/// <summary>An opted-in entity (not an <see cref="IAuthUser"/>) carrying a non-personal secret.</summary>
+public sealed class SensitiveThing : IAuditedEntity
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    [Sensitive]
+    public string ApiKey { get; set; } = string.Empty;
+}
+
 /// <summary>An entity that never opted in; nothing it does may reach the trail.</summary>
 public sealed class PlainThing
 {
@@ -119,6 +146,10 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
     public DbSet<OverridingPiiThing> OverridingPiiThings => Set<OverridingPiiThing>();
 
     public DbSet<PlainThing> PlainThings => Set<PlainThing>();
+
+    public DbSet<CredentialUser> CredentialUsers => Set<CredentialUser>();
+
+    public DbSet<SensitiveThing> SensitiveThings => Set<SensitiveThing>();
 
     public DbSet<CompositeKeyThing> CompositeKeyThings => Set<CompositeKeyThing>();
 
@@ -197,6 +228,18 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<CredentialUser>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<SensitiveThing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
         });
 
         modelBuilder.Entity<CompositeKeyThing>(entity => entity.HasKey(e => new { e.PartA, e.PartB }));

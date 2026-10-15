@@ -116,6 +116,22 @@ public static class BrandColors
     /// <summary>Dark-palette error (Red A100); the contrast rationale lives beside its use in <see cref="MMCATheme"/>.</summary>
     public const string DarkError = "#FF8A80";
 
+    /// <summary>
+    /// Dark-palette info darken (Blue 300), the text colour of a text or outlined info alert and the
+    /// hover/focus/active fill of a filled info control. Lighter than <see cref="DarkInfo"/> on purpose;
+    /// the contrast rationale lives beside its use in <see cref="MMCATheme"/>.
+    /// </summary>
+    public const string DarkInfoDarken = "#64B5F6";
+
+    /// <summary>Dark-palette success darken (Green 300); see <see cref="DarkInfoDarken"/>.</summary>
+    public const string DarkSuccessDarken = "#81C784";
+
+    /// <summary>Dark-palette warning darken (Orange 300); see <see cref="DarkInfoDarken"/>.</summary>
+    public const string DarkWarningDarken = "#FFB74D";
+
+    /// <summary>Dark-palette error darken (Red 200); see <see cref="DarkInfoDarken"/>.</summary>
+    public const string DarkErrorDarken = "#EF9A9A";
+
     /// <summary>Dark-palette page background.</summary>
     public const string DarkBackground = "#1A2027";
 

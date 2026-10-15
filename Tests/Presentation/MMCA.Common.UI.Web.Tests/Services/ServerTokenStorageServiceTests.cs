@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
@@ -73,7 +74,21 @@ public sealed class ServerTokenStorageServiceTests
         return context;
     }
 
-    private static string CreateJwt(DateTime expires) =>
+    /// <summary>
+    /// The HttpContext the circuit actually sees: the request that opened the Blazor hub connection,
+    /// whose endpoint carries SignalR's hub metadata and whose cookies are those sent at connect time.
+    /// </summary>
+    internal static DefaultHttpContext HubConnectionContext(string? accessToken = null)
+    {
+        var context = ContextWithCookies(accessToken: accessToken);
+        context.SetEndpoint(new Endpoint(
+            requestDelegate: null,
+            new EndpointMetadataCollection(new HubMetadata(typeof(ConnectionHub))),
+            "/_blazor"));
+        return context;
+    }
+
+    internal static string CreateJwt(DateTime expires) =>
         new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             notBefore: expires.AddMinutes(-60),
             expires: expires));
@@ -110,6 +125,79 @@ public sealed class ServerTokenStorageServiceTests
         var result = await sut.GetAccessTokenAsync();
 
         result.Should().BeNull();
+    }
+
+    // == Run 12 A-03: on the circuit the HttpContext is the hub connection request, opened before sign-in ==
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnectionWithoutCookie_ReturnsTheTokenStoredAtSignIn()
+    {
+        var (sut, mocks) = CreateSut(HubConnectionContext());
+        var freshJwt = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+
+        await sut.SetTokensAsync(freshJwt, "rt");
+
+        (await sut.GetAccessTokenAsync()).Should().Be(freshJwt,
+            "the token stored at sign-in must win over the connection request, which carried no cookie");
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnectionWithExpiredStoredToken_RehydratesAndIgnoresTheConnectionCookie()
+    {
+        var connectionCookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        var (sut, mocks) = CreateSut(HubConnectionContext(connectionCookieToken));
+        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddMinutes(-5)), "rt");
+
+        var result = await sut.GetAccessTokenAsync();
+
+        result.Should().Be("hydrated-token");
+        result.Should().NotBe(connectionCookieToken);
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_DuringSsrPrerenderWithNothingInMemory_ReadsTheAccessCookie()
+    {
+        var cookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        var (sut, mocks) = CreateSut(ContextWithCookies(accessToken: cookieToken));
+
+        (await sut.GetAccessTokenAsync()).Should().Be(cookieToken);
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnectionAfterLogout_DoesNotResurrectTheConnectionCookie()
+    {
+        var oldToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        var (sut, _) = CreateSut(HubConnectionContext(oldToken), refresherToken: null);
+        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddMinutes(10)), "rt");
+
+        await sut.ClearTokensAsync();
+
+        (await sut.GetAccessTokenAsync()).Should().NotBe(oldToken,
+            "a logout must not be undone by the token the connection request carried");
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnectionWithExpiredCookie_RehydratesInsteadOfReturningIt()
+    {
+        // The production loop: a circuit kept sending the connection's expired token for hours.
+        var expiredCookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        var (sut, mocks) = CreateSut(HubConnectionContext(expiredCookieToken));
+
+        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnectionWithFreshCookieAndNothingStored_ReturnsTheCookie()
+    {
+        // A circuit that starts signed in keeps answering from its connection cookie while it is fresh.
+        var cookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        var (sut, mocks) = CreateSut(HubConnectionContext(cookieToken));
+
+        (await sut.GetAccessTokenAsync()).Should().Be(cookieToken);
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // L132: on the circuit, an anonymous visitor's "no session" answer is remembered briefly.
@@ -299,6 +387,9 @@ public sealed class ServerTokenStorageServiceTests
 
         await act.Should().NotThrowAsync();
     }
+
+    /// <summary>Stands in for Blazor's internal ComponentHub in the connection endpoint's metadata.</summary>
+    private sealed class ConnectionHub : Hub;
 
     /// <summary>A settable clock (this project does not reference the TimeProvider testing package).</summary>
     private sealed class ManualClock(DateTimeOffset start) : TimeProvider
