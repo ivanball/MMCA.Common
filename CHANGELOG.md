@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- The notification bell stops polling once the server has rejected the session. `NotificationBell` (MMCA.Common.UI) kept its periodic unread-count read running after `GetUnreadCountAsync` answered Unauthorized, which the inbox service reports only after its own forced token refresh and replay have failed. A Blazor Server tab left open on a dead session therefore sent one rejected read plus one failed refresh every poll interval for as long as it stayed open: in production one tab produced about 1,240 rejected reads and 1,150 failed refreshes in a day. An Unauthorized read now stops the periodic timer (the first read never starts it), navigation and push reads keep running, and the first of them that succeeds starts polling again. A transient failure (5xx, timeout, network) keeps polling exactly as before. Consumers need no change.
+- A database provider's own cancel report is answered 499 once the client has gone. `OperationCanceledExceptionHandler` (MMCA.Common.API) claimed only `OperationCanceledException`, but SqlClient can surface a command cancelled by `RequestAborted` as a `SqlException` ("Operation cancelled by user."), which then reached `GlobalExceptionHandler` and was logged at Error as an unhandled exception, although the response went nowhere. A `DbException` raised after the client disconnected is now handled like the cancellation it is: status 499, logged at Warning with its stack, so a database fault that coincides with a disconnect stays visible. Any other exception type still falls through to the generic handler, and a `DbException` while the client is connected still answers 500. Consumers need no change.
+
 ## [1.240.0] - 2026-10-11
 
 ### Fixed
