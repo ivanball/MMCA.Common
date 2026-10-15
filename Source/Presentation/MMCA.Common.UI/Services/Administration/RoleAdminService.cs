@@ -51,7 +51,7 @@ public sealed class RoleAdminService(
         GetAsync<PermissionCatalogResponse>($"{Endpoint}/catalog", cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<RolePermissionsResponse>> SetStoredPermissionsAsync(
+    public Task<Result<RolePermissionsResponse>> SetStoredPermissionsAsync(
         string role,
         IReadOnlyList<string> permissions,
         CancellationToken cancellationToken = default)
@@ -61,7 +61,7 @@ public sealed class RoleAdminService(
 
         var url = $"{Endpoint}/{Uri.EscapeDataString(role)}/permissions";
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -86,8 +86,8 @@ public sealed class RoleAdminService(
     /// <param name="url">The relative URL to read.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The body, or the API's own refusal.</returns>
-    private async Task<Result<TResponse>> GetAsync<TResponse>(string url, CancellationToken cancellationToken) =>
-        await HttpResultExecutor.ExecuteAsync(
+    private Task<Result<TResponse>> GetAsync<TResponse>(string url, CancellationToken cancellationToken) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();

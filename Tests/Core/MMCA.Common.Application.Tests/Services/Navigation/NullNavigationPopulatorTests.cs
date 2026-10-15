@@ -10,7 +10,7 @@ public sealed class NullNavigationPopulatorTests
     private sealed class StubEntity : AuditableBaseEntity<int>;
 
     [Fact]
-    public async Task PopulateAsync_CompletesImmediately()
+    public Task PopulateAsync_CompletesImmediately()
     {
         var populator = new NullNavigationPopulator<StubEntity>();
         IReadOnlyCollection<StubEntity> entities = [new StubEntity { Id = 1 }];
@@ -19,11 +19,11 @@ public sealed class NullNavigationPopulatorTests
         var task = populator.PopulateAsync(entities, metadata, true, true, CancellationToken.None);
 
         task.IsCompleted.Should().BeTrue();
-        await task;
+        return task;
     }
 
     [Fact]
-    public async Task PopulateAsync_WithEmptyCollection_CompletesImmediately()
+    public Task PopulateAsync_WithEmptyCollection_CompletesImmediately()
     {
         var populator = new NullNavigationPopulator<StubEntity>();
         IReadOnlyCollection<StubEntity> entities = [];
@@ -32,7 +32,7 @@ public sealed class NullNavigationPopulatorTests
         var task = populator.PopulateAsync(entities, metadata, false, false, CancellationToken.None);
 
         task.IsCompleted.Should().BeTrue();
-        await task;
+        return task;
     }
 
     [Fact]

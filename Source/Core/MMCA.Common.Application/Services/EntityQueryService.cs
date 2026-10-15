@@ -259,14 +259,14 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
+    public virtual Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default)
-        => await GetAllAsync(
+        => GetAllAsync(
             includeFKs: includeFKs,
             includeChildren: includeChildren,
             specification: specification,
@@ -277,7 +277,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             pageNumber: null,
             pageSize: null,
             asTracking: asTracking,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken);
 
     /// <inheritdoc />
     public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
@@ -546,7 +546,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     /// <summary>
     /// Assembles the query parameters and delegates execution to the <see cref="IEntityQueryPipeline"/>.
     /// </summary>
-    private async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> BuildQueryAsync(
+    private Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> BuildQueryAsync(
         bool includeFKs,
         bool includeChildren,
         ISpecification<TEntity, TIdentifierType>? specification,
@@ -580,12 +580,12 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             FieldContract = FieldContract
         };
 
-        return await QueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(
+        return QueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(
             baseQuery,
             navigationMetadata,
             parameters,
             NavigationPopulator.PopulateAsync,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <summary>

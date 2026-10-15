@@ -94,11 +94,11 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
     }
 
-    protected async Task LoginAsAdminAsync() =>
-        await LoginAsync(E2ETestConfiguration.AdminCredentials.Email, E2ETestConfiguration.AdminCredentials.Password).ConfigureAwait(false);
+    protected Task LoginAsAdminAsync() =>
+        LoginAsync(E2ETestConfiguration.AdminCredentials.Email, E2ETestConfiguration.AdminCredentials.Password);
 
-    protected async Task LoginAsUserAsync() =>
-        await LoginAsync(E2ETestConfiguration.UserCredentials.Email, E2ETestConfiguration.UserCredentials.Password).ConfigureAwait(false);
+    protected Task LoginAsUserAsync() =>
+        LoginAsync(E2ETestConfiguration.UserCredentials.Email, E2ETestConfiguration.UserCredentials.Password);
 
     protected async Task LoginAsync(string email, string password)
     {
@@ -504,8 +504,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
     }
 
-    protected async Task NavigateAndWaitAsync(string path) =>
-        await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+    protected Task NavigateAndWaitAsync(string path) =>
+        Page.GotoAndWaitForBlazorAsync(path);
 
     /// <summary>
     /// Fills a form field and waits for the value to persist, guarding against the Blazor
@@ -547,8 +547,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// <c>theme.js</c>) on the browser context, so the next page load starts in dark mode. Call it
     /// before navigating, then <see cref="WaitForDarkModeAsync"/> before scanning.
     /// </summary>
-    protected async Task SeedDarkThemeAsync() =>
-        await Page.Context.AddCookiesAsync(
+    protected Task SeedDarkThemeAsync() =>
+        Page.Context.AddCookiesAsync(
         [
             new Cookie
             {
@@ -556,7 +556,7 @@ public abstract class E2ETestBase : IAsyncLifetime
                 Value = "dark",
                 Url = BaseUrl,
             },
-        ]).ConfigureAwait(false);
+        ]);
 
     /// <summary>
     /// Waits until dark mode is actually applied. The Common theme toggle's accessible name flips to
@@ -565,8 +565,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// layout renders the toggle twice (app bar plus the mobile nav top row), so this waits on the
     /// desktop cluster's copy. The name is the English resource, matching the default E2E culture.
     /// </summary>
-    protected async Task WaitForDarkModeAsync() =>
-        await Expect(Page.Locator(".appbar-icon-actions").First
+    protected Task WaitForDarkModeAsync() =>
+        Expect(Page.Locator(".appbar-icon-actions").First
                 .GetByRole(AriaRole.Button, new() { Name = "Switch to light mode" }))
-            .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 }

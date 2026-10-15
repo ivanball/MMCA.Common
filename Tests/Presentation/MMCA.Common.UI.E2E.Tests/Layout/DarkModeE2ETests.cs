@@ -40,8 +40,8 @@ public sealed class DarkModeE2ETests : GalleryAxeTestBase
         await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }
 
-    private async Task SeedDarkThemeAsync() =>
-        await Page.Context.AddCookiesAsync(
+    private Task SeedDarkThemeAsync() =>
+        Page.Context.AddCookiesAsync(
         [
             new Cookie
             {
@@ -53,6 +53,6 @@ public sealed class DarkModeE2ETests : GalleryAxeTestBase
 
     // The toggle's accessible name flips once ThemeService has initialized from the cookie and the
     // MudThemeProvider re-rendered with the dark palette — the reliable "dark is applied" signal.
-    private async Task WaitForDarkModeAsync() =>
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Switch to light mode" })).ToBeVisibleAsync();
+    private Task WaitForDarkModeAsync() =>
+        Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Switch to light mode" })).ToBeVisibleAsync();
 }

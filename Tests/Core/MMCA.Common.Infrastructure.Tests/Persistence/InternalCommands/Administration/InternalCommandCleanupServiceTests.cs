@@ -125,10 +125,10 @@ public sealed class InternalCommandCleanupServiceTests : IDisposable
         return row;
     }
 
-    private async Task<List<Guid>> RemainingIdsAsync()
+    private Task<List<Guid>> RemainingIdsAsync()
     {
         _context.ChangeTracker.Clear();
-        return await _context.Set<InternalCommandMessage>().AsNoTracking()
+        return _context.Set<InternalCommandMessage>().AsNoTracking()
             .Select(c => c.Id)
             .ToListAsync(TestContext.Current.CancellationToken);
     }

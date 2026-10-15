@@ -33,8 +33,8 @@ public abstract class ChildEntityServiceBase(
     /// </param>
     /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
     /// <returns>The created DTO, or the errors the API described.</returns>
-    protected async Task<Result<TResponse>> PostAsync<TResponse>(object request, CancellationToken cancellationToken) =>
-        await HttpResultExecutor.ExecuteAsync(
+    protected Task<Result<TResponse>> PostAsync<TResponse>(object request, CancellationToken cancellationToken) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -49,8 +49,8 @@ public abstract class ChildEntityServiceBase(
     /// <param name="request">The payload to post, typically an anonymous object.</param>
     /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
     /// <returns>Success for any 2xx, otherwise the errors the API described.</returns>
-    protected async Task<Result> PostAsync(object request, CancellationToken cancellationToken) =>
-        await HttpResultExecutor.ExecuteAsync(
+    protected Task<Result> PostAsync(object request, CancellationToken cancellationToken) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -67,8 +67,8 @@ public abstract class ChildEntityServiceBase(
     /// <param name="id">The join entity's identifier, already formatted for the route.</param>
     /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
     /// <returns>Success for any 2xx, otherwise the errors the API described.</returns>
-    protected async Task<Result> DeleteByIdAsync(string id, CancellationToken cancellationToken) =>
-        await HttpResultExecutor.ExecuteAsync(
+    protected Task<Result> DeleteByIdAsync(string id, CancellationToken cancellationToken) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();

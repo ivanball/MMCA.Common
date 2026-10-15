@@ -118,18 +118,18 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     }
 
     [JSInvokable]
-    public async Task OnSentinelVisible()
+    public Task OnSentinelVisible()
     {
         if (_isLoadingMore || !_hasMore || _disposed)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await InvokeAsync(async () =>
-        {
-            await LoadNextPageAsync(isInitial: false);
-            StateHasChanged();
-        });
+        return InvokeAsync(async () =>
+               {
+                   await LoadNextPageAsync(isInitial: false);
+                   StateHasChanged();
+               });
     }
 
     private async Task LoadNextPageAsync(bool isInitial)

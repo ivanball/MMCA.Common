@@ -48,7 +48,7 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
     /// </summary>
     /// <param name="context">The HTTP context for the current request.</param>
     /// <returns>A task representing the middleware execution.</returns>
-    public async Task InvokeAsync(HttpContext context)
+    public Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -75,7 +75,7 @@ public sealed class GatewayCorrelationMiddleware(RequestDelegate next)
             return Task.CompletedTask;
         });
 
-        await next(context).ConfigureAwait(false);
+        return next(context);
     }
 
     /// <summary>

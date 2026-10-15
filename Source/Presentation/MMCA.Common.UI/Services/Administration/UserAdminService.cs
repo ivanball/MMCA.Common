@@ -32,13 +32,13 @@ public sealed class UserAdminService<TUserDto>(
     private const string Endpoint = "Admin/Users";
 
     /// <inheritdoc />
-    public async Task<Result<TUserDto>> GetAsync(
+    public Task<Result<TUserDto>> GetAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
         var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}");
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -53,13 +53,13 @@ public sealed class UserAdminService<TUserDto>(
     }
 
     /// <inheritdoc />
-    public async Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+    public Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
         var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}/sessions");
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -89,14 +89,14 @@ public sealed class UserAdminService<TUserDto>(
         SetRolesAsync(userId, [role], cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> SetRolesAsync(
+    public Task<Result> SetRolesAsync(
         UserIdentifierType userId,
         IReadOnlyList<string> roles,
         CancellationToken cancellationToken = default)
     {
         var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}/roles");
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -112,14 +112,14 @@ public sealed class UserAdminService<TUserDto>(
             cancellationToken);
     }
 
-    private async Task<Result> PostLockChangeAsync(
+    private Task<Result> PostLockChangeAsync(
         UserIdentifierType userId,
         string action,
         CancellationToken cancellationToken)
     {
         var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}/{action}");
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();

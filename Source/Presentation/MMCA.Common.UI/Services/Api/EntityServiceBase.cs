@@ -140,7 +140,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<TEntityDTO>> GetByIdAsync(
+    public virtual Task<Result<TEntityDTO>> GetByIdAsync(
         TIdentifierType id,
         bool includeChildren = false,
         CancellationToken cancellationToken = default)
@@ -155,7 +155,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         // A missing entity is a NotFound failure rather than a null value: the caller can tell it
         // apart from a transport failure (ResultUiExtensions.IsNotFound) instead of both arriving
         // as the same null. A failure is never cached, so a 404 is re-asked every time.
-        return await GetCachedAsync<TEntityDTO>(url, cancellationToken);
+        return GetCachedAsync<TEntityDTO>(url, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -348,7 +348,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <see cref="ProblemDetailsResultReader.EmptyResponseCode"/>: use the non-generic overload for
     /// endpoints that legitimately answer without one.
     /// </returns>
-    protected async Task<Result<T>> SendRequestAsync<T>(
+    protected Task<Result<T>> SendRequestAsync<T>(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
         string? idempotencyKey = null,
@@ -356,7 +356,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(httpAction);
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 // The client stays alive across the read: HttpClient buffers the body before the send
@@ -378,7 +378,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <param name="idempotencyKey">Optional <c>Idempotency-Key</c> header value.</param>
     /// <param name="ifMatch">Optional <c>If-Match</c> entity tag stating the version the write is conditional on.</param>
     /// <returns>Success for any 2xx, otherwise the errors the response described.</returns>
-    protected async Task<Result> SendRequestAsync(
+    protected Task<Result> SendRequestAsync(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
         string? idempotencyKey = null,
@@ -386,7 +386,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(httpAction);
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateRequestClientAsync(idempotencyKey, ifMatch);

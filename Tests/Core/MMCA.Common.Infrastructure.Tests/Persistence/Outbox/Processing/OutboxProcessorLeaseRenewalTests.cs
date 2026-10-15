@@ -187,8 +187,8 @@ public sealed class OutboxProcessorLeaseRenewalTests : IDisposable
         return (first.Id, second.Id, third.Id);
     }
 
-    private async Task<Dictionary<Guid, OutboxMessage>> ReadAllAsync() =>
-        await _dbContext.Set<OutboxMessage>().AsNoTracking().ToDictionaryAsync(m => m.Id);
+    private Task<Dictionary<Guid, OutboxMessage>> ReadAllAsync() =>
+        _dbContext.Set<OutboxMessage>().AsNoTracking().ToDictionaryAsync(m => m.Id);
 
     private static OutboxMessage EligibleMessage(DateTime occurredOn) =>
         new()

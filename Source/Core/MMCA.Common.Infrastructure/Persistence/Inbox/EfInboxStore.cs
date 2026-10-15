@@ -53,12 +53,11 @@ public sealed partial class EfInboxStore(
     private readonly Dictionary<Guid, EntityEntry<InboxMessage>> _staged = [];
 
     /// <inheritdoc />
-    public async Task<bool> AlreadyProcessedAsync(Guid messageId, CancellationToken cancellationToken)
+    public Task<bool> AlreadyProcessedAsync(Guid messageId, CancellationToken cancellationToken)
     {
         var context = ResolveContext();
-        return await context.Set<InboxMessage>()
-            .AnyAsync(m => m.MessageId == messageId, cancellationToken)
-            .ConfigureAwait(false);
+        return context.Set<InboxMessage>()
+            .AnyAsync(m => m.MessageId == messageId, cancellationToken);
     }
 
     /// <inheritdoc />

@@ -89,8 +89,8 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
     // The notification pages carry a real [Authorize] (rubric §25); the gallery's cookie-toggled
     // fake scheme (GalleryFakeAuthenticationHandler) signs these scans in so the guarded pages
     // render, while the login/register/components scans stay deliberately anonymous.
-    private async Task SeedSignedInCookieAsync() =>
-        await Page.Context.AddCookiesAsync(
+    private Task SeedSignedInCookieAsync() =>
+        Page.Context.AddCookiesAsync(
         [
             new Cookie
             {

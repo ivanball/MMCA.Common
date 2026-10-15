@@ -31,6 +31,6 @@ public sealed class ProfilePage
 
     public ILocator ErrorAlert => _page.GetByRole(AriaRole.Alert);
 
-    public async Task GotoAsync() =>
-        await _page.GotoProtectedAsync("/profile").ConfigureAwait(false);
+    public Task GotoAsync() =>
+        _page.GotoProtectedAsync("/profile");
 }

@@ -41,8 +41,8 @@ public sealed class EntityServiceBaseCachingTests
         IUiReadCache? readCache)
         : EntityServiceBase<WidgetDto, int>("widgets", httpClientFactory, tokenStorageService, readCache)
     {
-        public async Task<Result<PagedCollectionResult<WidgetDto>>> GetAllBypassingCacheAsync(CancellationToken cancellationToken) =>
-            await GetCachedAsync<PagedCollectionResult<WidgetDto>>(
+        public Task<Result<PagedCollectionResult<WidgetDto>>> GetAllBypassingCacheAsync(CancellationToken cancellationToken) =>
+            GetCachedAsync<PagedCollectionResult<WidgetDto>>(
                 "widgets?includeFKs=False&includeChildren=False", cancellationToken, bypassCache: true);
     }
 

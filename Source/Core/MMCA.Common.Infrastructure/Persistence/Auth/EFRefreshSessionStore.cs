@@ -46,13 +46,12 @@ internal sealed class EFRefreshSessionStore(
     }
 
     /// <inheritdoc />
-    public async Task<RefreshSession?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+    public Task<RefreshSession?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenHash);
 
-        return await Sessions
-            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, cancellationToken)
-            .ConfigureAwait(false);
+        return Sessions
+            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -117,13 +116,12 @@ internal sealed class EFRefreshSessionStore(
     /// filtering in the query is what makes another account's session unreadable rather than merely
     /// rejected after being read.
     /// </remarks>
-    public async Task<RefreshSession?> FindByIdAsync(
+    public Task<RefreshSession?> FindByIdAsync(
         Guid id,
         UserIdentifierType userId,
         CancellationToken cancellationToken = default) =>
-        await Sessions
-            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken)
-            .ConfigureAwait(false);
+        Sessions
+            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken);
 
     /// <inheritdoc />
     /// <remarks>
@@ -131,11 +129,10 @@ internal sealed class EFRefreshSessionStore(
     /// copy (which the identity map would otherwise hand back unchanged) to the row the database holds
     /// after a concurrent rotation. Nothing revokes through the instance it returns.
     /// </remarks>
-    public async Task<RefreshSession?> FindByIdUntrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
-        await Sessions
+    public Task<RefreshSession?> FindByIdUntrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Sessions
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken)
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
     /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>

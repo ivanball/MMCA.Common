@@ -510,7 +510,7 @@ public sealed partial class InternalCommandProcessor(
     }
 
     /// <summary>Stamps a completed row, guarded by this replica's claim token.</summary>
-    private async Task CompleteAsync(
+    private Task CompleteAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
@@ -519,7 +519,7 @@ public sealed partial class InternalCommandProcessor(
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var attempts = row.Attempts + 1;
 
-        await StampAsync(
+        return StampAsync(
             context,
             row.Id,
             claimToken,
@@ -529,7 +529,7 @@ public sealed partial class InternalCommandProcessor(
                       .SetProperty(c => c.LastError, (string?)null)
                       .SetProperty(c => c.ClaimedUntil, (DateTime?)null)
                       .SetProperty(c => c.ClaimedBy, (Guid?)null),
-                cancellationToken)).ConfigureAwait(false);
+                cancellationToken));
     }
 
     /// <summary>
@@ -537,7 +537,7 @@ public sealed partial class InternalCommandProcessor(
     /// outright because the poll skips leased rows: parking the row under its own lease is what turns
     /// the backoff into an actual wait rather than an immediate re-attempt on the next signal.
     /// </summary>
-    private async Task ScheduleRetryAsync(
+    private Task ScheduleRetryAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
@@ -548,7 +548,7 @@ public sealed partial class InternalCommandProcessor(
         var retryAt = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(ComputeRetryBackoffSeconds(attempts));
         var truncated = ColumnWidth.Truncate(message, MaxErrorLength);
 
-        await StampAsync(
+        return StampAsync(
             context,
             row.Id,
             claimToken,
@@ -556,7 +556,7 @@ public sealed partial class InternalCommandProcessor(
                 s => s.SetProperty(c => c.Attempts, attempts)
                       .SetProperty(c => c.LastError, truncated)
                       .SetProperty(c => c.ClaimedUntil, (DateTime?)retryAt),
-                cancellationToken)).ConfigureAwait(false);
+                cancellationToken));
     }
 
     /// <summary>Abandons a row, recording why, and releases its lease so nothing re-claims it.</summary>

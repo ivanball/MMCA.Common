@@ -35,8 +35,8 @@ internal sealed class EFRawSqlQueryExecutor(
         await SqlQueryable<T>(sql).ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
-    public async Task<T?> QuerySingleOrDefaultAsync<T>(FormattableString sql, CancellationToken cancellationToken = default) =>
-        await SqlQueryable<T>(sql).SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+    public Task<T?> QuerySingleOrDefaultAsync<T>(FormattableString sql, CancellationToken cancellationToken = default) =>
+        SqlQueryable<T>(sql).SingleOrDefaultAsync(cancellationToken);
 
     /// <summary>
     /// Builds the parameterized queryable for one statement on the host's default source.

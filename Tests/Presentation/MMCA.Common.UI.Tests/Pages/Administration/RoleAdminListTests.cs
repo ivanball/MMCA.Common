@@ -59,13 +59,13 @@ public sealed class RoleAdminListTests : BunitTestBase
     }
 
     [Fact]
-    public async Task WithNoRoles_RendersTheEmptyState()
+    public Task WithNoRoles_RendersTheEmptyState()
     {
         SetupRoles();
 
         var cut = RenderList();
 
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("No roles found."));
+        return cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("No roles found."));
     }
 
     /// <summary>

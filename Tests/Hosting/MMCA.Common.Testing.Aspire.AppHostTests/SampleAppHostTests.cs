@@ -41,31 +41,31 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
     }
 
     [Fact]
-    public async Task Service_AnswersLiveness()
+    public Task Service_AnswersLiveness()
     {
         SkipIfUnavailable();
 
-        await AssertAliveAsync(
+        return AssertAliveAsync(
             SampleAppHostFixture.ServiceResourceName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task Service_AnswersTheFullHealthReport()
+    public Task Service_AnswersTheFullHealthReport()
     {
         SkipIfUnavailable();
 
-        await AssertHealthyAsync(
+        return AssertHealthyAsync(
             SampleAppHostFixture.ServiceResourceName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task Service_AnswersReadiness()
+    public Task Service_AnswersReadiness()
     {
         SkipIfUnavailable();
 
-        await AssertReadyAsync(
+        return AssertReadyAsync(
             SampleAppHostFixture.ServiceResourceName,
             cancellationToken: TestContext.Current.CancellationToken);
     }
@@ -97,11 +97,11 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
     /// </summary>
     /// <returns>A task that completes when the assertion holds.</returns>
     [Fact]
-    public async Task Http2OnlyService_NegotiatesH2cOnItsCleartextEndpoint()
+    public Task Http2OnlyService_NegotiatesH2cOnItsCleartextEndpoint()
     {
         SkipIfUnavailable();
 
-        await AssertH2cAsync(
+        return AssertH2cAsync(
             SampleAppHostFixture.H2cServiceResourceName,
             AppHostProbePaths.Alive,
             cancellationToken: TestContext.Current.CancellationToken);

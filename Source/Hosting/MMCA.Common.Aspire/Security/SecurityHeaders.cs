@@ -182,7 +182,7 @@ public sealed class SecurityHeadersMiddleware
             .Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Sets the security headers, then invokes the rest of the pipeline.</summary>
-    public async Task InvokeAsync(HttpContext context)
+    public Task InvokeAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -240,7 +240,7 @@ public sealed class SecurityHeadersMiddleware
             }
         }
 
-        await _next(context).ConfigureAwait(false);
+        return _next(context);
     }
 
     private static void ApplyCredentialCacheHeaders(IHeaderDictionary headers)

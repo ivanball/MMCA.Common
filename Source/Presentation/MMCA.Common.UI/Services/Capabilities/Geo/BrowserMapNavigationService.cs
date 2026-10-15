@@ -21,11 +21,11 @@ public sealed class BrowserMapNavigationService : IMapNavigationService
         _externalLinkService = externalLinkService;
 
     /// <inheritdoc />
-    public async Task<bool> OpenAddressAsync(string address, string? label, CancellationToken cancellationToken = default)
+    public Task<bool> OpenAddressAsync(string address, string? label, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(address);
 
         var uri = new Uri(MapsSearchUrl + Uri.EscapeDataString(address));
-        return await _externalLinkService.OpenAsync(uri, cancellationToken).ConfigureAwait(false);
+        return _externalLinkService.OpenAsync(uri, cancellationToken);
     }
 }

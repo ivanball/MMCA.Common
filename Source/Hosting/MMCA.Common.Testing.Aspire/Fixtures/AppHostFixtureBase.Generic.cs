@@ -27,8 +27,7 @@ public abstract class AppHostFixtureBase<TAppHost> : AppHostFixtureBase
     protected virtual IReadOnlyList<string> AppHostArguments => [];
 
     /// <inheritdoc />
-    protected override async Task<IDistributedApplicationTestingBuilder> CreateBuilderAsync(CancellationToken cancellationToken) =>
-        await DistributedApplicationTestingBuilder
-            .CreateAsync<TAppHost>([.. AppHostArguments], ConfigureOptions, cancellationToken)
-            .ConfigureAwait(false);
+    protected override Task<IDistributedApplicationTestingBuilder> CreateBuilderAsync(CancellationToken cancellationToken) =>
+        DistributedApplicationTestingBuilder
+            .CreateAsync<TAppHost>([.. AppHostArguments], ConfigureOptions, cancellationToken);
 }

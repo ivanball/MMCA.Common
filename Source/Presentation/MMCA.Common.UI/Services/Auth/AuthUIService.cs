@@ -65,23 +65,23 @@ public sealed class AuthUIService(
     private const string ApiClientName = "APIClient";
 
     /// <inheritdoc />
-    public async Task<Result<AuthenticationResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
-        await AuthenticateAsync("auth/login", request, cancellationToken);
+    public Task<Result<AuthenticationResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
+        AuthenticateAsync("auth/login", request, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<AuthenticationResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
-        await AuthenticateAsync("auth/register", request, cancellationToken);
+    public Task<Result<AuthenticationResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
+        AuthenticateAsync("auth/register", request, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<AuthenticationResponse>> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default)
+    public Task<Result<AuthenticationResponse>> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
-            return Result.Failure<AuthenticationResponse>(
-                Error.Validation("Auth.OAuth.MissingCode", "Authentication failed: missing exchange code."));
+            return Task.FromResult(Result.Failure<AuthenticationResponse>(
+                Error.Validation("Auth.OAuth.MissingCode", "Authentication failed: missing exchange code.")));
         }
 
-        return await AuthenticateAsync("auth/oauth/exchange", new OAuthCodeExchangeRequest(code), cancellationToken);
+        return AuthenticateAsync("auth/oauth/exchange", new OAuthCodeExchangeRequest(code), cancellationToken);
     }
 
     /// <inheritdoc />
@@ -207,11 +207,11 @@ public sealed class AuthUIService(
     }
 
     /// <inheritdoc />
-    public async Task<Result> ChangePasswordAsync(
+    public Task<Result> ChangePasswordAsync(
         string currentPassword,
         string newPassword,
         CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -223,8 +223,8 @@ public sealed class AuthUIService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+    public Task<Result> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 // Anonymous endpoint: no bearer header is attached, matching LoginAsync/RegisterAsync. A
@@ -240,12 +240,12 @@ public sealed class AuthUIService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> ResetPasswordAsync(
+    public Task<Result> ResetPasswordAsync(
         string email,
         string token,
         string newPassword,
         CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = httpClientFactory.CreateClient(ApiClientName);
@@ -258,9 +258,9 @@ public sealed class AuthUIService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+    public Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -272,8 +272,8 @@ public sealed class AuthUIService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+    public Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();

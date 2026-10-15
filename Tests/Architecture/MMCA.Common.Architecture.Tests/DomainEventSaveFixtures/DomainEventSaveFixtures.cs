@@ -34,8 +34,8 @@ internal sealed class TransitiveSavingHandler : IDomainEventHandler<FixtureDomai
 
     internal TransitiveSavingHandler(PointsAwarder awarder) => _awarder = awarder;
 
-    public async Task HandleAsync(FixtureDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
-        await _awarder.AwardAsync(cancellationToken).ConfigureAwait(false);
+    public Task HandleAsync(FixtureDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
+        _awarder.AwardAsync(cancellationToken);
 }
 
 /// <summary>Hop one of the transitive chain: no save here.</summary>
@@ -45,8 +45,8 @@ internal sealed class PointsAwarder
 
     internal PointsAwarder(PointsWriter writer) => _writer = writer;
 
-    internal async Task AwardAsync(CancellationToken cancellationToken) =>
-        await _writer.WriteAsync(cancellationToken).ConfigureAwait(false);
+    internal Task AwardAsync(CancellationToken cancellationToken) =>
+        _writer.WriteAsync(cancellationToken);
 }
 
 /// <summary>Hop two of the transitive chain: the save the handler must not reach.</summary>

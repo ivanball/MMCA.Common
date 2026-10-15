@@ -36,11 +36,11 @@ public sealed class RoleAdminPage
     /// </summary>
     public ILocator SavedToast => _page.GetByText("Stored permissions saved.");
 
-    public async Task GotoListAsync() =>
-        await _page.GotoProtectedAsync("/roles").ConfigureAwait(false);
+    public Task GotoListAsync() =>
+        _page.GotoProtectedAsync("/roles");
 
-    public async Task GotoEditorAsync(string role) =>
-        await _page.GotoProtectedAsync($"/roles/{role}").ConfigureAwait(false);
+    public Task GotoEditorAsync(string role) =>
+        _page.GotoProtectedAsync($"/roles/{role}");
 
     /// <summary>The roster row for one role.</summary>
     /// <param name="role">The role name.</param>

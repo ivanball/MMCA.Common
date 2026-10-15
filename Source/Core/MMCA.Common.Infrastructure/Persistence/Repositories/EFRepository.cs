@@ -37,10 +37,10 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    public Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entities);
-        await Entities.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+        return Entities.AddRangeAsync(entities, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -116,16 +116,16 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public async Task<int> ExecuteDeleteAsync(
+    public Task<int> ExecuteDeleteAsync(
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(where);
-        return await Entities.Where(where).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        return Entities.Where(where).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<int> ExecuteUpdateAsync(
+    public Task<int> ExecuteUpdateAsync(
         Expression<Func<TEntity, bool>> where,
         Action<IUpdatePropertySetter<TEntity>> setProperties,
         CancellationToken cancellationToken = default)
@@ -156,7 +156,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
 
         StampRowVersion(builder);
 
-        return await Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken).ConfigureAwait(false);
+        return Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken);
     }
 
     /// <summary>

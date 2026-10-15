@@ -363,10 +363,10 @@ public sealed class RefreshSessionCleanupServiceTests
 
         public Task<int> SaveAsync() => Context.SaveChangesAsync(CancellationToken.None);
 
-        public async Task<List<Guid>> RemainingIdsAsync()
+        public Task<List<Guid>> RemainingIdsAsync()
         {
             Context.ChangeTracker.Clear();
-            return await Context.Set<RefreshSession>().AsNoTracking()
+            return Context.Set<RefreshSession>().AsNoTracking()
                 .Select(s => s.Id)
                 .ToListAsync(CancellationToken.None);
         }

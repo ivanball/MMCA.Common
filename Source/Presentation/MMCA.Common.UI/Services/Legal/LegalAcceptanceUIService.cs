@@ -26,8 +26,8 @@ public sealed class LegalAcceptanceUIService(
     : AuthenticatedServiceBase(httpClientFactory, tokenStorageService), ILegalAcceptanceUIService
 {
     /// <inheritdoc />
-    public async Task<Result<LegalAcceptanceDTO>> GetAsync(CancellationToken cancellationToken = default) =>
-        await HttpResultExecutor.ExecuteAsync(
+    public Task<Result<LegalAcceptanceDTO>> GetAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();
@@ -41,11 +41,11 @@ public sealed class LegalAcceptanceUIService(
             cancellationToken);
 
     /// <inheritdoc />
-    public async Task<Result<LegalAcceptanceDTO>> AcceptAsync(string version, CancellationToken cancellationToken = default)
+    public Task<Result<LegalAcceptanceDTO>> AcceptAsync(string version, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
 
-        return await HttpResultExecutor.ExecuteAsync(
+        return HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = await CreateAuthenticatedClientAsync();

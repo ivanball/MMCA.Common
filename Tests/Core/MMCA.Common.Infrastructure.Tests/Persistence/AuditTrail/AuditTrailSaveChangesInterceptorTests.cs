@@ -327,12 +327,12 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
         return thing;
     }
 
-    private async Task<List<AuditTrailEntry>> RowsAsync() =>
-        await _context.TrailRows.AsNoTracking().ToListAsync();
+    private Task<List<AuditTrailEntry>> RowsAsync() =>
+        _context.TrailRows.AsNoTracking().ToListAsync();
 
-    private async Task<List<AuditTrailEntry>> ModifiedRowsAsync() =>
-        await _context.TrailRows.AsNoTracking().Where(r => r.Operation == "Modified").ToListAsync();
+    private Task<List<AuditTrailEntry>> ModifiedRowsAsync() =>
+        _context.TrailRows.AsNoTracking().Where(r => r.Operation == "Modified").ToListAsync();
 
-    private async Task<AuditTrailEntry> SingleRowAsync() =>
-        await _context.TrailRows.AsNoTracking().SingleAsync();
+    private Task<AuditTrailEntry> SingleRowAsync() =>
+        _context.TrailRows.AsNoTracking().SingleAsync();
 }

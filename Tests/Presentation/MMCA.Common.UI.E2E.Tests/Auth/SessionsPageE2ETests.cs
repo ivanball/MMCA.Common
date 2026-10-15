@@ -36,8 +36,8 @@ public sealed class SessionsPageE2ETests : GalleryAxeTestBase
 
     // The page carries a real [Authorize] (rubric section 25); the gallery's cookie-toggled fake
     // scheme (GalleryFakeAuthenticationHandler) signs this scan in so the guarded page renders.
-    private async Task SeedSignedInCookieAsync() =>
-        await Page.Context.AddCookiesAsync(
+    private Task SeedSignedInCookieAsync() =>
+        Page.Context.AddCookiesAsync(
         [
             new Cookie
             {

@@ -14,11 +14,10 @@ public sealed class SignalRPushNotificationSender(IHubContext<NotificationHub> h
     private const int BatchSize = 100;
 
     /// <inheritdoc />
-    public async Task SendToUserAsync(UserIdentifierType userId, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
-        await hubContext.Clients
+    public Task SendToUserAsync(UserIdentifierType userId, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
+        hubContext.Clients
             .User(userId.ToString(CultureInfo.InvariantCulture))
-            .SendAsync(NotificationHub.ReceiveNotificationMethod, title, body, metadata, cancellationToken)
-            .ConfigureAwait(false);
+            .SendAsync(NotificationHub.ReceiveNotificationMethod, title, body, metadata, cancellationToken);
 
     /// <inheritdoc />
     public async Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
@@ -33,10 +32,9 @@ public sealed class SignalRPushNotificationSender(IHubContext<NotificationHub> h
     }
 
     /// <inheritdoc />
-    public async Task BroadcastAsync(string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
-        await hubContext.Clients.All
-            .SendAsync(NotificationHub.ReceiveNotificationMethod, title, body, metadata, cancellationToken)
-            .ConfigureAwait(false);
+    public Task BroadcastAsync(string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
+        hubContext.Clients.All
+            .SendAsync(NotificationHub.ReceiveNotificationMethod, title, body, metadata, cancellationToken);
 
     private static IEnumerable<IReadOnlyList<string>> BatchUserIds(IEnumerable<UserIdentifierType> userIds)
     {

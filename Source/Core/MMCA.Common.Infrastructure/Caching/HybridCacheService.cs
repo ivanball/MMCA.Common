@@ -278,7 +278,7 @@ internal sealed partial class HybridCacheService(
     /// warned once, exactly as in <see cref="DistributedCacheService.RemoveByPrefixAsync"/>.
     /// </para>
     /// </remarks>
-    public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
         if (connectionMultiplexer is null)
         {
@@ -287,16 +287,16 @@ internal sealed partial class HybridCacheService(
             // command.
             if (Interlocked.Exchange(ref _noMultiplexerWarned, 1) == 0)
                 LogPrefixEvictionNoMultiplexer(logger);
-            return;
+            return Task.CompletedTask;
         }
 
-        await RedisPrefixScanner.RemoveMatchingAsync(
+        return RedisPrefixScanner.RemoveMatchingAsync(
             connectionMultiplexer,
             $"{HybridKey(prefix)}*",
             key => hybrid.RemoveAsync(key.ToString(), cancellationToken).AsTask(),
             () => LogPrefixEvictionNoServer(logger, prefix),
             (server, ex) => LogPrefixEvictionServerFailed(logger, server, prefix, ex),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
     }
 
     /// <inheritdoc />

@@ -42,7 +42,7 @@ public sealed class DeleteConfirmationEscapeTests : BunitTestBase
         providers.Dialog.FindAll("[data-testid=confirm-delete]").Should().BeEmpty("the dialog is gone");
     }
 
-    private async Task PressEscapeInTheDialogAsync(IRenderedComponent<MudBlazor.MudDialogProvider> dialog)
+    private Task PressEscapeInTheDialogAsync(IRenderedComponent<MudBlazor.MudDialogProvider> dialog)
     {
         // The dialog container subscribes its own element id with the key interceptor when it opens.
         var containerId = dialog.Find(".mud-dialog-container").Id;
@@ -60,7 +60,7 @@ public sealed class DeleteConfirmationEscapeTests : BunitTestBase
         onKeyDown.Should().NotBeNull("the key interceptor exposes the key-down callback the browser invokes (precondition)");
 
         var escape = new KeyboardEventArgs { Key = "Escape", Code = "Escape", Type = "keydown" };
-        await dialog.InvokeAsync(async () =>
+        return dialog.InvokeAsync(async () =>
         {
             var outcome = onKeyDown!.Invoke(service, [containerId, escape]);
             if (outcome is Task pending)

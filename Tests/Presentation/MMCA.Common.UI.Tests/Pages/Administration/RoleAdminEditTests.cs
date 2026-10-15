@@ -55,11 +55,11 @@ public sealed class RoleAdminEditTests : BunitTestBase
     }
 
     [Fact]
-    public async Task RendersOneCheckboxPerCatalogPermission()
+    public Task RendersOneCheckboxPerCatalogPermission()
     {
         var cut = RenderEdit();
 
-        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+        return cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
     }
 
     /// <summary>
@@ -104,13 +104,13 @@ public sealed class RoleAdminEditTests : BunitTestBase
     }
 
     [Fact]
-    public async Task WithAnEmptyCatalog_RendersTheEmptyState()
+    public Task WithAnEmptyCatalog_RendersTheEmptyState()
     {
         SetupCatalog();
 
         var cut = RenderEdit();
 
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("nothing to grant"));
+        return cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("nothing to grant"));
     }
 
     [Fact]

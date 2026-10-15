@@ -251,14 +251,14 @@ public sealed class OutboxProcessorOrderingTests : IDisposable
         _context.ChangeTracker.Clear();
     }
 
-    private async Task<List<Guid>> ProcessedIdsAsync() =>
-        await _context.Set<OutboxMessage>().AsNoTracking()
+    private Task<List<Guid>> ProcessedIdsAsync() =>
+        _context.Set<OutboxMessage>().AsNoTracking()
             .Where(m => m.ProcessedOn != null)
             .Select(m => m.Id)
             .ToListAsync(CancellationToken.None);
 
-    private async Task<OutboxMessage> ReloadAsync(Guid id) =>
-        await _context.Set<OutboxMessage>().AsNoTracking().SingleAsync(m => m.Id == id, CancellationToken.None);
+    private Task<OutboxMessage> ReloadAsync(Guid id) =>
+        _context.Set<OutboxMessage>().AsNoTracking().SingleAsync(m => m.Id == id, CancellationToken.None);
 
     /// <summary>A domain event carrying a marker the dispatcher double can fail on selectively.</summary>
     public sealed class OrderedTestEvent : IDomainEvent

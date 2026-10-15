@@ -95,11 +95,11 @@ public abstract class AppHostTestBase<TFixture>(TFixture fixture)
     /// <param name="endpointName">The endpoint name, or <see langword="null"/> for the single endpoint.</param>
     /// <param name="cancellationToken">Cancels the probe.</param>
     /// <returns>A task that completes when the assertion holds.</returns>
-    protected async Task AssertHealthyAsync(
+    protected Task AssertHealthyAsync(
         string resourceName,
         string? endpointName = null,
         CancellationToken cancellationToken = default) =>
-        await AssertProbeAsync(resourceName, AppHostProbePaths.Health, endpointName, cancellationToken).ConfigureAwait(false);
+        AssertProbeAsync(resourceName, AppHostProbePaths.Health, endpointName, cancellationToken);
 
     /// <summary>
     /// Asserts that a resource answers the LIVENESS probe with 200. This is the signal a startup gate
@@ -110,11 +110,11 @@ public abstract class AppHostTestBase<TFixture>(TFixture fixture)
     /// <param name="endpointName">The endpoint name, or <see langword="null"/> for the single endpoint.</param>
     /// <param name="cancellationToken">Cancels the probe.</param>
     /// <returns>A task that completes when the assertion holds.</returns>
-    protected async Task AssertAliveAsync(
+    protected Task AssertAliveAsync(
         string resourceName,
         string? endpointName = null,
         CancellationToken cancellationToken = default) =>
-        await AssertProbeAsync(resourceName, AppHostProbePaths.Alive, endpointName, cancellationToken).ConfigureAwait(false);
+        AssertProbeAsync(resourceName, AppHostProbePaths.Alive, endpointName, cancellationToken);
 
     /// <summary>
     /// Asserts that a resource answers the READINESS probe with 200, meaning traffic may be routed to
@@ -124,11 +124,11 @@ public abstract class AppHostTestBase<TFixture>(TFixture fixture)
     /// <param name="endpointName">The endpoint name, or <see langword="null"/> for the single endpoint.</param>
     /// <param name="cancellationToken">Cancels the probe.</param>
     /// <returns>A task that completes when the assertion holds.</returns>
-    protected async Task AssertReadyAsync(
+    protected Task AssertReadyAsync(
         string resourceName,
         string? endpointName = null,
         CancellationToken cancellationToken = default) =>
-        await AssertProbeAsync(resourceName, AppHostProbePaths.Ready, endpointName, cancellationToken).ConfigureAwait(false);
+        AssertProbeAsync(resourceName, AppHostProbePaths.Ready, endpointName, cancellationToken);
 
     /// <summary>
     /// Asserts that a resource publishes a key set containing at least one RSA signing key.
