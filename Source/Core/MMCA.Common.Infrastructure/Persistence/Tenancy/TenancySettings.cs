@@ -15,7 +15,8 @@ public enum TenantResolutionStrategy
     /// <summary>
     /// Read the tenant from a request header (<see cref="TenancySettings.HeaderName"/>). Intended
     /// for service-to-service calls behind a trusted gateway; a public edge that honors this header
-    /// lets any caller name any tenant.
+    /// lets any caller name any tenant. Never part of the default order: a host opts in by listing
+    /// it in <c>Tenancy:ResolutionOrder</c> explicitly, after <see cref="Claim"/>.
     /// </summary>
     Header = 1,
 
@@ -52,9 +53,13 @@ public sealed class TenancySettings
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "Tenancy";
 
-    /// <summary>The resolution order used when <see cref="ResolutionOrder"/> is left empty.</summary>
+    /// <summary>
+    /// The resolution order used when <see cref="ResolutionOrder"/> is left empty: the signed claim
+    /// only. Header resolution is an explicit opt-in, because a caller-supplied header lets any
+    /// caller name any tenant.
+    /// </summary>
     private static readonly TenantResolutionStrategy[] DefaultResolutionOrder =
-        [TenantResolutionStrategy.Claim, TenantResolutionStrategy.Header];
+        [TenantResolutionStrategy.Claim];
 
     /// <summary>The excluded prefixes used when <see cref="ExcludedPathPrefixes"/> is left empty.</summary>
     private static readonly string[] DefaultExcludedPathPrefixes =
@@ -68,7 +73,8 @@ public sealed class TenancySettings
 
     /// <summary>
     /// Gets the strategies tried, in order, until one yields a tenant. Empty means
-    /// <see cref="EffectiveResolutionOrder"/> (claim, then header).
+    /// <see cref="EffectiveResolutionOrder"/> (the claim only). A host that also accepts the
+    /// header sets <c>Claim</c> then <c>Header</c> here explicitly.
     /// </summary>
     public List<TenantResolutionStrategy> ResolutionOrder { get; } = [];
 

@@ -266,8 +266,9 @@ public static partial class DependencyInjection
         /// </para>
         /// <para>
         /// What this DOES switch on is resolution: with <c>Tenancy:Enabled</c> true,
-        /// <c>TenantResolutionMiddleware</c> reads the tenant from the configured claim or header
-        /// and, by default (<c>Tenancy:RequireTenant</c>), rejects a request that carries none.
+        /// <c>TenantResolutionMiddleware</c> reads the tenant from the configured claim (and from
+        /// the header only when <c>Tenancy:ResolutionOrder</c> lists <c>Header</c> explicitly) and,
+        /// by default (<c>Tenancy:RequireTenant</c>), rejects a request that carries none.
         /// </para>
         /// <para>
         /// <b>Database-per-tenant is configuration only.</b> A tenant listed under

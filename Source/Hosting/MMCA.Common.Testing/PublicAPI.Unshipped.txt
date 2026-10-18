@@ -1,1 +1,8 @@
 #nullable enable
+abstract MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Settings.get -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Claim_is_tried_before_header() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Header_resolution_is_an_explicit_opt_in() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Health_endpoints_are_excluded() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.TenantResolutionTestsBase() -> void
+virtual MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.AllowsHeaderResolution.get -> bool

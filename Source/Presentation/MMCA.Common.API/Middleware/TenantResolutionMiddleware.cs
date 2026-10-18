@@ -21,8 +21,9 @@ namespace MMCA.Common.API.Middleware;
 /// <para>
 /// <b>It runs immediately after <c>UseAuthentication</c></b>, and that position is load-bearing:
 /// the claim strategy reads <c>HttpContext.User</c>, which does not carry the token's claims until
-/// authentication has run. Running it earlier would silently demote every request to the header
-/// strategy.
+/// authentication has run. Running it earlier would resolve no tenant from the claim at all: in the
+/// default claim-only order every request would be rejected, and in an order that opts into the
+/// header every request would silently fall through to it.
 /// </para>
 /// <para>
 /// <b>It fails closed.</b> With <c>Tenancy:RequireTenant</c> (the default) a request that resolves
