@@ -32,6 +32,29 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.244.0] - 2026-10-18
+
+**Service tokens are opt-in per gRPC client.** `AddServiceTokenClient` no longer makes every typed
+client send the service token; each client that should send it chains `WithServiceToken()`.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `AddServiceTokenClient(configuration)` attaches the service token on every typed client | registers `IServiceTokenProvider` only; chain `.WithServiceToken()` onto each `AddTypedGrpcClient<TClient>(serviceName)` whose server calls `AddServiceTokenAuthentication` |
+| `JwtForwardingClientInterceptor(IHttpContextAccessor, IServiceTokenProvider? serviceTokenProvider = null)` | `JwtForwardingClientInterceptor(IHttpContextAccessor)`; the service token moved to `ServiceTokenClientInterceptor` |
+
+The fix:
+
+1. **Clients.** For each typed gRPC client whose server validates service tokens, chain the opt-in:
+   `services.AddTypedGrpcClient<CustomerService.CustomerServiceClient>(serviceName).WithServiceToken();`
+   (add `using MMCA.Common.Grpc.Authentication;`). Leave it off every other client. A host that
+   calls `WithServiceToken()` must also call `AddServiceTokenClient`, or the client fails on first use.
+2. **Interceptor.** Code that constructs `JwtForwardingClientInterceptor` itself passes only the
+   `IHttpContextAccessor`. Nothing changes where `AddTypedGrpcClient` registers it.
+
+A host that never called `AddServiceTokenClient` needs no change.
+
 ## [1.243.0] - 2026-10-18
 
 **Tenant resolution reads only the claim unless the host opts into the header.** Three

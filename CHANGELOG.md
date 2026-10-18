@@ -3,6 +3,17 @@
 All notable changes to the MMCA.Common packages are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
+## [1.244.0] - 2026-10-18
+
+### Changed
+
+- **Breaking:** service tokens are opt-in per gRPC client. In 1.243.0, `AddServiceTokenClient` made `JwtForwardingClientInterceptor` attach the service token to a call with no user token on every typed client. That included clients whose server does not validate service tokens. Such a server's default JwtBearer scheme fetches its OIDC metadata before it can reject the token, and a call made while that endpoint was still starting stalled until its timeout. Now:
+  - `JwtForwardingClientInterceptor` forwards only the user's token, and its constructor is `JwtForwardingClientInterceptor(IHttpContextAccessor)` again.
+  - `WithServiceToken()` on the `IHttpClientBuilder` that `AddTypedGrpcClient<TClient>` returns adds the new `ServiceTokenClientInterceptor` to that client alone (namespace `MMCA.Common.Grpc.Authentication`). It sends the service token only when the request carries no user token, whichever order the two interceptors run in, and never replaces a caller-set `Authorization` header.
+  - `AddServiceTokenClient` still registers `IServiceTokenProvider`, but on its own it attaches nothing.
+
+  Map and fix: UPGRADING.md, [1.244.0].
+
 ## [1.243.0] - 2026-10-18
 
 ### Added
