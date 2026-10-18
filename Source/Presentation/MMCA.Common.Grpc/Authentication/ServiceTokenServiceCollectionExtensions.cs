@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +54,7 @@ public static class ServiceTokenServiceCollectionExtensions
         /// itself); a plain <c>[Authorize]</c> endpoint still authenticates the user scheme alone.
         /// Register the user scheme as well (<c>AddCommonAuthentication</c> or
         /// <c>AddForwardedJwtBearer</c>): ASP.NET Core falls back to a lone registered scheme as the
-        /// default, which would let a service token through a plain <c>[Authorize]</c>.
+        /// default, so a host where the service scheme would end up the default fails at startup.
         /// </para>
         /// </summary>
         /// <param name="configuration">The application configuration holding the <c>Grpc:ServiceToken</c> section.</param>
@@ -68,6 +69,16 @@ public static class ServiceTokenServiceCollectionExtensions
             services.AddAuthentication().AddJwtBearer(ServiceTokenDefaults.AuthenticationScheme);
             services.AddOptions<JwtBearerOptions>(ServiceTokenDefaults.AuthenticationScheme)
                 .Configure<IOptions<ServiceTokenSettings>>((options, settings) => ConfigureServiceTokenBearer(options, settings.Value));
+
+            // Fail the host rather than document the trap: a service token that became the default
+            // scheme would satisfy every plain [Authorize] endpoint.
+            // A marker type carries the check so it runs once at startup and reading
+            // AuthenticationOptions stays free of side effects.
+            services.AddOptions<DefaultSchemeGuard>()
+                .Validate<IOptions<AuthenticationOptions>>(
+                    (_, authentication) => ServiceTokenIsNotTheDefaultScheme(authentication.Value),
+                    $"The '{ServiceTokenDefaults.AuthenticationScheme}' scheme must not be the default authentication scheme, explicitly or as the only registered scheme. Register the user bearer scheme as the default (AddCommonAuthentication or AddForwardedJwtBearer).")
+                .ValidateOnStart();
 
             services.AddAuthorizationBuilder()
                 .AddPolicy(ServiceTokenDefaults.InternalCallerPolicy, policy => policy
@@ -93,6 +104,27 @@ public static class ServiceTokenServiceCollectionExtensions
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
         }
+    }
+
+    private static bool ServiceTokenIsNotTheDefaultScheme(AuthenticationOptions options)
+    {
+        string?[] defaults =
+        [
+            options.DefaultScheme,
+            options.DefaultAuthenticateScheme,
+            options.DefaultChallengeScheme,
+            options.DefaultForbidScheme,
+        ];
+        if (defaults.Contains(ServiceTokenDefaults.AuthenticationScheme, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        // ASP.NET Core promotes a lone registered scheme to the default when none is set.
+        var schemes = options.Schemes.Select(s => s.Name).ToList();
+        return !(options.DefaultScheme is null
+            && options.DefaultAuthenticateScheme is null
+            && schemes is [ServiceTokenDefaults.AuthenticationScheme]);
     }
 
     private static void ConfigureServiceTokenBearer(JwtBearerOptions options, ServiceTokenSettings settings)
@@ -127,4 +159,7 @@ public static class ServiceTokenServiceCollectionExtensions
             },
         };
     }
+
+    /// <summary>Marker options whose start-time validation runs the default-scheme guard.</summary>
+    private sealed class DefaultSchemeGuard;
 }
