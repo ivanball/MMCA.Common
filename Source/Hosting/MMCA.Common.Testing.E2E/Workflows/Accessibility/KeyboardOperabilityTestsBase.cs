@@ -90,12 +90,42 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     /// <returns>A task that completes when the page is interactive.</returns>
     protected virtual Task NavigateAsync(string path) => Page.GotoAndWaitForBlazorAsync(path);
 
+    /// <summary>
+    /// Runs after each fact, even a failing one, to undo <see cref="ArrangeAsync"/> (for example to
+    /// delete a live event that would otherwise change what later tests see). The default does nothing.
+    /// </summary>
+    /// <returns>A task that completes when the arrangement is removed.</returns>
+    protected virtual Task CleanupAsync() => Task.CompletedTask;
+
     [Fact]
-    public async Task SkipLink_IsFirstTabStop_AndMovesFocusIntoMainLandmark()
+    public Task SkipLink_IsFirstTabStop_AndMovesFocusIntoMainLandmark() => RunArrangedAsync(CheckSkipLinkAsync);
+
+    [Fact]
+    public Task OpenDialog_TrapsTabFocus() => RunArrangedAsync(CheckFocusTrapAsync);
+
+    [Fact]
+    public Task Escape_ClosesDialog_AndReturnsFocusToOpener() => RunArrangedAsync(CheckEscapeAsync);
+
+    [Fact]
+    public Task FocusedElement_ShowsVisibleFocusIndicator() => RunArrangedAsync(CheckFocusIndicatorAsync);
+
+    private async Task RunArrangedAsync(Func<Task> check)
+    {
+        await ArrangeAsync().ConfigureAwait(false);
+        try
+        {
+            await check().ConfigureAwait(false);
+        }
+        finally
+        {
+            await CleanupAsync().ConfigureAwait(false);
+        }
+    }
+
+    private async Task CheckSkipLinkAsync()
     {
         PagePaths.Should().NotBeEmpty("at least one page must be declared, or the skip-link gate verifies nothing");
 
-        await ArrangeAsync().ConfigureAwait(false);
         foreach (var path in PagePaths)
         {
             await NavigateAsync(path).ConfigureAwait(false);
@@ -117,8 +147,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         }
     }
 
-    [Fact]
-    public async Task OpenDialog_TrapsTabFocus()
+    private async Task CheckFocusTrapAsync()
     {
         var dialog = await OpenDialogWithKeyboardAsync().ConfigureAwait(false);
 
@@ -138,8 +167,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         }
     }
 
-    [Fact]
-    public async Task Escape_ClosesDialog_AndReturnsFocusToOpener()
+    private async Task CheckEscapeAsync()
     {
         var dialog = await OpenDialogWithKeyboardAsync().ConfigureAwait(false);
 
@@ -149,12 +177,10 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         await Expect(DialogOpener).ToBeFocusedAsync(new() { Timeout = FocusTimeoutMs }).ConfigureAwait(false);
     }
 
-    [Fact]
-    public async Task FocusedElement_ShowsVisibleFocusIndicator()
+    private async Task CheckFocusIndicatorAsync()
     {
         PagePaths.Should().NotBeEmpty("at least one page must be declared, or the focus-indicator gate verifies nothing");
 
-        await ArrangeAsync().ConfigureAwait(false);
         foreach (var path in PagePaths)
         {
             await NavigateAsync(path).ConfigureAwait(false);
@@ -188,7 +214,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
             + " p.setAttribute('data-keyboard-start', ''); document.body.prepend(p); p.focus(); }");
 
     /// <summary>
-    /// Arranges, loads <see cref="DialogPagePath"/>, focuses <see cref="DialogOpener"/>, presses Enter and waits
+    /// Loads <see cref="DialogPagePath"/>, focuses <see cref="DialogOpener"/>, presses Enter and waits
     /// for the dialog and for keyboard focus to enter it. Both dialog checks need that precondition:
     /// a trap is only judged once focus is inside, and Escape reaches the dialog's handler only from
     /// within. An opened dialog that leaves focus on its opener fails here.
@@ -196,7 +222,6 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     /// <returns>The open dialog.</returns>
     private async Task<ILocator> OpenDialogWithKeyboardAsync()
     {
-        await ArrangeAsync().ConfigureAwait(false);
         await NavigateAsync(DialogPagePath).ConfigureAwait(false);
         await DialogOpener.FocusAsync().ConfigureAwait(false);
         await Page.Keyboard.PressAsync("Enter").ConfigureAwait(false);
