@@ -1,4 +1,5 @@
-﻿using AwesomeAssertions;
+﻿using System.Globalization;
+using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
@@ -141,6 +142,64 @@ public sealed class ForgotPasswordHandlerBaseTests
         result.IsSuccess.Should().BeTrue("a delivery failure must not become an existence oracle");
     }
 
+    [Theory]
+    [InlineData("en", "es", "Reset your password", "We received a request to reset your password.", "It expires in 30 minutes and can be used once.")]
+    [InlineData("es", "en", "Restablezca su contraseña", "Recibimos una solicitud para restablecer su contraseña.", "Caduca en 30 minutos y solo se puede usar una vez.")]
+    public async Task HandleAsync_ComposesTheEmailInTheRecipientsPreferredCulture(
+        string preferredCulture,
+        string requestCulture,
+        string expectedSubject,
+        string expectedIntro,
+        string expectedExpiry)
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestIdentityUser { Id = 7 };
+        user.SeedPreferences(preferredCulture, theme: null);
+        sut.Found = user;
+
+        await UnderUiCulture(requestCulture, () =>
+            sut.HandleAsync(new TestForgotPasswordCommand(new ForgotPasswordRequest(KnownEmail))));
+
+        mocks.SentSubject.Should().Be(expectedSubject, "the recipient's stored culture wins over the request's");
+        mocks.SentBody.Should().Contain(expectedIntro).And.Contain(expectedExpiry);
+        AssertEveryPlaceholderFilled(mocks);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithoutAStoredCulture_ComposesTheEmailInTheRequestCulture()
+    {
+        var (sut, mocks) = CreateSut();
+        sut.Found = new TestIdentityUser { Id = 7 };
+
+        await UnderUiCulture("es", () =>
+            sut.HandleAsync(new TestForgotPasswordCommand(new ForgotPasswordRequest(KnownEmail))));
+
+        mocks.SentSubject.Should().Be("Restablezca su contraseña");
+        mocks.SentBody.Should().Contain("Restablecer su contraseña", "the link text is localized too");
+        AssertEveryPlaceholderFilled(mocks);
+    }
+
+    private static void AssertEveryPlaceholderFilled(HandlerMocks mocks)
+    {
+        mocks.SentBody.Should().Contain(IssuedToken).And.Contain(ResetUrl).And.Contain("30");
+        mocks.SentSubject.Should().NotMatchRegex(@"\{\d+\}");
+        mocks.SentBody.Should().NotMatchRegex(@"\{\d+\}", "every format placeholder must be filled");
+    }
+
+    private static async Task UnderUiCulture(string culture, Func<Task> action)
+    {
+        var original = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo(culture);
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
     private static void VerifyNoEmail(HandlerMocks mocks) =>
         mocks.EmailSender.Verify(
             x => x.SendAsync(
@@ -160,6 +219,8 @@ public sealed class ForgotPasswordHandlerBaseTests
         public Mock<IEmailSender> EmailSender { get; } = new();
 
         public string? SentTo { get; set; }
+
+        public string? SentSubject { get; set; }
 
         public string? SentBody { get; set; }
 
@@ -184,6 +245,7 @@ public sealed class ForgotPasswordHandlerBaseTests
             .Callback((string to, string subject, string body, bool isHtml, CancellationToken _) =>
             {
                 mocks.SentTo = to;
+                mocks.SentSubject = subject;
                 mocks.SentBody = body;
                 mocks.SentAsHtml = isHtml;
             })

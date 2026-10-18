@@ -94,9 +94,10 @@
 
 #components-reconnect-modal button {
     border: 0;
-    /* Blue 800 rather than the stock #6b9ed2, which gives its white label only 2.82:1. #1565C0 is
-       5.75:1, and the hover/active shades stay darker still so the state change never drops below it. */
-    background-color: #1565C0;
+    /* The brand primary (Blue 800) rather than the stock #6b9ed2, which gives its white label only
+       2.82:1. The primary gives 5.75:1, and the hover/active shade (the darkened primary) stays darker
+       still so the state change never drops below it. */
+    background-color: var(--mmca-primary);
     color: white;
     padding: 4px 24px;
     border-radius: 4px;
@@ -106,11 +107,11 @@
 }
 
     #components-reconnect-modal button:hover {
-        background-color: #0D47A1;
+        background-color: var(--mmca-primary-dark);
     }
 
     #components-reconnect-modal button:active {
-        background-color: #0D47A1;
+        background-color: var(--mmca-primary-dark);
     }
 
 .components-rejoining-animation {

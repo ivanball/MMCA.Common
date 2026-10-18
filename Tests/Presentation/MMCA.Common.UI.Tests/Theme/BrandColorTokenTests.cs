@@ -11,7 +11,7 @@ namespace MMCA.Common.UI.Tests.Theme;
 /// properties in <c>wwwroot/app.css</c> must match <see cref="BrandColors"/> so the C# theme and
 /// the stylesheet can't silently drift. app.css is embedded into this test assembly (see the csproj).
 /// </summary>
-public sealed class BrandColorTokenTests
+public sealed partial class BrandColorTokenTests
 {
     // MudColor stringifies with alpha/casing variance; compare on RGB channels for stability.
     private static string ToHex(MudColor color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
@@ -50,6 +50,48 @@ public sealed class BrandColorTokenTests
     }
 
     [Fact]
+    public void UiStylesheets_NeverHardcodeABrandHex_OutsideTheAppCssTokenDefinitions()
+    {
+        // The brand family is every BrandColors constant named Primary* or Secondary*. Comments are
+        // scanned too (as ADC's consumer-side guard does), so a hex left in prose cannot be copied
+        // back into a declaration later.
+        var brandHexes = typeof(BrandColors)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.IsLiteral
+                && (field.Name.StartsWith("Primary", StringComparison.Ordinal)
+                    || field.Name.StartsWith("Secondary", StringComparison.Ordinal)))
+            .Select(field => (string)field.GetValue(null)!)
+            .ToList();
+        brandHexes.Should().Contain(BrandColors.Primary, "the scan must cover the primary brand color at least");
+
+        var uiProject = Path.Combine(RepositoryRoot(), "Source", "Presentation", "MMCA.Common.UI");
+        var stylesheets = Directory.EnumerateFiles(uiProject, "*.css", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutput(uiProject, path))
+            .ToList();
+        stylesheets.Should().Contain(path => path.EndsWith("ReconnectModal.razor.css", StringComparison.Ordinal),
+            "the scan must reach the scoped stylesheets, not just app.css");
+
+        var violations = new List<string>();
+        foreach (var path in stylesheets)
+        {
+            var css = File.ReadAllText(path);
+            if (string.Equals(Path.GetFileName(path), "app.css", StringComparison.Ordinal))
+            {
+                // app.css alone may spell the hex, and only in a custom-property definition (the token).
+                css = TokenDefinition.Replace(css, string.Empty);
+            }
+
+            violations.AddRange(brandHexes
+                .Where(hex => Regex.IsMatch(css, Regex.Escape(hex) + "(?![0-9A-Fa-f])", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)))
+                .Select(hex => $"{Path.GetRelativePath(uiProject, path)} contains {hex}"));
+        }
+
+        violations.Should().BeEmpty(
+            "a brand color must come from its app.css token (var(--mmca-primary) and friends), never a raw hex, comments included; found: {0}",
+            string.Join("; ", violations));
+    }
+
+    [Fact]
     public void ThemeLightPrimary_IsSourcedFromBrandColors()
     {
         ToHex(MMCATheme.Instance.PaletteLight.Primary).Should().BeEquivalentTo(BrandColors.Primary);
@@ -75,4 +117,27 @@ public sealed class BrandColorTokenTests
         ToHex(MMCATheme.Instance.PaletteDark.Background).Should().BeEquivalentTo("#1A2027");
         ToHex(MMCATheme.Instance.PaletteDark.Primary).Should().BeEquivalentTo(BrandColors.PrimaryLight);
     }
+
+    private static string RepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "MMCA.Common.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new InvalidOperationException("MMCA.Common.slnx not found above the test output directory.");
+    }
+
+    private static bool IsBuildOutput(string projectDirectory, string path)
+    {
+        var relative = Path.GetRelativePath(projectDirectory, path).Replace(Path.DirectorySeparatorChar, '/');
+        return relative.StartsWith("bin/", StringComparison.Ordinal)
+            || relative.StartsWith("obj/", StringComparison.Ordinal);
+    }
+
+    [GeneratedRegex(@"--mmca-[a-z0-9-]+\s*:\s*#[0-9A-Fa-f]{6,8}\s*;", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TokenDefinition { get; }
 }
