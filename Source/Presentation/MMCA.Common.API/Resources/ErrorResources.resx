@@ -103,4 +103,253 @@
   <data name="DateRange.Invalid" xml:space="preserve">
     <value>End date must be greater than or equal to start date.</value>
   </data>
+  <data name="Address.Line1.Empty" xml:space="preserve">
+    <value>Address Line 1 cannot be empty.</value>
+  </data>
+  <data name="Auth.EmailAlreadyExists" xml:space="preserve">
+    <value>An account with this email already exists.</value>
+  </data>
+  <data name="Auth.ExternalLoginNotSupported" xml:space="preserve">
+    <value>External login is not supported.</value>
+  </data>
+  <data name="Auth.InvalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="Auth.InvalidCurrentPassword" xml:space="preserve">
+    <value>Current password is incorrect.</value>
+  </data>
+  <data name="Auth.InvalidRefreshToken" xml:space="preserve">
+    <value>Invalid or expired refresh token.</value>
+  </data>
+  <data name="Auth.InvalidResetToken" xml:space="preserve">
+    <value>The reset link is invalid or has expired. Please request a new one.</value>
+  </data>
+  <data name="Auth.InvalidToken" xml:space="preserve">
+    <value>Invalid access token.</value>
+  </data>
+  <data name="Auth.RefreshSuperseded" xml:space="preserve">
+    <value>The refresh token was already rotated by a concurrent request; retry with the current session.</value>
+  </data>
+  <data name="Auth.RegistrationRateLimitExceeded" xml:space="preserve">
+    <value>Too many registration attempts. Please try again later.</value>
+  </data>
+  <data name="Auth.ResetThrottled" xml:space="preserve">
+    <value>Too many password reset requests. Please try again later.</value>
+  </data>
+  <data name="Auth.SessionAlreadyRevoked" xml:space="preserve">
+    <value>The session was already signed out.</value>
+  </data>
+  <data name="Auth.SessionNotFound" xml:space="preserve">
+    <value>The session was not found.</value>
+  </data>
+  <data name="Auth.TermsNotAccepted" xml:space="preserve">
+    <value>You must accept the Terms of Service to register.</value>
+  </data>
+  <data name="Auth.TooManyAttempts" xml:space="preserve">
+    <value>Too many failed login attempts. Please try again later.</value>
+  </data>
+  <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
+    <value>Too many confirmation requests. Please try again later.</value>
+  </data>
+  <data name="Authentication.EmailNotConfirmed" xml:space="preserve">
+    <value>Confirm your email address before signing in. Request a new confirmation link if you no longer have it.</value>
+  </data>
+  <data name="Authentication.InvalidConfirmationToken" xml:space="preserve">
+    <value>The confirmation link is invalid or has expired. Please request a new one.</value>
+  </data>
+  <data name="Authentication.TwoFactorAlreadyEnabled" xml:space="preserve">
+    <value>Two-factor authentication is already enabled for this account. Disable it before enrolling again.</value>
+  </data>
+  <data name="Authentication.TwoFactorEnrollmentMissing" xml:space="preserve">
+    <value>No two-factor enrollment is in progress for this account. Start one before confirming it.</value>
+  </data>
+  <data name="Authentication.TwoFactorInvalid" xml:space="preserve">
+    <value>The two-factor code is invalid or has expired.</value>
+  </data>
+  <data name="Authentication.TwoFactorNotEnrolled" xml:space="preserve">
+    <value>Two-factor authentication is not enabled for this account.</value>
+  </data>
+  <data name="Authentication.TwoFactorRequired" xml:space="preserve">
+    <value>This account requires a second authentication factor. Supply the code from your authenticator app or a recovery code.</value>
+  </data>
+  <data name="Authorization.MultiFactorRequired" xml:space="preserve">
+    <value>This operation requires a second authentication factor. Sign in again with your authenticator code.</value>
+  </data>
+  <data name="Authorization.PermissionDenied" xml:space="preserve">
+    <value>The current user does not hold the permission this operation requires.</value>
+  </data>
+  <data name="Authorization.RoleNotFound" xml:space="preserve">
+    <value>The role was not found.</value>
+  </data>
+  <data name="Concurrency.MalformedIfMatch" xml:space="preserve">
+    <value>The If-Match header is not a decodable entity tag.</value>
+  </data>
+  <data name="Concurrency.PreconditionFailed" xml:space="preserve">
+    <value>Someone else changed this item after you opened it. Reload the page and try again.</value>
+  </data>
+  <data name="Concurrency.PreconditionRequired" xml:space="preserve">
+    <value>This write is conditional; the If-Match header is required.</value>
+  </data>
+  <data name="Entity.NotDeleted" xml:space="preserve">
+    <value>Cannot undelete an entity that is not deleted.</value>
+  </data>
+  <data name="Enumeration.UnknownName" xml:space="preserve">
+    <value>The supplied name is not a known value.</value>
+  </data>
+  <data name="Enumeration.UnknownValue" xml:space="preserve">
+    <value>The supplied value is not a known value.</value>
+  </data>
+  <data name="Error.Forbidden" xml:space="preserve">
+    <value>Access denied.</value>
+  </data>
+  <data name="Error.InvalidCursor" xml:space="preserve">
+    <value>The supplied pagination cursor isn't valid.</value>
+  </data>
+  <data name="Error.InvalidSortDirection" xml:space="preserve">
+    <value>The provided sort direction isn't valid. Allowed values are 'asc' or 'desc'.</value>
+  </data>
+  <data name="Export.RowScopeRequired" xml:space="preserve">
+    <value>The export is refused because the resource declares no row scope.</value>
+  </data>
+  <data name="Feature.Disabled" xml:space="preserve">
+    <value>The requested feature is not currently available.</value>
+  </data>
+  <data name="FileStorage.DeleteFailed" xml:space="preserve">
+    <value>The file could not be deleted.</value>
+  </data>
+  <data name="FileStorage.NotConfigured" xml:space="preserve">
+    <value>No file storage is configured for this host.</value>
+  </data>
+  <data name="FileStorage.UploadFailed" xml:space="preserve">
+    <value>The file could not be stored.</value>
+  </data>
+  <data name="Filter.Operator.NotSupported" xml:space="preserve">
+    <value>The filter operator is not supported for this property.</value>
+  </data>
+  <data name="Filter.Property.NotFound" xml:space="preserve">
+    <value>The filter property does not exist or is not filterable.</value>
+  </data>
+  <data name="Filter.Type.NotSupported" xml:space="preserve">
+    <value>No filter strategy is registered for this property's type.</value>
+  </data>
+  <data name="Filter.Value.Invalid" xml:space="preserve">
+    <value>The filter value is not valid for this property and operator.</value>
+  </data>
+  <data name="Image.TooLarge" xml:space="preserve">
+    <value>The uploaded image is too large to process.</value>
+  </data>
+  <data name="Image.Undecodable" xml:space="preserve">
+    <value>The uploaded file is not a supported image.</value>
+  </data>
+  <data name="InternalCommands.InvalidOlderThan" xml:space="preserve">
+    <value>OlderThan must be zero or greater.</value>
+  </data>
+  <data name="InternalCommands.InvalidSkip" xml:space="preserve">
+    <value>Skip must be zero or greater.</value>
+  </data>
+  <data name="InternalCommands.InvalidTake" xml:space="preserve">
+    <value>Take must be between 1 and 500.</value>
+  </data>
+  <data name="InternalCommands.NotSerializable" xml:space="preserve">
+    <value>The command could not be serialized to JSON and was not scheduled.</value>
+  </data>
+  <data name="InternalCommands.NullCommand" xml:space="preserve">
+    <value>A null command cannot be scheduled.</value>
+  </data>
+  <data name="InternalCommands.UnknownDataSource" xml:space="preserve">
+    <value>No internal-command data source with that name is owned by this host.</value>
+  </data>
+  <data name="Legal.Unauthorized" xml:space="preserve">
+    <value>User is not authenticated.</value>
+  </data>
+  <data name="Legal.VersionNotCurrent" xml:space="preserve">
+    <value>The terms you accepted are no longer the current version. Please review the latest terms.</value>
+  </data>
+  <data name="Notification.Unauthorized" xml:space="preserve">
+    <value>User is not authenticated.</value>
+  </data>
+  <data name="Outbox.InvalidSkip" xml:space="preserve">
+    <value>Skip must be zero or greater.</value>
+  </data>
+  <data name="Outbox.InvalidTake" xml:space="preserve">
+    <value>Take must be between 1 and 500.</value>
+  </data>
+  <data name="Outbox.UnknownDataSource" xml:space="preserve">
+    <value>No outbox data source with that name is owned by this host.</value>
+  </data>
+  <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
+    <value>The role-administration permission cannot be granted by a stored row. Grant it in code, through the host's permission registry.</value>
+  </data>
+  <data name="PermissionGrant.PermissionInvalid" xml:space="preserve">
+    <value>A permission grant requires a permission name of at most 128 characters.</value>
+  </data>
+  <data name="PermissionGrant.RoleInvalid" xml:space="preserve">
+    <value>A permission grant requires a role name of at most 64 characters.</value>
+  </data>
+  <data name="PermissionGrant.UnknownPermission" xml:space="preserve">
+    <value>The host's permission catalog does not contain the requested permission. A stored grant may only name a permission the code already declares.</value>
+  </data>
+  <data name="Privacy.Unauthorized" xml:space="preserve">
+    <value>User is not authenticated.</value>
+  </data>
+  <data name="PushDevice.DeleteFailed" xml:space="preserve">
+    <value>The device could not be unregistered from push notifications.</value>
+  </data>
+  <data name="PushDevice.Unauthorized" xml:space="preserve">
+    <value>User is not authenticated.</value>
+  </data>
+  <data name="PushDevice.UnsupportedPlatform" xml:space="preserve">
+    <value>Platform must be 'fcmv1' or 'apns'.</value>
+  </data>
+  <data name="PushDevice.UpsertFailed" xml:space="preserve">
+    <value>The device could not be registered for push notifications.</value>
+  </data>
+  <data name="PushNotification.Body.Empty" xml:space="preserve">
+    <value>Notification body cannot be empty.</value>
+  </data>
+  <data name="PushNotification.Body.TooLong" xml:space="preserve">
+    <value>Notification body cannot exceed 2000 characters.</value>
+  </data>
+  <data name="PushNotification.DedupKey.TooLong" xml:space="preserve">
+    <value>Notification dedup key cannot exceed 128 characters.</value>
+  </data>
+  <data name="PushNotification.NoRecipients" xml:space="preserve">
+    <value>There are no recipients to send the notification to.</value>
+  </data>
+  <data name="PushNotification.ScopeKey.TooLong" xml:space="preserve">
+    <value>Notification scope key cannot exceed 128 characters.</value>
+  </data>
+  <data name="PushNotification.Title.Empty" xml:space="preserve">
+    <value>Notification title cannot be empty.</value>
+  </data>
+  <data name="PushNotification.Title.TooLong" xml:space="preserve">
+    <value>Notification title cannot exceed 200 characters.</value>
+  </data>
+  <data name="RefreshSession.AlreadyRevoked" xml:space="preserve">
+    <value>The refresh session is already revoked.</value>
+  </data>
+  <data name="RefreshSession.ExpiryInPast" xml:space="preserve">
+    <value>A refresh session must expire after it is created.</value>
+  </data>
+  <data name="RefreshSession.TokenRequired" xml:space="preserve">
+    <value>A refresh session requires a refresh token.</value>
+  </data>
+  <data name="Request.TimedOut" xml:space="preserve">
+    <value>The request did not complete within its time budget.</value>
+  </data>
+  <data name="Url.Invalid" xml:space="preserve">
+    <value>The URL is not a well-formed absolute URL.</value>
+  </data>
+  <data name="User.DeleteForbidden" xml:space="preserve">
+    <value>You can only delete your own account.</value>
+  </data>
+  <data name="User.ExportForbidden" xml:space="preserve">
+    <value>You can only export your own account data.</value>
+  </data>
+  <data name="User.Role.Invalid" xml:space="preserve">
+    <value>The role is not a valid user role.</value>
+  </data>
+  <data name="UserNotification.NotFound" xml:space="preserve">
+    <value>Notification not found.</value>
+  </data>
 </root>

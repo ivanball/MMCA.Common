@@ -103,4 +103,253 @@
   <data name="DateRange.Invalid" xml:space="preserve">
     <value>La fecha de fin debe ser mayor o igual que la fecha de inicio.</value>
   </data>
+  <data name="Address.Line1.Empty" xml:space="preserve">
+    <value>La línea 1 de la dirección no puede estar vacía.</value>
+  </data>
+  <data name="Auth.EmailAlreadyExists" xml:space="preserve">
+    <value>Ya existe una cuenta con este correo electrónico.</value>
+  </data>
+  <data name="Auth.ExternalLoginNotSupported" xml:space="preserve">
+    <value>No se admite el inicio de sesión externo.</value>
+  </data>
+  <data name="Auth.InvalidCredentials" xml:space="preserve">
+    <value>Correo electrónico o contraseña no válidos.</value>
+  </data>
+  <data name="Auth.InvalidCurrentPassword" xml:space="preserve">
+    <value>La contraseña actual es incorrecta.</value>
+  </data>
+  <data name="Auth.InvalidRefreshToken" xml:space="preserve">
+    <value>Token de actualización no válido o caducado.</value>
+  </data>
+  <data name="Auth.InvalidResetToken" xml:space="preserve">
+    <value>El enlace de restablecimiento no es válido o ha caducado. Solicite uno nuevo.</value>
+  </data>
+  <data name="Auth.InvalidToken" xml:space="preserve">
+    <value>El token de acceso no es válido.</value>
+  </data>
+  <data name="Auth.RefreshSuperseded" xml:space="preserve">
+    <value>Una solicitud simultánea ya renovó el token de actualización; vuelva a intentarlo con la sesión actual.</value>
+  </data>
+  <data name="Auth.RegistrationRateLimitExceeded" xml:space="preserve">
+    <value>Demasiados intentos de registro. Vuelva a intentarlo más tarde.</value>
+  </data>
+  <data name="Auth.ResetThrottled" xml:space="preserve">
+    <value>Demasiadas solicitudes de restablecimiento de contraseña. Vuelva a intentarlo más tarde.</value>
+  </data>
+  <data name="Auth.SessionAlreadyRevoked" xml:space="preserve">
+    <value>La sesión ya se había cerrado.</value>
+  </data>
+  <data name="Auth.SessionNotFound" xml:space="preserve">
+    <value>No se encontró la sesión.</value>
+  </data>
+  <data name="Auth.TermsNotAccepted" xml:space="preserve">
+    <value>Debe aceptar los Términos del servicio para registrarse.</value>
+  </data>
+  <data name="Auth.TooManyAttempts" xml:space="preserve">
+    <value>Demasiados intentos de inicio de sesión fallidos. Vuelva a intentarlo más tarde.</value>
+  </data>
+  <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
+    <value>Demasiadas solicitudes de confirmación. Vuelva a intentarlo más tarde.</value>
+  </data>
+  <data name="Authentication.EmailNotConfirmed" xml:space="preserve">
+    <value>Confirme su dirección de correo electrónico antes de iniciar sesión. Solicite un nuevo enlace de confirmación si ya no lo tiene.</value>
+  </data>
+  <data name="Authentication.InvalidConfirmationToken" xml:space="preserve">
+    <value>El enlace de confirmación no es válido o ha caducado. Solicite uno nuevo.</value>
+  </data>
+  <data name="Authentication.TwoFactorAlreadyEnabled" xml:space="preserve">
+    <value>La autenticación en dos pasos ya está habilitada para esta cuenta. Deshabilítela antes de volver a inscribirse.</value>
+  </data>
+  <data name="Authentication.TwoFactorEnrollmentMissing" xml:space="preserve">
+    <value>No hay ninguna inscripción en la autenticación en dos pasos en curso para esta cuenta. Inicie una antes de confirmarla.</value>
+  </data>
+  <data name="Authentication.TwoFactorInvalid" xml:space="preserve">
+    <value>El código de autenticación en dos pasos no es válido o ha caducado.</value>
+  </data>
+  <data name="Authentication.TwoFactorNotEnrolled" xml:space="preserve">
+    <value>La autenticación en dos pasos no está habilitada para esta cuenta.</value>
+  </data>
+  <data name="Authentication.TwoFactorRequired" xml:space="preserve">
+    <value>Esta cuenta requiere un segundo factor de autenticación. Introduzca el código de su aplicación de autenticación o un código de recuperación.</value>
+  </data>
+  <data name="Authorization.MultiFactorRequired" xml:space="preserve">
+    <value>Esta operación requiere un segundo factor de autenticación. Vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
+  </data>
+  <data name="Authorization.PermissionDenied" xml:space="preserve">
+    <value>El usuario actual no tiene el permiso que requiere esta operación.</value>
+  </data>
+  <data name="Authorization.RoleNotFound" xml:space="preserve">
+    <value>No se encontró el rol.</value>
+  </data>
+  <data name="Concurrency.MalformedIfMatch" xml:space="preserve">
+    <value>El encabezado If-Match no es una etiqueta de entidad descodificable.</value>
+  </data>
+  <data name="Concurrency.PreconditionFailed" xml:space="preserve">
+    <value>Otra persona modificó este elemento después de que usted lo abriera. Recargue la página e inténtelo de nuevo.</value>
+  </data>
+  <data name="Concurrency.PreconditionRequired" xml:space="preserve">
+    <value>Esta escritura es condicional; el encabezado If-Match es obligatorio.</value>
+  </data>
+  <data name="Entity.NotDeleted" xml:space="preserve">
+    <value>No se puede restaurar una entidad que no está eliminada.</value>
+  </data>
+  <data name="Enumeration.UnknownName" xml:space="preserve">
+    <value>El nombre proporcionado no es un valor conocido.</value>
+  </data>
+  <data name="Enumeration.UnknownValue" xml:space="preserve">
+    <value>El valor proporcionado no es un valor conocido.</value>
+  </data>
+  <data name="Error.Forbidden" xml:space="preserve">
+    <value>Acceso denegado.</value>
+  </data>
+  <data name="Error.InvalidCursor" xml:space="preserve">
+    <value>El cursor de paginación proporcionado no es válido.</value>
+  </data>
+  <data name="Error.InvalidSortDirection" xml:space="preserve">
+    <value>La dirección de ordenación proporcionada no es válida. Los valores permitidos son 'asc' o 'desc'.</value>
+  </data>
+  <data name="Export.RowScopeRequired" xml:space="preserve">
+    <value>Se rechazó la exportación porque el recurso no declara ningún ámbito de filas.</value>
+  </data>
+  <data name="Feature.Disabled" xml:space="preserve">
+    <value>La función solicitada no está disponible en este momento.</value>
+  </data>
+  <data name="FileStorage.DeleteFailed" xml:space="preserve">
+    <value>No se pudo eliminar el archivo.</value>
+  </data>
+  <data name="FileStorage.NotConfigured" xml:space="preserve">
+    <value>No hay ningún almacenamiento de archivos configurado para este host.</value>
+  </data>
+  <data name="FileStorage.UploadFailed" xml:space="preserve">
+    <value>No se pudo almacenar el archivo.</value>
+  </data>
+  <data name="Filter.Operator.NotSupported" xml:space="preserve">
+    <value>El operador de filtro no es compatible con esta propiedad.</value>
+  </data>
+  <data name="Filter.Property.NotFound" xml:space="preserve">
+    <value>La propiedad de filtro no existe o no se puede filtrar.</value>
+  </data>
+  <data name="Filter.Type.NotSupported" xml:space="preserve">
+    <value>No hay ninguna estrategia de filtro registrada para el tipo de esta propiedad.</value>
+  </data>
+  <data name="Filter.Value.Invalid" xml:space="preserve">
+    <value>El valor del filtro no es válido para esta propiedad y este operador.</value>
+  </data>
+  <data name="Image.TooLarge" xml:space="preserve">
+    <value>La imagen cargada es demasiado grande para procesarla.</value>
+  </data>
+  <data name="Image.Undecodable" xml:space="preserve">
+    <value>El archivo cargado no es una imagen compatible.</value>
+  </data>
+  <data name="InternalCommands.InvalidOlderThan" xml:space="preserve">
+    <value>OlderThan debe ser cero o mayor.</value>
+  </data>
+  <data name="InternalCommands.InvalidSkip" xml:space="preserve">
+    <value>Skip debe ser cero o mayor.</value>
+  </data>
+  <data name="InternalCommands.InvalidTake" xml:space="preserve">
+    <value>Take debe estar entre 1 y 500.</value>
+  </data>
+  <data name="InternalCommands.NotSerializable" xml:space="preserve">
+    <value>El comando no se pudo serializar a JSON y no se programó.</value>
+  </data>
+  <data name="InternalCommands.NullCommand" xml:space="preserve">
+    <value>No se puede programar un comando nulo.</value>
+  </data>
+  <data name="InternalCommands.UnknownDataSource" xml:space="preserve">
+    <value>Este host no tiene ningún origen de datos de comandos internos con ese nombre.</value>
+  </data>
+  <data name="Legal.Unauthorized" xml:space="preserve">
+    <value>El usuario no está autenticado.</value>
+  </data>
+  <data name="Legal.VersionNotCurrent" xml:space="preserve">
+    <value>Los términos que aceptó ya no son la versión vigente. Revise los términos más recientes.</value>
+  </data>
+  <data name="Notification.Unauthorized" xml:space="preserve">
+    <value>El usuario no está autenticado.</value>
+  </data>
+  <data name="Outbox.InvalidSkip" xml:space="preserve">
+    <value>Skip debe ser cero o mayor.</value>
+  </data>
+  <data name="Outbox.InvalidTake" xml:space="preserve">
+    <value>Take debe estar entre 1 y 500.</value>
+  </data>
+  <data name="Outbox.UnknownDataSource" xml:space="preserve">
+    <value>Este host no tiene ningún origen de datos de bandeja de salida con ese nombre.</value>
+  </data>
+  <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
+    <value>El permiso de administración de roles no se puede conceder mediante una fila almacenada. Concédalo en el código, a través del registro de permisos del host.</value>
+  </data>
+  <data name="PermissionGrant.PermissionInvalid" xml:space="preserve">
+    <value>Una concesión de permiso requiere un nombre de permiso de 128 caracteres como máximo.</value>
+  </data>
+  <data name="PermissionGrant.RoleInvalid" xml:space="preserve">
+    <value>Una concesión de permiso requiere un nombre de rol de 64 caracteres como máximo.</value>
+  </data>
+  <data name="PermissionGrant.UnknownPermission" xml:space="preserve">
+    <value>El catálogo de permisos del host no contiene el permiso solicitado. Una concesión almacenada solo puede nombrar un permiso que el código ya declara.</value>
+  </data>
+  <data name="Privacy.Unauthorized" xml:space="preserve">
+    <value>El usuario no está autenticado.</value>
+  </data>
+  <data name="PushDevice.DeleteFailed" xml:space="preserve">
+    <value>No se pudo anular el registro del dispositivo para las notificaciones push.</value>
+  </data>
+  <data name="PushDevice.Unauthorized" xml:space="preserve">
+    <value>El usuario no está autenticado.</value>
+  </data>
+  <data name="PushDevice.UnsupportedPlatform" xml:space="preserve">
+    <value>La plataforma debe ser 'fcmv1' o 'apns'.</value>
+  </data>
+  <data name="PushDevice.UpsertFailed" xml:space="preserve">
+    <value>No se pudo registrar el dispositivo para las notificaciones push.</value>
+  </data>
+  <data name="PushNotification.Body.Empty" xml:space="preserve">
+    <value>El cuerpo de la notificación no puede estar vacío.</value>
+  </data>
+  <data name="PushNotification.Body.TooLong" xml:space="preserve">
+    <value>El cuerpo de la notificación no puede superar los 2000 caracteres.</value>
+  </data>
+  <data name="PushNotification.DedupKey.TooLong" xml:space="preserve">
+    <value>La clave de deduplicación de la notificación no puede superar los 128 caracteres.</value>
+  </data>
+  <data name="PushNotification.NoRecipients" xml:space="preserve">
+    <value>No hay destinatarios a los que enviar la notificación.</value>
+  </data>
+  <data name="PushNotification.ScopeKey.TooLong" xml:space="preserve">
+    <value>La clave de ámbito de la notificación no puede superar los 128 caracteres.</value>
+  </data>
+  <data name="PushNotification.Title.Empty" xml:space="preserve">
+    <value>El título de la notificación no puede estar vacío.</value>
+  </data>
+  <data name="PushNotification.Title.TooLong" xml:space="preserve">
+    <value>El título de la notificación no puede superar los 200 caracteres.</value>
+  </data>
+  <data name="RefreshSession.AlreadyRevoked" xml:space="preserve">
+    <value>La sesión de actualización ya está revocada.</value>
+  </data>
+  <data name="RefreshSession.ExpiryInPast" xml:space="preserve">
+    <value>Una sesión de actualización debe caducar después de su creación.</value>
+  </data>
+  <data name="RefreshSession.TokenRequired" xml:space="preserve">
+    <value>Una sesión de actualización requiere un token de actualización.</value>
+  </data>
+  <data name="Request.TimedOut" xml:space="preserve">
+    <value>La solicitud no se completó dentro del tiempo asignado.</value>
+  </data>
+  <data name="Url.Invalid" xml:space="preserve">
+    <value>La URL no es una URL absoluta con un formato válido.</value>
+  </data>
+  <data name="User.DeleteForbidden" xml:space="preserve">
+    <value>Solo puede eliminar su propia cuenta.</value>
+  </data>
+  <data name="User.ExportForbidden" xml:space="preserve">
+    <value>Solo puede exportar los datos de su propia cuenta.</value>
+  </data>
+  <data name="User.Role.Invalid" xml:space="preserve">
+    <value>El rol no es un rol de usuario válido.</value>
+  </data>
+  <data name="UserNotification.NotFound" xml:space="preserve">
+    <value>Notificación no encontrada.</value>
+  </data>
 </root>
