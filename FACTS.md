@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-10-15 (framework v1.242.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-10-18 (framework v1.242.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
@@ -41,6 +41,36 @@ Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; t
 20. `MMCA.Common.Testing.E2E`
 21. `MMCA.Common.Testing.UI`
 22. `MMCA.Common`
+
+## Package dependency graph
+Which other `MMCA.Common.*` packages each package references directly, read from the `<ProjectReference>`
+items between the packable projects above (each becomes a package dependency at pack time). Transitive
+references are not repeated; a package with **(none)** depends on no other `MMCA.Common.*` package.
+
+| Package | References (direct, `MMCA.Common.*` packages) |
+| --- | --- |
+| `MMCA.Common.AI` | (none) |
+| `MMCA.Common.AI.Anthropic` | `MMCA.Common.AI` |
+| `MMCA.Common.AI.OpenAI` | `MMCA.Common.AI` |
+| `MMCA.Common.Application` | `MMCA.Common.Domain` |
+| `MMCA.Common.Domain` | `MMCA.Common.Shared` |
+| `MMCA.Common.Infrastructure` | `MMCA.Common.Application` |
+| `MMCA.Common.Shared` | (none) |
+| `MMCA.Common.API` | `MMCA.Common.Application`, `MMCA.Common.Infrastructure` |
+| `MMCA.Common.Grpc` | `MMCA.Common.Shared` |
+| `MMCA.Common.UI` | `MMCA.Common.Shared` |
+| `MMCA.Common.UI.Maui` | `MMCA.Common.UI` |
+| `MMCA.Common.UI.Web` | `MMCA.Common.API`, `MMCA.Common.UI`, `MMCA.Common.Aspire` |
+| `MMCA.Common.AI.Testing` | `MMCA.Common.AI` |
+| `MMCA.Common.Aspire` | `MMCA.Common.Shared` |
+| `MMCA.Common.Aspire.Hosting` | (none) |
+| `MMCA.Common.Gateway` | (none) |
+| `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
+| `MMCA.Common.Testing.Architecture` | (none) |
+| `MMCA.Common.Testing.Aspire` | `MMCA.Common.Testing` |
+| `MMCA.Common.Testing.E2E` | (none) |
+| `MMCA.Common.Testing.UI` | `MMCA.Common.UI` |
+| `MMCA.Common` | `MMCA.Common.Application`, `MMCA.Common.Domain`, `MMCA.Common.Infrastructure`, `MMCA.Common.Shared`, `MMCA.Common.API`, `MMCA.Common.Aspire` |
 
 ## Architecture Decision Records
 The ADRs live in the Website repo (`docs-src/adr/`), published at

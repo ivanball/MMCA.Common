@@ -167,6 +167,10 @@ errors (`NU5xxx`) are all invisible to a source-mode build. The `package-consump
 precisely to catch these, so expect the occasional CI-only round-trip and do not treat a clean local
 build as the final word.
 
+Run the same check locally with `pwsh build/consumer-check/Invoke-ConsumerCheck.ps1` (the script CI
+runs: packs to `./nupkgs`, builds a throwaway consumer and the layer-rule probes in the temp folder,
+exits non-zero on any failure; needs nuget.org access, no token).
+
 ## Releases are separate
 
 Do **not** bump versions in a feature PR. A release is cut after merge by the maintainer via the
