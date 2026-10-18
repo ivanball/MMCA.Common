@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldDeclare_EventName() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsDeclareEventName(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

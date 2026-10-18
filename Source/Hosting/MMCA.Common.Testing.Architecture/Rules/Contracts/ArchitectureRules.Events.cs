@@ -24,6 +24,22 @@ public static partial class ArchitectureRules
             "integration events must inherit BaseIntegrationEvent so the cross-service envelope stays consistent");
     }
 
+    /// <summary>
+    /// Every concrete integration event carries <c>[EventName]</c>, so its outbox and inbox rows store a
+    /// stable wire identity instead of a CLR type name that a rename, namespace move or assembly move
+    /// would orphan. The attribute is matched by name and must be declared on the event itself
+    /// (it is not inherited).
+    /// </summary>
+    public static void IntegrationEventsDeclareEventName(IArchitectureMap map)
+    {
+        var violations = IntegrationEvents(map)
+            .Where(t => !t.GetCustomAttributesData().Any(a => string.Equals(a.AttributeType.FullName, EventNameAttributeFullName, StringComparison.Ordinal)))
+            .Select(t => $"  - {t.FullName} must declare [EventName(\"<Module>.<Event>.v<N>\")]");
+
+        ArchitectureAssert.NoViolations(violations,
+            "integration events must carry [EventName] so persisted outbox and inbox rows survive a rename, namespace move or assembly move of the event type");
+    }
+
     /// <summary>Integration events live in a <c>*.IntegrationEvents</c> namespace within the Shared layer.</summary>
     public static void IntegrationEventsResideInSharedIntegrationEventsNamespace(IArchitectureMap map)
     {
