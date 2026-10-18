@@ -73,12 +73,13 @@ public sealed class KeyboardOperabilityHooksE2ETests : KeyboardOperabilityTestsB
         _arranged = false;
 
         var fact = TestContext.Current.TestMethod?.MethodName;
-        if (fact is nameof(OpenDialog_TrapsTabFocus) or nameof(Escape_ClosesDialog_AndReturnsFocusToOpener))
+        var isEscapeFact = string.Equals(fact, nameof(Escape_ClosesDialog_AndReturnsFocusToOpener), StringComparison.Ordinal);
+        if (isEscapeFact || string.Equals(fact, nameof(OpenDialog_TrapsTabFocus), StringComparison.Ordinal))
         {
             _dialogReads.Should().BePositive("the dialog facts must locate the dialog through Dialog");
         }
 
-        if (fact is nameof(Escape_ClosesDialog_AndReturnsFocusToOpener))
+        if (isEscapeFact)
         {
             _focusReturnReads.Should().BePositive("the Escape fact must check focus on FocusReturnTarget");
         }

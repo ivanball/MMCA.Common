@@ -75,6 +75,18 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     protected abstract ILocator DialogOpener { get; }
 
     /// <summary>
+    /// The open dialog. Defaults to the first element with <c>role="dialog"</c>; override it for a
+    /// modal surface rendered without that role (for example a temporary drawer).
+    /// </summary>
+    protected virtual ILocator Dialog => Page.GetByRole(AriaRole.Dialog).First;
+
+    /// <summary>
+    /// The element that must hold focus after Escape closes the dialog. Defaults to
+    /// <see cref="DialogOpener"/>; override it when the app returns focus to a wrapper around it.
+    /// </summary>
+    protected virtual ILocator FocusReturnTarget => DialogOpener;
+
+    /// <summary>
     /// Runs before each fact's first navigation. Override it to sign in or to arrange the data a page
     /// or the dialog needs (for example a live event with a closed poll). The default does nothing.
     /// </summary>
@@ -174,7 +186,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         await Page.Keyboard.PressAsync("Escape").ConfigureAwait(false);
 
         await Expect(dialog).ToHaveCountAsync(0, new() { Timeout = FocusTimeoutMs }).ConfigureAwait(false);
-        await Expect(DialogOpener).ToBeFocusedAsync(new() { Timeout = FocusTimeoutMs }).ConfigureAwait(false);
+        await Expect(FocusReturnTarget).ToBeFocusedAsync(new() { Timeout = FocusTimeoutMs }).ConfigureAwait(false);
     }
 
     private async Task CheckFocusIndicatorAsync()
@@ -226,7 +238,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         await DialogOpener.FocusAsync().ConfigureAwait(false);
         await Page.Keyboard.PressAsync("Enter").ConfigureAwait(false);
 
-        var dialog = Page.GetByRole(AriaRole.Dialog).First;
+        var dialog = Dialog;
         await Expect(dialog).ToBeVisibleAsync(new() { Timeout = FocusTimeoutMs }).ConfigureAwait(false);
 
         var focusEntered = await FocusSettlesAsync(
