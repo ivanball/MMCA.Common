@@ -124,9 +124,6 @@
   <data name="Auth.InvalidResetToken" xml:space="preserve">
     <value>El enlace de restablecimiento no es válido o ha caducado. Solicite uno nuevo.</value>
   </data>
-  <data name="Auth.InvalidToken" xml:space="preserve">
-    <value>El token de acceso no es válido.</value>
-  </data>
   <data name="Auth.RefreshSuperseded" xml:space="preserve">
     <value>Una solicitud simultánea ya renovó el token de actualización; vuelva a intentarlo con la sesión actual.</value>
   </data>
@@ -175,9 +172,6 @@
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
     <value>Esta operación requiere un segundo factor de autenticación. Vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
   </data>
-  <data name="Authorization.PermissionDenied" xml:space="preserve">
-    <value>El usuario actual no tiene el permiso que requiere esta operación.</value>
-  </data>
   <data name="Authorization.RoleNotFound" xml:space="preserve">
     <value>No se encontró el rol.</value>
   </data>
@@ -193,23 +187,11 @@
   <data name="Entity.NotDeleted" xml:space="preserve">
     <value>No se puede restaurar una entidad que no está eliminada.</value>
   </data>
-  <data name="Enumeration.UnknownName" xml:space="preserve">
-    <value>El nombre proporcionado no es un valor conocido.</value>
-  </data>
-  <data name="Enumeration.UnknownValue" xml:space="preserve">
-    <value>El valor proporcionado no es un valor conocido.</value>
-  </data>
   <data name="Error.Forbidden" xml:space="preserve">
     <value>Acceso denegado.</value>
   </data>
   <data name="Error.InvalidCursor" xml:space="preserve">
     <value>El cursor de paginación proporcionado no es válido.</value>
-  </data>
-  <data name="Error.InvalidSortDirection" xml:space="preserve">
-    <value>La dirección de ordenación proporcionada no es válida. Los valores permitidos son 'asc' o 'desc'.</value>
-  </data>
-  <data name="Export.RowScopeRequired" xml:space="preserve">
-    <value>Se rechazó la exportación porque el recurso no declara ningún ámbito de filas.</value>
   </data>
   <data name="Feature.Disabled" xml:space="preserve">
     <value>La función solicitada no está disponible en este momento.</value>
@@ -223,21 +205,6 @@
   <data name="FileStorage.UploadFailed" xml:space="preserve">
     <value>No se pudo almacenar el archivo.</value>
   </data>
-  <data name="Filter.Operator.NotSupported" xml:space="preserve">
-    <value>El operador de filtro no es compatible con esta propiedad.</value>
-  </data>
-  <data name="Filter.Property.NotFound" xml:space="preserve">
-    <value>La propiedad de filtro no existe o no se puede filtrar.</value>
-  </data>
-  <data name="Filter.Type.NotSupported" xml:space="preserve">
-    <value>No hay ninguna estrategia de filtro registrada para el tipo de esta propiedad.</value>
-  </data>
-  <data name="Filter.Value.Invalid" xml:space="preserve">
-    <value>El valor del filtro no es válido para esta propiedad y este operador.</value>
-  </data>
-  <data name="Image.TooLarge" xml:space="preserve">
-    <value>La imagen cargada es demasiado grande para procesarla.</value>
-  </data>
   <data name="Image.Undecodable" xml:space="preserve">
     <value>El archivo cargado no es una imagen compatible.</value>
   </data>
@@ -250,14 +217,8 @@
   <data name="InternalCommands.InvalidTake" xml:space="preserve">
     <value>Take debe estar entre 1 y 500.</value>
   </data>
-  <data name="InternalCommands.NotSerializable" xml:space="preserve">
-    <value>El comando no se pudo serializar a JSON y no se programó.</value>
-  </data>
   <data name="InternalCommands.NullCommand" xml:space="preserve">
     <value>No se puede programar un comando nulo.</value>
-  </data>
-  <data name="InternalCommands.UnknownDataSource" xml:space="preserve">
-    <value>Este host no tiene ningún origen de datos de comandos internos con ese nombre.</value>
   </data>
   <data name="Legal.Unauthorized" xml:space="preserve">
     <value>El usuario no está autenticado.</value>
@@ -274,9 +235,6 @@
   <data name="Outbox.InvalidTake" xml:space="preserve">
     <value>Take debe estar entre 1 y 500.</value>
   </data>
-  <data name="Outbox.UnknownDataSource" xml:space="preserve">
-    <value>Este host no tiene ningún origen de datos de bandeja de salida con ese nombre.</value>
-  </data>
   <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
     <value>El permiso de administración de roles no se puede conceder mediante una fila almacenada. Concédalo en el código, a través del registro de permisos del host.</value>
   </data>
@@ -285,9 +243,6 @@
   </data>
   <data name="PermissionGrant.RoleInvalid" xml:space="preserve">
     <value>Una concesión de permiso requiere un nombre de rol de 64 caracteres como máximo.</value>
-  </data>
-  <data name="PermissionGrant.UnknownPermission" xml:space="preserve">
-    <value>El catálogo de permisos del host no contiene el permiso solicitado. Una concesión almacenada solo puede nombrar un permiso que el código ya declara.</value>
   </data>
   <data name="Privacy.Unauthorized" xml:space="preserve">
     <value>El usuario no está autenticado.</value>
@@ -334,9 +289,6 @@
   <data name="RefreshSession.TokenRequired" xml:space="preserve">
     <value>Una sesión de actualización requiere un token de actualización.</value>
   </data>
-  <data name="Request.TimedOut" xml:space="preserve">
-    <value>La solicitud no se completó dentro del tiempo asignado.</value>
-  </data>
   <data name="Url.Invalid" xml:space="preserve">
     <value>La URL no es una URL absoluta con un formato válido.</value>
   </data>
@@ -345,9 +297,6 @@
   </data>
   <data name="User.ExportForbidden" xml:space="preserve">
     <value>Solo puede exportar los datos de su propia cuenta.</value>
-  </data>
-  <data name="User.Role.Invalid" xml:space="preserve">
-    <value>El rol no es un rol de usuario válido.</value>
   </data>
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notificación no encontrada.</value>

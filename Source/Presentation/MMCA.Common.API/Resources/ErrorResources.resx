@@ -124,9 +124,6 @@
   <data name="Auth.InvalidResetToken" xml:space="preserve">
     <value>The reset link is invalid or has expired. Please request a new one.</value>
   </data>
-  <data name="Auth.InvalidToken" xml:space="preserve">
-    <value>Invalid access token.</value>
-  </data>
   <data name="Auth.RefreshSuperseded" xml:space="preserve">
     <value>The refresh token was already rotated by a concurrent request; retry with the current session.</value>
   </data>
@@ -175,9 +172,6 @@
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
     <value>This operation requires a second authentication factor. Sign in again with your authenticator code.</value>
   </data>
-  <data name="Authorization.PermissionDenied" xml:space="preserve">
-    <value>The current user does not hold the permission this operation requires.</value>
-  </data>
   <data name="Authorization.RoleNotFound" xml:space="preserve">
     <value>The role was not found.</value>
   </data>
@@ -193,23 +187,11 @@
   <data name="Entity.NotDeleted" xml:space="preserve">
     <value>Cannot undelete an entity that is not deleted.</value>
   </data>
-  <data name="Enumeration.UnknownName" xml:space="preserve">
-    <value>The supplied name is not a known value.</value>
-  </data>
-  <data name="Enumeration.UnknownValue" xml:space="preserve">
-    <value>The supplied value is not a known value.</value>
-  </data>
   <data name="Error.Forbidden" xml:space="preserve">
     <value>Access denied.</value>
   </data>
   <data name="Error.InvalidCursor" xml:space="preserve">
     <value>The supplied pagination cursor isn't valid.</value>
-  </data>
-  <data name="Error.InvalidSortDirection" xml:space="preserve">
-    <value>The provided sort direction isn't valid. Allowed values are 'asc' or 'desc'.</value>
-  </data>
-  <data name="Export.RowScopeRequired" xml:space="preserve">
-    <value>The export is refused because the resource declares no row scope.</value>
   </data>
   <data name="Feature.Disabled" xml:space="preserve">
     <value>The requested feature is not currently available.</value>
@@ -223,21 +205,6 @@
   <data name="FileStorage.UploadFailed" xml:space="preserve">
     <value>The file could not be stored.</value>
   </data>
-  <data name="Filter.Operator.NotSupported" xml:space="preserve">
-    <value>The filter operator is not supported for this property.</value>
-  </data>
-  <data name="Filter.Property.NotFound" xml:space="preserve">
-    <value>The filter property does not exist or is not filterable.</value>
-  </data>
-  <data name="Filter.Type.NotSupported" xml:space="preserve">
-    <value>No filter strategy is registered for this property's type.</value>
-  </data>
-  <data name="Filter.Value.Invalid" xml:space="preserve">
-    <value>The filter value is not valid for this property and operator.</value>
-  </data>
-  <data name="Image.TooLarge" xml:space="preserve">
-    <value>The uploaded image is too large to process.</value>
-  </data>
   <data name="Image.Undecodable" xml:space="preserve">
     <value>The uploaded file is not a supported image.</value>
   </data>
@@ -250,14 +217,8 @@
   <data name="InternalCommands.InvalidTake" xml:space="preserve">
     <value>Take must be between 1 and 500.</value>
   </data>
-  <data name="InternalCommands.NotSerializable" xml:space="preserve">
-    <value>The command could not be serialized to JSON and was not scheduled.</value>
-  </data>
   <data name="InternalCommands.NullCommand" xml:space="preserve">
     <value>A null command cannot be scheduled.</value>
-  </data>
-  <data name="InternalCommands.UnknownDataSource" xml:space="preserve">
-    <value>No internal-command data source with that name is owned by this host.</value>
   </data>
   <data name="Legal.Unauthorized" xml:space="preserve">
     <value>User is not authenticated.</value>
@@ -274,9 +235,6 @@
   <data name="Outbox.InvalidTake" xml:space="preserve">
     <value>Take must be between 1 and 500.</value>
   </data>
-  <data name="Outbox.UnknownDataSource" xml:space="preserve">
-    <value>No outbox data source with that name is owned by this host.</value>
-  </data>
   <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
     <value>The role-administration permission cannot be granted by a stored row. Grant it in code, through the host's permission registry.</value>
   </data>
@@ -285,9 +243,6 @@
   </data>
   <data name="PermissionGrant.RoleInvalid" xml:space="preserve">
     <value>A permission grant requires a role name of at most 64 characters.</value>
-  </data>
-  <data name="PermissionGrant.UnknownPermission" xml:space="preserve">
-    <value>The host's permission catalog does not contain the requested permission. A stored grant may only name a permission the code already declares.</value>
   </data>
   <data name="Privacy.Unauthorized" xml:space="preserve">
     <value>User is not authenticated.</value>
@@ -334,9 +289,6 @@
   <data name="RefreshSession.TokenRequired" xml:space="preserve">
     <value>A refresh session requires a refresh token.</value>
   </data>
-  <data name="Request.TimedOut" xml:space="preserve">
-    <value>The request did not complete within its time budget.</value>
-  </data>
   <data name="Url.Invalid" xml:space="preserve">
     <value>The URL is not a well-formed absolute URL.</value>
   </data>
@@ -345,9 +297,6 @@
   </data>
   <data name="User.ExportForbidden" xml:space="preserve">
     <value>You can only export your own account data.</value>
-  </data>
-  <data name="User.Role.Invalid" xml:space="preserve">
-    <value>The role is not a valid user role.</value>
   </data>
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notification not found.</value>
