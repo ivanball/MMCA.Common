@@ -1,1 +1,27 @@
 #nullable enable
+const MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.RefreshBaselineEnvironmentVariable = "MMCA_UPDATE_OPENAPI_BASELINE" -> string!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.<Clone>$() -> MMCA.Common.Testing.Conformance.OpenApiBreakingChange!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Deconstruct(out MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, out string! JsonPointer) -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Equals(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? other) -> bool
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.get -> string!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.init -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Kind.get -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Kind.init -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.OpenApiBreakingChange(MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, string! JsonPointer) -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ChangedPropertyType = 5 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedOperation = 1 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedPath = 0 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedResponseProperty = 4 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedResponseStatusCode = 2 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RequestPropertyNewlyRequired = 3 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline() -> System.Threading.Tasks.Task!
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.GetHashCode() -> int
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.ToString() -> string!
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator !=(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator ==(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector.Detect(string! baselineJson, string! liveJson) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Conformance.OpenApiBreakingChange!>!
+virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.BaselineDocumentPath.get -> string?
