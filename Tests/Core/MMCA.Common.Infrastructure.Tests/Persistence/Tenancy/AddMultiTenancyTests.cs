@@ -27,10 +27,39 @@ public sealed class AddMultiTenancyTests
         settings.RequireTenant.Should().BeTrue("with tenancy on, an unscoped request reads across every tenant");
         settings.ClaimType.Should().Be("tenant_id");
         settings.HeaderName.Should().Be("X-Tenant-Id");
-        settings.EffectiveResolutionOrder.Should().Equal(
-            TenantResolutionStrategy.Claim, TenantResolutionStrategy.Header);
+        settings.EffectiveResolutionOrder.Should().Equal(TenantResolutionStrategy.Claim);
         settings.EffectiveExcludedPathPrefixes.Should().Equal("/health", "/alive", "/.well-known");
         settings.Tenants.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TenancySettings_DefaultResolutionOrder_IsClaimOnly()
+    {
+        var settings = new TenancySettings();
+
+        settings.ResolutionOrder.Should().BeEmpty("the default lives in EffectiveResolutionOrder, not in the bound list");
+        settings.EffectiveResolutionOrder.Should().Equal(
+            [TenantResolutionStrategy.Claim],
+            "a caller-supplied header lets any caller name any tenant, so header resolution is an explicit opt-in");
+    }
+
+    [Fact]
+    public void AddMultiTenancy_BindsAnExplicitClaimThenHeaderOrder_AndHonorsIt()
+    {
+        var services = new ServiceCollection();
+        services.AddMultiTenancy(Configuration(new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["Tenancy:Enabled"] = "true",
+            ["Tenancy:ResolutionOrder:0"] = "Claim",
+            ["Tenancy:ResolutionOrder:1"] = "Header",
+        }));
+
+        using var provider = services.BuildServiceProvider();
+        var settings = provider.GetRequiredService<IOptions<TenancySettings>>().Value;
+
+        settings.EffectiveResolutionOrder.Should().Equal(
+            [TenantResolutionStrategy.Claim, TenantResolutionStrategy.Header],
+            "a host that opts into header resolution keeps exactly the order it configured");
     }
 
     [Fact]
