@@ -2,6 +2,7 @@ using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using MMCA.Common.Grpc.Authentication;
 
 namespace MMCA.Common.Grpc.Interceptors;
 
@@ -23,8 +24,28 @@ namespace MMCA.Common.Grpc.Interceptors;
 /// ticket (<c>JwtBearerOptions.SaveToken</c>, on by default, stores it as <c>access_token</c>). A
 /// header that is present always wins.
 /// </para>
+/// <para>
+/// When the call has no user token at all (no <see cref="HttpContext"/>, or a request that carried
+/// none) and an <see cref="IServiceTokenProvider"/> is registered (<c>AddServiceTokenClient</c>), the
+/// call is sent as <c>Bearer {serviceToken}</c> instead, so a background processor or an anonymous
+/// request that fans out internally still authenticates to the downstream service as this service.
+/// Precedence is therefore: the user's token, then the service token, then nothing. With no provider
+/// registered the interceptor attaches nothing to such a call, exactly as before service tokens
+/// existed.
+/// </para>
+/// <para>
+/// An <c>Authorization</c> entry the caller already set on the call's metadata is never overwritten
+/// or duplicated, whichever token would otherwise have been attached.
+/// </para>
 /// </summary>
-public sealed class JwtForwardingClientInterceptor(IHttpContextAccessor httpContextAccessor) : Interceptor
+/// <param name="httpContextAccessor">Accessor for the ambient request whose user token is forwarded.</param>
+/// <param name="serviceTokenProvider">
+/// The service-token source used when there is no user token, or <see langword="null"/> (the default
+/// when <c>AddServiceTokenClient</c> was not called) to attach nothing in that case.
+/// </param>
+public sealed class JwtForwardingClientInterceptor(
+    IHttpContextAccessor httpContextAccessor,
+    IServiceTokenProvider? serviceTokenProvider = null) : Interceptor
 {
     private const string AuthorizationHeader = "Authorization";
 
@@ -88,21 +109,20 @@ public sealed class JwtForwardingClientInterceptor(IHttpContextAccessor httpCont
         where TRequest : class
         where TResponse : class
     {
-        var authHeader = ResolveAuthorization(httpContextAccessor.HttpContext);
+        // Never overwrite or duplicate a header a previous interceptor or the caller already set.
+        // Checked first, so a caller-chosen credential never costs a service-token mint.
+        if (context.Options.Headers?.GetValue(AuthorizationHeader) is not null)
+        {
+            return context;
+        }
+
+        var authHeader = ResolveAuthorization(httpContextAccessor.HttpContext) ?? ResolveServiceAuthorization();
         if (string.IsNullOrEmpty(authHeader))
         {
             return context;
         }
 
         var headers = context.Options.Headers ?? [];
-
-        // Avoid duplicating the header if a previous interceptor or caller already set it.
-        var existing = headers.GetValue(AuthorizationHeader);
-        if (existing is not null)
-        {
-            return context;
-        }
-
         headers.Add(AuthorizationHeader, authHeader);
         var newOptions = context.Options.WithHeaders(headers);
         return new ClientInterceptorContext<TRequest, TResponse>(context.Method, context.Host, newOptions);
@@ -130,5 +150,15 @@ public sealed class JwtForwardingClientInterceptor(IHttpContextAccessor httpCont
         var savedToken = httpContext.Features.Get<IAuthenticateResultFeature>()?.AuthenticateResult?.Properties
             ?.GetTokenValue(AccessTokenName);
         return string.IsNullOrEmpty(savedToken) ? null : $"Bearer {savedToken}";
+    }
+
+    /// <summary>
+    /// The service token as a bearer value, consulted only when there is no user token to forward.
+    /// </summary>
+    /// <returns>The <c>Authorization</c> value, or <see langword="null"/> when no provider is registered.</returns>
+    private string? ResolveServiceAuthorization()
+    {
+        var token = serviceTokenProvider?.GetToken();
+        return string.IsNullOrEmpty(token) ? null : $"Bearer {token}";
     }
 }

@@ -60,7 +60,9 @@ public static class DependencyInjection
         ///   <c>"Kestrel": { "EndpointDefaults": { "Protocols": "Http2" } }</c> in its
         ///   <c>appsettings.json</c> — otherwise Kestrel rejects HTTP/2 frames with
         ///   <c>HTTP_1_1_REQUIRED</c>.</item>
-        ///   <item><see cref="JwtForwardingClientInterceptor"/>: forwards inbound bearer tokens.</item>
+        ///   <item><see cref="JwtForwardingClientInterceptor"/>: forwards the inbound user's bearer
+        ///   token; when there is none and <c>AddServiceTokenClient</c> registered an
+        ///   <c>IServiceTokenProvider</c>, attaches this service's own token instead.</item>
         ///   <item>Standard Polly resilience handler: matches the HTTP defaults from <c>MMCA.Common.Aspire</c>.</item>
         /// </list>
         /// <para>

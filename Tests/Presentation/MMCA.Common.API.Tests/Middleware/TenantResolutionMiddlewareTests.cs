@@ -47,24 +47,49 @@ public sealed class TenantResolutionMiddlewareTests
     }
 
     [Fact]
-    public async Task Claim_WinsOverHeader_InTheDefaultOrder()
+    public async Task Claim_ResolvesTheTenant_InTheDefaultOrder()
+    {
+        var tenantContext = new Mock<ITenantContext>();
+        var context = HttpContextWith(claim: Acme);
+
+        var nextCalled = await InvokeAsync(context, tenantContext, Enabled());
+
+        nextCalled.Should().BeTrue();
+        tenantContext.Verify(t => t.SetTenant(Acme), Times.Once);
+    }
+
+    [Fact]
+    public async Task Header_IsIgnored_InTheDefaultOrder()
+    {
+        var tenantContext = new Mock<ITenantContext>();
+        var context = HttpContextWith(header: Globex);
+
+        var nextCalled = await InvokeAsync(context, tenantContext, Enabled());
+
+        nextCalled.Should().BeFalse("the default order is claim only, so a caller-supplied header names no tenant");
+        tenantContext.Verify(t => t.SetTenant(It.IsAny<string>()), Times.Never);
+        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task Claim_WinsOverHeader_WhenHeaderIsOptedIn()
     {
         var tenantContext = new Mock<ITenantContext>();
         var context = HttpContextWith(header: Globex, claim: Acme);
 
-        await InvokeAsync(context, tenantContext, Enabled());
+        await InvokeAsync(context, tenantContext, ClaimThenHeader());
 
         tenantContext.Verify(t => t.SetTenant(Acme), Times.Once,
             "the claim was signed by the issuer; the header is caller-supplied");
     }
 
     [Fact]
-    public async Task Header_IsTheFallback_WhenNoClaimIsPresent()
+    public async Task Header_IsTheFallback_WhenOptedInAndNoClaimIsPresent()
     {
         var tenantContext = new Mock<ITenantContext>();
         var context = HttpContextWith(header: Globex);
 
-        await InvokeAsync(context, tenantContext, Enabled());
+        await InvokeAsync(context, tenantContext, ClaimThenHeader());
 
         tenantContext.Verify(t => t.SetTenant(Globex), Times.Once);
     }
@@ -87,7 +112,13 @@ public sealed class TenantResolutionMiddlewareTests
     [Fact]
     public async Task CustomClaimTypeAndHeaderName_AreHonored()
     {
-        var settings = new TenancySettings { Enabled = true, ClaimType = "org", HeaderName = "X-Org" };
+        var settings = new TenancySettings
+        {
+            Enabled = true,
+            ClaimType = "org",
+            HeaderName = "X-Org",
+            ResolutionOrder = { TenantResolutionStrategy.Claim, TenantResolutionStrategy.Header },
+        };
 
         var context = new DefaultHttpContext();
         context.Request.Headers["X-Org"] = Globex;
@@ -104,7 +135,7 @@ public sealed class TenantResolutionMiddlewareTests
         var tenantContext = new Mock<ITenantContext>();
         var context = HttpContextWith(header: "  acme  ");
 
-        await InvokeAsync(context, tenantContext, Enabled());
+        await InvokeAsync(context, tenantContext, ClaimThenHeader());
 
         tenantContext.Verify(t => t.SetTenant(Acme), Times.Once);
     }
@@ -115,7 +146,7 @@ public sealed class TenantResolutionMiddlewareTests
         var tenantContext = new Mock<ITenantContext>();
         var context = HttpContextWith(header: "   ");
 
-        await InvokeAsync(context, tenantContext, Enabled());
+        await InvokeAsync(context, tenantContext, ClaimThenHeader());
 
         tenantContext.Verify(t => t.SetTenant(It.IsAny<string>()), Times.Never);
         context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -191,7 +222,7 @@ public sealed class TenantResolutionMiddlewareTests
     public async Task NonExcludedPath_WithATenant_ReachesTheApplication()
     {
         var tenantContext = new Mock<ITenantContext>();
-        var context = HttpContextWith(header: Acme);
+        var context = HttpContextWith(claim: Acme);
         context.Request.Path = "/api/tickets";
 
         var nextCalled = await InvokeAsync(context, tenantContext, Enabled());
@@ -202,6 +233,15 @@ public sealed class TenantResolutionMiddlewareTests
 
     // ── Scaffolding ──
     private static TenancySettings Enabled() => new() { Enabled = true };
+
+    // Header resolution is an explicit opt-in: the default order is claim only.
+    private static TenancySettings ClaimThenHeader()
+    {
+        var settings = Enabled();
+        settings.ResolutionOrder.Add(TenantResolutionStrategy.Claim);
+        settings.ResolutionOrder.Add(TenantResolutionStrategy.Header);
+        return settings;
+    }
 
     private static DefaultHttpContext HttpContextWith(string? header = null, string? claim = null)
     {

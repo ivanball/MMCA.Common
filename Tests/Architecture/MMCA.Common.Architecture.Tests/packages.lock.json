@@ -1597,8 +1597,10 @@
           "Grpc.AspNetCore.Server.Reflection": "[2.84.0, )",
           "Grpc.Net.ClientFactory": "[2.84.0, )",
           "MMCA.Common.Shared": "[1.0.0, )",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.13, )",
           "Microsoft.Extensions.Http.Resilience": "[10.10.0, )",
-          "Microsoft.Extensions.ServiceDiscovery": "[10.10.0, )"
+          "Microsoft.Extensions.ServiceDiscovery": "[10.10.0, )",
+          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
       "mmca.common.infrastructure": {
