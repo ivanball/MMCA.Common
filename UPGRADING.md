@@ -32,6 +32,38 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.243.0] - 2026-10-18
+
+**Tenant resolution reads only the claim unless the host opts into the header.** Three
+smaller changes ride along:
+- A constructor change on `JwtForwardingClientInterceptor`.
+- The observability base requires a workbook by default.
+- An `[EventName]` fact applies to every integration event.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `TenancySettings` default `EffectiveResolutionOrder` = `[Claim, Header]` | `[Claim]`; an `X-Tenant-Id` header is ignored unless `Tenancy:ResolutionOrder` lists `Header` |
+| `JwtForwardingClientInterceptor(IHttpContextAccessor)` | `JwtForwardingClientInterceptor(IHttpContextAccessor, IServiceTokenProvider? serviceTokenProvider = null)`; source-compatible, binary-breaking for a direct constructor call |
+| `ObservabilityConventionTestsBase.RequireWorkbook` default `false` | default `true` |
+| `EventConventionTestsBase` with no `[EventName]` fact | adds `IntegrationEvents_ShouldDeclare_EventName` |
+
+The fix:
+
+1. **Tenancy.** Does a host with `Tenancy:Enabled=true` resolve the tenant from the `X-Tenant-Id`
+   header? If so, set the order explicitly, for example `"Tenancy": { "ResolutionOrder": [ "Claim", "Header" ] }`.
+   Without it, a header-only request is answered 400 "Tenant not resolved". Then subclass
+   `TenantResolutionTestsBase` and override `AllowsHeaderResolution => true`, so the opt-in is
+   stated in a test. A host that resolves from the claim needs no change.
+2. **Interceptor.** Code that constructs `JwtForwardingClientInterceptor` itself must recompile.
+   Nothing changes where `AddTypedGrpcClient` registers it.
+3. **Workbook.** Does a subclass of `ObservabilityConventionTestsBase` deploy no
+   `Microsoft.Insights/workbooks` resource? Then either add the workbook or override
+   `RequireWorkbook => false` with a comment that states the reason.
+4. **Event names.** Add `[EventName("...")]` to each integration event the new fact reports. The
+   attribute is not inherited, so it goes on each concrete event type.
+
 ## [1.236.0] - 2026-10-10
 
 **The user-administration roster moves onto the generic paged entity path.** The search-and-role

@@ -3,6 +3,39 @@
 All notable changes to the MMCA.Common packages are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
+## [1.243.0] - 2026-10-18
+
+### Added
+
+- Service-to-service tokens on internal gRPC (MMCA.Common.Grpc, namespace `MMCA.Common.Grpc.Authentication`). A calling service with no user in context (an outbox handler, a hosted service) can now prove who it is. `AddServiceTokenClient(configuration)` binds `Grpc:ServiceToken` (`ServiceTokenSettings`: a Base64 `SigningKey` of at least 32 bytes shared by every service, the caller's `ServiceName`, `Issuer` "mmca-service", `Audience` "internal-grpc", `LifetimeMinutes` 5) and registers `IServiceTokenProvider`, which mints a cached HS256 token carrying `sub` and `svc` = `ServiceName` and re-mints once 60 seconds or less remain. `JwtForwardingClientInterceptor` attaches it only when the request carries no user token: a user's bearer token is still forwarded exactly as before, and a caller-set `Authorization` header is never replaced. On the receiving side `AddServiceTokenAuthentication(configuration)` adds the non-default `ServiceToken` JwtBearer scheme (HS256 only, the `svc` claim required) and the `InternalCaller` policy (`ServiceTokenDefaults.InternalCallerPolicy`), which accepts either the user bearer scheme or a service token. A service token never satisfies a plain `[Authorize]`, and a host where the `ServiceToken` scheme would become the default (set explicitly, or as the only registered scheme) fails at startup. Hosts that call neither method see no change.
+- `TenantResolutionTestsBase` (MMCA.Common.Testing): a conformance base over the host's `TenancySettings` with three facts. The header strategy must be an explicit opt-in (`AllowsHeaderResolution`), the claim must be tried before the header, and `/health` and `/alive` must stay excluded.
+- `OpenApiContractTestsBase` (MMCA.Common.Testing) gains an opt-in baseline diff. Override `BaselineDocumentPath` to point at a committed baseline document, and `OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline` fails only on breaking changes: a removed path, operation or response status code, a request property that became required, a removed response property, or a changed property type. Additive and documentation-only changes pass. Setting `MMCA_UPDATE_OPENAPI_BASELINE=1` rewrites the baseline and fails the run on purpose, so a regeneration is always a reviewed commit. `OpenApiBreakingChangeDetector` exposes the comparison on its own. Consumers that do not override the property see no change.
+- `SubstitutabilityTestsBase` (MMCA.Common.Testing.Architecture): an override or interface implementation that throws `NotSupportedException` or `NotImplementedException` fails the build (the Liskov rule). Escape hatch: `ExcludedMembers`, empty by default.
+- `PiiInventoryTestsBase` (MMCA.Common.Testing.Architecture): a two-way check between `[Pii]` members and the inventory table in the consumer's PRIVACY.md (`Member | Purpose | Lawful basis | Retention`). Every `[Pii]` member needs a row with all three cells filled, and every row must name a live `[Pii]` member.
+- `EventConventionTestsBase` gains `IntegrationEvents_ShouldDeclare_EventName`: every integration event must carry `[EventName]`.
+- `KeyboardOperabilityTestsBase` (MMCA.Common.Testing.E2E) checks four keyboard behaviors in a real browser:
+  - The skip link is the first Tab stop and moves focus into the main landmark.
+  - An open dialog traps focus.
+  - Escape closes the dialog and returns focus to its opener.
+  - The first Tab stops show a visible focus indicator.
+- `ShouldExposeFieldErrorAccessibly(inputId, message)` (MMCA.Common.Testing.UI): a bUnit assertion that a field error has a `role="alert"` element, `aria-invalid="true"` on the input, and an `aria-describedby` reference to an element that holds the message.
+- FACTS.md carries a package dependency graph between the MMCA.Common packages.
+- `build/consumer-check/Invoke-ConsumerCheck.ps1` runs the package-mode consumer check. CI runs the same script, and contributors can run it locally.
+
+### Changed
+
+- **Breaking:** these four defaults and signatures change:
+  - Tenant resolution reads only the claim unless configured otherwise.
+  - `JwtForwardingClientInterceptor` gains a constructor parameter.
+  - `ObservabilityConventionTestsBase.RequireWorkbook` now defaults to `true`.
+  - Integration events must declare `[EventName]`.
+
+  Map and fix: UPGRADING.md, [1.243.0].
+- Every framework error code now has an English and a Spanish entry in `ErrorResources`, with 66 codes added (15 to 81 keys per file). A code that used to answer with its English source message now answers with the resx text in the request culture. Seventeen codes whose message is composed at runtime keep their source message, so the runtime detail survives; they are listed in `ErrorResourceCoverageTests.DetailBearingCodes`.
+- `ErrorLocalizer` (MMCA.Common.API) tries module error resources before Common's own, so a module's translation of a code wins and Common's is the fallback. Before this release Common was tried first.
+- The password-reset and email-confirmation emails (`ForgotPasswordHandlerBase`, `EmailConfirmationHandlerBase`, MMCA.Common.Application) are written in the recipient's stored `PreferredCulture`, falling back to the request culture, with English and Spanish shipped. English output is unchanged, and the Application package now ships an `es` satellite assembly.
+- `.skip-nav`, the active navigation bar and the reconnect modal (MMCA.Common.UI) take the brand blue only from `--mmca-primary` and `--mmca-primary-dark`, with no raw-hex fallback. A host page must load the MMCA.Common.UI `app.css`, as every shipped layout already does.
+
 
 ## [1.242.0] - 2026-10-15
 
