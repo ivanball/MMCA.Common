@@ -47,6 +47,7 @@ internal static class FactsGenerator
         // ---- compute the facts from source
         var version = GitTag(root);
         var packages = PackageList(root);                       // package ids, tier-then-name order
+        var graph = PackageGraph(root);                         // package id -> direct MMCA.Common.* references
         var baseCounts = FitnessBaseCounts(root);               // baseClassName -> [Fact]/[Theory] count
         var fitBases = baseCounts.Count;
         var fitMethods = baseCounts.Values.Sum();
@@ -60,6 +61,7 @@ internal static class FactsGenerator
             .Replace("{{VERSION}}", version)
             .Replace("{{PKG_COUNT}}", packages.Count.ToString())
             .Replace("{{PKG_LIST}}", pkgList)
+            .Replace("{{PKG_GRAPH}}", GraphTable(graph))
             .Replace("{{FIT_METHODS}}", fitMethods.ToString())
             .Replace("{{FIT_BASES}}", fitBases.ToString())
             .Replace("{{COMMON_EXEC}}", commonExecuted.ToString());
@@ -67,6 +69,7 @@ internal static class FactsGenerator
         Console.WriteLine("FACTS computed from source:");
         Console.WriteLine($"  version           = {version}");
         Console.WriteLine($"  packages          = {packages.Count}");
+        Console.WriteLine($"  package edges     = {graph.Sum(g => g.References.Count)}");
         Console.WriteLine($"  fitness methods   = {fitMethods} across {fitBases} *TestsBase classes");
         Console.WriteLine($"  Common executes   = {commonExecuted}");
 
@@ -114,10 +117,13 @@ internal static class FactsGenerator
     }
 
     // ---- packable packages: csproj under Source/ carrying an explicit <PackageId>, ordered Core→Presentation→Hosting then by name
-    private static List<string> PackageList(string root)
+    private static List<string> PackageList(string root) => PackageProjects(root).Select(p => p.Id).ToList();
+
+    // the same packable projects with their full .csproj path, in the same order (the graph below needs the path)
+    private static List<(string Id, string Path)> PackageProjects(string root)
     {
         var sourceDir = Path.Combine(root, "Source");
-        var pkgs = new List<(int tier, string id)>();
+        var pkgs = new List<(int tier, string id, string path)>();
         if (!Directory.Exists(sourceDir)) return new();
 
         foreach (var csproj in Directory.EnumerateFiles(sourceDir, "*.csproj", SearchOption.AllDirectories))
@@ -127,10 +133,45 @@ internal static class FactsGenerator
             var m = Regex.Match(File.ReadAllText(csproj), @"<PackageId>\s*([^<\s]+)\s*</PackageId>");
             if (!m.Success) continue;
             var tier = n.Contains("/Core/") ? 0 : n.Contains("/Presentation/") ? 1 : n.Contains("/Hosting/") ? 2 : 3;
-            pkgs.Add((tier, m.Groups[1].Value));
+            pkgs.Add((tier, m.Groups[1].Value, Path.GetFullPath(csproj)));
         }
 
-        return pkgs.OrderBy(p => p.tier).ThenBy(p => p.id, StringComparer.Ordinal).Select(p => p.id).ToList();
+        return pkgs.OrderBy(p => p.tier).ThenBy(p => p.id, StringComparer.Ordinal).Select(p => (p.id, p.path)).ToList();
+    }
+
+    // ---- package dependency graph: for each packable project, the OTHER packable projects its .csproj names in a
+    //      <ProjectReference Include="..."> (XML comments stripped first). Rows and each row's references follow the
+    //      package-list order, so the output is deterministic. Direct references only; transitive ones are not repeated.
+    private static List<(string Id, List<string> References)> PackageGraph(string root)
+    {
+        var projects = PackageProjects(root);
+        var idByPath = projects.ToDictionary(p => Norm(p.Path), p => p.Id, StringComparer.OrdinalIgnoreCase);
+        var order = projects.Select((p, i) => (p.Id, i)).ToDictionary(x => x.Id, x => x.i, StringComparer.Ordinal);
+        var graph = new List<(string Id, List<string> References)>();
+
+        foreach (var (id, path) in projects)
+        {
+            var xml = Regex.Replace(File.ReadAllText(path), @"<!--.*?-->", "", RegexOptions.Singleline);
+            var dir = Path.GetDirectoryName(path)!;
+            var refs = Regex.Matches(xml, @"<ProjectReference\s+Include\s*=\s*""([^""]+)""")
+                .Select(m => Norm(Path.GetFullPath(Path.Combine(dir, m.Groups[1].Value.Replace('\\', Path.DirectorySeparatorChar)))))
+                .Where(idByPath.ContainsKey)
+                .Select(p => idByPath[p])
+                .Where(r => r != id)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => order[r])
+                .ToList();
+            graph.Add((id, refs));
+        }
+
+        return graph;
+    }
+
+    private static string GraphTable(List<(string Id, List<string> References)> graph)
+    {
+        var rows = graph.Select(g =>
+            $"| `{g.Id}` | {(g.References.Count == 0 ? "(none)" : string.Join(", ", g.References.Select(r => $"`{r}`")))} |");
+        return "| Package | References (direct, `MMCA.Common.*` packages) |\n| --- | --- |\n" + string.Join("\n", rows);
     }
 
     // ---- fitness: each abstract *TestsBase class in MMCA.Common.Testing.Architecture -> its [Fact]/[Theory] count.
@@ -208,6 +249,13 @@ _As of: {{AS_OF}} (framework {{VERSION}}) — **generated from source by `build/
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 {{PKG_LIST}}
+
+## Package dependency graph
+Which other `MMCA.Common.*` packages each package references directly, read from the `<ProjectReference>`
+items between the packable projects above (each becomes a package dependency at pack time). Transitive
+references are not repeated; a package with **(none)** depends on no other `MMCA.Common.*` package.
+
+{{PKG_GRAPH}}
 
 ## Architecture Decision Records
 The ADRs live in the Website repo (`docs-src/adr/`), published at
