@@ -6,7 +6,8 @@ namespace MMCA.Common.API.Tests.Localization;
 
 /// <summary>
 /// Guards that the framework's <c>ErrorResources.resx</c> and <c>ErrorResources.es.resx</c> translate
-/// every error code the framework itself emits (ADR-027), and carry no key for a code nothing emits.
+/// every error code the framework itself emits (ADR-027), carry no key for a code nothing emits, and
+/// carry no key for a code in <see cref="DetailBearingCodes"/> (whose runtime detail must pass through).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -60,7 +61,83 @@ public sealed partial class ErrorResourceCoverageTests
         "ProblemDetailsResultReader.cs",
     };
 
+    /// <summary>
+    /// Emitted codes whose message is composed at runtime: a static translation would replace the
+    /// detailed source message and drop the detail, so these deliberately have NO resource entry and
+    /// the localizer passes the source message through.
+    /// </summary>
+    private static readonly HashSet<string> DetailBearingCodes = new(StringComparer.Ordinal)
+    {
+        // Three refresh-path checks share the code with different messages (bad token, bad claims, no user).
+        "Auth.InvalidToken",
+
+        // Names the permission the caller lacks.
+        "Authorization.PermissionDenied",
+
+        // Name the rejected name or value and the enumeration type.
+        "Enumeration.UnknownName",
+        "Enumeration.UnknownValue",
+
+        // Echoes the rejected sort direction.
+        "Error.InvalidSortDirection",
+
+        // Names the entity whose export was refused.
+        "Export.RowScopeRequired",
+
+        // Name the property, operator, type or value the filter rejected.
+        "Filter.Operator.NotSupported",
+        "Filter.Property.NotFound",
+        "Filter.Type.NotSupported",
+        "Filter.Value.Invalid",
+
+        // States the image's pixel dimensions.
+        "Image.TooLarge",
+
+        // Name the command type or the unknown data source.
+        "InternalCommands.NotSerializable",
+        "InternalCommands.UnknownDataSource",
+        "Outbox.UnknownDataSource",
+
+        // Lists the permissions missing from the host catalog.
+        "PermissionGrant.UnknownPermission",
+
+        // States the elapsed budget and whether a command or a query timed out.
+        "Request.TimedOut",
+
+        // Echoes the rejected role.
+        "User.Role.Invalid",
+    };
+
     private static readonly Lazy<Scan> EmittedCodes = new(ScanSources);
+
+    [Fact]
+    public void DetailBearingCodes_AreAllStillEmitted()
+    {
+        var stale = DetailBearingCodes
+            .Where(code => !EmittedCodes.Value.Codes.Contains(code))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        stale.Should().BeEmpty(
+            "the detail-bearing exclusions must name codes the framework still emits; stale: {0}",
+            string.Join(", ", stale));
+    }
+
+    [Theory]
+    [InlineData("ErrorResources.resx")]
+    [InlineData("ErrorResources.es.resx")]
+    public void DetailBearingCodes_HaveNoEntry(string resourceFile)
+    {
+        var translated = ReadResx(resourceFile).Keys
+            .Where(DetailBearingCodes.Contains)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        translated.Should().BeEmpty(
+            "{0} must not translate a code whose message is composed at runtime, or the detail is lost; translated: {1}",
+            resourceFile,
+            string.Join(", ", translated));
+    }
 
     [Fact]
     public void Scan_ResolvesEveryErrorConstruction_AndFindsTheFrameworkCatalog()
@@ -83,12 +160,13 @@ public sealed partial class ErrorResourceCoverageTests
         var entries = ReadResx(resourceFile);
 
         var missing = EmittedCodes.Value.Codes
-            .Where(code => !entries.TryGetValue(code, out var value) || string.IsNullOrWhiteSpace(value))
+            .Where(code => !DetailBearingCodes.Contains(code)
+                && (!entries.TryGetValue(code, out var value) || string.IsNullOrWhiteSpace(value)))
             .Order(StringComparer.Ordinal)
             .ToList();
 
         missing.Should().BeEmpty(
-            "{0} must translate every error code the framework emits; {1} missing: {2}",
+            "{0} must translate every error code the framework emits, except the detail-bearing ones; {1} missing: {2}",
             resourceFile,
             missing.Count,
             string.Join(", ", missing));
