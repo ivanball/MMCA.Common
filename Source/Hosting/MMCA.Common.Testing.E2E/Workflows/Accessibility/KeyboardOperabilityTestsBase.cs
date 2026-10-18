@@ -74,14 +74,31 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     /// </summary>
     protected abstract ILocator DialogOpener { get; }
 
+    /// <summary>
+    /// Runs before each fact's first navigation. Override it to sign in or to arrange the data a page
+    /// or the dialog needs (for example a live event with a closed poll). The default does nothing.
+    /// </summary>
+    /// <returns>A task that completes when the arrangement is in place.</returns>
+    protected virtual Task ArrangeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Loads <paramref name="path"/>; every page load in this base goes through it. Override it to route
+    /// through the app's own navigation helper, for example a client-side navigation that keeps a
+    /// signed-in session on an authorized page. The default is a full load that waits for Blazor.
+    /// </summary>
+    /// <param name="path">The app-relative path to load.</param>
+    /// <returns>A task that completes when the page is interactive.</returns>
+    protected virtual Task NavigateAsync(string path) => Page.GotoAndWaitForBlazorAsync(path);
+
     [Fact]
     public async Task SkipLink_IsFirstTabStop_AndMovesFocusIntoMainLandmark()
     {
         PagePaths.Should().NotBeEmpty("at least one page must be declared, or the skip-link gate verifies nothing");
 
+        await ArrangeAsync().ConfigureAwait(false);
         foreach (var path in PagePaths)
         {
-            await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+            await NavigateAsync(path).ConfigureAwait(false);
             await FocusDocumentStartAsync().ConfigureAwait(false);
             await Page.Keyboard.PressAsync("Tab").ConfigureAwait(false);
 
@@ -137,9 +154,10 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     {
         PagePaths.Should().NotBeEmpty("at least one page must be declared, or the focus-indicator gate verifies nothing");
 
+        await ArrangeAsync().ConfigureAwait(false);
         foreach (var path in PagePaths)
         {
-            await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+            await NavigateAsync(path).ConfigureAwait(false);
             await FocusDocumentStartAsync().ConfigureAwait(false);
 
             for (var stop = 1; stop <= IndicatorTabStops; stop++)
@@ -170,7 +188,7 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
             + " p.setAttribute('data-keyboard-start', ''); document.body.prepend(p); p.focus(); }");
 
     /// <summary>
-    /// Loads <see cref="DialogPagePath"/>, focuses <see cref="DialogOpener"/>, presses Enter and waits
+    /// Arranges, loads <see cref="DialogPagePath"/>, focuses <see cref="DialogOpener"/>, presses Enter and waits
     /// for the dialog and for keyboard focus to enter it. Both dialog checks need that precondition:
     /// a trap is only judged once focus is inside, and Escape reaches the dialog's handler only from
     /// within. An opened dialog that leaves focus on its opener fails here.
@@ -178,7 +196,8 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     /// <returns>The open dialog.</returns>
     private async Task<ILocator> OpenDialogWithKeyboardAsync()
     {
-        await Page.GotoAndWaitForBlazorAsync(DialogPagePath).ConfigureAwait(false);
+        await ArrangeAsync().ConfigureAwait(false);
+        await NavigateAsync(DialogPagePath).ConfigureAwait(false);
         await DialogOpener.FocusAsync().ConfigureAwait(false);
         await Page.Keyboard.PressAsync("Enter").ConfigureAwait(false);
 

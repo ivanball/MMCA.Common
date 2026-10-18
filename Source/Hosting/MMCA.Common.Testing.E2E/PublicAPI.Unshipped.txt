@@ -8,3 +8,5 @@ MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.Foc
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.PagePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogPagePath.get -> string!
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogOpener.get -> Microsoft.Playwright.ILocator!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.ArrangeAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.NavigateAsync(string! path) -> System.Threading.Tasks.Task!

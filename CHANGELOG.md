@@ -18,6 +18,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   - An open dialog traps focus.
   - Escape closes the dialog and returns focus to its opener.
   - The first Tab stops show a visible focus indicator.
+
+  Override `ArrangeAsync` to sign in or arrange data before each fact navigates, and `NavigateAsync` to route page loads through the app's own navigation helper.
 - `ShouldExposeFieldErrorAccessibly(inputId, message)` (MMCA.Common.Testing.UI): a bUnit assertion that a field error has a `role="alert"` element, `aria-invalid="true"` on the input, and an `aria-describedby` reference to an element that holds the message.
 - FACTS.md carries a package dependency graph between the MMCA.Common packages.
 - `build/consumer-check/Invoke-ConsumerCheck.ps1` runs the package-mode consumer check. CI runs the same script, and contributors can run it locally.
