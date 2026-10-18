@@ -21,6 +21,10 @@ public sealed class KeyboardOperabilityHooksE2ETests : KeyboardOperabilityTestsB
 
     private int _navigations;
 
+    private int _dialogReads;
+
+    private int _focusReturnReads;
+
     public KeyboardOperabilityHooksE2ETests(PlaywrightFixture playwright, GalleryHostFixture gallery)
         : base(playwright) =>
         ArgumentNullException.ThrowIfNull(gallery);
@@ -38,6 +42,25 @@ public sealed class KeyboardOperabilityHooksE2ETests : KeyboardOperabilityTestsB
         }
     }
 
+    /// <summary>A drawer-style consumer locates its dialog by class rather than by role.</summary>
+    protected override ILocator Dialog
+    {
+        get
+        {
+            _dialogReads++;
+            return Page.Locator(".mud-dialog").First;
+        }
+    }
+
+    protected override ILocator FocusReturnTarget
+    {
+        get
+        {
+            _focusReturnReads++;
+            return DialogOpener;
+        }
+    }
+
     protected override Task ArrangeAsync()
     {
         _arranged = true;
@@ -48,6 +71,18 @@ public sealed class KeyboardOperabilityHooksE2ETests : KeyboardOperabilityTestsB
     {
         _arranged.Should().BeTrue("CleanupAsync undoes ArrangeAsync, so it must run after it");
         _arranged = false;
+
+        var fact = TestContext.Current.TestMethod?.MethodName;
+        if (fact is nameof(OpenDialog_TrapsTabFocus) or nameof(Escape_ClosesDialog_AndReturnsFocusToOpener))
+        {
+            _dialogReads.Should().BePositive("the dialog facts must locate the dialog through Dialog");
+        }
+
+        if (fact is nameof(Escape_ClosesDialog_AndReturnsFocusToOpener))
+        {
+            _focusReturnReads.Should().BePositive("the Escape fact must check focus on FocusReturnTarget");
+        }
+
         return Task.CompletedTask;
     }
 
