@@ -115,14 +115,19 @@ public static class DependencyInjection
         /// <summary>
         /// Registers the edge error-localization extension point (ADR-027): <see cref="IErrorLocalizer"/> plus the
         /// framework's own <see cref="ErrorResources"/> source. Called automatically by <c>AddAPI</c>.
-        /// Modules add their own error translations additively via <see cref="AddErrorResources{TResource}"/>.
+        /// Modules add their own error translations additively via <see cref="AddErrorResources{TResource}"/>;
+        /// a module's entry for a code wins over the framework's, which is consulted last.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddErrorLocalization()
         {
             services.AddLocalization();
             services.TryAddSingleton<IErrorLocalizer, ErrorLocalizer>();
-            services.AddErrorResources<ErrorResources>();
+            services.AddSingleton(serviceProvider => new ErrorResourceSource(
+                serviceProvider.GetRequiredService<IStringLocalizerFactory>().Create(typeof(ErrorResources)))
+            {
+                IsFramework = true,
+            });
             return services;
         }
 
