@@ -121,14 +121,8 @@ public static partial class ArchitectureRules
         List<string> violations,
         List<string> unverifiable)
     {
-        foreach (var instruction in method.Body.Instructions)
+        foreach (var exceptionType in ThrownExceptionTypes(method))
         {
-            if (instruction.OpCode != OpCodes.Throw)
-            {
-                continue;
-            }
-
-            var exceptionType = ConstructedExceptionType(instruction);
             if (exceptionType is null)
             {
                 unverifiable.Add($"  ? {OwnerName(type)}.{method.Name}");
@@ -140,6 +134,17 @@ public static partial class ArchitectureRules
             }
         }
     }
+
+    /// <summary>
+    /// One entry per <see langword="throw"/> instruction in the method body: the full name of the
+    /// exception constructed in place, or null when the thrown value came from somewhere else. The
+    /// shared IL read behind every rule that judges what a method throws (the domain-throw rule and
+    /// the substitutability rule).
+    /// </summary>
+    private static IEnumerable<string?> ThrownExceptionTypes(MethodDefinition method) =>
+        method.Body.Instructions
+            .Where(instruction => instruction.OpCode == OpCodes.Throw)
+            .Select(ConstructedExceptionType);
 
     /// <summary>
     /// The full name of the exception constructed immediately before a <see langword="throw"/>, or null when the

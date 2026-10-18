@@ -10,6 +10,12 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="Moq" />
+    <!-- Service-token tests: FakeTimeProvider drives the token cache, the in-memory TestServer hosts the
+         ServiceToken scheme and InternalCaller policy, and JwtBearer configures the user default scheme
+         those tests compare against (all already pinned centrally). -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

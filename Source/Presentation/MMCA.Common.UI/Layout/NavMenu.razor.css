@@ -182,13 +182,13 @@
 
 /* Active item: a brand-tinted pill plus a left accent bar in the lightened primary. The flat
    white wash this replaces read as "disabled" on the dark sidebar and carried no brand cue. The
-   background is that same #42A5F5 at 16% alpha (rgba, because a custom property cannot be given
-   an alpha channel here without color-mix). */
+   background is that same lightened primary at 16% alpha (rgba, because a custom property cannot
+   be given an alpha channel here without color-mix). */
 ::deep .mud-nav-link.active {
     color: #ffffff !important;
     font-weight: 600;
     background-color: rgba(66, 165, 245, 0.16) !important;
-    box-shadow: inset 3px 0 0 var(--mmca-primary-light, #42A5F5);
+    box-shadow: inset 3px 0 0 var(--mmca-primary-light);
 }
 
 ::deep .mud-nav-link .mud-nav-link-icon {

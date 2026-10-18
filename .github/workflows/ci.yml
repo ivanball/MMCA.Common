@@ -666,64 +666,27 @@ jobs:
             **/packages.lock.json
             Directory.Packages.props
 
+      # Every stage runs build/consumer-check/Invoke-ConsumerCheck.ps1, the one implementation a
+      # contributor also runs locally (`pwsh build/consumer-check/Invoke-ConsumerCheck.ps1` runs all
+      # four stages). One stage per step keeps each step's name and log; PACK_VERSION (job env) pins
+      # the same version across the steps, the feed defaults to <checkout>/nupkgs and the consumer
+      # to RUNNER_TEMP/pkg-consumer.
       - name: Pack all packages to a local folder feed
         if: needs.changes.outputs.code == 'true'
-        run: dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs -p:MinVerSkip=true -p:Version=$PACK_VERSION -p:PackageVersion=$PACK_VERSION
+        shell: pwsh
+        run: ./build/consumer-check/Invoke-ConsumerCheck.ps1 -Stage Pack
 
       - name: Scaffold throwaway package consumer
         if: needs.changes.outputs.code == 'true'
         # A classlib referencing the meta set (API + Infrastructure + Testing.Architecture) pulls
         # the full package graph transitively; the smoke type proves the refs actually bind.
-        run: |
-          mkdir -p "$RUNNER_TEMP/pkg-consumer"
-          cd "$RUNNER_TEMP/pkg-consumer"
-          cat > nuget.config <<EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <packageSources>
-              <clear />
-              <add key="local-nupkgs" value="$GITHUB_WORKSPACE/nupkgs" />
-              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-            </packageSources>
-            <packageSourceMapping>
-              <packageSource key="local-nupkgs">
-                <package pattern="MMCA.Common.*" />
-              </packageSource>
-              <packageSource key="nuget.org">
-                <package pattern="*" />
-              </packageSource>
-            </packageSourceMapping>
-          </configuration>
-          EOF
-          cat > Consumer.csproj <<EOF
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <TargetFramework>net10.0</TargetFramework>
-              <Nullable>enable</Nullable>
-              <ImplicitUsings>enable</ImplicitUsings>
-            </PropertyGroup>
-            <ItemGroup>
-              <PackageReference Include="MMCA.Common.API" Version="$PACK_VERSION" />
-              <PackageReference Include="MMCA.Common.Infrastructure" Version="$PACK_VERSION" />
-              <PackageReference Include="MMCA.Common.Testing.Architecture" Version="$PACK_VERSION" />
-            </ItemGroup>
-          </Project>
-          EOF
-          cat > Smoke.cs <<'EOF'
-          using MMCA.Common.Shared.Abstractions;
-
-          namespace PackageConsumer;
-
-          public static class Smoke
-          {
-              public static Result Ok() => Result.Success();
-          }
-          EOF
+        shell: pwsh
+        run: ./build/consumer-check/Invoke-ConsumerCheck.ps1 -Stage Scaffold
 
       - name: Restore and build consumer against the packed nupkgs
         if: needs.changes.outputs.code == 'true'
-        working-directory: ${{ runner.temp }}/pkg-consumer
-        run: dotnet build Consumer.csproj -c Release
+        shell: pwsh
+        run: ./build/consumer-check/Invoke-ConsumerCheck.ps1 -Stage Build
 
       - name: Layer rules ship with the packages (compile-time probes)
         if: needs.changes.outputs.code == 'true'
@@ -732,30 +695,8 @@ jobs:
         # ResolveProjectReferences with no opt-in. One positive and two negative probes prove the
         # import reaches a package-mode consumer AND that both error codes fire: a passing probe on
         # its own would also pass if the file were silently missing from the package.
-        working-directory: ${{ runner.temp }}/pkg-consumer
-        run: |
-          set -euo pipefail
-          probe() { local name="$1"; shift; mkdir -p "probes/$name"
-            { printf '<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>\n  <ItemGroup>\n'
-              for item in "$@"; do printf '    %s\n' "$item"; done
-              printf '  </ItemGroup>\n</Project>\n'; } > "probes/$name/$name.csproj"; }
-          pkg() { printf '<PackageReference Include="%s" Version="%s" />' "$1" "$PACK_VERSION"; }
-          prj() { printf '<ProjectReference Include="../%s/%s.csproj" />' "$1" "$1"; }
-          expect_error() { # $1 project, $2 error code
-            if dotnet build "probes/$1/$1.csproj" -c Release > "probes/$1.log" 2>&1; then
-              cat "probes/$1.log"; echo "::error::$1 built although it violates a layer rule; $2 did not fire"; exit 1
-            fi
-            grep -q "$2" "probes/$1.log" || { cat "probes/$1.log"; echo "::error::$1 failed for a reason other than $2"; exit 1; }
-            echo "$1: $2 fired as expected"; }
-          probe Probe.Sample.Domain "$(pkg MMCA.Common.Domain)"
-          probe Probe.Sample.Application "$(pkg MMCA.Common.Application)" "$(prj Probe.Sample.Domain)"
-          dotnet build probes/Probe.Sample.Application/Probe.Sample.Application.csproj -c Release
-          probe Probe.BadPackage.Domain "$(pkg MMCA.Common.Domain)" "$(pkg MMCA.Common.Infrastructure)"
-          expect_error Probe.BadPackage.Domain MMCA0002
-          probe Probe.BadProject.Application "$(pkg MMCA.Common.Application)"
-          probe Probe.BadProject.Domain "$(pkg MMCA.Common.Domain)" "$(prj Probe.BadProject.Application)"
-          expect_error Probe.BadProject.Domain MMCA0001
-          echo "Layer-rule probes: positive built, MMCA0001 and MMCA0002 fired."
+        shell: pwsh
+        run: ./build/consumer-check/Invoke-ConsumerCheck.ps1 -Stage Probes
 
   # Reference-deployment validation gate (§17): the samples/deployment Bicep is the framework's
   # distilled IaC/OIDC reference (a library cannot deploy itself; DEPLOYMENT.md), so keep it

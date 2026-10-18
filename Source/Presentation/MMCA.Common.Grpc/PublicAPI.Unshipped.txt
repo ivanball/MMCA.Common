@@ -1,1 +1,32 @@
 #nullable enable
+*REMOVED*MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.JwtForwardingClientInterceptor(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor) -> void
+const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.AuthenticationScheme = "ServiceToken" -> string!
+const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.InternalCallerPolicy = "InternalCaller" -> string!
+const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.ServiceClaimType = "svc" -> string!
+const MMCA.Common.Grpc.Authentication.ServiceTokenSettings.SectionName = "Grpc:ServiceToken" -> string!
+MMCA.Common.Grpc.Authentication.IServiceTokenProvider
+MMCA.Common.Grpc.Authentication.IServiceTokenProvider.GetToken() -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenDefaults
+MMCA.Common.Grpc.Authentication.ServiceTokenProvider
+MMCA.Common.Grpc.Authentication.ServiceTokenProvider.GetToken() -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenProvider.ServiceTokenProvider(Microsoft.Extensions.Options.IOptions<MMCA.Common.Grpc.Authentication.ServiceTokenSettings!>! options, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions
+MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddServiceTokenAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddServiceTokenClient(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Audience.get -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Audience.init -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Issuer.get -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Issuer.init -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.LifetimeMinutes.get -> int
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.LifetimeMinutes.init -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.ServiceName.get -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.ServiceName.init -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.ServiceTokenSettings() -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.SigningKey.get -> string!
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.SigningKey.init -> void
+MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.JwtForwardingClientInterceptor(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor, MMCA.Common.Grpc.Authentication.IServiceTokenProvider? serviceTokenProvider = null) -> void
+static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

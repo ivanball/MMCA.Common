@@ -5,7 +5,7 @@
     left: 0;
     z-index: var(--mmca-z-skip-nav, 9999);
     padding: 0.75rem 1.5rem;
-    background: var(--mmca-primary-dark, #0D47A1);
+    background: var(--mmca-primary-dark);
     color: #fff;
     font-weight: 600;
     text-decoration: none;

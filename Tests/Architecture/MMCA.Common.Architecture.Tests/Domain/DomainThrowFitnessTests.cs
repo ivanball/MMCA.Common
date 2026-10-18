@@ -21,15 +21,16 @@ public sealed class DomainThrowFitnessTests
     /// <summary>
     /// The throws in this test assembly that are not fixtures: <c>NavigationContractTests</c> guards
     /// its embedded resource with an <c>InvalidOperationException</c>, and the OpenAPI XML-comment
-    /// source generator emits a transformer into every assembly that references the API layer. The map
-    /// below scans the whole test assembly, so allowlisting both keeps the fixtures the only subject
-    /// of these assertions. This is the allowlist doing its day job: generated plumbing is exactly
-    /// what it is for.
+    /// source generator emits a transformer into every assembly that references the API layer, and the
+    /// substitutability rule's own fixtures throw on purpose. The map below scans the whole test
+    /// assembly, so allowlisting them keeps this file's fixtures the only subject of these assertions.
+    /// This is the allowlist doing its day job: generated plumbing is exactly what it is for.
     /// </summary>
     private static readonly string[] NonFixtureThrows =
     [
         "MMCA.Common.Architecture.Tests.Ui.NavigationContractTests",
         "Microsoft.AspNetCore.OpenApi.Generated",
+        "MMCA.Common.Architecture.Tests.SubstitutabilityFixtures",
     ];
 
     private readonly FixtureAssemblyMap _map = new();

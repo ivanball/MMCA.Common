@@ -102,9 +102,9 @@ html, body {
 }
 
 /* Links (breadcrumbs included: MudBreadcrumbs sets no colour of its own) follow the active palette's
-   primary, like the eyebrow below, so dark mode gets the lightened accent: #1565C0 in light mode
-   (unchanged, 5.75:1 on Surface #FFFFFF) and #42A5F5 in dark mode (6.20:1 on Background #1A2027,
-   5.05:1 on Surface #27303A). The raw --mmca-primary token is only 2.86:1 on the dark Background,
+   primary, like the eyebrow below, so dark mode gets the lightened accent: the --mmca-primary value
+   in light mode (unchanged, 5.75:1 on Surface #FFFFFF) and the --mmca-primary-light value in dark
+   mode (6.20:1 on Background #1A2027, 5.05:1 on Surface #27303A). The raw --mmca-primary token is only 2.86:1 on the dark Background,
    under the WCAG AA 4.5:1 floor; it stays as the fallback for a page with no MudThemeProvider. */
 a {
     color: var(--mud-palette-primary, var(--mmca-primary));

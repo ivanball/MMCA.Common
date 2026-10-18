@@ -6,6 +6,7 @@ using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.Users.Emails;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
@@ -91,12 +92,10 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
 
         try
         {
-            await emailSender.SendAsync(
-                email.Value,
-                ComposeSubject(),
-                ComposeBody(ComposeConfirmationLink(email.Value, token), token),
-                isHtml: true,
-                cancellationToken).ConfigureAwait(false);
+            var (subject, body) = UserEmailResources.InRecipientCulture(
+                user,
+                () => (ComposeSubject(), ComposeBody(ComposeConfirmationLink(email.Value, token), token)));
+            await emailSender.SendAsync(email.Value, subject, body, isHtml: true, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -129,14 +128,18 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
     protected virtual bool IsAlreadyConfirmed(TUser user) =>
         user is Domain.Auth.IEmailConfirmableUser { IsEmailConfirmed: true };
 
-    /// <summary>The subject line of the confirmation email. Override to localize or rebrand.</summary>
+    /// <summary>
+    /// The subject line of the confirmation email, in the recipient's culture: both compose members run
+    /// with the current UI culture set to the account's stored preference (the request's culture when
+    /// it has none). Override to rebrand.
+    /// </summary>
     /// <returns>The subject line.</returns>
-    protected virtual string ComposeSubject() => "Confirm your email address";
+    protected virtual string ComposeSubject() => UserEmailResources.Get("EmailConfirmation.Subject");
 
     /// <summary>
-    /// The body of the confirmation email. The default carries the link when one can be composed AND
-    /// the raw token, because clients without deep linking (the MAUI head) need the token typed into
-    /// the confirmation page by hand.
+    /// The body of the confirmation email, in the recipient's culture. The default carries the link
+    /// when one can be composed AND the raw token, because clients without deep linking (the MAUI head)
+    /// need the token typed into the confirmation page by hand.
     /// </summary>
     /// <param name="confirmationLink">The prefilled URL, or <see langword="null"/> when none is configured.</param>
     /// <param name="token">The raw single-use token.</param>
@@ -146,12 +149,12 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         string minutes = Settings.TokenLifetimeMinutes.ToString(CultureInfo.InvariantCulture);
         string linkBlock = confirmationLink is null
             ? string.Empty
-            : $"<p><a href=\"{WebUtility.HtmlEncode(confirmationLink)}\">Confirm your email address</a></p>";
+            : $"<p><a href=\"{WebUtility.HtmlEncode(confirmationLink)}\">{UserEmailResources.Get("EmailConfirmation.LinkText")}</a></p>";
 
-        return "<p>Please confirm this address so we know we can reach you.</p>"
+        return $"<p>{UserEmailResources.Get("EmailConfirmation.Intro")}</p>"
             + linkBlock
-            + $"<p>Your confirmation code is <strong>{WebUtility.HtmlEncode(token)}</strong>. It expires in {minutes} minutes and can be used once.</p>"
-            + "<p>If you did not create an account, you can ignore this message.</p>";
+            + $"<p>{UserEmailResources.Plural("EmailConfirmation.Code", Settings.TokenLifetimeMinutes, $"<strong>{WebUtility.HtmlEncode(token)}</strong>", minutes)}</p>"
+            + $"<p>{UserEmailResources.Get("EmailConfirmation.Ignore")}</p>";
     }
 
     /// <summary>
