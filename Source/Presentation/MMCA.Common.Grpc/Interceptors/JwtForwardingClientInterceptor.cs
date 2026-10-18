@@ -25,29 +25,20 @@ namespace MMCA.Common.Grpc.Interceptors;
 /// header that is present always wins.
 /// </para>
 /// <para>
-/// When the call has no user token at all (no <see cref="HttpContext"/>, or a request that carried
-/// none) and an <see cref="IServiceTokenProvider"/> is registered (<c>AddServiceTokenClient</c>), the
-/// call is sent as <c>Bearer {serviceToken}</c> instead, so a background processor or an anonymous
-/// request that fans out internally still authenticates to the downstream service as this service.
-/// Precedence is therefore: the user's token, then the service token, then nothing. With no provider
-/// registered the interceptor attaches nothing to such a call, exactly as before service tokens
-/// existed.
+/// This interceptor forwards only the user's token. A call with no user token goes out with no
+/// <c>Authorization</c> entry unless its client opted into service tokens with
+/// <see cref="ServiceTokenHttpClientBuilderExtensions"/>' <c>WithServiceToken()</c>, which adds
+/// <see cref="ServiceTokenClientInterceptor"/> for that client alone.
 /// </para>
 /// <para>
 /// An <c>Authorization</c> entry the caller already set on the call's metadata is never overwritten
-/// or duplicated, whichever token would otherwise have been attached.
+/// or duplicated.
 /// </para>
 /// </summary>
 /// <param name="httpContextAccessor">Accessor for the ambient request whose user token is forwarded.</param>
-/// <param name="serviceTokenProvider">
-/// The service-token source used when there is no user token, or <see langword="null"/> (the default
-/// when <c>AddServiceTokenClient</c> was not called) to attach nothing in that case.
-/// </param>
-public sealed class JwtForwardingClientInterceptor(
-    IHttpContextAccessor httpContextAccessor,
-    IServiceTokenProvider? serviceTokenProvider = null) : Interceptor
+public sealed class JwtForwardingClientInterceptor(IHttpContextAccessor httpContextAccessor) : Interceptor
 {
-    private const string AuthorizationHeader = "Authorization";
+    internal const string AuthorizationHeader = "Authorization";
 
     private const string AccessTokenName = "access_token";
 
@@ -104,20 +95,23 @@ public sealed class JwtForwardingClientInterceptor(
         return continuation(newContext);
     }
 
-    private ClientInterceptorContext<TRequest, TResponse> WithForwardedAuthorization<TRequest, TResponse>(
-        ClientInterceptorContext<TRequest, TResponse> context)
+    /// <summary>
+    /// Returns <paramref name="context"/> with <c>Authorization: {authHeader}</c> added, unless the
+    /// call already carries an <c>Authorization</c> entry (never overwritten or duplicated) or
+    /// <paramref name="authHeader"/> is empty.
+    /// </summary>
+    /// <typeparam name="TRequest">The request message type.</typeparam>
+    /// <typeparam name="TResponse">The response message type.</typeparam>
+    /// <param name="context">The outgoing call's context.</param>
+    /// <param name="authHeader">The value to attach, or <see langword="null"/> to attach nothing.</param>
+    /// <returns>The context to continue the call with.</returns>
+    internal static ClientInterceptorContext<TRequest, TResponse> WithAuthorization<TRequest, TResponse>(
+        ClientInterceptorContext<TRequest, TResponse> context,
+        string? authHeader)
         where TRequest : class
         where TResponse : class
     {
-        // Never overwrite or duplicate a header a previous interceptor or the caller already set.
-        // Checked first, so a caller-chosen credential never costs a service-token mint.
-        if (context.Options.Headers?.GetValue(AuthorizationHeader) is not null)
-        {
-            return context;
-        }
-
-        var authHeader = ResolveAuthorization(httpContextAccessor.HttpContext) ?? ResolveServiceAuthorization();
-        if (string.IsNullOrEmpty(authHeader))
+        if (string.IsNullOrEmpty(authHeader) || HasAuthorization(context))
         {
             return context;
         }
@@ -129,12 +123,25 @@ public sealed class JwtForwardingClientInterceptor(
     }
 
     /// <summary>
-    /// The value to forward: the inbound <c>Authorization</c> header, or, when that is empty, a bearer
-    /// built from the access token saved on the request's authentication ticket.
+    /// Whether the call already carries an <c>Authorization</c> entry, set by the caller or by an
+    /// earlier interceptor.
+    /// </summary>
+    /// <typeparam name="TRequest">The request message type.</typeparam>
+    /// <typeparam name="TResponse">The response message type.</typeparam>
+    /// <param name="context">The outgoing call's context.</param>
+    /// <returns><see langword="true"/> when an <c>Authorization</c> entry is present.</returns>
+    internal static bool HasAuthorization<TRequest, TResponse>(ClientInterceptorContext<TRequest, TResponse> context)
+        where TRequest : class
+        where TResponse : class =>
+        context.Options.Headers?.GetValue(AuthorizationHeader) is not null;
+
+    /// <summary>
+    /// The user's token to forward: the inbound <c>Authorization</c> header, or, when that is empty, a
+    /// bearer built from the access token saved on the request's authentication ticket.
     /// </summary>
     /// <param name="httpContext">The ambient request, if any.</param>
     /// <returns>The <c>Authorization</c> value to forward, or <see langword="null"/>.</returns>
-    private static string? ResolveAuthorization(HttpContext? httpContext)
+    internal static string? ResolveUserAuthorization(HttpContext? httpContext)
     {
         if (httpContext is null)
         {
@@ -152,13 +159,11 @@ public sealed class JwtForwardingClientInterceptor(
         return string.IsNullOrEmpty(savedToken) ? null : $"Bearer {savedToken}";
     }
 
-    /// <summary>
-    /// The service token as a bearer value, consulted only when there is no user token to forward.
-    /// </summary>
-    /// <returns>The <c>Authorization</c> value, or <see langword="null"/> when no provider is registered.</returns>
-    private string? ResolveServiceAuthorization()
-    {
-        var token = serviceTokenProvider?.GetToken();
-        return string.IsNullOrEmpty(token) ? null : $"Bearer {token}";
-    }
+    private ClientInterceptorContext<TRequest, TResponse> WithForwardedAuthorization<TRequest, TResponse>(
+        ClientInterceptorContext<TRequest, TResponse> context)
+        where TRequest : class
+        where TResponse : class =>
+        HasAuthorization(context)
+            ? context
+            : WithAuthorization(context, ResolveUserAuthorization(httpContextAccessor.HttpContext));
 }

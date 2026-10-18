@@ -15,9 +15,10 @@ namespace MMCA.Common.Grpc.Authentication;
 /// validate it on start.
 /// </summary>
 /// <remarks>
-/// The two halves are independent opt-ins. A host that calls neither keeps exactly the behavior it
-/// had before service tokens shipped: the forwarding interceptor attaches the user's token when
-/// there is one and nothing otherwise.
+/// The two halves are independent opt-ins. Registering the provider sends nothing by itself: each
+/// typed client that should carry the token opts in with
+/// <see cref="ServiceTokenHttpClientBuilderExtensions"/>' <c>WithServiceToken()</c>, and every other
+/// client keeps forwarding only the user's token.
 /// </remarks>
 public static class ServiceTokenServiceCollectionExtensions
 {
@@ -25,7 +26,7 @@ public static class ServiceTokenServiceCollectionExtensions
     {
         /// <summary>
         /// Registers <see cref="IServiceTokenProvider"/> as a singleton (one token cache per process)
-        /// so the <c>JwtForwardingClientInterceptor</c> on every typed gRPC client attaches a
+        /// for the typed gRPC clients that opted in with <c>WithServiceToken()</c>, which attach a
         /// service token to a call that has no user token to forward. Also adds
         /// <see cref="TimeProvider.System"/> unless the host already registered a clock.
         /// </summary>
