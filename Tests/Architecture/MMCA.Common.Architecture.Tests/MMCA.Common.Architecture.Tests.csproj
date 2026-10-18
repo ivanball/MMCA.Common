@@ -48,6 +48,9 @@
          ForwardedJwtAudienceFitnessTests, never compiled (they reference host types on purpose). -->
     <Compile Remove="JwtAudienceFixtures\**" />
     <None Include="JwtAudienceFixtures\**" />
+    <!-- Fixture privacy policies for PiiInventoryTestsBaseTests: read from disk by path, exactly as a
+         consumer's subclass reads its own PRIVACY.md. -->
+    <None Include="PiiInventoryFixtures\*.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />

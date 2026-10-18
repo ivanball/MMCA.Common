@@ -52,10 +52,12 @@ public abstract partial class ObservabilityConventionTestsBase
 
     /// <summary>
     /// Whether the consumer's bicep must provision a monitoring view (an Azure Monitor workbook or a
-    /// portal dashboard) next to its alerts. Off by default, so a consumer that does not opt in keeps
-    /// exactly the alert-to-runbook checks it had.
+    /// portal dashboard) next to its alerts. On by default: an alert an operator cannot look at the
+    /// signal behind is half a monitoring story, so every consumer gets the check without opting in.
+    /// Override to <see langword="false"/> only for a deployment that deliberately has no
+    /// operator-facing view, and say why in the override.
     /// </summary>
-    protected virtual bool RequireWorkbook => false;
+    protected virtual bool RequireWorkbook => true;
 
     /// <summary>
     /// When <see cref="RequireWorkbook"/> is on, the bicep declares at least one

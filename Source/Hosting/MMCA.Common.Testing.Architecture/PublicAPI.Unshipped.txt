@@ -1,1 +1,17 @@
 ﻿#nullable enable
+MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldDeclare_EventName() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsDeclareEventName(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.SubstitutabilityTestsBase() -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.OverridesAndInterfaceImplementations_ShouldNotThrow_NotSupportedOrNotImplemented() -> void
+abstract MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+virtual MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.ExcludedMembers.get -> System.Collections.Generic.IReadOnlySet<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.SubstitutableMembersDoNotRefuseTheContract(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlySet<string!>! excludedMembers) -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiInventoryTestsBase() -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiMembers_ShouldHave_CompleteInventoryRows() -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.InventoryRows_ShouldMapTo_LivePiiMembers() -> void
+abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.Assemblies.get -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
+abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PrivacyPolicyPath.get -> string!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiMembersHaveInventoryRows(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToPiiMembers(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
