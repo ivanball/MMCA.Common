@@ -1,3 +1,9 @@
 ﻿#nullable enable
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldDeclare_EventName() -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsDeclareEventName(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.SubstitutabilityTestsBase() -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.OverridesAndInterfaceImplementations_ShouldNotThrow_NotSupportedOrNotImplemented() -> void
+abstract MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+virtual MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.ExcludedMembers.get -> System.Collections.Generic.IReadOnlySet<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.SubstitutableMembersDoNotRefuseTheContract(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlySet<string!>! excludedMembers) -> void
