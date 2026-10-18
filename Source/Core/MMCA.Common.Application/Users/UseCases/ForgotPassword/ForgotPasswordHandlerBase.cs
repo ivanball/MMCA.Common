@@ -6,6 +6,7 @@ using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.Users.Emails;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
@@ -81,12 +82,10 @@ public abstract partial class ForgotPasswordHandlerBase<TUser, TCommand>(
 
         try
         {
-            await emailSender.SendAsync(
-                email.Value,
-                ComposeSubject(),
-                ComposeBody(ComposeResetLink(email.Value, token), token),
-                isHtml: true,
-                cancellationToken).ConfigureAwait(false);
+            var (subject, body) = UserEmailResources.InRecipientCulture(
+                user,
+                () => (ComposeSubject(), ComposeBody(ComposeResetLink(email.Value, token), token)));
+            await emailSender.SendAsync(email.Value, subject, body, isHtml: true, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -109,14 +108,18 @@ public abstract partial class ForgotPasswordHandlerBase<TUser, TCommand>(
     /// <returns>The matching account, or <see langword="null"/>.</returns>
     protected abstract Task<TUser?> FindUntrackedByEmailAsync(Email email, CancellationToken cancellationToken);
 
-    /// <summary>The subject line of the reset email. Override to localize or rebrand.</summary>
+    /// <summary>
+    /// The subject line of the reset email, in the recipient's culture: both compose members run with
+    /// the current UI culture set to the account's stored preference (the request's culture when it
+    /// has none). Override to rebrand.
+    /// </summary>
     /// <returns>The subject line.</returns>
-    protected virtual string ComposeSubject() => "Reset your password";
+    protected virtual string ComposeSubject() => UserEmailResources.Get("ForgotPassword.Subject");
 
     /// <summary>
-    /// The body of the reset email. The default carries the reset link when one can be composed AND
-    /// the raw token, because clients without deep linking (the MAUI head) need the token typed into
-    /// the reset page by hand.
+    /// The body of the reset email, in the recipient's culture. The default carries the reset link
+    /// when one can be composed AND the raw token, because clients without deep linking (the MAUI head)
+    /// need the token typed into the reset page by hand.
     /// </summary>
     /// <param name="resetLink">The prefilled reset URL, or <see langword="null"/> when no reset URL is configured.</param>
     /// <param name="token">The raw single-use token.</param>
@@ -126,12 +129,12 @@ public abstract partial class ForgotPasswordHandlerBase<TUser, TCommand>(
         string minutes = Settings.TokenLifetimeMinutes.ToString(CultureInfo.InvariantCulture);
         string linkBlock = resetLink is null
             ? string.Empty
-            : $"<p><a href=\"{WebUtility.HtmlEncode(resetLink)}\">Reset your password</a></p>";
+            : $"<p><a href=\"{WebUtility.HtmlEncode(resetLink)}\">{UserEmailResources.Get("ForgotPassword.LinkText")}</a></p>";
 
-        return $"<p>We received a request to reset your password.</p>"
+        return $"<p>{UserEmailResources.Get("ForgotPassword.Intro")}</p>"
             + linkBlock
-            + $"<p>Your reset code is <strong>{WebUtility.HtmlEncode(token)}</strong>. It expires in {minutes} minutes and can be used once.</p>"
-            + "<p>If you did not request this, you can ignore this message: your password has not changed.</p>";
+            + $"<p>{UserEmailResources.Plural("ForgotPassword.Code", Settings.TokenLifetimeMinutes, $"<strong>{WebUtility.HtmlEncode(token)}</strong>", minutes)}</p>"
+            + $"<p>{UserEmailResources.Get("ForgotPassword.Ignore")}</p>";
     }
 
     /// <summary>
