@@ -57,6 +57,16 @@ The fix:
    `EFRefreshSessionStore` and `InMemoryRefreshSessionStore` already implement it. A Moq mock needs no
    change unless it is strict.
 
+**The OpenAPI baseline gate also compares parameters and request bodies.** No signature changed, but
+`OpenApiContractTestsBase.OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline` (only for a host
+that overrides `BaselineDocumentPath`) can now fail on a change the earlier detector let through: a
+removed parameter, an optional parameter now required, a new required parameter, a changed parameter
+type, a removed request body, a new required request body, or a removed request media type.
+
+The fix: read each new finding. A real break is fixed in the API. A deliberate one is accepted by
+regenerating the committed baseline with `MMCA_UPDATE_OPENAPI_BASELINE=1` and committing the result.
+Code that switches over `OpenApiBreakingChangeKind` handles the seven new values.
+
 ## [1.244.0] - 2026-10-18
 
 **Service tokens are opt-in per gRPC client.** `AddServiceTokenClient` no longer makes every typed
