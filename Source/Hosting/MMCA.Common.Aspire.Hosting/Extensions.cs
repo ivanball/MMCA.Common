@@ -42,6 +42,18 @@ public static class Extensions
     internal const string E2eLiftTriggerVariable = "E2E_LIFT_REGISTRATION_THROTTLE";
 
     /// <summary>
+    /// The environment variable an E2E workflow sets to pin the UI host to InteractiveServer (see
+    /// <c>WithE2eForceServer</c>). Absent locally and in production.
+    /// </summary>
+    public const string E2eForceServerTriggerVariable = "E2E_FORCE_SERVER";
+
+    /// <summary>
+    /// The environment variable <c>WithE2eForceServer</c> writes onto the UI resource; the UI host
+    /// reads it as the <c>E2E:ForceServer</c> configuration key.
+    /// </summary>
+    public const string E2eForceServerConfigurationKey = "E2E__ForceServer";
+
+    /// <summary>
     /// Requests per window per client IP the gateway allows while an E2E suite is running (see
     /// <c>WithE2eGatewayRateLimitLift</c>). High enough that no suite can reach it.
     /// </summary>
@@ -404,6 +416,41 @@ public static class Extensions
                     "LoginProtection__MaxRegistrationsPerIpPerHour",
                     E2eRegistrationsPerIpPerHour.ToString(CultureInfo.InvariantCulture))
                 : identity;
+        }
+    }
+
+    extension(IResourceBuilder<ProjectResource> ui)
+    {
+        /// <summary>
+        /// CI/E2E only: pins the UI host to InteractiveServer for the suite by setting
+        /// <c>E2E__ForceServer=true</c> on the UI resource, so no page boots the WASM bundle. Under
+        /// InteractiveAuto the post-login second page load switches to the background-downloaded WASM
+        /// runtime, whose boot on a shared 2-core CI runner exceeds every suite wait. The UI host reads
+        /// <c>E2E:ForceServer</c> itself; this method only forwards the switch.
+        /// <para>
+        /// The trigger is the <see cref="E2eForceServerTriggerVariable"/> environment variable (set by
+        /// the E2E workflow, absent locally and in production, so this is a no-op there).
+        /// </para>
+        /// </summary>
+        /// <param name="unlessAlso">
+        /// A veto evaluated at the call site: when <see langword="true"/> the switch is not forwarded
+        /// even if the environment asks for it. Pass the AppHost's own competing render-mode flag (for
+        /// example a forced-WebAssembly switch that must win); defaults to <see langword="false"/>.
+        /// </param>
+        /// <returns>The UI resource builder for chaining.</returns>
+        public IResourceBuilder<ProjectResource> WithE2eForceServer(bool unlessAlso = false)
+        {
+            ArgumentNullException.ThrowIfNull(ui);
+
+            var force = !unlessAlso
+                && string.Equals(
+                    Environment.GetEnvironmentVariable(E2eForceServerTriggerVariable),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase);
+
+            return force
+                ? ui.WithEnvironment(E2eForceServerConfigurationKey, "true")
+                : ui;
         }
     }
 

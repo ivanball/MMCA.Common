@@ -1,0 +1,43 @@
+// Pre-paint Day/Dark seed for a MAUI Blazor head (ADR-028). Load it as a CLASSIC, synchronous script
+// in index.html's <head>, before the stylesheets:
+//
+//     <script src="_content/MMCA.Common.UI/theme-prepaint.js"></script>
+//
+// The WebView paints index.html before MudThemeProvider defines --mud-palette-background, and that
+// provider's first render still carries the light palette until ThemeService has read the stored mode,
+// so a dark-mode user sees a white flash on a cold launch. This stamps <html data-mmca-theme="dark|light">
+// before the first paint, reading the persisted preference exactly as theme.js does (the mmca_theme
+// cookie, then localStorage) and falling back to the OS scheme the way ThemeService does. The matching
+// rules in app.css then paint the host surface in that mode until MmcaThemeProviders marks the page
+// interactive (data-mmca-interactive). Not an ES module and no modern syntax on purpose: it must run
+// before anything else on the page, on every WebView the MAUI heads target.
+(function () {
+    var key = 'mmca_theme';
+    var theme = null;
+
+    var cookies = document.cookie ? document.cookie.split('; ') : [];
+    for (var i = 0; i < cookies.length; i++) {
+        if (cookies[i].indexOf(key + '=') === 0) {
+            try {
+                theme = decodeURIComponent(cookies[i].substring(key.length + 1));
+            } catch (e) {
+                // A malformed cookie value (URIError): fall through to localStorage, as theme.js does.
+                theme = null;
+            }
+        }
+    }
+
+    if (theme !== 'dark' && theme !== 'light') {
+        try {
+            theme = localStorage.getItem(key);
+        } catch (e) {
+            theme = null;
+        }
+    }
+
+    if (theme !== 'dark' && theme !== 'light') {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    document.documentElement.setAttribute('data-mmca-theme', theme);
+})();

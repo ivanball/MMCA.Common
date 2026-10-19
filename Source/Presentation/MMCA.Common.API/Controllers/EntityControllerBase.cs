@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Reflection;
-using System.Text.Json;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.API.Export;
 using MMCA.Common.API.ModelBinders;
+using MMCA.Common.API.Pagination;
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
@@ -185,7 +185,7 @@ public abstract class EntityControllerBase<
         if (result.IsFailure)
             return HandleFailure(result.Errors);
 
-        Response.Headers.Append("X-Pagination", JsonSerializer.Serialize(result.Value!.PaginationMetadata, JsonSerializerOptions.Web));
+        Response.AppendPaginationHeader(result.Value!.PaginationMetadata);
         return Ok(result.Value);
     }
 
