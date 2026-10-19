@@ -12,7 +12,7 @@ namespace MMCA.Common.UI.Tests.Components.Auth;
 
 /// <summary>
 /// The shared change-password section both consumers' profile pages render: client-side validation
-/// (required, min-length, match) stops an invalid submit before any server call, a valid submit calls
+/// (required, min-length, complexity, match) stops an invalid submit before any server call, a valid submit calls
 /// <see cref="IAuthUIService.ChangePasswordAsync"/>, and the outcome is toasted in the component's own
 /// localized text and reported through <c>OnChanged</c> / <c>OnFailed</c>.
 /// </summary>
@@ -123,6 +123,44 @@ public sealed class ChangePasswordCardTests : BunitTestBase
     }
 
     [Fact]
+    public void NewPasswordFailingComplexity_ShowsTheComplexityMessageUnderTheNewPasswordField_AndCallsNoService()
+    {
+        var cut = RenderUnderTest<ChangePasswordCard>(_ => { });
+
+        // Long enough for MinLength, but no uppercase letter and no special character.
+        Fill(cut, "Current-1", "alllowercase1", "alllowercase1");
+        SubmitButton(cut).Click();
+
+        cut.WaitForAssertion(() => NewPasswordField(cut).TextContent.Should().Contain(
+            "Password must be at least 8 characters and include uppercase, lowercase, a digit, and a special character."));
+        _auth.Verify(a => a.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void MaxLength_ByDefault_BoundsTheNewPasswordInputToTheServerMaximum()
+    {
+        var cut = RenderUnderTest<ChangePasswordCard>(_ => { });
+
+        cut.FindAll("input[type=password]")[1].GetAttribute("maxlength").Should().Be("128");
+    }
+
+    [Fact]
+    public void RefusalTargetedAtTheNewPassword_ShowsTheServersMessageUnderTheNewPasswordField()
+    {
+        const string message = "This password has appeared in a known data breach.";
+        var refusal = Result.Failure(Error.Validation("Password.Breached", message, target: "Request.NewPassword"));
+        _auth.Setup(a => a.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(refusal);
+        var cut = RenderUnderTest<ChangePasswordCard>(_ => { });
+
+        Fill(cut, "Current-1", "New-Password-1", "New-Password-1");
+        SubmitButton(cut).Click();
+
+        cut.WaitForAssertion(() => NewPasswordField(cut).TextContent.Should().Contain(message));
+        _toast.Verify(t => t.Error(message), Times.Once);
+    }
+
+    [Fact]
     public void AdditionalActions_RenderAfterTheSubmitButton()
     {
         var cut = RenderUnderTest<ChangePasswordCard>(p => p.Add(
@@ -152,6 +190,10 @@ public sealed class ChangePasswordCardTests : BunitTestBase
 
     private static AngleSharp.Dom.IElement SubmitButton(IRenderedComponent<ChangePasswordCard> cut) =>
         cut.Find(".mud-card-actions button");
+
+    // The second MudTextField (current, new, confirm): its input plus its helper or error text line.
+    private static AngleSharp.Dom.IElement NewPasswordField(IRenderedComponent<ChangePasswordCard> cut) =>
+        cut.FindAll(".mud-input-control")[1];
 
     private static void Fill(IRenderedComponent<ChangePasswordCard> cut, string current, string next, string confirm)
     {

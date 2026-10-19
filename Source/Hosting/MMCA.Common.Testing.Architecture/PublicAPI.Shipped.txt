@@ -117,6 +117,7 @@ MMCA.Common.Testing.Architecture.EventConventionTestsBase
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldHave_UniqueSourceTypes() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldIncrease_SchemaVersion() -> void
+MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldDeclare_EventName() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldDeclare_SchemaVersion() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldInherit_BaseIntegrationEvent() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.IntegrationEvents_ShouldResideIn_SharedIntegrationEventsNamespace() -> void
@@ -279,6 +280,10 @@ MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.EntitiesWithPiiProperties_ShouldImplement_IAnonymizable() -> void
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.PiiConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.InventoryRows_ShouldMapTo_LivePiiMembers() -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiInventoryTestsBase() -> void
+MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiMembers_ShouldHave_CompleteInventoryRows() -> void
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContractTestsBase() -> void
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContracts_ShouldMatch_TheFrozenSnapshot() -> void
@@ -326,6 +331,9 @@ MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.UiProjects_R
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIdTestsBase() -> void
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIds_ShouldBe_ReadonlyRecordStructs() -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.OverridesAndInterfaceImplementations_ShouldNotThrow_NotSupportedOrNotImplemented() -> void
+MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.SubstitutabilityTestsBase() -> void
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.CodeBehinds_StayWithinTheLineCap() -> void
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.RazorFiles_KeepInlineCodeBlocksSmall() -> void
@@ -386,6 +394,8 @@ abstract MMCA.Common.Testing.Architecture.ModuleIsolationTestsBase.Map.get -> MM
 abstract MMCA.Common.Testing.Architecture.NamespaceCycleTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.NamingConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.PiiConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.Assemblies.get -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
+abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PrivacyPolicyPath.get -> string!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.FrozenProtoContracts.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.SolutionFileName.get -> string!
@@ -404,6 +414,7 @@ abstract MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.ResourceRoot.ge
 abstract MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix = "MMCA.Common.AI." -> string!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractAttributeFullName = "MMCA.Common.Shared.Abstractions.ServiceContractAttribute" -> string!
@@ -487,6 +498,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.InfrastructureDoesNotD
 static MMCA.Common.Testing.Architecture.ArchitectureRules.InlineStyleViolations(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventPayloadsAreDomainFree(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsAreImmutable(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsDeclareEventName(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsDeclareSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsInheritBaseIntegrationEvent(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsLiveInSharedAssemblies(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -507,6 +519,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedIsFramewor
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamespacesHaveNoDependencyCycles(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? allowedCycleNamespaces = null) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToPiiMembers(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiMembersHaveInventoryRows(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! packageId, int exclusiveMajorCeiling, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PostActionsDeclareIdempotencyIntent(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ProtoContractsMatchFrozenList(System.Collections.Generic.IReadOnlyCollection<string!>! protoRelativePaths, System.Collections.Generic.IReadOnlyCollection<string!>! frozenContracts, string! repoRootSolutionFileName) -> void
@@ -528,6 +542,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.SortableGridColumnsUse
 static MMCA.Common.Testing.Architecture.ArchitectureRules.SpecificationsAreSealedWithSpecificationSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.SpecificationsDoNotNavigateToOtherEntities(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.StronglyTypedIdsAreReadonlyRecordStructs(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.SubstitutableMembersDoNotRefuseTheContract(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlySet<string!>! excludedMembers) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.TemporaryFeatureFlagsAreNotPastRemoveBy(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.DateOnly today) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.TransportDoesNotLeakIntoCoreLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.UiDoesNotDependOnApplication(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -621,6 +636,7 @@ virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.AllowedEntries.g
 virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.MinimumResourceFileCount.get -> int
 virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.UnaccentedWords.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.AllowedStaticMembers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.ExcludedMembers.get -> System.Collections.Generic.IReadOnlySet<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.ExcludedPathFragments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.MaxCodeBehindLines.get -> int
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.MaxInlineCodeLines.get -> int

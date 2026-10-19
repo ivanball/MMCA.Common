@@ -50,6 +50,9 @@ MMCA.Common.Testing.UI.CapturingHttpMessageHandler.SetResponse(System.Net.Http.H
 MMCA.Common.Testing.UI.ErrorSummaryExtensions
 MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
 MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ErrorSummaryMessages() -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions
+MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
+MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ShouldExposeFieldErrorAccessibly(string! inputId, string! expectedMessage) -> void
 MMCA.Common.Testing.UI.FreshApiClientFactory
 MMCA.Common.Testing.UI.FreshApiClientFactory.CreateClient(string! name) -> System.Net.Http.HttpClient!
 MMCA.Common.Testing.UI.FreshApiClientFactory.FreshApiClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri! baseAddress) -> void
@@ -134,6 +137,7 @@ static MMCA.Common.Testing.UI.BunitInteractionExtensions.HasText<TComponent>(thi
 static MMCA.Common.Testing.UI.CapturedRequest.operator !=(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
 static MMCA.Common.Testing.UI.CapturedRequest.operator ==(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
 static MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryMessages<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.ShouldExposeFieldErrorAccessibly<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! inputId, string! expectedMessage) -> void
 static MMCA.Common.Testing.UI.HttpTestDoubles.ClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri? baseAddress = null) -> System.Net.Http.IHttpClientFactory!
 static MMCA.Common.Testing.UI.HttpTestDoubles.EmptyResponse(System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.NoContent) -> System.Net.Http.HttpResponseMessage!
 static MMCA.Common.Testing.UI.HttpTestDoubles.JsonResponse<T>(T payload, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> System.Net.Http.HttpResponseMessage!

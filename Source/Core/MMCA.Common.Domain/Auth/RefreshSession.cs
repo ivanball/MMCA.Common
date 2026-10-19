@@ -66,6 +66,9 @@ public sealed class RefreshSession : IAnonymizable
     /// <summary>Reason recorded when the per-user session cap evicts the oldest session.</summary>
     public const string ReasonSessionCap = "SessionCapExceeded";
 
+    /// <summary>Reason recorded when a session is revoked because its account was deleted and erased.</summary>
+    public const string ReasonAccountDeleted = "AccountDeleted";
+
     /// <summary>Gets the unique identifier for this session row.</summary>
     public Guid Id { get; init; } = Guid.NewGuid();
 

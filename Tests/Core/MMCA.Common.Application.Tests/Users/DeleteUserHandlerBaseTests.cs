@@ -1,22 +1,29 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.DeleteUser;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Users;
 
 /// <summary>
 /// Exercises the shared account-erasure workflow: the owner-or-privileged-role gate, the
-/// delete-then-anonymize-then-save ordering, the app tail hook, the shared soft-deleted marker
-/// write (ADR-047), and the post-commit queue.
+/// delete-then-anonymize-then-save ordering, the app tail hook, the refresh-session erasure, the
+/// shared soft-deleted marker write (ADR-047), and the post-commit queue.
 /// </summary>
 public sealed class DeleteUserHandlerBaseTests
 {
     private const string PrivilegedRole = "Manager";
+    private const string SessionIp = "203.0.113.7";
+    private const string SessionUserAgent = "Mozilla/5.0 (test)";
+
+    private static readonly DateTimeOffset SessionNow = new(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task HandleAsync_WhenCallerIsNeitherOwnerNorPrivileged_ReturnsForbiddenWithoutFetching()
@@ -288,6 +295,84 @@ public sealed class DeleteUserHandlerBaseTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task HandleAsync_RevokesTheErasedUsersUnrevokedSessionsAndAnonymizesAllOfThem_LeavingOtherUsersAlone()
+    {
+        var clock = new FakeTimeProvider(SessionNow);
+        var store = new InMemoryRefreshSessionStore();
+        var active = SeedSession(store, userId: 1, "u-active", SessionNow.UtcDateTime.AddHours(-1), SessionNow.UtcDateTime.AddDays(6));
+        var expired = SeedSession(store, userId: 1, "u-expired", SessionNow.UtcDateTime.AddDays(-10), SessionNow.UtcDateTime.AddDays(-3));
+        var revoked = SeedSession(store, userId: 1, "u-revoked", SessionNow.UtcDateTime.AddDays(-2), SessionNow.UtcDateTime.AddDays(5));
+        revoked.Revoke(SessionNow.UtcDateTime.AddDays(-1), RefreshSession.ReasonSignedOut);
+        var otherUsers = SeedSession(store, userId: 2, "v-active", SessionNow.UtcDateTime.AddHours(-2), SessionNow.UtcDateTime.AddDays(6));
+        var (sut, mocks) = CreateSut(store, clock);
+        ArrangeUser(mocks, new TestHidingDeleteUser { Id = 1 });
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        foreach (var session in new[] { active, expired, revoked })
+        {
+            session.IpAddress.Should().BeNull("every row of the erased user is anonymized, revoked ones included");
+            session.UserAgent.Should().BeNull("every row of the erased user is anonymized, revoked ones included");
+            session.IsRevoked.Should().BeTrue();
+        }
+
+        active.ReasonRevoked.Should().Be(RefreshSession.ReasonAccountDeleted);
+        active.RevokedAt.Should().Be(SessionNow.UtcDateTime);
+        expired.ReasonRevoked.Should().Be(RefreshSession.ReasonAccountDeleted, "an expired row is still un-revoked");
+        revoked.ReasonRevoked.Should().Be(RefreshSession.ReasonSignedOut, "an already-revoked row keeps its own revocation");
+
+        otherUsers.IsRevoked.Should().BeFalse("another user's session is not part of this erasure");
+        otherUsers.IpAddress.Should().Be(SessionIp);
+        otherUsers.UserAgent.Should().Be(SessionUserAgent);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ErasesTheSessionsBeforeTheUnitOfWorkSave()
+    {
+        var store = new InMemoryRefreshSessionStore();
+        var active = SeedSession(store, userId: 1, "u-active", SessionNow.UtcDateTime.AddHours(-1), SessionNow.UtcDateTime.AddDays(6));
+        var (sut, mocks) = CreateSut(store, new FakeTimeProvider(SessionNow));
+        ArrangeUser(mocks, new TestHidingDeleteUser { Id = 1 });
+        (bool Revoked, string? IpAddress)? atSave = null;
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => atSave = (active.IsRevoked, active.IpAddress));
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        atSave.Should().Be((true, (string?)null), "the session changes commit with the erasure in the same save");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithNoRefreshSessionStoreRegistered_StillErasesTheAccount()
+    {
+        var (sut, mocks) = CreateSut(refreshSessions: null);
+        var user = new TestHidingDeleteUser { Id = 1 };
+        ArrangeUser(mocks, user);
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        user.AnonymizeCalled.Should().BeTrue();
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static RefreshSession SeedSession(
+        InMemoryRefreshSessionStore store,
+        UserIdentifierType userId,
+        string token,
+        DateTime createdAt,
+        DateTime expiresAt)
+    {
+        var session = RefreshSession.Create(userId, token, createdAt, expiresAt, SessionIp, SessionUserAgent).Value!;
+        store.Seed(session);
+        return session;
+    }
+
     private static Task TraceAsync(List<string> trace, string entry)
     {
         trace.Add(entry);
@@ -305,7 +390,9 @@ public sealed class DeleteUserHandlerBaseTests
         Mock<ICacheService> Cache,
         Mock<ILogger> Logger);
 
-    private static (TestDeleteUserHandler Sut, HandlerMocks Mocks) CreateSut()
+    private static (TestDeleteUserHandler Sut, HandlerMocks Mocks) CreateSut(
+        IRefreshSessionStore? refreshSessions = null,
+        TimeProvider? timeProvider = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>>();
@@ -316,14 +403,19 @@ public sealed class DeleteUserHandlerBaseTests
         unitOfWork.Setup(x => x.GetRepository<TestHidingDeleteUser, UserIdentifierType>()).Returns(repository.Object);
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object);
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object, refreshSessions, timeProvider);
         return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
 
 /// <summary>Concrete subclass standing in for an app's <c>DeleteUserHandler</c> plus its erasure tail.</summary>
-public sealed class TestDeleteUserHandler(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger)
+public sealed class TestDeleteUserHandler(
+    IUnitOfWork unitOfWork,
+    ICacheService cacheService,
+    ILogger logger,
+    IRefreshSessionStore? refreshSessions = null,
+    TimeProvider? timeProvider = null)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger, refreshSessions, timeProvider)
 {
     public int TailInvocations { get; private set; }
 

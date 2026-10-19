@@ -87,6 +87,22 @@ public sealed class InMemoryRefreshSessionStore : IRefreshSessionStore
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<RefreshSession>> GetAllByUserAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<RefreshSession> all =
+        [
+            .. _sessions
+                .Where(s => EqualityComparer<UserIdentifierType>.Default.Equals(s.UserId, userId))
+                .OrderBy(s => s.CreatedAt)
+                .ThenBy(s => s.Id)
+        ];
+
+        return Task.FromResult(all);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
         DateTime now,
         CancellationToken cancellationToken = default)

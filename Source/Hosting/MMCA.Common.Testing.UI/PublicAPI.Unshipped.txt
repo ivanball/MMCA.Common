@@ -1,5 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions
-MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
-MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ShouldExposeFieldErrorAccessibly(string! inputId, string! expectedMessage) -> void
-static MMCA.Common.Testing.UI.FieldErrorAccessibilityExtensions.ShouldExposeFieldErrorAccessibly<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! inputId, string! expectedMessage) -> void

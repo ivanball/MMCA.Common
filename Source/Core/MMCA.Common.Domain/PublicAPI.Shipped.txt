@@ -228,6 +228,7 @@ abstract MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierTyp
 const MMCA.Common.Domain.Auth.PermissionGrant.PermissionMaxLength = 128 -> int
 const MMCA.Common.Domain.Auth.PermissionGrant.RoleMaxLength = 64 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonAccountDeleted = "AccountDeleted" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonReuseDetected = "ReuseDetected" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonRevokedMaxLength = 64 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonRotated = "Rotated" -> string!

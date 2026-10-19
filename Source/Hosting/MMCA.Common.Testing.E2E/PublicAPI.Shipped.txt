@@ -173,6 +173,12 @@ MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RowByRole(string! role) -> Mic
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SaveButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SavedToast.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SetPermissionAsync(string! permission, bool granted) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.Escape_ClosesDialog_AndReturnsFocusToOpener() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.FocusedElement_ShowsVisibleFocusIndicator() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.KeyboardOperabilityTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.OpenDialog_TrapsTabFocus() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.SkipLink_IsFirstTabStop_AndMovesFocusIntoMainLandmark() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.DefaultCulture_DoesNotLeakPseudoSentinel() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocale_RendersSentinel_WithoutEnUsLeak_AndDoesNotOverflowHorizontally() -> System.Threading.Tasks.Task!
@@ -230,6 +236,9 @@ MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.CultureSw
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.MobileViewport_CultureAndTheme_ShouldBeReachable() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.ThemeToggle_ToDark_ShouldApplyAndPersist() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.UserPreferencesTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogOpener.get -> Microsoft.Playwright.ILocator!
+abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogPagePath.get -> string!
+abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.PagePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ScannedPages.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.ProtectedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.PublicPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -306,6 +315,11 @@ static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultInterva
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultTimeout -> System.TimeSpan
 virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptsTermsAfterSignIn.get -> bool
 virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.TermsAcceptanceProbePath.get -> string?
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.ArrangeAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.CleanupAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.Dialog.get -> Microsoft.Playwright.ILocator!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.FocusReturnTarget.get -> Microsoft.Playwright.ILocator!
+virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.NavigateAsync(string! path) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.AssertProbePresentUnderDefaultCulture.get -> bool
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.OverflowTolerancePx.get -> int
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ProbeVisibleTextOnly.get -> bool

@@ -281,7 +281,12 @@ public sealed class AuthSessionIssuerReuseGraceTests
             return Task.FromResult(live);
         }
 
-        // The roster queries play no part in a refresh race.
+        // The erasure and roster queries play no part in a refresh race.
+        public Task<IReadOnlyList<RefreshSession>> GetAllByUserAsync(
+            UserIdentifierType userId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
             DateTime now,
             CancellationToken cancellationToken = default) =>

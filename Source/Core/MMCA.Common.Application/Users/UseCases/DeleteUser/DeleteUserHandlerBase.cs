@@ -11,7 +11,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 
 /// <summary>
 /// The shared account-erasure workflow: owner-or-privileged-role authorization, soft-delete the
-/// account, irreversibly anonymize its personal data in place (ADR-005), persist, write the shared
+/// account, irreversibly anonymize its personal data in place (ADR-005), revoke and anonymize its
+/// refresh sessions when the host registered a session store, persist, write the shared
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
 /// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
@@ -59,10 +60,23 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's delete-user command record.</typeparam>
+/// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
+/// <param name="cacheService">The cache the soft-deleted user marker is written to (ADR-047).</param>
+/// <param name="logger">Logger for the erasure audit line and the marker-failure warning.</param>
+/// <param name="refreshSessions">
+/// The refresh-session store, or <see langword="null"/> on a host that registered none (refresh
+/// sessions are opt-in). When present, every un-revoked session of the account is revoked and every
+/// session row, revoked ones included, is anonymized in the same unit of work as the erasure, so the
+/// IP address and user agent captured at sign-in do not outlive the account's other personal data.
+/// A subclass forwards the store it injects; one that forwards nothing leaves the rows as they are.
+/// </param>
+/// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ICacheService cacheService,
-    ILogger logger) : ICommandHandler<TCommand, Result>
+    ILogger logger,
+    IRefreshSessionStore? refreshSessions = null,
+    TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IErasableUser
     where TCommand : IUserOwnedRequest
 {
@@ -104,11 +118,8 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
 
         // Soft-delete (sets IsDeleted = true, plus whatever the aggregate couples to deletion).
         //
-        // Outstanding refresh sessions are not revoked here and do not need to be: the refresh flow
-        // re-fetches the user through the same soft-delete query filter, so an erased account's
-        // sessions stop working the moment this commits. An app that also wants the rows tidied
-        // revokes them from its OnAfterSoftDeleteAsync tail via IRefreshSessionStore, which enlists
-        // in this same unit of work.
+        // The account's refresh sessions are revoked and anonymized further down, after the user's own
+        // anonymization and before the save (see RevokeAndAnonymizeAllAsync), not left to the app.
         //
         // Called through IErasableUser deliberately, and the cast is load-bearing: member lookup on a
         // type parameter prefers the members of its CLASS constraint, so a bare user.Delete() would
@@ -135,6 +146,15 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         {
             return anonymizeResult;
         }
+
+        // The session rows are personal data too (IP address and user agent, captured at sign-in), on
+        // revoked rows as much as live ones. The store returns tracked rows on the same database
+        // context factory as this unit of work, so revoking the un-revoked ones and anonymizing all of
+        // them here commits (or rolls back) with the erasure in the one save below. The refresh flow's
+        // soft-delete filter already stops an erased account's sessions; the revocation records why.
+        await RefreshSessionRevocation
+            .RevokeAndAnonymizeAllAsync(refreshSessions, timeProvider, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

@@ -3,6 +3,22 @@
 All notable changes to the MMCA.Common packages are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
+
+## [1.245.0] - 2026-10-19
+
+### Changed
+
+- **Breaking:** account erasure now erases the account's refresh sessions. `DeleteUserHandlerBase<TUser, TCommand>` takes two optional trailing constructor parameters, `IRefreshSessionStore? refreshSessions = null` and `TimeProvider? timeProvider = null`. When a store is passed, the handler revokes every un-revoked session of the account (expired ones included) with the new reason `RefreshSession.ReasonAccountDeleted` and calls `Anonymize()` on every session row of the account, revoked ones too, before the unit-of-work save, so the IP address and user agent captured at sign-in are erased with the rest of the account. A host with no store registered still deletes as before. `IRefreshSessionStore` gains `GetAllByUserAsync(userId, cancellationToken)`, which returns every row of the user as tracked instances; `EFRefreshSessionStore` and `InMemoryRefreshSessionStore` implement it, and any other implementation must add it. `GetUnrevokedByUserAsync` is unchanged. The constructor change is source-compatible, but a subclass gets the erasure only once it forwards its store.
+
+  Map and fix: UPGRADING.md, [Unreleased].
+
+- **Breaking:** `OpenApiBreakingChangeDetector` (MMCA.Common.Testing) also compares operation parameters and request bodies. A parameter is identified by its location (`in`) and its name, the name compared case-insensitively, and an operation's parameters are its path item's shared ones overridden by its own; `$ref` parameters and request bodies are resolved like schemas. Seven new `OpenApiBreakingChangeKind` values report a removed parameter, an optional parameter now required, a new required parameter, a changed parameter type, a removed request body, a new required request body, and a removed request media type. A new optional parameter or optional request body is not breaking. Those findings set the new `OpenApiBreakingChange.Detail` (for example `GET /Orders: query parameter 'page'`), which `ToString()` appends in parentheses; the other kinds render exactly as before. A consumer whose `OpenApiContractTestsBase` overrides `BaselineDocumentPath` can see `OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline` fail on a parameter or body change the earlier detector let through.
+
+### Fixed
+
+- `ChangePasswordCard` (MMCA.Common.UI) checks the new password against the shared `PasswordComplexity` rule before it calls the server, with the same message the Register and Reset forms show, so it no longer sends a password the API then refuses. `MaxLength` now defaults to `PasswordComplexity.MaximumLength` (128), the bound the server enforces; set it to `null` to leave the input unbounded. When the server refuses the change with an error that names the current or the new password (a validation target ending in `CurrentPassword` or `NewPassword`, or the `Auth.InvalidCurrentPassword` code), the message also appears under that field until the user edits it. The toast stays.
+- `KeyboardOperabilityTestsBase` (MMCA.Common.Testing.E2E) runs `ArrangeAsync` inside the `try` whose `finally` calls `CleanupAsync`, so an arrangement that throws part-way is still cleaned up. An override of `CleanupAsync` must therefore tolerate a partial arrangement.
+
 ## [1.244.0] - 2026-10-18
 
 ### Changed
