@@ -279,7 +279,9 @@ MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ObservabilityC
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_AreDiscovered_GateIsNotVacuous() -> void
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.EntitiesWithPiiProperties_ShouldImplement_IAnonymizable() -> void
+MMCA.Common.Testing.Architecture.PiiConventionTestsBase.EveryAnonymizableDomainEntity_IsCoveredBySample() -> void
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.PiiConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.PiiConventionTestsBase.PropertiesOverwrittenByAnonymize_MustCarryPii() -> void
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.InventoryRows_ShouldMapTo_LivePiiMembers() -> void
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiInventoryTestsBase() -> void
@@ -436,6 +438,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureMapBase.Framework(MMCA.Commo
 static MMCA.Common.Testing.Architecture.ArchitectureRules.AggregateRootsHaveNoPublicConstructors(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.AggregateRootsHaveResultFactory(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.AggregatesCascadeSoftDeleteToChildren(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypes) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.AnonymizableEntitiesAreCoveredBySamples(System.Collections.Generic.IEnumerable<System.Type!>! candidateTypes, System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>! samples) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationDoesNotDependOnApi(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationDoesNotDependOnAspNetCore(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationDoesNotDependOnEntityFrameworkCore(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -523,6 +526,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToP
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiMembersHaveInventoryRows(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! packageId, int exclusiveMajorCeiling, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PostActionsDeclareIdempotencyIntent(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PropertiesOverwrittenByAnonymizeCarryPii(System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>! samples) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ProtoContractsMatchFrozenList(System.Collections.Generic.IReadOnlyCollection<string!>! protoRelativePaths, System.Collections.Generic.IReadOnlyCollection<string!>! frozenContracts, string! repoRootSolutionFileName) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueriesHaveQuerySuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersReturnResult(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -625,6 +629,7 @@ virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.Minimu
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RequireWorkbook.get -> bool
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RunbookResource.get -> string!
+virtual MMCA.Common.Testing.Architecture.PiiConventionTestsBase.AnonymizableSamples.get -> System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>!
 virtual MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.AllowedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.ApplicationSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!

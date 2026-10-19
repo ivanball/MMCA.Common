@@ -32,6 +32,32 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.246.0] - 2026-10-19
+
+**`PiiConventionTestsBase` checks erasure in both directions.** Two facts and one overridable member
+are added to the base.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| an app-local `EveryAnonymizableDomainEntity_IsCoveredBySample` / `PropertiesOverwrittenByAnonymize_MustCarryPii` | inherited from `PiiConventionTestsBase`; the local copies must be deleted (same names, CS0108) |
+| an app-local sample table (`Type` to `Func<IAnonymizable>`) | `protected override IReadOnlyDictionary<Type, Func<object>> AnonymizableSamples` |
+
+The fix:
+
+1. **A subclass with its own copies of the two facts** deletes them and their helpers, retypes its
+   sample table to `Func<object>`, and exposes it as the `AnonymizableSamples` override. The
+   factories keep working unchanged (`static () => X.Create(...).Value!`).
+2. **A subclass with no copies** compiles as is. If its module Domain assemblies hold an
+   `IAnonymizable` entity, the coverage fact fails until the override has a sample for it. Build the
+   sample through the entity's own factory and populate every field `Anonymize()` erases, or the
+   reverse fact has nothing to compare.
+3. **Then read what the reverse fact reports.** Each `Type.Property` it lists is overwritten by
+   `Anonymize()` without `[Pii]`: mark it, add it to the PII inventory, and redact its existing
+   audit-trail values with a data-only migration, since the rows written before the marker hold it in
+   clear.
+
 ## [1.245.0] - 2026-10-19
 
 **Account erasure erases the account's refresh sessions.** `DeleteUserHandlerBase` gains two

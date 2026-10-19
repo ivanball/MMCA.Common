@@ -1,6 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.Testing.Architecture.PiiConventionTestsBase.EveryAnonymizableDomainEntity_IsCoveredBySample() -> void
-MMCA.Common.Testing.Architecture.PiiConventionTestsBase.PropertiesOverwrittenByAnonymize_MustCarryPii() -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.AnonymizableEntitiesAreCoveredBySamples(System.Collections.Generic.IEnumerable<System.Type!>! candidateTypes, System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>! samples) -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.PropertiesOverwrittenByAnonymizeCarryPii(System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>! samples) -> void
-virtual MMCA.Common.Testing.Architecture.PiiConventionTestsBase.AnonymizableSamples.get -> System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>!
