@@ -13,8 +13,12 @@ namespace MMCA.Common.Application.Auth;
 /// than <c>IAuthenticationService</c>: the store returns tracked instances, so revoking is a
 /// mutation plus a save with no second user lookup and no cycle back through the auth workflow.
 /// </para>
+/// <para>
+/// <see cref="RevokeAllAsync"/> is public so an app-side <c>IUserAdministrationService</c> can run the
+/// same step after locking an account or changing its role, instead of re-implementing it.
+/// </para>
 /// </summary>
-internal static class RefreshSessionRevocation
+public static class RefreshSessionRevocation
 {
     /// <summary>
     /// Revokes every un-revoked session the user holds. A host that registered no
@@ -62,7 +66,7 @@ internal static class RefreshSessionRevocation
     /// <param name="timeProvider">Clock used to stamp the revocation; defaults to the system clock.</param>
     /// <param name="userId">The user being erased.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task RevokeAndAnonymizeAllAsync(
+    internal static async Task RevokeAndAnonymizeAllAsync(
         IRefreshSessionStore? refreshSessions,
         TimeProvider? timeProvider,
         UserIdentifierType userId,

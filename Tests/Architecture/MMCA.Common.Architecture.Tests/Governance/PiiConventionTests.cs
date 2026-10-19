@@ -1,3 +1,4 @@
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Testing.Architecture;
 
 namespace MMCA.Common.Architecture.Tests.Governance;
@@ -12,6 +13,10 @@ namespace MMCA.Common.Architecture.Tests.Governance;
 ///   address, declared on a class in MMCA.Common's Domain assembly or in the auth, user and
 ///   notification namespaces of its Application assembly, carries <c>[Pii]</c>. Without the marker,
 ///   <c>PiiRedactor</c> logs the value in clear text and the erasure rule above never sees it.</item>
+///   <item>The inherited reverse rule (what <c>Anonymize()</c> overwrites must carry <c>[Pii]</c>), run
+///   over the framework's own anonymizable entity, <see cref="RefreshSession"/>. The framework has no
+///   module Domain assembly, so the inherited coverage fact scans nothing here; this sample is what
+///   keeps the reverse rule exercised against a real entity in this repo.</item>
 /// </list>
 /// The Shared assembly is out of scope: it does not reference Domain, where <c>[Pii]</c> lives, so a
 /// Shared DTO cannot carry the marker. The redaction + erasure machinery itself is proven end to end
@@ -41,6 +46,20 @@ public sealed class PiiConventionTests : PiiConventionTestsBase
     ];
 
     protected override IArchitectureMap Map { get; } = new CommonArchitectureMap();
+
+    protected override IReadOnlyDictionary<Type, Func<object>> AnonymizableSamples { get; } =
+        new Dictionary<Type, Func<object>>
+        {
+            [typeof(RefreshSession)] = static () => RefreshSession
+                .Create(
+                    userId: 1,
+                    refreshToken: "refresh-token",
+                    createdAt: new DateTime(2026, 10, 19, 0, 0, 0, DateTimeKind.Utc),
+                    expiresAt: new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc),
+                    ipAddress: "203.0.113.7",
+                    userAgent: "Mozilla/5.0 (fixture)")
+                .Value!,
+        };
 
     [Fact]
     public void PersonalDataMembers_AreDiscovered_GateIsNotVacuous() =>

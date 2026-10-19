@@ -37,9 +37,10 @@ public interface IUserAdministrationService<TUserDto>
     /// </summary>
     /// <remarks>
     /// An implementation that locks an account should also revoke its live refresh sessions, or the
-    /// lock only takes effect when the current access token expires. <c>IRefreshSessionStore</c> and
-    /// <c>RefreshSessionRevocation.RevokeAllAsync</c> are what the framework's own credential-rotation
-    /// paths use for exactly this.
+    /// lock only takes effect when the current access token expires. Call
+    /// <see cref="RefreshSessionRevocation.RevokeAllAsync"/> with the injected
+    /// <see cref="IRefreshSessionStore"/>: it is the step the framework's own credential-rotation paths
+    /// use for exactly this, and it is a no-op when the host registered no store.
     /// </remarks>
     /// <param name="userId">The account.</param>
     /// <param name="locked"><see langword="true"/> to lock, <see langword="false"/> to unlock.</param>

@@ -1,1 +1,5 @@
 #nullable enable
+const MMCA.Common.Aspire.Hosting.Extensions.E2eForceServerConfigurationKey = "E2E__ForceServer" -> string!
+const MMCA.Common.Aspire.Hosting.Extensions.E2eForceServerTriggerVariable = "E2E_FORCE_SERVER" -> string!
+MMCA.Common.Aspire.Hosting.Extensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!).WithE2eForceServer(bool unlessAlso = false) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!
+static MMCA.Common.Aspire.Hosting.Extensions.WithE2eForceServer(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>! ui, bool unlessAlso = false) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!

@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Application.Auth.RefreshSessionRevocation
+static MMCA.Common.Application.Auth.RefreshSessionRevocation.RevokeAllAsync(MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions, System.TimeProvider? timeProvider, int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!

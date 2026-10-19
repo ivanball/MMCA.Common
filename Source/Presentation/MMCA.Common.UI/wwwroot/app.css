@@ -89,6 +89,40 @@
     --mmca-z-drawer: 1300;
     --mmca-z-skip-nav: 9999;
     --mmca-z-snackbar-mobile: 10000;
+
+    /* Pre-paint host surface (MAUI heads, theme-prepaint.js). Mirror BrandColors.LightBackground
+       and BrandColors.DarkBackground, the values MMCATheme and a head's MainPage.xaml use natively.
+       An app whose theme or MainPage uses another background redefines these in its own sheet. */
+    --mmca-prepaint-background-light: #FAFBFC;
+    --mmca-prepaint-background-dark: #1A2027;
+}
+
+/* -- Pre-paint Day/Dark host surface (ADR-028) --
+   A MAUI head loads theme-prepaint.js in index.html's <head>, which stamps the persisted mode
+   (data-mmca-theme) before the first paint. The WebView paints index.html before MudThemeProvider
+   defines --mud-palette-background, and that provider's first render still carries the light palette
+   until ThemeService has read the stored mode, so without these rules a dark-mode user sees a white
+   flash. The pinned dark surface holds until MmcaThemeProviders marks the page interactive
+   (data-mmca-interactive, right after applying the stored mode); from then on the palette variable
+   wins and the page follows the in-app Day/Dark toggle. Every selector requires data-mmca-theme, so
+   a head that does not load the script (the web heads) is untouched. */
+html[data-mmca-theme="light"],
+html[data-mmca-theme="light"] body {
+    background-color: var(--mud-palette-background, var(--mmca-prepaint-background-light));
+}
+
+html[data-mmca-theme="dark"],
+html[data-mmca-theme="dark"] body {
+    background-color: var(--mud-palette-background, var(--mmca-prepaint-background-dark));
+}
+
+html[data-mmca-theme="dark"]:not([data-mmca-interactive]) {
+    color-scheme: dark;
+}
+
+html[data-mmca-theme="dark"]:not([data-mmca-interactive]),
+html[data-mmca-theme="dark"]:not([data-mmca-interactive]) body {
+    background-color: var(--mmca-prepaint-background-dark);
 }
 
 /* Deliberately no overflow-y here. With height: auto both boxes are already content-sized, so
@@ -312,6 +346,33 @@ h1:focus:not(:focus-visible) {
 /* ── Detail card standard ── */
 .detail-card {
     max-width: var(--mmca-content-max-width, 700px);
+}
+
+/* -- List surfaces: semantic classes replacing inline style= / CellStyle= (rubric section 20) --
+   These land on elements MudBlazor renders (the MudTextField root, the MudDataGrid <td>, a MudText
+   in a mobile card row), which never carry the calling component's CSS-isolation scope attribute, so
+   a scoped .razor.css cannot reach them. The compound .mud-table-cell selector outranks MudBlazor's
+   own single-class cell rules without needing !important. */
+.list-search-field {
+    max-width: min(400px, 100%);
+}
+
+.mud-table-cell.grid-cell-actions {
+    width: 60px;
+    text-align: center;
+}
+
+/* The flexible half of a two-column list row: min-width 0 is what lets the truncating text below
+   actually shrink inside a flex container. */
+.list-item-text-fill {
+    min-width: 0;
+    flex: 1 1 0%;
+}
+
+.text-truncate-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ── Mobile: responsive data grids ── */
