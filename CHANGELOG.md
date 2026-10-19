@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Changed
+
+- `OpenApiBreakingChangeDetector` (MMCA.Common.Testing) also compares operation parameters and request bodies. A parameter is identified by its location (`in`) and its name, the name compared case-insensitively, and an operation's parameters are its path item's shared ones overridden by its own; `$ref` parameters and request bodies are resolved like schemas. Seven new `OpenApiBreakingChangeKind` values report a removed parameter, an optional parameter now required, a new required parameter, a changed parameter type, a removed request body, a new required request body, and a removed request media type. A new optional parameter or optional request body is not breaking. Those findings set the new `OpenApiBreakingChange.Detail` (for example `GET /Orders: query parameter 'page'`), which `ToString()` appends in parentheses; the other kinds render exactly as before. A consumer whose `OpenApiContractTestsBase` overrides `BaselineDocumentPath` can see `OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline` fail on a parameter or body change the earlier detector let through.
+
 ### Fixed
 
 - `ChangePasswordCard` (MMCA.Common.UI) checks the new password against the shared `PasswordComplexity` rule before it calls the server, with the same message the Register and Reset forms show, so it no longer sends a password the API then refuses. `MaxLength` now defaults to `PasswordComplexity.MaximumLength` (128), the bound the server enforces; set it to `null` to leave the input unbounded. When the server refuses the change with an error that names the current or the new password (a validation target ending in `CurrentPassword` or `NewPassword`, or the `Auth.InvalidCurrentPassword` code), the message also appears under that field until the user edits it. The toast stays.

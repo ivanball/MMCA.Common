@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace MMCA.Common.Testing.Conformance;
@@ -5,17 +6,27 @@ namespace MMCA.Common.Testing.Conformance;
 /// <summary>
 /// Compares a committed baseline OpenAPI document with the live one and reports only the changes that
 /// break an existing client: a removed path or operation, a removed response status code, a request
-/// property newly required, a removed response property, or a changed property type. Everything else
-/// passes, additive changes included.
+/// property newly required, a removed response property, a changed property type, a removed parameter,
+/// a parameter newly required, a new required parameter, a changed parameter type, a removed request
+/// body, a new required request body, or a removed request media type. Everything else passes,
+/// additive changes included.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Both documents are normalized by reading them structurally rather than textually: paths, operations,
 /// status codes and properties are matched by name, so property order never shows up as a change, and
 /// only the contract-bearing members are read
-/// (<c>paths, responses, requestBody, content, schema, $ref, type, properties, required, items</c>),
-/// so descriptions, summaries, examples, titles, tags and every other documentation-only field are
-/// ignored by construction.
+/// (<c>paths, parameters, in, name, responses, requestBody, content, schema, $ref,</c>
+/// <c>type, properties, required, items</c>), so descriptions, summaries, examples, titles, tags and
+/// every other documentation-only field are ignored by construction.
+/// </para>
+/// <para>
+/// A parameter is identified by its location and its name, the name compared case-insensitively, and
+/// an operation's parameters are its path item's shared ones overridden by its own. A path parameter is
+/// always required. Parameter and request-body findings carry a <see cref="OpenApiBreakingChange.Detail"/>
+/// naming the method, the path and the parameter or body (for example
+/// <c>GET /Orders: query parameter 'page'</c>), and their pointer is the declaration site in the
+/// operation, so the same shared component reached from two operations is reported for each.
 /// </para>
 /// <para>
 /// Schemas are followed through local <c>$ref</c>s, and a component reached from several operations is
@@ -88,7 +99,10 @@ public static class OpenApiBreakingChangeDetector
                     var operationPointer = pointer + "/" + operationName;
                     if (TryGetObject(livePath, operationName, out var liveOperation))
                     {
-                        CompareOperation(baselineOperation, liveOperation, operationPointer);
+                        var operation = new OperationSite(path.Name, operationName, pointer, path.Value, livePath);
+                        CompareParameters(operation, baselineOperation, liveOperation);
+                        CompareRequestBody(operation, baselineOperation, liveOperation);
+                        CompareResponses(baselineOperation, liveOperation, operationPointer);
                     }
                     else
                     {
@@ -187,14 +201,185 @@ public static class OpenApiBreakingChangeDetector
             return true;
         }
 
-        private void CompareOperation(JsonElement baseline, JsonElement live, string pointer)
+        private static bool HasRequiredFlag(JsonElement element) =>
+            element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty("required", out var required)
+            && required.ValueKind == JsonValueKind.True;
+
+        private static string? ReadString(JsonElement element, string name) =>
+            element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(name, out var value)
+            && value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
+
+        private static string FormatTypes(HashSet<string> types) =>
+            string.Join("|", types.Order(StringComparer.Ordinal));
+
+        /// <summary>
+        /// The parameters that apply to one operation, keyed by location and name, the name
+        /// compared case-insensitively: the path item's shared parameters, overridden by the operation's
+        /// own with the same key (the OpenAPI rule). Each keeps the pointer of the place it is declared.
+        /// </summary>
+        private static Dictionary<string, ParameterSite> EffectiveParameters(
+            JsonElement root,
+            JsonElement pathItem,
+            string pathPointer,
+            JsonElement operation,
+            string operationPointer)
         {
-            if (TryGetObject(baseline, "requestBody", out var baselineBody)
-                && TryGetObject(live, "requestBody", out var liveBody))
+            var parameters = new Dictionary<string, ParameterSite>(StringComparer.OrdinalIgnoreCase);
+            Collect(pathItem, pathPointer);
+            Collect(operation, operationPointer);
+            return parameters;
+
+            void Collect(JsonElement owner, string ownerPointer)
             {
-                CompareContent(baselineBody, liveBody, pointer + "/requestBody", Direction.Request);
+                if (owner.ValueKind != JsonValueKind.Object
+                    || !owner.TryGetProperty("parameters", out var list)
+                    || list.ValueKind != JsonValueKind.Array)
+                {
+                    return;
+                }
+
+                var index = 0;
+                foreach (var declared in list.EnumerateArray())
+                {
+                    var sitePointer = ownerPointer + "/parameters/" + index.ToString(CultureInfo.InvariantCulture);
+                    index++;
+
+                    var (parameter, _) = Resolve(root, declared, sitePointer);
+                    if (ReadString(parameter, "in") is { } location && ReadString(parameter, "name") is { } name)
+                    {
+                        parameters[location + "|" + name] = new ParameterSite(location, name, parameter, sitePointer);
+                    }
+                }
+            }
+        }
+
+        private void CompareParameters(OperationSite operation, JsonElement baselineOperation, JsonElement liveOperation)
+        {
+            var baselineParameters = EffectiveParameters(
+                baselineRoot, operation.BaselinePathItem, operation.PathPointer, baselineOperation, operation.Pointer);
+            var liveParameters = EffectiveParameters(
+                liveRoot, operation.LivePathItem, operation.PathPointer, liveOperation, operation.Pointer);
+
+            foreach (var (key, baseline) in baselineParameters)
+            {
+                if (!liveParameters.TryGetValue(key, out var live))
+                {
+                    Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.RemovedParameter, baseline.Pointer)
+                    {
+                        Detail = operation.Describe(baseline.Describe()),
+                    });
+                    continue;
+                }
+
+                if (live.IsRequired && !baseline.IsRequired)
+                {
+                    Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.ParameterNewlyRequired, live.Pointer)
+                    {
+                        Detail = operation.Describe(live.Describe()),
+                    });
+                }
+
+                CompareParameterSchema(operation, baseline, live);
             }
 
+            foreach (var (key, live) in liveParameters)
+            {
+                if (live.IsRequired && !baselineParameters.ContainsKey(key))
+                {
+                    Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.AddedRequiredParameter, live.Pointer)
+                    {
+                        Detail = operation.Describe(live.Describe()),
+                    });
+                }
+            }
+        }
+
+        private void CompareParameterSchema(OperationSite operation, ParameterSite baseline, ParameterSite live)
+        {
+            if (!TryGetObject(baseline.Parameter, "schema", out var baselineSchema)
+                || !TryGetObject(live.Parameter, "schema", out var liveSchema))
+            {
+                return;
+            }
+
+            var baselineTypes = DeclaredTypes(Resolve(baselineRoot, baselineSchema, baseline.Pointer).Schema);
+            var liveTypes = DeclaredTypes(Resolve(liveRoot, liveSchema, live.Pointer).Schema);
+            if (baselineTypes.Count > 0 && liveTypes.Count > 0 && !baselineTypes.SetEquals(liveTypes))
+            {
+                Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.ChangedParameterType, baseline.Pointer + "/schema")
+                {
+                    Detail = operation.Describe(
+                        $"{baseline.Describe()} type {FormatTypes(baselineTypes)} -> {FormatTypes(liveTypes)}"),
+                });
+                return;
+            }
+
+            // Same top-level type: anything deeper (an array's items, an object's properties) is compared
+            // like any request schema.
+            CompareSchema(baselineSchema, baseline.Pointer + "/schema", liveSchema, live.Pointer + "/schema", Direction.Request);
+        }
+
+        private void CompareRequestBody(OperationSite operation, JsonElement baselineOperation, JsonElement liveOperation)
+        {
+            var pointer = operation.Pointer + "/requestBody";
+            var hasBaselineBody = TryGetObject(baselineOperation, "requestBody", out var baselineBody);
+            var hasLiveBody = TryGetObject(liveOperation, "requestBody", out var liveBody);
+            if (hasBaselineBody)
+            {
+                baselineBody = Resolve(baselineRoot, baselineBody, pointer).Schema;
+            }
+
+            if (hasLiveBody)
+            {
+                liveBody = Resolve(liveRoot, liveBody, pointer).Schema;
+            }
+
+            if (hasBaselineBody && !hasLiveBody)
+            {
+                Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.RemovedRequestBody, pointer)
+                {
+                    Detail = operation.Describe("request body"),
+                });
+                return;
+            }
+
+            if (!hasBaselineBody)
+            {
+                if (hasLiveBody && HasRequiredFlag(liveBody))
+                {
+                    Changes.Add(new OpenApiBreakingChange(OpenApiBreakingChangeKind.AddedRequiredRequestBody, pointer)
+                    {
+                        Detail = operation.Describe("request body"),
+                    });
+                }
+
+                return;
+            }
+
+            if (TryGetObject(baselineBody, "content", out var baselineContent))
+            {
+                TryGetObject(liveBody, "content", out var liveContent);
+                foreach (var mediaType in baselineContent.EnumerateObject()
+                    .Where(mediaType => !TryGetObject(liveContent, mediaType.Name, out _)))
+                {
+                    Changes.Add(new OpenApiBreakingChange(
+                        OpenApiBreakingChangeKind.RemovedRequestMediaType,
+                        pointer + "/content/" + Escape(mediaType.Name))
+                    {
+                        Detail = operation.Describe($"request body media type '{mediaType.Name}'"),
+                    });
+                }
+            }
+
+            CompareContent(baselineBody, liveBody, pointer, Direction.Request);
+        }
+
+        private void CompareResponses(JsonElement baseline, JsonElement live, string pointer)
+        {
             if (!TryGetObject(baseline, "responses", out var baselineResponses))
             {
                 return;
@@ -306,6 +491,30 @@ public static class OpenApiBreakingChangeDetector
                         livePointer + "/properties/" + Escape(name)));
                 }
             }
+        }
+
+        /// <summary>One operation present on both sides: where it is and how a finding names it.</summary>
+        private sealed record OperationSite(
+            string Path,
+            string Method,
+            string PathPointer,
+            JsonElement BaselinePathItem,
+            JsonElement LivePathItem)
+        {
+            public string Pointer => PathPointer + "/" + Method;
+
+            /// <summary>Names the path, the method and <paramref name="what"/>, for example <c>GET /Orders: query parameter 'page'</c>.</summary>
+            public string Describe(string what) => $"{Method.ToUpperInvariant()} {Path}: {what}";
+        }
+
+        /// <summary>One resolved parameter and the pointer of the place it is declared.</summary>
+        private sealed record ParameterSite(string In, string Name, JsonElement Parameter, string Pointer)
+        {
+            /// <summary>A path parameter is always required, whatever its own required flag says.</summary>
+            public bool IsRequired =>
+                string.Equals(In, "path", StringComparison.OrdinalIgnoreCase) || HasRequiredFlag(Parameter);
+
+            public string Describe() => $"{In} parameter '{Name}'";
         }
     }
 }

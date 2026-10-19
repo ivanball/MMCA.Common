@@ -10,6 +10,8 @@ const MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.Refresh
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.<Clone>$() -> MMCA.Common.Testing.Conformance.OpenApiBreakingChange!
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Deconstruct(out MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, out string! JsonPointer) -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Detail.get -> string?
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Detail.init -> void
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Equals(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? other) -> bool
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.get -> string!
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.init -> void
@@ -18,7 +20,14 @@ MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Kind.init -> void
 MMCA.Common.Testing.Conformance.OpenApiBreakingChange.OpenApiBreakingChange(MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, string! JsonPointer) -> void
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.AddedRequiredParameter = 8 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.AddedRequiredRequestBody = 11 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ChangedParameterType = 9 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ChangedPropertyType = 5 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ParameterNewlyRequired = 7 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedParameter = 6 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedRequestBody = 10 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedRequestMediaType = 12 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedOperation = 1 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedPath = 0 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
 MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedResponseProperty = 4 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind

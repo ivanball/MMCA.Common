@@ -20,4 +20,25 @@ public enum OpenApiBreakingChangeKind
 
     /// <summary>A property (or a body schema) now declares a different JSON type.</summary>
     ChangedPropertyType,
+
+    /// <summary>A parameter (identified by its location and name) the baseline declared for an operation is gone.</summary>
+    RemovedParameter,
+
+    /// <summary>A parameter the baseline declared as optional is now required.</summary>
+    ParameterNewlyRequired,
+
+    /// <summary>An operation declares a required parameter the baseline did not have.</summary>
+    AddedRequiredParameter,
+
+    /// <summary>A parameter's schema now declares a different JSON type.</summary>
+    ChangedParameterType,
+
+    /// <summary>An operation that accepted a request body no longer declares one.</summary>
+    RemovedRequestBody,
+
+    /// <summary>An operation that took no request body now requires one.</summary>
+    AddedRequiredRequestBody,
+
+    /// <summary>A media type the baseline request body accepted is no longer accepted.</summary>
+    RemovedRequestMediaType,
 }
