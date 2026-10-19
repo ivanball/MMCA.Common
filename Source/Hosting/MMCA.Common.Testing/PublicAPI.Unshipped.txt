@@ -41,3 +41,4 @@ static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator !=(MMCA.Co
 static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator ==(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
 static MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector.Detect(string! baselineJson, string! liveJson) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Conformance.OpenApiBreakingChange!>!
 virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.BaselineDocumentPath.get -> string?
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetAllByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!

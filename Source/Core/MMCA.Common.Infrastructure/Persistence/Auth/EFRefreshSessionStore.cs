@@ -70,6 +70,18 @@ internal sealed class EFRefreshSessionStore(
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    /// <remarks>Tracked, like every read here: erasure revokes and anonymizes the returned rows in place.</remarks>
+    public async Task<IReadOnlyList<RefreshSession>> GetAllByUserAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default) =>
+        await Sessions
+            .Where(s => s.UserId == userId)
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     /// <remarks>
     /// A scalar projection, so nothing is tracked: no caller revokes through these rows. The live
     /// predicate is <see cref="RefreshSession.IsActiveAt"/> spelled out so it translates to SQL.

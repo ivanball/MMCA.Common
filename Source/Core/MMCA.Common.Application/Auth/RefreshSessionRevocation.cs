@@ -4,7 +4,7 @@ namespace MMCA.Common.Application.Auth;
 
 /// <summary>
 /// Shared "credential rotated, evict every live session" step for the password-change and
-/// password-reset workflows.
+/// password-reset workflows, plus the session half of account erasure.
 /// <para>
 /// SECURITY: changing or resetting a password is the remediation a user reaches for when they think
 /// someone else is inside the account. Leaving the refresh-session rows un-revoked means the
@@ -48,5 +48,41 @@ internal static class RefreshSessionRevocation
         }
 
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The account-erasure step: revokes every un-revoked session the user holds (expired ones
+    /// included) as <see cref="RefreshSession.ReasonAccountDeleted"/> and anonymizes EVERY session row,
+    /// revoked ones too, since each still carries the IP address and user agent captured at issue time.
+    /// Nothing is saved here: the store returns tracked rows, so the caller's own unit-of-work save
+    /// persists these changes together with the erasure. A host that registered no
+    /// <see cref="IRefreshSessionStore"/> is a no-op.
+    /// </summary>
+    /// <param name="refreshSessions">The session store, or <see langword="null"/> when the host wired none.</param>
+    /// <param name="timeProvider">Clock used to stamp the revocation; defaults to the system clock.</param>
+    /// <param name="userId">The user being erased.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task RevokeAndAnonymizeAllAsync(
+        IRefreshSessionStore? refreshSessions,
+        TimeProvider? timeProvider,
+        UserIdentifierType userId,
+        CancellationToken cancellationToken)
+    {
+        if (refreshSessions is null)
+        {
+            return;
+        }
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var sessions = await refreshSessions.GetAllByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        foreach (var session in sessions)
+        {
+            if (!session.IsRevoked)
+            {
+                session.Revoke(now, RefreshSession.ReasonAccountDeleted);
+            }
+
+            session.Anonymize();
+        }
     }
 }

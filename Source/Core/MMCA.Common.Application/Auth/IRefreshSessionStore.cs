@@ -48,6 +48,20 @@ public interface IRefreshSessionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns EVERY session row the user holds, revoked and expired ones included, oldest first, as
+    /// tracked instances. Account erasure needs the whole set: a revoked row still carries the
+    /// personal data captured at issue time (<see cref="RefreshSession.IpAddress"/> and
+    /// <see cref="RefreshSession.UserAgent"/>), so anonymizing only the un-revoked rows would leave the
+    /// rest behind.
+    /// </summary>
+    /// <param name="userId">The user whose sessions to list.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The user's sessions, oldest first; empty when the user holds none.</returns>
+    Task<IReadOnlyList<RefreshSession>> GetAllByUserAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the distinct users holding at least one LIVE session at <paramref name="now"/>: not
     /// revoked and <c>ExpiresAt</c> strictly after <paramref name="now"/>
     /// (<see cref="RefreshSession.IsActiveAt"/>). One query, evaluated in the store.

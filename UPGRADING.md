@@ -32,6 +32,31 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Account erasure erases the account's refresh sessions.** `DeleteUserHandlerBase` gains two
+optional constructor parameters, and `IRefreshSessionStore` gains one member.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `DeleteUserHandlerBase(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)` | `DeleteUserHandlerBase(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger, IRefreshSessionStore? refreshSessions = null, TimeProvider? timeProvider = null)`; source-compatible, binary-breaking for a compiled subclass |
+| `IRefreshSessionStore` with no way to read a user's revoked rows | adds `GetAllByUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`: every row of the user, revoked and expired included, tracked |
+
+The fix:
+
+1. **Each app's `DeleteUserHandler`.** Add `IRefreshSessionStore? refreshSessions = null` (namespace
+   `MMCA.Common.Application.Auth`) to the handler's own constructor and pass it to the base as the
+   fourth argument; pass the handler's `TimeProvider` as the fifth if it already injects one. The
+   default value keeps the handler resolvable on a host that registered no store. A handler that
+   forwards nothing still compiles and still deletes, but leaves the session rows un-revoked and
+   un-anonymized.
+2. **Custom `IRefreshSessionStore` implementations** add `GetAllByUserAsync`: the user's rows, oldest
+   first, as tracked instances, so the caller's anonymization is saved. The shipped
+   `EFRefreshSessionStore` and `InMemoryRefreshSessionStore` already implement it. A Moq mock needs no
+   change unless it is strict.
+
 ## [1.244.0] - 2026-10-18
 
 **Service tokens are opt-in per gRPC client.** `AddServiceTokenClient` no longer makes every typed
