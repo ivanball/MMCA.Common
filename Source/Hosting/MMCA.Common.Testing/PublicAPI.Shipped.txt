@@ -24,10 +24,37 @@ MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Respo
 MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Route_IsThrottledOnceTheClientExhaustsItsWindow() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendAsync(string! path, System.Net.IPAddress! clientIp) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendForwardedAsync(string! path, System.Net.IPAddress! proxyIp, string! forwardedFor) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.<Clone>$() -> MMCA.Common.Testing.Conformance.OpenApiBreakingChange!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Deconstruct(out MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, out string! JsonPointer) -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Detail.get -> string?
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Detail.init -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Equals(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? other) -> bool
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.get -> string!
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.JsonPointer.init -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Kind.get -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Kind.init -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChange.OpenApiBreakingChange(MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind Kind, string! JsonPointer) -> void
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.AddedRequiredParameter = 8 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.AddedRequiredRequestBody = 11 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ChangedParameterType = 9 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ChangedPropertyType = 5 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.ParameterNewlyRequired = 7 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedOperation = 1 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedParameter = 6 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedPath = 0 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedRequestBody = 10 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedRequestMediaType = 12 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedResponseProperty = 4 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RemovedResponseStatusCode = 2 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
+MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind.RequestPropertyNewlyRequired = 3 -> MMCA.Common.Testing.Conformance.OpenApiBreakingChangeKind
 MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>
 MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.GetOpenApiJsonAsync() -> System.Threading.Tasks.Task<string!>!
 MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiContractTestsBase(TFixture fixture) -> void
 MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_DescribesEveryCorePublicResource() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_HasNoBreakingChangesAgainstTheBaseline() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_IsServed_AsWellFormedOpenApiDescribingTheApiSurface() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>
 MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.NotFound_404_HasProblemDetailsShape() -> System.Threading.Tasks.Task!
@@ -40,6 +67,11 @@ MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfoVersioningContractTestsBase(TFixture fixture) -> void
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V1_ReturnsMinimalShape_AndIsReportedDeprecated() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V2_ReturnsEvolvedShape_AndIsReportedSupported() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Claim_is_tried_before_header() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Header_resolution_is_an_explicit_opt_in() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Health_endpoints_are_excluded() -> void
+MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.TenantResolutionTestsBase() -> void
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource.<Clone>$() -> MMCA.Common.Testing.Fixtures.CrossServiceDataSource!
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource.CrossServiceDataSource(string! LogicalName, string! DatabaseName) -> void
@@ -120,6 +152,7 @@ MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.CountLiveSessionsByUserA
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByIdAsync(System.Guid id, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByIdUntrackedAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetAllByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetUserIdsWithLiveSessionsAsync(System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
 MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.InMemoryRefreshSessionStore() -> void
@@ -155,6 +188,7 @@ abstract MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.Mini
 abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendNotFoundProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
 abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendValidationErrorProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
 abstract MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.CreateClient() -> System.Net.Http.HttpClient!
+abstract MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Settings.get -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.BootHostsAsync() -> System.Threading.Tasks.ValueTask
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DataSources.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Fixtures.CrossServiceDataSource!>!
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DisposeHostsAsync() -> System.Threading.Tasks.ValueTask
@@ -162,6 +196,7 @@ abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.MigrationsAssembly
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateFactory() -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DatabaseNamePrefix.get -> string!
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlBaseEnvironmentVariable.get -> string!
+const MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.RefreshBaselineEnvironmentVariable = "MMCA_UPDATE_OPENAPI_BASELINE" -> string!
 const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
 const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultIssuer = "https://localhost:6001" -> string!
@@ -176,10 +211,16 @@ const MMCA.Common.Testing.Support.RecordingHttpForwarder.RouteTraceEchoHeader = 
 const MMCA.Common.Testing.Support.RecordingHttpForwarder.UnsetValue = "(unset)" -> string!
 const MMCA.Common.Testing.Support.RecordingHttpForwarder.VersionHeader = "X-Test-Forward-Version" -> string!
 const MMCA.Common.Testing.Support.RecordingHttpForwarder.VersionPolicyHeader = "X-Test-Forward-Version-Policy" -> string!
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.GetHashCode() -> int
+override MMCA.Common.Testing.Conformance.OpenApiBreakingChange.ToString() -> string!
 override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.Equals(object? obj) -> bool
 override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.GetHashCode() -> int
 override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.ToString() -> string!
 override MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.CreateHost(Microsoft.Extensions.Hosting.IHostBuilder! builder) -> Microsoft.Extensions.Hosting.IHost!
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator !=(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator ==(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
+static MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector.Detect(string! baselineJson, string! liveJson) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Conformance.OpenApiBreakingChange!>!
 static MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.AssertProblemDetailsShapeAsync(System.Net.Http.HttpResponseMessage! response, System.Net.HttpStatusCode expected) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator !=(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator ==(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
@@ -209,9 +250,11 @@ virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoin
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ForwardedForHeader.get -> string!
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPath.get -> string?
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPermitLimit.get -> int
+virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.BaselineDocumentPath.get -> string?
 virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.MinimumPathCountBecause.get -> string!
 virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocumentPath.get -> string!
 virtual MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.ProbePath.get -> string!
+virtual MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.AllowsHeaderResolution.get -> bool
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ConfigureSharedEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.OnContainersStartedAsync() -> System.Threading.Tasks.ValueTask
 virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan

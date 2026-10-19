@@ -1,15 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.KeyboardOperabilityTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.SkipLink_IsFirstTabStop_AndMovesFocusIntoMainLandmark() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.OpenDialog_TrapsTabFocus() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.Escape_ClosesDialog_AndReturnsFocusToOpener() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.FocusedElement_ShowsVisibleFocusIndicator() -> System.Threading.Tasks.Task!
-abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.PagePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
-abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogPagePath.get -> string!
-abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogOpener.get -> Microsoft.Playwright.ILocator!
-virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.ArrangeAsync() -> System.Threading.Tasks.Task!
-virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.NavigateAsync(string! path) -> System.Threading.Tasks.Task!
-virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.CleanupAsync() -> System.Threading.Tasks.Task!
-virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.Dialog.get -> Microsoft.Playwright.ILocator!
-virtual MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.FocusReturnTarget.get -> Microsoft.Playwright.ILocator!

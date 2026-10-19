@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.245.0] - 2026-10-19
 
 **Account erasure erases the account's refresh sessions.** `DeleteUserHandlerBase` gains two
 optional constructor parameters, and `IRefreshSessionStore` gains one member.
