@@ -263,6 +263,9 @@ MMCA.Common.API.OpenApi.StronglyTypedIdParameterTransformer.TransformAsync(Micro
 MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer
 MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer.StronglyTypedIdSchemaTransformer() -> void
 MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer.TransformAsync(Microsoft.OpenApi.OpenApiSchema! schema, Microsoft.AspNetCore.OpenApi.OpenApiSchemaTransformerContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.API.Pagination.PaginationHeaderExtensions
+MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!)
+MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!).AppendPaginationHeader(MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.FixedWindow = 0 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.SlidingWindow = 1 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
@@ -464,6 +467,7 @@ const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIde
 const MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.ExportContentType = "application/json" -> string!
 const MMCA.Common.API.Middleware.CorrelationIdMiddleware.HeaderName = "X-Correlation-ID" -> string!
 const MMCA.Common.API.ModelBinders.QueryFilterModelBinder.MaxFilters = 50 -> int
+const MMCA.Common.API.Pagination.PaginationHeaderExtensions.HeaderName = "X-Pagination" -> string!
 const MMCA.Common.API.SessionCookies.SessionCookieAuthenticationHandler.SchemeName = "SessionCookie" -> string!
 const MMCA.Common.API.SessionCookies.SessionCookieEndpoints.AccessTokenCookieName = "mmca_auth_access" -> string!
 const MMCA.Common.API.SessionCookies.SessionCookieEndpoints.RefreshTokenCookieName = "mmca_auth_refresh" -> string!
@@ -550,6 +554,7 @@ static MMCA.Common.API.Idempotency.IdempotencyFilter.IdempotencyKeyHeader.get ->
 static MMCA.Common.API.Idempotency.IdempotencyRecord.operator !=(MMCA.Common.API.Idempotency.IdempotencyRecord? left, MMCA.Common.API.Idempotency.IdempotencyRecord? right) -> bool
 static MMCA.Common.API.Idempotency.IdempotencyRecord.operator ==(MMCA.Common.API.Idempotency.IdempotencyRecord? left, MMCA.Common.API.Idempotency.IdempotencyRecord? right) -> bool
 static MMCA.Common.API.Notifications.DependencyInjection.AddNotificationControllers(this Microsoft.Extensions.DependencyInjection.IMvcBuilder! builder) -> Microsoft.Extensions.DependencyInjection.IMvcBuilder!
+static MMCA.Common.API.Pagination.PaginationHeaderExtensions.AppendPaginationHeader(this Microsoft.AspNetCore.Http.HttpResponse! response, MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void
 static MMCA.Common.API.SessionCookies.CookieSessionRefreshMiddlewareExtensions.UseCookieSessionRefresh(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.API.SessionCookies.SessionClaimsToken.Create(string? accessToken) -> string?
 static MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions.AddSessionCookieAuthentication(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!

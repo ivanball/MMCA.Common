@@ -152,6 +152,7 @@ MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.DataSourceName.
 MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.KnownRoles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.KnownRoles.init -> void
 MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.PermissionGrantSettings() -> void
+MMCA.Common.Application.Auth.RefreshSessionRevocation
 MMCA.Common.Application.Auth.RefreshSessionSettings
 MMCA.Common.Application.Auth.RefreshSessionSettings.CleanupIntervalHours.get -> int
 MMCA.Common.Application.Auth.RefreshSessionSettings.CleanupIntervalHours.init -> void
@@ -1224,6 +1225,7 @@ static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.VersionNotCurren
 static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.EnsureAcceptsCurrentVersion(string? currentVersion, string? suppliedVersion, string? source = null) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.Normalize(string? currentVersion, MMCA.Common.Shared.Legal.LegalAcceptanceDTO! standing) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
 static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.ResolveCurrentVersion(MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions? options) -> string?
+static MMCA.Common.Application.Auth.RefreshSessionRevocation.RevokeAllAsync(MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions, System.TimeProvider? timeProvider, int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.KeyFor(int userId) -> string!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> System.TimeSpan

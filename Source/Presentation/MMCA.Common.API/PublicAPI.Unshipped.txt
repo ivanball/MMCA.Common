@@ -1,6 +1,1 @@
 ﻿#nullable enable
-const MMCA.Common.API.Pagination.PaginationHeaderExtensions.HeaderName = "X-Pagination" -> string!
-MMCA.Common.API.Pagination.PaginationHeaderExtensions
-MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!)
-MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!).AppendPaginationHeader(MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void
-static MMCA.Common.API.Pagination.PaginationHeaderExtensions.AppendPaginationHeader(this Microsoft.AspNetCore.Http.HttpResponse! response, MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void

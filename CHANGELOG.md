@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.246.0] - 2026-10-19
+
+### Added
+
+- **Breaking:** `PiiConventionTestsBase` (MMCA.Common.Testing.Architecture) runs the ADR-005 rule in both directions. Besides the forward fact, it adds `PropertiesOverwrittenByAnonymize_MustCarryPii` (builds each sample, runs `Anonymize()`, and reports every string or reference property whose value moved without a `[Pii]` marker, so the audit trail would keep the pre-erasure value) and `EveryAnonymizableDomainEntity_IsCoveredBySample` (every concrete `IAnonymizable` type in the module Domain assemblies needs a sample). Samples come from the new `protected virtual IReadOnlyDictionary<Type, Func<object>> AnonymizableSamples`, empty by default, so a repo with no anonymizable module entity passes unchanged. A subclass that already declares facts with those two names no longer compiles (CS0108 under `TreatWarningsAsErrors`).
+
+  Map and fix: UPGRADING.md, [1.246.0].
+
+- `theme-prepaint.js` (MMCA.Common.UI static asset, `_content/MMCA.Common.UI/theme-prepaint.js`): a MAUI head loads it synchronously in `index.html`'s `<head>` to stamp the persisted Day/Dark mode as `data-mmca-theme` before the first paint (ADR-028). `app.css` carries the matching host-surface rules, every selector gated on that attribute so web heads are untouched, with the colours as the overridable tokens `--mmca-prepaint-background-light` and `--mmca-prepaint-background-dark`.
+- `app.css` (MMCA.Common.UI) ships the list-surface classes `.list-search-field`, `.mud-table-cell.grid-cell-actions`, `.list-item-text-fill` and `.text-truncate-cell`, which apps had been copying into their own sheets.
+- `RefreshSessionRevocation` and its `RevokeAllAsync(IRefreshSessionStore?, TimeProvider?, userId, cancellationToken)` are public, so a user-administration service revokes a user's live sessions without re-implementing the loop. A null store is still a no-op.
+- `PaginationHeaderExtensions` (MMCA.Common.API): `HttpResponse.AppendPaginationHeader(PaginationMetadata)` writes the `X-Pagination` header as `JsonSerializerOptions.Web` JSON, and `HeaderName` names it. `EntityControllerBase` uses it.
+- `WithE2eForceServer(bool unlessAlso = false)` (MMCA.Common.Aspire.Hosting) forwards `E2E_FORCE_SERVER=true` onto a UI resource as `E2E__ForceServer=true`, beside the other `WithE2e*` extensions.
+
 ## [1.245.0] - 2026-10-19
 
 ### Changed
