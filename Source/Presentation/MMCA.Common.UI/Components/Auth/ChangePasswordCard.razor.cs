@@ -1,24 +1,35 @@
 using Microsoft.AspNetCore.Components;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Globalization;
+using MMCA.Common.UI.Resources;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Components.Auth;
 
 /// <summary>
 /// Code-behind for the shared change-password section of a profile page. Validation runs client-side
-/// first (all three fields required, the new password at least <see cref="MinLength"/> characters, the
-/// confirmation equal to it), each message tied to its field and listed in the form's ErrorSummary, so
-/// the user sees what to fix without a server round trip. Only a valid form calls
+/// first (all three fields required, the new password at least <see cref="MinLength"/> characters and
+/// satisfying the shared <see cref="PasswordComplexity"/> rule, the confirmation equal to it), each
+/// message tied to its field and listed in the form's ErrorSummary, so the user sees what to fix without
+/// a server round trip. Only a valid form calls
 /// <see cref="MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync"/>; a success is toasted
-/// with the component's own localized text, a refusal with the server's reason, and the outcome is
-/// reported through <see cref="OnChanged"/> or <see cref="OnFailed"/>.
+/// with the component's own localized text, a refusal with the server's reason (and, when the refusal
+/// names the current or the new password, under that field as well), and the outcome is reported
+/// through <see cref="OnChanged"/> or <see cref="OnFailed"/>.
 /// </summary>
 public partial class ChangePasswordCard
 {
     // MudTextField's own default MaxLength (the HTML maxlength ceiling), used when MaxLength is unset.
     private const int NoMaxLength = 524288;
+
+    // The request members a server validation failure targets, and the code ChangePasswordHandlerBase
+    // returns when the current password does not verify.
+    private const string CurrentPasswordField = nameof(ChangePasswordRequest.CurrentPassword);
+    private const string NewPasswordField = nameof(ChangePasswordRequest.NewPassword);
+    private const string InvalidCurrentPasswordCode = "Auth.InvalidCurrentPassword";
 
     private readonly CancellationTokenSource _cts = new();
 
@@ -29,6 +40,8 @@ public partial class ChangePasswordCard
     private string _confirmNewPassword = string.Empty;
     private bool _isSaving;
     private bool _disposed;
+    private FieldRefusal _currentPasswordRefusal;
+    private FieldRefusal _newPasswordRefusal;
 
     /// <summary>
     /// The minimum new-password length enforced client-side and shown in the field's helper text.
@@ -38,11 +51,12 @@ public partial class ChangePasswordCard
     public int MinLength { get; set; } = 8;
 
     /// <summary>
-    /// An optional maximum new-password length enforced by the input itself; <see langword="null"/>
-    /// (the default) leaves the field unbounded and the limit to the server.
+    /// The maximum new-password length enforced by the input itself. Defaults to
+    /// <see cref="PasswordComplexity.MaximumLength"/>, the bound the server's password rules enforce;
+    /// <see langword="null"/> leaves the field unbounded and the limit to the server.
     /// </summary>
     [Parameter]
-    public int? MaxLength { get; set; }
+    public int? MaxLength { get; set; } = PasswordComplexity.MaximumLength;
 
     /// <summary>
     /// Optional extra actions (for example a link to the device-management page) rendered in the same
@@ -84,11 +98,29 @@ public partial class ChangePasswordCard
     }
 
     // Each validator returns null when valid (or empty, leaving the Required check to report a missing
-    // value) or the message to show under the offending field.
-    private string? ValidateNewPassword(string value) =>
-        string.IsNullOrEmpty(value) || value.Length >= MinLength
-            ? null
-            : L.Plural("Validation.NewPasswordMinLength", MinLength, MinLength).Value;
+    // value) or the message to show under the offending field. A message the server returned for the
+    // exact value still in the field is reported there too, until the user edits it.
+    private string? ValidateCurrentPassword(string value) =>
+        _currentPasswordRefusal.MessageFor(value);
+
+    private string? ValidateNewPassword(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return null;
+        }
+
+        if (value.Length < MinLength)
+        {
+            return L.Plural("Validation.NewPasswordMinLength", MinLength, MinLength).Value;
+        }
+
+        // The shared rule the server's StrongPasswordRules evaluates, with the message the Register and
+        // Reset forms show for it, so the card cannot accept a password the API then refuses.
+        return PasswordComplexity.Evaluate(value)
+            ? _newPasswordRefusal.MessageFor(value)
+            : AuthFieldMessages.PasswordComplexity;
+    }
 
     private string? ValidateConfirmPassword(string value) =>
         string.IsNullOrEmpty(value) || string.Equals(value, _newPassword, StringComparison.Ordinal)
@@ -128,6 +160,7 @@ public partial class ChangePasswordCard
                 // client-synthesized transport and status failures are localized by code. The fixed text
                 // is only the fallback for a failure that carries no message at all.
                 Toast.Error(result.LocalizedErrorMessage(L) ?? L["ChangePassword.Failed"].Value);
+                await ShowFieldRefusalsAsync(form, result);
                 await OnFailed.InvokeAsync(result);
             }
         }
@@ -138,6 +171,54 @@ public partial class ChangePasswordCard
         finally
         {
             _isSaving = false;
+        }
+    }
+
+    // A refusal the server tied to one of the two password fields (a validation failure whose target
+    // names the field, or the handler's wrong-current-password code) is also shown under that field,
+    // next to the value it was raised for; re-validating the form puts it there and in the summary.
+    private async Task ShowFieldRefusalsAsync(MudForm form, Result result)
+    {
+        _currentPasswordRefusal = FieldRefusal.From(result, CurrentPasswordField, _currentPassword, InvalidCurrentPasswordCode);
+        _newPasswordRefusal = FieldRefusal.From(result, NewPasswordField, _newPassword, matchCode: null);
+
+        if (_currentPasswordRefusal.Message is not null || _newPasswordRefusal.Message is not null)
+        {
+            await form.ValidateAsync();
+        }
+    }
+
+    /// <summary>
+    /// A server message for one field, held against the exact value it was raised for, so it clears
+    /// itself as soon as the user edits that field.
+    /// </summary>
+    private readonly record struct FieldRefusal(string? Value, string? Message)
+    {
+        public static FieldRefusal From(Result result, string field, string value, string? matchCode)
+        {
+            var error = result.Errors.FirstOrDefault(e =>
+                TargetsField(e.Target, field)
+                || matchCode is not null && string.Equals(e.Code, matchCode, StringComparison.Ordinal));
+
+            return error is null || string.IsNullOrWhiteSpace(error.Message)
+                ? default
+                : new FieldRefusal(value, error.Message);
+        }
+
+        public string? MessageFor(string value) =>
+            Message is not null && string.Equals(value, Value, StringComparison.Ordinal) ? Message : null;
+
+        // The target is the validator's property path: "NewPassword" for a validator over the request,
+        // "Request.NewPassword" for one over the command, in either casing once it crossed the wire.
+        private static bool TargetsField(string? target, string field)
+        {
+            if (string.IsNullOrEmpty(target))
+            {
+                return false;
+            }
+
+            var lastSegment = target[(target.LastIndexOf('.') + 1)..];
+            return string.Equals(lastSegment, field, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
