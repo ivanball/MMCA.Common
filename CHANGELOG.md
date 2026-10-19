@@ -13,6 +13,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Fixed
 
 - `ChangePasswordCard` (MMCA.Common.UI) checks the new password against the shared `PasswordComplexity` rule before it calls the server, with the same message the Register and Reset forms show, so it no longer sends a password the API then refuses. `MaxLength` now defaults to `PasswordComplexity.MaximumLength` (128), the bound the server enforces; set it to `null` to leave the input unbounded. When the server refuses the change with an error that names the current or the new password (a validation target ending in `CurrentPassword` or `NewPassword`, or the `Auth.InvalidCurrentPassword` code), the message also appears under that field until the user edits it. The toast stays.
+- `KeyboardOperabilityTestsBase` (MMCA.Common.Testing.E2E) runs `ArrangeAsync` inside the `try` whose `finally` calls `CleanupAsync`, so an arrangement that throws part-way is still cleaned up. An override of `CleanupAsync` must therefore tolerate a partial arrangement.
 
 ## [1.244.0] - 2026-10-18
 

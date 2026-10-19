@@ -103,8 +103,10 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     protected virtual Task NavigateAsync(string path) => Page.GotoAndWaitForBlazorAsync(path);
 
     /// <summary>
-    /// Runs after each fact, even a failing one, to undo <see cref="ArrangeAsync"/> (for example to
-    /// delete a live event that would otherwise change what later tests see). The default does nothing.
+    /// Runs after each fact, even a failing one or one whose <see cref="ArrangeAsync"/> threw part-way,
+    /// to undo <see cref="ArrangeAsync"/> (for example to delete a live event that would otherwise change
+    /// what later tests see), so it must tolerate an arrangement that is only partly in place. The
+    /// default does nothing.
     /// </summary>
     /// <returns>A task that completes when the arrangement is removed.</returns>
     protected virtual Task CleanupAsync() => Task.CompletedTask;
@@ -121,11 +123,13 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
     [Fact]
     public Task FocusedElement_ShowsVisibleFocusIndicator() => RunArrangedAsync(CheckFocusIndicatorAsync);
 
+    // ArrangeAsync runs inside the try, so an arrangement that throws part-way (after creating some of
+    // its data) is still cleaned up.
     private async Task RunArrangedAsync(Func<Task> check)
     {
-        await ArrangeAsync().ConfigureAwait(false);
         try
         {
+            await ArrangeAsync().ConfigureAwait(false);
             await check().ConfigureAwait(false);
         }
         finally
