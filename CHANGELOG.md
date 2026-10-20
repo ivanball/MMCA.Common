@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.248.0] - 2026-10-20
+
+### Fixed
+
+- An edge-to-edge MAUI head no longer draws its app bar under the Android status bar on a cold launch. The Android WebView reports `env(safe-area-inset-top)` as 0 until the first layout, so `MainPageBase` (MMCA.Common.UI.Maui) now appends the native status bar height to the web view's user agent on Android as `MmcaStatusBar/<css px>`, and `theme-prepaint.js` (MMCA.Common.UI) turns it into the `--mmca-status-bar-fallback` custom property before the first paint. Other platforms send no token and leave the property unset. A head adopts it by sizing its status bar spacer with `max(env(safe-area-inset-top, 0px), var(--mmca-status-bar-fallback, 0px))`.
+
+  Map and fix: UPGRADING.md, [1.248.0].
+
 ## [1.247.0] - 2026-10-20
 
 ### Added

@@ -32,6 +32,26 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.248.0] - 2026-10-20
+
+**MAUI heads get the Android status bar height before the first paint.** `MainPageBase` appends it to
+the web view user agent on Android (`MmcaStatusBar/<css px>`), and `theme-prepaint.js` exposes it as
+`--mmca-status-bar-fallback`, because the Android WebView reports `env(safe-area-inset-top)` as 0 on a
+cold launch and an edge-to-edge head then draws its app bar under the status bar. Nothing breaks for a
+head that ignores it; nothing changes off Android.
+
+| Old (per head) | New |
+|-----------------|-----|
+| a head-local `BlazorWebViewInitialized` hook appending `MmcaStatusBar/<px>` to the user agent | `MainPageBase` does it on Android |
+| an inline `index.html` script setting `--mmca-status-bar-fallback` from that token | `theme-prepaint.js`, which the head already loads |
+
+The fix:
+
+1. **A head whose page derives from `MainPageBase` and loads `theme-prepaint.js`** sizes its status bar
+   spacer with `height: max(env(safe-area-inset-top, 0px), var(--mmca-status-bar-fallback, 0px));`.
+2. **A head that carried its own hook** (MMCA.Store did) deletes it and its inline `index.html`
+   script, or the user agent carries the token twice (harmless, but dead code).
+
 ## [1.247.0] - 2026-10-20
 
 **Deferred work carries the raising user's permission claims, so every module database needs a
