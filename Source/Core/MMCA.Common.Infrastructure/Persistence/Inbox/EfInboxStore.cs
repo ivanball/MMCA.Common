@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
@@ -57,6 +58,7 @@ public sealed partial class EfInboxStore(
     {
         var context = ResolveContext();
         return context.Set<InboxMessage>()
+            .AsNoTracking()
             .AnyAsync(m => m.MessageId == messageId, cancellationToken);
     }
 
@@ -75,19 +77,29 @@ public sealed partial class EfInboxStore(
     {
         if (_staged.Remove(messageId, out var staged))
         {
-            // Added still means no handler saved: persist it now. Anything else means a handler's
-            // own SaveChangesAsync already committed the row atomically with its mutations, which is
-            // the whole point of staging, so there is nothing left to write.
-            if (staged.State == EntityState.Added)
+            // Added still means no handler saved: persist it now.
+            var state = TrackedState(staged);
+            if (state == EntityState.Added)
             {
                 await SaveStagedAsync(staged, messageId, cancellationToken).ConfigureAwait(false);
+                return;
             }
 
-            return;
+            // Anything else USUALLY means a handler's own SaveChangesAsync committed the row
+            // atomically with its mutations. Not always: a save inside a transaction that then rolled
+            // back leaves the entry Unchanged with no row, and an execution-strategy retry clears the
+            // change tracker (Detached) before the handler re-runs without it. Only the database can
+            // tell, so confirm, and write the row when it is absent.
+            if (await AlreadyProcessedAsync(messageId, cancellationToken).ConfigureAwait(false))
+                return;
+
+            if (state != EntityState.Detached)
+                staged.State = EntityState.Detached;
         }
 
-        // No staged row: a caller that skipped TryBeginAsync (or a second CompleteAsync). Fall back
-        // to the write-after-handlers path so the message is still recorded.
+        // No staged row (a caller that skipped TryBeginAsync, or a second CompleteAsync), or a staged
+        // row that never reached the database: fall back to the write-after-handlers path so the
+        // message is still recorded.
         await SaveStagedAsync(Stage(messageId, eventType), messageId, cancellationToken).ConfigureAwait(false);
     }
 
@@ -97,19 +109,25 @@ public sealed partial class EfInboxStore(
         if (!_staged.Remove(messageId, out var staged))
             return true;
 
-        if (staged.State != EntityState.Added)
-        {
-            // A handler committed the row before a later handler failed. The redelivery will be
-            // skipped as a duplicate, so the handlers that had not run yet never will: loud, because
-            // it is the one case where this design loses work a pure after-the-fact inbox retried.
-            LogAbandonAfterCommit(logger, messageId);
-            return false;
-        }
+        var state = TrackedState(staged);
+        var wasAdded = state == EntityState.Added;
 
         // Detach rather than leave it Added: the context is cached for the whole scope, so a
         // surviving Added row would be re-attempted by any later save on the same scope.
-        staged.State = EntityState.Detached;
-        return true;
+        if (state != EntityState.Detached)
+            staged.State = EntityState.Detached;
+
+        // Not Added means a handler's save took the row, but that save may since have rolled back
+        // (or the tracker been cleared for a retry), so the row's existence is checked rather than
+        // inferred before warning that the redelivery will be skipped.
+        if (wasAdded || !RowCommitted(messageId))
+            return true;
+
+        // A handler committed the row before a later handler failed. The redelivery will be
+        // skipped as a duplicate, so the handlers that had not run yet never will: loud, because
+        // it is the one case where this design loses work a pure after-the-fact inbox retried.
+        LogAbandonAfterCommit(logger, messageId);
+        return false;
     }
 
     /// <inheritdoc />
@@ -157,6 +175,35 @@ public sealed partial class EfInboxStore(
                 throw;
 
             LogConcurrentDuplicate(logger, messageId);
+        }
+    }
+
+    /// <summary>
+    /// The staged row's state as the context tracks it NOW. Read through the context rather than
+    /// the stored entry: after <c>ChangeTracker.Clear()</c> (an execution-strategy retry) the stored
+    /// entry is stale and can still report Added although nothing is tracked any more.
+    /// </summary>
+    private static EntityState TrackedState(EntityEntry<InboxMessage> staged) =>
+        staged.Context.ChangeTracker.Entries<InboxMessage>().Any(e => ReferenceEquals(e.Entity, staged.Entity))
+            ? staged.State
+            : EntityState.Detached;
+
+    /// <summary>
+    /// Whether the inbox row for <paramref name="messageId"/> exists in the database. Synchronous
+    /// because <see cref="Abandon"/> is; it runs only on a handler-failure path. A check that itself
+    /// fails answers <see langword="true"/>, the conservative reading that keeps the warning.
+    /// </summary>
+    private bool RowCommitted(Guid messageId)
+    {
+        try
+        {
+            return ResolveContext().Set<InboxMessage>()
+                .AsNoTracking()
+                .Any(m => m.MessageId == messageId);
+        }
+        catch (Exception ex) when (ex is DbException or InvalidOperationException)
+        {
+            return true;
         }
     }
 

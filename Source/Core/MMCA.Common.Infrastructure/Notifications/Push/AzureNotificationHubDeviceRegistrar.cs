@@ -43,6 +43,14 @@ public sealed class AzureNotificationHubDeviceRegistrar(
 
         try
         {
+            // The same ownership rule DeleteAsync applies: the id is client-supplied, and the upsert
+            // is a full overwrite, so writing over another user's installation would re-tag and
+            // re-point their device. Reported as success for the same existence-oracle reason.
+            if (await OwnedByAnotherUserAsync(request.InstallationId, userId, cancellationToken).ConfigureAwait(false))
+            {
+                return Result.Success();
+            }
+
             await hubClient.CreateOrUpdateInstallationAsync(installation, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
@@ -86,6 +94,28 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             logger.LogError(ex, "Device installation delete failed");
             return DeleteFailed();
         }
+    }
+
+    /// <summary>
+    /// Whether the installation already exists and carries a different user's owner tag. An unknown
+    /// id, or an installation registered before ownership tagging, is free for the caller to claim.
+    /// </summary>
+    private async Task<bool> OwnedByAnotherUserAsync(string installationId, UserIdentifierType userId, CancellationToken cancellationToken)
+    {
+        Installation existing;
+        try
+        {
+            existing = await hubClient.GetInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (MessagingEntityNotFoundException)
+        {
+            return false;
+        }
+
+        var ownTag = NativePushPayloads.UserTag(userId);
+        return existing is { Tags: { } tags }
+            && tags.Any(tag => tag.StartsWith(NativePushPayloads.UserTagPrefix, StringComparison.Ordinal)
+                && !string.Equals(tag, ownTag, StringComparison.Ordinal));
     }
 
     private static bool OwnedBy(Installation installation, UserIdentifierType userId) =>

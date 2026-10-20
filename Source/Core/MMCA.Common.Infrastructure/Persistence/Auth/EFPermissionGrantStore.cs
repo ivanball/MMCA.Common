@@ -60,9 +60,11 @@ internal sealed class EFPermissionGrantStore(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
 
+        var storedRole = await CanonicalRoleAsync(role, cancellationToken).ConfigureAwait(false);
+
         return await Grants
             .AsNoTracking()
-            .Where(g => g.Role == role)
+            .Where(g => g.Role == storedRole)
             .OrderBy(g => g.Permission)
             .Select(g => g.Permission)
             .ToListAsync(cancellationToken)
@@ -76,8 +78,13 @@ internal sealed class EFPermissionGrantStore(
         string? grantedBy = null,
         CancellationToken cancellationToken = default)
     {
+        // An invalid role is left for Create to refuse; a valid one takes the spelling already stored.
+        var storedRole = string.IsNullOrWhiteSpace(role)
+            ? role
+            : await CanonicalRoleAsync(role, cancellationToken).ConfigureAwait(false);
+
         var grantResult = PermissionGrant.Create(
-            role,
+            storedRole,
             permission,
             timeProvider.GetUtcNow().UtcDateTime,
             grantedBy);
@@ -128,15 +135,49 @@ internal sealed class EFPermissionGrantStore(
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentException.ThrowIfNullOrWhiteSpace(permission);
 
+        var storedRole = await CanonicalRoleAsync(role, cancellationToken).ConfigureAwait(false);
+
         // A set-based delete rather than load-then-remove: there is at most one row by the unique
         // index, nothing about it needs to be read, and removing zero rows is the success an
         // idempotent revoke promises.
         await Grants
-            .Where(g => g.Role == role && g.Permission == permission)
+            .Where(g => g.Role == storedRole && g.Permission == permission)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Resolves a role to the spelling already stored for it, so every read and write matches the
+    /// same rows however the caller cased the name.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="PermissionGrant.Role"/> is compared case-insensitively everywhere it is read, but an
+    /// equality predicate is only as case-insensitive as the column's collation (case-sensitive on
+    /// PostgreSQL and SQLite), and folding case inside the predicate would defeat the unique index.
+    /// The fold happens here instead, in memory, over the handful of distinct role names: the
+    /// ordinally first stored spelling wins, and a role with no stored row keeps the caller's
+    /// (trimmed) spelling.
+    /// </remarks>
+    /// <param name="role">The role as the caller spelled it.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The canonical role spelling.</returns>
+    private async Task<string> CanonicalRoleAsync(string role, CancellationToken cancellationToken)
+    {
+        var trimmed = role.Trim();
+
+        var storedRoles = await Grants
+            .AsNoTracking()
+            .Select(g => g.Role)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return storedRoles
+            .Order(StringComparer.Ordinal)
+            .FirstOrDefault(stored => string.Equals(stored, trimmed, StringComparison.OrdinalIgnoreCase))
+            ?? trimmed;
     }
 
     // The configured NAME is used verbatim; only the engine goes through the resolver, so a host that

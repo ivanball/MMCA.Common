@@ -88,6 +88,31 @@ public class JwtSettingsTests
         sut.RefreshTokenExpirationDays.Should().Be(14);
     }
 
+    // L183: a zero or negative lifetime must fail validation (and so host startup under
+    // ValidateOnStart), not surface later as a 500 on every sign-in or refresh.
+    [Theory]
+    [InlineData(0, 7, nameof(JwtSettings.AccessTokenExpirationMinutes))]
+    [InlineData(-5, 7, nameof(JwtSettings.AccessTokenExpirationMinutes))]
+    [InlineData(15, 0, nameof(JwtSettings.RefreshTokenExpirationDays))]
+    [InlineData(15, -1, nameof(JwtSettings.RefreshTokenExpirationDays))]
+    public void Validation_RejectsANonPositiveTokenLifetime(int accessMinutes, int refreshDays, string member)
+    {
+        var sut = new JwtSettings
+        {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
+            SecretForKey = "super-secret-key-that-is-32-chars!",
+            Issuer = "https://issuer.example.com",
+            Audience = "api",
+            AccessTokenExpirationMinutes = accessMinutes,
+            RefreshTokenExpirationDays = refreshDays,
+        };
+        var results = new List<ValidationResult>();
+
+        Validator.TryValidateObject(sut, new ValidationContext(sut), results, validateAllProperties: true)
+            .Should().BeFalse();
+        results.Should().Contain(r => r.MemberNames.Contains(member));
+    }
+
 }
 
 // ── SmtpSettings ──

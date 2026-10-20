@@ -95,6 +95,11 @@ public sealed partial class InternalCommandAdministration(
         if (targets.Count == 0)
             return Result.Failure<IReadOnlyList<InternalCommandDeadLetter>>(UnknownSourceError(dataSource));
 
+        // Widened then clamped: skip + take in int arithmetic wraps negative for a skip near
+        // int.MaxValue, and the database then rejects the negative FETCH/LIMIT. Clamped, a deep page
+        // simply comes back empty.
+        var perTarget = (int)Math.Min((long)skip + take, int.MaxValue);
+
         List<InternalCommandDeadLetter> collected = [];
 
         foreach (var target in targets)
@@ -112,7 +117,7 @@ public sealed partial class InternalCommandAdministration(
                     .Where(c => c.DeadLetteredOn != null)
                     .OrderBy(c => c.ScheduledOn)
                     .ThenBy(c => c.Id)
-                    .Take(skip + take)
+                    .Take(perTarget)
                     .Select(c => new InternalCommandDeadLetter(
                         c.Id,
                         sourceName,

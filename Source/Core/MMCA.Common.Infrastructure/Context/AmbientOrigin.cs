@@ -33,7 +33,7 @@ internal static class AmbientOrigin
 
     /// <summary>
     /// Column width of every stored roles list (<c>InternalCommands.UserRoles</c> and
-    /// <c>OutboxMessages.UserRoles</c>); a longer list is truncated to fit.
+    /// <c>OutboxMessages.UserRoles</c>); a longer list keeps only the whole roles that fit.
     /// </summary>
     internal const int MaxRolesLength = 512;
 
@@ -50,7 +50,11 @@ internal static class AmbientOrigin
     /// throws inside a save.
     /// </remarks>
     /// <param name="roles">The roles held by the capturing principal.</param>
-    /// <returns>The comma-separated list truncated to the column width, or null when there are none.</returns>
+    /// <returns>
+    /// The comma-separated list, or null when there are none. A list wider than the column keeps
+    /// only the whole leading roles that fit: cutting a name mid-word would restore a role nobody
+    /// holds (and lose the real one), so trailing roles are dropped instead.
+    /// </returns>
     internal static string? FlattenRoles(IEnumerable<string>? roles)
     {
         if (roles is null)
@@ -66,15 +70,48 @@ internal static class AmbientOrigin
         }
 
         var joined = string.Join(',', materialized);
-        return joined.Length <= MaxRolesLength ? joined : joined[..MaxRolesLength];
+        if (joined.Length <= MaxRolesLength)
+        {
+            return joined;
+        }
+
+        var fits = 0;
+        var length = 0;
+        foreach (var role in materialized)
+        {
+            var needed = role.Length + (fits > 0 ? 1 : 0);
+            if (length + needed > MaxRolesLength)
+            {
+                break;
+            }
+
+            length += needed;
+            fits++;
+        }
+
+        return fits == 0 ? null : string.Join(',', materialized, 0, fits);
     }
 
     /// <summary>
     /// Rebuilds a captured principal: the user id as the standard <c>sub</c> claim and each stored
-    /// role as a role claim, which is exactly what <c>ClaimsPrincipalExtensions</c> and the
+    /// role as a role claim, which is what <c>ClaimsPrincipalExtensions</c> and the role half of the
     /// authorization decorator read. Returns null when nothing was captured, so the execution stays
     /// anonymous rather than inventing an identity.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The <c>mfa</c> claim is intentionally not propagated.</b> A step-up proves a live
+    /// interaction at the moment it happened; deferred work (an internal command, an outbox row, a
+    /// broker message) runs later, without that person present, so it never inherits the proof. An
+    /// <c>IRequiresMfa</c> command therefore cannot run deferred: run it inline, inside the request
+    /// that carried the step-up.
+    /// </para>
+    /// <para>
+    /// Permission claims are not carried either: only the user id and the roles are stored on the
+    /// row or message, so a deferred <c>IRequiresPermission</c> command is authorized by the roles
+    /// the host's registry maps, not by a claim-only grant.
+    /// </para>
+    /// </remarks>
     /// <param name="userId">The captured user id, or null for system-raised work.</param>
     /// <param name="userRoles">The captured roles as a comma-separated list, or null.</param>
     /// <param name="authenticationType">

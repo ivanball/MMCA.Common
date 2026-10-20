@@ -14,6 +14,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -174,14 +175,19 @@ internal static class InternalCommandTestHarness
 
         public static InternalCommandTestContext Create(SqliteConnection connection)
         {
+            var recorder = new NegativeParameterRecorder();
             var options = new DbContextOptionsBuilder<InternalCommandTestContext>()
                 .UseSqlite(connection)
+                .AddInterceptors(recorder)
                 .Options;
 
-            var context = new InternalCommandTestContext(options, BuildContextServices());
+            var context = new InternalCommandTestContext(options, BuildContextServices()) { NegativeParameters = recorder };
             context.Database.EnsureCreated();
             return context;
         }
+
+        /// <summary>Gets the negative integer parameters this context's queries sent.</summary>
+        public NegativeParameterRecorder NegativeParameters { get; private init; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -195,6 +201,13 @@ internal static class InternalCommandTestHarness
                 entity.Property(e => e.LastError).HasMaxLength(4000);
                 entity.Property(e => e.UserRoles).HasMaxLength(512);
                 entity.HasIndex(e => e.ScheduledOn);
+            });
+
+            modelBuilder.Entity<ScheduledAlongsideEntity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.RowVersion).IsConcurrencyToken();
             });
         }
 
@@ -218,6 +231,15 @@ internal static class InternalCommandTestHarness
 }
 
 /// <summary>An unauthenticated <see cref="ICurrentUserService"/> for tests.</summary>
+/// <summary>
+/// An auditable entity a handler leaves pending on the shared context before it schedules a command,
+/// so a test can see which user the scheduler's own save stamps it with.
+/// </summary>
+public sealed class ScheduledAlongsideEntity : AuditableBaseEntity<int>
+{
+    public string Name { get; set; } = string.Empty;
+}
+
 internal sealed class AnonymousCurrentUserService : ICurrentUserService
 {
     public ClaimsPrincipal User { get; } = new();

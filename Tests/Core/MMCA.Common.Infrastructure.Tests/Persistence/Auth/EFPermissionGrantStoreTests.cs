@@ -72,6 +72,43 @@ public sealed class EFPermissionGrantStoreTests : IAsyncDisposable
         (await NewContext().Set<PermissionGrant>().AsNoTracking().CountAsync(CancellationToken.None)).Should().Be(1);
     }
 
+    // M230: SQLite compares text case-sensitively, exactly like PostgreSQL, so a role cased differently
+    // from its stored rows must still read, de-duplicate against and revoke those rows.
+    [Fact]
+    public async Task GrantGetRevoke_WithADifferentlyCasedRole_AllMatchTheStoredSpelling()
+    {
+        await _connection.OpenAsync(CancellationToken.None);
+        ApplicationDbContext storeContext = NewContext();
+
+        var dbContextFactory = new Mock<IDbContextFactory>();
+        dbContextFactory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(storeContext);
+        dbContextFactory
+            .Setup(f => f.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => storeContext.SaveChangesAsync(ct));
+
+        var sut = new EFPermissionGrantStore(
+            dbContextFactory.Object,
+            new EmptyEntityDataSourceRegistry(),
+            Mock.Of<IDataSourceResolver>(),
+            Options.Create(new PermissionGrantSettings()),
+            TimeProvider.System,
+            new SqlServerUniqueConstraintViolationDetector());
+
+        (await sut.GrantAsync(Role, Permission, cancellationToken: CancellationToken.None)).IsSuccess.Should().BeTrue();
+        (await sut.GrantAsync("manager", Permission, cancellationToken: CancellationToken.None)).IsSuccess.Should().BeTrue();
+
+        var rows = await NewContext().Set<PermissionGrant>().AsNoTracking().ToListAsync(CancellationToken.None);
+        rows.Should().ContainSingle("a second casing of the same role must not write a second row")
+            .Which.Role.Should().Be(Role);
+
+        (await sut.GetPermissionsAsync("MANAGER", CancellationToken.None)).Should().Equal(Permission);
+
+        (await sut.RevokeAsync("manager", Permission, CancellationToken.None)).IsSuccess.Should().BeTrue();
+        (await NewContext().Set<PermissionGrant>().AsNoTracking().CountAsync(CancellationToken.None)).Should().Be(
+            0,
+            "a revoke cased differently from the stored row must still remove it");
+    }
+
     public async ValueTask DisposeAsync()
     {
         foreach (ApplicationDbContext context in _contexts)

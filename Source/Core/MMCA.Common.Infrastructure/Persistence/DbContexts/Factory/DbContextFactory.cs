@@ -422,16 +422,23 @@ public sealed class DbContextFactory(
                     dialect.BuildToggleSql(group.Schema, group.Table, enable: true),
                     cancellationToken).ConfigureAwait(false);
 
+                var toggleOffSql = dialect.BuildToggleSql(group.Schema, group.Table, enable: false);
+                int saved;
                 try
                 {
-                    result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
+                    saved = await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
                 }
-                finally
+                catch
                 {
-                    await context.Database.ExecuteSqlRawAsync(
-                        dialect.BuildToggleSql(group.Schema, group.Table, enable: false),
-                        CancellationToken.None).ConfigureAwait(false);
+                    // Best-effort on the failure path: the session may already be gone (the same
+                    // fault that failed the save), and a throw from the toggle-off would replace the
+                    // save's real exception, hiding a transient error from the execution strategy.
+                    await TryToggleOffAsync(context, toggleOffSql).ConfigureAwait(false);
+                    throw;
                 }
+
+                await context.Database.ExecuteSqlRawAsync(toggleOffSql, CancellationToken.None).ConfigureAwait(false);
+                result += saved;
 #pragma warning restore S2077
             }
             finally
@@ -444,6 +451,22 @@ public sealed class DbContextFactory(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Switches the explicit-key toggle off without letting a failure escape, for the path where the
+    /// save already failed and its exception is the one that must be reported.
+    /// </summary>
+    private static async Task TryToggleOffAsync(ApplicationDbContext context, string toggleOffSql)
+    {
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(toggleOffSql, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Swallowed so the save's failure is the one reported; disposal releases the session.
+        }
     }
 
     /// <inheritdoc />
@@ -644,27 +667,33 @@ public sealed class DbContextFactory(
 
             return (result, null);
         }
-        catch (OperationCanceledException)
+        catch
         {
-            // The connection may already be closed; best-effort rollback.
-            // Disposal will clean up if this fails.
-            try
-            {
-                RollbackTransaction();
-            }
-            catch
-            {
-                _transactionActive = false;
-                foreach (var abortedContext in _dbContexts.Values.ToArray())
-                    DropDeferredWork(abortedContext);
-            }
-
+            // Cancellation and failure alike: the connection may already be closed or the
+            // transaction zombied by the very fault being reported, so the rollback is best-effort.
+            // A throwing rollback must never replace the original exception, or the execution
+            // strategy would judge retriability on the rollback error instead of the transient one.
+            RollbackBestEffort();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Rolls back the open transaction without letting a rollback failure escape. On failure the
+    /// transaction is marked inactive and every context's deferred dispatch is dropped, which is
+    /// what a successful rollback would have done; disposal releases whatever is left.
+    /// </summary>
+    private void RollbackBestEffort()
+    {
+        try
+        {
+            RollbackTransaction();
         }
         catch
         {
-            RollbackTransaction();
-            throw;
+            _transactionActive = false;
+            foreach (var abortedContext in _dbContexts.Values.ToArray())
+                DropDeferredWork(abortedContext);
         }
     }
 

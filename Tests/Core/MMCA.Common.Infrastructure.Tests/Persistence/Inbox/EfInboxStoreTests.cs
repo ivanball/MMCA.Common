@@ -248,6 +248,62 @@ public sealed class EfInboxStoreTests : IDisposable
         (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
     }
 
+    // ── M231: a staged row that is no longer Added is not proof the row was written ──
+    [Fact]
+    public async Task Complete_WhenTheHandlersSaveRolledBack_StillWritesTheRow()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        // A transactional handler saves (the entry turns Unchanged) and then rolls back.
+        await using (var transaction = await _contextA.Database.BeginTransactionAsync(CancellationToken.None))
+        {
+            await _contextA.SaveChangesAsync(CancellationToken.None);
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
+
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "the rolled-back save never wrote the row, so a redelivery would re-run the handlers");
+    }
+
+    [Fact]
+    public async Task Complete_WhenTheTrackerWasClearedForARetry_StillWritesTheRow()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        // DbContextFactory.ResetForRetry clears every cached context before re-running the unit.
+        _contextA.ChangeTracker.Clear();
+
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "the detached staged row was never saved by the retried handler");
+    }
+
+    [Fact]
+    public async Task Abandon_WhenTheHandlersSaveRolledBack_ReportsTheMessageStillOpen()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await using (var transaction = await _contextA.Database.BeginTransactionAsync(CancellationToken.None))
+        {
+            await _contextA.SaveChangesAsync(CancellationToken.None);
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
+
+        store.Abandon(messageId).Should().BeTrue(
+            "no row reached the database, so the redelivery will reprocess and there is nothing to warn about");
+    }
+
     [Fact]
     public async Task ConcurrentDelivery_StagedRowLosesToTheUniqueIndex_AndIsAbsorbedOnComplete()
     {

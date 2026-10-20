@@ -1,1 +1,2 @@
 #nullable enable
+static MMCA.Common.Infrastructure.Persistence.Encryption.EncryptedStringConverter.MarkForReEncryption(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry! entry) -> int

@@ -64,6 +64,11 @@ public sealed partial class OutboxAdministration(
         if (targets.Count == 0)
             return Result.Failure<IReadOnlyList<OutboxDeadLetter>>([UnknownSourceError(dataSource)]);
 
+        // Widened then clamped: skip + take in int arithmetic wraps negative for a skip near
+        // int.MaxValue, and the database then rejects the negative FETCH/LIMIT. Clamped, a deep page
+        // simply comes back empty.
+        var perTarget = (int)Math.Min((long)skip + take, int.MaxValue);
+
         var maxRetries = _settings.MaxRetries;
         List<OutboxDeadLetter> collected = [];
 
@@ -82,7 +87,7 @@ public sealed partial class OutboxAdministration(
                     .Where(m => m.ProcessedOn == null && m.RetryCount >= maxRetries)
                     .OrderBy(m => m.OccurredOn)
                     .ThenBy(m => m.Id)
-                    .Take(skip + take)
+                    .Take(perTarget)
                     .Select(m => new OutboxDeadLetter(
                         m.Id,
                         sourceName,

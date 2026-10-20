@@ -166,6 +166,28 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
             "one attempt plus the strategy's three retries; only the commit phase opts out of this");
     }
 
+    // ── A throwing rollback never masks the operation's own (transient) failure ──
+    [Fact]
+    public async Task ExecuteInTransactionAsync_OperationFailsAndRollbackThrows_StrategySeesTheOriginalFailure()
+    {
+        _dbContext.FailRollbackWith = new InvalidOperationException("This SqlTransaction has completed");
+        var transient = new TimeoutException("transient failure inside the operation");
+        var attempts = 0;
+
+        var act = async () => await _sut.ExecuteInTransactionAsync<Result>(
+            _ =>
+            {
+                attempts++;
+                throw transient;
+            });
+
+        var thrown = await act.Should().ThrowAsync<RetryLimitExceededException>();
+        thrown.And.InnerException.Should().BeSameAs(
+            transient,
+            "the rollback error must not replace the failure the execution strategy judges retriability on");
+        attempts.Should().Be(4, "every attempt still reaches the strategy with the original transient error");
+    }
+
     // ── Sequential commits: the exception names what landed, what is unknowable, and what did not ──
     [Fact]
     public async Task ExecuteInTransactionAsync_SecondSourceCommitFails_ReportsEachSourceOutcome()
@@ -285,6 +307,13 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         /// <summary>The exception the next commit raises, or <see langword="null"/> to commit normally.</summary>
         public Exception? FailCommitWith { get; set; }
 
+        /// <summary>
+        /// The exception every rollback raises after rolling back, or <see langword="null"/> to roll
+        /// back normally. Stands in for SqlClient's "This SqlTransaction has completed" on a
+        /// transaction the failing operation already zombied.
+        /// </summary>
+        public Exception? FailRollbackWith { get; set; }
+
         public override DatabaseFacade Database => _databaseFacade ??= new FailingDatabaseFacade(this);
 
         public static CommitFailingDbContext Create(SqliteConnection connection, IDomainEventDispatcher dispatcher)
@@ -334,6 +363,14 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
                     throw failure;
 
                 base.CommitTransaction();
+            }
+
+            public override void RollbackTransaction()
+            {
+                base.RollbackTransaction();
+
+                if (owner.FailRollbackWith is { } failure)
+                    throw failure;
             }
 
             public override IExecutionStrategy CreateExecutionStrategy() => new AlwaysRetryExecutionStrategy(owner);

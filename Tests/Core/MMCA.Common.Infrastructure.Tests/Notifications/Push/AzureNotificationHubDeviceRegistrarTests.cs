@@ -153,4 +153,50 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         captured.Should().NotBeNull();
         captured!.Tags.Should().Contain("user:42", "the delete's ownership check reads this tag back");
     }
+
+    // L176: the upsert is a full overwrite, so it must apply the same ownership check as the delete.
+    [Fact]
+    public async Task UpsertAsync_WhenTheInstallationBelongsToAnotherUser_DoesNotOverwriteIt()
+    {
+        SetupInstallation("user:42");
+
+        var result = await _sut.UpsertAsync(
+            Stranger,
+            new()
+            {
+                InstallationId = InstallationId,
+                Platform = "FCMV1",
+                PushChannel = "attacker-registration-token",
+            },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue("not-yours answers exactly like success, so the endpoint is not an existence oracle");
+        _hubClient.Verify(
+            x => x.CreateOrUpdateInstallationAsync(It.IsAny<Installation>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "re-tagging another user's installation would redirect their pushes to the caller");
+    }
+
+    [Fact]
+    public async Task UpsertAsync_WhenTheCallerAlreadyOwnsTheInstallation_RefreshesIt()
+    {
+        SetupInstallation("user:42");
+
+        var result = await _sut.UpsertAsync(
+            Owner,
+            new()
+            {
+                InstallationId = InstallationId,
+                Platform = "FCMV1",
+                PushChannel = "rotated-registration-token",
+            },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _hubClient.Verify(
+            x => x.CreateOrUpdateInstallationAsync(
+                It.Is<Installation>(i => i.PushChannel == "rotated-registration-token"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

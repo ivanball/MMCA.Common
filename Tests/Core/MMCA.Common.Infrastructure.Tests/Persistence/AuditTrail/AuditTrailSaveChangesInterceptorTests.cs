@@ -378,6 +378,26 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
             || r.NewValue != null && r.NewValue.Contains("key-", StringComparison.Ordinal));
     }
 
+    // -- L178: a column encrypted at rest never reaches the trail as decrypted plaintext --
+    [Fact]
+    public async Task SaveChanges_EncryptedProperty_RecordsTheRedactionToken()
+    {
+        var thing = new EncryptedThing { SocialSecurityNumber = "ssn-111-11-1111" };
+        _context.EncryptedThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        thing.SocialSecurityNumber = "ssn-222-22-2222";
+        await _context.SaveChangesAsync(userId: 2);
+
+        var row = (await ModifiedRowsAsync()).Should().ContainSingle().Subject;
+        row.PropertyName.Should().Be(nameof(EncryptedThing.SocialSecurityNumber));
+        row.OldValue.Should().Be(PiiRedactor.RedactedToken);
+        row.NewValue.Should().Be(PiiRedactor.RedactedToken);
+        (await RowsAsync()).Should().NotContain(r =>
+            r.OldValue != null && r.OldValue.Contains("ssn-", StringComparison.Ordinal)
+            || r.NewValue != null && r.NewValue.Contains("ssn-", StringComparison.Ordinal));
+    }
+
     // -- M181: a change confined to an owned value object is recorded under its owner --
     [Fact]
     public async Task SaveChanges_OwnedPropertyChanged_WritesARowUnderTheOwner()

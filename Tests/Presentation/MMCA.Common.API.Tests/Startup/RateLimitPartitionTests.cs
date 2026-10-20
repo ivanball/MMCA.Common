@@ -88,11 +88,9 @@ public sealed class RateLimitPartitionTests
     {
         var keys = new List<string>();
         var database = new Mock<IDatabase>();
-        database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-            .Callback<RedisKey, long, CommandFlags>((key, _, _) => keys.Add(key.ToString()))
-            .ReturnsAsync(1);
-        database.Setup(d => d.KeyExpireAsync(It.IsAny<RedisKey>(), It.IsAny<TimeSpan?>(), It.IsAny<ExpireWhen>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
+        database.Setup(d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Callback<string, RedisKey[]?, RedisValue[]?, CommandFlags>((_, scriptKeys, _, _) => keys.Add(scriptKeys![0].ToString()))
+            .ReturnsAsync(RedisResult.Create((RedisValue)1L));
         var connection = new Mock<IConnectionMultiplexer>();
         connection.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(database.Object);
 
