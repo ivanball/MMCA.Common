@@ -60,13 +60,14 @@ internal sealed class EFPermissionGrantStore(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
 
-        var storedRole = await CanonicalRoleAsync(role, cancellationToken).ConfigureAwait(false);
+        var storedRoles = await StoredSpellingsAsync(role, cancellationToken).ConfigureAwait(false);
 
         return await Grants
             .AsNoTracking()
-            .Where(g => g.Role == storedRole)
-            .OrderBy(g => g.Permission)
+            .Where(g => storedRoles.Contains(g.Role))
             .Select(g => g.Permission)
+            .Distinct()
+            .OrderBy(permission => permission)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -135,13 +136,14 @@ internal sealed class EFPermissionGrantStore(
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentException.ThrowIfNullOrWhiteSpace(permission);
 
-        var storedRole = await CanonicalRoleAsync(role, cancellationToken).ConfigureAwait(false);
+        var storedRoles = await StoredSpellingsAsync(role, cancellationToken).ConfigureAwait(false);
 
-        // A set-based delete rather than load-then-remove: there is at most one row by the unique
-        // index, nothing about it needs to be read, and removing zero rows is the success an
-        // idempotent revoke promises.
+        // A set-based delete rather than load-then-remove: there is at most one row per stored
+        // spelling by the unique index, nothing about them needs to be read, and removing zero rows
+        // is the success an idempotent revoke promises. Every spelling goes, so a pre-existing
+        // duplicate casing cannot keep the grant alive.
         await Grants
-            .Where(g => g.Role == storedRole && g.Permission == permission)
+            .Where(g => storedRoles.Contains(g.Role) && g.Permission == permission)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -165,6 +167,25 @@ internal sealed class EFPermissionGrantStore(
     /// <returns>The canonical role spelling.</returns>
     private async Task<string> CanonicalRoleAsync(string role, CancellationToken cancellationToken)
     {
+        var spellings = await StoredSpellingsAsync(role, cancellationToken).ConfigureAwait(false);
+        return spellings[0];
+    }
+
+    /// <summary>
+    /// Resolves a role to EVERY spelling stored for it, ordinally sorted, or to the caller's trimmed
+    /// spelling when no row holds the role.
+    /// </summary>
+    /// <remarks>
+    /// Grants always write the canonical spelling, but a host whose table already holds two casings of
+    /// one role (written before that rule) would keep them apart forever if reads and revokes matched
+    /// one spelling. Reads and revokes therefore filter with <c>Role IN (...)</c> over every spelling
+    /// that matches case-insensitively, folded in memory for the same collation reason as above.
+    /// </remarks>
+    /// <param name="role">The role as the caller spelled it.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>At least one spelling; the first is the canonical one.</returns>
+    private async Task<List<string>> StoredSpellingsAsync(string role, CancellationToken cancellationToken)
+    {
         var trimmed = role.Trim();
 
         var storedRoles = await Grants
@@ -174,10 +195,12 @@ internal sealed class EFPermissionGrantStore(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        return storedRoles
+        var matches = storedRoles
+            .Where(stored => string.Equals(stored, trimmed, StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal)
-            .FirstOrDefault(stored => string.Equals(stored, trimmed, StringComparison.OrdinalIgnoreCase))
-            ?? trimmed;
+            .ToList();
+
+        return matches.Count > 0 ? matches : [trimmed];
     }
 
     // The configured NAME is used verbatim; only the engine goes through the resolver, so a host that

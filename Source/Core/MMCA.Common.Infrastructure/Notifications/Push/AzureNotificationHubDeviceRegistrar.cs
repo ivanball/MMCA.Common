@@ -43,12 +43,20 @@ public sealed class AzureNotificationHubDeviceRegistrar(
 
         try
         {
-            // The same ownership rule DeleteAsync applies: the id is client-supplied, and the upsert
-            // is a full overwrite, so writing over another user's installation would re-tag and
-            // re-point their device. Reported as success for the same existence-oracle reason.
-            if (await OwnedByAnotherUserAsync(request.InstallationId, userId, cancellationToken).ConfigureAwait(false))
+            // The id is client-supplied and the upsert is a full overwrite, so writing over another
+            // user's installation would re-tag and re-point their device. The installation id is per
+            // DEVICE, though, so a second user signing in on the same phone legitimately presents an
+            // id the previous user owns: when the request also carries the installation's current
+            // push channel, the caller holds the device and the installation is handed over (re-tagged
+            // below, so the previous owner's pushes stop). Without the channel the answer is a
+            // conflict rather than a silent success: ids are random client GUIDs, so "taken" reveals
+            // nothing an attacker could use, and the client recovers by minting a fresh id.
+            if (await ClaimedByAnotherDeviceAsync(request, userId, cancellationToken).ConfigureAwait(false))
             {
-                return Result.Success();
+                return Result.Failure(Error.Conflict(
+                    code: "PushDevice.InstallationConflict",
+                    message: "The installation id is registered to another device. Generate a new installation id and retry.",
+                    source: nameof(AzureNotificationHubDeviceRegistrar)));
             }
 
             await hubClient.CreateOrUpdateInstallationAsync(installation, cancellationToken).ConfigureAwait(false);
@@ -97,15 +105,17 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     }
 
     /// <summary>
-    /// Whether the installation already exists and carries a different user's owner tag. An unknown
-    /// id, or an installation registered before ownership tagging, is free for the caller to claim.
+    /// Whether the installation already exists, carries a different user's owner tag, AND points at a
+    /// different push channel than the request. An unknown id, an installation registered before
+    /// ownership tagging, or one whose channel the caller presents (the same physical device changing
+    /// hands) is free for the caller to claim.
     /// </summary>
-    private async Task<bool> OwnedByAnotherUserAsync(string installationId, UserIdentifierType userId, CancellationToken cancellationToken)
+    private async Task<bool> ClaimedByAnotherDeviceAsync(DeviceInstallationRequest request, UserIdentifierType userId, CancellationToken cancellationToken)
     {
         Installation existing;
         try
         {
-            existing = await hubClient.GetInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
+            existing = await hubClient.GetInstallationAsync(request.InstallationId, cancellationToken).ConfigureAwait(false);
         }
         catch (MessagingEntityNotFoundException)
         {
@@ -113,9 +123,11 @@ public sealed class AzureNotificationHubDeviceRegistrar(
         }
 
         var ownTag = NativePushPayloads.UserTag(userId);
-        return existing is { Tags: { } tags }
+        var ownedByAnotherUser = existing is { Tags: { } tags }
             && tags.Any(tag => tag.StartsWith(NativePushPayloads.UserTagPrefix, StringComparison.Ordinal)
                 && !string.Equals(tag, ownTag, StringComparison.Ordinal));
+        return ownedByAnotherUser
+            && !string.Equals(existing.PushChannel, request.PushChannel, StringComparison.Ordinal);
     }
 
     private static bool OwnedBy(Installation installation, UserIdentifierType userId) =>

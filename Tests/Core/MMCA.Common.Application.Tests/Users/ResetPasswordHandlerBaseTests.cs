@@ -158,24 +158,50 @@ public sealed class ResetPasswordHandlerBaseTests
     }
 
     [Fact]
-    public async Task HandleAsync_RevokesTheSessionsBeforeSavingThePassword()
+    public async Task HandleAsync_WhenTheSessionStoreSaves_TheUserStillHoldsTheOldPassword()
     {
-        // M240: a failure between two separate saves must never leave a new password with the old
-        // sessions alive, so the revocation is persisted first.
+        // M240 review (R3): the EF session store saves through the shared context factory, which
+        // saves EVERY cached context. Were the user already mutated, the "revoke first" save would
+        // carry the new password with it. So the revoke runs before ChangePassword touches the user:
+        // at the moment the session store saves, the loaded user is still unmodified.
         var (sut, mocks) = CreateSut();
-        var order = ArrangeLiveSessionAndRecordSaves(mocks);
+        var (user, _) = ArrangeLiveSession(mocks);
+        byte[]? hashAtRevokeSave = null;
+        mocks.RefreshSessions
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => hashAtRevokeSave = [.. user.PasswordHash]);
 
         Result result = await sut.HandleAsync(Command());
 
         result.IsSuccess.Should().BeTrue();
-        order.Should().Equal("revoke", "save");
+        hashAtRevokeSave.Should().Equal([1, 2, 3], "the revoke save must not carry the new password");
+        user.PasswordHash.Should().Equal(NewHash, "the password is applied after the revoke and saved on its own");
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheAggregateRejectsTheChange_StillRevokesEveryLiveSession()
+    {
+        // M240 review (R3): a reset is the remediation for a suspected intruder, so the sessions die
+        // even when the new password then fails the aggregate's invariants.
+        var (sut, mocks) = CreateSut();
+        var (user, live) = ArrangeLiveSession(mocks);
+        user.ForcedFailure = Error.Invariant("User.PasswordReused", "New password must differ.");
+
+        Result result = await sut.HandleAsync(Command());
+
+        result.IsFailure.Should().BeTrue();
+        live.RevokedAt.Should().NotBeNull();
+        mocks.RefreshSessions.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task HandleAsync_WhenTheRevokeFails_LeavesThePasswordAndTheLockoutUntouched()
     {
         var (sut, mocks) = CreateSut();
-        ArrangeLiveSessionAndRecordSaves(mocks);
+        ArrangeLiveSession(mocks);
         mocks.RefreshSessions
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("session store unavailable"));
@@ -189,12 +215,12 @@ public sealed class ResetPasswordHandlerBaseTests
             Times.Never);
     }
 
-    private static List<string> ArrangeLiveSessionAndRecordSaves(HandlerMocks mocks)
+    private static (TestIdentityUser User, RefreshSession Live) ArrangeLiveSession(HandlerMocks mocks)
     {
-        var order = new List<string>();
+        var user = new TestIdentityUser { Id = 42 };
         mocks.Repository
             .Setup(x => x.GetByIdAsync(42, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TestIdentityUser { Id = 42 });
+            .ReturnsAsync(user);
         var live = RefreshSession.Create(
             42,
             "stolen-chain",
@@ -205,13 +231,8 @@ public sealed class ResetPasswordHandlerBaseTests
             .ReturnsAsync([live]);
         mocks.RefreshSessions
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1)
-            .Callback(() => order.Add("revoke"));
-        mocks.UnitOfWork
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1)
-            .Callback(() => order.Add("save"));
-        return order;
+            .ReturnsAsync(1);
+        return (user, live);
     }
 
     private static TestResetPasswordCommand Command() =>

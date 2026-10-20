@@ -27,10 +27,15 @@ public sealed class DevicesController(
     IPushDeviceRegistrar registrar,
     ICurrentUserService currentUserService) : ApiControllerBase
 {
-    /// <summary>Registers or refreshes this device's push installation (PUT /Notifications/Devices).</summary>
+    /// <summary>
+    /// Registers or refreshes this device's push installation (PUT /Notifications/Devices). Answers
+    /// 409 when the installation id belongs to another user's device (the request does not carry
+    /// that installation's push channel); the client then mints a new installation id and retries.
+    /// </summary>
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
     public async Task<ActionResult> UpsertAsync(
         [FromBody] DeviceInstallationRequest request,
         CancellationToken cancellationToken = default)

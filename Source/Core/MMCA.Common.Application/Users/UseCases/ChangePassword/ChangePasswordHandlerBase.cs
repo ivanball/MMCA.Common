@@ -17,10 +17,24 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePassword;
 /// line-identical copies of this handler; only the log message text differed.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The command record stays app-side (<typeparamref name="TCommand"/>): ADC marks it
 /// <c>ICacheInvalidating</c> with a cache prefix built from its own <c>User</c> type and Store does
 /// not, so a single shared record could not preserve both behaviors. The base reads the command only
 /// through <see cref="IUserScopedCommand{TRequest}"/>.
+/// </para>
+/// <para>
+/// <b>Session revocation is atomic with the password only on a single data source.</b> Sessions
+/// are revoked only when the aggregate accepts the new password, and
+/// <see cref="IPasswordChangeableUser"/> exposes no side-effect-free invariant check, so the user is
+/// already mutated when the revoke is saved. The EF session store saves through the shared context
+/// factory, which saves every cached context, so that save carries the new password too. When the
+/// users and the refresh sessions share one data source this is a single atomic save. When they live
+/// in different sources the factory saves them sequentially without a two-phase commit, so the
+/// password can commit while the session save fails; such a host should keep the two together or
+/// revoke again on its own retry path. (The reset workflow, which revokes unconditionally, revokes
+/// before applying the password and has no such window.)
+/// </para>
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's change-password command record.</typeparam>
@@ -107,10 +121,9 @@ public abstract partial class ChangePasswordHandlerBase<TUser, TCommand>(
         {
             // Credential rotation evicts every live refresh session: an attacker holding a stolen
             // chain must not keep minting tokens through the exact remediation the user performed.
-            // The revocation is persisted BEFORE the password (M240): it is a separate save, and a
-            // failure between the two must never leave a new password with the old sessions still
-            // alive. A revoke failure throws here, so the password stays unchanged and the user can
-            // simply retry.
+            // The revocation is persisted BEFORE the explicit password save (M240), so a revoke
+            // failure throws here and the user can simply retry. That save also carries the already
+            // mutated user (see the remarks: atomic only when sessions and users share a source).
             await RefreshSessionRevocation
                 .RevokeAllAsync(refreshSessions, _timeProvider, command.UserId, cancellationToken)
                 .ConfigureAwait(false);

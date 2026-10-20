@@ -250,6 +250,9 @@
   <data name="PushDevice.DeleteFailed" xml:space="preserve">
     <value>No se pudo anular el registro del dispositivo para las notificaciones push.</value>
   </data>
+  <data name="PushDevice.InstallationConflict" xml:space="preserve">
+    <value>El identificador de instalación está registrado en otro dispositivo. Genere un nuevo identificador de instalación y vuelva a intentarlo.</value>
+  </data>
   <data name="PushDevice.Unauthorized" xml:space="preserve">
     <value>El usuario no está autenticado.</value>
   </data>

@@ -109,6 +109,55 @@ public sealed class EFPermissionGrantStoreTests : IAsyncDisposable
             "a revoke cased differently from the stored row must still remove it");
     }
 
+    // M230 review (R4): a host that already holds two casings of one role (written before the
+    // canonical-spelling fix) must not keep the bug. A revoke removes the grant under EVERY stored
+    // spelling, and a read sees the grants of every spelling.
+    [Fact]
+    public async Task GetAndRevoke_WithDuplicateStoredCasingsOfOneRole_CoverEverySpelling()
+    {
+        await _connection.OpenAsync(CancellationToken.None);
+        ApplicationDbContext storeContext = NewContext();
+        var seed = NewContext();
+        seed.Set<PermissionGrant>().AddRange(
+            PermissionGrant.Create("Admin", "sessions:read", Now).Value!,
+            PermissionGrant.Create("admin", "sessions:read", Now).Value!,
+            PermissionGrant.Create("admin", "sessions:write", Now).Value!,
+            PermissionGrant.Create("Auditor", "sessions:read", Now).Value!);
+        await seed.SaveChangesAsync(CancellationToken.None);
+        var sut = CreateSut(storeContext);
+
+        (await sut.GetPermissionsAsync("ADMIN", CancellationToken.None)).Should().Equal(
+            ["sessions:read", "sessions:write"],
+            "every stored spelling of the role contributes, each permission once");
+
+        (await sut.RevokeAsync("Admin", "sessions:read", CancellationToken.None)).IsSuccess.Should().BeTrue();
+
+        var remaining = await NewContext().Set<PermissionGrant>().AsNoTracking()
+            .OrderBy(g => g.Role).ThenBy(g => g.Permission)
+            .Select(g => g.Role + "/" + g.Permission)
+            .ToListAsync(CancellationToken.None);
+        remaining.Should().Equal(
+            ["Auditor/sessions:read", "admin/sessions:write"],
+            "the revoke must remove the grant under both stored casings and nothing else");
+    }
+
+    private static EFPermissionGrantStore CreateSut(ApplicationDbContext storeContext)
+    {
+        var dbContextFactory = new Mock<IDbContextFactory>();
+        dbContextFactory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(storeContext);
+        dbContextFactory
+            .Setup(f => f.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => storeContext.SaveChangesAsync(ct));
+
+        return new EFPermissionGrantStore(
+            dbContextFactory.Object,
+            new EmptyEntityDataSourceRegistry(),
+            Mock.Of<IDataSourceResolver>(),
+            Options.Create(new PermissionGrantSettings()),
+            TimeProvider.System,
+            new SqlServerUniqueConstraintViolationDetector());
+    }
+
     public async ValueTask DisposeAsync()
     {
         foreach (ApplicationDbContext context in _contexts)

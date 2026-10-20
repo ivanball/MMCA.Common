@@ -61,8 +61,9 @@ public sealed class ServerTokenStorageService(
     private DateTimeOffset _anonymousUntil;
 
     /// <summary>
-    /// Bumped by every <see cref="SetTokensAsync"/> and <see cref="ClearTokensAsync"/>. A hydrate
-    /// that sees it move while its acquisition was in flight discards its stale answer (M234).
+    /// Bumped by every <see cref="SetTokensAsync"/>, and by <see cref="ClearTokensAsync"/> both before
+    /// and after its cookie clear. A hydrate that sees it move while its acquisition was in flight
+    /// discards its stale answer (M234).
     /// </summary>
     private int _tokenVersion;
 
@@ -171,6 +172,12 @@ public sealed class ServerTokenStorageService(
         // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
         // server-side revoke.
         _ = await sessionCookieSync.ClearAsync();
+
+        // Bump again once the cookies are gone (M234 review): a hydrate that STARTED during the clear
+        // captured the first bump and read the session the clear was still removing. This discards its
+        // answer if it is still in flight, and drops it if it already landed.
+        Interlocked.Increment(ref _tokenVersion);
+        _accessToken = null;
     }
 
     private async Task<string?> HydrateAsync()

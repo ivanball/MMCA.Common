@@ -32,5 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <!-- RedisFixedWindowRateLimiter (API) runs its Lua counter against the same real Redis. -->
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
   </ItemGroup>
 </Project>

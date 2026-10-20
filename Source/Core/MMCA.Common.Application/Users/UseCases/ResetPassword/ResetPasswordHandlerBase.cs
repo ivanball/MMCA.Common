@@ -34,8 +34,9 @@ namespace MMCA.Common.Application.Users.UseCases.ResetPassword;
 /// <param name="loginProtection">Clears the account's lockout after a successful reset.</param>
 /// <param name="logger">Logger for the reset audit lines.</param>
 /// <param name="refreshSessions">
-/// The refresh-session store. A successful reset revokes every live session on the account
-/// (ADR-097), so the reset actually evicts whoever else was signed in.
+/// The refresh-session store. A redeemed reset token revokes every live session on the account
+/// (ADR-097), so the reset actually evicts whoever else was signed in. The revoke is saved before
+/// the new password is applied, and stands even when the aggregate then rejects that password.
 /// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract partial class ResetPasswordHandlerBase<TUser, TCommand>(
@@ -91,23 +92,27 @@ public abstract partial class ResetPasswordHandlerBase<TUser, TCommand>(
             return Result.Failure(InvalidToken());
         }
 
+        // Credential rotation evicts every live refresh session: a reset is the remediation for a
+        // suspected intruder, so the intruder's rotating chain has to die with the old password.
+        // The revocation is persisted BEFORE the password is even applied (M240): the session
+        // store's save goes through the shared context factory, which saves every cached context,
+        // so a user already mutated here would ride along in that save. With the user still
+        // unmodified, the revoke save carries only the sessions, and a failure between the two saves
+        // can never leave a new password with the old sessions alive. Revoking on a reset is always
+        // desirable, so it also stands when the new password then fails the aggregate's invariants.
+        // A revoke failure throws here, so the password stays unchanged and the lockout stays as it
+        // was. The token is already spent at that point (see above); a non-burning check would need a
+        // token-service member that does not exist, so the user requests a new link.
+        await RefreshSessionRevocation
+            .RevokeAllAsync(refreshSessions, _timeProvider, userId, cancellationToken)
+            .ConfigureAwait(false);
+
         var (newHash, newSalt) = passwordHasher.HashPassword(request.NewPassword);
         var result = user.ChangePassword(newHash, newSalt);
         if (result.IsFailure)
         {
             return result;
         }
-
-        // Credential rotation evicts every live refresh session: a reset is the remediation for a
-        // suspected intruder, so the intruder's rotating chain has to die with the old password.
-        // The revocation is persisted BEFORE the password (M240): it is a separate save, and a
-        // failure between the two must never leave a new password with the old sessions still
-        // alive. A revoke failure throws here, so the password stays unchanged and the lockout stays
-        // as it was. The token is already spent at that point (see above); a non-burning check
-        // would need a token-service member that does not exist, so the user requests a new link.
-        await RefreshSessionRevocation
-            .RevokeAllAsync(refreshSessions, _timeProvider, userId, cancellationToken)
-            .ConfigureAwait(false);
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

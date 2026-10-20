@@ -4,6 +4,7 @@ using Microsoft.Azure.NotificationHubs;
 using Microsoft.Azure.NotificationHubs.Messaging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Infrastructure.Notifications.Push;
+using MMCA.Common.Shared.Abstractions;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Notifications.Push;
@@ -155,8 +156,11 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
     }
 
     // L176: the upsert is a full overwrite, so it must apply the same ownership check as the delete.
+    // A caller without the device's push channel cannot take the installation over; the answer is a
+    // distinct conflict (installation ids are random client GUIDs, so it reveals nothing useful) and
+    // the client recovers by minting a fresh id.
     [Fact]
-    public async Task UpsertAsync_WhenTheInstallationBelongsToAnotherUser_DoesNotOverwriteIt()
+    public async Task UpsertAsync_WhenTheInstallationBelongsToAnotherUser_ReturnsConflictWithoutOverwriting()
     {
         SetupInstallation("user:42");
 
@@ -170,11 +174,41 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
             },
             TestContext.Current.CancellationToken);
 
-        result.IsSuccess.Should().BeTrue("not-yours answers exactly like success, so the endpoint is not an existence oracle");
+        result.IsFailure.Should().BeTrue("the caller must learn the id is taken so it can mint a new one");
+        result.Errors.Should().ContainSingle(e =>
+            e.Code == "PushDevice.InstallationConflict" && e.Type == ErrorType.Conflict);
         _hubClient.Verify(
             x => x.CreateOrUpdateInstallationAsync(It.IsAny<Installation>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "re-tagging another user's installation would redirect their pushes to the caller");
+    }
+
+    // L176 review (R1): the installation id is per DEVICE (the MAUI client persists it in device
+    // preferences and never rotates it), so a second user signing in on the same phone presents the
+    // same id AND the same push channel. Holding the channel is possession of the device, so the
+    // installation is handed over and re-tagged; the previous owner's pushes stop reaching it.
+    [Fact]
+    public async Task UpsertAsync_WhenTheSameDeviceChangesHands_RetagsTheInstallationToTheCaller()
+    {
+        SetupInstallation("user:42");
+
+        var result = await _sut.UpsertAsync(
+            Stranger,
+            new()
+            {
+                InstallationId = InstallationId,
+                Platform = "FCMV1",
+                PushChannel = "fcm-registration-token",
+            },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _hubClient.Verify(
+            x => x.CreateOrUpdateInstallationAsync(
+                It.Is<Installation>(i => i.Tags.Contains("user:99") && !i.Tags.Contains("user:42")),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the device now belongs to the signed-in user, and the previous owner's pushes must stop");
     }
 
     [Fact]

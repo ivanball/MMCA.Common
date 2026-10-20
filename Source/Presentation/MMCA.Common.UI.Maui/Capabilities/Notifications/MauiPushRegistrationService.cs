@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
@@ -8,8 +9,10 @@ namespace MMCA.Common.UI.Maui.Capabilities.Notifications;
 /// <summary>
 /// Native push registration orchestration (ADR-044). Asks the app's
 /// <see cref="IPushDeviceTokenProvider"/> for the platform token, keeps a stable
-/// client-generated installation id in device preferences, and syncs the installation to the
-/// server's <c>Notifications/Devices</c> endpoints over the authenticated API client. Inert by
+/// client-generated installation id in device preferences (replaced, and the PUT retried once, only
+/// when the server answers 409 because the id belongs to another device), and syncs the
+/// installation to the server's <c>Notifications/Devices</c> endpoints over the authenticated API
+/// client. Inert by
 /// construction until the app registers a credentialed token provider (the default provider
 /// yields no token). Never throws: registration is a best-effort side channel.
 /// </summary>
@@ -70,18 +73,37 @@ public sealed partial class MauiPushRegistrationService(
 
         var installationId = await GetOrCreateInstallationIdAsync(cancellationToken).ConfigureAwait(false);
         using var client = httpClientFactory.CreateClient("APIClient");
-        var response = await client.PutAsJsonAsync(
-            new Uri("Notifications/Devices", UriKind.Relative),
-            new { InstallationId = installationId, token.Platform, PushChannel = token.Token },
-            cancellationToken).ConfigureAwait(false);
+        var status = await PutInstallationAsync(client, installationId, token, cancellationToken).ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode)
+        if (status == HttpStatusCode.Conflict)
         {
-            LogRegistrationRejected(logger, (int)response.StatusCode);
+            // The server holds this id for another user's device (a restored backup or a copied
+            // preference store can carry an id to a second phone). Ids are random GUIDs, so a fresh
+            // one is all it takes; persist it first so later passes and the logout delete use it.
+            installationId = await CreateInstallationIdAsync(cancellationToken).ConfigureAwait(false);
+            status = await PutInstallationAsync(client, installationId, token, cancellationToken).ConfigureAwait(false);
+        }
+
+        if ((int)status is < 200 or > 299)
+        {
+            LogRegistrationRejected(logger, (int)status);
             return false;
         }
 
         return true;
+    }
+
+    private static async Task<HttpStatusCode> PutInstallationAsync(
+        HttpClient client,
+        string installationId,
+        PushDeviceToken token,
+        CancellationToken cancellationToken)
+    {
+        using var response = await client.PutAsJsonAsync(
+            new Uri("Notifications/Devices", UriKind.Relative),
+            new { InstallationId = installationId, token.Platform, PushChannel = token.Token },
+            cancellationToken).ConfigureAwait(false);
+        return response.StatusCode;
     }
 
     /// <inheritdoc />
@@ -116,6 +138,11 @@ public sealed partial class MauiPushRegistrationService(
             return existing;
         }
 
+        return await CreateInstallationIdAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string> CreateInstallationIdAsync(CancellationToken cancellationToken)
+    {
         var created = Guid.NewGuid().ToString("N");
         await devicePreferences.SetAsync(InstallationIdKey, created, cancellationToken).ConfigureAwait(false);
         return created;
