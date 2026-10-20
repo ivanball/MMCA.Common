@@ -1,2 +1,3 @@
 #nullable enable
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingMarkers(string! markup, System.Collections.Generic.IEnumerable<string!>! markers) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.HeadingNamesAlert(string! heading, string! key) -> bool

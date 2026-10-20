@@ -98,7 +98,7 @@ public abstract partial class ObservabilityConventionTestsBase
         var violations = new List<string>();
         foreach (var (key, severity) in specs)
         {
-            var heading = headings.Find(h => h.Contains(AlertNameInfix + key, StringComparison.Ordinal));
+            var heading = headings.Find(h => HeadingNamesAlert(h, key));
             if (heading is null)
             {
                 violations.Add($"alert '{key}' has no '### ...{AlertNameInfix}{key}' runbook section in infra/OPERATIONS.md");
@@ -123,7 +123,7 @@ public abstract partial class ObservabilityConventionTestsBase
         var runbook = ReadEmbedded(RunbookResource);
 
         var orphans = DiscoverRunbookAlertHeadings(runbook)
-            .Where(heading => !specKeys.Exists(key => heading.Contains(AlertNameInfix + key, StringComparison.Ordinal)))
+            .Where(heading => !specKeys.Exists(key => HeadingNamesAlert(heading, key)))
             .ToList();
 
         orphans.Should().BeEmpty(
@@ -151,6 +151,30 @@ public abstract partial class ObservabilityConventionTestsBase
         }
 
         return specs;
+    }
+
+    /// <summary>
+    /// Whether a runbook heading names the alert <paramref name="key"/> as a whole token:
+    /// <c>-alert-{key}</c>, then an optional version suffix <c>-v{digits}</c> (provisioned names such
+    /// as <c>${prefix}-alert-${key}-v2</c>), then the end of the heading, whitespace, <c>(</c> or the
+    /// backtick that closes a code span. Any other hyphenated continuation is a different alert: a
+    /// plain substring test would let the section for <c>server-response-time-p99</c> answer for
+    /// <c>server-response-time</c>, and hide an orphan <c>x-extra</c> section behind a surviving
+    /// <c>x</c> alert. Both pairing facts read headings through this one predicate.
+    /// </summary>
+    /// <param name="heading">A <c>###</c> runbook heading.</param>
+    /// <param name="key">An alert key from <c>sloAlertSpecs</c>.</param>
+    /// <returns><see langword="true"/> when the heading names that alert.</returns>
+    protected static bool HeadingNamesAlert(string heading, string key)
+    {
+        ArgumentNullException.ThrowIfNull(heading);
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        return Regex.IsMatch(
+            heading,
+            Regex.Escape(AlertNameInfix + key) + @"(-v\d+)?(?=$|[\s(`])",
+            RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
+            TimeSpan.FromSeconds(2));
     }
 
     private static List<string> DiscoverRunbookAlertHeadings(string runbook) =>
