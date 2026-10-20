@@ -1,1 +1,3 @@
 #nullable enable
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnRestoredStateAppliedAsync(bool needsReload) -> System.Threading.Tasks.Task!
+*REMOVED*override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!

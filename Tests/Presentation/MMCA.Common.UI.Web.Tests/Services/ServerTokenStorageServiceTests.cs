@@ -388,6 +388,53 @@ public sealed class ServerTokenStorageServiceTests
         await act.Should().NotThrowAsync();
     }
 
+    // == M234: a hydrate in flight across a set or clear must not overwrite it ==
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuit_WhenALoginCompletesDuringAnAnonymousHydrate_KeepsTheNewTokenAndNoGrace()
+    {
+        var (sut, refresher, pending) = CreateGatedCircuitSut();
+        var signedIn = CreateJwt(DateTime.UtcNow.AddHours(1));
+
+        var hydrate = sut.GetAccessTokenAsync();
+        await sut.SetTokensAsync(signedIn, "refresh-token");
+        pending.SetResult(TokenAcquisition.NoSession);
+
+        (await hydrate).Should().Be(signedIn, "the stale anonymous answer must not overwrite a login that landed meanwhile");
+        (await sut.GetAccessTokenAsync()).Should().Be(signedIn, "no anonymous grace may be armed by the stale hydrate");
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuit_WhenALogoutCompletesDuringAHydrate_DoesNotResurrectTheClearedToken()
+    {
+        var (sut, _, pending) = CreateGatedCircuitSut();
+
+        var hydrate = sut.GetAccessTokenAsync();
+        await sut.ClearTokensAsync();
+        pending.SetResult(TokenAcquisition.Acquired(CreateJwt(DateTime.UtcNow.AddHours(1))));
+
+        (await hydrate).Should().BeNull("a token acquired before the logout must not be restored after it");
+    }
+
+    private static (ServerTokenStorageService Sut, Mock<ISessionAwareTokenRefresher> Refresher, TaskCompletionSource<TokenAcquisition> Pending) CreateGatedCircuitSut()
+    {
+        var accessor = new Mock<IHttpContextAccessor>();
+        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
+        var pending = new TaskCompletionSource<TokenAcquisition>();
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).Returns(pending.Task);
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        cookieSync.Setup(c => c.ClearAsync()).ReturnsAsync(true);
+        var sut = new ServerTokenStorageService(
+            accessor.Object,
+            new CookieTokenReader(accessor.Object),
+            cookieSync.Object,
+            refresher.Object,
+            new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        return (sut, refresher, pending);
+    }
+
     /// <summary>Stands in for Blazor's internal ComponentHub in the connection endpoint's metadata.</summary>
     private sealed class ConnectionHub : Hub;
 

@@ -31,6 +31,12 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// detection (BR-206) revokes the whole family, including the other holder's session. Clearing the
 /// pair here would let a stolen-and-rotated token live for the full refresh lifetime.
 /// </para>
+/// <para>
+/// Only a refusal of the presented token (400, 401, 403) is "no session". Every other failure (a 408,
+/// a 429, a 5xx during a revision swap, a dropped connection, a timeout the caller did not ask for) is
+/// reported as unavailable, as <see cref="SameOriginProxyTokenRefresher"/> does, because the caller
+/// treats "no session" as a sign-out and clears the stored pair.
+/// </para>
 /// </summary>
 public sealed class DirectApiTokenRefresher(
     IHttpClientFactory httpClientFactory,
@@ -59,7 +65,23 @@ public sealed class DirectApiTokenRefresher(
             Content = JsonContent.Create(new RefreshTokenRequest(accessToken, refreshToken)),
         };
         request.Options.Set(AuthDelegatingHandler.SkipBearer, true);
-        var response = await httpClient.SendAsync(request, cancellationToken);
+
+        HttpResponseMessage sent;
+        try
+        {
+            sent = await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return TokenAcquisition.Unavailable;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient.Timeout, not the caller: transient.
+            return TokenAcquisition.Unavailable;
+        }
+
+        using var response = sent;
 
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
@@ -68,7 +90,9 @@ public sealed class DirectApiTokenRefresher(
 
         if (!response.IsSuccessStatusCode)
         {
-            return TokenAcquisition.NoSession;
+            return response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                ? TokenAcquisition.NoSession
+                : TokenAcquisition.Unavailable;
         }
 
         var result = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken);

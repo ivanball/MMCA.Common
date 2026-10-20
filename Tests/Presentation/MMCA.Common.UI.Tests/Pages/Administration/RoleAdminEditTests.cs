@@ -216,6 +216,65 @@ public sealed class RoleAdminEditTests : BunitTestBase
             Times.Once);
     }
 
+    // L189: the save-side twin of M192. While a save is in flight the checkboxes are locked (a toggle
+    // then would be discarded by the re-seed with the dirty flag cleared), and a save answer for the
+    // previous Role must not re-seed the form of the Role loaded since.
+    [Fact]
+    public async Task WhileASaveIsInFlight_ThePermissionCheckboxesAreDisabled()
+    {
+        var pendingSave = new TaskCompletionSource<Result<RolePermissionsResponse>>();
+        _roles.Setup(x => x.SetStoredPermissionsAsync(
+                It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .Returns(pendingSave.Task);
+        var cut = RenderEdit();
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        // Not awaited: the click's handler is the save, held open by the pending answer.
+        var save = cut.Find("[data-testid=\"save-permissions\"]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        Checkbox(cut, OrdersWrite).HasAttribute("disabled").Should().BeTrue("a toggle now would be discarded by the save's re-seed");
+        Checkbox(cut, ReportsRun).HasAttribute("disabled").Should().BeTrue();
+
+        await cut.InvokeAsync(() => pendingSave.SetResult(Result.Success(new RolePermissionsResponse(Role, [OrdersRead], [ReportsRun]))));
+        await save;
+        Checkbox(cut, OrdersWrite).HasAttribute("disabled").Should().BeFalse("the lock ends with the save");
+    }
+
+    [Fact]
+    public async Task WhenTheRoleChangesMidSave_TheLateSaveAnswerDoesNotOverwriteTheNewRole()
+    {
+        const string editor = "Editor";
+        var pendingAdminSave = new TaskCompletionSource<Result<RolePermissionsResponse>>();
+        _roles.Setup(x => x.SetStoredPermissionsAsync(Role, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .Returns(pendingAdminSave.Task);
+        _roles.Setup(x => x.GetAsync(editor, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new RolePermissionsResponse(editor, [], [OrdersWrite])));
+        _roles.Setup(x => x.GetCatalogAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PermissionCatalogResponse([Role, editor], [OrdersRead, OrdersWrite, ReportsRun, AdministrationPermissions.ManageRoles])));
+        _roles.Setup(x => x.SetStoredPermissionsAsync(editor, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new RolePermissionsResponse(editor, [], [OrdersWrite])));
+
+        var cut = RenderEdit();
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        // Not awaited: the click's handler is the Admin save, held open by the pending answer.
+        var adminSave = cut.Find("[data-testid=\"save-permissions\"]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        cut.Render(p => p.Add(x => x.Role, editor));
+        await cut.WaitForAssertionAsync(() => _roles.Verify(x => x.GetAsync(editor, It.IsAny<CancellationToken>()), Times.Once));
+        await cut.InvokeAsync(() => pendingAdminSave.SetResult(Result.Success(new RolePermissionsResponse(Role, [OrdersRead], [ReportsRun]))));
+        await adminSave;
+        await cut.Find("[data-testid=\"save-permissions\"]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        _roles.Verify(
+            x => x.SetStoredPermissionsAsync(
+                editor,
+                It.Is<IReadOnlyList<string>>(set => set.SequenceEqual(new[] { OrdersWrite })),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the Admin save answer must not re-seed the Editor form");
+    }
+
     // -- Unsaved-changes guard --
     [Fact]
     public async Task OnLoad_TheUnsavedChangesGuardIsStoodDown()

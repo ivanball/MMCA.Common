@@ -96,6 +96,92 @@ public sealed class AuthenticatedServiceBaseRetryTests
         final.Dispose();
     }
 
+    // -- L185: a transport failure is method-aware too --
+    // The exception arm sees no response, so the API client pipeline (AuthDelegatingHandler) marks the
+    // exception with its request's replay safety. A keyless POST or PATCH is then retried only when the
+    // failure happened BEFORE the request was sent; the gRPC client applies the same rule.
+    [Theory]
+    [InlineData("POST", HttpRequestError.ResponseEnded)]
+    [InlineData("POST", HttpRequestError.Unknown)]
+    [InlineData("PATCH", HttpRequestError.ResponseEnded)]
+    [InlineData("PATCH", HttpRequestError.HttpProtocolError)]
+    public async Task RetryPolicy_AKeylessPostOrPatchThatFailsAfterSending_IsSentOnce(string method, HttpRequestError error)
+    {
+        var (attempts, thrown) = await RunThroughApiPipelineAsync(new HttpMethod(method), idempotencyKey: null, error);
+
+        attempts.Should().Be(1, "the server may already have processed it, so a resend could create a duplicate");
+        thrown.Should().BeOfType<HttpRequestException>();
+    }
+
+    [Theory]
+    [InlineData(HttpRequestError.NameResolutionError)]
+    [InlineData(HttpRequestError.ConnectionError)]
+    [InlineData(HttpRequestError.SecureConnectionError)]
+    public async Task RetryPolicy_AKeylessPostThatFailsBeforeSending_KeepsItsRetries(HttpRequestError error)
+    {
+        var (attempts, _) = await RunThroughApiPipelineAsync(HttpMethod.Post, idempotencyKey: null, error);
+
+        attempts.Should().Be(4, "nothing reached the server, so a resend cannot run the write twice");
+    }
+
+    [Theory]
+    [InlineData("GET", null)]
+    [InlineData("PUT", null)]
+    [InlineData("POST", "key-1")]
+    [InlineData("PATCH", "key-1")]
+    public async Task RetryPolicy_AReplaySafeRequestThatFailsAfterSending_KeepsItsRetries(string method, string? idempotencyKey)
+    {
+        var (attempts, _) = await RunThroughApiPipelineAsync(new HttpMethod(method), idempotencyKey, HttpRequestError.ResponseEnded);
+
+        attempts.Should().Be(4, "an idempotent verb or a keyed write is safe to resend");
+    }
+
+    private static async Task<(int Attempts, Exception? Thrown)> RunThroughApiPipelineAsync(
+        HttpMethod method,
+        string? idempotencyKey,
+        HttpRequestError error)
+    {
+        var transport = new ThrowingHandler(error);
+        using var client = new HttpClient(new MMCA.Common.UI.Services.Auth.AuthDelegatingHandler(
+            Moq.Mock.Of<MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService>())
+        {
+            InnerHandler = transport,
+        });
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(_ => TimeSpan.Zero);
+
+        Exception? thrown = null;
+        try
+        {
+            using var response = await policy.ExecuteAsync(() =>
+            {
+                var request = new HttpRequestMessage(method, new Uri("https://api.example.com/events/1/refresh"));
+                if (idempotencyKey is not null)
+                {
+                    request.Headers.Add("Idempotency-Key", idempotencyKey);
+                }
+
+                return client.SendAsync(request);
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            thrown = ex;
+        }
+
+        return (transport.Attempts, thrown);
+    }
+
+    private sealed class ThrowingHandler(HttpRequestError error) : HttpMessageHandler
+    {
+        public int Attempts { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Attempts++;
+            throw new HttpRequestException(error, "transport failure");
+        }
+    }
+
     private static async Task<(int Attempts, HttpResponseMessage Final)> RunAsync(
         HttpMethod method,
         string? idempotencyKey,

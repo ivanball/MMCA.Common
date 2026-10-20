@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Auth;
@@ -23,6 +24,23 @@ public sealed class AuthDelegatingHandler(
 
     /// <inheritdoc/>
     protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await SendWithBearerAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            // The shared retry policy sees only this exception, not the request, so it is told here
+            // whether the request may be resent (L185): a keyless POST or PATCH may not, once sent.
+            AuthenticatedServiceBase.MarkReplaySafety(ex, request);
+            throw;
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendWithBearerAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {

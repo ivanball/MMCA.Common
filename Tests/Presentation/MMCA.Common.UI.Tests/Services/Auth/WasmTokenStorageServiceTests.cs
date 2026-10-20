@@ -257,4 +257,46 @@ public sealed class WasmTokenStorageServiceTests
 
         await act.Should().NotThrowAsync();
     }
+
+    // == M234: a hydrate in flight across a set or clear must not overwrite it ==
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenALoginCompletesDuringAnAnonymousHydrate_KeepsTheNewTokenAndNoGrace()
+    {
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var pending = new TaskCompletionSource<TokenAcquisition>();
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).Returns(pending.Task);
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        var sut = new WasmTokenStorageService(cookieSync.Object, refresher.Object, clock);
+        var signedIn = CreateJwt(DateTime.UtcNow.AddHours(1));
+
+        var hydrate = sut.GetAccessTokenAsync();
+        await sut.SetTokensAsync(signedIn, "refresh-token");
+        pending.SetResult(TokenAcquisition.NoSession);
+
+        (await hydrate).Should().Be(signedIn, "the stale anonymous answer must not overwrite a login that landed meanwhile");
+        (await sut.GetAccessTokenAsync()).Should().Be(signedIn, "no anonymous grace may be armed by the stale hydrate");
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenALogoutCompletesDuringAHydrate_DoesNotResurrectTheClearedToken()
+    {
+        var pending = new TaskCompletionSource<TokenAcquisition>();
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .Returns(pending.Task)
+            .ReturnsAsync(TokenAcquisition.NoSession);
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.ClearAsync()).ReturnsAsync(true);
+        var sut = new WasmTokenStorageService(cookieSync.Object, refresher.Object, timeProvider: null);
+
+        var hydrate = sut.GetAccessTokenAsync();
+        await sut.ClearTokensAsync();
+        pending.SetResult(TokenAcquisition.Acquired(CreateJwt(DateTime.UtcNow.AddHours(1))));
+
+        (await hydrate).Should().BeNull("a token acquired before the logout must not be restored after it");
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+    }
 }

@@ -402,4 +402,56 @@ public sealed class NotificationInboxTests : BunitTestBase
             s => s.ScrollIntoViewAsync(It.IsAny<string>(), It.IsAny<ScrollBehavior>()),
             Times.Once());
     }
+
+    // == L190: a failed load is not an empty inbox ==
+    [Fact]
+    public async Task WhenTheFirstInboxLoadFails_ShowsTheErrorWithRetry_NotTheEmptyState()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LoadFailure<PagedCollectionResult<UserNotificationDTO>>("The inbox is unavailable."));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => cut.Find("[role='alert']").TextContent.Should().Contain("The inbox is unavailable."));
+        cut.Markup.Should().NotContain("You have no notifications.", "an inbox that failed to load is not known to be empty");
+
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1)));
+        await cut.FindAll("button").Single(b => b.TextContent.Trim() == "Retry").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Notice 1"));
+        cut.FindAll("[role='alert']").Should().BeEmpty("a successful retry clears the error");
+    }
+
+    [Fact]
+    public async Task WhenAPageChangeFails_ThePagerStaysOnTheLoadedPage()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(1, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedCollectionResult<UserNotificationDTO>([Unread(1)], new PaginationMetadata(45, 20, 1))));
+        var pageTwo = new TaskCompletionSource<Result<PagedCollectionResult<UserNotificationDTO>>>();
+        _inbox
+            .Setup(x => x.GetInboxAsync(2, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(pageTwo.Task);
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Notice 1"));
+
+        // Not awaited: the click handler is the page-2 load, held open until it fails.
+        var pageChange = PageButton(cut, "2").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        await cut.InvokeAsync(() => pageTwo.SetResult(LoadFailure<PagedCollectionResult<UserNotificationDTO>>("The inbox is unavailable.")));
+        await pageChange;
+
+        _inbox.Verify(x => x.GetInboxAsync(2, It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once());
+        SelectedPage(cut).Should().Be("1", "the rows on screen are still page 1's, so the pager must say so");
+        cut.Markup.Should().Contain("Notice 1");
+    }
+
+    private static AngleSharp.Dom.IElement PageButton(IRenderedComponent<NotificationInbox> cut, string page) =>
+        cut.FindAll(".mud-pagination button").Single(b => b.TextContent.Trim() == page);
+
+    private static string SelectedPage(IRenderedComponent<NotificationInbox> cut) =>
+        cut.Find(".mud-pagination .mud-pagination-item-selected").TextContent.Trim();
 }

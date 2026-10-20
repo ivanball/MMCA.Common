@@ -341,49 +341,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     {
         if (firstRender)
         {
-            // Hydrate scroll/state from sessionStorage now that JS interop is available
-            // (the SSR-time OnInitialized only saw the in-memory dictionary, which is
-            // empty after a circuit teardown or forceLoad navigation).
-            var routePath = GetRoutePath();
-            await ListPageStateService.HydrateFromSessionAsync(routePath);
-
-            // Cross-circuit fallback: when neither URL nor in-memory state was available
-            // during OnInitialized (new circuit after forceLoad or session teardown),
-            // check if sessionStorage hydration recovered any list-page state.
-            var hydrated = ListPageStateService.GetState(routePath);
-            var needsSessionRestore = _deferSessionPersist && hydrated is not null && HasListPageState(hydrated);
-
-            if (needsSessionRestore)
-            {
-                ApplyRestoredState(hydrated!);
-            }
-
-            if (_pendingScrollRestore is null && hydrated is { ScrollPosition: > 0 })
-            {
-                _pendingScrollRestore = hydrated.ScrollPosition;
-            }
-
-            _deferSessionPersist = false;
-
-            await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
-
-            _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/MMCA.Common.UI/list-page-scroll.js");
-            _dotNetRef = DotNetObjectReference.Create(this);
-            await _scrollModule.InvokeVoidAsync(
-                "enableScrollTracking",
-                _dotNetRef,
-                _scrollTrackerId,
-                150,
-                ScrollContainerSelector);
-
-            await RestoreGridStateAsync(needsSessionRestore);
-
-            // Ensure the current state is persisted to sessionStorage. This covers the
-            // deferred case (first load skipped persist) and keeps sessionStorage in sync
-            // after hydration/restoration.
-            _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
+            await RunFirstRenderSetupAsync();
         }
 
         // Restore scroll only after the grid has finished its first data load and rendered rows.
@@ -394,6 +352,167 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// The first interactive render's setup: the late <c>sessionStorage</c> restore, the viewport
+    /// subscription and scroll tracking, the grid-state restore, then
+    /// <see cref="OnRestoredStateAppliedAsync"/>.
+    /// </summary>
+    private async Task RunFirstRenderSetupAsync()
+    {
+        // Hydrate scroll/state from sessionStorage now that JS interop is available
+        // (the SSR-time OnInitialized only saw the in-memory dictionary, which is
+        // empty after a circuit teardown or forceLoad navigation).
+        var routePath = GetRoutePath();
+        await ListPageStateService.HydrateFromSessionAsync(routePath);
+
+        // M236: every await below is an interop round trip the user can navigate away during.
+        // DisposeAsync has then already run with nothing to clean up, so each continuation
+        // checks _disposed and releases whatever it created after that point.
+        if (_disposed)
+        {
+            return;
+        }
+
+        // Cross-circuit fallback: when neither URL nor in-memory state was available
+        // during OnInitialized (new circuit after forceLoad or session teardown),
+        // check if sessionStorage hydration recovered any list-page state.
+        var hydrated = ListPageStateService.GetState(routePath);
+        var needsSessionRestore = _deferSessionPersist && hydrated is not null && HasListPageState(hydrated);
+
+        if (needsSessionRestore)
+        {
+            ApplyRestoredState(hydrated!);
+        }
+
+        if (_pendingScrollRestore is null && hydrated is { ScrollPosition: > 0 })
+        {
+            _pendingScrollRestore = hydrated.ScrollPosition;
+        }
+
+        _deferSessionPersist = false;
+
+        if (!await StartScrollTrackingAsync())
+        {
+            return;
+        }
+
+        await RestoreGridStateAsync(needsSessionRestore);
+        if (_disposed)
+        {
+            return;
+        }
+
+        await OnRestoredStateAppliedAsync(needsSessionRestore);
+
+        // Ensure the current state is persisted to sessionStorage. This covers the
+        // deferred case (first load skipped persist) and keeps sessionStorage in sync
+        // after hydration/restoration.
+        _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
+    }
+
+    /// <summary>
+    /// Subscribes to the viewport and starts the window scroll tracker. Returns
+    /// <see langword="false"/> when the page was disposed during one of the round trips, after
+    /// releasing what was created past that point.
+    /// </summary>
+    private async Task<bool> StartScrollTrackingAsync()
+    {
+        await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+        if (_disposed)
+        {
+            await ReleaseLateFirstRenderSetupAsync();
+            return false;
+        }
+
+        _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/MMCA.Common.UI/list-page-scroll.js");
+        if (_disposed)
+        {
+            await ReleaseLateFirstRenderSetupAsync();
+            return false;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await _scrollModule.InvokeVoidAsync(
+            "enableScrollTracking",
+            _dotNetRef,
+            _scrollTrackerId,
+            150,
+            ScrollContainerSelector);
+        if (_disposed)
+        {
+            await ReleaseLateFirstRenderSetupAsync();
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Called once, on the first interactive render, after the saved list state has been applied
+    /// and (for a page with a <see cref="GridRef"/>) the grid has been reloaded with it. The default
+    /// does nothing.
+    /// </summary>
+    /// <param name="needsReload">
+    /// <see langword="true"/> when the state came late, from <c>sessionStorage</c> after the first
+    /// render (a new circuit after a <c>forceLoad</c> navigation or a session teardown), so filters,
+    /// sort or paging changed after the first data load already ran with defaults. The base reloads
+    /// <see cref="GridRef"/> itself; a page without one (a card list, say) overrides this and reloads
+    /// its own data when the flag is set.
+    /// </param>
+    /// <returns>A task that completes when the page has reacted to the restored state.</returns>
+    protected virtual Task OnRestoredStateAppliedAsync(bool needsReload) => Task.CompletedTask;
+
+    /// <summary>
+    /// Releases what the first-render setup created after the page was already disposed (M236):
+    /// the scroll module, its DotNetObjectReference and the window scroll listener it registered,
+    /// and the viewport subscription. Each field is taken before it is released, so a second
+    /// call (or DisposeAsync) finds nothing left to release.
+    /// </summary>
+    private async Task ReleaseLateFirstRenderSetupAsync()
+    {
+        await ReleaseScrollTrackingAsync();
+
+        try
+        {
+            await BrowserViewportService.UnsubscribeAsync(this);
+        }
+        catch
+        {
+            // Best-effort, as in DisposeAsync: JS interop may fail during teardown.
+        }
+    }
+
+    private async Task ReleaseScrollTrackingAsync()
+    {
+        var module = _scrollModule;
+        var dotNetRef = _dotNetRef;
+        _scrollModule = null;
+        _dotNetRef = null;
+
+        try
+        {
+            if (module is not null)
+            {
+                await module.InvokeVoidAsync("disableScrollTracking", _scrollTrackerId);
+                await module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already torn down: nothing to clean up.
+        }
+        catch (JSException)
+        {
+            // Best-effort: ignore shutdown-time JS interop races.
+        }
+        finally
+        {
+            dotNetRef?.Dispose();
+        }
     }
 
     /// <summary>
@@ -1095,26 +1214,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         _persistenceSubscription?.Dispose();
         UnsubscribeLocationChanged();
 
-        try
-        {
-            if (_scrollModule is not null)
-            {
-                await _scrollModule.InvokeVoidAsync("disableScrollTracking", _scrollTrackerId);
-                await _scrollModule.DisposeAsync();
-            }
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit already torn down: nothing to clean up.
-        }
-        catch (JSException)
-        {
-            // Best-effort: ignore shutdown-time JS interop races.
-        }
-        finally
-        {
-            _dotNetRef?.Dispose();
-        }
+        await ReleaseScrollTrackingAsync();
 
         try
         {

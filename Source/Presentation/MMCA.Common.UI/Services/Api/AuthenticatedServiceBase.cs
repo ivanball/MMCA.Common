@@ -147,6 +147,37 @@ public abstract class AuthenticatedServiceBase(
             && keys.Any(key => !string.IsNullOrWhiteSpace(key));
     }
 
+    /// <summary>
+    /// <see cref="Exception.Data"/> key under which the API client pipeline records whether the
+    /// request that failed with an <see cref="HttpRequestException"/> may be sent again (see
+    /// <see cref="MarkReplaySafety"/>). The exception arm of the retry policy sees no response, so this
+    /// is how it learns the request's method and <c>Idempotency-Key</c>.
+    /// </summary>
+    internal const string ReplaySafeDataKey = "MMCA.Common.UI.ReplaySafe";
+
+    /// <summary>
+    /// Records on <paramref name="exception"/> whether <paramref name="request"/> may be sent again.
+    /// Called by <see cref="Auth.AuthDelegatingHandler"/>, the outermost handler of the API client.
+    /// </summary>
+    /// <param name="exception">The transport failure the request ended in.</param>
+    /// <param name="request">The request that failed.</param>
+    internal static void MarkReplaySafety(HttpRequestException exception, HttpRequestMessage request) =>
+        exception.Data[ReplaySafeDataKey] = IsReplaySafe(request);
+
+    /// <summary>
+    /// Decides whether a transport failure is worth another attempt (L185). A request marked not
+    /// replay-safe (a POST or PATCH without an <c>Idempotency-Key</c>) is retried only when it failed
+    /// BEFORE it was sent: name resolution, the TCP connect, or the TLS handshake, the same rule the
+    /// gRPC client applies. Any later failure (the response ended, a protocol error, a reset reported
+    /// as Unknown) may have reached the handler, and a resend could run the write twice. Everything
+    /// else, including an exception no pipeline marked, keeps today's retry.
+    /// </summary>
+    private static bool IsRetryableException(HttpRequestException exception) =>
+        exception.Data[ReplaySafeDataKey] is not false
+        || exception.HttpRequestError is HttpRequestError.NameResolutionError
+            or HttpRequestError.ConnectionError
+            or HttpRequestError.SecureConnectionError;
+
 #pragma warning disable S2245, CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
 
     /// <summary>The shipped backoff: 2s, 4s, 8s plus up to one second of jitter.</summary>
@@ -168,7 +199,7 @@ public abstract class AuthenticatedServiceBase(
     /// the caller owns it.
     /// </remarks>
     internal static AsyncRetryPolicy<HttpResponseMessage> BuildRetryPolicy(Func<int, TimeSpan> backoff) => Policy
-        .Handle<HttpRequestException>()
+        .Handle<HttpRequestException>(IsRetryableException)
         .OrResult<HttpResponseMessage>(IsRetryableResponse)
         .WaitAndRetryAsync(3, backoff, onRetry: (outcome, _) => outcome.Result?.Dispose());
 }

@@ -45,6 +45,10 @@ public partial class NotificationBell : IDisposable
     private bool _isActivePoller;
     private bool _disposed;
 
+    // Bumped by every unread-count read (L188): the poll, navigation and push reads overlap freely,
+    // and only the newest one may write the badge.
+    private int _readSequence;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -223,9 +227,18 @@ public partial class NotificationBell : IDisposable
             return false;
         }
 
+        var sequence = Interlocked.Increment(ref _readSequence);
         try
         {
             var count = await InboxService.GetUnreadCountAsync(_cts.LifetimeToken());
+
+            // A newer read started while this one was in flight: its answer is the authoritative one,
+            // and this older one would overwrite it (and re-stamp it as fresh).
+            if (sequence != Volatile.Read(ref _readSequence))
+            {
+                return false;
+            }
+
             if (!count.TryGetValue(out var unread))
             {
                 // The authoritative count is unknown (expired session, transient failure). Leave the
@@ -249,6 +262,11 @@ public partial class NotificationBell : IDisposable
             {
                 await InvokeAsync(() =>
                 {
+                    if (sequence != Volatile.Read(ref _readSequence))
+                    {
+                        return;
+                    }
+
                     State.SetUnreadCount(unread);
                     StartPollTimerIfStopped();
                     StateHasChanged();

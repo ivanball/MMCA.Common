@@ -70,28 +70,30 @@ public partial class Login
     }
 
     /// <summary>
-    /// Writes the per-attempt OAuth state the completion page requires back. When device storage
+    /// Starts a web-redirect provider sign-in: writes the per-attempt OAuth state the completion page
+    /// requires back, then leaves for the provider with it. The attempt is minted at the click (M237),
+    /// so its lifetime runs from the moment the user chose a provider, and a second login tab only
+    /// replaces the attempt when the user clicks there (the latest click wins). When device storage
     /// accepts the attempt without keeping it (storage full, site data blocked, private mode) the
-    /// completion would refuse the flow one redirect later with no explanation, so this says so now
-    /// and keeps the web-redirect providers disabled.
+    /// completion would refuse the flow one redirect later with no explanation, so this says so now,
+    /// stays on the page and disables the web-redirect providers.
     /// </summary>
-    private async Task BeginOAuthAttemptAsync()
+    /// <param name="provider">The provider segment of the challenge URL.</param>
+    private async Task SignInWithRedirectAsync(string provider)
     {
+        string? oauthState;
         try
         {
-            _oauthState = await OAuthFlowState.BeginAsync();
+            oauthState = await OAuthFlowState.BeginAsync();
         }
         catch (InvalidOperationException)
         {
             _externalSignInUnavailable = true;
             _errorMessage = L["Auth.Login.ExternalSignInStorageUnavailable"].Value;
-            StateHasChanged();
             return;
         }
 
-        if (_oauthState is not null)
-        {
-            StateHasChanged();
-        }
+        // A full load, as the link it replaces was: the challenge is a server endpoint, not a route.
+        Navigation.NavigateTo(BuildOAuthUrl(provider, oauthState), forceLoad: true);
     }
 }

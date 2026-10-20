@@ -17,7 +17,8 @@ namespace MMCA.Common.UI.Tests.Pages.Notifications;
 
 /// <summary>
 /// bUnit tests for the <see cref="NotificationList"/> history page: loaded/empty render states, the
-/// failed-history surface (one toast, list left empty), and navigation to the compose page.
+/// failed-history surface (one toast plus the inline error and Retry, never the empty state), server
+/// paging over the whole history, and navigation to the compose page.
 /// </summary>
 public sealed class NotificationListTests : BunitTestBase
 {
@@ -96,7 +97,7 @@ public sealed class NotificationListTests : BunitTestBase
     }
 
     [Fact]
-    public void WhenTheHistoryLoadFails_RaisesOneToastAndLeavesTheListEmpty()
+    public void WhenTheHistoryLoadFails_RaisesOneToastAndShowsTheErrorWithRetry_NotTheEmptyState()
     {
         // A failed load is the one case where the empty state is a lie, so the toast carries the
         // API's own wording rather than the page inventing a message of its own.
@@ -110,7 +111,55 @@ public sealed class NotificationListTests : BunitTestBase
             t => t.Show("The notification history is unavailable.", ToastSeverity.Error),
             Times.Once()));
         _toast.VerifyNoOtherCalls();
-        cut.Markup.Should().Contain("No notifications have been sent yet.");
+
+        // L190: the empty-state alert used to render here once the toast expired, which tells an
+        // operator that nothing was ever sent. The failure stays on screen with a way to retry.
+        cut.Markup.Should().NotContain("No notifications have been sent yet.");
+        cut.Find("[role='alert']").TextContent.Should().Contain("The notification history is unavailable.");
+        cut.FindAll("button").Should().Contain(b => b.TextContent.Trim() == "Retry");
+    }
+
+    [Fact]
+    public async Task Retry_AfterAFailedLoad_LoadsTheHistory()
+    {
+        _service
+            .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(HistoryFailure("The notification history is unavailable."));
+        RenderMudProviders();
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
+        await cut.WaitForAssertionAsync(() => cut.FindAll("button").Should().Contain(b => b.TextContent.Trim() == "Retry"));
+
+        _service
+            .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(History(Sent(1, "Welcome aboard")));
+        await cut.FindAll("button").Single(b => b.TextContent.Trim() == "Retry").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Welcome aboard"));
+        cut.FindAll("[role='alert']").Should().BeEmpty("a successful retry clears the error");
+    }
+
+    // L191: the history used to be one 50-row read paged client-side, so every older send was
+    // unreachable and nothing said so. The pager now pages the server's own total.
+    [Fact]
+    public async Task WhenTheHistoryHasMoreThanOnePage_AnOlderPageIsReadFromTheServer()
+    {
+        _service
+            .Setup(x => x.GetHistoryAsync(1, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, int pageSize, CancellationToken _) => Result.Success(
+                new PagedCollectionResult<PushNotificationDTO>([Sent(1, "Newest send")], new PaginationMetadata(pageSize * 2 + 1, pageSize, 1))));
+        _service
+            .Setup(x => x.GetHistoryAsync(3, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, int pageSize, CancellationToken _) => Result.Success(
+                new PagedCollectionResult<PushNotificationDTO>([Sent(99, "Oldest send")], new PaginationMetadata(pageSize * 2 + 1, pageSize, 3))));
+        RenderMudProviders();
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Newest send"));
+
+        await cut.FindAll(".mud-pagination button").Single(b => b.TextContent.Trim() == "3")
+            .ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Oldest send"));
+        _service.Verify(x => x.GetHistoryAsync(3, It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once());
     }
 
     [Fact]
