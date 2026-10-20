@@ -40,6 +40,15 @@ public static class SessionCookieEndpoints
                 // 204 rather than an error, so a client written for the default mode still signs in.
                 if (!settings.Value.ClaimsOnlyBrowserTokens)
                 {
+                    // The record binds with no validation, so a body missing either token reached
+                    // Response.Cookies.Append with null and threw (500 plus an error log) on an
+                    // anonymous endpoint. A missing or blank token is the caller's fault: 400 (L184).
+                    var errors = MissingTokenErrors(request);
+                    if (errors.Count > 0)
+                    {
+                        return Results.ValidationProblem(errors);
+                    }
+
                     SessionCookieJar.Append(httpContext, request.AccessToken, request.RefreshToken, env, settings.Value.SameSite);
                 }
 
@@ -91,6 +100,23 @@ public static class SessionCookieEndpoints
     private static bool IsCrossSite(HttpRequest request) =>
         request.Headers.TryGetValue("Sec-Fetch-Site", out var site) &&
         string.Equals(site.ToString(), "cross-site", StringComparison.OrdinalIgnoreCase);
+
+    // One entry per blank token, keyed by its JSON name, in the ValidationProblem shape.
+    private static Dictionary<string, string[]> MissingTokenErrors(SessionCookieRequest request)
+    {
+        Dictionary<string, string[]> errors = [];
+        if (string.IsNullOrWhiteSpace(request.AccessToken))
+        {
+            errors["accessToken"] = ["The access token is required."];
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            errors["refreshToken"] = ["The refresh token is required."];
+        }
+
+        return errors;
+    }
 
     public sealed record SessionCookieRequest(string AccessToken, string RefreshToken);
 }

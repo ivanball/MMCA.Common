@@ -131,6 +131,36 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
         _invalidator.Verify(x => x.InvalidateAsync("Manager", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // M230: the store's role predicate is only as case-insensitive as the column's collation, so the
+    // service must hand it one canonical spelling (the catalog's) whatever casing the route carried.
+    [Fact]
+    public async Task SetStoredPermissionsAsync_WithADifferentlyCasedRole_WritesUnderTheCatalogSpelling()
+    {
+        var store = new Mock<IPermissionGrantStore>();
+        store.Setup(s => s.GetPermissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string role, CancellationToken _) => role == "Manager" ? [Read] : []);
+        store.Setup(s => s.GrantAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        store.Setup(s => s.RevokeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        var sut = CreateService(
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Read, Export),
+            store: store.Object);
+
+        var result = await sut.SetStoredPermissionsAsync("manager", [Export]);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Role.Should().Be("Manager");
+        store.Verify(s => s.GrantAsync("Manager", Export, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(
+            s => s.RevokeAsync("Manager", Read, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the permission the operator removed must be revoked from the stored spelling's row");
+        store.Verify(
+            s => s.GrantAsync("manager", It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // L59: each grant commits on its own, so a set that stops part-way has already written rows the
     // snapshot must pick up. The invalidation runs on every exit, not only on success.
     [Fact]

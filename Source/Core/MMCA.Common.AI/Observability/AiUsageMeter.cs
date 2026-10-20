@@ -50,7 +50,10 @@ public sealed class AiUsageMeter
     /// <summary>The <c>outcome</c> tag value for a call that threw.</summary>
     public const string ErrorOutcome = "error";
 
-    /// <summary>The <c>outcome</c> tag value for a call the caller (or a bound) cancelled.</summary>
+    /// <summary>
+    /// The <c>outcome</c> tag value for a call the caller (or a bound) cancelled, including a streamed
+    /// call whose consumer stopped enumerating before the stream ended.
+    /// </summary>
     public const string CanceledOutcome = "canceled";
 
     private readonly Counter<long> _inputTokens;

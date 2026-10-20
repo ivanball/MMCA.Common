@@ -53,3 +53,12 @@ internal static class SharedCodeErrors
 {
     internal static Error Missing() => Error.NotFoundError("Error.NotFound", "Generic shared code");
 }
+
+/// <summary>
+/// Builds its code through <c>Error.TooManyRequests</c>, so the catalog must read that factory like
+/// every other code-first one: the code carries no module prefix and the prefix rule must flag it.
+/// </summary>
+internal static class ThrottledErrors
+{
+    internal static Error TooFast() => Error.TooManyRequests("TooFast", "Slow down");
+}

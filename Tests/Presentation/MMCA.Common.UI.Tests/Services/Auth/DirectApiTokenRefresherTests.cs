@@ -199,4 +199,92 @@ public sealed class DirectApiTokenRefresherTests
 
         mocks.Handler.CallCount.Should().Be(2);
     }
+
+    // == L186: a transient failure is not a sign-out ==
+    // AuthUIService.TryRefreshTokenAsync treats NoSession as definitive and clears the stored session,
+    // so a 5xx during a revision swap or a 429 must report Unavailable, as the browser refresher does.
+    [Theory]
+    [InlineData(HttpStatusCode.RequestTimeout)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRefreshFailsTransiently_ReportsUnavailable(HttpStatusCode status)
+    {
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(status));
+
+        var acquisition = await sut.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeTrue("a transient status says nothing about whether the session is gone");
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRefreshIsRefused_ReportsNoSession(HttpStatusCode status)
+    {
+        var (sut, _) = CreateSut(_ => new HttpResponseMessage(status));
+
+        var acquisition = await sut.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeFalse("the server refused the presented refresh token");
+        acquisition.AccessToken.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheConnectionFails_ReportsUnavailable()
+    {
+        var (sut, _) = CreateSut(_ => throw new HttpRequestException(HttpRequestError.ConnectionError, "connection refused"));
+
+        var acquisition = await sut.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeTrue("an unreachable API is not a refused session");
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheRequestTimesOut_ReportsUnavailable()
+    {
+        var (sut, _) = CreateSut(_ => throw new TaskCanceledException("HttpClient.Timeout elapsed"));
+
+        var acquisition = await sut.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        acquisition.IsUnavailable.Should().BeTrue("a timeout the caller did not ask for is transient");
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_WhenTheCallerCancels_Propagates()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+        var (sut, _) = CreateSut(_ => TokenResponse("new-access", "new-refresh"));
+
+        var act = () => sut.TryAcquireAccessTokenAsync(cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task TryAcquireAccessTokenAsync_DisposesTheRefreshResponse()
+    {
+        var response = new TrackingResponse(HttpStatusCode.ServiceUnavailable);
+        var (sut, _) = CreateSut(_ => response);
+
+        await sut.TryAcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        response.IsDisposed.Should().BeTrue();
+    }
+
+    private sealed class TrackingResponse(HttpStatusCode statusCode) : HttpResponseMessage(statusCode)
+    {
+        public bool IsDisposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            IsDisposed = true;
+            base.Dispose(disposing);
+        }
+    }
 }

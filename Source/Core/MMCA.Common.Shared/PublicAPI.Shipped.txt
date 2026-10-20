@@ -638,6 +638,7 @@ const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Path = "Users/me/legal-acce
 const MMCA.Common.Shared.Messaging.MessageHeaders.CorrelationId = "MMCA-Correlation-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.TenantId = "MMCA-Tenant-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.UserId = "MMCA-User-Id" -> string!
+const MMCA.Common.Shared.Messaging.MessageHeaders.UserPermissions = "MMCA-User-Permissions" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.UserRoles = "MMCA-User-Roles" -> string!
 const MMCA.Common.Shared.Notifications.NotificationFeatures.PushNotifications = "Notification.PushNotifications" -> string!
 const MMCA.Common.Shared.Notifications.NotificationPermissions.Manage = "notifications:manage" -> string!
@@ -934,8 +935,6 @@ static MMCA.Common.Shared.Identifiers.StronglyTypedId.Parse<TSelf, TValue>(strin
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.TryDescribe(System.Type! type, out System.Type? identifierType, out System.Type? valueType) -> bool
 static MMCA.Common.Shared.Identifiers.StronglyTypedId.TryParse<TSelf, TValue>(string? s, System.IFormatProvider? provider, out TSelf result) -> bool
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToIdentifier(TValue value) -> TSelf
-static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableIdentifier(TValue? value) -> TSelf?
-static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue(TSelf? identifier) -> TValue?
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToValue(TSelf identifier) -> TValue
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.GetIdentifierTypes(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IEnumerable<System.Type!>!
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.Register(System.Type! identifierType) -> void

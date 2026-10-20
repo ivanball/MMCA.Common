@@ -30,4 +30,12 @@ public readonly record struct OutboxOrigin(
     UserIdentifierType? UserId,
     string? UserRoles,
     string? TenantId,
-    string? CorrelationId);
+    string? CorrelationId)
+{
+    /// <summary>
+    /// Gets the raising user's permission claims as a JSON array of strings, or null when they hold
+    /// none. An init property rather than a positional parameter so the shipped constructor is
+    /// unchanged.
+    /// </summary>
+    public string? UserPermissions { get; init; }
+}

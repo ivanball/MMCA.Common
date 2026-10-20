@@ -248,6 +248,62 @@ public sealed class EfInboxStoreTests : IDisposable
         (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
     }
 
+    // ── M231: a staged row that is no longer Added is not proof the row was written ──
+    [Fact]
+    public async Task Complete_WhenTheHandlersSaveRolledBack_StillWritesTheRow()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        // A transactional handler saves (the entry turns Unchanged) and then rolls back.
+        await using (var transaction = await _contextA.Database.BeginTransactionAsync(CancellationToken.None))
+        {
+            await _contextA.SaveChangesAsync(CancellationToken.None);
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
+
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "the rolled-back save never wrote the row, so a redelivery would re-run the handlers");
+    }
+
+    [Fact]
+    public async Task Complete_WhenTheTrackerWasClearedForARetry_StillWritesTheRow()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        // DbContextFactory.ResetForRetry clears every cached context before re-running the unit.
+        _contextA.ChangeTracker.Clear();
+
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "the detached staged row was never saved by the retried handler");
+    }
+
+    [Fact]
+    public async Task Abandon_WhenTheHandlersSaveRolledBack_ReportsTheMessageStillOpen()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await using (var transaction = await _contextA.Database.BeginTransactionAsync(CancellationToken.None))
+        {
+            await _contextA.SaveChangesAsync(CancellationToken.None);
+            await transaction.RollbackAsync(CancellationToken.None);
+        }
+
+        store.Abandon(messageId).Should().BeTrue(
+            "no row reached the database, so the redelivery will reprocess and there is nothing to warn about");
+    }
+
     [Fact]
     public async Task ConcurrentDelivery_StagedRowLosesToTheUniqueIndex_AndIsAbsorbedOnComplete()
     {
@@ -268,6 +324,23 @@ public sealed class EfInboxStoreTests : IDisposable
         (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(1);
     }
 
+    // L179: CompleteAsync saves the consume scope's SHARED context, so anything a handler left
+    // pending on it must be stamped with the publisher's restored user, not as the system.
+    [Fact]
+    public async Task Complete_StampsCoPendingEntitiesWithTheRestoredUser()
+    {
+        var store = CreateStore(_contextA, currentUser: new DeferredPermissionGate.FixedCurrentUserService(
+            DeferredPermissionGate.ClaimOnlyPrincipal(42)));
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        _contextA.Add(new InboxAlongsideEntity { Id = 3, Name = "pending" });
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        var saved = await _contextB.Set<InboxAlongsideEntity>().AsNoTracking().SingleAsync(CancellationToken.None);
+        saved.CreatedBy.Should().Be(42, "the co-pending change was made on behalf of the restored user");
+    }
+
     // ── Injected clock ──
     [Fact]
     public async Task TryBegin_StampsProcessedOnFromTheInjectedClock()
@@ -284,7 +357,10 @@ public sealed class EfInboxStoreTests : IDisposable
             "the processed-on stamp is the injected clock's instant");
     }
 
-    private static EfInboxStore CreateStore(ApplicationDbContext context, TimeProvider? timeProvider = null)
+    private static EfInboxStore CreateStore(
+        ApplicationDbContext context,
+        TimeProvider? timeProvider = null,
+        MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUser = null)
     {
         var factory = new Mock<IDbContextFactory>();
         factory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(context);
@@ -298,6 +374,7 @@ public sealed class EfInboxStoreTests : IDisposable
             factory.Object,
             resolver.Object,
             Options.Create(new OutboxSettings()),
+            currentUser ?? new DeferredPermissionGate.FixedCurrentUserService(new System.Security.Claims.ClaimsPrincipal()),
             NullLogger<EfInboxStore>.Instance,
             timeProvider ?? TimeProvider.System);
     }
@@ -325,7 +402,8 @@ public sealed class EfInboxStoreTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<InboxMessage>(entity =>
             {
                 entity.ToTable("InboxMessages");
@@ -333,5 +411,18 @@ public sealed class EfInboxStoreTests : IDisposable
                 entity.Property(e => e.EventType).IsRequired().HasMaxLength(500);
                 entity.HasIndex(e => e.MessageId).IsUnique();
             });
+            modelBuilder.Entity<InboxAlongsideEntity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.RowVersion).IsConcurrencyToken();
+            });
+        }
+    }
+
+    /// <summary>An auditable entity a handler leaves pending on the consume scope's context.</summary>
+    public sealed class InboxAlongsideEntity : MMCA.Common.Domain.Entities.AuditableBaseEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
     }
 }

@@ -45,4 +45,57 @@ public sealed class StateManagementConventionTests : StateManagementConventionTe
             Directory.Delete(Path.GetDirectoryName(Path.GetDirectoryName(sourceDir))!, recursive: true);
         }
     }
+
+    // L196: the match is bounded by AddSingleton's own type and argument lists, so a scoped
+    // registration chained after a singleton one is not reported as a singleton.
+    [Theory]
+    [InlineData("services.AddSingleton<IClock, Clock>().AddScoped<IWizardStateService, WizardStateService>();")]
+    [InlineData("services.AddSingleton<IClock, Clock>()\n    .AddScoped<IWizardStateService, WizardStateService>();")]
+    [InlineData("services.AddSingleton(typeof(IClock), typeof(Clock)).AddScoped(typeof(WizardStateContainer));")]
+    public void SingletonScan_DoesNotReachAcrossAFluentChain(string registration) =>
+        ScanOneUiFile("MMCA.Probe.UI", registration).Should().BeEmpty(
+            "only the AddScoped call names the state service, and it is scoped");
+
+    // Every shape the statement-wide match caught before stays caught.
+    [Theory]
+    [InlineData("services.AddSingleton<ProbeStateService>();")]
+    [InlineData("services.AddSingleton<IProbe, ProbeStateService>();")]
+    [InlineData("services.AddSingleton<IOptions<ProbeOptions>, ProbeStateService>();")]
+    [InlineData("services.TryAddSingleton<ProbeStateContainer>();")]
+    [InlineData("services.AddSingleton(typeof(ProbeStateService));")]
+    [InlineData("services.AddSingleton(typeof(IProbe), typeof(ProbeStateService));")]
+    [InlineData("services.AddSingleton(new ProbeStateContainer(clock));")]
+    [InlineData("services.AddSingleton<IProbe>(sp => new ProbeStateService(sp.GetRequiredService<IClock>()));")]
+    [InlineData("services.AddScoped<IClock, Clock>().AddSingleton<ProbeStateService>();")]
+    public void SingletonScan_StillCatchesEverySingletonStateRegistrationShape(string registration) =>
+        ScanOneUiFile("MMCA.Probe.UI", registration).Should().ContainSingle().Which.Should().Be("Registrations.cs:1");
+
+    // L196: only a whole "Testing" project-name segment marks test support code, so a production UI
+    // folder whose name merely contains the word is still scanned.
+    [Theory]
+    [InlineData("MMCA.Probe.UI/TestingHelpers", 1)]
+    [InlineData("MMCA.Probe.UI/Pages/LoadTesting", 1)]
+    [InlineData("MMCA.Probe.Testing.UI", 0)]
+    [InlineData("MMCA.Probe.UI/Testing", 0)]
+    public void SingletonScan_SkipsOnlyAWholeTestingSegment(string folder, int expectedOffenders) =>
+        ScanOneUiFile(folder, "services.AddSingleton<ProbeStateService>();")
+            .Should().HaveCount(expectedOffenders);
+
+    private static IReadOnlyList<string> ScanOneUiFile(string folder, string registration)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"mmca-l196-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "Source");
+        try
+        {
+            var directory = Path.Combine([sourceDir, .. folder.Split('/')]);
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "Registrations.cs"), registration);
+
+            return FindSingletonStateRegistrations(sourceDir, out _);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

@@ -25,11 +25,12 @@ namespace MMCA.Common.API.RateLimiting;
 /// framework partition key is <c>{application namespace}:{scope}:{partition}</c> so two MMCA
 /// applications sharing one Redis do not share a counter by default (the namespace defaults to the
 /// host's application name; two hosts given the same <c>Application:Namespace</c> share counters),
-/// incremented with <c>INCR</c> and given a TTL slightly longer than the window on the increment
-/// that creates it. Keys expire on their own, so nothing has to sweep them, and a window rollover
-/// is a new key rather than a reset. The counter is not transactional with the permit decision
-/// (INCR then compare), which can let a burst arriving in the same instant overshoot the limit
-/// slightly; that is the accepted trade for one round trip per request.
+/// incremented and given a TTL slightly longer than the window on the increment that creates it.
+/// The increment and the TTL run in ONE Lua script (<see cref="IncrementScript"/>), so no failure
+/// between them can leave a key with no expiry. Keys expire on their own, so nothing has to sweep
+/// them, and a window rollover is a new key rather than a reset. The counter is not transactional
+/// with the permit decision (increment then compare), which can let a burst arriving in the same
+/// instant overshoot the limit slightly; that is the accepted trade for one round trip per request.
 /// </para>
 /// <para>
 /// <b>Fail open:</b> any Redis fault permits the request and logs at warning level, at most once
@@ -39,6 +40,25 @@ namespace MMCA.Common.API.RateLimiting;
 /// </summary>
 public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
 {
+    /// <summary>
+    /// Increments the window's counter and, on the increment that created the key, sets its TTL, as
+    /// one atomic server-side step. <c>KEYS[1]</c> is the window key, <c>ARGV[1]</c> the permits
+    /// requested and <c>ARGV[2]</c> the TTL in seconds; returns the new count. Only the creating
+    /// increment sets the TTL: re-stamping it on every request would slide the window forward for a
+    /// caller who keeps hitting it, so the allowance would never reset.
+    /// </summary>
+    internal const string IncrementScript =
+        "local count = redis.call('INCRBY', KEYS[1], ARGV[1]) "
+        + "if count <= tonumber(ARGV[1]) then redis.call('EXPIRE', KEYS[1], ARGV[2]) end "
+        + "return count";
+
+    /// <summary>
+    /// The key's TTL in seconds. The skew past the window length covers clock drift between
+    /// instances: an early-expiring key would hand the partition a fresh allowance inside the same
+    /// window.
+    /// </summary>
+    internal const int KeyTtlSeconds = 65;
+
     /// <summary>
     /// The window this process last logged a Redis fault for, so a dead Redis produces one warning
     /// a minute rather than one per request. Static (rather than per instance) because a fault is a
@@ -143,15 +163,11 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
         try
         {
             var database = _connection.GetDatabase();
-            var count = await database.StringIncrementAsync(key, permitCount).ConfigureAwait(false);
-
-            if (count <= permitCount)
-            {
-                // First increment of this window created the key, so give it a TTL. The skew past
-                // the window length covers clock drift between instances: an early-expiring key
-                // would hand the partition a fresh allowance inside the same window.
-                await database.KeyExpireAsync(key, TimeSpan.FromSeconds(65)).ConfigureAwait(false);
-            }
+            var result = await database.ScriptEvaluateAsync(
+                IncrementScript,
+                [key],
+                [permitCount, KeyTtlSeconds]).ConfigureAwait(false);
+            var count = (long)result;
 
             return count <= _permitLimit ? RedisRateLimitLease.Acquired : RedisRateLimitLease.Rejected;
         }

@@ -133,10 +133,18 @@ public static class DependencyInjection
                 options.Retry.MaxRetryAttempts = GrpcResilienceDefaults.MaxRetryAttempts;
 
                 // Every gRPC call is a POST, so the unsafe-method opt-out would switch the retry off
-                // entirely. Instead only a failure to reach the service (DNS or connect during an ACA
-                // replica rollover) is retried; a status or an attempt timeout may have reached the
-                // handler, and replaying it could run the call twice.
-                options.Retry.ShouldHandle = args => ValueTask.FromResult(args.Outcome.Exception is HttpRequestException);
+                // entirely. Instead only a failure to reach the service BEFORE the request was sent
+                // is retried: name resolution, the TCP connect, or the TLS handshake (an ACA replica
+                // rollover). Anything else may have reached the handler and replaying it could run the
+                // call twice: a status, an attempt timeout, and an HttpRequestException raised after
+                // the request frames were written (ResponseEnded, a protocol error, or Unknown wrapping
+                // a connection reset).
+                options.Retry.ShouldHandle = args => ValueTask.FromResult(args.Outcome.Exception is HttpRequestException
+                {
+                    HttpRequestError: HttpRequestError.NameResolutionError
+                        or HttpRequestError.ConnectionError
+                        or HttpRequestError.SecureConnectionError,
+                });
                 options.CircuitBreaker.SamplingDuration = GrpcResilienceDefaults.SamplingDuration;
                 options.CircuitBreaker.FailureRatio = GrpcResilienceDefaults.FailureRatio;
                 options.CircuitBreaker.MinimumThroughput = GrpcResilienceDefaults.MinimumThroughput;

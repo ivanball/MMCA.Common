@@ -111,7 +111,7 @@
                         {
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.Apple"
-                                       Href="@BuildOAuthUrl("apple")"
+                                       OnClick="@(() => SignInWithRedirectAsync("apple"))"
                                        Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithApple"]">
                                 @L["Auth.Login.SignInWithApple"]
@@ -133,7 +133,7 @@
                         {
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.Google"
-                                       Href="@BuildOAuthUrl("google")"
+                                       OnClick="@(() => SignInWithRedirectAsync("google"))"
                                        Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithGoogle"]">
                                 @L["Auth.Login.SignInWithGoogle"]
@@ -155,7 +155,7 @@
                         {
                             <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                        StartIcon="@Icons.Custom.Brands.GitHub"
-                                       Href="@BuildOAuthUrl("github")"
+                                       OnClick="@(() => SignInWithRedirectAsync("github"))"
                                        Disabled="@_externalSignInUnavailable"
                                        aria-label="@L["Auth.Login.SignInWithGitHub"]">
                                 @L["Auth.Login.SignInWithGitHub"]
@@ -177,7 +177,6 @@
     private bool _isLoading;
     private bool _hasExternalProviders;
     private string _apiBase = string.Empty;
-    private string? _oauthState;
 
     protected override void OnInitialized()
     {
@@ -186,19 +185,7 @@
         _errorMessage = ExternalSignInErrorMessage(Error);
     }
 
-    // The per-attempt value the completion page requires back. Written once interactivity exists,
-    // because it has to reach device-local storage to survive the provider round trip.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || !_hasExternalProviders || _oauthState is not null)
-        {
-            return;
-        }
-
-        await BeginOAuthAttemptAsync();
-    }
-
-    private string BuildOAuthUrl(string provider)
+    private string BuildOAuthUrl(string provider, string? oauthState)
     {
         var url = $"{_apiBase}/auth/oauth/{provider}";
         var safeReturnUrl = ReturnUrlProtector.Sanitize(ReturnUrl, "/");
@@ -208,9 +195,9 @@
             query.Add($"returnUrl={Uri.EscapeDataString(safeReturnUrl)}");
         }
 
-        if (!string.IsNullOrEmpty(_oauthState))
+        if (!string.IsNullOrEmpty(oauthState))
         {
-            query.Add($"state={Uri.EscapeDataString(_oauthState)}");
+            query.Add($"state={Uri.EscapeDataString(oauthState)}");
         }
 
         return query.Count == 0 ? url : $"{url}?{string.Join("&", query)}";

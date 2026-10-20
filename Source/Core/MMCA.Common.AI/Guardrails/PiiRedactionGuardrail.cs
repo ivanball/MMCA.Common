@@ -104,27 +104,68 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
     /// values (the shape Microsoft.Extensions.AI's function-invoking client marshals a tool's return
     /// value and the model's arguments into). A tool's output is exactly where contact details turn
     /// up (a customer lookup, a directory search), so it is scrubbed like any other text.
+    /// <para>
+    /// Only the text changes. An item with nothing to redact passes through by reference, and a
+    /// rebuilt item keeps its metadata (<see cref="AIContent.AdditionalProperties"/>,
+    /// <see cref="AIContent.Annotations"/>, a tool call's <see cref="FunctionCallContent.InformationalOnly"/>
+    /// and <c>Exception</c>, a tool result's <c>Exception</c>). A rebuilt item does NOT keep
+    /// <see cref="AIContent.RawRepresentation"/>: the provider's original object still holds the
+    /// unredacted text, and the OpenAI adapters send a raw representation verbatim in place of the
+    /// item, which would undo the redaction.
+    /// </para>
+    /// <para>
+    /// A reasoning block that carries <see cref="TextReasoningContent.ProtectedData"/> is never
+    /// rebuilt: that data is the provider's signature over the text (Anthropic's thinking signature),
+    /// and an edited signed block is rejected when the conversation is sent back.
+    /// </para>
     /// </summary>
     private static AIContent RedactContent(AIContent content) => content switch
     {
-        TextContent { Text: { Length: > 0 } text } => new TextContent(RedactText(text)),
-        TextReasoningContent { Text: { Length: > 0 } reasoning } => new TextReasoningContent(RedactText(reasoning)),
-        FunctionResultContent { Result: JsonElement element } call => new FunctionResultContent(call.CallId, RedactJson(element)),
-        FunctionResultContent { Result: string result } call => new FunctionResultContent(call.CallId, RedactText(result)),
-        FunctionCallContent { Arguments: { } arguments } call => new FunctionCallContent(
-            call.CallId,
-            call.Name,
-            arguments.ToDictionary(
-                pair => pair.Key,
-                pair => RedactArgument(pair.Value),
-                StringComparer.Ordinal)),
+        TextReasoningContent { ProtectedData: not null } => content,
 
-        // Binary and other non-text content (images, tool results and arguments that are neither a
-        // string nor a JsonElement, provider-specific items) passes through untouched: this
-        // guardrail understands text, and silently dropping what it does not understand would be a
-        // far worse failure than leaving it alone.
+        TextContent { Text: { Length: > 0 } text } when HasContactDetails(text) =>
+            WithMetadataOf(content, new TextContent(RedactText(text))),
+
+        TextReasoningContent { Text: { Length: > 0 } reasoning } when HasContactDetails(reasoning) =>
+            WithMetadataOf(content, new TextReasoningContent(RedactText(reasoning))),
+
+        FunctionResultContent { Result: { } result } call when ArgumentHasContactDetails(result) =>
+            WithMetadataOf(content, new FunctionResultContent(call.CallId, RedactArgument(result))
+            {
+                Exception = call.Exception,
+            }),
+
+        FunctionCallContent { Arguments: { } arguments } call when arguments.Values.Any(ArgumentHasContactDetails) =>
+            WithMetadataOf(content, new FunctionCallContent(
+                call.CallId,
+                call.Name,
+                arguments.ToDictionary(
+                    pair => pair.Key,
+                    pair => RedactArgument(pair.Value),
+                    StringComparer.Ordinal))
+            {
+                InformationalOnly = call.InformationalOnly,
+                Exception = call.Exception,
+            }),
+
+        // Text with nothing to redact, binary and other non-text content (images, tool results and
+        // arguments that are neither a string nor a JsonElement, provider-specific items) passes
+        // through untouched: this guardrail understands text, and silently dropping what it does not
+        // understand would be a far worse failure than leaving it alone.
         _ => content,
     };
+
+    /// <summary>
+    /// Copies the metadata a rebuilt item keeps from the item it replaces; see
+    /// <see cref="RedactContent"/> for why <see cref="AIContent.RawRepresentation"/> is not among it.
+    /// </summary>
+    private static TContent WithMetadataOf<TContent>(AIContent source, TContent rebuilt)
+        where TContent : AIContent
+    {
+        rebuilt.AdditionalProperties = source.AdditionalProperties;
+        rebuilt.Annotations = source.Annotations;
+        return rebuilt;
+    }
 
     private static object? RedactArgument(object? value) => value switch
     {
@@ -132,6 +173,32 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
         JsonElement element => RedactJson(element),
         _ => value,
     };
+
+    private static bool ArgumentHasContactDetails(object? value) => value switch
+    {
+        string text => HasContactDetails(text),
+        JsonElement element => JsonHasContactDetails(element),
+        _ => false,
+    };
+
+    /// <summary>Whether any string VALUE in the JSON would be redacted (the same values <see cref="WriteRedacted"/> rewrites).</summary>
+    private static bool JsonHasContactDetails(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            return element.EnumerateObject().Any(property => JsonHasContactDetails(property.Value));
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            return element.EnumerateArray().Any(JsonHasContactDetails);
+        }
+
+        return element.ValueKind == JsonValueKind.String && HasContactDetails(element.GetString()!);
+    }
+
+    private static bool HasContactDetails(string value) =>
+        !string.Equals(RedactText(value), value, StringComparison.Ordinal);
 
     private static string RedactText(string value) =>
         PhonePattern.Replace(EmailPattern.Replace(value, EmailPlaceholder), PhonePlaceholder);

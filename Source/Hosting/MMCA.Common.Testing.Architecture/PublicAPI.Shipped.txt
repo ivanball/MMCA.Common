@@ -559,11 +559,13 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsHaveValidato
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsResideInApplicationLayer(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValueObjectsAreImmutableSealedInShared(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ContainsRegionClaim(string! policyText, string! regionClaim) -> bool
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingMarkers(string! markup, System.Collections.Generic.IEnumerable<string!>! markers) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingPasswordFormMarkers(string! markup) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.RendersChangePasswordCard(string! markup) -> bool
 static MMCA.Common.Testing.Architecture.LayerRef.operator !=(MMCA.Common.Testing.Architecture.LayerRef? left, MMCA.Common.Testing.Architecture.LayerRef? right) -> bool
 static MMCA.Common.Testing.Architecture.LayerRef.operator ==(MMCA.Common.Testing.Architecture.LayerRef? left, MMCA.Common.Testing.Architecture.LayerRef? right) -> bool
 static MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.Check(string! service, string! appSettingsJson) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.HeadingNamesAlert(string! heading, string! key) -> bool
 static MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.HasAuthorizeAttribute(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.IsRoutablePage(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.RequiresRole(System.Type! type, string! role) -> bool

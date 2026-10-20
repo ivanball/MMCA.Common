@@ -57,10 +57,19 @@ public sealed class JwtSettings : IValidatableObject
     [Required]
     public string Audience { get; init; } = string.Empty;
 
-    /// <summary>Gets the access-token lifetime in minutes. Defaults to <c>15</c>.</summary>
+    /// <summary>
+    /// Gets the access-token lifetime in minutes. Defaults to <c>15</c>. Must be at least <c>1</c>:
+    /// a token whose expiry is not after its not-before cannot be minted, so a zero or negative
+    /// value fails host startup instead of every sign-in.
+    /// </summary>
+    [Range(1, int.MaxValue)]
     public int AccessTokenExpirationMinutes { get; init; } = 15;
 
-    /// <summary>Gets the refresh-token lifetime in days. Defaults to <c>7</c>.</summary>
+    /// <summary>
+    /// Gets the refresh-token lifetime in days. Defaults to <c>7</c>. Must be at least <c>1</c>, or
+    /// every session would be expired at issue.
+    /// </summary>
+    [Range(1, int.MaxValue)]
     public int RefreshTokenExpirationDays { get; init; } = 7;
 
     /// <summary>

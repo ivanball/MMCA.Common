@@ -59,6 +59,24 @@ public sealed class ClaimsOnlySessionCookieEndpointsTests
     }
 
     [Fact]
+    public async Task PostSessionCookie_ClaimsOnly_WithNoTokens_StillReturns204()
+    {
+        // L184: the missing-token 400 applies only where the tokens are used; a claims-only host
+        // ignores the body, so a client written for the default mode keeps signing in.
+        using var host = await CreateHostAsync(claimsOnly: true, result: null);
+        using HttpClient client = host.GetTestClient();
+        using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync(
+            new Uri("/auth/session-cookie", UriKind.Relative),
+            content,
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Set-Cookie").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteSessionCookie_UsesTheConfiguredSameSite()
     {
         using var host = await CreateHostAsync(claimsOnly: true, result: null);

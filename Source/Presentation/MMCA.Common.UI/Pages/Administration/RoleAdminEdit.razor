@@ -50,7 +50,7 @@ else
                     <MudCheckBox T="bool"
                                  Value="@IsChecked(permission)"
                                  ValueChanged="@(value => Toggle(permission, value))"
-                                 Disabled="@IsReadOnly(permission)"
+                                 Disabled="@(IsReadOnly(permission) || IsSaving)"
                                  Dense="true"
                                  Label="@permission"
                                  data-testid="permission-checkbox"

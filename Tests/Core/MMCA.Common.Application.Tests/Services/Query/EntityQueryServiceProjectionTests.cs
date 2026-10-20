@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Interfaces.Navigation;
@@ -264,5 +264,140 @@ public sealed class EntityQueryServiceProjectionTests
             null!);
 
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── fields= (M227, bug hunt 2026-10-19) ──
+    // fields= names DTO properties, because shaping runs over the DTO. Validation has to agree with
+    // shaping: a DTO-only name is shaped, an entity-only name has no DTO accessor and is refused
+    // rather than returning empty objects. Only the non-projected path, which narrows the entity with
+    // a MemberInit, still needs a writable entity property.
+    public sealed class FieldsEntity : AuditableBaseEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>Entity-only column: the DTO deliberately does not carry it.</summary>
+        public string InternalNote { get; set; } = string.Empty;
+    }
+
+    public sealed class FieldsEntityDTO : IBaseDTO<int>
+    {
+        public required int Id { get; init; }
+
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>DTO-only member: computed by the mapper or projector, absent from the entity.</summary>
+        public string DisplayName { get; set; } = string.Empty;
+    }
+
+    private sealed class FieldsMapper : IEntityDTOMapper<FieldsEntity, FieldsEntityDTO, int>
+    {
+        public FieldsEntityDTO MapToDTO(FieldsEntity entity) =>
+            new() { Id = entity.Id, Name = entity.Name, DisplayName = "display:" + entity.Name };
+
+        public IReadOnlyCollection<FieldsEntityDTO> MapToDTOs(IReadOnlyCollection<FieldsEntity> entityCollection) =>
+            [.. entityCollection.Select(MapToDTO)];
+    }
+
+    private sealed class FieldsProjector : IEntityDTOProjector<FieldsEntity, FieldsEntityDTO, int>
+    {
+        public IQueryable<FieldsEntityDTO> ProjectTo(IQueryable<FieldsEntity> source) =>
+            source.Select(e => new FieldsEntityDTO { Id = e.Id, Name = e.Name, DisplayName = "display:" + e.Name });
+    }
+
+    private static readonly List<FieldsEntity> FieldsRows =
+    [
+        new() { Id = 1, Name = "a", InternalNote = "secret-a" },
+        new() { Id = 2, Name = "b", InternalNote = "secret-b" },
+    ];
+
+    private static EntityQueryService<FieldsEntity, FieldsEntityDTO, int> CreateFieldsSut(bool withProjector)
+    {
+        var repository = new Mock<IReadRepository<FieldsEntity, int>>();
+        repository.SetupGet(r => r.Table).Returns(FieldsRows.AsQueryable());
+        repository.SetupGet(r => r.TableNoTracking).Returns(FieldsRows.AsQueryable());
+
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(u => u.GetReadRepository<FieldsEntity, int>()).Returns(repository.Object);
+
+        var navigationMetadataProvider = new Mock<INavigationMetadataProvider>();
+        navigationMetadataProvider
+            .Setup(p => p.BuildIncludes<FieldsEntity>(It.IsAny<bool>(), It.IsAny<bool>()))
+            .Returns(new NavigationMetadata());
+
+        var pipeline = new EntityQueryPipeline(new InMemoryQueryableExecutor());
+        var populator = new Mock<INavigationPopulator<FieldsEntity>>();
+
+        return withProjector
+            ? new EntityQueryService<FieldsEntity, FieldsEntityDTO, int>(
+                unitOfWork.Object, navigationMetadataProvider.Object, pipeline, new FieldsMapper(), populator.Object, new FieldsProjector())
+            : new EntityQueryService<FieldsEntity, FieldsEntityDTO, int>(
+                unitOfWork.Object, navigationMetadataProvider.Object, pipeline, new FieldsMapper(), populator.Object);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_Projected_ShapesADtoOnlyField()
+    {
+        var sut = CreateFieldsSut(withProjector: true);
+
+        var result = await sut.GetAllAsync(filters: null, fields: "Id,DisplayName");
+
+        result.IsSuccess.Should().BeTrue("fields= names DTO properties, and the projected DTO carries DisplayName");
+        result.Value!.Items.Cast<IDictionary<string, object?>>()
+            .Select(shaped => shaped["displayName"])
+            .Should().BeEquivalentTo(["display:a", "display:b"]);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_Projected_RefusesAnEntityOnlyField()
+    {
+        var sut = CreateFieldsSut(withProjector: true);
+
+        var result = await sut.GetAllAsync(filters: null, fields: "InternalNote");
+
+        result.IsFailure.Should().BeTrue("a field with no DTO accessor would shape every row into an empty object");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_NotProjected_RefusesAnEntityOnlyField()
+    {
+        var sut = CreateFieldsSut(withProjector: false);
+
+        var result = await sut.GetAllAsync(filters: null, fields: "InternalNote");
+
+        result.IsFailure.Should().BeTrue("a field with no DTO accessor would shape every row into an empty object");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_NotProjected_StillRequiresAWritableEntityProperty()
+    {
+        var sut = CreateFieldsSut(withProjector: false);
+
+        var result = await sut.GetAllAsync(filters: null, fields: "DisplayName");
+
+        result.IsFailure.Should().BeTrue(
+            "the entity path narrows the entity with a MemberInit, which cannot bind a name the entity lacks");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_NotProjected_ShapesAFieldTheEntityAndDtoShare()
+    {
+        var sut = CreateFieldsSut(withProjector: false);
+
+        var result = await sut.GetAllAsync(filters: null, fields: "Id,Name");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Items.Cast<IDictionary<string, object?>>()
+            .Select(shaped => shaped["name"])
+            .Should().BeEquivalentTo(["a", "b"]);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RefusesAnEntityOnlyField()
+    {
+        var sut = CreateFieldsSut(withProjector: false);
+
+        var result = await sut.GetByIdAsync(1, fields: "InternalNote");
+
+        result.IsFailure.Should().BeTrue("a field with no DTO accessor would shape the row into an empty object");
     }
 }

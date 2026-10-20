@@ -564,6 +564,7 @@ public sealed partial class OutboxProcessor(
                         rowScope.ServiceProvider,
                         message.UserId,
                         message.UserRoles,
+                        message.UserPermissions,
                         message.TenantId,
                         message.CorrelationId,
                         OutboxPrincipalAuthenticationType);

@@ -32,6 +32,175 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.247.0] - 2026-10-20
+
+**Deferred work carries the raising user's permission claims, so every module database needs a
+migration.** `ApplicationDbContext` maps a new `UserPermissions` column (`nvarchar(max) NULL` on SQL
+Server: a JSON array of strings, unbounded and never truncated) on both `dbo.OutboxMessages` and
+`dbo.InternalCommands`. The broker hop carries the same value as the header
+`MessageHeaders.UserPermissions` (`MMCA-User-Permissions`), absent when the user holds no permission
+claim. The outbox processor, the internal-command processor and the broker consumer restore it as
+`permission` claims, so a command or event authorized by a claim-only grant passes the gate deferred
+exactly as it did inline. The `mfa` claim is deliberately not carried: deferred work never satisfies
+an `IRequiresMfa` gate.
+
+The fix:
+
+1. **Generate one migration per module database** that persists the outbox and internal-command
+   tables (every relational source with a migrations assembly), for example
+   `dotnet ef migrations add AddOriginUserPermissions -- --datasource <Name>`. Each holds exactly two
+   `AddColumn<string>` calls, `UserPermissions` on `OutboxMessages` and on `InternalCommands`,
+   nullable with no length. Anything else in the diff is unrelated model drift: investigate it before
+   committing.
+2. **Deploy it as usual.** The change is expand-only: old rows and old messages read as "no
+   permissions" (the previous behavior), and an older instance in a rolling deploy ignores the new
+   column and header.
+
+**Address columns keep the provider's Unicode default.** `OwnsAddress` no longer calls
+`IsUnicode(false)` on the columns of the six address properties (`AddressLine1`, `AddressLine2`, `City`,
+`State`, `ZipCode`, `Country`), so they map to `nvarchar` on SQL Server with the same lengths and
+required-ness.
+
+The fix:
+
+1. **A consumer that hand-overrode the columns to Unicode** after `OwnsAddress` deletes the override
+   block. Generate a migration to confirm: the model snapshot must not change for the address columns,
+   and nothing is committed.
+2. **A consumer on the old `varchar` default** generates a migration that alters the six columns to
+   `nvarchar` of the same length. It widens the type only, so existing values convert without loss.
+
+**Eight public signatures change or disappear.**
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `ConfirmTwoFactorEnrollmentHandlerBase(ITwoFactorService twoFactorService, ITwoFactorStore store, ILogger logger)` | `ConfirmTwoFactorEnrollmentHandlerBase(ITwoFactorService twoFactorService, ITwoFactorAuthenticator authenticator, ITwoFactorStore store, ILoginProtectionService loginProtection, ILogger logger)` |
+| `DisableTwoFactorHandlerBase(ITwoFactorAuthenticator authenticator, ITwoFactorStore store, ILogger logger)` | `DisableTwoFactorHandlerBase(ITwoFactorAuthenticator authenticator, ITwoFactorStore store, ILoginProtectionService loginProtection, ILogger logger)` |
+| `RegenerateRecoveryCodesHandlerBase(ITwoFactorAuthenticator authenticator, ITwoFactorService twoFactorService, ITwoFactorStore store, ILogger logger)` | `RegenerateRecoveryCodesHandlerBase(ITwoFactorAuthenticator authenticator, ITwoFactorService twoFactorService, ITwoFactorStore store, ILoginProtectionService loginProtection, ILogger logger)` |
+| `ITwoFactorAuthenticator` without an enrollment check | adds `Task<bool> VerifyEnrollmentCodeAsync(UserIdentifierType userId, string secret, string? code, CancellationToken cancellationToken = default)` |
+| `EfInboxStore(IDbContextFactory dbContextFactory, IDataSourceResolver dataSourceResolver, IOptions<OutboxSettings> outboxOptions, ILogger<EfInboxStore> logger, TimeProvider timeProvider)` | `EfInboxStore(IDbContextFactory dbContextFactory, IDataSourceResolver dataSourceResolver, IOptions<OutboxSettings> outboxOptions, ICurrentUserService currentUserService, ILogger<EfInboxStore> logger, TimeProvider timeProvider)` |
+| `StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue(TSelf? identifier)` | removed; Mapperly lifts `Nullable<TSelf>` through `ToValue` |
+| `StronglyTypedIdMappings<TSelf, TValue>.ToNullableIdentifier(TValue? value)` | removed; Mapperly lifts `Nullable<TValue>` through `ToIdentifier` |
+| `override Login.OnAfterRenderAsync(bool firstRender)` (MMCA.Common.UI) | removed; the OAuth attempt is minted at the provider click |
+
+The fix:
+
+1. **Each app's 2FA handler subclass** adds `ILoginProtectionService loginProtection` (namespace
+   `MMCA.Common.Application.Auth`, registered by `AddInfrastructure`) to its constructor and passes it
+   to the base before the logger; the confirm handler also adds `ITwoFactorAuthenticator
+   authenticator` (namespace `MMCA.Common.Application.Auth.TwoFactor`) after the two-factor service.
+   A unit test that builds the handler passes a mock of each.
+2. **A custom `ITwoFactorAuthenticator`** implements `VerifyEnrollmentCodeAsync`: verify `code`
+   against the pending `secret` and accept each time step at most once per account, sharing the
+   replay record `ChallengeAsync` uses, with no recovery-code fallback. The shipped
+   `TwoFactorAuthenticator` already does. A Moq mock needs no change unless it is strict.
+3. **Code that constructs `EfInboxStore` by hand** passes an `ICurrentUserService` (namespace
+   `MMCA.Common.Application.Interfaces.Infrastructure.Auth`) as the fourth argument. A host that
+   resolves it from DI needs nothing.
+4. **A Mapperly mapper that referenced `ToNullableValue` or `ToNullableIdentifier`** through
+   `[UseStaticMapper]` or `[MapProperty(Use = ...)]` deletes the reference; the non-nullable
+   `ToValue` / `ToIdentifier` pair covers the nullable members.
+5. **A `Login` subclass that overrode `OnAfterRenderAsync` and called the base** still compiles; one
+   that relied on the attempt being minted at render reads it at the click instead.
+
+**Behavior an app will notice.** No signature changes for these, but a test, a client or an
+operator can see the difference.
+
+1. **`fields=` is validated against the DTO.** Each name must resolve through the controller's
+   DTO-to-entity map, its field contract or a DTO property, as sort and filter keys do. An entity-only
+   name that the DTO does not expose now fails validation (400) instead of returning empty objects; a
+   DTO-only computed member is accepted on a projected read. A non-projected or by-id read still also
+   requires a writable entity property. Fix a client that sent entity names to send the DTO's.
+2. **Second-factor codes have a lockout.** Confirm, disable and regenerate count a wrong code against
+   `two-factor:{userId}`, separate from the sign-in counter (keyed by email) and from
+   `password-change:{userId}`, so a lockout there never blocks signing in. Confirm answers 409
+   `Authentication.TwoFactorAlreadyEnabled` for an account whose factor is already active (disable it
+   first), and the code that confirmed enrollment cannot be replayed at the first sign-in challenge. A
+   test that confirms twice, or reuses one TOTP code across confirm and sign-in, changes.
+3. **Password reset revokes sessions before it applies the password.** `ResetPasswordHandlerBase`
+   revokes every live refresh session as soon as the reset token is redeemed, and the revocation
+   stands even when the aggregate then rejects the new password. A revoke failure throws: the
+   password and the lockout are unchanged, the link is already spent, and the user requests a new one.
+   `ChangePasswordHandlerBase` saves the revocation before the explicit password save; that save
+   carries the already-mutated user too, so the two are atomic only when users and refresh sessions
+   share one data source (see its remarks). Run the app's `ResetPasswordHandlerTests` and
+   `ChangePasswordHandlerTests` (or their equivalents): an assertion on call order or save count may change.
+4. **`POST /auth/session-cookie` answers 400 for a missing or blank token.** The body is a
+   `ValidationProblem` keyed `accessToken` and `refreshToken`, where it used to be a 500; a
+   claims-only host still answers 204.
+5. **Retries are narrower.** The typed gRPC client retries an `HttpRequestException` only for
+   `NameResolutionError`, `ConnectionError` or `SecureConnectionError`. The UI API client resends a
+   POST or PATCH without an `Idempotency-Key` only after one of those pre-send failures; GET, PUT,
+   DELETE and keyed writes keep the previous retry. A caller that relied on a post-send failure being
+   resent sends an `Idempotency-Key` or handles the error.
+6. **`PUT /Notifications/Devices` can answer 409 `PushDevice.InstallationConflict`.** An installation
+   id tagged to another user is handed over only when the request presents that installation's
+   current push channel (the same device changing hands); otherwise the upsert does not overwrite.
+   `MauiPushRegistrationService` mints and persists a new installation id on that 409 and retries
+   once. A custom client does the same; an app's OpenAPI baseline gains the 409 response.
+7. **The Login page's web provider buttons are `<button>`s.** Apple, Google and GitHub no longer
+   render `<a href>`; the OAuth attempt is minted at the click (its lifetime starts there, and the
+   latest click wins across tabs) and the page navigates with a forced load. The MAUI broker buttons
+   are unchanged. An E2E test that selected the anchors or read their `href` selects the button by
+   its text.
+8. **Notification history is server-paged.** `NotificationList` reads 20 notifications per page
+   through `MudPagination` instead of one 50-row read, and a failed load shows an inline error with
+   Retry instead of the empty state (the inbox does too).
+9. **`DataGridListPageBase.OnRestoredStateAppliedAsync(bool needsReload)` is the restore hook.** A
+   list page without a `GridRef` (a card list, say) overrides it and reloads its own data when
+   `needsReload` is true, since a state restored late from `sessionStorage` arrives after the first
+   load ran with defaults.
+10. **The Redis user needs script permission.** `RedisFixedWindowRateLimiter` runs one Lua script
+    (`EVAL`/`EVALSHA`); an ACL user without `+@scripting` fails every rate-limited request. Grant it
+    before deploying.
+11. **The gateway validates its nested settings at startup.** `AddMmcaGateway` (both overloads)
+    throws a `ValidationException` at registration for a blank `TraceHeaders.RouteHeaderName` or
+    `ClusterHeaderName`, or a blank passive or active `HealthCheckDefaults` policy or active path, and
+    the configuration overload re-checks on start through `GatewaySettingsValidator`. A blank value in
+    configuration now stops the host instead of failing each proxied request.
+12. **`JwtSettings` lifetimes must be at least 1.** A zero or negative
+    `AccessTokenExpirationMinutes` or `RefreshTokenExpirationDays` fails startup.
+13. **A streamed AI call abandoned early records `canceled`.** `mmca.ai.call.duration` tags a stream
+    whose consumer stopped enumerating before its end with outcome `canceled` (it was `success`);
+    the usage delivered so far is still counted. A dashboard or alert that keys on the outcome
+    tag picks up the new value.
+14. **`RedactionPlaceholder` is literal text.** `ContentPolicyGuardrail` inserts
+    `ContentPolicySettings.RedactionPlaceholder` verbatim, so a `$1` or `$&` in it is no longer a regex
+    substitution.
+15. **Key rotation needs `EncryptedStringConverter.MarkForReEncryption`.** Loading an entity and
+    saving it does not rewrite an unchanged encrypted column, so its old version byte stays. The
+    background re-encryption loads each entity, calls `MarkForReEncryption(context.Entry(entity))`
+    (and on each owned entry that holds an encrypted property), then saves.
+
+**The fitness and test bases are stricter.** A consumer subclassing them can see a new failure on
+code that passed before (each is a gap the base used to miss); two of them also stop a false report.
+
+1. **`FormsConventionTestsBase`** strips `@* *@` and `<!-- -->` comments before checking the create-form
+   and inline password-form markers, so a marker that only appears in a comment fails. Restore the
+   real marker.
+2. **`KeyboardOperabilityTestsBase`** counts a `box-shadow` as a focus indicator only when it
+   differs from the same element's blurred `box-shadow` (the check blurs and refocuses each Tab stop).
+   An element whose only indicator was a resting elevation shadow needs a visible focus style.
+3. **`MarkupSnapshot`** with `UPDATE_SNAPSHOTS=1` rewrites the baseline and reports a non-match.
+   Review and commit the refreshed baseline, then re-run without the variable; a CI job that sets it
+   now fails.
+4. **`StateManagementConventionTestsBase`** reports only what `AddSingleton` itself registers (a
+   scoped call chained after it is no longer reported) and skips only folders with `Testing` as a whole
+   dot-separated part, so a folder such as `TestingHelpers` is now scanned.
+5. **The inline-style rule** flags `style='...'` and `Style=@expr` as well as `style="..."`, and skips
+   `@code` and `@functions` blocks. Move the flagged styles to CSS classes.
+6. **`RouteAuthorizationTestsBase`** reads every `AuthorizeAttribute` on a page, own and inherited,
+   and passes when any of them names the role. A page that failed only because a policy-only sibling
+   attribute came first now passes.
+7. **The error catalog** reads codes built through `Error.TooManyRequests`, so they are held to the
+   uniqueness and prefix gates. Rename a duplicated or unprefixed code.
+8. **`ObservabilityConventionTestsBase`** pairs an alert key with a runbook heading only as a whole
+   token: `-alert-{key}`, an optional `-v{digits}` suffix, then the end of the heading, whitespace,
+   `(` or a backtick. A key that was satisfied only as a prefix of another alert's heading now reports
+   a missing runbook section. The match is `protected static bool HeadingNamesAlert(string heading,
+   string key)` for a subclass that pairs its own way.
+
 ## [1.246.0] - 2026-10-19
 
 **`PiiConventionTestsBase` checks erasure in both directions.** Two facts and one overridable member

@@ -138,6 +138,21 @@ public sealed class ContentPolicyGuardrailTests
         redacted[0].Text.Should().Be("[removed], please");
     }
 
+    // L202: the placeholder is literal text, not a Regex replacement pattern, so "$&" cannot put the
+    // matched injection marker back and "$$" is not collapsed.
+    [Theory]
+    [InlineData("[removed $&]", "[removed $&], please")]
+    [InlineData("[removed $0]", "[removed $0], please")]
+    [InlineData("$$", "$$, please")]
+    public void TheRedactionPlaceholder_IsInsertedLiterally(string placeholder, string expected)
+    {
+        var guardrail = Guardrail(new ContentPolicySettings { RedactionPlaceholder = placeholder });
+
+        var redacted = guardrail.Redact([new ChatMessage(ChatRole.User, "do anything now, please")]);
+
+        redacted[0].Text.Should().Be(expected);
+    }
+
     [Fact]
     public async Task ABlockedResponsePattern_RefusesTheAnswerWithoutEchoingIt()
     {

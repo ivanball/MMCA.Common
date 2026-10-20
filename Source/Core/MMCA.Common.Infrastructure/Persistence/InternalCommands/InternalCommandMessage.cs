@@ -121,6 +121,14 @@ public sealed class InternalCommandMessage
     public string? UserRoles { get; init; }
 
     /// <summary>
+    /// Gets the scheduling user's permission claims, stored as a JSON array of strings and restored
+    /// as <c>permission</c> claims at execution time, so a command the scheduling request was
+    /// granted only through a claim (a stored grant minted by another service) passes the same gate
+    /// deferred. Unbounded and never truncated. Null when the user held no permission claim.
+    /// </summary>
+    public string? UserPermissions { get; init; }
+
+    /// <summary>
     /// Gets the tenant the command was scheduled under, restored onto the execution scope so a
     /// deferred command reads and writes the same tenant's rows the scheduling request did.
     /// </summary>
@@ -154,6 +162,7 @@ public sealed class InternalCommandMessage
             SpanId = context.SpanId,
             UserId = context.UserId,
             UserRoles = context.UserRoles,
+            UserPermissions = context.UserPermissions,
             TenantId = context.TenantId,
         };
     }

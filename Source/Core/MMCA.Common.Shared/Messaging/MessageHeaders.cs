@@ -30,6 +30,13 @@ public static class MessageHeaders
     /// <summary>The publishing user's roles as a comma-separated list, absent when they hold none.</summary>
     public const string UserRoles = "MMCA-User-Roles";
 
+    /// <summary>
+    /// The publishing user's permission claims as a JSON array of strings, absent when they hold
+    /// none. Carried in full, never truncated: a missing permission would deny the consumer what the
+    /// publisher was allowed to do.
+    /// </summary>
+    public const string UserPermissions = "MMCA-User-Permissions";
+
     /// <summary>The correlation id of the interaction that produced the message.</summary>
     public const string CorrelationId = "MMCA-Correlation-Id";
 }

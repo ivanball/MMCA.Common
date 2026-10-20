@@ -202,6 +202,21 @@ public sealed class OutboxAdministrationTests : IDisposable
         count.Value.Should().Be(2, "dead letters are not pending work, and processed rows are done");
     }
 
+    // L180: skip + take in int arithmetic wraps negative near int.MaxValue; SQLite would read the
+    // wrapped LIMIT as "no limit", while SQL Server and PostgreSQL reject it and fail the call.
+    [Fact]
+    public async Task ListDeadLetters_WithASkipNearIntMax_SendsNoNegativeLimitAndReturnsAnEmptyPage()
+    {
+        await SeedAsync(DeadLetter(Origin.AddHours(-1), orderingKey: null));
+
+        var result = await _sut.ListDeadLettersAsync(null, skip: int.MaxValue - 5, take: 10, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEmpty("a page past the end is empty, not an error");
+        _context.NegativeParameters.Negatives.Should().BeEmpty(
+            "a wrapped negative page size is rejected by SQL Server and PostgreSQL");
+    }
+
     // ── Helpers ──
     private static OutboxMessage DeadLetter(DateTime occurredOn, string? orderingKey) => new()
     {
@@ -252,14 +267,19 @@ public sealed class OutboxAdministrationTests : IDisposable
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             ServiceProvider provider = services.BuildServiceProvider();
 
+            var recorder = new NegativeParameterRecorder();
             var options = new DbContextOptionsBuilder<AdminTestContext>()
                 .UseSqlite(connection)
+                .AddInterceptors(recorder)
                 .Options;
 
-            var context = new AdminTestContext(options, provider);
+            var context = new AdminTestContext(options, provider) { NegativeParameters = recorder };
             context.Database.EnsureCreated();
             return context;
         }
+
+        /// <summary>Gets the negative integer parameters this context's queries sent.</summary>
+        public NegativeParameterRecorder NegativeParameters { get; private init; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) =>
             modelBuilder.Entity<OutboxMessage>(entity =>

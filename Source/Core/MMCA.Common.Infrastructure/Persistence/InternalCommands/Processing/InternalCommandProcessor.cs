@@ -484,6 +484,7 @@ public sealed partial class InternalCommandProcessor(
             executionScope.ServiceProvider,
             row.UserId,
             row.UserRoles,
+            row.UserPermissions,
             row.TenantId,
             row.CorrelationId,
             PrincipalAuthenticationType);

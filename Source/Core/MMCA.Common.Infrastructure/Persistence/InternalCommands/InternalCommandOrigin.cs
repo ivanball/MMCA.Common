@@ -9,6 +9,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 /// </summary>
 /// <param name="UserId">The scheduling user's id, or null for system-scheduled work.</param>
 /// <param name="UserRoles">The scheduling user's roles as a comma-separated list, or null.</param>
+/// <param name="UserPermissions">The scheduling user's permission claims as a JSON array, or null.</param>
 /// <param name="TenantId">The tenant the scheduling scope was resolved to, or null.</param>
 /// <param name="CorrelationId">The scheduling request's correlation id, or null.</param>
 /// <param name="TraceId">The W3C trace id current at schedule time, or null.</param>
@@ -16,6 +17,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 internal readonly record struct InternalCommandOrigin(
     UserIdentifierType? UserId,
     string? UserRoles,
+    string? UserPermissions,
     string? TenantId,
     string? CorrelationId,
     string? TraceId,

@@ -1366,7 +1366,6 @@ override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnParametersSe
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RestoreFilters(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! filters) -> void
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SaveFilters(System.Collections.Generic.Dictionary<string!, string!>! filters) -> void
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Title.get -> string!
-override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Login.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.OAuthComplete.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1517,6 +1516,7 @@ virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.GridRef.get -> MudBlazor.MudDataGrid<TDto>?
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnMobileDataRequestedAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnRestoredStateAppliedAsync(bool needsReload) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RestoreFilters(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! filters) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.SaveFilters(System.Collections.Generic.Dictionary<string!, string!>! filters) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool

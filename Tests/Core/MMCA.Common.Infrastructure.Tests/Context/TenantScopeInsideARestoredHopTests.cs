@@ -28,7 +28,7 @@ public sealed class TenantScopeInsideARestoredHopTests
     {
         using var provider = CreateProvider();
         using var hopScope = provider.CreateScope();
-        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, "tenant-a", "corr-1", "Test");
+        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, null, "tenant-a", "corr-1", "Test");
 
         using var scope = provider.GetRequiredService<IServiceScopeFactory>()
             .CreateTenantScope(new TenantDataSourceTarget(Source, "tenant-b"));
@@ -41,7 +41,7 @@ public sealed class TenantScopeInsideARestoredHopTests
     {
         using var provider = CreateProvider();
         using var hopScope = provider.CreateScope();
-        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, "tenant-a", "corr-1", "Test");
+        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, null, "tenant-a", "corr-1", "Test");
 
         using var scope = provider.GetRequiredService<IServiceScopeFactory>()
             .CreateTenantScope(new TenantDataSourceTarget(Source, TenantId: null));
@@ -55,7 +55,7 @@ public sealed class TenantScopeInsideARestoredHopTests
     {
         using var provider = CreateProvider();
         using var hopScope = provider.CreateScope();
-        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, "tenant-a", "corr-1", "Test");
+        using var origin = AmbientOrigin.Restore(hopScope.ServiceProvider, 7, null, null, "tenant-a", "corr-1", "Test");
 
         using var scope = provider.CreateScope();
 

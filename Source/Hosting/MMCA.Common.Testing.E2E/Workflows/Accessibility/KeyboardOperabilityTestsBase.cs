@@ -22,7 +22,9 @@ namespace MMCA.Common.Testing.E2E.Workflows.Accessibility;
 /// it;</description></item>
 /// <item><description>on every page in <see cref="PagePaths"/>, each of the first Tab stops shows a
 /// visible focus indicator: a computed <c>outline-style</c> other than <c>none</c> with a non-zero
-/// <c>outline-width</c>, or a <c>box-shadow</c> other than <c>none</c>.</description></item>
+/// <c>outline-width</c>, or a <c>box-shadow</c> other than <c>none</c> that differs from the same
+/// element's box-shadow once blurred (a resting elevation shadow is not a focus
+/// indicator).</description></item>
 /// </list>
 /// </summary>
 /// <remarks>
@@ -56,6 +58,20 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
         + " const timer = setInterval(() => { ticks++;"
         + " if (document.activeElement === last) { stable++; } else { last = document.activeElement; stable = 0; }"
         + " if (stable >= 3 || ticks >= 60) { clearInterval(timer); resolve(); } }, 50); })";
+
+    /// <summary>
+    /// Reads the focused element's outline and box-shadow, then blurs it, reads its box-shadow again
+    /// and focuses it back, so the next Tab continues from the same place. Running CSS transitions on
+    /// the element are finished before each read, so neither read lands mid-transition (a blur that
+    /// starts a shadow transition would otherwise still report the focused value).
+    /// </summary>
+    private const string FocusStyleScript =
+        "() => { const e = document.activeElement;"
+        + " const settle = () => { if (typeof CSSTransition === 'undefined' || !e.getAnimations) { return; }"
+        + " for (const a of e.getAnimations()) { if (a instanceof CSSTransition) { try { a.finish(); } catch { } } } };"
+        + " settle(); const f = getComputedStyle(e); const focused = [f.outlineStyle, f.outlineWidth, f.boxShadow];"
+        + " e.blur(); settle(); const unfocusedShadow = getComputedStyle(e).boxShadow;"
+        + " e.focus(); return [...focused, unfocusedShadow, e.outerHTML.slice(0, 200)]; }";
 
     protected KeyboardOperabilityTestsBase(PlaywrightFixture fixture)
         : base(fixture)
@@ -206,15 +222,18 @@ public abstract class KeyboardOperabilityTestsBase : E2ETestBase
             {
                 await Page.Keyboard.PressAsync("Tab").ConfigureAwait(false);
 
-                var style = await Page.EvaluateAsync<string[]>(
-                    "() => { const e = document.activeElement; const s = getComputedStyle(e);"
-                    + " return [s.outlineStyle, s.outlineWidth, s.boxShadow, e.outerHTML.slice(0, 200)]; }").ConfigureAwait(false);
+                // [0..2] focused outline-style, outline-width, box-shadow; [3] the same element's
+                // box-shadow once blurred; [4] its markup.
+                var style = await Page.EvaluateAsync<string[]>(FocusStyleScript).ConfigureAwait(false);
                 var outlineVisible = style[0] != "none" && style[1] != "0px";
-                var boxShadowVisible = style[2] != "none";
+
+                // A box-shadow counts only when focus changed it: an elevated button carries a resting
+                // shadow whether focused or not, so its shadow alone proves nothing about focus.
+                var boxShadowVisible = style[2] != "none" && !string.Equals(style[2], style[3], StringComparison.Ordinal);
 
                 (outlineVisible || boxShadowVisible).Should().BeTrue(
                     string.Create(CultureInfo.InvariantCulture, $"Tab stop {stop} on {path} must show a visible focus indicator, but computed outline-style '{style[0]}', "
-                    + $"outline-width '{style[1]}', box-shadow '{style[2]}' on: {style[3]}"));
+                    + $"outline-width '{style[1]}', box-shadow '{style[2]}' (unfocused box-shadow '{style[3]}', so a shadow only counts when focus changes it) on: {style[4]}"));
             }
         }
     }

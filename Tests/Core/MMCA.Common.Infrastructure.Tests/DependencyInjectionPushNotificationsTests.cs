@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Notifications.Live;
 using MMCA.Common.Infrastructure.Notifications.Push;
 
@@ -113,6 +114,21 @@ public sealed class DependencyInjectionPushNotificationsTests
 
         descriptor.Should().NotBeNull();
         descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
+    }
+
+    // L182: AddSignalR registers its DefaultUserIdProvider first, so the claim-based provider must
+    // REPLACE it; a TryAdd leaves SignalR's default as the one that resolves.
+    [Fact]
+    public void AddPushNotifications_ResolvesClaimBasedUserIdProvider()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateConfigurationWithRedis();
+
+        services.AddPushNotifications(config);
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<Microsoft.AspNetCore.SignalR.IUserIdProvider>()
+            .Should().BeOfType<ClaimBasedUserIdProvider>("a principal carrying only the raw sub claim must still map to its user");
     }
 
     // ── AddPushNotifications registers SignalR hub services ──

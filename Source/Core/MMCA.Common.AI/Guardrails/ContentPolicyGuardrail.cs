@@ -353,10 +353,13 @@ public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatReques
 
     private string RedactText(string value)
     {
+        // A MatchEvaluator rather than the replacement-string overload: the placeholder is literal text,
+        // and as a replacement pattern "$&" or "$0" would put the matched marker straight back.
+        var placeholder = _settings.RedactionPlaceholder;
         var current = value;
         foreach (var marker in _requestMarkers)
         {
-            current = marker.Pattern.Replace(current, _settings.RedactionPlaceholder);
+            current = marker.Pattern.Replace(current, _ => placeholder);
         }
 
         return current;

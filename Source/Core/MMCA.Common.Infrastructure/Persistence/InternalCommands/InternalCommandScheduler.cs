@@ -43,7 +43,7 @@ internal sealed partial class InternalCommandScheduler(
     TimeProvider timeProvider) : IInternalCommandScheduler
 {
     /// <summary>
-    /// Column width of <c>UserRoles</c>; a longer list is truncated to fit. Shared with the outbox's
+    /// Column width of <c>UserRoles</c>; a longer list keeps only the whole roles that fit. Shared with the outbox's
     /// column of the same name through <see cref="AmbientOrigin.MaxRolesLength"/>, so the two hops
     /// cannot disagree about what fits.
     /// </summary>
@@ -82,10 +82,12 @@ internal sealed partial class InternalCommandScheduler(
         // that has already slipped wants the work done immediately, not an error to handle.
         var scheduledOn = runAt is { } at && at.UtcDateTime > now ? at.UtcDateTime : now;
 
+        var origin = originCapture.Capture();
+
         InternalCommandMessage row;
         try
         {
-            row = InternalCommandMessage.FromCommand(command, scheduledOn, now, originCapture.Capture());
+            row = InternalCommandMessage.FromCommand(command, scheduledOn, now, origin);
         }
         catch (NotSupportedException ex)
         {
@@ -115,9 +117,11 @@ internal sealed partial class InternalCommandScheduler(
             return Result.Success(row.Id);
         }
 
-        // Plain SaveChangesAsync without a user id: InternalCommandMessage is neither auditable nor
-        // an aggregate root, so the interceptors have nothing to stamp and no events to capture.
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Saved as the scheduling user. The row itself is neither auditable nor an aggregate root,
+        // but the context is the one the calling handler's repositories share, so anything else it
+        // has pending is flushed by this save too and must be stamped with the real user, not as
+        // the system.
+        await context.SaveChangesAsync(origin.UserId, cancellationToken).ConfigureAwait(false);
 
         // Signalled whether or not the row is due yet. A due row runs on the wake; a not-yet-due row
         // costs one fetch and re-arms the processor's smart wait on its ScheduledOn, which it would

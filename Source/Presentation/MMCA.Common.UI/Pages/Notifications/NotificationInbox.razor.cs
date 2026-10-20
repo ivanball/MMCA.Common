@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
@@ -56,6 +57,9 @@ public partial class NotificationInbox : IDisposable
     private List<UserNotificationDTO> _notifications = [];
     private int _currentPage = 1;
     private int _totalPages = 1;
+
+    /// <summary>The last load's outcome; a failure renders inline with a retry instead of the empty state.</summary>
+    private Result? _loadResult;
 
     /// <summary>A push arrived while a load was in flight and still owes the list one reload.</summary>
     private bool _refreshPending;
@@ -211,14 +215,20 @@ public partial class NotificationInbox : IDisposable
         StateHasChanged();
     }
 
-    private async Task LoadNotificationsAsync()
+    /// <summary>Loads <see cref="_currentPage"/>.</summary>
+    /// <returns><see langword="true"/> when the page loaded.</returns>
+    private async Task<bool> LoadNotificationsAsync()
     {
+        var loaded = false;
         IsLoading = true;
+        _loadResult = null;
         try
         {
             var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.LifetimeToken());
+            _loadResult = result;
             if (result.TryGetValue(out var page))
             {
+                loaded = true;
                 _notifications = [.. page.Items];
                 _totalPages = (int)Math.Ceiling((double)page.PaginationMetadata.TotalItemCount / PageSize);
                 if (_totalPages < 1)
@@ -255,12 +265,22 @@ public partial class NotificationInbox : IDisposable
             _refreshPending = false;
             await RefreshFromPushAsync();
         }
+
+        return loaded;
     }
 
-    private Task OnPageChangedAsync(int page)
+    /// <summary>
+    /// Moves to <paramref name="page"/>. A failed load keeps the previous page's rows on screen
+    /// (L190), so the pager goes back to the page those rows belong to.
+    /// </summary>
+    private async Task OnPageChangedAsync(int page)
     {
+        var previous = _currentPage;
         _currentPage = page;
-        return LoadNotificationsAsync();
+        if (!await LoadNotificationsAsync())
+        {
+            _currentPage = previous;
+        }
     }
 
     private async Task MarkReadAsync(UserNotificationDTO notification)

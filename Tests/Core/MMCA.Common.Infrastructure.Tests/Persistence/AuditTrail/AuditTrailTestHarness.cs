@@ -13,6 +13,7 @@ using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.Encryption;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
@@ -110,6 +111,17 @@ public sealed class SensitiveThing : IAuditedEntity
     public string ApiKey { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// An opted-in entity whose secret column is encrypted at rest and carries no marker: the converter
+/// alone must keep the decrypted value out of the trail.
+/// </summary>
+public sealed class EncryptedThing : IAuditedEntity
+{
+    public int Id { get; set; }
+
+    public string SocialSecurityNumber { get; set; } = string.Empty;
+}
+
 /// <summary>An entity that never opted in; nothing it does may reach the trail.</summary>
 public sealed class PlainThing
 {
@@ -150,6 +162,8 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
     public DbSet<CredentialUser> CredentialUsers => Set<CredentialUser>();
 
     public DbSet<SensitiveThing> SensitiveThings => Set<SensitiveThing>();
+
+    public DbSet<EncryptedThing> EncryptedThings => Set<EncryptedThing>();
 
     public DbSet<CompositeKeyThing> CompositeKeyThings => Set<CompositeKeyThing>();
 
@@ -240,6 +254,14 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<EncryptedThing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.SocialSecurityNumber)
+                .HasConversion(new EncryptedStringConverter(EncryptedStringConverter.GenerateKey()));
         });
 
         modelBuilder.Entity<CompositeKeyThing>(entity => entity.HasKey(e => new { e.PartA, e.PartB }));

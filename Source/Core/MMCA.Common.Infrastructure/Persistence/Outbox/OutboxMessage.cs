@@ -108,6 +108,13 @@ public sealed class OutboxMessage
     public string? UserRoles { get; init; }
 
     /// <summary>
+    /// Gets the raising user's permission claims, stored as a JSON array of strings and restored as
+    /// <c>permission</c> claims at delivery time, so a handler authorizing on a claim-only grant sees
+    /// what the raising request saw. Unbounded and never truncated. Null when the user held none.
+    /// </summary>
+    public string? UserPermissions { get; init; }
+
+    /// <summary>
     /// Gets the correlation id of the request that raised the event, so the delivery (a poll cycle
     /// later, on another thread and possibly in another process) can be tied back to the interaction
     /// that produced it.
@@ -146,6 +153,7 @@ public sealed class OutboxMessage
             TenantId = origin.TenantId,
             UserId = origin.UserId,
             UserRoles = origin.UserRoles,
+            UserPermissions = origin.UserPermissions,
             CorrelationId = origin.CorrelationId,
 
             // Opt-in: an event that does not implement the contract keeps a null key and the

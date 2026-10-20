@@ -27,7 +27,11 @@ public sealed class RedisFixedWindowRateLimiterTests
 
         lease.IsAcquired.Should().BeTrue();
         database.Verify(
-            d => d.StringIncrementAsync(It.IsAny<RedisKey>(), 1L, It.IsAny<CommandFlags>()),
+            d => d.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.Is<RedisValue[]>(values => values[0] == 1L),
+                It.IsAny<CommandFlags>()),
             Times.Once);
     }
 
@@ -55,7 +59,8 @@ public sealed class RedisFixedWindowRateLimiterTests
 
     // Only the increment that CREATES the window's key sets its TTL. Re-stamping the expiry on
     // every request would slide the window forward for a caller who keeps hitting it, so the key
-    // would never expire and the allowance would never reset.
+    // would never expire and the allowance would never reset. The TTL now rides the increment's own
+    // script (L203), so what is pinned here is the TTL argument and the script's create-only guard.
     [Fact]
     public async Task AcquireAsync_OnTheFirstRequestOfAWindow_SetsTheKeyExpiry()
     {
@@ -65,10 +70,10 @@ public sealed class RedisFixedWindowRateLimiterTests
         using var lease = await sut.AcquireAsync();
 
         database.Verify(
-            d => d.KeyExpireAsync(
-                It.IsAny<RedisKey>(),
-                It.Is<TimeSpan?>(expiry => expiry > TimeSpan.FromSeconds(60)),
-                It.IsAny<ExpireWhen>(),
+            d => d.ScriptEvaluateAsync(
+                It.Is<string>(script => script.Contains("EXPIRE", StringComparison.Ordinal)),
+                It.IsAny<RedisKey[]>(),
+                It.Is<RedisValue[]>(values => values.Length == 2 && (int)values[1] > 60),
                 It.IsAny<CommandFlags>()),
             Times.Once);
     }
@@ -88,6 +93,34 @@ public sealed class RedisFixedWindowRateLimiterTests
                 It.IsAny<ExpireWhen>(),
                 It.IsAny<CommandFlags>()),
             Times.Never);
+
+        // The create-only decision now runs inside the script, on the server's own count.
+        RedisFixedWindowRateLimiter.IncrementScript.Should().Contain(
+            "if count <= tonumber(ARGV[1]) then",
+            "a later request of the same window must not reset the expiry");
+    }
+
+    // L203: a separate EXPIRE round trip after INCR leaves a key with no TTL forever if the process
+    // dies, the connection drops or the call times out between the two. The TTL must be set in the
+    // same atomic step as the increment, and no second command may follow it.
+    [Fact]
+    public async Task AcquireAsync_SetsTheExpiryAtomicallyWithTheIncrement()
+    {
+        var (connection, database) = CreateConnection(incrementResult: 1);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var lease = await sut.AcquireAsync();
+
+        database.Verify(
+            d => d.ScriptEvaluateAsync(
+                It.Is<string>(script => script.Contains("INCRBY", StringComparison.Ordinal)
+                    && script.Contains("EXPIRE", StringComparison.Ordinal)),
+                It.Is<RedisKey[]>(keys => keys.Length == 1),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()),
+            Times.Once);
+        database.Invocations.Should().ContainSingle(
+            "the increment and its TTL are one round trip; any second command reopens the window for a TTL-less key");
     }
 
     // The key must carry both the partition and the window, or two partitions would share an
@@ -97,9 +130,9 @@ public sealed class RedisFixedWindowRateLimiterTests
     {
         var (connection, database) = CreateConnection(incrementResult: 1);
         RedisKey capturedKey = default;
-        database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-            .Callback<RedisKey, long, CommandFlags>((key, _, _) => capturedKey = key)
-            .ReturnsAsync(1L);
+        database.Setup(d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Callback<string, RedisKey[]?, RedisValue[]?, CommandFlags>((_, keys, _, _) => capturedKey = keys![0])
+            .ReturnsAsync(RedisResult.Create((RedisValue)1L));
 
         var timeProvider = new FakeTimeProvider(FixedInstant);
         await using var sut = new RedisFixedWindowRateLimiter(
@@ -118,7 +151,7 @@ public sealed class RedisFixedWindowRateLimiterTests
     public async Task AcquireAsync_WhenRedisFaults_FailsOpen()
     {
         var database = new Mock<IDatabase>();
-        database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+        database.Setup(d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "down", innerException: null, CommandStatus.Unknown));
 
         var connection = new Mock<IConnectionMultiplexer>();
@@ -143,9 +176,7 @@ public sealed class RedisFixedWindowRateLimiterTests
         using var lease = await sut.AcquireAsync(permitCount: 6);
 
         lease.IsAcquired.Should().BeFalse();
-        database.Verify(
-            d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
-            Times.Never);
+        database.Invocations.Should().BeEmpty();
     }
 
     // The ASP.NET Core middleware tries AttemptAcquire FIRST and falls through to AcquireAsync only
@@ -160,9 +191,7 @@ public sealed class RedisFixedWindowRateLimiterTests
         using var lease = sut.AttemptAcquire();
 
         lease.IsAcquired.Should().BeFalse();
-        database.Verify(
-            d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
-            Times.Never);
+        database.Invocations.Should().BeEmpty();
     }
 
     // Reported rather than null so the owning PartitionedRateLimiter can evict partitions: keys
@@ -203,14 +232,8 @@ public sealed class RedisFixedWindowRateLimiterTests
     private static (Mock<IConnectionMultiplexer> Connection, Mock<IDatabase> Database) CreateConnection(long incrementResult)
     {
         var database = new Mock<IDatabase>();
-        database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(incrementResult);
-        database.Setup(d => d.KeyExpireAsync(
-                It.IsAny<RedisKey>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<ExpireWhen>(),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
+        database.Setup(d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisResult.Create((RedisValue)incrementResult));
 
         var connection = new Mock<IConnectionMultiplexer>();
         connection.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(database.Object);

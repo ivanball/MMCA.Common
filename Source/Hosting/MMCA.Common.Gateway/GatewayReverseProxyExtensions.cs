@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Gateway.Configuration;
 using MMCA.Common.Gateway.RateLimiting;
@@ -56,6 +57,11 @@ public static class GatewayReverseProxyExtensions
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            // ValidateDataAnnotations does not recurse into the nested trace-header and health-check
+            // objects, so their [Required] values are validated on start by this one.
+            builder.Services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<GatewaySettings>, GatewaySettingsValidator>());
+
             return Wire(builder, section.Get<GatewaySettings>() ?? new GatewaySettings());
         }
 
@@ -85,6 +91,10 @@ public static class GatewayReverseProxyExtensions
     /// <returns>The same builder for chaining.</returns>
     private static IReverseProxyBuilder Wire(IReverseProxyBuilder builder, GatewaySettings settings)
     {
+        // Fail-fast at registration for BOTH overloads, as AddGatewayRoutePolicies does for the route
+        // policies: a blank trace-header name would otherwise pass startup and throw from
+        // Headers.Remove("") on every proxied request.
+        GatewaySettingsValidator.ThrowIfInvalid(settings);
         builder.Services.AddGatewayRoutePolicies(settings);
 
         return builder

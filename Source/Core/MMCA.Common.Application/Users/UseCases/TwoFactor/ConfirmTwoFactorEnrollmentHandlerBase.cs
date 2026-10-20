@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
@@ -21,14 +22,25 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// Verification here is deliberately time-based only. A recovery code cannot confirm an enrollment,
 /// because the whole point of the step is proving the authenticator app really holds the secret.
 /// </para>
+/// <para>
+/// SECURITY (M228): an account whose factor is already active is refused, because the secret stays
+/// stored after enrollment and a time-based code alone would otherwise mint a fresh recovery set.
+/// The code is verified through <see cref="ITwoFactorAuthenticator.VerifyEnrollmentCodeAsync"/>, so
+/// its time step is accepted once, and a wrong code counts against the per-account second-factor
+/// budget the same way a wrong current password counts in the change-password workflow.
+/// </para>
 /// </remarks>
 /// <typeparam name="TCommand">The app's confirm-enrollment command record.</typeparam>
-/// <param name="twoFactorService">Verifies the code and generates the recovery codes.</param>
+/// <param name="twoFactorService">Generates the recovery codes.</param>
+/// <param name="authenticator">Verifies the code under the single-use time-step guard.</param>
 /// <param name="store">Reads the pending secret and activates the factor.</param>
+/// <param name="loginProtection">The failed-attempt counter and exponential lockout (ADR-029).</param>
 /// <param name="logger">Logger for the enrollment audit line.</param>
 public abstract partial class ConfirmTwoFactorEnrollmentHandlerBase<TCommand>(
     ITwoFactorService twoFactorService,
+    ITwoFactorAuthenticator authenticator,
     ITwoFactorStore store,
+    ILoginProtectionService loginProtection,
     ILogger logger) : ICommandHandler<TCommand, Result<TwoFactorRecoveryCodesResponse>>
     where TCommand : IUserScopedCommand<TwoFactorCodeRequest>
 {
@@ -52,10 +64,31 @@ public abstract partial class ConfirmTwoFactorEnrollmentHandlerBase<TCommand>(
                 TwoFactorErrors.TwoFactorEnrollmentMissing(HandlerName));
         }
 
-        if (!twoFactorService.VerifyCode(secret, command.Request.Code))
+        if (state.IsTwoFactorEnabled)
         {
+            return Result.Failure<TwoFactorRecoveryCodesResponse>(Error.Conflict(
+                "Authentication.TwoFactorAlreadyEnabled",
+                "Two-factor authentication is already enabled for this account. Disable it before enrolling again.",
+                HandlerName));
+        }
+
+        var protectionKey = TwoFactorAttemptKey.For(command.UserId);
+        var lockout = await loginProtection.CheckLockoutAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+        if (lockout.IsFailure)
+        {
+            return Result.Failure<TwoFactorRecoveryCodesResponse>(lockout.Errors);
+        }
+
+        var verified = await authenticator
+            .VerifyEnrollmentCodeAsync(command.UserId, secret, command.Request.Code, cancellationToken)
+            .ConfigureAwait(false);
+        if (!verified)
+        {
+            await loginProtection.IncrementFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
             return Result.Failure<TwoFactorRecoveryCodesResponse>(TwoFactorErrors.TwoFactorInvalid(HandlerName));
         }
+
+        await loginProtection.ResetFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
 
         var recoveryCodes = twoFactorService.GenerateRecoveryCodes();
 

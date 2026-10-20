@@ -107,14 +107,16 @@ public static class EntityTypeBuilderExtensions
         /// default <c>"Address"</c> prefix that yields <c>AddressLine1</c> and <c>AddressLine2</c>
         /// rather than <c>AddressAddressLine1</c>, and <c>AddressCity</c>, <c>AddressState</c>,
         /// <c>AddressZipCode</c>, <c>AddressCountry</c> for the rest. That is exactly the mapping
-        /// the existing hand-written configurations declare, so adopting this helper is a zero-diff
-        /// model change: no migration, no snapshot churn.
+        /// the existing hand-written configurations declare, so adopting this helper changes no column
+        /// name, length or required-ness.
         /// </para>
         /// <para>
         /// <b>Fixed facets.</b> Max lengths come from <see cref="AddressInvariants"/> (the same
         /// constants the value object validates against, so a column can never be shorter than what
-        /// the domain accepts) and every column is non-Unicode <c>varchar</c>. Only
-        /// <see cref="Address.AddressLine1"/> is required, matching the value object, whose other
+        /// the domain accepts), and every column keeps the provider's Unicode default
+        /// (<c>nvarchar</c> on SQL Server): <see cref="Address"/> accepts free text in any script, so
+        /// a non-Unicode column would silently replace characters outside the database code page.
+        /// Only <see cref="Address.AddressLine1"/> is required, matching the value object, whose other
         /// five fields are optional to support international address formats.
         /// </para>
         /// </summary>
@@ -142,33 +144,27 @@ public static class EntityTypeBuilderExtensions
                 addressBuilder.Property(a => a.AddressLine1)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.AddressLine1)))
                     .HasMaxLength(AddressInvariants.AddressLine1MaxLength)
-                    .IsUnicode(false)
                     .IsRequired();
 
                 addressBuilder.Property(a => a.AddressLine2)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.AddressLine2)))
-                    .HasMaxLength(AddressInvariants.AddressLine2MaxLength)
-                    .IsUnicode(false);
+                    .HasMaxLength(AddressInvariants.AddressLine2MaxLength);
 
                 addressBuilder.Property(a => a.City)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.City)))
-                    .HasMaxLength(AddressInvariants.CityMaxLength)
-                    .IsUnicode(false);
+                    .HasMaxLength(AddressInvariants.CityMaxLength);
 
                 addressBuilder.Property(a => a.State)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.State)))
-                    .HasMaxLength(AddressInvariants.StateMaxLength)
-                    .IsUnicode(false);
+                    .HasMaxLength(AddressInvariants.StateMaxLength);
 
                 addressBuilder.Property(a => a.ZipCode)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.ZipCode)))
-                    .HasMaxLength(AddressInvariants.ZipCodeMaxLength)
-                    .IsUnicode(false);
+                    .HasMaxLength(AddressInvariants.ZipCodeMaxLength);
 
                 addressBuilder.Property(a => a.Country)
                     .HasColumnName(AddressColumn(columnPrefix, nameof(Address.Country)))
-                    .HasMaxLength(AddressInvariants.CountryMaxLength)
-                    .IsUnicode(false);
+                    .HasMaxLength(AddressInvariants.CountryMaxLength);
             });
 
             builder.Navigation(navigationExpression).IsRequired(required);

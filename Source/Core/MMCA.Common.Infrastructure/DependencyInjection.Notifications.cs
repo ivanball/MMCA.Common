@@ -64,7 +64,10 @@ public static partial class DependencyInjection
             // Replace the default Null implementations with the SignalR-backed ones.
             services.AddTransient<IPushNotificationSender, SignalRPushNotificationSender>();
             services.AddTransient<ILiveChannelPublisher, SignalRLiveChannelPublisher>();
-            services.TryAddSingleton<IUserIdProvider, ClaimBasedUserIdProvider>();
+            // Replace, not TryAdd: AddSignalR above already registered SignalR's DefaultUserIdProvider
+            // (NameIdentifier only), so a TryAdd here never took effect and a principal carrying only
+            // the raw sub claim got a null UserIdentifier.
+            services.Replace(ServiceDescriptor.Singleton<IUserIdProvider, ClaimBasedUserIdProvider>());
 
             return services;
         }

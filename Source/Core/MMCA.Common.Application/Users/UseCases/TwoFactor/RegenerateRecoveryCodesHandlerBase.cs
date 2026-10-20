@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
@@ -26,11 +27,17 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <param name="authenticator">Runs the challenge.</param>
 /// <param name="twoFactorService">Generates the replacement set.</param>
 /// <param name="store">Replaces the stored hashes.</param>
+/// <param name="loginProtection">
+/// The failed-attempt counter and exponential lockout (ADR-029). A wrong code counts against the
+/// per-account second-factor budget (M228), so the endpoint is not an unthrottled code oracle for a
+/// stolen-token holder.
+/// </param>
 /// <param name="logger">Logger for the audit line.</param>
 public abstract partial class RegenerateRecoveryCodesHandlerBase<TCommand>(
     ITwoFactorAuthenticator authenticator,
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
+    ILoginProtectionService loginProtection,
     ILogger logger) : ICommandHandler<TCommand, Result<TwoFactorRecoveryCodesResponse>>
     where TCommand : IUserScopedCommand<TwoFactorCodeRequest>
 {
@@ -47,11 +54,23 @@ public abstract partial class RegenerateRecoveryCodesHandlerBase<TCommand>(
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        var protectionKey = TwoFactorAttemptKey.For(command.UserId);
+        var lockout = await loginProtection.CheckLockoutAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+        if (lockout.IsFailure)
+        {
+            return Result.Failure<TwoFactorRecoveryCodesResponse>(lockout.Errors);
+        }
+
         var challenge = await authenticator
             .ChallengeAsync(command.UserId, command.Request.Code, cancellationToken)
             .ConfigureAwait(false);
         if (challenge.IsFailure)
         {
+            if (challenge.Errors.Any(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode))
+            {
+                await loginProtection.IncrementFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+            }
+
             return Result.Failure<TwoFactorRecoveryCodesResponse>(challenge.Errors);
         }
 
@@ -60,6 +79,8 @@ public abstract partial class RegenerateRecoveryCodesHandlerBase<TCommand>(
             return Result.Failure<TwoFactorRecoveryCodesResponse>(
                 TwoFactorErrors.TwoFactorNotEnrolled(HandlerName));
         }
+
+        await loginProtection.ResetFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
 
         var recoveryCodes = twoFactorService.GenerateRecoveryCodes();
 
