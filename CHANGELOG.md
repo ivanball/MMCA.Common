@@ -4,6 +4,86 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.247.0] - 2026-10-20
+
+### Added
+
+- **Breaking:** deferred work carries the raising user's permission claims (L181). `OutboxMessage.UserPermissions`, `InternalCommandMessage.UserPermissions` and `OutboxOrigin.UserPermissions` (`string?`, a JSON array of strings, null when the user held none) are mapped by `ApplicationDbContext` as new unbounded nullable columns on `OutboxMessages` and `InternalCommands`, and `BrokerMessageBus` sends them as the new `MessageHeaders.UserPermissions` header (`MMCA-User-Permissions`). The outbox processor, the internal-command processor and the broker consumer restore them as `permission` claims, so a claim-only grant passes the gate deferred exactly as inline. The `mfa` claim is still not carried. Every consumer generates one migration per module database.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- **Breaking:** `ITwoFactorAuthenticator.VerifyEnrollmentCodeAsync(UserIdentifierType userId, string secret, string? code, CancellationToken cancellationToken = default)` verifies a code against the pending secret under the same single-use time-step guard as `ChallengeAsync`, so the code that confirmed enrollment cannot be replayed against the first challenge (M228). A custom `ITwoFactorAuthenticator` must implement it; the shipped `TwoFactorAuthenticator` does.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- `EncryptedStringConverter.MarkForReEncryption(EntityEntry entry)` marks every property of the entry stored through an `EncryptedStringConverter` as modified and returns how many it marked, so the next save rewrites those columns under the current key version. A plain load-and-save does not re-encrypt; the rotation remarks say so (L177).
+- `DataGridListPageBase<TDto>.OnRestoredStateAppliedAsync(bool needsReload)` (protected virtual, no-op by default) runs once on the first interactive render after the saved list state is applied. `needsReload` is true when the state came late from `sessionStorage`; the base still reloads `GridRef` itself, so a page without one overrides the hook to reload its own data.
+
+### Changed
+
+- **Breaking:** the second-factor handler bases share a per-account lockout (M228). `ConfirmTwoFactorEnrollmentHandlerBase`, `DisableTwoFactorHandlerBase` and `RegenerateRecoveryCodesHandlerBase` take an `ILoginProtectionService`, and the confirm base also takes an `ITwoFactorAuthenticator`. A wrong code on any of the three counts against the key `two-factor:{userId}`, separate from the sign-in and change-password counters. Confirm returns 409 `Authentication.TwoFactorAlreadyEnabled` for an account whose factor is already active, and verifies through `VerifyEnrollmentCodeAsync`.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- **Breaking:** `EfInboxStore` takes an `ICurrentUserService` (between `outboxOptions` and `logger`) and saves as the consume scope's restored user (L179). A DI-resolved host is unaffected. The non-transactional `InternalCommandScheduler.ScheduleAsync` path also saves as the scheduling user.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- **Breaking:** `OwnsAddress` no longer forces `IsUnicode(false)` on the six address columns, which take the provider's Unicode default (`nvarchar` on SQL Server), so free text outside the database code page is no longer silently replaced (M232). A consumer on the old `varchar` columns gets a column-type migration; one that already overrode them to Unicode drops the override with no schema change.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- `fields=` is validated against `TEntityDTO` through `DTOToEntityPropertyMap`, `FieldContract` and the DTO's own properties, as sort and filter keys are (M227). A DTO-only computed member is accepted on a projected read, and an entity-only name that the DTO does not expose is a validation failure (400) instead of a page of empty objects. A non-projected or by-id read still also requires a writable entity property.
+- `ResetPasswordHandlerBase` revokes every live refresh session before it applies the new password, and the revocation stands when the aggregate then rejects that password; a revoke failure throws with the password and the lockout unchanged, and the reset link is already spent (M240). `ChangePasswordHandlerBase` saves the revocation before the explicit password save; its remarks document that the two are atomic only when users and refresh sessions share one data source.
+- `POST /auth/session-cookie` answers 400 `ValidationProblem` (keys `accessToken`, `refreshToken`) for a missing or blank token instead of a 500 (L184). A claims-only host still answers 204.
+- The typed gRPC client retry handles only pre-send `HttpRequestException`s (`NameResolutionError`, `ConnectionError`, `SecureConnectionError`); a post-send transport failure surfaces instead of being resent (M233).
+- The UI API client retry resends a POST or PATCH without an `Idempotency-Key` only after a pre-send failure (name resolution, connect, TLS). `AuthDelegatingHandler` records replay safety on the exception; an unmarked exception and every other method keep the previous retry (L185).
+- `PUT /Notifications/Devices` hands an installation tagged to another user over to the caller only when the request presents that installation's current push channel (the same device changing hands); otherwise the upsert does not overwrite and answers 409 `PushDevice.InstallationConflict` (L176). `MauiPushRegistrationService` mints and persists a new installation id on that 409 and retries once.
+- The Login page's web provider buttons (Apple, Google, GitHub) are `<button>`s instead of `<a href>` links, and the OAuth attempt is minted at the click with a forced-load navigation instead of at first render (M237). The MAUI broker buttons are unchanged.
+- `NotificationList` pages the history on the server (20 per page, `MudPagination` over `PaginationMetadata`) instead of reading one 50-row page, so the whole history is reachable (L191).
+- `RedisFixedWindowRateLimiter` increments its counter and sets the 65-second TTL in one Lua script (`EVAL`/`EVALSHA`), so a crash between the two can no longer leave a counter without expiry (L203). The Redis user needs script permission.
+- `AddMmcaGateway` (both overloads) throws a `ValidationException` at registration for a blank `TraceHeaders.RouteHeaderName` or `ClusterHeaderName`, or a blank passive or active `HealthCheckDefaults` policy or active path; the configuration overload also registers `GatewaySettingsValidator` on the options pipeline, which runs on start (L192).
+- `JwtSettings.AccessTokenExpirationMinutes` and `RefreshTokenExpirationDays` carry `[Range(1, int.MaxValue)]`, so a zero or negative lifetime fails host startup instead of every sign-in (L183).
+- `UsageRecordingChatClient` records a stream whose consumer stops enumerating before its end with the outcome `canceled` on `mmca.ai.call.duration`, keeping the usage the stream delivered so far (L201).
+- `ContentPolicyGuardrail` inserts `ContentPolicySettings.RedactionPlaceholder` as literal text; a `$` sequence in it is no longer a regex substitution (L202).
+- `FormsConventionTestsBase` strips Razor (`@* *@`) and HTML (`<!-- -->`) comments before the create-form and inline password-form marker checks, so a commented-out marker no longer counts. The check is public as `static IReadOnlyList<string> MissingMarkers(string markup, IEnumerable<string> markers)` (M238).
+- `KeyboardOperabilityTestsBase` accepts a `box-shadow` focus indicator only when it differs from the same element's blurred `box-shadow`; it blurs and refocuses each Tab stop to compare, so a resting elevation shadow is not a focus indicator (L193).
+- `MarkupSnapshot` reports a non-match when `UPDATE_SNAPSHOTS=1` refreshes a baseline, so a run that rewrites baselines never passes (L194).
+- `StateManagementConventionTestsBase` bounds the singleton-state match to `AddSingleton`'s own type-argument and argument lists, so a call chained after it is not reported, and skips only a directory with `Testing` as a whole dot-separated part, so folders such as `TestingHelpers` are scanned (L196).
+- The inline-style rule flags single-quoted (`style='...'`) and bare Razor-expression (`Style=@expr`) values and skips lines inside `@code` and `@functions` blocks (L197).
+- `RouteAuthorizationTestsBase` reads every `AuthorizeAttribute` on a page, own and inherited, so any instance naming the role satisfies the gate (L198).
+- The error catalog reads codes built through `Error.TooManyRequests`, so they are held to the uniqueness and prefix gates (L199).
+- `ObservabilityConventionTestsBase` pairs an alert key with a runbook heading only as a whole token: `-alert-{key}`, an optional `-v{digits}` suffix, then the end of the heading, whitespace, `(` or a backtick. Both pairing facts use it, through the new `protected static bool HeadingNamesAlert(string heading, string key)` (L195).
+
+### Fixed
+
+- The transactional catch rolls back best-effort and rethrows the original exception, so a throwing rollback no longer replaces the transient error the execution strategy judges; the `IDENTITY_INSERT` toggle-off is guarded the same way on the failure path (M229).
+- The stored-permission role administration resolves a role to one canonical spelling, and `EFPermissionGrantStore` reads and revokes every stored case-insensitive spelling of a role; grants write the canonical one (M230).
+- `EfInboxStore.CompleteAsync` confirms a staged row that is not in the `Added` state still exists and rewrites it when it is gone; `Abandon` no longer logs a false warning (M231).
+- The audit trail records the redaction token for a property stored through `EncryptedStringConverter`, which reaches it as decrypted plaintext (L178).
+- Outbox and internal-command dead-letter paging clamps `skip + take` instead of wrapping negative for a very deep page (L180).
+- The captured roles (the `MMCA-User-Roles` header and the outbox and internal-command roles columns) drop whole trailing roles when the value is truncated, never a partial role name (L181).
+- `ClaimBasedUserIdProvider` replaces SignalR's `DefaultUserIdProvider` instead of a `TryAdd` that never took effect, so a principal with only the `sub` claim gets a user identifier (L182).
+- The WASM and Server token stores bump a version on `SetTokens` and `ClearTokens`, again after the cookie clear completes; a hydrate that sees the version move discards its answer, so a hydrate started during a clear cannot keep a stale token (M234).
+- `ChangePasswordCard` raises its saving flag before the first await and ignores a second submit while a save runs (M235).
+- `DataGridListPageBase` checks for disposal after each await of its first-render setup and releases a late JS module, `DotNetObjectReference`, scroll listener and viewport subscription (M236).
+- `DirectApiTokenRefresher` (MAUI) reports 408, 429, 5xx, transport failures and timeouts as `TokenAcquisition.Unavailable` (only 400, 401 and 403 are `NoSession`) and disposes the response, so a transient failure no longer signs the user out (L186).
+- `InfiniteScrollObserver` holds its module in a `LazyJsModule`, so overlapping observes share one import (L187).
+- `NotificationBell` discards an unread-count read superseded by a newer one (L188).
+- `RoleAdminEdit` disables the permission checkboxes while saving and applies a save answer only while the same role is shown (L189).
+- `NotificationInbox` and `NotificationList` render an inline error with Retry instead of the empty state on a failed load, and keep the previous page on a failed page change (L190).
+- `PiiRedactionGuardrail` passes signed reasoning and unchanged items through by reference and keeps `AdditionalProperties`, `Annotations`, `InformationalOnly` and `Exception` on a rebuilt item. `RawRepresentation` is not copied onto a redacted item, because the OpenAI adapters send it verbatim (M239).
+
+### Removed
+
+- **Breaking:** `StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue` and `ToNullableIdentifier` (L200). Mapperly lifts `Nullable<TSelf>` natively through `ToValue` and `ToIdentifier`.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
+- **Breaking:** the `Login.OnAfterRenderAsync(bool firstRender)` override (MMCA.Common.UI), which minted the OAuth attempt at render (M237). The attempt is minted at the provider click, and the page no longer overrides the method.
+
+  Map and fix: UPGRADING.md, [1.247.0].
+
 ## [1.246.0] - 2026-10-19
 
 ### Added

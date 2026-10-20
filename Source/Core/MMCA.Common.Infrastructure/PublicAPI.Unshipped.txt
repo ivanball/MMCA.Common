@@ -1,10 +1,1 @@
 #nullable enable
-static MMCA.Common.Infrastructure.Persistence.Encryption.EncryptedStringConverter.MarkForReEncryption(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry! entry) -> int
-MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserPermissions.get -> string?
-MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserPermissions.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserPermissions.get -> string?
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserPermissions.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserPermissions.get -> string?
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserPermissions.init -> void
-*REMOVED*MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.EfInboxStore(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore!>! logger, System.TimeProvider! timeProvider) -> void
-MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.EfInboxStore(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore!>! logger, System.TimeProvider! timeProvider) -> void
