@@ -41,6 +41,28 @@ public interface ITwoFactorAuthenticator
         UserIdentifierType userId,
         string? code,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifies a time-based code against an account's PENDING secret while it confirms enrollment,
+    /// under the same single-use time-step guard <see cref="ChallengeAsync"/> applies.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ChallengeAsync"/> answers <see cref="TwoFactorOutcome.NotEnrolled"/> until the
+    /// factor is active, so enrollment cannot use it; this member gives the confirm step the replay
+    /// guard without the recovery-code fallback, because confirming must prove the authenticator app
+    /// holds the secret. The accepted step is remembered, so the code that confirmed enrollment
+    /// cannot be replayed against the first challenge inside its window either.
+    /// </remarks>
+    /// <param name="userId">The account confirming enrollment.</param>
+    /// <param name="secret">The account's pending secret.</param>
+    /// <param name="code">The code the caller supplied.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the code verified and its time step had not been accepted before.</returns>
+    Task<bool> VerifyEnrollmentCodeAsync(
+        UserIdentifierType userId,
+        string secret,
+        string? code,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>How a second-factor challenge was satisfied.</summary>

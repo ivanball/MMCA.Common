@@ -157,6 +157,63 @@ public sealed class ResetPasswordHandlerBaseTests
         mocks.RefreshSessions.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task HandleAsync_RevokesTheSessionsBeforeSavingThePassword()
+    {
+        // M240: a failure between two separate saves must never leave a new password with the old
+        // sessions alive, so the revocation is persisted first.
+        var (sut, mocks) = CreateSut();
+        var order = ArrangeLiveSessionAndRecordSaves(mocks);
+
+        Result result = await sut.HandleAsync(Command());
+
+        result.IsSuccess.Should().BeTrue();
+        order.Should().Equal("revoke", "save");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRevokeFails_LeavesThePasswordAndTheLockoutUntouched()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeLiveSessionAndRecordSaves(mocks);
+        mocks.RefreshSessions
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("session store unavailable"));
+
+        Func<Task> act = () => sut.HandleAsync(Command());
+
+        await act.Should().ThrowAsync<TimeoutException>();
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        mocks.LoginProtection.Verify(
+            x => x.ResetFailedAttemptsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static List<string> ArrangeLiveSessionAndRecordSaves(HandlerMocks mocks)
+    {
+        var order = new List<string>();
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestIdentityUser { Id = 42 });
+        var live = RefreshSession.Create(
+            42,
+            "stolen-chain",
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 1, 8, 0, 0, 0, DateTimeKind.Utc)).Value!;
+        mocks.RefreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([live]);
+        mocks.RefreshSessions
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => order.Add("revoke"));
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => order.Add("save"));
+        return order;
+    }
+
     private static TestResetPasswordCommand Command() =>
         new(new ResetPasswordRequest(Email, Token, NewPassword));
 

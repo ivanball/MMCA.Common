@@ -38,6 +38,29 @@ public sealed class SessionCookieEndpointsTests
         setCookies.Should().OnlyContain(c => c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
     }
 
+    // L184: the anonymous POST used to hand a missing token to Response.Cookies.Append, which threw
+    // and answered 500 with an error-level log entry.
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"accessToken":"the-access"}""")]
+    [InlineData("""{"refreshToken":"the-refresh"}""")]
+    [InlineData("""{"accessToken":"   ","refreshToken":"the-refresh"}""")]
+    [InlineData("""{"accessToken":"the-access","refreshToken":""}""")]
+    public async Task PostSessionCookie_WithAMissingToken_Returns400AndSetsNoCookie(string body)
+    {
+        using var host = await CreateHostAsync(new StubRefresher(result: null));
+        using HttpClient client = host.GetTestClient();
+        using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync(
+            new Uri("/auth/session-cookie", UriKind.Relative),
+            content,
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        GetSetCookies(response).Should().BeEmpty();
+    }
+
     // ── DELETE /auth/session-cookie ──
     [Fact]
     public async Task DeleteSessionCookie_ExpiresBothCookies_AndReturns204()

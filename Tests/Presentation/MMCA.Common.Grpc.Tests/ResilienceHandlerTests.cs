@@ -91,8 +91,35 @@ public sealed class ResilienceHandlerTests
             .Should().BeFalse("a 503 came from a server that may have run the call");
         (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(new TimeoutRejectedException())))
             .Should().BeFalse("a timed-out attempt may still be running on the server");
-        (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(new HttpRequestException("connection refused"))))
+        (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(new HttpRequestException(HttpRequestError.ConnectionError, "connection refused"))))
             .Should().BeTrue("a failure to reach the service is the replica-rollover case the retry exists for");
+    }
+
+    // -- M233: only a failure BEFORE the request was sent is retried --
+    [Theory]
+    [InlineData(HttpRequestError.NameResolutionError, true)]
+    [InlineData(HttpRequestError.ConnectionError, true)]
+    [InlineData(HttpRequestError.SecureConnectionError, true)]
+    [InlineData(HttpRequestError.ResponseEnded, false)]
+    [InlineData(HttpRequestError.HttpProtocolError, false)]
+    [InlineData(HttpRequestError.InvalidResponse, false)]
+    [InlineData(HttpRequestError.Unknown, false)]
+    public async Task AddTypedGrpcClient_RetriesOnlyFailuresBeforeTheRequestWasSent(HttpRequestError error, bool retried)
+    {
+        var services = new ServiceCollection();
+        services.AddTypedGrpcClient<FakeGrpcClient>("fake-service");
+        await using var provider = services.BuildServiceProvider();
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
+            .Get($"{nameof(FakeGrpcClient)}-standard");
+
+        // A connection lost after the request frames were written surfaces as an HttpRequestException
+        // too (ResponseEnded, a protocol error, or Unknown wrapping an IOException); replaying it could
+        // run a non-idempotent call twice.
+        var exception = new HttpRequestException(error, "transport failure", new IOException("connection reset"));
+
+        (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(exception)))
+            .Should().Be(retried);
     }
 
     private static async Task<bool> ShouldHandleAsync(HttpStandardResilienceOptions options, Outcome<HttpResponseMessage> outcome)

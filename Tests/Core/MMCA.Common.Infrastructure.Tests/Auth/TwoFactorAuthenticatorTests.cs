@@ -153,6 +153,45 @@ public sealed class TwoFactorAuthenticatorTests
         result.IsSuccess.Should().BeTrue();
     }
 
+    // ── Enrollment confirm (M228) ──
+    [Fact]
+    public async Task VerifyEnrollmentCodeAsync_AcceptsALiveCodeOnce()
+    {
+        var (sut, _, secret) = CreateSut(enabled: false);
+        string code = CodeAt(secret);
+
+        bool first = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
+        bool second = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
+
+        first.Should().BeTrue();
+        second.Should().BeFalse("the confirm step is under the same single-use time-step guard as the challenge");
+    }
+
+    [Fact]
+    public async Task VerifyEnrollmentCodeAsync_WithAWrongCode_IsFalse()
+    {
+        var (sut, _, secret) = CreateSut(enabled: false);
+
+        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, "000000");
+
+        verified.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task VerifyEnrollmentCodeAsync_TheConfirmingCodeCannotBeReplayedAtTheFirstChallenge()
+    {
+        var (sut, store, secret) = CreateSut(enabled: false);
+        string code = CodeAt(secret);
+
+        bool confirmed = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
+        store.Seed(enabled: true, secret, recoveryCodes: null);
+        Result<TwoFactorOutcome> replayed = await sut.ChallengeAsync(TestUserId, code);
+
+        confirmed.Should().BeTrue();
+        replayed.IsFailure.Should().BeTrue();
+        replayed.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
+    }
+
     // ── Helpers ──
     private static (TwoFactorAuthenticator Sut, FakeTwoFactorStore Store, string Secret) CreateSut(
         bool enabled,

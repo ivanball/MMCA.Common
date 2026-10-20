@@ -105,13 +105,17 @@ public abstract partial class ChangePasswordHandlerBase<TUser, TCommand>(
         var result = user.ChangePassword(newHash, newSalt);
         if (result.IsSuccess)
         {
-            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
             // Credential rotation evicts every live refresh session: an attacker holding a stolen
             // chain must not keep minting tokens through the exact remediation the user performed.
+            // The revocation is persisted BEFORE the password (M240): it is a separate save, and a
+            // failure between the two must never leave a new password with the old sessions still
+            // alive. A revoke failure throws here, so the password stays unchanged and the user can
+            // simply retry.
             await RefreshSessionRevocation
                 .RevokeAllAsync(refreshSessions, _timeProvider, command.UserId, cancellationToken)
                 .ConfigureAwait(false);
+
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             PasswordChanged(logger, command.UserId);
         }

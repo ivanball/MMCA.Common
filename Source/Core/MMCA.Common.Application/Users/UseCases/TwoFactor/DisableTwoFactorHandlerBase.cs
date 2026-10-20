@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
@@ -21,14 +22,21 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// authenticator device is exactly the person who needs to disable it, and spending one recovery code
 /// to do so is the intended use of the list.
 /// </para>
+/// <para>
+/// SECURITY (M228): a wrong code counts against the per-account second-factor budget, the same way a
+/// wrong current password counts in the change-password workflow, so a stolen-token holder cannot
+/// guess codes here without hitting the lockout.
+/// </para>
 /// </remarks>
 /// <typeparam name="TCommand">The app's disable-two-factor command record.</typeparam>
 /// <param name="authenticator">Runs the challenge, spending a recovery code when one is presented.</param>
 /// <param name="store">Clears the account's two-factor state.</param>
+/// <param name="loginProtection">The failed-attempt counter and exponential lockout (ADR-029).</param>
 /// <param name="logger">Logger for the audit line.</param>
 public abstract partial class DisableTwoFactorHandlerBase<TCommand>(
     ITwoFactorAuthenticator authenticator,
     ITwoFactorStore store,
+    ILoginProtectionService loginProtection,
     ILogger logger) : ICommandHandler<TCommand, Result>
     where TCommand : IUserScopedCommand<TwoFactorCodeRequest>
 {
@@ -43,11 +51,23 @@ public abstract partial class DisableTwoFactorHandlerBase<TCommand>(
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        var protectionKey = TwoFactorAttemptKey.For(command.UserId);
+        var lockout = await loginProtection.CheckLockoutAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+        if (lockout.IsFailure)
+        {
+            return lockout;
+        }
+
         var challenge = await authenticator
             .ChallengeAsync(command.UserId, command.Request.Code, cancellationToken)
             .ConfigureAwait(false);
         if (challenge.IsFailure)
         {
+            if (challenge.Errors.Any(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode))
+            {
+                await loginProtection.IncrementFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+            }
+
             return Result.Failure(challenge.Errors);
         }
 
@@ -58,6 +78,8 @@ public abstract partial class DisableTwoFactorHandlerBase<TCommand>(
         {
             return Result.Failure(TwoFactorErrors.TwoFactorNotEnrolled(HandlerName));
         }
+
+        await loginProtection.ResetFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
 
         var disabled = await store.DisableAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         if (disabled.IsFailure)

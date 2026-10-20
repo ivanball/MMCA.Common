@@ -98,13 +98,18 @@ public abstract partial class ResetPasswordHandlerBase<TUser, TCommand>(
             return result;
         }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
         // Credential rotation evicts every live refresh session: a reset is the remediation for a
         // suspected intruder, so the intruder's rotating chain has to die with the old password.
+        // The revocation is persisted BEFORE the password (M240): it is a separate save, and a
+        // failure between the two must never leave a new password with the old sessions still
+        // alive. A revoke failure throws here, so the password stays unchanged and the lockout stays
+        // as it was. The token is already spent at that point (see above); a non-burning check
+        // would need a token-service member that does not exist, so the user requests a new link.
         await RefreshSessionRevocation
             .RevokeAllAsync(refreshSessions, _timeProvider, userId, cancellationToken)
             .ConfigureAwait(false);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // A user who reset the password because of a lockout must not stay locked out.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);

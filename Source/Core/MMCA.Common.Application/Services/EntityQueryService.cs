@@ -294,8 +294,11 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         CancellationToken cancellationToken = default)
     {
         // Step 1: Validate all query parameters upfront before touching the database
+        var navigationMetadata = NavigationMetadataProvider.BuildIncludes<TEntity>(includeFKs, includeChildren);
+        var project = CanProject(navigationMetadata, asTracking);
+
         var validateResult = Result.Combine(
-            QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false),
+            ValidateFields(fields, project),
             QueryFieldService.ValidateSortColumn<TEntity>(sortColumn, DTOToEntityPropertyMap, FieldContract),
             QueryFieldService.ValidateSortDirection(sortDirection),
             QueryFilterService.ValidateFilters<TEntity>(filters, DTOToEntityPropertyMap, FieldContract)
@@ -314,8 +317,6 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         }
 
         // Step 2: Execute the query pipeline (includes, criteria, filters, sort, pagination, field selection)
-        var navigationMetadata = NavigationMetadataProvider.BuildIncludes<TEntity>(includeFKs, includeChildren);
-
         var parameters = new EntityQueryParameters<TEntity>
         {
             Criteria = specification?.Criteria,
@@ -336,7 +337,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         IReadOnlyCollection<TEntityDTO> pagedDTOs;
         int totalItemCount;
 
-        if (CanProject(navigationMetadata, asTracking))
+        if (project)
         {
             // Projection pushdown: the provider selects the DTO's columns directly, so nothing is
             // materialized as an entity and DTOMapper is never involved.
@@ -435,7 +436,9 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         bool asTracking = false,
         CancellationToken cancellationToken = default)
     {
-        Result validateResult = QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false);
+        // The by-id read always materializes the entity (narrowed by ApplyFieldSelection), so it is
+        // the non-projected path and keeps the writable-entity-property rule.
+        Result validateResult = ValidateFields(fields, projected: false);
         if (validateResult.IsFailure)
         {
             var errors = validateResult.Errors
@@ -521,6 +524,32 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
         => Repository.ExistsAsync(where, ignoreQueryFilters, cancellationToken);
+
+    /// <summary>
+    /// Validates a client-supplied <c>fields=</c> list against what shaping will actually do with it
+    /// (M227). Shaping reflects over <typeparamref name="TEntityDTO"/>, so every name must resolve
+    /// through <see cref="DTOToEntityPropertyMap"/>, <see cref="FieldContract"/> and the DTO's own
+    /// properties, exactly as sort and filter keys do: a DTO-only name is accepted, and an
+    /// entity-only name (which has no DTO accessor and would shape every row into an empty object)
+    /// is refused.
+    /// </summary>
+    /// <param name="fields">The comma-separated field list, or null.</param>
+    /// <param name="projected">
+    /// Whether the read is served by the projector. When it is not, the pipeline narrows the
+    /// ENTITY with a <c>MemberInit</c> over the requested names before mapping, so each name must
+    /// also be a writable entity property: a name the entity lacks or cannot set would leave the
+    /// mapper reading unprojected (default) values.
+    /// </param>
+    /// <returns>A success result, or a failure carrying every validation error.</returns>
+    private Result ValidateFields(string? fields, bool projected)
+    {
+        var dtoResult = QueryFieldService.Validate<TEntityDTO>(
+            fields, DTOToEntityPropertyMap, allowWriteableFields: true, FieldContract);
+
+        return projected
+            ? dtoResult
+            : Result.Combine(dtoResult, QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false));
+    }
 
     /// <summary>
     /// Whether this read can be served by the server-side projection path.

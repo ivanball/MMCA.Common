@@ -403,4 +403,11 @@ internal sealed class TwoFactorStub(Result<TwoFactorOutcome> answer) : ITwoFacto
         string? code,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(answer);
+
+    public Task<bool> VerifyEnrollmentCodeAsync(
+        UserIdentifierType userId,
+        string secret,
+        string? code,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(answer.IsSuccess);
 }
