@@ -157,7 +157,10 @@ public sealed class DbContextFactory(
             _currentUserService.UserId,
             AmbientOrigin.FlattenRoles(_currentUserService.Roles),
             tenantContext.TenantId,
-            correlationContext?.CorrelationId);
+            correlationContext?.CorrelationId)
+        {
+            UserPermissions = AmbientOrigin.FlattenPermissions(_currentUserService.User),
+        };
     }
 
     /// <summary>

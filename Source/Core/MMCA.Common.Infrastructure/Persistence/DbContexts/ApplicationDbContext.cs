@@ -675,13 +675,18 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.OrderingKey).HasMaxLength(200).IsUnicode(false);
 
             // The captured ambient context, restored around delivery. Same widths and unicode
-            // settings as the InternalCommands columns below: the two hops carry the same four
+            // settings as the InternalCommands columns below: the two hops carry the same five
             // values, and a shape that differed between them would be a migration hazard rather
             // than a design choice. Every column is nullable, so adding them is expand-only
             // (ADR-057) and rows written before they existed keep reading back as "nothing captured".
             entity.Property(e => e.TenantId).HasMaxLength(TenantIdMaxLength).IsUnicode(false);
             entity.Property(e => e.UserRoles).HasMaxLength(512).IsUnicode(false);
             entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
+
+            // Unbounded (nvarchar(max) on SQL Server) on purpose: permission claims are carried in
+            // full, because a truncated list would deny deferred work the inline request was allowed
+            // to run. Same mapping on InternalCommands below.
+            entity.Property(e => e.UserPermissions);
 
             // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
             // RetryCount and LockedUntil, so both ride along as included columns; without them every
@@ -764,6 +769,7 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.UserRoles).HasMaxLength(512).IsUnicode(false);
+            entity.Property(e => e.UserPermissions);
             entity.Property(e => e.TenantId).HasMaxLength(TenantIdMaxLength).IsUnicode(false);
 
             // Claim path (InternalCommandProcessor): runnable rows, earliest scheduled first. The

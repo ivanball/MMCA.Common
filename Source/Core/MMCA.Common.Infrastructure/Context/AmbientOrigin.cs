@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Auth;
@@ -10,7 +11,8 @@ namespace MMCA.Common.Infrastructure.Context;
 /// The one place the framework snapshots and restores the ambient request context around a hop it
 /// cannot stay on the same call stack for: a deferred command, an outbox row, a broker message.
 /// <para>
-/// Every such hop captures the same four values (user id, roles, tenant, correlation id) and
+/// Every such hop captures the same five values (user id, roles, permission claims, tenant,
+/// correlation id) and
 /// restores them the same way, so the capture and the restore live here rather than once per
 /// mechanism. Before this, the internal-command queue was the only hop that carried them and the
 /// outbox carried none, which is exactly the drift a single helper prevents.
@@ -93,10 +95,68 @@ internal static class AmbientOrigin
     }
 
     /// <summary>
-    /// Rebuilds a captured principal: the user id as the standard <c>sub</c> claim and each stored
-    /// role as a role claim, which is what <c>ClaimsPrincipalExtensions</c> and the role half of the
-    /// authorization decorator read. Returns null when nothing was captured, so the execution stays
-    /// anonymous rather than inventing an identity.
+    /// Captures the principal's <see cref="AuthClaimTypes.Permission"/> claims (distinct, in claim
+    /// order) as a JSON array of strings, the form the <c>UserPermissions</c> columns and the
+    /// <c>MMCA-User-Permissions</c> header carry.
+    /// </summary>
+    /// <remarks>
+    /// Full fidelity, unlike the roles list: the columns are unbounded and nothing is ever dropped
+    /// or cut, because a missing permission denies a deferred command the inline request was
+    /// allowed to run. JSON rather than a comma list because nothing constrains what a permission
+    /// name may contain, so no delimiter is safe.
+    /// </remarks>
+    /// <param name="principal">The capturing principal, or null.</param>
+    /// <returns>The JSON array, or null when the principal holds no permission claim.</returns>
+    internal static string? FlattenPermissions(ClaimsPrincipal? principal)
+    {
+        if (principal is null)
+        {
+            return null;
+        }
+
+        string[] permissions =
+        [
+            .. principal.FindAll(AuthClaimTypes.Permission)
+                .Select(claim => claim.Value)
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.Ordinal),
+        ];
+
+        return permissions.Length == 0 ? null : JsonSerializer.Serialize(permissions);
+    }
+
+    /// <summary>
+    /// Reads back what <see cref="FlattenPermissions"/> wrote. A malformed value is a writer bug,
+    /// not a reason to fail the hop, so it yields no permissions (the deferred work is then
+    /// authorized by its roles alone, never by more than was captured).
+    /// </summary>
+    /// <param name="userPermissions">The stored JSON array, or null.</param>
+    /// <returns>The permission names.</returns>
+    internal static IReadOnlyList<string> ParsePermissions(string? userPermissions)
+    {
+        if (string.IsNullOrEmpty(userPermissions))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(userPermissions) is { } parsed
+                ? [.. parsed.Where(value => !string.IsNullOrEmpty(value))]
+                : [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds a captured principal: the user id as the standard <c>sub</c> claim, each stored role
+    /// as a role claim and each stored permission as an <see cref="AuthClaimTypes.Permission"/>
+    /// claim, which is what <c>ClaimsPrincipalExtensions</c> and both halves of the authorization
+    /// gate read, so deferred work is granted exactly as the inline request was. Returns null when
+    /// nothing was captured, so the execution stays anonymous rather than inventing an identity.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -106,14 +166,10 @@ internal static class AmbientOrigin
     /// <c>IRequiresMfa</c> command therefore cannot run deferred: run it inline, inside the request
     /// that carried the step-up.
     /// </para>
-    /// <para>
-    /// Permission claims are not carried either: only the user id and the roles are stored on the
-    /// row or message, so a deferred <c>IRequiresPermission</c> command is authorized by the roles
-    /// the host's registry maps, not by a claim-only grant.
-    /// </para>
     /// </remarks>
     /// <param name="userId">The captured user id, or null for system-raised work.</param>
     /// <param name="userRoles">The captured roles as a comma-separated list, or null.</param>
+    /// <param name="userPermissions">The captured permission claims as written by <see cref="FlattenPermissions"/>, or null.</param>
     /// <param name="authenticationType">
     /// The authentication type stamped on the rebuilt identity. It is what makes
     /// <c>IsAuthenticated</c> true (without one the principal reads as anonymous no matter how many
@@ -123,6 +179,7 @@ internal static class AmbientOrigin
     internal static ClaimsPrincipal? BuildPrincipal(
         UserIdentifierType? userId,
         string? userRoles,
+        string? userPermissions,
         string authenticationType)
     {
         if (userId is not { } id)
@@ -141,6 +198,9 @@ internal static class AmbientOrigin
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(role => new Claim(ClaimTypes.Role, role)));
         }
+
+        claims.AddRange(ParsePermissions(userPermissions)
+            .Select(permission => new Claim(AuthClaimTypes.Permission, permission)));
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType));
     }
@@ -183,6 +243,7 @@ internal static class AmbientOrigin
     /// <param name="services">The scope to restore the context onto.</param>
     /// <param name="userId">The captured user id, or null.</param>
     /// <param name="userRoles">The captured roles as a comma-separated list, or null.</param>
+    /// <param name="userPermissions">The captured permission claims (see <see cref="FlattenPermissions"/>), or null.</param>
     /// <param name="tenantId">The captured tenant, or null.</param>
     /// <param name="correlationId">The captured correlation id, or null.</param>
     /// <param name="authenticationType">The authentication type to stamp on the rebuilt identity.</param>
@@ -194,6 +255,7 @@ internal static class AmbientOrigin
         IServiceProvider services,
         UserIdentifierType? userId,
         string? userRoles,
+        string? userPermissions,
         string? tenantId,
         string? correlationId,
         string authenticationType)
@@ -206,7 +268,7 @@ internal static class AmbientOrigin
         // Tenant first: it routes the scoped context factory to the right database, and every
         // repository resolved afterwards reads its query filter from it.
         RestoreTenant(services, tenantId);
-        RestorePrincipal(services, BuildPrincipal(userId, userRoles, authenticationType));
+        RestorePrincipal(services, BuildPrincipal(userId, userRoles, userPermissions, authenticationType));
 
         var correlationContext = services.GetService<ICorrelationContext>();
         if (correlationId is { Length: > 0 } correlation)
@@ -217,6 +279,7 @@ internal static class AmbientOrigin
         CurrentOrigin.Value = new OriginSnapshot(
             userId,
             userRoles,
+            userPermissions,
             services.GetService<ITenantContext>()?.TenantId ?? NullIfEmpty(tenantId),
             correlationContext?.CorrelationId ?? NullIfEmpty(correlationId),
             authenticationType);
@@ -283,17 +346,19 @@ internal static class AmbientOrigin
 /// <summary>The origin a background hop restored, as published on the async flow.</summary>
 /// <param name="UserId">The captured user id, or null for system-raised work.</param>
 /// <param name="UserRoles">The captured roles as a comma-separated list, or null.</param>
+/// <param name="UserPermissions">The captured permission claims as a JSON array, or null.</param>
 /// <param name="TenantId">The tenant the restored scope runs as, or null.</param>
 /// <param name="CorrelationId">The correlation id the restored scope carries, or null.</param>
 /// <param name="AuthenticationType">The authentication type stamped on a rebuilt identity.</param>
 internal sealed record OriginSnapshot(
     UserIdentifierType? UserId,
     string? UserRoles,
+    string? UserPermissions,
     string? TenantId,
     string? CorrelationId,
     string AuthenticationType)
 {
     /// <summary>Rebuilds the captured principal, or null when no user was captured.</summary>
     /// <returns>The principal, or null.</returns>
-    public ClaimsPrincipal? BuildPrincipal() => AmbientOrigin.BuildPrincipal(UserId, UserRoles, AuthenticationType);
+    public ClaimsPrincipal? BuildPrincipal() => AmbientOrigin.BuildPrincipal(UserId, UserRoles, UserPermissions, AuthenticationType);
 }

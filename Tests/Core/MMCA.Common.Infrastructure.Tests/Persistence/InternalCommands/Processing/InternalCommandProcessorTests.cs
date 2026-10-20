@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
 
@@ -296,6 +297,42 @@ public sealed class InternalCommandProcessorTests : IDisposable
         var execution = _log.Executions.Should().ContainSingle().Subject;
         execution.UserId.Should().Be(7);
         execution.Roles.Should().Equal("Admin", "Manager");
+    }
+
+    // L181: a command the inline caller was authorized for ONLY through a Permission claim must pass
+    // the same gate when it runs deferred, so the row has to carry the claim and the restore rebuild it.
+    [Fact]
+    public async Task Cycle_ACommandGrantedOnlyByAPermissionClaim_PassesTheSameGateDeferred()
+    {
+        var inlineUser = new DeferredPermissionGate.FixedCurrentUserService(DeferredPermissionGate.ClaimOnlyPrincipal(7));
+        (await DeferredPermissionGate.EvaluateAsync(inlineUser)).IsSuccess.Should().BeTrue(
+            "control: the inline request is authorized by the claim alone");
+
+        var scheduler = InternalCommandTestHarness.CreateScheduler(
+            _context,
+            InternalCommandTestHarness.Settings(),
+            _clock,
+            Mock.Of<IInternalCommandSignal>(),
+            inlineUser);
+        await scheduler.ScheduleAsync(new DeferredPermissionGate.GatedCommand("deferred"), runAt: null, TestContext.Current.CancellationToken);
+        _context.ChangeTracker.Clear();
+
+        var handler = new DeferredPermissionGate.GatedCommandHandler();
+        (InternalCommandProcessor processor, ServiceProvider provider) = InternalCommandTestHarness.CreateProcessor(
+            _context,
+            InternalCommandTestHarness.Settings(),
+            _clock,
+            collection => collection.AddScoped(sp => DeferredPermissionGate.Decorate(
+                handler,
+                sp.GetRequiredService<MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService>())));
+        _providers.Add(provider);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        handler.Executions.Should().Be(1, "the restored principal must carry the claim the inline gate granted on");
+        var row = await _context.Set<InternalCommandMessage>().AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
+        row.LastError.Should().BeNull();
+        row.ProcessedOn.Should().NotBeNull();
     }
 
     [Fact]

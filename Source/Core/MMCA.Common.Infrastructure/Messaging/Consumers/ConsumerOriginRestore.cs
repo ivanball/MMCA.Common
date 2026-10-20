@@ -51,6 +51,7 @@ internal static class ConsumerOriginRestore
             services,
             userId,
             headers.Get<string>(MessageHeaders.UserRoles, null),
+            headers.Get<string>(MessageHeaders.UserPermissions, null),
             headers.Get<string>(MessageHeaders.TenantId, null),
             headers.Get<string>(MessageHeaders.CorrelationId, null),
             authenticationType);

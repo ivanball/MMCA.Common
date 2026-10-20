@@ -324,6 +324,23 @@ public sealed class EfInboxStoreTests : IDisposable
         (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(1);
     }
 
+    // L179: CompleteAsync saves the consume scope's SHARED context, so anything a handler left
+    // pending on it must be stamped with the publisher's restored user, not as the system.
+    [Fact]
+    public async Task Complete_StampsCoPendingEntitiesWithTheRestoredUser()
+    {
+        var store = CreateStore(_contextA, currentUser: new DeferredPermissionGate.FixedCurrentUserService(
+            DeferredPermissionGate.ClaimOnlyPrincipal(42)));
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        _contextA.Add(new InboxAlongsideEntity { Id = 3, Name = "pending" });
+        await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        var saved = await _contextB.Set<InboxAlongsideEntity>().AsNoTracking().SingleAsync(CancellationToken.None);
+        saved.CreatedBy.Should().Be(42, "the co-pending change was made on behalf of the restored user");
+    }
+
     // ── Injected clock ──
     [Fact]
     public async Task TryBegin_StampsProcessedOnFromTheInjectedClock()
@@ -340,7 +357,10 @@ public sealed class EfInboxStoreTests : IDisposable
             "the processed-on stamp is the injected clock's instant");
     }
 
-    private static EfInboxStore CreateStore(ApplicationDbContext context, TimeProvider? timeProvider = null)
+    private static EfInboxStore CreateStore(
+        ApplicationDbContext context,
+        TimeProvider? timeProvider = null,
+        MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUser = null)
     {
         var factory = new Mock<IDbContextFactory>();
         factory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(context);
@@ -354,6 +374,7 @@ public sealed class EfInboxStoreTests : IDisposable
             factory.Object,
             resolver.Object,
             Options.Create(new OutboxSettings()),
+            currentUser ?? new DeferredPermissionGate.FixedCurrentUserService(new System.Security.Claims.ClaimsPrincipal()),
             NullLogger<EfInboxStore>.Instance,
             timeProvider ?? TimeProvider.System);
     }
@@ -381,7 +402,8 @@ public sealed class EfInboxStoreTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<InboxMessage>(entity =>
             {
                 entity.ToTable("InboxMessages");
@@ -389,5 +411,18 @@ public sealed class EfInboxStoreTests : IDisposable
                 entity.Property(e => e.EventType).IsRequired().HasMaxLength(500);
                 entity.HasIndex(e => e.MessageId).IsUnique();
             });
+            modelBuilder.Entity<InboxAlongsideEntity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.RowVersion).IsConcurrencyToken();
+            });
+        }
+    }
+
+    /// <summary>An auditable entity a handler leaves pending on the consume scope's context.</summary>
+    public sealed class InboxAlongsideEntity : MMCA.Common.Domain.Entities.AuditableBaseEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
     }
 }

@@ -43,7 +43,7 @@ internal sealed partial class InternalCommandScheduler(
     TimeProvider timeProvider) : IInternalCommandScheduler
 {
     /// <summary>
-    /// Column width of <c>UserRoles</c>; a longer list is truncated to fit. Shared with the outbox's
+    /// Column width of <c>UserRoles</c>; a longer list keeps only the whole roles that fit. Shared with the outbox's
     /// column of the same name through <see cref="AmbientOrigin.MaxRolesLength"/>, so the two hops
     /// cannot disagree about what fits.
     /// </summary>

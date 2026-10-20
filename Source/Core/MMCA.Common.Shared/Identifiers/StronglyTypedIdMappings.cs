@@ -21,6 +21,11 @@ namespace MMCA.Common.Shared.Identifiers;
 /// Mapperly discovers the two public static methods by signature, so the framework ships plain
 /// methods and takes no dependency on <c>Riok.Mapperly.Abstractions</c> in the Shared layer.
 /// </para>
+/// <para>
+/// An optional identifier needs no helper: Mapperly lifts these two methods over
+/// <see cref="Nullable{T}"/> itself, mapping a missing identifier to <see langword="null"/> and
+/// back.
+/// </para>
 /// </summary>
 /// <typeparam name="TSelf">The identifier type.</typeparam>
 /// <typeparam name="TValue">The wrapped primitive.</typeparam>
@@ -41,14 +46,4 @@ public static class StronglyTypedIdMappings<TSelf, TValue>
     /// <param name="value">The primitive.</param>
     /// <returns>The identifier carrying it.</returns>
     public static TSelf ToIdentifier(TValue value) => TSelf.From(value);
-
-    /// <summary>Unwraps an optional identifier, keeping "not set" as <see langword="null"/>.</summary>
-    /// <param name="identifier">The identifier, or <see langword="null"/>.</param>
-    /// <returns>The wrapped primitive, or <see langword="null"/>.</returns>
-    public static TValue? ToNullableValue(TSelf? identifier) => identifier is null ? default : identifier.Value.Value;
-
-    /// <summary>Wraps an optional primitive, keeping "not set" as <see langword="null"/>.</summary>
-    /// <param name="value">The primitive, or <see langword="null"/>.</param>
-    /// <returns>The identifier, or <see langword="null"/>.</returns>
-    public static TSelf? ToNullableIdentifier(TValue? value) => value is null ? null : TSelf.From(value);
 }

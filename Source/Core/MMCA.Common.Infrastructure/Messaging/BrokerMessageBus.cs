@@ -89,30 +89,30 @@ public sealed class BrokerMessageBus(
     {
         List<KeyValuePair<string, string>> headers = [];
 
-        if (tenantContext?.TenantId is { Length: > 0 } tenantId)
+        AddIfPresent(headers, MessageHeaders.TenantId, tenantContext?.TenantId);
+        AddIfPresent(
+            headers,
+            MessageHeaders.UserId,
+            currentUserService?.UserId is { } userId ? userId.ToString(CultureInfo.InvariantCulture) : null);
+
+        if (currentUserService is not null)
         {
-            headers.Add(new KeyValuePair<string, string>(MessageHeaders.TenantId, tenantId));
+            AddIfPresent(headers, MessageHeaders.UserRoles, Context.AmbientOrigin.FlattenRoles(currentUserService.Roles));
+            AddIfPresent(headers, MessageHeaders.UserPermissions, Context.AmbientOrigin.FlattenPermissions(currentUserService.User));
         }
 
-        if (currentUserService?.UserId is { } userId)
-        {
-            headers.Add(new KeyValuePair<string, string>(
-                MessageHeaders.UserId,
-                userId.ToString(CultureInfo.InvariantCulture)));
-        }
-
-        if (currentUserService is not null
-            && Context.AmbientOrigin.FlattenRoles(currentUserService.Roles) is { Length: > 0 } roles)
-        {
-            headers.Add(new KeyValuePair<string, string>(MessageHeaders.UserRoles, roles));
-        }
-
-        if (correlationContext?.CorrelationId is { Length: > 0 } correlationId)
-        {
-            headers.Add(new KeyValuePair<string, string>(MessageHeaders.CorrelationId, correlationId));
-        }
+        AddIfPresent(headers, MessageHeaders.CorrelationId, correlationContext?.CorrelationId);
 
         return headers;
+    }
+
+    /// <summary>Adds a header only when it has something to say (see <see cref="CaptureHeaders"/>).</summary>
+    private static void AddIfPresent(List<KeyValuePair<string, string>> headers, string name, string? value)
+    {
+        if (value is { Length: > 0 })
+        {
+            headers.Add(new KeyValuePair<string, string>(name, value));
+        }
     }
 
     /// <summary>Writes the captured pairs onto the outgoing message.</summary>

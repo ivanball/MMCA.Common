@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
@@ -43,6 +44,7 @@ public sealed partial class EfInboxStore(
     IDbContextFactory dbContextFactory,
     IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions,
+    ICurrentUserService currentUserService,
     ILogger<EfInboxStore> logger,
     TimeProvider timeProvider) : IInboxStore
 {
@@ -156,7 +158,11 @@ public sealed partial class EfInboxStore(
 
         try
         {
-            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Saved as the consume scope's user: the publisher's origin is restored onto this scope
+            // before the inbox is touched, and the context is the one a handler resolved from the
+            // consume scope shares, so anything else it left pending is flushed by this save too and
+            // must be stamped with that user rather than as the system.
+            await context.SaveChangesAsync(currentUserService.UserId, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException)
         {

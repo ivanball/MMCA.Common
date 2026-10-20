@@ -1,1 +1,4 @@
 ﻿#nullable enable
+*REMOVED*static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableIdentifier(TValue? value) -> TSelf?
+*REMOVED*static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue(TSelf? identifier) -> TValue?
+const MMCA.Common.Shared.Messaging.MessageHeaders.UserPermissions = "MMCA-User-Permissions" -> string!

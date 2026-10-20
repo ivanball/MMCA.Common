@@ -11,14 +11,17 @@ using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Messaging;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -39,6 +42,8 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
     private readonly ServiceProvider _rootProvider;
     private readonly CapturingMessageBus _messageBus = new();
     private readonly OutboxProcessor _sut;
+    private readonly ServiceProvider _contextProvider;
+    private readonly IEntityConfigurationAssemblyProvider _assemblyProvider;
 
     public OutboxProcessorContextRestoreTests()
     {
@@ -60,6 +65,8 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
             Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
         contextServices.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
         ServiceProvider contextProvider = contextServices.BuildServiceProvider();
+        _contextProvider = contextProvider;
+        _assemblyProvider = assemblyProvider;
 
         _dbContext = new RestoreTestDbContext(
             new DbContextOptionsBuilder<RestoreTestDbContext>().UseSqlite(_connection).Options,
@@ -111,6 +118,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
     {
         _sut.Dispose();
         _dbContext.Dispose();
+        _contextProvider.Dispose();
         _rootProvider.Dispose();
         _connection.Dispose();
     }
@@ -127,6 +135,47 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         OutboxMessage.FromDomainEvent(
             new TestIntegrationEvent { DateOccurred = DateTime.UtcNow.AddMinutes(-5) },
             origin);
+
+    // L181: an event raised by a request authorized ONLY through a Permission claim is captured by
+    // the real factory, stored on the row and restored for delivery; the delivery scope must pass the
+    // same gate the inline request did.
+    [Fact]
+    public async Task DispatchMessages_APrincipalGrantedOnlyByAPermissionClaim_PassesTheSameGateDeferred()
+    {
+        var inlineUser = new DeferredPermissionGate.FixedCurrentUserService(DeferredPermissionGate.ClaimOnlyPrincipal(7));
+        (await DeferredPermissionGate.EvaluateAsync(inlineUser)).IsSuccess.Should().BeTrue(
+            "control: the inline request is authorized by the claim alone");
+
+        var writeContext = new RestoreTestDbContext(
+            new DbContextOptionsBuilder<RestoreTestDbContext>().UseSqlite(_connection).Options,
+            _contextProvider,
+            _assemblyProvider);
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns(writeContext);
+        var registry = new Mock<IEntityDataSourceRegistry>();
+        registry.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+
+        await using (var factory = new DbContextFactory(
+            physicalFactory.Object,
+            registry.Object,
+            new DefaultDataSourceResolver(),
+            inlineUser,
+            new TenantContext(),
+            Options.Create(new TenancySettings())))
+        {
+            var aggregate = new RaisingAggregate { Id = 1 };
+            aggregate.AddDomainEvent(new TestIntegrationEvent { DateOccurred = DateTime.UtcNow.AddMinutes(-5) });
+            factory.GetDbContext(DataSourceKey.Default(DataSource.SQLServer)).Set<RaisingAggregate>().Add(aggregate);
+            await factory.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        var observed = _messageBus.Observations.Should().ContainSingle().Subject;
+        observed.UserId.Should().Be(7);
+        observed.PermissionGranted.Should().BeTrue(
+            "the delivery scope must carry the Permission claim the inline gate granted on");
+    }
 
     [Fact]
     public async Task DispatchMessages_RestoresTheRowsCapturedContextBeforePublishing()
@@ -229,7 +278,12 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
     }
 
     /// <summary>What the scope looked like at the instant one message was published.</summary>
-    private sealed record Observation(string? TenantId, string? CorrelationId, int? UserId, string[] Roles);
+    private sealed record Observation(string? TenantId, string? CorrelationId, int? UserId, string[] Roles, bool PermissionGranted);
+
+    /// <summary>An aggregate the real factory saves, so its event row is captured exactly as production captures it.</summary>
+    public sealed class RaisingAggregate : AuditableAggregateRootEntity<int>
+    {
+    }
 
     /// <summary>
     /// Stands in for <c>BrokerMessageBus</c>: it reads the same scoped services the real bus reads
@@ -254,7 +308,8 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
                 services.GetRequiredService<ITenantContext>().TenantId,
                 services.GetRequiredService<ICorrelationContext>().CorrelationId,
                 user.UserId,
-                [.. user.Roles]));
+                [.. user.Roles],
+                (await DeferredPermissionGate.EvaluateAsync(user).ConfigureAwait(false)).IsSuccess));
 
             if (Forward is not null && integrationEvent is TestIntegrationEvent forwarded)
             {
@@ -325,7 +380,8 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<OutboxMessage>(entity =>
             {
                 entity.ToTable("OutboxMessages");
@@ -334,5 +390,12 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
                 entity.Property(e => e.Payload).IsRequired();
                 entity.Property(e => e.LastError).HasMaxLength(4000);
             });
+            modelBuilder.Entity<RaisingAggregate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.RowVersion).IsConcurrencyToken();
+            });
+        }
     }
 }
