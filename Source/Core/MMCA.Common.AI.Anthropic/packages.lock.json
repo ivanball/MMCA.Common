@@ -4,18 +4,18 @@
     "net10.0": {
       "Anthropic": {
         "type": "Direct",
-        "requested": "[12.53.0, )",
-        "resolved": "12.53.0",
-        "contentHash": "NS4eDj4By+7C8RfhKQDq+/KKPd2m9HZvsflGJIJwT9MTNngNIyCkw6dnFwJp84wOClKHNDM6NXA9OXC8MfwAuQ==",
+        "requested": "[12.58.0, )",
+        "resolved": "12.58.0",
+        "contentHash": "lOI9NaI5cjWDm0HnuM/yVr1/+RtMAjdJyvxUV2/yAiG4iIQRZJhzpeiK4fDigqz4+kWfaRa+40+zU3lR2hY9HQ==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.303, )",
-        "resolved": "3.0.303",
-        "contentHash": "IBcDi9Gq15J7F7Akw/KCVrxMsms13e7rgA6ssVhoqn+3BWDvCg3RAhzPMK8foJapDMgz5tG4cDHO/JImrnn1cw=="
+        "requested": "[3.0.315, )",
+        "resolved": "3.0.315",
+        "contentHash": "adL/ZRvZdqwVnpIcfTKC+soGLj4H+6mV7lcLSA79FkAjJd5bVUnKF6geq+b1w9uz3Dtj1VGJkGCYS0WKtxNEyQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
