@@ -55,6 +55,35 @@ public sealed class FormsConventionTestsBaseTests
                 CompleteForm.Replace("ValidateConfirmPassword", "Other", StringComparison.Ordinal))
             .Should().ContainSingle().Which.Should().Be("ValidateConfirmPassword");
 
+    // M238: a guard wrapped in a Razor or HTML comment no longer renders, so it must not count.
+    [Theory]
+    [InlineData("@* <ErrorSummary Messages=\"_passwordForm?.Errors\" /> *@")]
+    [InlineData("<!-- <ErrorSummary Messages=\"_passwordForm?.Errors\" /> -->")]
+    public void PasswordForm_WithACommentedOutErrorSummary_IsFlagged(string commentedSummary) =>
+        FormsConventionTestsBase.MissingPasswordFormMarkers(
+                CompleteForm.Replace("<ErrorSummary Messages=\"_passwordForm?.Errors\" />", commentedSummary, StringComparison.Ordinal))
+            .Should().Contain("<ErrorSummary").And.Contain("Messages=\"_passwordForm?.Errors\"");
+
+    [Fact]
+    public void PasswordForm_WithACommentedOutRequiredField_IsFlagged() =>
+        FormsConventionTestsBase.MissingPasswordFormMarkers(
+                CompleteForm.Replace("<MudTextField Required=\"true\" RequiredError=\"a\" />", "@* <MudTextField Required=\"true\" RequiredError=\"a\" /> *@", StringComparison.Ordinal))
+            .Should().HaveCount(2, "a commented-out field is not a required field");
+
+    [Theory]
+    [InlineData("@* <UnsavedChangesGuard IsDirtyAccessor=\"() => _isDirty\" /> *@ <MudForm>")]
+    [InlineData("<!-- <UnsavedChangesGuard IsDirtyAccessor=\"() => _isDirty\" /> --> <MudForm>")]
+    public void CreateForm_WithACommentedOutGuard_IsFlagged(string markup) =>
+        FormsConventionTestsBase.MissingMarkers(markup, ["UnsavedChangesGuard", "IsDirtyAccessor", "<MudForm"])
+            .Should().Equal(["UnsavedChangesGuard", "IsDirtyAccessor"], "only the uncommented MudForm still renders");
+
+    [Fact]
+    public void CreateForm_WithTheGuardRendered_HasNoMissingMarkers() =>
+        FormsConventionTestsBase.MissingMarkers(
+                "@* old note *@ <UnsavedChangesGuard IsDirtyAccessor=\"() => _isDirty\" /> <MudForm>",
+                ["UnsavedChangesGuard", "IsDirtyAccessor", "<MudForm"])
+            .Should().BeEmpty();
+
     [Theory]
     [InlineData("<ChangePasswordCard />", true)]
     [InlineData("@* <ChangePasswordCard /> *@", false)]

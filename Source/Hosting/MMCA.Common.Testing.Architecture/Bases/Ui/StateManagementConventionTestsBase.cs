@@ -82,9 +82,9 @@ public abstract partial class StateManagementConventionTestsBase
     /// Scans the production UI sources under <paramref name="sourceDir"/> for a singleton registration
     /// of a stateful service. Paths are judged RELATIVE to <paramref name="sourceDir"/>, segment by
     /// segment: a file counts when one segment is a <c>*.UI</c> / <c>*.UI.*</c> project directory and no
-    /// segment contains <c>Testing</c> or is <c>bin</c>/<c>obj</c>, so where the checkout lives cannot
-    /// skip it. The match runs over the file text up to the end of the statement, so a registration
-    /// wrapped across lines is caught.
+    /// segment has <c>Testing</c> as a whole dot-separated part or is <c>bin</c>/<c>obj</c>, so where the checkout lives cannot
+    /// skip it. The match runs over AddSingleton's own type-argument and argument lists, so a
+    /// registration wrapped across lines is caught and a call chained after it is not.
     /// </summary>
     /// <param name="sourceDir">The repo's <c>Source</c> directory.</param>
     /// <param name="scannedUiFiles">How many UI source files were scanned.</param>
@@ -100,7 +100,7 @@ public abstract partial class StateManagementConventionTestsBase
             var segments = Path.GetRelativePath(sourceDir, file)
                 .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)[..^1];
             if (!segments.Any(static s => UiProjectSegment.IsMatch(s)) ||
-                segments.Any(static s => s.Contains("Testing", StringComparison.Ordinal) || s is "bin" or "obj"))
+                segments.Any(static s => IsTestingSegment(s) || s is "bin" or "obj"))
             {
                 continue;
             }
@@ -120,9 +120,23 @@ public abstract partial class StateManagementConventionTestsBase
     [GeneratedRegex(@"^[\w.]+\.UI(\.[\w.]+)?$", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex UiProjectSegment { get; }
 
-    // Up to the end of the statement, so the generic, the factory and the typeof forms all match and
-    // a registration wrapped across lines is still one match.
-    [GeneratedRegex(@"AddSingleton\b[^;]*?State(Service|Container)\b", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    /// <summary>
+    /// Whether a directory segment marks test-support code: a project or folder name with
+    /// <c>Testing</c> as one whole dot-separated part (<c>MMCA.Common.Testing.UI</c>, <c>Testing</c>),
+    /// not merely containing the word (<c>TestingHelpers</c> and <c>LoadTesting</c> are still scanned).
+    /// </summary>
+    private static bool IsTestingSegment(string segment) =>
+        segment.Split('.').Contains("Testing", StringComparer.Ordinal);
+
+    // Bounded by AddSingleton's OWN type-argument list or OWN argument list, so a registration wrapped
+    // across lines is one match and the generic, typeof, instance and factory forms are all caught,
+    // while a call chained after it (.AddScoped<IWizardStateService, ...>()) is out of reach: the
+    // type-argument branch cannot cross a parenthesis, and the argument branch tracks nesting depth
+    // and cannot pass the parenthesis that closes AddSingleton's own call.
+    [GeneratedRegex(
+        @"AddSingleton\s*(<[^;()]*?State(Service|Container)\b|(<[^;()]*>)?\s*\((?>[^();]|\((?<depth>)|\)(?<-depth>))*?State(Service|Container)\b)",
+        RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
+        matchTimeoutMilliseconds: 1000)]
     private static partial Regex SingletonStateRegistration { get; }
 
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)

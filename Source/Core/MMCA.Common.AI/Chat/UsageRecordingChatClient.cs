@@ -124,7 +124,12 @@ public sealed class UsageRecordingChatClient : DelegatingChatClient
     {
         var startedAt = Stopwatch.GetTimestamp();
         string? modelId = null;
-        var outcome = AiUsageMeter.SuccessOutcome;
+
+        // Canceled until the stream is seen to END (MoveNextAsync returned false): a consumer that
+        // stops enumerating early (a guardrail blocking an update, a caller breaking out of its loop)
+        // reaches the finally without either catch running, and that call did not complete. The
+        // usage the stream delivered before it stopped has already been recorded update by update.
+        var outcome = AiUsageMeter.CanceledOutcome;
 
         // Hand-driven rather than `await foreach`, because the duration has to be attributed to the
         // outcome and C# forbids a `yield return` inside a try that has a catch clause. The stream
@@ -155,6 +160,7 @@ public sealed class UsageRecordingChatClient : DelegatingChatClient
 
                 if (!moved)
                 {
+                    outcome = AiUsageMeter.SuccessOutcome;
                     break;
                 }
 

@@ -30,6 +30,40 @@ public sealed class InlineStyleFitnessTests
         ArchitectureRules.InlineStyleViolations("Sample.razor", [line])
             .Should().ContainSingle().Which.Should().Be($"Sample.razor:1 {attribute}");
 
+    // L197: a single-quoted value and a bare Razor expression are inline styles too.
+    [Theory]
+    [InlineData("<div style='color: red;'>", "style=")]
+    [InlineData("<MudText Style=@_style>", "Style=")]
+    [InlineData("<MudCard Style = @(CardStyle(n))>", "Style=")]
+    [InlineData("<TemplateColumn CellStyle='width: 110px;' />", "CellStyle=")]
+    [InlineData("<MudDataGrid RowStyleFunc=@RowStyle />", "RowStyleFunc=")]
+    public void Detector_FlagsSingleQuotedAndExpressionValuedStyles(string line, string attribute) =>
+        ArchitectureRules.InlineStyleViolations("Sample.razor", [line])
+            .Should().ContainSingle().Which.Should().Be($"Sample.razor:1 {attribute}");
+
+    // L197: C# inside the @code block is not markup, so a variable named style is not an attribute.
+    [Fact]
+    public void Detector_SkipsTheCodeBlock_AndKeepsScanningMarkupAfterIt()
+    {
+        string[] lines =
+        [
+            "<div class=\"card\">",
+            "@code {",
+            "    private string style = \"color: red;\";",
+            "    private static string RowStyle(int i) { var rowStyle = 'x'; return rowStyle.ToString(); }",
+            "    private void Set() { if (true) { style = @\"a\"; } }",
+            "}",
+            "<div style=\"gap: 1rem;\">",
+            "@code",
+            "{",
+            "    string cellStyle = \"width: 1px\";",
+            "}",
+        ];
+
+        ArchitectureRules.InlineStyleViolations("Sample.razor", lines)
+            .Should().Equal(["Sample.razor:7 style="], "only the markup line after the first @code block carries a style attribute");
+    }
+
     [Theory]
     [InlineData("<div class=\"mmca-auth-actions\">")]
     [InlineData("<div data-style=\"compact\">")]

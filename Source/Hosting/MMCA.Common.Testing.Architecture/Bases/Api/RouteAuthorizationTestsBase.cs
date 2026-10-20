@@ -77,15 +77,18 @@ public abstract class RouteAuthorizationTestsBase
     protected static bool IsRoutablePage(Type type) => AttributesOf(type, RouteAttributeFullName).Any();
 
     /// <summary>
-    /// Whether the page's <c>AuthorizeAttribute</c> requires exactly <paramref name="role"/> (a bare
-    /// <c>[Authorize]</c>, a missing attribute, or a different role all fail).
+    /// Whether one of the page's <c>AuthorizeAttribute</c>s requires exactly <paramref name="role"/>
+    /// (a bare <c>[Authorize]</c>, a missing attribute, or a different role all fail). Every instance
+    /// is read, own and inherited: the attribute allows multiple instances and ASP.NET Core enforces all
+    /// of them, so a policy-only sibling or a derived page's bare <c>[Authorize]</c> cannot hide the
+    /// role gate, and reflection does not promise which instance comes first.
     /// </summary>
-    protected static bool RequiresRole(Type type, string role)
-    {
-        var authorize = AttributesOf(type, AuthorizeAttributeFullName).FirstOrDefault();
-        var roles = authorize?.GetType().GetProperty("Roles")?.GetValue(authorize) as string;
-        return string.Equals(roles, role, StringComparison.Ordinal);
-    }
+    protected static bool RequiresRole(Type type, string role) =>
+        AttributesOf(type, AuthorizeAttributeFullName)
+            .Any(authorize => string.Equals(
+                authorize.GetType().GetProperty("Roles")?.GetValue(authorize) as string,
+                role,
+                StringComparison.Ordinal));
 
     /// <summary>
     /// Whether the page carries any <c>AuthorizeAttribute</c> at all: lets subclasses assert that a

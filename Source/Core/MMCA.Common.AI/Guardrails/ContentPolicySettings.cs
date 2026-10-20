@@ -57,7 +57,8 @@ public sealed class ContentPolicySettings : IValidatableObject
     public IReadOnlyList<string> BlockedResponsePatterns { get; init; } = [];
 
     /// <summary>
-    /// What replaces a marker match in <see cref="ContentPolicyInjectionMode.Redact"/> mode.
+    /// What replaces a marker match in <see cref="ContentPolicyInjectionMode.Redact"/> mode, inserted
+    /// as literal text (a <c>$</c> sequence is not a regex substitution).
     /// Defaults to <see cref="DefaultRedactionPlaceholder"/>.
     /// </summary>
     /// <remarks>

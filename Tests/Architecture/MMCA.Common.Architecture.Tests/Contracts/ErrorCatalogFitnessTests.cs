@@ -63,6 +63,19 @@ public sealed class ErrorCatalogFitnessTests
         message.Should().Contain(nameof(UnprefixedErrors), "the report must name the owning type");
     }
 
+    // L199: Error.TooManyRequests is a code-first factory like its siblings, so its code is read
+    // into the catalog rather than escaping both gates unreported.
+    [Fact]
+    public void TooManyRequestsCode_IsReadIntoTheCatalog()
+    {
+        var act = () => ArchitectureRules.ErrorCodesUseAnAllowedPrefix(_map, IsTicketsCode, SharedCodes);
+
+        var message = act.Should().Throw<XunitException>().Which.Message;
+
+        message.Should().Contain("TooFast", "a code built through Error.TooManyRequests is part of the catalog");
+        message.Should().Contain(nameof(ThrottledErrors), "the report must name the owning type");
+    }
+
     [Fact]
     public void PrefixedCodes_AndAllowedSharedCodes_PassThePrefixRule()
     {

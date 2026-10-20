@@ -1,1 +1,2 @@
-﻿#nullable enable
+#nullable enable
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingMarkers(string! markup, System.Collections.Generic.IEnumerable<string!>! markers) -> System.Collections.Generic.IReadOnlyList<string!>!
