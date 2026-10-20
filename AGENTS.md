@@ -72,7 +72,7 @@ Strict layered flow: `API/Grpc -> Infrastructure -> Application -> Domain -> Sha
 
 ### DI Registration Sequence
 
-`AddApplicationDecorators()` runs **last**: Scrutor `TryDecorate` only wraps handlers already registered. That ordering is the only load-bearing part. Prefer `AddMmcaApplicationPipeline(pipeline => ...)`: it runs `AddApplication() -> AddInfrastructure(config) -> AddAPI(modulesSettings) -> ScanModuleApplicationServices<TModuleRef>() per module -> AddApplicationDecorators()` in order and **seals** the pipeline, so a later handler registration throws instead of silently going unwrapped. `VerifyDecoratorPipeline(IServiceCollection)` exposes the same check to fitness tests.
+`AddApplicationDecorators()` runs **last**: Scrutor `TryDecorate` only wraps handlers already registered. That ordering is the only load-bearing part. Prefer `AddMmcaApplicationPipeline(pipeline => ...)`: it runs `AddApplication() -> the configure callback (module scans, `ModuleLoader.DiscoverAndRegister`, broker registration) -> AddApplicationDecorators()` in order and **seals** the pipeline (`AddInfrastructure`, `AddAPI` and other non-handler registrations stay outside the call, since their order relative to the decorators does not matter), so a later handler registration throws instead of silently going unwrapped. `VerifyDecoratorPipeline(IServiceCollection)` exposes the same check to fitness tests.
 
 ### CQRS Decorator Pipeline
 
