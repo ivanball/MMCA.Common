@@ -1308,7 +1308,7 @@
       },
       "QRCoder": {
         "type": "CentralTransitive",
-        "requested": "[1.8.0, )",
+        "requested": "[1.8.1, )",
         "resolved": "1.7.0",
         "contentHash": "6R3hQkayihGIDjp3F1nLRDBWG+nqahGyOY2+fH4Rll16Vad67oaUUfHkOiMWKiJFnGh+PIGDfUos+0R9m54O1g==",
         "dependencies": {

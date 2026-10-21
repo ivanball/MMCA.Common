@@ -228,7 +228,7 @@
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.11.0, )",
           "Polly": "[8.8.0, )",
-          "QRCoder": "[1.8.0, )",
+          "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -266,9 +266,9 @@
       },
       "QRCoder": {
         "type": "CentralTransitive",
-        "requested": "[1.8.0, )",
-        "resolved": "1.8.0",
-        "contentHash": "RuvX3PEXU6pbY/I5ItAk800jm62r+YnoPLgyS2WTgwxkOnGkOfU9ORiipHUF0LkLyqM8rlroUCA319JjRYfRFQ==",
+        "requested": "[1.8.1, )",
+        "resolved": "1.8.1",
+        "contentHash": "aGfRFpU/IPexAtEOEXCNxC3fMCAqgn6kqALRvXt6LxVAW0VolSDGHiyrY+o2CJgTITOsMpsrsDi7svMJaJ9Vfg==",
         "dependencies": {
           "System.Drawing.Common": "6.0.0"
         }

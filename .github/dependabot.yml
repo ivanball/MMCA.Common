@@ -58,11 +58,11 @@ updates:
       # fitness test. Don't let Dependabot propose the major bump. See Directory.Packages.props.
       - dependency-name: "MassTransit*"
         update-types: ["version-update:semver-major"]
-      # ImageSharp is pinned to v3 by policy (v4 requires a commercial license key at BUILD time;
-      # its MSBuild targets fail without one); enforced by the same fitness test. See
-      # Directory.Packages.props.
+      # ImageSharp is pinned to 3.1.x by policy: v4 AND 3.2.0+ require a commercial license key at
+      # BUILD time (their MSBuild targets fail with "No Six Labors license found"), so a minor bump
+      # is a license decision too, not a routine update. See Directory.Packages.props.
       - dependency-name: "SixLabors.ImageSharp"
-        update-types: ["version-update:semver-major"]
+        versions: [">= 3.2.0"]
       # VS.Threading.Analyzers v18 adds stricter rules (e.g. VSTHRD103) that error under
       # TreatWarningsAsErrors; held at v17 until the flagged call sites are reworked.
       - dependency-name: "Microsoft.VisualStudio.Threading.Analyzers"

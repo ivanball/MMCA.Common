@@ -141,7 +141,7 @@
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.2.0" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aspire.AddCommonDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
