@@ -110,7 +110,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         // WRONG user). The DELETE hits the same /auth/session-cookie endpoint the app's logout uses.
         try
         {
-            var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+            var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Logout" });
             if (await logoutVisible.IsVisibleAsync().ConfigureAwait(false))
             {
                 await Page.EvaluateAsync(
@@ -296,7 +296,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     }
 
     /// <summary>
-    /// Clicks "Sign out of your account" and waits until the browser has actually landed on
+    /// Clicks "Logout" and waits until the browser has actually landed on
     /// <c>/login</c>, so a <see cref="LoginAsync"/> that follows does not race the in-flight logout
     /// navigation.
     /// </summary>
@@ -319,7 +319,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// </remarks>
     protected async Task SignOutAsync()
     {
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Logout" }).ClickAsync().ConfigureAwait(false);
         try
         {
             await Page.WaitForURLAsync(LoginUrlPattern, new() { Timeout = 15_000 }).ConfigureAwait(false);
@@ -356,11 +356,11 @@ public abstract class E2ETestBase : IAsyncLifetime
         await FillFieldAsync(Page.GetByLabel("Password", new() { Exact = true }), password).ConfigureAwait(false);
         await FillFieldAsync(Page.GetByLabel("Confirm Password"), password).ConfigureAwait(false);
 
-        // A host with a Terms URL keeps "Create your account" disabled until the required box is
+        // A host with a Terms URL keeps "Create Account" disabled until the required box is
         // ticked; on a host without one this is a single DOM count and nothing else.
         await new PageObjects.RegisterPage(Page).AcceptTermsIfShownAsync().ConfigureAwait(false);
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync().ConfigureAwait(false);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Create Account" }).ClickAsync().ConfigureAwait(false);
 
         // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
@@ -418,7 +418,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     // subset of the prior conditions, so it cannot turn a passing flow into a failing one.
     private async Task WaitForAuthResultAsync(string authPagePath, string operation)
     {
-        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Logout" });
         var errorAlert = Page.Locator(".mud-alert-text-error");
 
         var leftAuthPage = Page.WaitForURLAsync(

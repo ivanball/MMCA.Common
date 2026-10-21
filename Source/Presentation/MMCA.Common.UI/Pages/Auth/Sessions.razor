@@ -96,8 +96,7 @@ else
                StartIcon="@Icons.Material.Filled.PowerSettingsNew"
                Disabled="@IsBusy"
                OnClick="RevokeAllAsync"
-               aria-busy="@(IsRevokingAll ? "true" : "false")"
-               aria-label="@L["Auth.Sessions.RevokeAll.Aria"]">
+               aria-busy="@(IsRevokingAll ? "true" : "false")">
         @if (IsRevokingAll)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />

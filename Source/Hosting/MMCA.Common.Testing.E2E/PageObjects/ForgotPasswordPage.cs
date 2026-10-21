@@ -10,7 +10,7 @@ public sealed class ForgotPasswordPage
     public ForgotPasswordPage(IPage page) => _page = page;
 
     public ILocator EmailField => _page.GetByLabel("Email");
-    public ILocator SubmitButton => _page.GetByRole(AriaRole.Button, new() { Name = "Send a password reset link" });
+    public ILocator SubmitButton => _page.GetByRole(AriaRole.Button, new() { Name = "Send Reset Link" });
 
     // The page always lands on the same success alert, whether or not the address has an account.
     public ILocator ConfirmationAlert => _page.Locator(".mud-alert-text-success");

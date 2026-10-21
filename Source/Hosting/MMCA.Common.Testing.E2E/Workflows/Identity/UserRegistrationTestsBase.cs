@@ -30,7 +30,7 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         await Expect(Page).Not.ToHaveURLAsync(new Regex("/register$")).ConfigureAwait(false);
 
         // Verify user is logged in by checking for Logout button in the app bar
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" })).ToBeVisibleAsync().ConfigureAwait(false);
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeVisibleAsync().ConfigureAwait(false);
     }
 
     [Fact]

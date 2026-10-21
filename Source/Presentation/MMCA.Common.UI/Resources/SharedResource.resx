@@ -67,9 +67,6 @@
   <data name="Common.Button.Register" xml:space="preserve">
     <value>Register</value>
   </data>
-  <data name="Common.Button.Logout.Aria" xml:space="preserve">
-    <value>Sign out of your account</value>
-  </data>
   <data name="Layout.SkipToMainContent" xml:space="preserve">
     <value>Skip to main content</value>
   </data>
@@ -288,9 +285,6 @@
   </data>
   <data name="Reconnect.FailedAction" xml:space="preserve">
     <value>Please retry or reload the page.</value>
-  </data>
-  <data name="Auth.Register.CreateAccount.Aria" xml:space="preserve">
-    <value>Create your account</value>
   </data>
   <data name="Notif.List.Title" xml:space="preserve">
     <value>Push Notifications</value>
@@ -538,9 +532,6 @@
   <data name="Auth.Forgot.Submit" xml:space="preserve">
     <value>Send Reset Link</value>
   </data>
-  <data name="Auth.Forgot.Submit.Aria" xml:space="preserve">
-    <value>Send a password reset link</value>
-  </data>
   <data name="Auth.Forgot.Confirmation" xml:space="preserve">
     <value>If an account exists for that email address, a password reset link is on its way. Check your inbox and your spam folder.</value>
   </data>
@@ -567,9 +558,6 @@
   </data>
   <data name="Auth.Reset.Submit" xml:space="preserve">
     <value>Reset Password</value>
-  </data>
-  <data name="Auth.Reset.Submit.Aria" xml:space="preserve">
-    <value>Reset your password</value>
   </data>
   <data name="Auth.Reset.Success" xml:space="preserve">
     <value>Your password has been reset. You can now sign in with your new password.</value>
@@ -648,9 +636,6 @@
   </data>
   <data name="Auth.Sessions.RevokeAll" xml:space="preserve">
     <value>Sign out everywhere</value>
-  </data>
-  <data name="Auth.Sessions.RevokeAll.Aria" xml:space="preserve">
-    <value>Sign out of every device, including this one</value>
   </data>
   <data name="Auth.Sessions.RevokeAll.Hint" xml:space="preserve">
     <value>This also signs you out on this device.</value>

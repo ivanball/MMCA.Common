@@ -34,8 +34,6 @@ public sealed class SessionsTests : BunitTestBase
 
     private const string CurrentDeviceButtonSelector = "button[aria-label=\"Sign out of Chrome on Windows\"]";
     private const string OtherDeviceButtonSelector = "button[aria-label=\"Sign out of Firefox on macOS\"]";
-    private const string SignOutEverywhereSelector =
-        "button[aria-label=\"Sign out of every device, including this one\"]";
 
     private static readonly Guid CurrentSessionId =
         new(0x11111111, 0x1111, 0x1111, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11);
@@ -89,6 +87,10 @@ public sealed class SessionsTests : BunitTestBase
 
     /// <summary>MudBlazor renders the boolean <c>Disabled</c> parameter as a bare <c>disabled</c> attribute.</summary>
     private static bool IsDisabled(IElement element) => element.HasAttribute("disabled");
+
+    // The revoke-all button's accessible name is its visible text (WCAG 2.5.3 label in name), so it is found by that text.
+    private static IElement SignOutEverywhere(IRenderedComponent<Sessions> cut) =>
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Sign out everywhere", StringComparison.Ordinal));
 
     private static string InZone(DateTime utcInstant, TimeZoneInfo zone) =>
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc), zone)
@@ -181,7 +183,7 @@ public sealed class SessionsTests : BunitTestBase
 
         cut.WaitForAssertion(() => cut.FindAll(OtherDeviceButtonSelector).Should().ContainSingle());
         IsDisabled(cut.Find(OtherDeviceButtonSelector)).Should().BeFalse();
-        IsDisabled(cut.Find(SignOutEverywhereSelector)).Should().BeFalse();
+        IsDisabled(SignOutEverywhere(cut)).Should().BeFalse();
     }
 
     // ==================== Empty and failed states ====================
@@ -310,7 +312,7 @@ public sealed class SessionsTests : BunitTestBase
 
         cut.WaitForAssertion(() =>
             IsDisabled(cut.Find(OtherDeviceButtonSelector)).Should().BeTrue());
-        IsDisabled(cut.Find(SignOutEverywhereSelector)).Should().BeTrue();
+        IsDisabled(SignOutEverywhere(cut)).Should().BeTrue();
 
         pending.SetResult(Result.Success());
 
@@ -361,7 +363,7 @@ public sealed class SessionsTests : BunitTestBase
         var cut = RenderSessions();
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
 
         cut.WaitForAssertion(() => _dialogs.Verify(
             d => d.ConfirmAsync(
@@ -383,7 +385,7 @@ public sealed class SessionsTests : BunitTestBase
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
         var uriBefore = navigation.Uri;
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
 
         cut.WaitForAssertion(() => _dialogs.Verify(
             d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
@@ -398,7 +400,7 @@ public sealed class SessionsTests : BunitTestBase
         var cut = RenderSessions();
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
 
         // One call does both halves: the account-wide server revoke AND (on success) the local
         // sign-out. M131: the reporting RevokeAllSessionsAsync, not the best-effort LogoutAsync.
@@ -412,7 +414,7 @@ public sealed class SessionsTests : BunitTestBase
         var cut = RenderSessions();
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
 
         cut.WaitForAssertion(() => _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Once()));
         _auth.Verify(a => a.RevokeSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never());
@@ -431,7 +433,7 @@ public sealed class SessionsTests : BunitTestBase
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
         var uriBefore = navigation.Uri;
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
 
         cut.WaitForAssertion(() =>
             _toast.Verify(t => t.Show("Your other devices could not be signed out.", ToastSeverity.Error), Times.Once()));
@@ -468,7 +470,7 @@ public sealed class SessionsTests : BunitTestBase
         var cut = RenderSessions();
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
 
-        cut.Find(SignOutEverywhereSelector).Click();
+        SignOutEverywhere(cut).Click();
         confirm.SetResult(true);
 
         // The revoke is now in flight (and stays there until the test completes it).
@@ -477,7 +479,7 @@ public sealed class SessionsTests : BunitTestBase
         cut.WaitForAssertion(
             () =>
             {
-                var button = cut.Find(SignOutEverywhereSelector);
+                var button = SignOutEverywhere(cut);
                 IsAriaBusy(button).Should().BeTrue(
                     "A-35: the sign-out-everywhere button must render its busy state (aria-busy) while the revoke is in flight");
                 IsDisabled(button).Should().BeTrue(
@@ -494,7 +496,7 @@ public sealed class SessionsTests : BunitTestBase
 
         cut.WaitForAssertion(() =>
         {
-            var button = cut.Find(SignOutEverywhereSelector);
+            var button = SignOutEverywhere(cut);
             IsAriaBusy(button).Should().BeFalse();
             IsDisabled(button).Should().BeFalse();
         });
@@ -528,7 +530,7 @@ public sealed class SessionsTests : BunitTestBase
                     "A-35: the row's sign-out button must show its progress indicator while its revoke is in flight");
             },
             BusyRenderTimeout);
-        IsDisabled(cut.Find(SignOutEverywhereSelector)).Should().BeTrue(
+        IsDisabled(SignOutEverywhere(cut)).Should().BeTrue(
             "A-35: the account-wide button must be locked while a row's revoke is in flight");
 
         revoke.SetResult(Result.Success());

@@ -67,9 +67,6 @@
   <data name="Common.Button.Register" xml:space="preserve">
     <value>Registrarse</value>
   </data>
-  <data name="Common.Button.Logout.Aria" xml:space="preserve">
-    <value>Cerrar la sesión de su cuenta</value>
-  </data>
   <data name="Layout.SkipToMainContent" xml:space="preserve">
     <value>Saltar al contenido principal</value>
   </data>
@@ -288,9 +285,6 @@
   </data>
   <data name="Reconnect.FailedAction" xml:space="preserve">
     <value>Reintente o recargue la página.</value>
-  </data>
-  <data name="Auth.Register.CreateAccount.Aria" xml:space="preserve">
-    <value>Crear su cuenta</value>
   </data>
   <data name="Notif.List.Title" xml:space="preserve">
     <value>Notificaciones push</value>
@@ -538,9 +532,6 @@
   <data name="Auth.Forgot.Submit" xml:space="preserve">
     <value>Enviar enlace</value>
   </data>
-  <data name="Auth.Forgot.Submit.Aria" xml:space="preserve">
-    <value>Enviar un enlace para restablecer la contraseña</value>
-  </data>
   <data name="Auth.Forgot.Confirmation" xml:space="preserve">
     <value>Si existe una cuenta con ese correo electrónico, le enviaremos un enlace para restablecer la contraseña. Revise su bandeja de entrada y la carpeta de correo no deseado.</value>
   </data>
@@ -567,9 +558,6 @@
   </data>
   <data name="Auth.Reset.Submit" xml:space="preserve">
     <value>Restablecer contraseña</value>
-  </data>
-  <data name="Auth.Reset.Submit.Aria" xml:space="preserve">
-    <value>Restablecer su contraseña</value>
   </data>
   <data name="Auth.Reset.Success" xml:space="preserve">
     <value>Su contraseña se ha restablecido. Ya puede iniciar sesión con su contraseña nueva.</value>
@@ -648,9 +636,6 @@
   </data>
   <data name="Auth.Sessions.RevokeAll" xml:space="preserve">
     <value>Cerrar sesión en todas partes</value>
-  </data>
-  <data name="Auth.Sessions.RevokeAll.Aria" xml:space="preserve">
-    <value>Cerrar la sesión en todos los dispositivos, incluido este</value>
   </data>
   <data name="Auth.Sessions.RevokeAll.Hint" xml:space="preserve">
     <value>Esto también cierra su sesión en este dispositivo.</value>

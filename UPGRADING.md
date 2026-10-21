@@ -32,6 +32,29 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Five shared buttons are named by their visible text (WCAG 2.5.3 Label in Name).** Their
+`aria-label` no longer differs from what they show, so a test or page object that located them by the
+old accessible name finds nothing.
+
+| Old accessible name | New accessible name (visible text) |
+|---------------------|------------------------------------|
+| `Sign out of your account` | `Logout` |
+| `Create your account` | `Create Account` |
+| `Send a password reset link` | `Send Reset Link` |
+| `Reset your password` | `Reset Password` |
+| `Sign out of every device, including this one` | `Sign out everywhere` |
+
+The fix:
+
+1. **A consumer test or page object** that calls `GetByRole(AriaRole.Button, new() { Name = "<old>" })`
+   (or a CSS `aria-label` selector) switches to the new name. `MMCA.Common.Testing.E2E` is already
+   updated, so anything going through its `E2ETestBase` helpers and Identity page objects needs no change.
+2. **A consumer that overrode one of the removed resource keys** (`Common.Button.Logout.Aria`,
+   `Auth.Register.CreateAccount.Aria`, `Auth.Forgot.Submit.Aria`, `Auth.Reset.Submit.Aria`,
+   `Auth.Sessions.RevokeAll.Aria`) deletes the override; nothing reads it any more.
+
 ## [1.248.0] - 2026-10-20
 
 **MAUI heads get the Android status bar height before the first paint.** `MainPageBase` appends it to
