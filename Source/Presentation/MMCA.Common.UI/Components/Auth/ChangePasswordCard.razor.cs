@@ -129,13 +129,10 @@ public partial class ChangePasswordCard
 
     private async Task SavePasswordAsync()
     {
-        if (_passwordForm is not { } form)
-        {
-            return;
-        }
-
-        await form.ValidateAsync();
-        if (!form.IsValid)
+        // Re-entrancy guard, raised BEFORE the first await (M235, as NotificationSend does): a second
+        // click that lands before the disabled render would resend the now-stale current password,
+        // which the server refuses and counts toward lockout.
+        if (_passwordForm is not { } form || _isSaving)
         {
             return;
         }
@@ -143,6 +140,12 @@ public partial class ChangePasswordCard
         _isSaving = true;
         try
         {
+            await form.ValidateAsync();
+            if (!form.IsValid)
+            {
+                return;
+            }
+
             var result = await AuthService.ChangePasswordAsync(_currentPassword, _newPassword, _cts.LifetimeToken());
 
             if (result.IsSuccess)

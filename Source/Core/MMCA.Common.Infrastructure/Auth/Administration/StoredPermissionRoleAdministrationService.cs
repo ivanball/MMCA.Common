@@ -99,15 +99,16 @@ internal sealed class StoredPermissionRoleAdministrationService(
             return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
         }
 
-        var stored = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
-        var compiled = CompiledPermissions(role);
+        var canonicalRole = CanonicalRole(role);
+        var stored = await store.GetPermissionsAsync(canonicalRole, cancellationToken).ConfigureAwait(false);
+        var compiled = CompiledPermissions(canonicalRole);
 
-        if (!IsKnownRole(role, stored, compiled))
+        if (!IsKnownRole(canonicalRole, stored, compiled))
         {
             return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
         }
 
-        return Result.Success(new RolePermissionsResponse(role, compiled, stored));
+        return Result.Success(new RolePermissionsResponse(canonicalRole, compiled, stored));
     }
 
     /// <inheritdoc />
@@ -127,8 +128,12 @@ internal sealed class StoredPermissionRoleAdministrationService(
         // The same existence rule GetRoleAsync applies, checked before anything is validated or
         // written: a set must not be the route by which a typo becomes a role, with an empty list
         // (answering success for a role that does not exist) or with a non-empty one (creating it).
-        var current = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
-        if (!IsKnownRole(role, current, CompiledPermissions(role)))
+        // Every read, write and invalidation below uses the one canonical spelling, so a route value
+        // cased differently from the stored rows cannot write a second casing beside them or revoke
+        // nothing on a case-sensitive collation.
+        var canonicalRole = CanonicalRole(role);
+        var current = await store.GetPermissionsAsync(canonicalRole, cancellationToken).ConfigureAwait(false);
+        if (!IsKnownRole(canonicalRole, current, CompiledPermissions(canonicalRole)))
         {
             return Result.Failure<RolePermissionsResponse>(RoleNotFound(role));
         }
@@ -172,7 +177,7 @@ internal sealed class StoredPermissionRoleAdministrationService(
             foreach (var permission in desired.Except(existing, StringComparer.Ordinal))
             {
                 var granted = await store
-                    .GrantAsync(role, permission, changedBy, cancellationToken)
+                    .GrantAsync(canonicalRole, permission, changedBy, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (granted.IsFailure)
@@ -183,7 +188,7 @@ internal sealed class StoredPermissionRoleAdministrationService(
 
             foreach (var permission in existing.Except(desired, StringComparer.Ordinal))
             {
-                var revoked = await store.RevokeAsync(role, permission, cancellationToken).ConfigureAwait(false);
+                var revoked = await store.RevokeAsync(canonicalRole, permission, cancellationToken).ConfigureAwait(false);
                 if (revoked.IsFailure)
                 {
                     return Result.Failure<RolePermissionsResponse>(revoked.Errors);
@@ -192,12 +197,12 @@ internal sealed class StoredPermissionRoleAdministrationService(
         }
         finally
         {
-            await invalidator.InvalidateAsync(role, cancellationToken).ConfigureAwait(false);
+            await invalidator.InvalidateAsync(canonicalRole, cancellationToken).ConfigureAwait(false);
         }
 
         IReadOnlyList<string> stored = [.. desired.Order(StringComparer.Ordinal)];
 
-        return Result.Success(new RolePermissionsResponse(role, CompiledPermissions(role), stored));
+        return Result.Success(new RolePermissionsResponse(canonicalRole, CompiledPermissions(canonicalRole), stored));
     }
 
     /// <summary>
@@ -233,6 +238,25 @@ internal sealed class StoredPermissionRoleAdministrationService(
     private bool IsKnownRole(string role, IReadOnlyList<string> stored, IReadOnlyList<string> compiled) =>
         compiled.Count > 0
         || RoleUniverse(stored.Count > 0 ? [role] : []).Contains(role);
+
+    /// <summary>
+    /// Resolves a role name to the one spelling the role universe knows it by, so a differently-cased
+    /// route value reads, writes and revokes the same stored rows.
+    /// </summary>
+    /// <remarks>
+    /// The lookup is the same universe <see cref="IsKnownRole"/> consults, folded case-insensitively:
+    /// the catalog's spelling wins, then the configured <c>KnownRoles</c>. A role named by stored rows
+    /// alone keeps the caller's (trimmed) spelling here, and the store folds it to the spelling
+    /// already stored.
+    /// </remarks>
+    /// <param name="role">The role as the caller spelled it.</param>
+    /// <returns>The canonical spelling.</returns>
+    private string CanonicalRole(string role)
+    {
+        var trimmed = role.Trim();
+
+        return RoleUniverse([]).TryGetValue(trimmed, out var canonical) ? canonical : trimmed;
+    }
 
     private static Error RoleNotFound(string? role) => Error.NotFoundError(
         "Authorization.RoleNotFound",

@@ -62,7 +62,10 @@ internal static class NativePushPayloads
             .Chunk(MaxTagsPerExpression)
             .Select(chunk => string.Join(" || ", chunk));
 
+    /// <summary>The prefix every owner tag starts with.</summary>
+    internal const string UserTagPrefix = "user:";
+
     /// <summary>The tag stamped on an installation to mark its owning user.</summary>
     internal static string UserTag(UserIdentifierType userId) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"user:{userId}");
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{UserTagPrefix}{userId}");
 }

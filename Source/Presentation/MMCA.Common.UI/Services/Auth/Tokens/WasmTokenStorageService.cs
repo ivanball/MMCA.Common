@@ -37,6 +37,13 @@ public sealed class WasmTokenStorageService(
     private DateTimeOffset _anonymousUntil;
 
     /// <summary>
+    /// Bumped by every <see cref="SetTokensAsync"/>, and by <see cref="ClearTokensAsync"/> both before
+    /// and after its cookie clear. A hydrate that sees it move while its acquisition was in flight
+    /// discards its stale answer (M234).
+    /// </summary>
+    private int _tokenVersion;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="WasmTokenStorageService"/> class on the system
     /// clock. Kept so code compiled against the original two-argument constructor keeps binding.
     /// </summary>
@@ -94,6 +101,7 @@ public sealed class WasmTokenStorageService(
     public async Task SetTokensAsync(string accessToken, string refreshToken)
     {
         // A login right after anonymous browsing must not wait out the grace.
+        Interlocked.Increment(ref _tokenVersion);
         _anonymousUntil = default;
         _accessToken = accessToken;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
@@ -108,11 +116,18 @@ public sealed class WasmTokenStorageService(
 
     public async Task ClearTokensAsync()
     {
+        Interlocked.Increment(ref _tokenVersion);
         _accessToken = null;
         // Best-effort by contract (IAuthUIService.LogoutAsync never fails), so a false is ignored. A caller
         // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
         // server-side revoke.
         _ = await sessionCookieSync.ClearAsync();
+
+        // Bump again once the cookies are gone (M234 review): a hydrate that STARTED during the clear
+        // captured the first bump and read the session the clear was still removing. This discards its
+        // answer if it is still in flight, and drops it if it already landed.
+        Interlocked.Increment(ref _tokenVersion);
+        _accessToken = null;
     }
 
     private async Task<string?> HydrateAsync()
@@ -121,17 +136,28 @@ public sealed class WasmTokenStorageService(
         // ones) reports a 429, a 5xx, a dropped connection or unavailable interop as unavailable, and
         // the next read then hydrates again instead of treating a signed-in user as anonymous. A
         // refresher without that capability keeps the previous reading: its null means "no session".
+        // A login or logout that lands while the acquisition is in flight wins (M234): the answer was
+        // read from the session as it was before, so it is discarded together with its grace.
+        var version = Volatile.Read(ref _tokenVersion);
+        string? acquired;
         var unavailable = false;
         if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
         {
             var acquisition = await sessionAware.TryAcquireAccessTokenAsync().ConfigureAwait(false);
-            _accessToken = acquisition.AccessToken;
+            acquired = acquisition.AccessToken;
             unavailable = acquisition.IsUnavailable;
         }
         else
         {
-            _accessToken = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
+            acquired = await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
         }
+
+        if (Volatile.Read(ref _tokenVersion) != version)
+        {
+            return _accessToken;
+        }
+
+        _accessToken = acquired;
 
         if (_accessToken is null && !unavailable)
         {

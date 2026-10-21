@@ -16,9 +16,12 @@ public static partial class ArchitectureRules
     /// <remarks>
     /// <para>
     /// <b>What it matches.</b> An attribute or component parameter whose name ends in <c>style</c> or
-    /// <c>Style</c> (optionally <c>StyleFunc</c>), assigned with <c>="</c>. The name must not be
-    /// preceded by a word character or a hyphen, so CSS text such as <c>list-style</c> and an attribute
-    /// such as <c>data-style</c> stay out. Each violation reads <c>relative/path.razor:line attr=</c>.
+    /// <c>Style</c> (optionally <c>StyleFunc</c>), assigned with <c>="</c>, <c>='</c> or <c>=@</c> (a
+    /// bare Razor expression). The name must not be preceded by a word character or a hyphen, so CSS
+    /// text such as <c>list-style</c> and an attribute such as <c>data-style</c> stay out. Lines inside
+    /// an <c>@code</c> (or <c>@functions</c>) block are C#, not markup, so a variable named
+    /// <c>style</c> there is not reported; markup after the block is scanned again. Each violation
+    /// reads <c>relative/path.razor:line attr=</c>.
     /// </para>
     /// <para>
     /// <b>Limits.</b> A missing root is a violation rather than a silent skip, and finding fewer than
@@ -87,9 +90,30 @@ public static partial class ArchitectureRules
 
     private static IEnumerable<string> InlineStyleViolationsIterator(string relativePath, IReadOnlyList<string> lines)
     {
+        // Brace depth of the @code block being skipped; null while scanning markup. The block opens on
+        // the directive line or the next one, and ends when its braces balance.
+        int? codeDepth = null;
+        var codeOpened = false;
+
         for (var i = 0; i < lines.Count; i++)
         {
-            var match = InlineStyleAttribute.Match(lines[i]);
+            var line = lines[i];
+            if (codeDepth is null && CodeBlockDirective.IsMatch(line))
+            {
+                codeDepth = 0;
+                codeOpened = false;
+            }
+
+            if (codeDepth is { } depth)
+            {
+                var opens = line.Count(static c => c == '{');
+                depth += opens - line.Count(static c => c == '}');
+                codeOpened |= opens > 0;
+                codeDepth = codeOpened && depth <= 0 ? null : depth;
+                continue;
+            }
+
+            var match = InlineStyleAttribute.Match(line);
             if (match.Success)
             {
                 yield return string.Create(CultureInfo.InvariantCulture, $"{relativePath}:{i + 1} {match.Groups["attr"].Value}=");
@@ -98,7 +122,12 @@ public static partial class ArchitectureRules
     }
 
     // An attribute or component parameter whose name ends in "style" or "Style" (optionally
-    // "StyleFunc"), assigned with =. The lookbehind keeps CSS text such as "list-style" out.
-    [GeneratedRegex(@"(?<![\w-])(?<attr>[A-Za-z]*[Ss]tyle(Func)?)\s*=\s*""", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    // "StyleFunc"), assigned with =, whose value opens with a double quote, a single quote or a bare
+    // Razor expression (@). The lookbehind keeps CSS text such as "list-style" out.
+    [GeneratedRegex(@"(?<![\w-])(?<attr>[A-Za-z]*[Ss]tyle(Func)?)\s*=\s*[""'@]", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
     private static partial Regex InlineStyleAttribute { get; }
+
+    // The directive that opens a Razor component's C# block.
+    [GeneratedRegex(@"^\s*@(code|functions)\b", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex CodeBlockDirective { get; }
 }

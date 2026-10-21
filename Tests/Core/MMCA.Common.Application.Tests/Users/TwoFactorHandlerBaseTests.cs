@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Users;
 using MMCA.Common.Application.Users.UseCases.TwoFactor;
@@ -26,6 +27,7 @@ namespace MMCA.Common.Application.Tests.Users;
 public sealed class TwoFactorHandlerBaseTests
 {
     private const UserIdentifierType TestUserId = 11;
+    private const string AttemptKey = "two-factor:11";
 
     // ── Begin enrollment ──
     [Fact]
@@ -149,7 +151,140 @@ public sealed class TwoFactorHandlerBaseTests
         result.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
     }
 
+    [Fact]
+    public async Task ConfirmEnrollment_OnAnAlreadyEnabledAccount_IsRefusedAndKeepsTheRecoveryCodes()
+    {
+        // M228: the secret stays stored after enrollment, so without this check a TOTP-only code
+        // re-ran CompleteEnrollmentAsync and minted a fresh recovery set for a stolen-token holder.
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        RecoveryCodeSet original = service.GenerateRecoveryCodes();
+        store.SeedEnabled(secret, original.Hashes);
+        var sut = new TestConfirmHandler(service, store);
+
+        Result<TwoFactorRecoveryCodesResponse> result = await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Authentication.TwoFactorAlreadyEnabled");
+        store.State!.TwoFactorRecoveryCodeHashes.Should().BeEquivalentTo(original.Hashes);
+    }
+
+    [Fact]
+    public async Task ConfirmEnrollment_WithAWrongCode_CountsAFailedAttempt()
+    {
+        // M228: every post-sign-in code check feeds the per-account lockout, as change-password does.
+        var (store, service) = CreateCollaborators();
+        store.SeedPending(service.GenerateSecret());
+        var protection = new RecordingLoginProtection();
+        var sut = new TestConfirmHandler(service, store, protection);
+
+        await sut.HandleAsync(new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest("000000")));
+
+        protection.Increments.Should().Equal(AttemptKey);
+        protection.Resets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ConfirmEnrollment_WhenLockedOut_IsRefusedWithoutEnablingTheFactor()
+    {
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedPending(secret);
+        var sut = new TestConfirmHandler(service, store, new RecordingLoginProtection { LockedOut = true });
+
+        Result<TwoFactorRecoveryCodesResponse> result = await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Type == ErrorType.TooManyRequests);
+        store.State!.IsTwoFactorEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmEnrollment_WithTheRightCode_ResetsTheFailedAttemptCounter()
+    {
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedPending(secret);
+        var protection = new RecordingLoginProtection();
+        var sut = new TestConfirmHandler(service, store, protection);
+
+        await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        protection.Resets.Should().Equal(AttemptKey);
+    }
+
+    [Fact]
+    public async Task ConfirmEnrollment_TheConfirmingCodeCannotBeReplayedToDisableTheFactor()
+    {
+        // M228: confirm goes through the authenticator's single-use time-step guard, so the code it
+        // accepted is already spent at the first challenge.
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedPending(secret);
+        var authenticator = new FakeAuthenticator(service, store);
+        var confirm = new TestConfirmHandler(service, store, authenticator: authenticator);
+        var disable = new TestDisableHandler(authenticator, store);
+        var code = new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret));
+
+        Result<TwoFactorRecoveryCodesResponse> confirmed = await confirm.HandleAsync(new TestTwoFactorCommand(TestUserId, code));
+        Result replayed = await disable.HandleAsync(new TestTwoFactorCommand(TestUserId, code));
+
+        confirmed.IsSuccess.Should().BeTrue();
+        replayed.IsFailure.Should().BeTrue();
+        replayed.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
+        store.State!.IsTwoFactorEnabled.Should().BeTrue();
+    }
+
     // ── Disable ──
+    [Fact]
+    public async Task Disable_WithAWrongCode_CountsAFailedAttempt()
+    {
+        var (store, service) = CreateCollaborators();
+        store.SeedEnabled(service.GenerateSecret(), []);
+        var protection = new RecordingLoginProtection();
+        var sut = new TestDisableHandler(new FakeAuthenticator(service, store), store, protection);
+
+        await sut.HandleAsync(new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest("000000")));
+
+        protection.Increments.Should().Equal(AttemptKey);
+        protection.Resets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Disable_WhenLockedOut_IsRefusedAndLeavesTheFactorOn()
+    {
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedEnabled(secret, []);
+        var sut = new TestDisableHandler(
+            new FakeAuthenticator(service, store), store, new RecordingLoginProtection { LockedOut = true });
+
+        Result result = await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Type == ErrorType.TooManyRequests);
+        store.State!.IsTwoFactorEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Disable_WithALiveCode_ResetsTheFailedAttemptCounter()
+    {
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedEnabled(secret, []);
+        var protection = new RecordingLoginProtection();
+        var sut = new TestDisableHandler(new FakeAuthenticator(service, store), store, protection);
+
+        await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        protection.Resets.Should().Equal(AttemptKey);
+    }
+
     [Fact]
     public async Task Disable_WithALiveCode_ClearsTheAccountsTwoFactorState()
     {
@@ -244,6 +379,53 @@ public sealed class TwoFactorHandlerBaseTests
         result.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorNotEnrolledCode);
     }
 
+    [Fact]
+    public async Task Regenerate_WithAWrongCode_CountsAFailedAttempt()
+    {
+        var (store, service) = CreateCollaborators();
+        store.SeedEnabled(service.GenerateSecret(), []);
+        var protection = new RecordingLoginProtection();
+        var sut = new TestRegenerateHandler(new FakeAuthenticator(service, store), service, store, protection);
+
+        await sut.HandleAsync(new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest("000000")));
+
+        protection.Increments.Should().Equal(AttemptKey);
+        protection.Resets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Regenerate_WhenLockedOut_IsRefusedAndKeepsTheRecoverySet()
+    {
+        var (store, service) = CreateCollaborators(recoveryCodeCount: 2);
+        string secret = service.GenerateSecret();
+        RecoveryCodeSet original = service.GenerateRecoveryCodes();
+        store.SeedEnabled(secret, original.Hashes);
+        var sut = new TestRegenerateHandler(
+            new FakeAuthenticator(service, store), service, store, new RecordingLoginProtection { LockedOut = true });
+
+        Result<TwoFactorRecoveryCodesResponse> result = await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Type == ErrorType.TooManyRequests);
+        store.State!.TwoFactorRecoveryCodeHashes.Should().BeEquivalentTo(original.Hashes);
+    }
+
+    [Fact]
+    public async Task Regenerate_WithALiveCode_ResetsTheFailedAttemptCounter()
+    {
+        var (store, service) = CreateCollaborators();
+        string secret = service.GenerateSecret();
+        store.SeedEnabled(secret, []);
+        var protection = new RecordingLoginProtection();
+        var sut = new TestRegenerateHandler(new FakeAuthenticator(service, store), service, store, protection);
+
+        await sut.HandleAsync(
+            new TestTwoFactorCommand(TestUserId, new TwoFactorCodeRequest(StubTwoFactorService.CodeFor(secret))));
+
+        protection.Resets.Should().Equal(AttemptKey);
+    }
+
     private static (RecordingTwoFactorStore Store, StubTwoFactorService Service) CreateCollaborators(
         int recoveryCodeCount = 10) =>
         (new RecordingTwoFactorStore(), new StubTwoFactorService(recoveryCodeCount));
@@ -321,10 +503,21 @@ public sealed class StubTwoFactorService(int recoveryCodeCount) : ITwoFactorServ
 /// <summary>
 /// <see cref="ITwoFactorAuthenticator"/> mirroring the shipped one's decision order over the stub
 /// service and the in-memory store, so the handler tests see realistic refusals without reaching into
-/// the Infrastructure tier.
+/// the Infrastructure tier. Like the shipped one, it accepts a time-based code once across the
+/// challenge and the enrollment-confirm check.
 /// </summary>
 public sealed class FakeAuthenticator(ITwoFactorService service, ITwoFactorStore store) : ITwoFactorAuthenticator
 {
+    private readonly HashSet<string> _acceptedCodes = new(StringComparer.Ordinal);
+
+    /// <inheritdoc />
+    public Task<bool> VerifyEnrollmentCodeAsync(
+        UserIdentifierType userId,
+        string secret,
+        string? code,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(service.VerifyCode(secret, code) && _acceptedCodes.Add(code!));
+
     /// <inheritdoc />
     public async Task<Result<TwoFactorOutcome>> ChallengeAsync(
         UserIdentifierType userId,
@@ -344,7 +537,9 @@ public sealed class FakeAuthenticator(ITwoFactorService service, ITwoFactorStore
 
         if (state.TwoFactorSecret is { Length: > 0 } secret && service.VerifyCode(secret, code))
         {
-            return Result.Success(TwoFactorOutcome.VerifiedTotp);
+            return _acceptedCodes.Add(code)
+                ? Result.Success(TwoFactorOutcome.VerifiedTotp)
+                : Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid());
         }
 
         if (!service.TryMatchRecoveryCode(code, state.TwoFactorRecoveryCodeHashes, out string? matched) || matched is null)
@@ -439,17 +634,76 @@ public sealed class TestBeginHandler(ITwoFactorService service, ITwoFactorStore 
         Task.FromResult(accountName);
 }
 
+/// <summary>
+/// In-memory <see cref="ILoginProtectionService"/> recording which counter keys were incremented and
+/// reset, with a switch that answers every lockout check as locked.
+/// </summary>
+public sealed class RecordingLoginProtection : ILoginProtectionService
+{
+    /// <summary>Whether every lockout check answers as locked.</summary>
+    public bool LockedOut { get; init; }
+
+    /// <summary>The keys a failed attempt was recorded against, in order.</summary>
+    public List<string> Increments { get; } = [];
+
+    /// <summary>The keys that were reset, in order.</summary>
+    public List<string> Resets { get; } = [];
+
+    /// <inheritdoc />
+    public Task<Result> CheckLockoutAsync(string email, CancellationToken cancellationToken = default) =>
+        Task.FromResult(LockedOut
+            ? Result.Failure(Error.TooManyRequests("Auth.TooManyAttempts", "Too many attempts."))
+            : Result.Success());
+
+    /// <inheritdoc />
+    public Task IncrementFailedAttemptsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        Increments.Add(email);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ResetFailedAttemptsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        Resets.Add(email);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<Result> CheckRegistrationRateLimitAsync(string? ipAddress, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success());
+
+    /// <inheritdoc />
+    public Task IncrementRegistrationCountAsync(string? ipAddress, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+}
+
 /// <summary>Concrete confirm-enrollment handler.</summary>
-public sealed class TestConfirmHandler(ITwoFactorService service, ITwoFactorStore store)
-    : ConfirmTwoFactorEnrollmentHandlerBase<TestTwoFactorCommand>(service, store, NullLogger.Instance);
+public sealed class TestConfirmHandler(
+    ITwoFactorService service,
+    ITwoFactorStore store,
+    ILoginProtectionService? loginProtection = null,
+    ITwoFactorAuthenticator? authenticator = null)
+    : ConfirmTwoFactorEnrollmentHandlerBase<TestTwoFactorCommand>(
+        service,
+        authenticator ?? new FakeAuthenticator(service, store),
+        store,
+        loginProtection ?? new RecordingLoginProtection(),
+        NullLogger.Instance);
 
 /// <summary>Concrete disable handler.</summary>
-public sealed class TestDisableHandler(ITwoFactorAuthenticator authenticator, ITwoFactorStore store)
-    : DisableTwoFactorHandlerBase<TestTwoFactorCommand>(authenticator, store, NullLogger.Instance);
+public sealed class TestDisableHandler(
+    ITwoFactorAuthenticator authenticator,
+    ITwoFactorStore store,
+    ILoginProtectionService? loginProtection = null)
+    : DisableTwoFactorHandlerBase<TestTwoFactorCommand>(
+        authenticator, store, loginProtection ?? new RecordingLoginProtection(), NullLogger.Instance);
 
 /// <summary>Concrete regenerate handler.</summary>
 public sealed class TestRegenerateHandler(
     ITwoFactorAuthenticator authenticator,
     ITwoFactorService service,
-    ITwoFactorStore store)
-    : RegenerateRecoveryCodesHandlerBase<TestTwoFactorCommand>(authenticator, service, store, NullLogger.Instance);
+    ITwoFactorStore store,
+    ILoginProtectionService? loginProtection = null)
+    : RegenerateRecoveryCodesHandlerBase<TestTwoFactorCommand>(
+        authenticator, service, store, loginProtection ?? new RecordingLoginProtection(), NullLogger.Instance);

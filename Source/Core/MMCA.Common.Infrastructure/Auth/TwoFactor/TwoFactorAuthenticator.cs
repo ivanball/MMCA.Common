@@ -85,6 +85,22 @@ internal sealed class TwoFactorAuthenticator(
             : Result.Success(TwoFactorOutcome.VerifiedRecoveryCode);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> VerifyEnrollmentCodeAsync(
+        UserIdentifierType userId,
+        string secret,
+        string? code,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(secret) || !twoFactorService.VerifyCode(secret, code, out var matchedStep))
+        {
+            return false;
+        }
+
+        var accepted = await AcceptTimeStepOnceAsync(userId, matchedStep, cancellationToken).ConfigureAwait(false);
+        return accepted.IsSuccess;
+    }
+
     /// <summary>
     /// Accepts a matched time step only when it is newer than the last one accepted for the account,
     /// then remembers it for as long as the window can still accept it.

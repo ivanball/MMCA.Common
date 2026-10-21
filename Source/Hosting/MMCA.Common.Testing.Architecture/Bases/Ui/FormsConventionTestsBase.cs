@@ -103,21 +103,38 @@ public abstract class FormsConventionTestsBase
     {
         ArgumentNullException.ThrowIfNull(markup);
 
-        var missing = PasswordFormMarkers
-            .Where(marker => !markup.Contains(marker, StringComparison.Ordinal))
-            .ToList();
+        var uncommented = StripAllComments(markup);
+        var missing = MissingMarkers(uncommented, PasswordFormMarkers).ToList();
 
-        if (CountOccurrences(markup, "Required=\"true\"") < 3)
+        if (CountOccurrences(uncommented, "Required=\"true\"") < 3)
         {
             missing.Add("Required=\"true\" on all three password fields (current/new/confirm)");
         }
 
-        if (CountOccurrences(markup, "RequiredError") < 3)
+        if (CountOccurrences(uncommented, "RequiredError") < 3)
         {
             missing.Add("RequiredError on all three password fields");
         }
 
         return missing;
+    }
+
+    /// <summary>
+    /// The entries of <paramref name="markers"/> that the markup does not contain once its Razor
+    /// (<c>@* *@</c>) and HTML (<c>&lt;!-- --&gt;</c>) comments are stripped, so a commented-out guard
+    /// does not stand in for one that renders. Public so the create-form check can be pinned against
+    /// fixture markup in the rule's own tests.
+    /// </summary>
+    /// <param name="markup">The form's <c>.razor</c> markup.</param>
+    /// <param name="markers">The literal markers the form must keep.</param>
+    /// <returns>The missing markers, empty when none.</returns>
+    public static IReadOnlyList<string> MissingMarkers(string markup, IEnumerable<string> markers)
+    {
+        ArgumentNullException.ThrowIfNull(markup);
+        ArgumentNullException.ThrowIfNull(markers);
+
+        var uncommented = StripAllComments(markup);
+        return [.. markers.Where(marker => !uncommented.Contains(marker, StringComparison.Ordinal))];
     }
 
     [Fact]
@@ -128,11 +145,8 @@ public abstract class FormsConventionTestsBase
         var violations = new List<string>();
         foreach (var form in createForms)
         {
-            var markup = File.ReadAllText(form);
-            var missing = RequiredMarkers
-                .Where(marker => !markup.Contains(marker, StringComparison.Ordinal))
-                .ToArray();
-            if (missing.Length > 0)
+            var missing = MissingMarkers(File.ReadAllText(form), RequiredMarkers);
+            if (missing.Count > 0)
             {
                 violations.Add($"{Path.GetFileName(form)} is missing: {string.Join(", ", missing)}");
             }
@@ -234,9 +248,11 @@ public abstract class FormsConventionTestsBase
     public static bool RendersChangePasswordCard(string markup)
     {
         ArgumentNullException.ThrowIfNull(markup);
-        var uncommented = StripComments(StripComments(markup, "@*", "*@"), "<!--", "-->");
-        return uncommented.Contains(ChangePasswordCardTag, StringComparison.Ordinal);
+        return StripAllComments(markup).Contains(ChangePasswordCardTag, StringComparison.Ordinal);
     }
+
+    private static string StripAllComments(string markup) =>
+        StripComments(StripComments(markup, "@*", "*@"), "<!--", "-->");
 
     private static string StripComments(string text, string open, string close)
     {

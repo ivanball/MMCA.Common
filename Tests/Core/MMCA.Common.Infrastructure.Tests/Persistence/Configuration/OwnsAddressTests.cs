@@ -70,7 +70,34 @@ public sealed class OwnsAddressTests : IDisposable
         owned.FindProperty(nameof(Address.City))!.GetMaxLength().Should().Be(AddressInvariants.CityMaxLength);
         owned.FindProperty(nameof(Address.ZipCode))!.GetMaxLength().Should().Be(AddressInvariants.ZipCodeMaxLength);
         owned.FindProperty(nameof(Address.Country))!.GetMaxLength().Should().Be(AddressInvariants.CountryMaxLength);
-        owned.FindProperty(nameof(Address.AddressLine1))!.IsUnicode().Should().BeFalse();
+        owned.FindProperty(nameof(Address.AddressLine1))!.IsUnicode().Should().NotBe(false);
+    }
+
+    // M232: Address accepts free text in any script, so no column may be non-Unicode varchar, which
+    // would silently replace characters outside the SQL Server database code page on save.
+    [Theory]
+    [InlineData(nameof(Address.AddressLine1))]
+    [InlineData(nameof(Address.AddressLine2))]
+    [InlineData(nameof(Address.City))]
+    [InlineData(nameof(Address.State))]
+    [InlineData(nameof(Address.ZipCode))]
+    [InlineData(nameof(Address.Country))]
+    public void OwnsAddress_MapsEveryColumnAsUnicode_OnSqlServer(string propertyName)
+    {
+        var options = new DbContextOptionsBuilder<SqlServerAddressDbContext>()
+            .UseSqlServer("Server=unused;Database=unused")
+            .Options;
+        using var context = new SqlServerAddressDbContext(options);
+
+        var property = context.Model.FindEntityType(typeof(HelperOwner))!
+            .FindNavigation(nameof(HelperOwner.Address))!
+            .TargetEntityType
+            .FindProperty(propertyName)!;
+
+        property.IsUnicode().Should().NotBe(false);
+        property.GetRelationalTypeMapping().StoreType.Should().StartWith(
+            "nvarchar",
+            "a varchar column loses every character outside the database code page");
     }
 
     [Theory]
@@ -184,45 +211,52 @@ public sealed class OwnsAddressTests : IDisposable
             {
                 builder.HasKey(p => p.Id);
 
-                // Verbatim copy of MMCA.Store Identity CustomerConfiguration: this control is the
-                // code the helper replaces, so a facet difference here is a migration in a consumer.
+                // The hand-written block the helper replaces (MMCA.Store Identity
+                // CustomerConfiguration's original mapping, at the provider's Unicode default): a
+                // facet difference here is a migration in a consumer.
                 builder.OwnsOne(p => p.Address, addressBuilder =>
                 {
                     addressBuilder.Property(a => a.AddressLine1)
                         .HasColumnName("AddressLine1")
                         .HasMaxLength(AddressInvariants.AddressLine1MaxLength)
-                        .IsUnicode(false)
                         .IsRequired();
 
                     addressBuilder.Property(a => a.AddressLine2)
                         .HasColumnName("AddressLine2")
-                        .HasMaxLength(AddressInvariants.AddressLine2MaxLength)
-                        .IsUnicode(false);
+                        .HasMaxLength(AddressInvariants.AddressLine2MaxLength);
 
                     addressBuilder.Property(a => a.City)
                         .HasColumnName("AddressCity")
-                        .HasMaxLength(AddressInvariants.CityMaxLength)
-                        .IsUnicode(false);
+                        .HasMaxLength(AddressInvariants.CityMaxLength);
 
                     addressBuilder.Property(a => a.State)
                         .HasColumnName("AddressState")
-                        .HasMaxLength(AddressInvariants.StateMaxLength)
-                        .IsUnicode(false);
+                        .HasMaxLength(AddressInvariants.StateMaxLength);
 
                     addressBuilder.Property(a => a.ZipCode)
                         .HasColumnName("AddressZipCode")
-                        .HasMaxLength(AddressInvariants.ZipCodeMaxLength)
-                        .IsUnicode(false);
+                        .HasMaxLength(AddressInvariants.ZipCodeMaxLength);
 
                     addressBuilder.Property(a => a.Country)
                         .HasColumnName("AddressCountry")
-                        .HasMaxLength(AddressInvariants.CountryMaxLength)
-                        .IsUnicode(false);
+                        .HasMaxLength(AddressInvariants.CountryMaxLength);
                 });
 
                 builder.Navigation(p => p.Address)
                     .IsRequired(false);
             });
         }
+    }
+
+    /// <summary>The helper mapping on SQL Server, where the Unicode facet decides varchar or nvarchar.</summary>
+    public sealed class SqlServerAddressDbContext(DbContextOptions<SqlServerAddressDbContext> options) : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.Entity<HelperOwner>(builder =>
+            {
+                builder.HasKey(p => p.Id);
+                builder.OwnsAddress(p => p.Address);
+                builder.OwnsAddress(p => p.ShippingAddress, "ShippingAddress");
+            });
     }
 }

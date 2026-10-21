@@ -32,6 +32,7 @@ internal sealed class InternalCommandOriginCapture(
         return new InternalCommandOrigin(
             currentUserService.UserId,
             AmbientOrigin.FlattenRoles(currentUserService.Roles),
+            AmbientOrigin.FlattenPermissions(currentUserService.User),
             tenantContext.TenantId,
             correlationContext.CorrelationId,
             activity?.TraceId.ToString(),

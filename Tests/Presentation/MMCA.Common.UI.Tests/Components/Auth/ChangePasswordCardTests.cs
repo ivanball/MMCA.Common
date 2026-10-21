@@ -114,6 +114,34 @@ public sealed class ChangePasswordCardTests : BunitTestBase
         _toast.Verify(t => t.Success(It.IsAny<string>()), Times.Never);
     }
 
+    // M235: a second click that lands before the disabled render reaches the button must not submit
+    // the same change again (it would send the now-stale current password and count a failed attempt).
+    // Both submits are dispatched back to back with no render between them, which is exactly the
+    // window the Disabled binding cannot close.
+    [Fact]
+    public async Task DoubleSubmit_BeforeTheDisabledRender_CallsTheServiceOnce()
+    {
+        var pending = new TaskCompletionSource<Result>();
+        _auth.Setup(a => a.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(pending.Task);
+        var cut = RenderUnderTest<ChangePasswordCard>(_ => { });
+        Fill(cut, "Current-1", "New-Password-1", "New-Password-1");
+        var save = typeof(ChangePasswordCard).GetMethod("SavePasswordAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+
+        Task first = Task.CompletedTask;
+        Task second = Task.CompletedTask;
+        await cut.InvokeAsync(() =>
+        {
+            first = (Task)save.Invoke(cut.Instance, null)!;
+            second = (Task)save.Invoke(cut.Instance, null)!;
+        });
+        pending.SetResult(Result.Success());
+        await cut.InvokeAsync(() => Task.WhenAll(first, second));
+
+        _auth.Verify(a => a.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _toast.Verify(t => t.Success("Password changed successfully."), Times.Once);
+    }
+
     [Fact]
     public void MaxLength_WhenSet_BoundsTheNewPasswordInput()
     {

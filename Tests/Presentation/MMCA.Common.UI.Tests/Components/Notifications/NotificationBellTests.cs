@@ -459,6 +459,31 @@ public sealed class NotificationBellTests : BunitTestBase
         cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(3)));
     }
 
+    // L188: the poll, navigation and push reads overlap freely. A read issued BEFORE a push that
+    // returns AFTER the read the push triggered must not overwrite the newer count.
+    [Fact]
+    public async Task WhenAnOlderReadLandsAfterANewerOne_TheNewerCountStands()
+    {
+        var older = new TaskCompletionSource<Result<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _inbox
+            .SetupSequence(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .Returns(older.Task)
+            .ReturnsAsync(Result.Success(7));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        await cut.WaitForAssertionAsync(() => VerifyFetchCount(Times.Once()));
+
+        _state.RequestRefresh();
+        await cut.WaitForAssertionAsync(() => _state.UnreadCount.Should().Be(7));
+
+        older.SetResult(Result.Success(3));
+        await cut.InvokeAsync(() => { });
+        await cut.InvokeAsync(() => { });
+
+        _state.UnreadCount.Should().Be(7, "the stale read started before the push and must be discarded");
+        cut.Markup.Should().Contain("7");
+    }
+
     [Fact]
     public void ANonAuthFailure_KeepsPolling()
     {

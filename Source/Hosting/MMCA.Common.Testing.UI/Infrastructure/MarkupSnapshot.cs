@@ -14,8 +14,9 @@ namespace MMCA.Common.Testing.UI;
 /// Unlike pixel screenshots this comparison is deterministic and OS-independent (pure normalized markup),
 /// so it runs identically on every CI platform and needs no per-platform golden management. Set the
 /// <c>UPDATE_SNAPSHOTS=1</c> environment variable to (re)write baselines after an intentional change, then
-/// review and commit the updated <c>.html</c> files. A missing baseline is written and reported as a
-/// non-match (review-and-commit discipline) so a regression can never slip through on an absent snapshot.
+/// review and commit the updated <c>.html</c> files. A refreshing run reports a non-match, so it can never
+/// pass a build, and a missing baseline is likewise written and reported as a non-match (review-and-commit
+/// discipline) so a regression can never slip through on an absent snapshot.
 /// </para>
 /// </summary>
 public static partial class MarkupSnapshot
@@ -41,8 +42,13 @@ public static partial class MarkupSnapshot
         var updating = string.Equals(Environment.GetEnvironmentVariable("UPDATE_SNAPSHOTS"), "1", StringComparison.Ordinal);
         if (updating)
         {
+            // A non-match on purpose, as the OpenAPI baseline refresh does: a run that regenerates the
+            // baseline must never count as a pass, or a CI job (or a shell) that leaves the variable
+            // set would turn every markup regression green while rewriting the baselines.
             File.WriteAllText(path, actual);
-            return new MarkupSnapshotResult(true, $"Snapshot '{snapshotName}' refreshed.");
+            return new MarkupSnapshotResult(
+                false,
+                $"Snapshot '{snapshotName}' baseline refreshed at {path} because UPDATE_SNAPSHOTS=1: review and commit it, then re-run without UPDATE_SNAPSHOTS; a refreshing run always reports a non-match.");
         }
 
         if (!File.Exists(path))
@@ -99,6 +105,6 @@ public static partial class MarkupSnapshot
 }
 
 /// <summary>The outcome of a <see cref="MarkupSnapshot.Match(string, string, string)"/> comparison.</summary>
-/// <param name="IsMatch"><see langword="true"/> when the markup matched the committed baseline (or was refreshed).</param>
+/// <param name="IsMatch"><see langword="true"/> only when the markup matched the committed baseline; a refresh or a newly written baseline is a non-match.</param>
 /// <param name="Message">A human-readable description (the first differing line on a mismatch).</param>
 public readonly record struct MarkupSnapshotResult(bool IsMatch, string Message);

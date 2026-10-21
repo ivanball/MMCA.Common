@@ -297,10 +297,19 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
         {
             IReadOnlyList<string> permissions = [.. _stored.Order(StringComparer.Ordinal)];
 
-            var result = await Roles.SetStoredPermissionsAsync(Role, permissions, _cts.LifetimeToken());
+            // Captured before the await (L189, the save-side twin of the M192 load guard): when Role
+            // changes while the save is in flight, the form now belongs to the newly loaded role, and
+            // this answer, about the previous one, must not re-seed it.
+            var savedRole = Role;
+            var result = await Roles.SetStoredPermissionsAsync(savedRole, permissions, _cts.LifetimeToken());
+            var formStillShowsSavedRole = string.Equals(savedRole, Role, StringComparison.Ordinal);
             if (result.IsFailure)
             {
-                _saveResult = result;
+                if (formStillShowsSavedRole)
+                {
+                    _saveResult = result;
+                }
+
                 Toast.Error(T("Snackbar.SaveFailed"));
                 return;
             }
@@ -308,11 +317,14 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
             // Re-seeded from the server's answer rather than from what was submitted: the two lists
             // it reports are disjoint, so a permission the host compiles in moves to the locked half
             // even if it arrived here ticked as stored.
-            _compiled.Clear();
-            _compiled.UnionWith(result.Value!.RegisteredPermissions);
-            _stored.Clear();
-            _stored.UnionWith(result.Value.StoredPermissions);
-            _isDirty = false;
+            if (formStillShowsSavedRole)
+            {
+                _compiled.Clear();
+                _compiled.UnionWith(result.Value!.RegisteredPermissions);
+                _stored.Clear();
+                _stored.UnionWith(result.Value.StoredPermissions);
+                _isDirty = false;
+            }
 
             Toast.Success(T("Snackbar.Saved"));
         }

@@ -157,6 +157,54 @@ public sealed class InfiniteScrollSentinelTests : BunitTestBase
         await act.Should().NotThrowAsync();
     }
 
+    // L187: Blazor does not serialize OnAfterRenderAsync, so a second ObserveAsync can start while the
+    // first one's import is still in flight. Both must share ONE import: a second module instance
+    // overwrites the first, which is then never disposed.
+    [Fact]
+    public async Task Observer_TwoObservesDuringOneImport_ImportOnceAndReleaseTheModuleOnDispose()
+    {
+        var runtime = new GatedImportJSRuntime();
+        var observer = new InfiniteScrollObserver<object>(runtime, new object());
+
+        var first = observer.ObserveAsync(default);
+        var second = observer.ObserveAsync(default);
+        runtime.Gate.SetResult();
+        await Task.WhenAll(first, second);
+        await observer.DisposeAsync();
+
+        runtime.Modules.Should().ContainSingle("concurrent observes share one import");
+        foreach (var module in runtime.Modules)
+        {
+            module.Verify(m => m.DisposeAsync(), Times.Once, "every imported module is released on dispose");
+        }
+    }
+
+    /// <summary>
+    /// Answers every module import with a fresh module, but only once the test opens <see cref="Gate"/>,
+    /// so overlapping imports stay overlapped.
+    /// </summary>
+    private sealed class GatedImportJSRuntime : IJSRuntime
+    {
+        public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public List<Mock<IJSObjectReference>> Modules { get; } = [];
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            new(ImportAsync<TValue>());
+
+        private async Task<TValue> ImportAsync<TValue>()
+        {
+            var module = new Mock<IJSObjectReference>();
+            module.Setup(m => m.DisposeAsync()).Returns(ValueTask.CompletedTask);
+            Modules.Add(module);
+            await Gate.Task;
+            return (TValue)module.Object;
+        }
+    }
+
     /// <summary>
     /// Holds the one module import it was built for open until the test completes
     /// <see cref="Import"/>; every other call goes to bUnit's runtime unchanged.

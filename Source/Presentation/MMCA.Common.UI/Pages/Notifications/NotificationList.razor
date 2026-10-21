@@ -31,6 +31,10 @@ else if (_canManage == true)
         @L["Notif.List.SendNew"]
     </MudButton>
 
+    @* The load failure is rendered inline as well as toasted: an empty history and a failed load look
+       identical once a toast expires, and this one has a retry (L190, as Sessions and RoleAdminList). *@
+    <ErrorSummary Result="_loadResult" Localizer="L" />
+
     if (IsLoading)
     {
         @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
@@ -39,6 +43,14 @@ else if (_canManage == true)
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4"
                                aria-label="@L["Loading.Label"]" />
         </div>
+    }
+    else if (_loadResult is { IsFailure: true } && _notifications.Count == 0)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="@(() => LoadNotificationsAsync())">
+            @L["Common.Button.Retry"]
+        </MudButton>
     }
     else if (_notifications.Count == 0)
     {
@@ -81,9 +93,15 @@ else if (_canManage == true)
                 </MudTd>
                 <MudTd DataLabel="@L["Notif.List.Col.Sent"]">@ViewerTime.Format(context.CreatedOn)</MudTd>
             </RowTemplate>
-            <PagerContent>
-                <MudTablePager />
-            </PagerContent>
         </MudTable>
+
+        @* Paged on the server (L191), as the inbox is: the whole history is reachable, not only the
+           newest sends one read could fetch. *@
+        <MudPagination Class="mt-4"
+                       Count="@_totalPages"
+                       Selected="@_currentPage"
+                       SelectedChanged="OnPageChangedAsync"
+                       ShowFirstButton="true"
+                       ShowLastButton="true" />
     }
 }

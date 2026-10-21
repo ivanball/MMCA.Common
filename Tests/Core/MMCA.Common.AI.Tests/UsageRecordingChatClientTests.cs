@@ -166,6 +166,47 @@ public sealed class UsageRecordingChatClientTests
             .Which.Tags["outcome"].Should().Be(AiUsageMeter.SuccessOutcome);
     }
 
+    // L201: a consumer that stops enumerating (a guardrail that blocked an update, or a caller that
+    // broke out of the loop) ends the stream early. That call did not complete, so it is not a
+    // success; the usage the stream DID deliver before it stopped is still recorded.
+    [Fact]
+    public async Task GetStreamingResponseAsync_AStreamAbandonedEarly_IsRecordedAsCanceled_WithTheUsageSeenSoFar()
+    {
+        using var recorder = new UsageRecorder();
+        var early = new ChatResponseUpdate(ChatRole.Assistant, [new TextContent("partial"), new UsageContent(new UsageDetails { InputTokenCount = 11 })]);
+        var final = new ChatResponseUpdate(ChatRole.Assistant, [new UsageContent(new UsageDetails { OutputTokenCount = 5 })]);
+        using var inner = new StubChatClient(updates: [early, new ChatResponseUpdate(ChatRole.Assistant, "more"), final]);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
+
+        var stream = client.GetStreamingResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        await using (stream)
+        {
+            (await stream.MoveNextAsync()).Should().BeTrue();
+        }
+
+        recorder.Durations.Should().ContainSingle()
+            .Which.Tags["outcome"].Should().Be(AiUsageMeter.CanceledOutcome, "the stream never reached its end");
+        recorder.Measurements.Should().ContainSingle()
+            .Which.Should().Match<Measurement>(m => m.Instrument == AiUsageMeter.InputTokensCounterName && m.Value == 11);
+    }
+
+    [Fact]
+    public async Task GetStreamingResponseAsync_AStreamDrainedToItsEnd_IsStillASuccess()
+    {
+        using var recorder = new UsageRecorder();
+        using var inner = new StubChatClient(updates: [new ChatResponseUpdate(ChatRole.Assistant, "a"), new ChatResponseUpdate(ChatRole.Assistant, "b")]);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
+
+        await foreach (var update in client.GetStreamingResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken))
+        {
+            _ = update;
+        }
+
+        recorder.Durations.Should().ContainSingle()
+            .Which.Tags["outcome"].Should().Be(AiUsageMeter.SuccessOutcome);
+    }
+
     private sealed record Measurement(string Instrument, long Value, IReadOnlyDictionary<string, object?> Tags);
 
     private sealed record DurationMeasurement(string Instrument, double Value, IReadOnlyDictionary<string, object?> Tags);

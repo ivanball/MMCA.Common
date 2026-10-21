@@ -14,7 +14,18 @@ public interface IPushDeviceRegistrar
     /// <param name="userId">The authenticated owner of the device.</param>
     /// <param name="request">The installation to upsert.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Success, or a validation/failure result.</returns>
+    /// <returns>
+    /// Success, a conflict result when the installation id belongs to another user's device, or a
+    /// validation/failure result.
+    /// </returns>
+    /// <remarks>
+    /// The installation id is per device, so an id already owned by another user is handed over to the
+    /// caller when the request presents the installation's current push channel (the same device
+    /// changing hands). Without the channel the upsert does not overwrite and returns a
+    /// <see cref="ErrorType.Conflict"/> error; the client then mints a new installation id and retries.
+    /// Unlike the delete, a conflict is not an existence oracle worth hiding: ids are random
+    /// client-generated GUIDs, not enumerable values.
+    /// </remarks>
     Task<Result> UpsertAsync(UserIdentifierType userId, DeviceInstallationRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

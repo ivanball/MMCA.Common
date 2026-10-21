@@ -98,6 +98,21 @@ public sealed class InternalCommandAdministrationTests : IDisposable
         (await _sut.ListDeadLettersAsync(null, 0, 501, TestContext.Current.CancellationToken)).IsFailure.Should().BeTrue();
     }
 
+    // L180: skip + take in int arithmetic wraps negative near int.MaxValue; SQLite would read the
+    // wrapped LIMIT as "no limit", while SQL Server and PostgreSQL reject it and fail the call.
+    [Fact]
+    public async Task ListDeadLettersAsync_WithASkipNearIntMax_SendsNoNegativeLimitAndReturnsAnEmptyPage()
+    {
+        Seed("abandoned", deadLetteredOn: InternalCommandTestHarness.EpochUtc);
+
+        var result = await _sut.ListDeadLettersAsync(null, int.MaxValue - 5, 10, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEmpty("a page past the end is empty, not an error");
+        _context.NegativeParameters.Negatives.Should().BeEmpty(
+            "a wrapped negative page size is rejected by SQL Server and PostgreSQL");
+    }
+
     [Fact]
     public async Task RequeueAsync_ClearsTheAbandonmentAndTheClaimButKeepsTheError()
     {

@@ -12,6 +12,7 @@ using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Privacy;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.Encryption;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -50,6 +51,11 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// record the same token. The consumer marks nothing for the first: the implementing properties
 /// are found through the interface map, so a password change can never write the old and new
 /// hash and salt into the trail as hexadecimal.
+/// </para>
+/// <para>
+/// <b>Encrypted columns are redacted too.</b> A property mapped through
+/// <see cref="EncryptedStringConverter"/> reaches this interceptor as decrypted plaintext, so it
+/// records the token as well, with no attribute needed.
 /// </para>
 /// <para>
 /// <b>Correlation.</b> The row records the ambient <see cref="Activity"/> trace id, not the scoped
@@ -331,7 +337,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 continue;
             }
 
-            var isRedacted = typeHasPii && IsPiiProperty(property) || credentials.Contains(property.Metadata.Name);
+            var isRedacted = IsRedacted(property, typeHasPii, credentials);
 
             AddRow(context, new AuditTrailEntry
             {
@@ -403,7 +409,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 continue;
             }
 
-            var isRedacted = typeHasPii && IsPiiProperty(property) || credentials.Contains(property.Metadata.Name);
+            var isRedacted = IsRedacted(property, typeHasPii, credentials);
 
             AddRow(context, new AuditTrailEntry
             {
@@ -619,6 +625,18 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
         return ColumnWidth.Truncate(string.Join(KeySeparator, parts), MaxKeyLength)!;
     }
+
+    /// <summary>
+    /// Whether a changed property records the redaction token instead of its values: personal data,
+    /// a credential, or a column encrypted at rest. The last needs no marker: the change tracker
+    /// hands this interceptor the model-side (decrypted) value of a property stored through an
+    /// <see cref="EncryptedStringConverter"/>, so recording it would put in clear text exactly what
+    /// the column encrypts.
+    /// </summary>
+    private static bool IsRedacted(PropertyEntry property, bool typeHasPii, HashSet<string> credentials) =>
+        typeHasPii && IsPiiProperty(property)
+        || credentials.Contains(property.Metadata.Name)
+        || property.Metadata.GetValueConverter() is EncryptedStringConverter;
 
     /// <summary>Whether the CLR property behind an EF property carries <see cref="PiiAttribute"/>.</summary>
     /// <remarks>

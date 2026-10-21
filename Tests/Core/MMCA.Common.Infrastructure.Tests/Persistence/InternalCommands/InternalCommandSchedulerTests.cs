@@ -170,6 +170,21 @@ public sealed class InternalCommandSchedulerTests : IDisposable
         row.UserRoles.Should().Be("Admin,Manager");
     }
 
+    // L179: outside a transaction the scheduler's save flushes the SHARED context, so whatever the
+    // handler left pending on it must be stamped with the scheduling user, not as the system.
+    [Fact]
+    public async Task ScheduleAsync_OutsideATransaction_StampsCoPendingEntitiesWithTheSchedulingUser()
+    {
+        var sut = CreateScheduler(new StubCurrentUserService(42, ["Manager"]));
+        _context.Add(new ScheduledAlongsideEntity { Id = 7, Name = "pending" });
+
+        await sut.ScheduleAsync(new RecordingCommand("work"), runAt: null, TestContext.Current.CancellationToken);
+
+        _context.ChangeTracker.Clear();
+        var saved = await _context.Set<ScheduledAlongsideEntity>().SingleAsync(TestContext.Current.CancellationToken);
+        saved.CreatedBy.Should().Be(42, "the co-pending change was made by the scheduling user");
+    }
+
     private InternalCommandScheduler CreateScheduler(
         MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUser = null) =>
         InternalCommandTestHarness.CreateScheduler(

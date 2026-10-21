@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using MMCA.Common.UI.Services;
 
 namespace MMCA.Common.UI.Components.Lists;
 
@@ -19,7 +20,11 @@ internal sealed class InfiniteScrollObserver<TOwner>(IJSRuntime js, TOwner owner
     private const string ModulePath = "./_content/MMCA.Common.UI/infinite-scroll.js";
 
     private readonly string _observerId = Guid.NewGuid().ToString("N");
-    private IJSObjectReference? _module;
+
+    // Single-flight import (the M72 pattern, L187): Blazor does not serialize OnAfterRenderAsync, so a
+    // second ObserveAsync can start while the first import is in flight, and an unguarded "??=" then
+    // imports twice and leaks the instance it overwrites.
+    private readonly LazyJsModule _module = new(js, ModulePath);
     private DotNetObjectReference<TOwner>? _dotNetRef;
     private bool _disposed;
 
@@ -36,7 +41,7 @@ internal sealed class InfiniteScrollObserver<TOwner>(IJSRuntime js, TOwner owner
     {
         try
         {
-            _module ??= await js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            await _module.GetOrImportAsync();
 
             // The owner can be disposed while the import is in flight (a host stops rendering the
             // sentinel the moment the last page arrives). DisposeAsync then found no module to
@@ -44,14 +49,14 @@ internal sealed class InfiniteScrollObserver<TOwner>(IJSRuntime js, TOwner owner
             // would ever detach.
             if (_disposed)
             {
-                var late = _module;
-                _module = null;
-                await late.DisposeAsync();
+                await _module.DisposeAsync();
                 return;
             }
 
+            // Re-read after the check: the shared import has completed, so this is the cached module.
+            var module = await _module.GetOrImportAsync();
             _dotNetRef ??= DotNetObjectReference.Create(owner);
-            await _module.InvokeVoidAsync("observe", _dotNetRef, sentinel, _observerId);
+            await module.InvokeVoidAsync("observe", _dotNetRef, sentinel, _observerId);
             IsObserving = true;
         }
         catch (JSDisconnectedException)
@@ -68,14 +73,15 @@ internal sealed class InfiniteScrollObserver<TOwner>(IJSRuntime js, TOwner owner
     /// <returns>A task that completes when the attempt is over, whatever its outcome.</returns>
     public async Task UnobserveAsync()
     {
-        if (_module is null || !IsObserving)
+        if (!_module.IsImported || !IsObserving)
         {
             return;
         }
 
         try
         {
-            await _module.InvokeVoidAsync("unobserve", _observerId);
+            var module = await _module.GetOrImportAsync();
+            await module.InvokeVoidAsync("unobserve", _observerId);
         }
         catch (JSDisconnectedException)
         {
@@ -102,11 +108,7 @@ internal sealed class InfiniteScrollObserver<TOwner>(IJSRuntime js, TOwner owner
         try
         {
             await UnobserveAsync();
-
-            if (_module is not null)
-            {
-                await _module.DisposeAsync();
-            }
+            await _module.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {

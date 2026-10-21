@@ -250,6 +250,9 @@
   <data name="PushDevice.DeleteFailed" xml:space="preserve">
     <value>The device could not be unregistered from push notifications.</value>
   </data>
+  <data name="PushDevice.InstallationConflict" xml:space="preserve">
+    <value>The installation id is registered to another device. Generate a new installation id and retry.</value>
+  </data>
   <data name="PushDevice.Unauthorized" xml:space="preserve">
     <value>User is not authenticated.</value>
   </data>

@@ -27,6 +27,12 @@
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.UI\MMCA.Common.Testing.UI.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- MMCA.Common.UI.Maui targets MAUI TFMs only, so no net10.0 project can reference it. This one
+         file uses no MAUI API (only MMCA.Common.UI abstractions), so it is compiled here as source to
+         unit-test its conflict-retry path (MauiPushRegistrationServiceTests). -->
+    <Compile Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\Capabilities\Notifications\MauiPushRegistrationService.cs" Link="Linked\MauiPushRegistrationService.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Embed the shipped CSS tokens so BrandColorTokenTests can assert app.css mirrors BrandColors.cs. -->
     <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\wwwroot\app.css" LogicalName="app.css" />
     <!-- Embed the sidebar's scoped stylesheet so MainLayoutSkipLinkTests can assert its keyboard-focus rule. -->

@@ -47,7 +47,7 @@ public sealed class DistributedRateLimitingMiddlewareTests
 
         statuses.Should().Equal(HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
         database.Verify(
-            d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
+            d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()),
             Times.Exactly(3));
     }
 
@@ -71,7 +71,7 @@ public sealed class DistributedRateLimitingMiddlewareTests
 
         statuses.Should().Equal(HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
         database.Verify(
-            d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
+            d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()),
             Times.Exactly(2));
     }
 
@@ -99,18 +99,11 @@ public sealed class DistributedRateLimitingMiddlewareTests
     private static (Mock<IConnectionMultiplexer> Connection, Mock<IDatabase> Database) CreateConnection(params long[] incrementResults)
     {
         var database = new Mock<IDatabase>();
-        var sequence = database.SetupSequence(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()));
+        var sequence = database.SetupSequence(d => d.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()));
         foreach (var result in incrementResults)
         {
-            sequence = sequence.ReturnsAsync(result);
+            sequence = sequence.ReturnsAsync(RedisResult.Create((RedisValue)result));
         }
-
-        database.Setup(d => d.KeyExpireAsync(
-                It.IsAny<RedisKey>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<ExpireWhen>(),
-                It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
 
         var connection = new Mock<IConnectionMultiplexer>();
         connection.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(database.Object);

@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MMCA.Common.Infrastructure.Persistence.Encryption;
@@ -52,8 +53,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Encryption;
 ///   the old versions registered;</item>
 ///   <item>deploy: new writes carry the new version byte, existing rows keep decrypting under
 ///   their original version;</item>
-///   <item>re-encrypt the existing rows in the background at your own pace (load an entity and
-///   save it, which rewrites the column under the current version);</item>
+///   <item>re-encrypt the existing rows in the background at your own pace: load an entity, call
+///   <see cref="MarkForReEncryption"/> on its entry, and save, which rewrites the column under the
+///   current version. A plain load-and-save does NOT: change tracking compares the decrypted
+///   plaintext against its snapshot, so an untouched property is not modified and the UPDATE omits
+///   its column, leaving the old version byte in place;</item>
 ///   <item>once no row carries the old version, drop that entry from the ring.</item>
 /// </list>
 /// A value whose version is not registered fails with a <see cref="CryptographicException"/>
@@ -123,6 +127,32 @@ public sealed class EncryptedStringConverter : ValueConverter<string, string>
     /// </summary>
     /// <returns>A 32-byte random key.</returns>
     public static byte[] GenerateKey() => RandomNumberGenerator.GetBytes(KeySize);
+
+    /// <summary>
+    /// Marks every property of <paramref name="entry"/> mapped through an
+    /// <see cref="EncryptedStringConverter"/> as modified, so the next save rewrites those columns
+    /// under the current key version (rotation step 3). Without it an unchanged property is left
+    /// out of the UPDATE and keeps its old version byte.
+    /// </summary>
+    /// <remarks>
+    /// Owned types are tracked as entries of their own, so an encrypted property on an owned
+    /// navigation needs that owned entry passed as well.
+    /// </remarks>
+    /// <param name="entry">The tracked entry to re-encrypt.</param>
+    /// <returns>The number of properties marked.</returns>
+    public static int MarkForReEncryption(EntityEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        var marked = 0;
+        foreach (var property in entry.Properties.Where(p => p.Metadata.GetValueConverter() is EncryptedStringConverter))
+        {
+            property.IsModified = true;
+            marked++;
+        }
+
+        return marked;
+    }
 
     private static Dictionary<byte, byte[]> CreateSingleKeyRing(byte[] encryptionKey)
     {

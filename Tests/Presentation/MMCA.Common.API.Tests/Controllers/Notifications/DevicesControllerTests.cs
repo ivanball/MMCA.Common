@@ -80,6 +80,21 @@ public sealed class DevicesControllerTests
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 
+    // L176 review (R1): the MAUI client keys its mint-and-retry on this status.
+    [Fact]
+    public async Task UpsertAsync_WhenTheInstallationBelongsToAnotherDevice_Returns409()
+    {
+        _registrar
+            .Setup(x => x.UpsertAsync(42, It.IsAny<DeviceInstallationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Conflict("PushDevice.InstallationConflict", "Taken.")));
+        var controller = CreateController();
+
+        var result = await controller.UpsertAsync(CreateRequest(), TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
     [Fact]
     public async Task DeleteAsync_ScopesTheDeleteToTheCurrentUser()
     {

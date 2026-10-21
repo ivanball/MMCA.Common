@@ -1,12 +1,17 @@
 #pragma warning disable CA2263 // The SUT deliberately calls the non-generic Publish(object, Type, CancellationToken) overload; mock setups and verifies must match that exact overload.
 
+using System.Security.Claims;
 using AwesomeAssertions;
 using MassTransit;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Consumers;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
 // Aliased for the same reason the bus itself aliases it: MassTransit ships its own static
@@ -179,11 +184,16 @@ public sealed class BrokerMessageBusTests
         int? userId = 42,
         string[]? roles = null,
         string? tenantId = "tenant-a",
-        string? correlationId = "correlation-1")
+        string? correlationId = "correlation-1",
+        ClaimsPrincipal? user = null)
     {
         var currentUser = new Mock<ICurrentUserService>();
         currentUser.SetupGet(u => u.UserId).Returns(userId);
         currentUser.SetupGet(u => u.Roles).Returns(roles ?? ["Admin", "Manager"]);
+        if (user is not null)
+        {
+            currentUser.SetupGet(u => u.User).Returns(user);
+        }
 
         var tenantContext = new Mock<ITenantContext>();
         tenantContext.SetupGet(t => t.TenantId).Returns(tenantId);
@@ -246,6 +256,36 @@ public sealed class BrokerMessageBusTests
             [MessageHeaders.UserRoles] = "Admin,Manager",
             [MessageHeaders.CorrelationId] = "correlation-1",
         });
+    }
+
+    // L181: a publish authorized ONLY through a Permission claim stamps the claims as a header, and
+    // the consumer's restore rebuilds them, so the consuming scope passes the same gate.
+    [Fact]
+    public async Task PublishThenConsume_APrincipalGrantedOnlyByAPermissionClaim_PassesTheSameGateDeferred()
+    {
+        var principal = DeferredPermissionGate.ClaimOnlyPrincipal(42);
+        (await DeferredPermissionGate.EvaluateAsync(new DeferredPermissionGate.FixedCurrentUserService(principal)))
+            .IsSuccess.Should().BeTrue("control: the publishing request is authorized by the claim alone");
+
+        var (sut, _, pipes) = CreateStampingSut(roles: [], user: principal);
+        await sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
+        var written = await HeadersWrittenByAsync(pipes.Should().ContainSingle().Subject);
+
+        var headers = new Mock<Headers>();
+        headers.Setup(h => h.Get<string>(It.IsAny<string>(), null))
+            .Returns((string key, string? _) => written.TryGetValue(key, out var value) ? value : null);
+
+        await using var provider = new ServiceCollection().AddScoped<ScopedUserOverride>().BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        using (ConsumerOriginRestore.Apply(headers.Object, scope.ServiceProvider, "Broker"))
+        {
+            var consumingUser = new ImpersonatingCurrentUserService(
+                new DeferredPermissionGate.FixedCurrentUserService(new ClaimsPrincipal()),
+                scope.ServiceProvider.GetRequiredService<ScopedUserOverride>());
+
+            (await DeferredPermissionGate.EvaluateAsync(consumingUser)).IsSuccess.Should().BeTrue(
+                "the consuming scope must carry the Permission claims the publishing gate granted on");
+        }
     }
 
     [Fact]

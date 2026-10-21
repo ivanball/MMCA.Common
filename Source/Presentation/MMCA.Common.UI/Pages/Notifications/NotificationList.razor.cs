@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
@@ -15,10 +16,13 @@ namespace MMCA.Common.UI.Pages.Notifications;
 
 /// <summary>
 /// Code-behind for the push notification history page.
-/// Displays a table of previously sent notifications with status and recipient count.
+/// Displays a table of previously sent notifications with status and recipient count, one server
+/// page at a time.
 /// </summary>
 public partial class NotificationList : IDisposable
 {
+    private const int PageSize = 20;
+
     [Inject] private IPushNotificationUIService NotificationService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IToastService Toast { get; set; } = default!;
@@ -41,6 +45,11 @@ public partial class NotificationList : IDisposable
     protected bool IsLoading { get; private set; }
 
     private IReadOnlyCollection<PushNotificationDTO> _notifications = [];
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+
+    /// <summary>The last load's outcome; a failure renders inline with a retry instead of the empty state.</summary>
+    private Result? _loadResult;
 
     // Localizes the wire status for display; unknown statuses fall back to the raw value (ADR-027).
     private string DisplayStatus(string status)
@@ -78,20 +87,24 @@ public partial class NotificationList : IDisposable
         }
     }
 
-    private async Task LoadNotificationsAsync()
+    /// <summary>Loads <see cref="_currentPage"/> of the history, sized by the server's own total.</summary>
+    /// <returns><see langword="true"/> when the page loaded.</returns>
+    private async Task<bool> LoadNotificationsAsync()
     {
         IsLoading = true;
+        _loadResult = null;
         try
         {
-            var result = await NotificationService.GetHistoryAsync(pageNumber: 1, pageSize: 50, _cts.LifetimeToken());
+            var result = await NotificationService.GetHistoryAsync(_currentPage, PageSize, _cts.LifetimeToken());
+            _loadResult = result;
             if (result.TryGetValue(out var history))
             {
                 _notifications = [.. history.Items];
+                _totalPages = Math.Max(1, (int)Math.Ceiling((double)history.PaginationMetadata.TotalItemCount / PageSize));
+                return true;
             }
-            else
-            {
-                result.NotifyOnFailure(Toast, L);
-            }
+
+            result.NotifyOnFailure(Toast, L);
         }
         catch (OperationCanceledException)
         {
@@ -100,6 +113,22 @@ public partial class NotificationList : IDisposable
         finally
         {
             IsLoading = false;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Moves to <paramref name="page"/>. A failed load keeps the previous page's rows on screen
+    /// (L190), so the pager goes back to the page those rows belong to.
+    /// </summary>
+    private async Task OnPageChangedAsync(int page)
+    {
+        var previous = _currentPage;
+        _currentPage = page;
+        if (!await LoadNotificationsAsync())
+        {
+            _currentPage = previous;
         }
     }
 

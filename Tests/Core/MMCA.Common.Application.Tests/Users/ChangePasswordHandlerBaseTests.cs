@@ -198,6 +198,53 @@ public sealed class ChangePasswordHandlerBaseTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task HandleAsync_RevokesTheSessionsBeforeSavingThePassword()
+    {
+        // M240: a failure between two separate saves must never leave a new password with the old
+        // sessions alive, so the revocation is persisted first.
+        var (sut, mocks) = CreateSut();
+        var order = ArrangeLiveSessionAndRecordSaves(mocks);
+
+        Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        result.IsSuccess.Should().BeTrue();
+        order.Should().Equal("revoke", "save");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRevokeFails_LeavesThePasswordUnsaved()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeLiveSessionAndRecordSaves(mocks);
+        mocks.RefreshSessions
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("session store unavailable"));
+
+        Func<Task> act = () => sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        await act.Should().ThrowAsync<TimeoutException>();
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static List<string> ArrangeLiveSessionAndRecordSaves(HandlerMocks mocks)
+    {
+        var order = new List<string>();
+        ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
+        mocks.RefreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreateSession(1)]);
+        mocks.RefreshSessions
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => order.Add("revoke"));
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => order.Add("save"));
+        return order;
+    }
+
     private static RefreshSession CreateSession(UserIdentifierType userId) =>
         RefreshSession.Create(
             userId,

@@ -12,6 +12,10 @@
 @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
 <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">@Title</MudText>
 
+@* The load failure is rendered inline as well as toasted: an empty inbox and a failed load look
+   identical once a toast expires, and this one has a retry (L190, as Sessions and RoleAdminList). *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
 @if (_notifications.Count > 0)
 {
     <MudButton Color="Color.Primary"
@@ -32,6 +36,14 @@
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4"
                            aria-label="@L["Loading.Label"]" />
     </div>
+}
+else if (_loadResult is { IsFailure: true } && _notifications.Count == 0)
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="@(() => LoadNotificationsAsync())">
+        @L["Common.Button.Retry"]
+    </MudButton>
 }
 else if (_notifications.Count == 0)
 {
