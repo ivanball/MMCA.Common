@@ -29,7 +29,7 @@ public sealed class SessionsPageE2ETests : GalleryAxeTestBase
         // Exact: the revoke-all hint below the table also contains the words "this device".
         await Expect(Page.GetByText("This device", new() { Exact = true })).ToBeVisibleAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of Safari on iOS" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of every device, including this one" })).ToBeVisibleAsync();
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out everywhere" })).ToBeVisibleAsync();
 
         await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }

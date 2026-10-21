@@ -14,7 +14,7 @@ public sealed class RegisterPage
     public ILocator EmailField => _page.GetByLabel("Email");
     public ILocator PasswordField => _page.GetByLabel("Password", new() { Exact = true });
     public ILocator ConfirmPasswordField => _page.GetByLabel("Confirm Password");
-    public ILocator RegisterButton => _page.GetByRole(AriaRole.Button, new() { Name = "Create your account" });
+    public ILocator RegisterButton => _page.GetByRole(AriaRole.Button, new() { Name = "Create Account" });
     public ILocator ErrorAlert => _page.Locator(".mud-alert-text-error");
 
     /// <summary>
@@ -29,7 +29,7 @@ public sealed class RegisterPage
 
     /// <summary>
     /// The required Terms acceptance checkbox. The page renders it only when the host configures a
-    /// Terms URL (<c>Legal:TermsUrl</c>), and keeps "Create your account" disabled until it is ticked.
+    /// Terms URL (<c>Legal:TermsUrl</c>), and keeps "Create Account" disabled until it is ticked.
     /// The test id sits on the wrapper around the MudCheckBox, so this targets the input inside it.
     /// </summary>
     public ILocator TermsCheckbox => _page.Locator("[data-testid='register-accept-terms'] input[type='checkbox']");

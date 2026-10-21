@@ -33,7 +33,7 @@ public abstract class UserLoginTestsBase : E2ETestBase
         await Expect(Page).Not.ToHaveURLAsync(new Regex("/login$")).ConfigureAwait(false);
 
         // Logout button should be visible (user is authenticated)
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" })).ToBeVisibleAsync().ConfigureAwait(false);
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeVisibleAsync().ConfigureAwait(false);
 
         // Login/Register links should NOT be visible (user is authenticated)
         await Expect(Page.GetByRole(AriaRole.Link, new() { Name = "Sign In" })).Not.ToBeVisibleAsync().ConfigureAwait(false);

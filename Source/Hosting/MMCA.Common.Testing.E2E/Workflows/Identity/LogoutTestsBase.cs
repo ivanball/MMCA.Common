@@ -18,10 +18,10 @@ public abstract class LogoutTestsBase : E2ETestBase
     {
         // Arrange — register and login
         await RegisterNewUserAsync().ConfigureAwait(false);
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" })).ToBeVisibleAsync().ConfigureAwait(false);
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeVisibleAsync().ConfigureAwait(false);
 
         // Act
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Logout" }).ClickAsync().ConfigureAwait(false);
 
         // Assert — should be on login page
         await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
@@ -45,7 +45,7 @@ public abstract class LogoutTestsBase : E2ETestBase
         // still present and SSR re-authenticates. Waiting for the DELETE response makes logout
         // deterministic — this is the timing that E2E_SLOWMO's between-action pauses masked.
         await Page.RunAndWaitForResponseAsync(
-            async () => await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false),
+            async () => await Page.GetByRole(AriaRole.Button, new() { Name = "Logout" }).ClickAsync().ConfigureAwait(false),
             response => response.Url.Contains("/auth/session-cookie", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(response.Request.Method, "DELETE", StringComparison.OrdinalIgnoreCase),
             new() { Timeout = 15_000 }).ConfigureAwait(false);

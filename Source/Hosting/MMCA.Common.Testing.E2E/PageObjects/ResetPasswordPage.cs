@@ -17,7 +17,7 @@ public sealed class ResetPasswordPage
     public ILocator NewPasswordField => _page.GetByLabel("New Password", new() { Exact = true });
     public ILocator ConfirmPasswordField => _page.GetByLabel("Confirm New Password");
 
-    public ILocator SubmitButton => _page.GetByRole(AriaRole.Button, new() { Name = "Reset your password" });
+    public ILocator SubmitButton => _page.GetByRole(AriaRole.Button, new() { Name = "Reset Password" });
     public ILocator ErrorAlert => _page.Locator(".mud-alert-text-error");
     public ILocator SuccessAlert => _page.Locator(".mud-alert-text-success");
 

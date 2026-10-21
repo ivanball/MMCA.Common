@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- 26 minor and patch dependency updates (Dependabot #576), among them OpenTelemetry 1.20.0, `Microsoft.Extensions.AI` 10.11.0, StackExchange.Redis 3.4.5 and Deque.AxeCore 4.14.0. `SixLabors.ImageSharp` stays at 3.1.12: 3.2.0 enforces a commercial license key at build time, and `dependabot.yml` now ignores it from 3.2.0 up.
+
+### Fixed
+
+- **Breaking (E2E selectors):** five shared buttons had an accessible name that did not contain their visible text, which fails WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`): a speech-input user saying the visible label could not activate them. They drop the `aria-label`, so the name IS the visible text: the app bar **Logout** (was "Sign out of your account"), **Create Account**, **Send Reset Link**, **Reset Password**, and the Sessions page **Sign out everywhere**. The `.Aria` resource keys for them are removed. `MMCA.Common.Testing.E2E` (`E2ETestBase`, the Identity page objects and workflow bases) selects by the new names.
+
+  Map and fix: UPGRADING.md, [Unreleased].
+
 ## [1.248.0] - 2026-10-20
 
 ### Fixed

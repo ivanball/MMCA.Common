@@ -52,8 +52,7 @@
                             </span>
                             <MudText Typo="Typo.body2" Class="mr-4 user-name">@context.User.Identity?.Name</MudText>
                             <span class="appbar-text-actions">
-                                <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
-                                           aria-label="@L["Common.Button.Logout.Aria"].Value">@L["Common.Button.Logout"]</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudButton>
                             </span>
                         </span>
                     </Authorized>

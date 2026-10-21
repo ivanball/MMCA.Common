@@ -117,7 +117,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         // sign-out-then-login site still on the racy pattern.
         await SignOutAsync().ConfigureAwait(false);
         await LoginAsync(email, newPassword).ConfigureAwait(false);
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" })).ToBeVisibleAsync().ConfigureAwait(false);
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeVisibleAsync().ConfigureAwait(false);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿@page "/register"
+@page "/register"
 @using MMCA.Common.UI.Validation
 @using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth
@@ -166,8 +166,7 @@
             <MudCardActions Class="d-flex flex-column pa-6 pt-2 mmca-auth-actions">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                            Disabled="@(_isLoading || (RequiresTerms && !_model.AcceptedTerms))" ButtonType="ButtonType.Submit" Size="Size.Large"
-                           aria-busy="@(_isLoading ? "true" : "false")"
-                           aria-label="@L["Auth.Register.CreateAccount.Aria"]">
+                           aria-busy="@(_isLoading ? "true" : "false")">
                     @if (_isLoading)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
