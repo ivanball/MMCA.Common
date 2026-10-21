@@ -1,10 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.get -> bool
-MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.set -> void
-MMCA.Common.UI.Common.Interfaces.IPendingToastService
-MMCA.Common.UI.Common.Interfaces.IPendingToastService.QueueAsync(MMCA.Common.UI.Common.Interfaces.ToastSeverity severity, string! message, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
-MMCA.Common.UI.Common.Interfaces.IPendingToastService.TakeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<(MMCA.Common.UI.Common.Interfaces.ToastSeverity Severity, string! Message)?>
-MMCA.Common.UI.Components.Notifications.PendingToastHost
-MMCA.Common.UI.Components.Notifications.PendingToastHost.PendingToastHost() -> void
-override MMCA.Common.UI.Components.Notifications.PendingToastHost.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
-~override MMCA.Common.UI.Components.Notifications.PendingToastHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

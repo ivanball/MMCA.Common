@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.249.0] - 2026-10-21
 
 **Five shared buttons are named by their visible text (WCAG 2.5.3 Label in Name).** Their
 `aria-label` no longer differs from what they show, so a test or page object that located them by the
