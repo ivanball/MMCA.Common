@@ -25,10 +25,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - `ListNoRecordsContent` takes `EmptyConfirmed` (default `true`, so existing callers are unchanged). A list whose data source is still pending passes `false`, and the component renders nothing instead of flashing "No ... found." when MudDataGrid repaints the fragment with stale parameters (U-35). A failed load still shows the failure and retry UI.
 - A toast raised just before a `forceLoad` navigation survives the reload. New `IPendingToastService.QueueAsync(severity, message, ct)` parks one toast in `sessionStorage` (key `mmca.pendingToast`), and the new `PendingToastHost`, placed in the shared `MainLayout`, shows it once on the first interactive render of the reloaded page. Registered by `AddCommonUiFacades` (so by `AddUIShared` and the shipped bUnit harness); storage failures are swallowed.
 
-  Adoption: UPGRADING.md, [Unreleased].
+  Adoption: UPGRADING.md, [1.249.0].
 - **Breaking (E2E selectors):** five shared buttons had an accessible name that did not contain their visible text, which fails WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`): a speech-input user saying the visible label could not activate them. They drop the `aria-label`, so the name IS the visible text: the app bar **Logout** (was "Sign out of your account"), **Create Account**, **Send Reset Link**, **Reset Password**, and the Sessions page **Sign out everywhere**. The `.Aria` resource keys for them are removed. `MMCA.Common.Testing.E2E` (`E2ETestBase`, the Identity page objects and workflow bases) selects by the new names.
 
-  Map and fix: UPGRADING.md, [Unreleased].
+  Map and fix: UPGRADING.md, [1.249.0].
 
 ## [1.248.0] - 2026-10-20
 
