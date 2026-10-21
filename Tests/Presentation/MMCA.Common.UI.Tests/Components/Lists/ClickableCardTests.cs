@@ -114,13 +114,16 @@ public sealed class ClickableCardTests : BunitTestBase
     }
 
     [Fact]
-    public void AriaLabel_OverridesTheContentDerivedName()
+    public void InteractiveCard_IsNamedByItsContent_WithNoAriaLabel()
     {
+        // WCAG 2.5.3 (Label in Name): an aria-label replacing the visible text would fail axe's
+        // label-content-name-mismatch, so the card never carries one and its content is its name.
         var cut = RenderUnderTest<ClickableCard>(p => p
             .Add(c => c.OnActivate, EventCallback.Factory.Create(this, () => { }))
-            .Add(c => c.AriaLabel, "Open order 4711")
-            .AddChildContent("4711"));
+            .AddChildContent("Order 4711"));
 
-        cut.Find(".mobile-list-card").GetAttribute("aria-label").Should().Be("Open order 4711");
+        var card = cut.Find(".mobile-list-card");
+        card.HasAttribute("aria-label").Should().BeFalse();
+        card.TextContent.Should().Contain("Order 4711");
     }
 }

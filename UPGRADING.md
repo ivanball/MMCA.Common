@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [1.249.1] - 2026-10-21
+## [1.250.0] - 2026-10-21
 
 **The role administration controls are named so that the name contains the visible text (WCAG
 2.5.3 Label in Name).** A test or page object that located them by the old accessible name finds
@@ -56,6 +56,12 @@ The fix:
 2. **A consumer that passes its own `Localizer` to `RoleAdminEdit` carrying `Aria.Save`** deletes
    that key; nothing reads it any more. One that overrides `RoleAdminList`'s `Aria.Edit` keeps the
    override only if its value still contains its `Action.Edit` text, or axe fails the page again.
+
+**`ClickableCard.AriaLabel` is removed (breaking).** An interactive `ClickableCard` (the card body of
+`MobileCardList` and `MobileInfiniteScrollList`) is always named by its own content, because an
+`aria-label` that replaced the visible text fails WCAG 2.5.3 Label in Name (axe
+`label-content-name-mismatch`). The fix: delete any `AriaLabel="..."` argument on a `ClickableCard` and
+make the card content lead with the row title, which is then the accessible name.
 
 ## [1.249.0] - 2026-10-21
 

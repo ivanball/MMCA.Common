@@ -10,11 +10,14 @@
 
    The content sits in a wrapper that stops keydown propagation, so Enter or Space pressed on a
    control nested inside the card (a delete button, a link) never activates the card as well; a
-   keydown that starts on the focused card element itself does not pass through the wrapper. *@
+   keydown that starts on the focused card element itself does not pass through the wrapper.
+
+   The card is always named by its own content: there is deliberately no aria-label override, since
+   any label that replaced the visible text would fail WCAG 2.5.3 (Label in Name, axe
+   label-content-name-mismatch). *@
 @if (IsInteractive)
 {
     <MudCard Elevation="@Elevation" Class="@Class" tabindex="0" role="button"
-             aria-label="@AriaLabel"
              @onclick="ActivateAsync" @onkeydown="OnKeyDownAsync">
         <MudCardContent Class="pa-3">
             <div class="mobile-list-card-body" @onkeydown:stopPropagation>@ChildContent</div>
@@ -39,12 +42,6 @@ else
     /// non-interactive card.
     /// </summary>
     [Parameter] public EventCallback OnActivate { get; set; }
-
-    /// <summary>
-    /// Optional accessible name. When null the card is named by its own content, which is the right
-    /// answer whenever the template already leads with the row's title.
-    /// </summary>
-    [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>Card elevation; matches the list components' own default.</summary>
     [Parameter] public int Elevation { get; set; } = 1;
