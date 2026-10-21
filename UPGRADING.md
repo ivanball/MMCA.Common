@@ -59,7 +59,9 @@ The fix:
 `NavigationManager.NavigateTo(url, forceLoad: true)` loses the toast with the page. Inject
 `IPendingToastService` and call `await PendingToasts.QueueAsync(ToastSeverity.Success, message)`
 before navigating instead; the shared `MainLayout` already renders `PendingToastHost`, so nothing else
-changes. A host with its own layout places `<PendingToastHost />` in it.
+changes. A host with its own layout places `<PendingToastHost />` in it. Pass no token (or
+`CancellationToken.None`) when the same action signs the user out of an `[Authorize]` page: the
+sign-out disposes the page, which cancels its lifetime token and silently drops the queued toast.
 
 **Lists with an async scope lookup.** A list page whose data source resolves after the grid first
 renders (an async scope or tenant lookup) can pass `EmptyConfirmed="false"` to `ListNoRecordsContent`

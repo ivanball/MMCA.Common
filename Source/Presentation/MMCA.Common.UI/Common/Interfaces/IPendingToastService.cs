@@ -21,7 +21,12 @@ public interface IPendingToastService
     /// </summary>
     /// <param name="severity">The level to render at.</param>
     /// <param name="message">The already-localized sentence to show.</param>
-    /// <param name="ct">Cancels the storage write.</param>
+    /// <param name="ct">
+    /// Cancels the storage write. Do not pass the page's lifetime token when the same action signs
+    /// the user out of an <c>[Authorize]</c> page: the sign-out re-renders the route into the login
+    /// redirect and disposes the page, which cancels that token and silently drops the toast. Pass
+    /// <see cref="CancellationToken.None"/> (or nothing) there.
+    /// </param>
     /// <returns>A task that completes once the toast is stored (or the write was abandoned).</returns>
     ValueTask QueueAsync(ToastSeverity severity, string message, CancellationToken ct = default);
 
