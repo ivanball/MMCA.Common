@@ -2,7 +2,11 @@
 
 @* Shared NoRecordsContent body for list pages built on DataGridListPageBase: branches on the base's
    LoadFailed flag so a failed fetch renders an inline error-with-retry instead of the
-   indistinguishable "no records" empty state. *@
+   indistinguishable "no records" empty state. EmptyConfirmed lets a page whose data source is still
+   pending (an async scope lookup, a persisted first page not yet applied) suppress the empty text
+   until the list is known to be empty; MudDataGrid can repaint this fragment with stale
+   parameters, so the page states the fact rather than the grid inferring it. While EmptyConfirmed
+   is false and the load has not failed, no branch renders and the fragment stays blank. *@
 
 @if (LoadFailed)
 {
@@ -14,11 +18,11 @@
                    OnClick="OnRetry">@L["Button.Retry"]</MudButton>
     </div>
 }
-else if (EmptyIcon is not null)
+else if (EmptyConfirmed && EmptyIcon is not null)
 {
     <EmptyState Icon="@EmptyIcon" Message="@EmptyMessage" />
 }
-else
+else if (EmptyConfirmed)
 {
     <EmptyState Message="@EmptyMessage" />
 }
@@ -29,6 +33,15 @@ else
 
     /// <summary>Localized empty-state text shown when the list is genuinely empty.</summary>
     [Parameter] public string? EmptyMessage { get; set; }
+
+    /// <summary>
+    /// Whether the page has established that the list is genuinely empty. Defaults to
+    /// <see langword="true"/>, so a caller that does not set it keeps the historical behaviour; a
+    /// page whose data source is still pending passes <see langword="false"/> until it resolves,
+    /// and the component renders nothing instead of the empty text. Ignored when
+    /// <see cref="LoadFailed"/> is set, since a failure is always shown.
+    /// </summary>
+    [Parameter] public bool EmptyConfirmed { get; set; } = true;
 
     /// <summary>Optional empty-state icon override; when null <c>EmptyState</c> keeps its default.</summary>
     [Parameter] public string? EmptyIcon { get; set; }

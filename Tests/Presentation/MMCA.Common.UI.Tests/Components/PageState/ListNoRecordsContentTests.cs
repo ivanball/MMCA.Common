@@ -48,6 +48,44 @@ public sealed class ListNoRecordsContentTests : BunitTestBase
         cut.Markup.Should().NotContain("No sessions yet");
     }
 
+    // -- EmptyConfirmed: a pending data source must not paint the empty frame (U-35) --
+    [Fact]
+    public void WhenEmptinessIsConfirmed_RendersTheEmptyState()
+    {
+        var cut = RenderUnderTest<ListNoRecordsContent>(p => p
+            .Add(c => c.LoadFailed, false)
+            .Add(c => c.EmptyConfirmed, true)
+            .Add(c => c.EmptyMessage, "No sessions yet"));
+
+        cut.FindComponents<EmptyState>().Should().ContainSingle();
+        cut.Markup.Should().Contain("No sessions yet");
+    }
+
+    [Fact]
+    public void WhenEmptinessIsNotConfirmed_RendersNothing()
+    {
+        var cut = RenderUnderTest<ListNoRecordsContent>(p => p
+            .Add(c => c.LoadFailed, false)
+            .Add(c => c.EmptyConfirmed, false)
+            .Add(c => c.EmptyMessage, "No sessions yet"));
+
+        cut.FindComponents<EmptyState>().Should().BeEmpty();
+        cut.FindAll("[role=alert]").Should().BeEmpty();
+        cut.Markup.Trim().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void WhenTheFetchFailed_ShowsTheFailureEvenIfEmptinessIsNotConfirmed()
+    {
+        var cut = RenderUnderTest<ListNoRecordsContent>(p => p
+            .Add(c => c.LoadFailed, true)
+            .Add(c => c.EmptyConfirmed, false)
+            .Add(c => c.EmptyMessage, "No sessions yet"));
+
+        cut.Find("[role=alert]").TextContent.Should().Contain("Could not load this list");
+        cut.FindComponents<EmptyState>().Should().BeEmpty();
+    }
+
     [Fact]
     public async Task RetryInvokesTheCallback()
     {

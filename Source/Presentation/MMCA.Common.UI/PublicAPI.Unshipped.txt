@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.get -> bool
+MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.set -> void
