@@ -22,8 +22,8 @@
     <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
          to the first patched version for GHSA-v5pm-xwqc-g5wc (circular-schema-reference DoS in OpenAPI
          parsing); referenced directly in MMCA.Common.API so the pin takes effect (no transitive pinning). -->
-    <!-- HELD at 2.12.2 2026-08-28: NU1608 vs Microsoft.AspNetCore.OpenApi 10.0.x, which constrains
-         Microsoft.OpenApi to (>= 2.7.5 && < 3.0.0).
+    <!-- HELD on the 2.x line (latest 2.x taken): NU1608 vs Microsoft.AspNetCore.OpenApi 10.0.x, which
+         constrains Microsoft.OpenApi to (>= 2.7.5 && < 3.0.0).
          The 3.x line cannot be taken until the ASP.NET Core 10 OpenAPI stack moves off the 2.x range. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.13.0" />
     <!-- Application -->
@@ -68,13 +68,13 @@
          (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
          never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
          one key is the WRONGTYPE production failure this framework already paid for once.
-         Held at 10.8.0, the same dotnet/extensions train as Http.Resilience, ServiceDiscovery and
-         TimeProvider.Testing, rather than the newer 10.9.0: 10.9.0 floors Microsoft.Extensions
-         .Caching.Abstractions/Memory (and through them DependencyInjection.Abstractions, Logging
-         .Abstractions, Options, Primitives) at 10.0.11, above the 10.0.10 every other pin here
-         resolves. Projects with the framework reference prune those away, but the ones without it
-         resolve them as real packages, so the newer pin quietly moves five shared transitives across
-         the graph for no functional gain. At 10.8.0 this adds exactly one entry per lock file. -->
+         Kept on the same dotnet/extensions train as Http.Resilience, ServiceDiscovery and
+         TimeProvider.Testing, so it moves with them rather than ahead of them: a Caching.Hybrid
+         release floors Microsoft.Extensions.Caching.Abstractions/Memory (and through them
+         DependencyInjection.Abstractions, Logging.Abstractions, Options, Primitives) at its own
+         train's servicing version. Projects with the framework reference prune those away, but the
+         ones without it resolve them as real packages, so a pin ahead of the train quietly moves five
+         shared transitives across the graph for no functional gain. -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.11.0" />
     <!-- Cron expression parsing for the opt-in recurring job scheduler (ScheduledJobRunner). MIT,
          zero-dependency (netstandard2.0, no transitive graph at all), and it does exactly one thing:
@@ -342,9 +342,9 @@
     <PackageVersion Include="OpenTelemetry.Api" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and

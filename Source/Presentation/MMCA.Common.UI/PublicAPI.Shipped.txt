@@ -14,6 +14,9 @@ MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.Upd
 MMCA.Common.UI.Common.Interfaces.IHomePageContent
 MMCA.Common.UI.Common.Interfaces.IHomePageContent.ComponentType.get -> System.Type!
 MMCA.Common.UI.Common.Interfaces.IHomePageContent.PageTitle.get -> string!
+MMCA.Common.UI.Common.Interfaces.IPendingToastService
+MMCA.Common.UI.Common.Interfaces.IPendingToastService.QueueAsync(MMCA.Common.UI.Common.Interfaces.ToastSeverity severity, string! message, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Common.Interfaces.IPendingToastService.TakeAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<(MMCA.Common.UI.Common.Interfaces.ToastSeverity Severity, string! Message)?>
 MMCA.Common.UI.Common.Interfaces.IToastService
 MMCA.Common.UI.Common.Interfaces.IToastService.Error(string! message) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.Info(string! message) -> void
@@ -302,6 +305,8 @@ MMCA.Common.UI.Components.Notifications.NotificationBell.NotificationBell() -> v
 MMCA.Common.UI.Components.Notifications.NotificationListener
 MMCA.Common.UI.Components.Notifications.NotificationListener.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Components.Notifications.NotificationListener.NotificationListener() -> void
+MMCA.Common.UI.Components.Notifications.PendingToastHost
+MMCA.Common.UI.Components.Notifications.PendingToastHost.PendingToastHost() -> void
 MMCA.Common.UI.Components.PageState.EmptyState
 MMCA.Common.UI.Components.PageState.EmptyState.EmptyState() -> void
 MMCA.Common.UI.Components.PageState.EmptyState.Icon.get -> string!
@@ -309,6 +314,8 @@ MMCA.Common.UI.Components.PageState.EmptyState.Icon.set -> void
 MMCA.Common.UI.Components.PageState.EmptyState.Message.get -> string?
 MMCA.Common.UI.Components.PageState.EmptyState.Message.set -> void
 MMCA.Common.UI.Components.PageState.ListNoRecordsContent
+MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.get -> bool
+MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyConfirmed.set -> void
 MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyIcon.get -> string?
 MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyIcon.set -> void
 MMCA.Common.UI.Components.PageState.ListNoRecordsContent.EmptyMessage.get -> string?
@@ -1353,6 +1360,7 @@ override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnAfter
 override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Notifications.NotificationBell.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Notifications.NotificationListener.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Notifications.PendingToastHost.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.PageState.PageStateScope.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Sharing.QrCodeImage.OnParametersSet() -> void
 override MMCA.Common.UI.Globalization.DocumentLanguage.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1555,6 +1563,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.NotificationBell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.NotificationListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Notifications.PendingToastHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.EmptyState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageErrorState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

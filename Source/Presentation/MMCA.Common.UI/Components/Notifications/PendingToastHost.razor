@@ -1,0 +1,24 @@
+@using MMCA.Common.UI.Common.Interfaces
+@inject IPendingToastService PendingToasts
+@inject IToastService Toast
+
+@* Renders no markup. On the first interactive render it shows, once, the toast a page parked with
+   IPendingToastService.QueueAsync before a forceLoad navigation, then the parked entry is gone.
+   Placed in the shared MainLayout, which every routed page of the Web and MAUI heads renders. *@
+
+@code {
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var pending = await PendingToasts.TakeAsync();
+        if (pending is { } toast)
+        {
+            Toast.Show(toast.Message, toast.Severity);
+        }
+    }
+}

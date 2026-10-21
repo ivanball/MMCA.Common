@@ -220,7 +220,9 @@ public static class DependencyInjection
 
         /// <summary>
         /// Registers the vendor-neutral toast and confirm-dialog facades over MudBlazor:
-        /// <c>IToastService</c> and <c>IAppDialogService</c>. Apart from these two implementations,
+        /// <c>IToastService</c> and <c>IAppDialogService</c>, plus <c>IPendingToastService</c> (the
+        /// toast that survives a <c>forceLoad</c> navigation), which the shared layout's
+        /// <c>PendingToastHost</c> injects. Apart from the two Mud-backed implementations,
         /// the only framework type that names MudBlazor's <c>ISnackbar</c> / <c>IDialogService</c> is
         /// the <c>DeleteConfirmation</c> component, which injects <c>IDialogService</c> directly to
         /// show its typed dialog; pages, other components and the <c>Result</c> helpers depend on the
@@ -237,6 +239,7 @@ public static class DependencyInjection
         {
             services.TryAddScoped<IToastService, MudToastService>();
             services.TryAddScoped<IAppDialogService, MudAppDialogService>();
+            services.TryAddScoped<IPendingToastService, PendingToastService>();
             return services;
         }
 

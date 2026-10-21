@@ -4,14 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.249.0] - 2026-10-21
 
 ### Changed
 
 - 26 minor and patch dependency updates (Dependabot #576), among them OpenTelemetry 1.20.0, `Microsoft.Extensions.AI` 10.11.0, StackExchange.Redis 3.4.5 and Deque.AxeCore 4.14.0. `SixLabors.ImageSharp` stays at 3.1.12: 3.2.0 enforces a commercial license key at build time, and `dependabot.yml` now ignores it from 3.2.0 up.
+- OpenTelemetry.Instrumentation.AspNetCore, .Http and .Runtime 1.20.0 -> 1.20.1, and the sample AppHost's `Aspire.AppHost.Sdk` 13.6.1 -> 13.6.2. `MMCA.Common.Infrastructure` and `MMCA.Common.API` no longer carry `VersionOverride="7.0.3"` on `Microsoft.Data.SqlClient`, so the packages depend on the central 7.1.1, in lockstep with `Microsoft.Data.SqlClient.Extensions.Azure` 7.1.1; the redundant overrides equal to the central pin (`Azure.Messaging.ServiceBus`, `System.IdentityModel.Tokens.Jwt`) are gone too. Holds are unchanged (MassTransit 8.x, ImageSharp 3.1.12, Microsoft.OpenApi 2.x).
 
 ### Fixed
 
+- The string grid filter's **is empty** no longer matches emoji-only text on SQL Server. `string.IsNullOrEmpty` translated to `IS NULL OR x LIKE N''`, and under `SQL_Latin1_General_CP1_CI_AS` a supplementary character has no sort weight, so an emoji-only value compared equal to `N''`. IS EMPTY / IS NOT EMPTY now test the length (`IS NULL OR LEN(x) = 0` and its complement). Because `LEN` ignores trailing spaces, a value made only of spaces now counts as empty on SQL Server (it did not under the `LIKE` form); in-memory queries are unchanged.
+- `ListNoRecordsContent` takes `EmptyConfirmed` (default `true`, so existing callers are unchanged). A list whose data source is still pending passes `false`, and the component renders nothing instead of flashing "No ... found." when MudDataGrid repaints the fragment with stale parameters (U-35). A failed load still shows the failure and retry UI.
+- A toast raised just before a `forceLoad` navigation survives the reload. New `IPendingToastService.QueueAsync(severity, message, ct)` parks one toast in `sessionStorage` (key `mmca.pendingToast`), and the new `PendingToastHost`, placed in the shared `MainLayout`, shows it once on the first interactive render of the reloaded page. Registered by `AddCommonUiFacades` (so by `AddUIShared` and the shipped bUnit harness); storage failures are swallowed.
+
+  Adoption: UPGRADING.md, [Unreleased].
 - **Breaking (E2E selectors):** five shared buttons had an accessible name that did not contain their visible text, which fails WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`): a speech-input user saying the visible label could not activate them. They drop the `aria-label`, so the name IS the visible text: the app bar **Logout** (was "Sign out of your account"), **Create Account**, **Send Reset Link**, **Reset Password**, and the Sessions page **Sign out everywhere**. The `.Aria` resource keys for them are removed. `MMCA.Common.Testing.E2E` (`E2ETestBase`, the Identity page objects and workflow bases) selects by the new names.
 
   Map and fix: UPGRADING.md, [Unreleased].

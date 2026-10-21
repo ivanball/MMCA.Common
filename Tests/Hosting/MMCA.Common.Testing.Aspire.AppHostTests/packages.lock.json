@@ -79,8 +79,8 @@
       },
       "Aspire.Dashboard.Sdk.win-x64": {
         "type": "Transitive",
-        "resolved": "13.6.1",
-        "contentHash": "ZzwJf0E36BGiYSH/i90wGhNqsg5yk9dLGzajK4mfOK1PEdfOMLsO41f8Qe1hUQ2p7wAHWvkJj9/00/8w99VqLw=="
+        "resolved": "13.6.2",
+        "contentHash": "mCiJ66YrmcamP9uurNXCReSG2wGdsEikCNGzH5SXe0lmGPAMvVkdFPJBQYT+OzRCq2xP10uU3PaEtL5TSVfYuQ=="
       },
       "Aspire.Hosting.AppHost": {
         "type": "Transitive",
@@ -214,8 +214,8 @@
       },
       "Aspire.Hosting.Orchestration.win-x64": {
         "type": "Transitive",
-        "resolved": "13.6.1",
-        "contentHash": "exo2DVGpYWRsnOgGVhbbLqIX3Q7Nc6kpn4+VJSMdanSW04uUZLQ1+Sfc6KJ4kK8QGYlihvPDJ6kfGeXmLAb/ig=="
+        "resolved": "13.6.2",
+        "contentHash": "jmh6lzsoQkqA3KKEhBAFPUJSQpjbO4OGfNtkycZWafOUX8vS2JoH0geN2qv7Fu/Y5zAKiZXGzbefZRXZB4UVbA=="
       },
       "AspNetCore.HealthChecks.CosmosDb": {
         "type": "Transitive",
@@ -1452,7 +1452,7 @@
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.13, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.13, )",
-          "Microsoft.Data.SqlClient": "[7.0.3, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[2.13.0, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
@@ -1507,7 +1507,7 @@
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, )",
-          "Microsoft.Data.SqlClient": "[7.0.3, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "Microsoft.Data.SqlClient.Extensions.Azure": "[7.1.1, )",
           "Microsoft.EntityFrameworkCore.Cosmos": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
@@ -1565,9 +1565,9 @@
       "mmca.common.testing.aspire.apphosttests.sampleapphost": {
         "type": "Project",
         "dependencies": {
-          "Aspire.Dashboard.Sdk.win-x64": "[13.6.1, )",
-          "Aspire.Hosting.AppHost": "[13.6.1, )",
-          "Aspire.Hosting.Orchestration.win-x64": "[13.6.1, )",
+          "Aspire.Dashboard.Sdk.win-x64": "[13.6.2, )",
+          "Aspire.Hosting.AppHost": "[13.6.2, )",
+          "Aspire.Hosting.Orchestration.win-x64": "[13.6.2, )",
           "MMCA.Common.Aspire.Hosting": "[1.0.0, )"
         }
       },

@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.249.0] - 2026-10-21
 
 **Five shared buttons are named by their visible text (WCAG 2.5.3 Label in Name).** Their
 `aria-label` no longer differs from what they show, so a test or page object that located them by the
@@ -54,6 +54,19 @@ The fix:
 2. **A consumer that overrode one of the removed resource keys** (`Common.Button.Logout.Aria`,
    `Auth.Register.CreateAccount.Aria`, `Auth.Forgot.Submit.Aria`, `Auth.Reset.Submit.Aria`,
    `Auth.Sessions.RevokeAll.Aria`) deletes the override; nothing reads it any more.
+
+**A success toast before a forced reload.** A page that calls `Toast.Success(...)` and then
+`NavigationManager.NavigateTo(url, forceLoad: true)` loses the toast with the page. Inject
+`IPendingToastService` and call `await PendingToasts.QueueAsync(ToastSeverity.Success, message)`
+before navigating instead; the shared `MainLayout` already renders `PendingToastHost`, so nothing else
+changes. A host with its own layout places `<PendingToastHost />` in it. Pass no token (or
+`CancellationToken.None`) when the same action signs the user out of an `[Authorize]` page: the
+sign-out disposes the page, which cancels its lifetime token and silently drops the queued toast.
+
+**Lists with an async scope lookup.** A list page whose data source resolves after the grid first
+renders (an async scope or tenant lookup) can pass `EmptyConfirmed="false"` to `ListNoRecordsContent`
+until the lookup completes, so the grid does not flash its "No ... found." text. Callers that do not
+set it keep today's behaviour.
 
 ## [1.248.0] - 2026-10-20
 

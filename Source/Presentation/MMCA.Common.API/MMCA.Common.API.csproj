@@ -8,7 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" VersionOverride="7.21.0" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="AspNet.Security.OAuth.Apple" />
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <!-- Direct reference so the Directory.Packages.props pin forces the transitive Microsoft.OpenApi
          (pulled by AspNetCore.OpenApi) up to the GHSA-v5pm-xwqc-g5wc-patched 2.7.5. -->
-    <PackageReference Include="Microsoft.Data.SqlClient" VersionOverride="7.0.3" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" />
     <!-- The profiler UI + middleware live here (MiniProfilerExtensions). MMCA.Common.Application
@@ -27,7 +27,7 @@
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Scalar.AspNetCore" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" VersionOverride="8.23.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />

@@ -63,8 +63,9 @@ updates:
       # is a license decision too, not a routine update. See Directory.Packages.props.
       - dependency-name: "SixLabors.ImageSharp"
         versions: [">= 3.2.0"]
-      # VS.Threading.Analyzers v18 adds stricter rules (e.g. VSTHRD103) that error under
-      # TreatWarningsAsErrors; held at v17 until the flagged call sites are reworked.
+      # VS.Threading.Analyzers majors are taken by hand, not by Dependabot: a new major adds
+      # stricter rules (v18 brought VSTHRD103) that error under TreatWarningsAsErrors, so the
+      # flagged call sites are reworked in the same PR. The repo is on v18.
       - dependency-name: "Microsoft.VisualStudio.Threading.Analyzers"
         update-types: ["version-update:semver-major"]
       # Microsoft.OpenApi is held at 2.x by a build constraint, not by preference. The
@@ -75,8 +76,8 @@ updates:
       # ASP.NET Core ships a generator targeting 3.x. See Directory.Packages.props.
       - dependency-name: "Microsoft.OpenApi"
         update-types: ["version-update:semver-major"]
-      # Breaking majors held back deliberately. MessagePack is also pinned to a patched 2.x to
-      # override a vulnerable transitive (see Directory.Packages.props).
+      # Breaking majors held back deliberately. MessagePack is also pinned directly (on the 3.x
+      # line) to override a vulnerable transitive (see Directory.Packages.props).
       - dependency-name: "StackExchange.Redis"
         update-types: ["version-update:semver-major"]
       - dependency-name: "MessagePack"
