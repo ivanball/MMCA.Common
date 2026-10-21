@@ -1,0 +1,13 @@
+@page "/admin/roles/{Role}"
+@using MMCA.Common.UI.Pages.Administration
+
+@* Hosts the shared RoleAdminEdit component the way an app does (the app owns the route and the
+   link back to the roster), against StubRoleAdminUIService, so the axe scan covers the editor. *@
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <RoleAdminEdit Role="@Role" ListHref="/admin/roles" />
+</MudContainer>
+
+@code {
+    /// <summary>The role named by the route.</summary>
+    [Parameter] public string Role { get; set; } = string.Empty;
+}
