@@ -88,18 +88,18 @@
       },
       "Aspire.Hosting.AppHost": {
         "type": "Transitive",
-        "resolved": "13.6.1",
-        "contentHash": "1qfHjEFIwPErKUdvlwySgSbUgZtuvKTq1x8WRhl7hAOYvr/WouiSeA5DhVST0Ig6ZFPiTOEG2AJqJjmS6ZEMzw==",
+        "resolved": "13.6.2",
+        "contentHash": "iCpFLP7pLlE7+JN12Rk27qmKHmiidni8/SxumGNs1lS2CPAqvX+gBwpSOfiJFzZBcecNoIXzQ3y5C87rN7FMLA==",
         "dependencies": {
           "AspNetCore.HealthChecks.Uris": "9.0.0",
-          "Aspire.Hosting": "13.6.1",
+          "Aspire.Hosting": "13.6.2",
           "Google.Protobuf": "3.36.1",
           "Grpc.AspNetCore": "2.83.0",
           "Grpc.Net.ClientFactory": "2.83.0",
           "Grpc.Tools": "2.83.0",
           "Hex1b": "0.168.0",
           "KubernetesClient": "19.0.2",
-          "MessagePack": "2.5.302",
+          "MessagePack": "2.5.307",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.12",
           "Microsoft.Extensions.Configuration.Binder": "10.0.12",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.12",
@@ -1568,7 +1568,7 @@
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[2.13.0, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[2.18.0, )",
+          "Scalar.AspNetCore": "[2.18.2, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -1673,8 +1673,8 @@
       "mmca.common.testing.aspire": {
         "type": "Project",
         "dependencies": {
-          "Aspire.Hosting": "[13.6.1, )",
-          "Aspire.Hosting.Testing": "[13.6.1, )",
+          "Aspire.Hosting": "[13.6.2, )",
+          "Aspire.Hosting.Testing": "[13.6.2, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.Testing": "[1.0.0, )",
           "xunit.v3.extensibility.core": "[4.0.2, )"
@@ -1720,9 +1720,9 @@
       },
       "Aspire.Hosting": {
         "type": "CentralTransitive",
-        "requested": "[13.6.1, )",
-        "resolved": "13.6.1",
-        "contentHash": "gIcP7+rPSBPWLlEpFGCWGKdjoXvyn0rZRCbjxUHTMnw8Y+a6Esp915o8MOROpYI++MQN3Fo55Yu0XuBJ6MqEIw==",
+        "requested": "[13.6.2, )",
+        "resolved": "13.6.2",
+        "contentHash": "eMnytcYrRtfksutqu5vgnCCcWVnYXFq4O0i5/ABskIV3rzAKR88dr8z0aDuZJPKSyf8hhDL1gBVZPN+rr6qJxw==",
         "dependencies": {
           "AspNetCore.HealthChecks.Uris": "9.0.0",
           "Google.Protobuf": "3.36.1",
@@ -1731,7 +1731,7 @@
           "Grpc.Tools": "2.83.0",
           "Hex1b": "0.168.0",
           "KubernetesClient": "19.0.2",
-          "MessagePack": "2.5.302",
+          "MessagePack": "2.5.307",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.12",
           "Microsoft.Extensions.Configuration.Binder": "10.0.12",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.12",
@@ -1758,20 +1758,20 @@
       },
       "Aspire.Hosting.Testing": {
         "type": "CentralTransitive",
-        "requested": "[13.6.1, )",
-        "resolved": "13.6.1",
-        "contentHash": "Tpg60qoFCZbuR1abm6AZRLhn6SPvUwOBM6RMrP41uV1LrUmDIBBn2NDTuOgP5w/wQUzvJISf5jGVI1MOVCWBtg==",
+        "requested": "[13.6.2, )",
+        "resolved": "13.6.2",
+        "contentHash": "YWNIziwNKyeZNQRkAITldHaYUxBXLdE2CXoQeB1skm9XGj/Nowl4gKBk14a2HNHdztpa17LPNucE0I8Ngm9t+w==",
         "dependencies": {
           "AspNetCore.HealthChecks.Uris": "9.0.0",
-          "Aspire.Hosting": "13.6.1",
-          "Aspire.Hosting.AppHost": "13.6.1",
+          "Aspire.Hosting": "13.6.2",
+          "Aspire.Hosting.AppHost": "13.6.2",
           "Google.Protobuf": "3.36.1",
           "Grpc.AspNetCore": "2.83.0",
           "Grpc.Net.ClientFactory": "2.83.0",
           "Grpc.Tools": "2.83.0",
           "Hex1b": "0.168.0",
           "KubernetesClient": "19.0.2",
-          "MessagePack": "2.5.302",
+          "MessagePack": "2.5.307",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.12",
           "Microsoft.Extensions.Configuration.Binder": "10.0.12",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.12",
@@ -2322,13 +2322,13 @@
       },
       "OpenTelemetry.Api": {
         "type": "CentralTransitive",
-        "requested": "[1.20.0, )",
+        "requested": "[1.20.1, )",
         "resolved": "1.17.0",
         "contentHash": "mSBxzomZgHIJu9CyVNqyDu/n2JHEtqVgfcCD1Br0cV5iLYogjZOMqhlVLt99PEp+0KGBNUR3GXgeOdN2GR3F9g=="
       },
       "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
         "type": "CentralTransitive",
-        "requested": "[1.20.0, )",
+        "requested": "[1.20.1, )",
         "resolved": "1.17.0",
         "contentHash": "R1omQOrQpGlS0Cp5UIr/TAiuEA48JrPlgr1NPV5gESiTU7HhWU+ILe2EBSYb1fKdsSavZ7nZkHcUxAzofPqr2A==",
         "dependencies": {
@@ -2337,7 +2337,7 @@
       },
       "OpenTelemetry.Extensions.Hosting": {
         "type": "CentralTransitive",
-        "requested": "[1.20.0, )",
+        "requested": "[1.20.1, )",
         "resolved": "1.17.0",
         "contentHash": "t1OwL/4qgboGMobYVT+UV5zgWnFqCp4Pw8lcsmzh8m2K8PQsTKkyxrC32tqYTMYny3GOW4q5cltE3dTVzLmRew==",
         "dependencies": {
@@ -2383,9 +2383,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.18.0, )",
-        "resolved": "2.18.0",
-        "contentHash": "wwI3khcYNM7oL6axr4a41G29fJYOS3ckusgYZ4NiIccL8Amh2LOeu4HSK1SrQWiMJNrgoFqyWfDkOkunQCiRDw=="
+        "requested": "[2.18.2, )",
+        "resolved": "2.18.2",
+        "contentHash": "/Ss5o3t+k+Ea5yRMxd5avukRCRB74YdWNZ+y7RNTjFtWqP10VNhl+ynQYyATC+vr65qB6sFcneQ4q2kExbc2+w=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

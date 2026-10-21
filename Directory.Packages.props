@@ -35,7 +35,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.2" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -108,7 +108,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="12.58.0" />
+    <PackageVersion Include="Anthropic" Version="12.60.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -294,7 +294,7 @@
          only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
          than merely skipping one AddXInstrumentation call that another component re-adds. Version
          tracks the OpenTelemetry family pinned below. -->
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
@@ -339,9 +339,9 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.20.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.0" />
@@ -359,20 +359,20 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.1" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.1" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.2" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.2" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.13" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.1" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.1" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.1" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.2" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.2" />
     <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
          MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
          SDK's own version, the same shape as the consumer AppHosts. -->
