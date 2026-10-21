@@ -32,6 +32,31 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.249.1] - 2026-10-21
+
+**The role administration controls are named so that the name contains the visible text (WCAG
+2.5.3 Label in Name).** A test or page object that located them by the old accessible name finds
+nothing.
+
+| Control | Old accessible name | New accessible name |
+|---------|---------------------|---------------------|
+| `RoleAdminList` edit link (`data-testid="edit-role"`) | `Edit the stored permissions of {role}` | `Edit permissions for {role}` |
+| `RoleAdminEdit` save button (`data-testid="save-permissions"`) | `Save the stored permissions of {role}` | `Save permissions` (the visible text) |
+
+The Spanish names follow the same shape: Editar permisos de {role} for the edit link, Guardar
+permisos for the save button, and the Sessions page's per-device sign-out button now reads
+Cerrar sesi&oacute;n en {device} (it inserted an article into the visible phrase before). The English
+per-device sign-out name (`Sign out of {device}`) is unchanged.
+
+The fix:
+
+1. **A consumer test or page object** that selects these controls by accessible name switches to the
+   new name, or better, to the unchanged `data-testid`. `MMCA.Common.Testing.E2E`'s `RoleAdminPage`
+   already selects by `data-testid`, so anything going through it needs no change.
+2. **A consumer that passes its own `Localizer` to `RoleAdminEdit` carrying `Aria.Save`** deletes
+   that key; nothing reads it any more. One that overrides `RoleAdminList`'s `Aria.Edit` keeps the
+   override only if its value still contains its `Action.Edit` text, or axe fails the page again.
+
 ## [1.249.0] - 2026-10-21
 
 **Five shared buttons are named by their visible text (WCAG 2.5.3 Label in Name).** Their

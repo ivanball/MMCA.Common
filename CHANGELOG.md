@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.249.1] - 2026-10-21
+
+### Fixed
+
+- The role administration components pass WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`, which consumer E2E scans of the role pages failed on all three browsers). `RoleAdminList`'s per-row **Edit permissions** link keeps a per-role `aria-label` but it now begins with the visible text: "Edit permissions for Admin" (was "Edit the stored permissions of Admin"). `RoleAdminEdit`'s **Save permissions** button drops its `aria-label`, so the visible text is the name (was "Save the stored permissions of Admin"), and its `Aria.Save` resource key is removed. The Spanish per-device sign-out label on the Sessions page (`Auth.Sessions.Revoke.Aria`) now contains its visible text too; the English one already did. The `data-testid` attributes are unchanged, so `MMCA.Common.Testing.E2E`'s `RoleAdminPage` needs no change. No public API change.
+
+  E2E selector map: UPGRADING.md, [1.249.1].
+
 ## [1.249.0] - 2026-10-21
 
 ### Changed
