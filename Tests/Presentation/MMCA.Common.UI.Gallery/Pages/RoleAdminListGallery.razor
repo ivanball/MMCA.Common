@@ -1,0 +1,8 @@
+@page "/admin/roles"
+@using MMCA.Common.UI.Pages.Administration
+
+@* Hosts the shared RoleAdminList component the way an app does (the app owns the route and the
+   edit link), against StubRoleAdminUIService, so the axe scan covers the real roster markup. *@
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <RoleAdminList EditHref="@(role => $"/admin/roles/{Uri.EscapeDataString(role)}")" />
+</MudContainer>

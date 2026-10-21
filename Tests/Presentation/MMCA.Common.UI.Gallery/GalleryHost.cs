@@ -6,6 +6,7 @@ using MMCA.Common.UI;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Gallery.Components;
 using MMCA.Common.UI.Gallery.Stubs;
+using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Notifications;
@@ -84,6 +85,10 @@ public static class GalleryHost
         // unscoped, so the null provider is the right stand-in: it keeps the page rendering and the
         // caption absent, which is exactly the framework-default look the scan should measure.
         builder.Services.AddScoped<INotificationScopeProvider, NullNotificationScopeProvider>();
+
+        // Canned role administration (ADR-116) so the gallery's /admin/roles and /admin/roles/{role}
+        // hosts render the shared RoleAdminList and RoleAdminEdit components populated for the scan.
+        builder.Services.AddScoped<IRoleAdminUIService, StubRoleAdminUIService>();
 
         // One empty UI module whose Assembly is the gallery, so the shared Router (Routes.razor)
         // discovers the gallery's own /components page alongside the real Login/Register pages, and

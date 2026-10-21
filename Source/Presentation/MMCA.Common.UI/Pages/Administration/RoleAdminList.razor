@@ -48,7 +48,10 @@ else
             <MudTd DataLabel="@T("Column.Stored")" data-testid="stored-count">@context.StoredPermissions.Count</MudTd>
             <MudTd DataLabel="@T("Column.Actions")">
                 @* A link, not a row click: a whole-row click is mouse-only, and the edit screen is
-                   the only destination this row has. *@
+                   the only destination this row has. The aria-label names the row's role so every
+                   link is distinct, and it STARTS with the visible text ("Edit permissions for
+                   Admin"), so the accessible name contains the label a speech-input user reads
+                   (WCAG 2.5.3 Label in Name, axe label-content-name-mismatch). *@
                 <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Edit"
                            Href="@EditHref(context.Role)"

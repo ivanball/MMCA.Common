@@ -64,13 +64,15 @@ else
         </fieldset>
     }
 
+    @* No aria-label: the visible text IS the accessible name (WCAG 2.5.3 Label in Name, axe
+       label-content-name-mismatch), so a speech-input user can say what they see. The page has one
+       save button and its title already names the role, so nothing needs disambiguating. *@
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Save"
                Disabled="@IsSaving"
                OnClick="SaveAsync"
                data-testid="save-permissions"
-               aria-busy="@(IsSaving ? "true" : "false")"
-               aria-label="@T("Aria.Save", Role)">
+               aria-busy="@(IsSaving ? "true" : "false")">
         @if (IsSaving)
         {
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />

@@ -626,7 +626,7 @@
     <value>Cerrar sesión</value>
   </data>
   <data name="Auth.Sessions.Revoke.Aria" xml:space="preserve">
-    <value>Cerrar la sesión de {0}</value>
+    <value>Cerrar sesión en {0}</value>
   </data>
   <data name="Auth.Sessions.Revoked" xml:space="preserve">
     <value>Se ha cerrado la sesión de ese dispositivo.</value>

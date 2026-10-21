@@ -127,6 +127,21 @@ public sealed class RoleAdminEditTests : BunitTestBase
         cut.FindAll("fieldset").Should().BeEmpty();
     }
 
+    /// <summary>
+    /// The save button is named by its visible text alone (WCAG 2.5.3 Label in Name): an aria-label
+    /// that did not contain "Save permissions" failed axe label-content-name-mismatch.
+    /// </summary>
+    [Fact]
+    public async Task TheSaveButtonIsNamedByItsVisibleText()
+    {
+        var cut = RenderEdit();
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        var save = cut.Find("[data-testid=\"save-permissions\"]");
+        save.HasAttribute("aria-label").Should().BeFalse();
+        save.TextContent.Trim().Should().Be("Save permissions");
+    }
+
     // ── Save ──
     [Fact]
     public async Task Saving_SendsTheWholeStoredSetIncludingTheNewlyTickedPermission()

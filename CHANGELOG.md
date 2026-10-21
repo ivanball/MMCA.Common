@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.250.0] - 2026-10-21
+
+### Fixed
+
+- The role administration components pass WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`, which consumer E2E scans of the role pages failed on all three browsers). `RoleAdminList`'s per-row **Edit permissions** link keeps a per-role `aria-label` but it now begins with the visible text: "Edit permissions for Admin" (was "Edit the stored permissions of Admin"). `RoleAdminEdit`'s **Save permissions** button drops its `aria-label`, so the visible text is the name (was "Save the stored permissions of Admin"), and its `Aria.Save` resource key is removed. The Spanish per-device sign-out label on the Sessions page (`Auth.Sessions.Revoke.Aria`) now contains its visible text too; the English one already did. The `data-testid` attributes are unchanged, so `MMCA.Common.Testing.E2E`'s `RoleAdminPage` needs no change.
+
+  E2E selector map: UPGRADING.md, [1.250.0].
+
+### Breaking
+
+- `ClickableCard.AriaLabel` (MMCA.Common.UI) is removed. An interactive card is always named by its own content: an `aria-label` that replaced the visible text would fail WCAG 2.5.3 Label in Name. No framework or reference-app code set it. The fix: delete the `AriaLabel=` argument and make the card content lead with the row title. UPGRADING.md, [1.250.0].
+
 ## [1.249.0] - 2026-10-21
 
 ### Changed
@@ -17,10 +29,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - `ListNoRecordsContent` takes `EmptyConfirmed` (default `true`, so existing callers are unchanged). A list whose data source is still pending passes `false`, and the component renders nothing instead of flashing "No ... found." when MudDataGrid repaints the fragment with stale parameters (U-35). A failed load still shows the failure and retry UI.
 - A toast raised just before a `forceLoad` navigation survives the reload. New `IPendingToastService.QueueAsync(severity, message, ct)` parks one toast in `sessionStorage` (key `mmca.pendingToast`), and the new `PendingToastHost`, placed in the shared `MainLayout`, shows it once on the first interactive render of the reloaded page. Registered by `AddCommonUiFacades` (so by `AddUIShared` and the shipped bUnit harness); storage failures are swallowed.
 
-  Adoption: UPGRADING.md, [Unreleased].
+  Adoption: UPGRADING.md, [1.249.0].
 - **Breaking (E2E selectors):** five shared buttons had an accessible name that did not contain their visible text, which fails WCAG 2.5.3 Label in Name (axe 4.14 `label-content-name-mismatch`): a speech-input user saying the visible label could not activate them. They drop the `aria-label`, so the name IS the visible text: the app bar **Logout** (was "Sign out of your account"), **Create Account**, **Send Reset Link**, **Reset Password**, and the Sessions page **Sign out everywhere**. The `.Aria` resource keys for them are removed. `MMCA.Common.Testing.E2E` (`E2ETestBase`, the Identity page objects and workflow bases) selects by the new names.
 
-  Map and fix: UPGRADING.md, [Unreleased].
+  Map and fix: UPGRADING.md, [1.249.0].
 
 ## [1.248.0] - 2026-10-20
 

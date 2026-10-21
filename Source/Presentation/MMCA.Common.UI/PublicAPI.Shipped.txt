@@ -237,8 +237,6 @@ MMCA.Common.UI.Components.Legal.TermsAcceptanceGate
 MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose() -> void
 MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.TermsAcceptanceGate() -> void
 MMCA.Common.UI.Components.Lists.ClickableCard
-MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.get -> string?
-MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.set -> void
 MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
 MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.set -> void
 MMCA.Common.UI.Components.Lists.ClickableCard.Class.get -> string!
