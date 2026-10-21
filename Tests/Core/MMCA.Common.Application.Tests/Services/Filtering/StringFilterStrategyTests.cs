@@ -76,6 +76,47 @@ public sealed class StringFilterStrategyTests
     public void IsNotEmpty_ExcludesEmptyStrings() =>
         Filter("IS NOT EMPTY", string.Empty).Should().HaveCount(4);
 
+    // -- IS EMPTY / IS NOT EMPTY over nullable values and supplementary characters --
+    private sealed class LabelledItem
+    {
+        public string? Label { get; set; }
+    }
+
+    private static readonly string?[] PresenceValues = [null, string.Empty, "a", "\U0001F600", "x\U0001F600"];
+
+    private static readonly string?[] EmptyValues = [null, string.Empty];
+
+    private static readonly string?[] NonEmptyValues = ["a", "\U0001F600", "x\U0001F600"];
+
+    private static List<string?> FilterLabels(string op) =>
+        [.. QueryFilterService.ApplyFilters(
+                PresenceValues.Select(v => new LabelledItem { Label = v }).AsQueryable(),
+                new Dictionary<string, (string, string)> { ["Label"] = (op, string.Empty) },
+                EmptyMap)
+            .Select(i => i.Label)];
+
+    [Fact]
+    public void IsEmpty_MatchesNullAndEmptyOnly() =>
+        FilterLabels("IS EMPTY").Should().BeEquivalentTo(EmptyValues);
+
+    [Theory]
+    [InlineData("a")]
+    [InlineData("\U0001F600")]
+    [InlineData("x\U0001F600")]
+    public void IsEmpty_DoesNotMatchNonEmptyValues_IncludingEmojiOnly(string value) =>
+        FilterLabels("IS EMPTY").Should().NotContain(value);
+
+    [Fact]
+    public void IsNotEmpty_IsTheExactComplementOfIsEmpty()
+    {
+        var empty = FilterLabels("IS EMPTY");
+        var notEmpty = FilterLabels("IS NOT EMPTY");
+
+        notEmpty.Should().BeEquivalentTo(NonEmptyValues);
+        notEmpty.Should().NotIntersectWith(empty);
+        empty.Concat(notEmpty).Should().BeEquivalentTo(PresenceValues);
+    }
+
     // ── Unknown operator ──
     [Fact]
     public void UnknownOperator_ReturnsAll() =>

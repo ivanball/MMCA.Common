@@ -40,11 +40,15 @@ internal sealed class StringFilterStrategy : IFilterStrategy
 
     // Presence checks (value-independent) and the comma-separated IN set, split out of the main
     // switch to keep each method under the cyclomatic-complexity ceiling.
+    // The presence checks test the length, not equality with the empty string: SQL Server
+    // translates string.IsNullOrEmpty to LIKE N'', and under a non-supplementary-character
+    // collation (SQL_Latin1_General_CP1_CI_AS) an emoji-only value carries no sort weight, so it
+    // compares equal to N'' and would match IS EMPTY. LEN counts its code units instead.
     private static IQueryable<T> ApplyPresenceOrSet<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
-            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"string.IsNullOrEmpty({property})"),
-            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"!string.IsNullOrEmpty({property})"),
+            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"({property} == null || {property}.Length == 0)"),
+            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"({property} != null && {property}.Length > 0)"),
             "IN" => ApplyIn(query, property, value),
             _ => query
         };
