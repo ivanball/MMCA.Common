@@ -4,25 +4,25 @@
     "net10.0": {
       "Aspire.Dashboard.Sdk.win-x64": {
         "type": "Direct",
-        "requested": "[13.6.1, )",
-        "resolved": "13.6.1",
-        "contentHash": "ZzwJf0E36BGiYSH/i90wGhNqsg5yk9dLGzajK4mfOK1PEdfOMLsO41f8Qe1hUQ2p7wAHWvkJj9/00/8w99VqLw=="
+        "requested": "[13.6.2, )",
+        "resolved": "13.6.2",
+        "contentHash": "mCiJ66YrmcamP9uurNXCReSG2wGdsEikCNGzH5SXe0lmGPAMvVkdFPJBQYT+OzRCq2xP10uU3PaEtL5TSVfYuQ=="
       },
       "Aspire.Hosting.AppHost": {
         "type": "Direct",
-        "requested": "[13.6.1, )",
-        "resolved": "13.6.1",
-        "contentHash": "1qfHjEFIwPErKUdvlwySgSbUgZtuvKTq1x8WRhl7hAOYvr/WouiSeA5DhVST0Ig6ZFPiTOEG2AJqJjmS6ZEMzw==",
+        "requested": "[13.6.2, )",
+        "resolved": "13.6.2",
+        "contentHash": "iCpFLP7pLlE7+JN12Rk27qmKHmiidni8/SxumGNs1lS2CPAqvX+gBwpSOfiJFzZBcecNoIXzQ3y5C87rN7FMLA==",
         "dependencies": {
           "AspNetCore.HealthChecks.Uris": "9.0.0",
-          "Aspire.Hosting": "13.6.1",
+          "Aspire.Hosting": "13.6.2",
           "Google.Protobuf": "3.36.1",
           "Grpc.AspNetCore": "2.83.0",
           "Grpc.Net.ClientFactory": "2.83.0",
           "Grpc.Tools": "2.83.0",
           "Hex1b": "0.168.0",
           "KubernetesClient": "19.0.2",
-          "MessagePack": "2.5.302",
+          "MessagePack": "2.5.307",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.12",
           "Microsoft.Extensions.Configuration.Binder": "10.0.12",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.12",
@@ -49,9 +49,9 @@
       },
       "Aspire.Hosting.Orchestration.win-x64": {
         "type": "Direct",
-        "requested": "[13.6.1, )",
-        "resolved": "13.6.1",
-        "contentHash": "exo2DVGpYWRsnOgGVhbbLqIX3Q7Nc6kpn4+VJSMdanSW04uUZLQ1+Sfc6KJ4kK8QGYlihvPDJ6kfGeXmLAb/ig=="
+        "requested": "[13.6.2, )",
+        "resolved": "13.6.2",
+        "contentHash": "jmh6lzsoQkqA3KKEhBAFPUJSQpjbO4OGfNtkycZWafOUX8vS2JoH0geN2qv7Fu/Y5zAKiZXGzbefZRXZB4UVbA=="
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
