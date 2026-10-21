@@ -30,9 +30,6 @@
   <data name="Action.Save" xml:space="preserve">
     <value>Guardar permisos</value>
   </data>
-  <data name="Aria.Save" xml:space="preserve">
-    <value>Guardar los permisos almacenados de {0}</value>
-  </data>
   <data name="Empty.NoPermissions" xml:space="preserve">
     <value>Esta aplicación aún no declara permisos, por lo que no hay nada que conceder.</value>
   </data>

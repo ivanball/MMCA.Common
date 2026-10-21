@@ -46,6 +46,6 @@
     <value>Edit permissions</value>
   </data>
   <data name="Aria.Edit" xml:space="preserve">
-    <value>Edit the stored permissions of {0}</value>
+    <value>Edit permissions for {0}</value>
   </data>
 </root>

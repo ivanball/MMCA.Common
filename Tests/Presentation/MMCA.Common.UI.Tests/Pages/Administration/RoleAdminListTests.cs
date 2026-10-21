@@ -54,8 +54,22 @@ public sealed class RoleAdminListTests : BunitTestBase
 
         await cut.WaitForAssertionAsync(() => cut.FindAll("[data-testid=\"edit-role\"]").Should().HaveCount(2));
         cut.FindAll("[data-testid=\"edit-role\"]")[0].GetAttribute("href").Should().Be("/admin/roles/Admin");
-        cut.FindAll("[data-testid=\"edit-role\"]")[0].GetAttribute("aria-label")
-            .Should().Be("Edit the stored permissions of Admin");
+    }
+
+    /// <summary>
+    /// The per-row name tells the links apart and still begins with the visible text, so it
+    /// contains what a speech-input user reads aloud (WCAG 2.5.3 Label in Name; axe
+    /// label-content-name-mismatch fails a name that does not).
+    /// </summary>
+    [Fact]
+    public async Task TheEditLinkAccessibleNameStartsWithItsVisibleText()
+    {
+        var cut = RenderList();
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll("[data-testid=\"edit-role\"]").Should().HaveCount(2));
+        var link = cut.FindAll("[data-testid=\"edit-role\"]")[0];
+        link.TextContent.Trim().Should().Be("Edit permissions");
+        link.GetAttribute("aria-label").Should().Be("Edit permissions for Admin");
     }
 
     [Fact]
