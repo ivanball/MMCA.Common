@@ -55,6 +55,17 @@ The fix:
    `Auth.Register.CreateAccount.Aria`, `Auth.Forgot.Submit.Aria`, `Auth.Reset.Submit.Aria`,
    `Auth.Sessions.RevokeAll.Aria`) deletes the override; nothing reads it any more.
 
+**A success toast before a forced reload.** A page that calls `Toast.Success(...)` and then
+`NavigationManager.NavigateTo(url, forceLoad: true)` loses the toast with the page. Inject
+`IPendingToastService` and call `await PendingToasts.QueueAsync(ToastSeverity.Success, message)`
+before navigating instead; the shared `MainLayout` already renders `PendingToastHost`, so nothing else
+changes. A host with its own layout places `<PendingToastHost />` in it.
+
+**Lists with an async scope lookup.** A list page whose data source resolves after the grid first
+renders (an async scope or tenant lookup) can pass `EmptyConfirmed="false"` to `ListNoRecordsContent`
+until the lookup completes, so the grid does not flash its "No ... found." text. Callers that do not
+set it keep today's behaviour.
+
 ## [1.248.0] - 2026-10-20
 
 **MAUI heads get the Android status bar height before the first paint.** `MainPageBase` appends it to
