@@ -56,16 +56,18 @@ public sealed class AuditTrailEntry
     /// <summary>
     /// Gets the invariant string form of the value before the change, or <see langword="null"/>
     /// when the property was null, when the operation has no before-state (<c>Added</c>), or when
-    /// the property carries <c>PiiAttribute</c> or <c>SensitiveAttribute</c> or is an <c>IAuthUser</c>
-    /// credential (in which case it holds the redaction placeholder).
+    /// the property carries <c>PiiAttribute</c> or <c>SensitiveAttribute</c>, is an <c>IAuthUser</c>
+    /// credential, or is stored through an <c>EncryptedStringConverter</c> (in which case it holds the
+    /// redaction placeholder).
     /// </summary>
     public string? OldValue { get; init; }
 
     /// <summary>
     /// Gets the invariant string form of the value after the change, or <see langword="null"/>
     /// when the property became null, when the operation has no after-state (<c>Deleted</c>), or
-    /// when the property carries <c>PiiAttribute</c> or <c>SensitiveAttribute</c> or is an
-    /// <c>IAuthUser</c> credential (in which case it holds the redaction placeholder).
+    /// when the property carries <c>PiiAttribute</c> or <c>SensitiveAttribute</c>, is an
+    /// <c>IAuthUser</c> credential, or is stored through an <c>EncryptedStringConverter</c> (in which
+    /// case it holds the redaction placeholder).
     /// </summary>
     public string? NewValue { get; init; }
 

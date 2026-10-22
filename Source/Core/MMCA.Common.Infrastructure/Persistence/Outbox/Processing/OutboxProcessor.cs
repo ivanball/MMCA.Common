@@ -90,9 +90,11 @@ public sealed partial class OutboxProcessor(
     private const int MaxIdsPerStatement = 500;
 
     /// <summary>
-    /// Budget for writing the outcome of the row in flight when the host signals shutdown. Deliberately
-    /// short: the work is one small UPDATE against an already-open connection, and anything slower is a
-    /// dependency that must not delay host shutdown.
+    /// Budget for the writes made on an early exit from a batch: the flush of the buffered delivered
+    /// rows (<see cref="FlushDeliveredOnExitAsync"/>) and the retry state of a row that FAILED while the
+    /// host was shutting down (<see cref="RecordFailureOnShutdownAsync"/>). Deliberately short: the work
+    /// is a few small UPDATEs against an already-open connection, and anything slower is a dependency
+    /// that must not delay host shutdown.
     /// </summary>
     private static readonly TimeSpan ShutdownStampTimeout = TimeSpan.FromSeconds(5);
 

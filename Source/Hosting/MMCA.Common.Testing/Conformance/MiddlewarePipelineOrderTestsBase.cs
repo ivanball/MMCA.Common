@@ -10,12 +10,14 @@ namespace MMCA.Common.Testing.Conformance;
 /// <see cref="Configure"/> customization if it has one, and asserts the resulting step order is
 /// exactly the documented pipeline. It is the edge counterpart of
 /// <see cref="DecoratorPipelineOrderTestsBase{TCommand, TCommandResult, TQuery, TQueryResult}"/>:
-/// several adjacencies are load-bearing (pre-forwarded capture immediately before
+/// several adjacencies are pinned (pre-forwarded capture immediately before
 /// <c>UseForwardedHeaders</c>, authentication immediately before tenant resolution, authentication
 /// before the rate limiter per ADR-019, forwarded headers before the HTTPS redirect), and a reorder
-/// that breaks one of them fails at runtime in ways that look like configuration bugs: an
-/// unreachable <c>jwks_uri</c>, a tenant that never resolves, a per-user rate cap that never
-/// engages. This base turns each of those into a test failure instead.
+/// that breaks one of them can fail at runtime in ways that look like configuration bugs: a tenant
+/// that never resolves, a per-user rate cap that never engages. The pre-forwarded capture's Items
+/// have no reader in the framework today (the OIDC discovery endpoint derives <c>jwks_uri</c> from
+/// <c>Jwt:Issuer</c>), so its adjacency is pinned without a runtime consequence. This base turns
+/// each reorder into a test failure instead.
 /// <para>
 /// Subclass it with an empty body for a host that calls the zero-argument overload. A host that
 /// customizes the pipeline overrides <see cref="Configure"/> with the same delegate its

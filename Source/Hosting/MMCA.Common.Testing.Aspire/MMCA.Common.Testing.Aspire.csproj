@@ -13,7 +13,7 @@
     <PackageReference Include="AwesomeAssertions" />
     <!-- The AppHost-side application model (DistributedApplicationModel, ProjectResource,
          ResourceNotificationService, HealthCheckAnnotation) the fixture reads to decide what to wait
-         for. Same 13.5.3 as every other Aspire pin. -->
+         for. Same version as every other Aspire pin in Directory.Packages.props. -->
     <PackageReference Include="Aspire.Hosting" />
     <!-- DistributedApplicationTestingBuilder, app.CreateHttpClient and app.GetConnectionStringAsync:
          the whole reason this package exists. -->

@@ -53,7 +53,8 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
     <!-- Pins the transitive SQLitePCLRaw bundle (EF Core Sqlite floors it at the vulnerable 2.1.11) to
          a patched build for GHSA-2m69-gcr7-jv3q / CVE-2025-6965; referenced directly in
-         MMCA.Common.Infrastructure so the fix flows to consumers through the published package graph
+         MMCA.Common.Infrastructure and MMCA.Common.Aspire (whose Sqlite health check pulls
+         Microsoft.Data.Sqlite) so the fix flows to consumers through the published package graph
          (same pattern as the MessagePack pin above). -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
@@ -134,8 +135,10 @@
     <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
          Six Labors Split License: Apache 2.0 terms apply to open-source / small-revenue use,
          which covers this project; revisit if that changes. PINNED to v3 by policy: v4 requires
-         a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
-         the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
+         a commercial license key at build time (DependencyVersionTests fails the build at major 4,
+         same pattern as the MassTransit v8 pin). The dependabot.yml ignore is narrower than that
+         ceiling: it holds the package at 3.1.x by ignoring every version >= 3.2.0 (its own comment
+         gives the reason). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
@@ -242,7 +245,7 @@
     <PackageVersion Include="bunit" Version="2.12.5" />
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
-         2.11.3 now floors it at 1.8.1. CPM does not pin transitives, so the two bUnit-referencing projects
+         2.12.5 now floors it at 1.8.5. CPM does not pin transitives, so the two bUnit-referencing projects
          keep a direct PackageReference to hold it at this central version. -->
     <PackageVersion Include="AngleSharp" Version="1.8.5" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />

@@ -7,7 +7,8 @@ namespace MMCA.Common.API.SessionCookies;
 /// <summary>
 /// Writes and clears the HttpOnly session cookies on a response, with the same options
 /// (<c>HttpOnly</c>, <c>Secure</c> outside Development, <see cref="SessionCookieSettings.SameSite"/>,
-/// 7-day lifetime) the session-cookie endpoints and the server-side refresher use. Registered by
+/// a <c>Max-Age</c> of <see cref="SessionCookieSettings.Lifetime"/>, else the configured refresh-token
+/// lifetime, else 7 days) the session-cookie endpoints and the server-side refresher use. Registered by
 /// <c>AddServerAuthSessionCookie</c>, for server components that obtain tokens themselves (the
 /// same-origin API proxy) and must store them without a browser round trip.
 /// </summary>

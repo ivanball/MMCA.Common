@@ -503,9 +503,10 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>
     /// Rewrites the <c>EntityKey</c> of rows captured before a store-generated key existed, now that
-    /// the insert has assigned one. A single set-based <c>UPDATE</c> per row, exactly like
-    /// <c>OutboxFinalizer</c>: it bypasses the change tracker and the interceptor pipeline, and it
-    /// joins the ambient transaction when the save runs inside one.
+    /// the insert has assigned one. One <c>ExecuteUpdate</c> statement per row whose key changed
+    /// (each row gets its own key value, unlike <c>OutboxFinalizer</c>, which stamps all its ids in
+    /// one set-based statement). Like that finalizer, it bypasses the change tracker and the
+    /// interceptor pipeline, and it joins the ambient transaction when the save runs inside one.
     /// </summary>
     private static async Task ResolveGeneratedKeysAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {

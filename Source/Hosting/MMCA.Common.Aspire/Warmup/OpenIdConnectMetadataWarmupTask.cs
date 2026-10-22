@@ -12,7 +12,9 @@ namespace MMCA.Common.Aspire.Warmup;
 /// succeeds" pattern on Container Apps Consumption plan.
 /// </summary>
 /// <remarks>
-/// This warms the authority's own discovery-doc cache and the host-level DNS path, and opens a
+/// This exercises the authority's discovery endpoint (which builds the document on every request;
+/// nothing on the authority caches it, so what warms is the authority process itself) and the name
+/// resolution for the authority's host, and opens a
 /// connection in this task's own <see cref="IHttpClientFactory"/> client pool. The <c>JwtBearer</c>
 /// middleware's <c>ConfigurationManager</c> caches discovery state separately and fetches through
 /// its own default backchannel <see cref="HttpClient"/> (no <c>Backchannel</c> or

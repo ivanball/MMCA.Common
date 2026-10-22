@@ -14,8 +14,10 @@ namespace MMCA.Common.Infrastructure.Storage;
 
 /// <summary>
 /// ImageSharp implementation of <see cref="IImageProcessor"/> (ADR-045). Decoding + full
-/// re-encode is deliberate: only pixels survive, so EXIF metadata (including GPS coordinates,
-/// which are PII) and any polyglot payload embedded in the original file are discarded.
+/// re-encode is deliberate: the original bytes never reach the output, and the EXIF, XMP and IPTC
+/// profiles are cleared before encoding, so EXIF metadata (including GPS coordinates, which are
+/// PII) and any polyglot payload embedded in the original file are discarded. The ICC color
+/// profile is not cleared.
 /// </summary>
 public sealed class ImageSharpImageProcessor : IImageProcessor
 {

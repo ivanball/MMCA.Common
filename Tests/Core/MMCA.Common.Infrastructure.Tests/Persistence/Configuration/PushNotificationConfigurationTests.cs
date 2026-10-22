@@ -7,9 +7,10 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.Configuration;
 
 /// <summary>
 /// Tests for <c>PushNotificationConfiguration</c>'s deduplication index. The index is unique and
-/// hand-filtered, and <c>SoftDeleteUniqueIndexConvention</c> deliberately leaves a hand-authored
-/// filter alone, so this configuration has to opt into the soft-delete predicate itself. Without it
-/// a soft-deleted notification keeps occupying its dedup slot and blocks every later send under the
+/// hand-filtered. <c>SoftDeleteUniqueIndexConvention</c> appends the soft-delete predicate to a
+/// hand-authored filter that does not already constrain <c>IsDeleted</c>, and the configuration
+/// also opts into it itself; either way the predicate must end up on the index. Without it a
+/// soft-deleted notification keeps occupying its dedup slot and blocks every later send under the
 /// same key (BugHunt M58). The scope-key column is pinned here too, including the deliberate absence
 /// of an index on it.
 /// </summary>
