@@ -18,8 +18,9 @@ public static class WebApplicationExtensions
     /// <summary>
     /// Key stored in <see cref="Microsoft.AspNetCore.Http.HttpContext.Items"/> before
     /// <see cref="ForwardedHeadersExtensions.UseForwardedHeaders(IApplicationBuilder, ForwardedHeadersOptions)"/>
-    /// runs. Consumed by <see cref="OidcDiscoveryEndpointExtensions"/> to construct
-    /// <c>jwks_uri</c> using the actual transport scheme, not the forwarded one.
+    /// runs, holding the actual transport scheme rather than the forwarded one. Nothing in the
+    /// framework reads it today: <see cref="OidcDiscoveryEndpointExtensions"/> derives
+    /// <c>jwks_uri</c> from <c>Jwt:Issuer</c>, not from the request.
     /// </summary>
     internal const string PreForwardedSchemeKey = "PreForwardedScheme";
 
@@ -28,9 +29,9 @@ public static class WebApplicationExtensions
     /// the connection actually saw it, before <c>UseForwardedHeaders</c> rewrites Request.Host
     /// from <c>X-Forwarded-Host</c>. Aspire/DCP injects an <c>X-Forwarded-Host</c> pointing at
     /// the canonical launchSettings URL (e.g. <c>localhost:56003</c>) which is unreachable to
-    /// internal callers — they reached the service via the Aspire-allocated DNS name. The OIDC
-    /// discovery endpoint needs the original host so <c>jwks_uri</c> is reachable from the
-    /// same caller that just fetched the discovery document.
+    /// internal callers (they reached the service via the Aspire-allocated DNS name). Like
+    /// <see cref="PreForwardedSchemeKey"/>, it has no reader today: the OIDC discovery endpoint
+    /// builds <c>jwks_uri</c> from <c>Jwt:Issuer</c>.
     /// </summary>
     internal const string PreForwardedHostKey = "PreForwardedHost";
 

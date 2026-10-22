@@ -147,10 +147,7 @@ public sealed class NotificationHub(
         EnsureValidChannelKey(channelKey);
 
         // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
-        return
-
-        // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
-        Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted);
+        return Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted);
     }
 
     // SECURITY: shape is not entitlement. Without an authorizer the hub keeps its historical

@@ -83,7 +83,8 @@ internal sealed partial class HybridCacheService(
     /// A read answered by L2 alone: the read-only flags plus a full L1 bypass (no L1 read, no L1
     /// promotion). Shared by the two reads whose correctness depends on every replica seeing the
     /// same value: the read leg of <see cref="IncrementAsync"/> (a counter) and
-    /// <see cref="GetFromSharedStoreAsync{T}"/> (a single-use record). See the remarks on each for
+    /// <see cref="GetFromSharedStoreAsync{T}"/> (a single-use record, a counter, or a cross-replica
+    /// flag such as the lockout flag or the soft-deleted-user marker). See the remarks on each for
     /// why neither may touch L1.
     /// </summary>
     private static readonly HybridCacheEntryOptions SharedStoreReadOptions = new()

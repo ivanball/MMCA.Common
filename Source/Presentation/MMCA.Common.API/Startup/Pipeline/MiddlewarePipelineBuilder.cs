@@ -49,11 +49,10 @@ public sealed class MiddlewarePipelineBuilder
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.PreForwardedCapture,
                 // Capture the actual transport scheme + host before UseForwardedHeaders rewrites
-                // Request.Scheme and Request.Host from the X-Forwarded-* headers. The OIDC discovery
-                // endpoint needs the original values for jwks_uri: internal services fetch JWKS
-                // over cleartext HTTP using the Aspire-resolved DNS name, but envoy/DCP forwards
+                // Request.Scheme and Request.Host from the X-Forwarded-* headers (envoy/DCP forwards
                 // X-Forwarded-Proto: https and X-Forwarded-Host pointing at the canonical
-                // launchSettings URL (e.g. localhost:56003) which the caller cannot reach.
+                // launchSettings URL, e.g. localhost:56003). Nothing in the framework reads the two
+                // captured Items today: the OIDC discovery endpoint derives jwks_uri from Jwt:Issuer.
                 static app => app.Use(static (context, next) =>
                 {
                     context.Items[WebApplicationExtensions.PreForwardedSchemeKey] = context.Request.Scheme;

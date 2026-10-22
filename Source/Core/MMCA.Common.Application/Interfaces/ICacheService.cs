@@ -40,8 +40,10 @@ public interface ICacheService
     /// <summary>
     /// Reads a key from the shared backing store, bypassing any process-local copy. For values whose
     /// change on one replica must be visible to every other replica at once: single-use records (an
-    /// OAuth exchange code, a password-reset or email-confirmation token, a second-factor time step)
-    /// and counters maintained by <see cref="IncrementAsync"/> (a registration rate-limit count).
+    /// OAuth exchange code, a password-reset or email-confirmation token, a second-factor time step),
+    /// counters maintained by <see cref="IncrementAsync"/> (a registration rate-limit count), and
+    /// flags that another replica can clear or set (the login lockout flag, the soft-deleted-user
+    /// marker).
     /// </summary>
     /// <typeparam name="T">The cached value type.</typeparam>
     /// <param name="key">The cache key.</param>
@@ -52,9 +54,11 @@ public interface ICacheService
     /// Use it when the record is consumed or invalidated after one use, so a stale local copy would
     /// let it be used twice: read the record through this member, then remove it. Use it too to read
     /// a counter that <see cref="IncrementAsync"/> maintains: a store with a process-local tier
-    /// increments in the shared store, so a local copy would pin the first count it saw. Use
+    /// increments in the shared store, so a local copy would pin the first count it saw. Use it as
+    /// well for a flag whose set or clear on one replica must take effect on every replica at once
+    /// (the lockout flag and the soft-deleted-user marker read through it). Use
     /// <see cref="GetAsync{T}"/> for everything else; a value that is read many times (a query
-    /// result, a replay cache, a flag) loses only the local hit rate by coming here.
+    /// result, a replay cache) loses only the local hit rate by coming here.
     /// </para>
     /// <para>
     /// The default implementation calls <see cref="GetAsync{T}"/>, which is exact for a store with no

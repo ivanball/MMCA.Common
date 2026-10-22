@@ -158,7 +158,8 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Revoke the account's already-issued access tokens (ADR-047), ahead of the app's tail: the
+        // Revoke the account's already-issued access tokens (ADR-047), ahead of the app's post-save
+        // afterCommit actions (OnAfterSoftDeleteAsync itself already ran, before the save): the
         // erasure is committed, so this is best effort, and it comes first so unbounded app work
         // queued behind it cannot stretch the window in which a deleted user's token still works.
         try
@@ -202,7 +203,7 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     /// the class summary). Use this for side effects that must not happen if the save fails
     /// (deleting a blob, notifying another system); a post-save action owns its own failure
     /// handling, since the erasure has already been saved by then. Do not queue a soft-deleted marker
-    /// write here: the base already wrote it, ahead of this tail.
+    /// write here: the base already wrote it, ahead of these actions.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success result, or the failure that aborts the erasure.</returns>

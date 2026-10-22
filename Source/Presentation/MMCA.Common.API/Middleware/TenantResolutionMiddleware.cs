@@ -124,7 +124,10 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
 
     /// <summary>
     /// Answers an unresolvable request with <c>400 Bad Request</c> as RFC 9457 problem details,
-    /// naming the claim and header that were looked at so the caller can fix the request.
+    /// naming the configured <see cref="TenancySettings.ClaimType"/> claim and
+    /// <see cref="TenancySettings.HeaderName"/> header so the caller can fix the request. Both are
+    /// named regardless of <see cref="TenancySettings.EffectiveResolutionOrder"/>, so the detail can
+    /// name a source that <see cref="Resolve"/> did not consult.
     /// </summary>
     private static async Task RejectAsync(
         HttpContext context,

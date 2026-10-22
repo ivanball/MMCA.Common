@@ -1,8 +1,9 @@
 namespace MMCA.Common.UI.Services.Capabilities.Media;
 
 /// <summary>
-/// Scans a QR code or barcode with the device camera (ADR-042). Implementations own the camera
-/// permission flow and never throw; a denied permission, a cancelled scan, an unsupported head,
+/// Scans a QR code or barcode with the device camera (ADR-042). The camera permission belongs to
+/// the platform and the head that declares it, not to the implementation, which requests nothing.
+/// Implementations never throw; a denied permission, a cancelled scan, an unsupported head,
 /// or a cancelled token all surface as <see langword="null"/>. Web heads keep the null default
 /// and hide the scan affordance (<see cref="IsSupported"/> is false) instead of opening a camera
 /// surface the browser cannot back - the affordance switch, not a degraded path. The scanned

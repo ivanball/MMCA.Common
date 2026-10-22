@@ -162,8 +162,8 @@ public static class DependencyInjection
                 apiClient.AddHttpMessageHandler<SameOriginProxyRequestHandler>();
             }
 
-            // Toast and confirm-dialog facades, factored out so a bUnit harness can register exactly
-            // these two without pulling in the whole shared-UI surface.
+            // Toast, confirm-dialog and pending-toast facades, factored out so a bUnit harness can
+            // register exactly these three without pulling in the whole shared-UI surface.
             services.AddCommonUiFacades();
 
             // TryAdd prevents duplicate registration when called from multiple hosts

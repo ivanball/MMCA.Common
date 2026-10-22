@@ -10,7 +10,7 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="bunit" />
-    <!-- Direct pin so the transitive AngleSharp resolves to the patched 1.5.0 (CVE-2026-54570). -->
+    <!-- Direct pin so the transitive AngleSharp resolves to the central version in Directory.Packages.props (patched for CVE-2026-54570). -->
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="Moq" />
     <!-- FakeTimeProvider drives the read cache's TTL expiry and the notification badge's staleness

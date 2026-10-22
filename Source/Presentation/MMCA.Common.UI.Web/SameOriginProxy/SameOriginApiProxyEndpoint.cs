@@ -252,7 +252,9 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         }
 
         // Never forwarded: a same-origin page needs no preflight, and a cross-origin one was refused
-        // above, so the gateway's CORS policy is never consulted on the proxy's behalf. No CORS grant.
+        // above, so no preflight reaches the gateway on the proxy's behalf. No CORS grant. The other
+        // methods are forwarded with the browser's Origin header intact (SameOriginProxyTransformer
+        // keeps YARP's default header copy), so the gateway's CORS middleware still sees them.
         if (HttpMethods.IsOptions(context.Request.Method))
         {
             context.Response.StatusCode = StatusCodes.Status204NoContent;

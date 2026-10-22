@@ -9,8 +9,8 @@ namespace MMCA.Common.UI.Web.Services;
 /// <summary>
 /// Blazor Server token storage (cookie-only, no localStorage). During SSR prerender (a live
 /// <see cref="HttpContext"/>) the access token is read from the HttpOnly cookie — refreshed in place by
-/// <c>UseCookieSessionRefresh</c> on navigations. On the interactive circuit (no <see cref="HttpContext"/>)
-/// the access token is held <b>in memory only</b> and hydrated/refreshed on demand from the HttpOnly cookies
+/// <c>UseCookieSessionRefresh</c> on navigations. On the interactive circuit (whose <see cref="HttpContext"/>
+/// is only the stale request that opened the hub connection; see below) the access token is held <b>in memory only</b> and hydrated/refreshed on demand from the HttpOnly cookies
 /// via the same-origin <c>/auth/session/token</c> endpoint (<see cref="ITokenRefresher"/>); the refresh
 /// token is never readable by JS. Hoisted from the app Blazor Web hosts (it carries no app-specific
 /// state); its WASM sibling is <see cref="WasmTokenStorageService"/> in MMCA.Common.UI. Register via
@@ -139,7 +139,9 @@ public sealed class ServerTokenStorageService(
 
     public Task<string?> GetRefreshTokenAsync()
     {
-        // The refresh token is never held client-side; SSR can read the cookie, the circuit cannot (HttpOnly).
+        // The refresh token is never held client-side or in memory. It is read from the HttpOnly cookie of
+        // the current HttpContext whenever one exists: the live request during SSR, and on the circuit the
+        // hub-connection request, whose cookie is as stale as described in the class remarks.
         var refreshToken = httpContextAccessor.HttpContext is not null ? cookieTokenReader.ReadRefreshToken() : null;
         return Task.FromResult(refreshToken);
     }
