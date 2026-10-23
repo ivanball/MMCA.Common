@@ -140,8 +140,8 @@ public sealed class ResilienceHandlerTests
     [Fact]
     public void GrpcResilienceDefaults_PinTheEastWestValues()
     {
-        GrpcResilienceDefaults.AttemptTimeout.Should().Be(TimeSpan.FromSeconds(30));
-        GrpcResilienceDefaults.TotalRequestTimeout.Should().Be(TimeSpan.FromSeconds(90));
+        GrpcResilienceDefaults.AttemptTimeout.Should().Be(TimeSpan.FromSeconds(8));
+        GrpcResilienceDefaults.TotalRequestTimeout.Should().Be(TimeSpan.FromSeconds(20));
         GrpcResilienceDefaults.SamplingDuration.Should().Be(TimeSpan.FromSeconds(60));
         GrpcResilienceDefaults.MaxRetryAttempts.Should().Be(1);
         GrpcResilienceDefaults.FailureRatio.Should().Be(0.5);
@@ -149,13 +149,37 @@ public sealed class ResilienceHandlerTests
         GrpcResilienceDefaults.BreakDuration.Should().Be(TimeSpan.FromSeconds(10));
     }
 
-    // ── Timeouts and retries stay tied to the outbound-HTTP path, so the two cannot drift ──
+    // -- The retry budget and breaker window stay tied to the outbound-HTTP path; the timeouts are gRPC's own --
     [Fact]
-    public void GrpcResilienceDefaults_ShareTheHttpTimeoutAndRetryBudget()
+    public void GrpcResilienceDefaults_ShareTheHttpRetryBudgetAndSamplingWindow()
     {
-        GrpcResilienceDefaults.AttemptTimeout.Should().Be(HttpResilienceDefaults.AttemptTimeout);
-        GrpcResilienceDefaults.TotalRequestTimeout.Should().Be(HttpResilienceDefaults.TotalRequestTimeout);
         GrpcResilienceDefaults.SamplingDuration.Should().Be(HttpResilienceDefaults.CircuitBreakerSamplingDuration);
         GrpcResilienceDefaults.MaxRetryAttempts.Should().Be(HttpResilienceDefaults.MaxRetryAttempts);
+    }
+
+    [Fact]
+    public void GrpcResilienceDefaults_TimeoutsAreTighterThanTheHttpPath()
+    {
+        GrpcResilienceDefaults.AttemptTimeout.Should().BeLessThan(HttpResilienceDefaults.AttemptTimeout);
+        GrpcResilienceDefaults.TotalRequestTimeout.Should().BeLessThan(HttpResilienceDefaults.TotalRequestTimeout);
+        GrpcResilienceDefaults.TotalRequestTimeout.Should().BeGreaterThanOrEqualTo(
+            GrpcResilienceDefaults.AttemptTimeout * (GrpcResilienceDefaults.MaxRetryAttempts + 1),
+            "the total budget must leave room for every attempt");
+    }
+
+    // -- Polly validates SamplingDuration >= 2 x AttemptTimeout; the configured options must pass --
+    [Fact]
+    public void AddTypedGrpcClient_ConfiguredOptionsPassValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddTypedGrpcClient<FakeGrpcClient>("fake-service");
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => provider
+            .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
+            .Get($"{nameof(FakeGrpcClient)}-standard");
+
+        act.Should().NotThrow();
+        GrpcResilienceDefaults.SamplingDuration.Should().BeGreaterThanOrEqualTo(GrpcResilienceDefaults.AttemptTimeout * 2);
     }
 }

@@ -1,9 +1,13 @@
 namespace MMCA.Common.Shared.Resilience;
 
 /// <summary>
-/// Resilience values for the typed gRPC clients registered by <c>MMCA.Common.Grpc</c>. Timeouts
-/// and the retry budget are re-exposed from <see cref="HttpResilienceDefaults"/> so the east-west
-/// path can never drift from the outbound-HTTP path, while the circuit-breaker shape is stated
+/// Resilience values for the typed gRPC clients registered by <c>MMCA.Common.Grpc</c>. The timeouts
+/// are the east-west path's own, sized from measured gRPC latency rather than inherited from
+/// <see cref="HttpResilienceDefaults"/>: an in-cluster gRPC call answers in well under a second
+/// (production p99 peaks below 800ms), so the outbound-HTTP 30s/90s budget would hold a caller on a
+/// hung peer for a minute and a half. The attempt timeout is about ten times the slowest measured
+/// p99 and the total covers two attempts plus the retry backoff. The retry budget and the breaker's
+/// sampling window stay shared with the HTTP path, and the circuit-breaker shape is stated
 /// explicitly here rather than left at the library defaults: east-west gRPC calls address a peer
 /// directly and bypass the Gateway's active health checks, so the breaker is the only thing that
 /// notices a peer going bad. A gRPC-status-aware retry predicate is deliberately deferred; retries
@@ -11,13 +15,13 @@ namespace MMCA.Common.Shared.Resilience;
 /// </summary>
 public static class GrpcResilienceDefaults
 {
-    /// <summary>Per-attempt timeout for a single call attempt (same value as the outbound-HTTP path).</summary>
-    public static TimeSpan AttemptTimeout => HttpResilienceDefaults.AttemptTimeout;
+    /// <summary>Per-attempt timeout for a single call attempt: about ten times the slowest measured east-west gRPC p99 (784ms).</summary>
+    public static TimeSpan AttemptTimeout => TimeSpan.FromSeconds(8);
 
-    /// <summary>Total call timeout including all retries (same value as the outbound-HTTP path).</summary>
-    public static TimeSpan TotalRequestTimeout => HttpResilienceDefaults.TotalRequestTimeout;
+    /// <summary>Total call timeout including all retries: two attempts plus the retry backoff.</summary>
+    public static TimeSpan TotalRequestTimeout => TimeSpan.FromSeconds(20);
 
-    /// <summary>Sampling window for the circuit breaker's failure-ratio calculation (same value as the outbound-HTTP path).</summary>
+    /// <summary>Sampling window for the circuit breaker's failure-ratio calculation (same value as the outbound-HTTP path, and at least twice <see cref="AttemptTimeout"/> as the resilience library requires).</summary>
     public static TimeSpan SamplingDuration => HttpResilienceDefaults.CircuitBreakerSamplingDuration;
 
     /// <summary>Retries beyond the initial attempt, kept at the outbound-HTTP budget of one so no hop multiplies a brownout into a request storm.</summary>
