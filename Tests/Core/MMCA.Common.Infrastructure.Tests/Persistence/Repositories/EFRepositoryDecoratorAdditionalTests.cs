@@ -25,16 +25,6 @@ public sealed class EFRepositoryDecoratorAdditionalTests
     }
 
     [Fact]
-    public void UpdateRange_DelegatesToInner()
-    {
-        var entities = new List<FakeAggregateEntity> { new() { Id = 1 } };
-
-        CreateSut().UpdateRange(entities);
-
-        _inner.Verify(x => x.UpdateRange(entities), Times.Once);
-    }
-
-    [Fact]
     public async Task ExecuteDeleteAsync_DelegatesToInner()
     {
         Expression<Func<FakeAggregateEntity, bool>> where = e => e.Id > 5;

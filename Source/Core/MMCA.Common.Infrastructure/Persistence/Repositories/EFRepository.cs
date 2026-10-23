@@ -44,35 +44,6 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// If the entity is already tracked by the context, its values are patched in place
-    /// via <see cref="Microsoft.EntityFrameworkCore.ChangeTracking.PropertyValues.SetValues(object)"/>
-    /// to avoid an "already tracked" exception. Otherwise, <see cref="DbSet{TEntity}.Update"/>
-    /// attaches and marks the entity as modified.
-    /// </remarks>
-    public Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(entity);
-
-        // FindEntry is an O(1) key lookup against the tracker's identity map (and never
-        // falls back to the database), replacing a linear scan of the LocalView.
-        var trackedEntry = Entities.Local.FindEntry(entity.Id);
-        if (trackedEntry is not null)
-            trackedEntry.CurrentValues.SetValues(entity);
-        else
-            Entities.Update(entity);
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public void UpdateRange(IEnumerable<TEntity> entities)
-    {
-        ArgumentNullException.ThrowIfNull(entities);
-        Entities.UpdateRange(entities);
-    }
-
-    /// <inheritdoc />
     public void SetOriginalRowVersion(TEntity entity, byte[] rowVersion)
     {
         ArgumentNullException.ThrowIfNull(entity);
