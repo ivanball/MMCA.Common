@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Infrastructure.Auth;
@@ -11,6 +13,18 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// </summary>
 internal static class EmailIdentity
 {
+    /// <summary>
+    /// The address's segment of a cache key: a hex SHA-256 of the <see cref="Normalize"/>d address,
+    /// so every spelling of one account still lands on one key while the address itself never
+    /// appears in a key. A key travels further than the entry it names (Redis key names, the
+    /// two-level cache's read-fault warnings, and Redis client exception messages, which quote the
+    /// key), and none of those places may carry an email address.
+    /// </summary>
+    /// <param name="email">The raw address from the request.</param>
+    /// <returns>A 64-character hex digest of the normalized address.</returns>
+    internal static string KeySegment(string? email) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Normalize(email))));
+
     /// <summary>
     /// Normalizes <paramref name="email"/> the way <see cref="Email"/> does: a valid address becomes
     /// the value object's normalized value, and a malformed one (which never matches a user, but can

@@ -4,7 +4,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// Localized-text convention fitness function (ADR-027 / rubric §27): user-visible literals must not
 /// be hard-coded in <c>.razor</c>/<c>.razor.cs</c> under <c>Source/</c> — snackbar messages, page
 /// <c>Title</c> properties, <c>&lt;PageTitle&gt;</c> markup, and breadcrumb labels must resolve
-/// through <c>IStringLocalizer</c> resources so every visible string follows the selected language.
+/// through <c>IStringLocalizer</c> resources so every visible string follows the selected language,
+/// and the shared <c>DeleteConfirmation</c> must receive a localized <c>EntityType</c> noun.
 /// Authored once here and re-run as a thin subclass in each repo. Deliberate literals (brand names,
 /// developer-only samples) are exempted per line with an <c>i18n: allow</c> comment or per file via
 /// <see cref="AllowedFiles"/>. Pairs with <see cref="LocalizationResourceTestsBase"/>: this gate keeps

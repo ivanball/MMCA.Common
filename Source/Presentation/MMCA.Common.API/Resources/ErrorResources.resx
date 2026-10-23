@@ -301,6 +301,9 @@
   <data name="User.ExportForbidden" xml:space="preserve">
     <value>You can only export your own account data.</value>
   </data>
+  <data name="User.PreferredTheme.Invalid" xml:space="preserve">
+    <value>Theme must be 'light' or 'dark'.</value>
+  </data>
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notification not found.</value>
   </data>

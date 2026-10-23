@@ -31,11 +31,21 @@ public static partial class ArchitectureRules
     [GeneratedRegex(@"new\s*\(\s*\$?""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex LiteralBreadcrumbTargetTyped { get; }
 
+    // The opening of the shared delete confirmation, bare or namespace-qualified.
+    [GeneratedRegex(@"<(?:[\w.]+\.)?DeleteConfirmation\b", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex DeleteConfirmationOpen { get; }
+
+    // An EntityType attribute whose value is not a razor expression: a quoted literal (empty
+    // included) or an unquoted bare word. EntityType="@L["Entity.X"].Value" does not match.
+    [GeneratedRegex(@"\bEntityType\s*=\s*(?:[""'](?!@)|[^\s""'@>/])", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex LiteralEntityType { get; }
+
     /// <summary>
     /// Localized-text convention fitness gate (ADR-027 / rubric §27): user-visible literals must not be
     /// hard-coded in <c>.razor</c>/<c>.razor.cs</c> files — snackbar messages, page <c>Title</c>
     /// properties, <c>&lt;PageTitle&gt;</c> markup, and breadcrumb labels must resolve through
-    /// <c>IStringLocalizer</c> resources. This is the regression guard that keeps "all visible text
+    /// <c>IStringLocalizer</c> resources, and a <c>DeleteConfirmation</c> must receive a localized
+    /// <c>EntityType</c> noun. This is the regression guard that keeps "all visible text
     /// adapts to the selected language" true after the externalization sweeps: a NEW hard-coded literal
     /// fails the build instead of silently shipping English.
     /// A line carrying the marker comment <c>i18n: allow</c> is exempt (for deliberate literals such as
@@ -80,6 +90,7 @@ public static partial class ArchitectureRules
         var lines = File.ReadAllLines(path);
         var inBreadcrumbInitializer = false;
         var inNavItemInitializer = false;
+        var inDeleteConfirmationTag = false;
 
         for (var i = 0; i < lines.Length; i++)
         {
@@ -119,6 +130,27 @@ public static partial class ArchitectureRules
                 yield return $"  - {relative}:{i + 1} declares a NavItem with a literal title and no TitleResource";
             }
 
+            // The shared delete confirmation renders EntityType in its title and prompt, so a literal
+            // noun shows "Eliminar Product" to a Spanish user. The tag may span lines: track it from
+            // its opening to the first line that ends the start tag.
+            if (!inDeleteConfirmationTag && DeleteConfirmationOpen.IsMatch(line))
+            {
+                inDeleteConfirmationTag = true;
+            }
+
+            if (inDeleteConfirmationTag)
+            {
+                if (LiteralEntityType.IsMatch(line))
+                {
+                    yield return $"  - {relative}:{i + 1} passes a literal EntityType to DeleteConfirmation";
+                }
+
+                if (EndsStartTag(line))
+                {
+                    inDeleteConfirmationTag = false;
+                }
+            }
+
             if (LiteralSnackbar.IsMatch(line))
             {
                 yield return $"  - {relative}:{i + 1} hard-codes a Snackbar message literal";
@@ -145,5 +177,17 @@ public static partial class ArchitectureRules
                 yield return $"  - {relative}:{i + 1} hard-codes a BreadcrumbItem label literal";
             }
         }
+    }
+
+    /// <summary>
+    /// True when <paramref name="line"/> ends a start tag: it ends in <c>&gt;</c> (or <c>/&gt;</c>) that
+    /// is not the arrow of a lambda attribute value.
+    /// </summary>
+    /// <param name="line">The razor source line.</param>
+    /// <returns><see langword="true"/> when the start tag closes on this line.</returns>
+    private static bool EndsStartTag(string line)
+    {
+        var trimmed = line.TrimEnd();
+        return trimmed.EndsWith('>') && !trimmed.EndsWith("=>", StringComparison.Ordinal);
     }
 }

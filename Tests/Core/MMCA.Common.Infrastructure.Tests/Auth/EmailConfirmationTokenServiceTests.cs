@@ -21,9 +21,10 @@ namespace MMCA.Common.Infrastructure.Tests.Auth;
 public sealed class EmailConfirmationTokenServiceTests
 {
     private const string TestEmail = "user@example.com";
-    private const string TokenKey = $"emailconfirm:token:{TestEmail}";
-    private const string RequestKey = $"emailconfirm:req:{TestEmail}";
     private const UserIdentifierType TestUserId = 42;
+
+    private static readonly string TokenKey = $"emailconfirm:token:{EmailIdentity.KeySegment(TestEmail)}";
+    private static readonly string RequestKey = $"emailconfirm:req:{EmailIdentity.KeySegment(TestEmail)}";
 
     // ── Issue and consume ──
     [Fact]

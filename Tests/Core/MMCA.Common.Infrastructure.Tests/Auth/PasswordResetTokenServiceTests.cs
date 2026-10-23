@@ -22,9 +22,10 @@ namespace MMCA.Common.Infrastructure.Tests.Auth;
 public sealed class PasswordResetTokenServiceTests
 {
     private const string TestEmail = "user@example.com";
-    private const string TokenKey = $"pwdreset:token:{TestEmail}";
-    private const string RequestKey = $"pwdreset:req:{TestEmail}";
     private const UserIdentifierType TestUserId = 42;
+
+    private static readonly string TokenKey = $"pwdreset:token:{EmailIdentity.KeySegment(TestEmail)}";
+    private static readonly string RequestKey = $"pwdreset:req:{EmailIdentity.KeySegment(TestEmail)}";
 
     // ── Issue and consume ──
     [Fact]

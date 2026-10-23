@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesCommandValidatorBase<TCommand>
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesCommandValidatorBase<TCommand>.ChangePreferencesCommandValidatorBase() -> void
