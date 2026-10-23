@@ -8,12 +8,16 @@ namespace MMCA.Common.UI.Services.Culture;
 /// scope through <c>time-zone.js</c> (<c>Intl.DateTimeFormat().resolvedOptions().timeZone</c>) and
 /// resolved with <see cref="TimeZoneInfo"/>; until then, and whenever it cannot be read (SSR
 /// prerender, a host without JS, an id this runtime does not know), every conversion uses UTC.
+/// <see cref="Format"/> renders nothing until the browser has been asked, so a prerendered UTC time
+/// never paints only to jump to the viewer's clock after hydration.
 /// </summary>
 /// <remarks>
 /// The server's own zone is never used: on Blazor Server and during prerender
 /// <see cref="DateTime.ToLocalTime"/> is the server's clock, which is the wrong answer for every
 /// viewer elsewhere. A page calls <see cref="EnsureResolvedAsync"/> from <c>OnAfterRenderAsync</c>
-/// on its first render and re-renders when it returns <see langword="true"/>.
+/// on its first render and re-renders when it returns <see langword="true"/>, which it does on the
+/// first resolution even when the zone stays UTC, because the formatted text changes from the
+/// placeholder to the time.
 /// </remarks>
 public sealed class ViewerTimeZone : IAsyncDisposable
 {
@@ -43,8 +47,9 @@ public sealed class ViewerTimeZone : IAsyncDisposable
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// <see langword="true"/> when this call changed <see cref="Zone"/>, so the caller should
-    /// re-render; otherwise <see langword="false"/>.
+    /// <see langword="true"/> when this call resolved the zone (successfully or not), so
+    /// <see cref="Format"/> output changed and the caller should re-render; otherwise
+    /// <see langword="false"/>.
     /// </returns>
     public async ValueTask<bool> EnsureResolvedAsync(CancellationToken cancellationToken = default)
     {
@@ -80,10 +85,8 @@ public sealed class ViewerTimeZone : IAsyncDisposable
         }
 
         IsResolved = true;
-        var resolved = ResolveZone(zoneId);
-        var changed = !string.Equals(resolved.Id, Zone.Id, StringComparison.Ordinal);
-        Zone = resolved;
-        return changed;
+        Zone = ResolveZone(zoneId);
+        return true;
     }
 
     /// <summary>
@@ -104,13 +107,16 @@ public sealed class ViewerTimeZone : IAsyncDisposable
     }
 
     /// <summary>
-    /// Formats a UTC instant on the viewer's clock with the current culture.
+    /// Formats a UTC instant on the viewer's clock with the current culture, or returns an empty
+    /// placeholder while <see cref="IsResolved"/> is <see langword="false"/> (prerender, and the first
+    /// interactive render before <see cref="EnsureResolvedAsync"/> ran): the UTC fallback painted
+    /// there was replaced by the viewer's time a moment later.
     /// </summary>
     /// <param name="instant">The instant to format (UTC or unspecified, read as UTC).</param>
     /// <param name="format">A standard or custom date and time format string; <c>"g"</c> by default.</param>
-    /// <returns>The formatted local time.</returns>
+    /// <returns>The formatted local time, or <see cref="string.Empty"/> until the zone is resolved.</returns>
     public string Format(DateTime instant, string format = "g") =>
-        ToViewerTime(instant).ToString(format, CultureInfo.CurrentCulture);
+        IsResolved ? ToViewerTime(instant).ToString(format, CultureInfo.CurrentCulture) : string.Empty;
 
     /// <inheritdoc />
     public ValueTask DisposeAsync() => _module.DisposeAsync();

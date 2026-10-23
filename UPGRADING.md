@@ -32,6 +32,26 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**`ViewerTimeZone.Format` renders an empty string until the browser zone is read.** Before, it
+painted UTC during prerender and the first interactive render. A page that calls
+`EnsureResolvedAsync` from `OnAfterRenderAsync(firstRender)` and re-renders on `true` needs no
+change: the call now answers `true` on the first resolution even when the zone stays UTC. A bUnit
+test that asserts a formatted time must let that first-render call run (loose JSInterop, or a
+`getTimeZone` setup on `./_content/MMCA.Common.UI/time-zone.js`). It must not read the markup of a
+render the call has not reached yet.
+
+**Adopting `EmptyConfirmed` on a `DataGridListPageBase` page** (U-35): pass the base's
+`EmptyConfirmed` to `ListNoRecordsContent`, and AND in any scope the page itself still waits on.
+
+```razor
+<ListNoRecordsContent LoadFailed="LoadFailed" EmptyConfirmed="EmptyConfirmed" EmptyMessage="..." OnRetry="..." />
+```
+
+A presentational child that receives the page's flags as parameters takes it as one more
+`[Parameter] public bool EmptyConfirmed`, replacing a gate computed from `!Loading && !LoadFailed`.
+
 ## [1.250.0] - 2026-10-21
 
 **The role administration controls are named so that the name contains the visible text (WCAG

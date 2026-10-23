@@ -4,6 +4,21 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `DataGridListPageBase<TDto>.EmptyConfirmed` (protected): true only once the NEWEST load completed with `TotalItems == 0`; false before the first load, while a load is in flight, after a failed or cancelled load, and while the renderer is not interactive. Bind it to `ListNoRecordsContent.EmptyConfirmed`. `UserAdminList` does. Adoption: UPGRADING.md, [Unreleased].
+- `ISessionAwareTokenStorage` (MMCA.Common.UI): an optional `ITokenStorageService` capability with one event, `SessionEnded`. `WasmTokenStorageService` and `ServerTokenStorageService` implement it. `JwtAuthenticationStateProvider` gains a `(ITokenStorageService, IUiReadCache?)` constructor (the one-argument constructor stays), subscribes to the event, empties the read cache and notifies anonymous.
+
+### Fixed
+
+- A list page no longer paints "No ... found." for 60 to 180 ms before its rows appear on in-app navigation (U-35). The loading state cleared, and rendered, before MudDataGrid had received the rows, so a gate on the loading flags confirmed an empty list that was not empty. `EmptyConfirmed` (above) is set from the completed newest result instead.
+- Overlapping grid and mobile loads end on the newest load's rows (U-20). Each loader now takes its cancellation source from the swap that started it, instead of re-reading it after awaiting the previous load's cancellation, when a newer load could already have swapped in its own. After every await of a fetch, a superseded load stops on the silent cancellation path. It no longer overwrites the newer cards, raises `LoadFailed` or a toast, or paints the empty state. This fixes the public speaker list showing "No speakers found." after an early reload.
+- A session that ended on the server signs the shell out (A-34). When a token refresh answers a definitive "no session" for a session the client held (revoked with "Sign out everywhere" on another device, or the account deleted), the browser token storages raise `SessionEnded` and the auth state flips to anonymous. Before, the client only held a 15-second anonymous grace with no auth-state change, so the shell stayed signed in. The `AuthorizeView`-gated notification bell is disposed with it and stops polling. A transient failure (429, 5xx, dropped connection) and a refresher that cannot tell the two apart still never sign anyone out.
+- `ViewerTimeZone.Format` returns an empty placeholder until the browser zone has been read, so prerender no longer paints a UTC time that jumps to the viewer's clock after hydration (Inbox, points history, user "Created on"). `EnsureResolvedAsync` now returns true on the first resolution even when the zone stays UTC, because the rendered text changes. UPGRADING.md, [Unreleased].
+- The HttpOnly session cookies are `Secure` on any HTTPS request, Development included, so the local HTTPS stack no longer issues them without the flag. Outside Development they stay `Secure` whatever the request scheme, as a TLS-terminating ingress requires. Only a plain `http://localhost` Development run omits it.
+
 ## [1.250.0] - 2026-10-21
 
 ### Fixed

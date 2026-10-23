@@ -52,6 +52,22 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// error-with-retry instead of the "no records" empty state. Reset by the next fetch.
     /// </summary>
     protected bool LoadFailed { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the NEWEST load completed and proved the list empty
+    /// (<c>TotalItems == 0</c>). Bind it to <c>ListNoRecordsContent.EmptyConfirmed</c>. Loading flags
+    /// cannot tell this: the loading state ends, and renders, before MudDataGrid has received the
+    /// rows, and the grid paints its NoRecordsContent in every render where it holds none, so a gate
+    /// on <see cref="IsLoading"/> flashed the empty text before a non-empty page (U-35). False before
+    /// the first load completes, while a load is in flight, after a failed or cancelled load, and
+    /// always while the renderer is not interactive.
+    /// </summary>
+    protected bool EmptyConfirmed
+    {
+        get => field && RendererInfo.IsInteractive;
+        private set;
+    }
+
     protected abstract string Title { get; }
 
     /// <summary>True when the viewport is below the sidebar-collapse threshold (phone or tablet, &lt; 960 px).</summary>
@@ -658,7 +674,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
         bool showCancelSnackbar)
     {
-        await ResetCancellationTokenAsync();
+        var loadSource = await ResetCancellationTokenAsync();
+
+        // Superseded while the previous load was being cancelled: the newer load owns the grid, and
+        // NewestPagedResultAsync hands this call its result.
+        if (!IsCurrentLoad(loadSource))
+        {
+            return EmptyGridData();
+        }
 
         // Return SSR-persisted data on the first interactive call, avoiding a redundant
         // API round-trip that would be immediately canceled by the MudDataGrid pager init.
@@ -671,13 +694,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             // This call is now the latest load and it is already finished; a load it superseded
             // leaves the loading state to its successor (see RunFetchAsync).
             IsLoading = false;
+            EmptyConfirmed = cached.TotalItems == 0;
 
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
             SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
             return cached;
         }
 
-        return await FetchPagedAsync(state, fetchAsync, additionalFilters, showCancelSnackbar);
+        return await FetchPagedAsync(loadSource, state, fetchAsync, additionalFilters, showCancelSnackbar);
     }
 
     /// <summary>
@@ -706,11 +730,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// timeout still applies (RunFetchAsync builds the token through CreateFetchCts).
     /// </remarks>
     private Task<GridData<TDto>> FetchPagedAsync(
+        CancellationTokenSource loadSource,
         GridState<TDto> state,
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
         bool showCancelSnackbar) =>
         RunFetchAsync(
+            loadSource,
             async token =>
             {
                 var filters = ExtractGridFilters(state.FilterDefinitions);
@@ -719,6 +745,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
 
                 var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, token);
+                ThrowIfSuperseded(loadSource);
                 if (!fetched.TryGetValue(out var page))
                 {
                     return FailedFetch(fetched, EmptyGridData);
@@ -726,6 +753,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
+                EmptyConfirmed = page.TotalItems == 0;
                 SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
                 return gridData;
             },
@@ -768,10 +796,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(fetchAsync);
 
-        await ResetCancellationTokenAsync();
+        var loadSource = await ResetCancellationTokenAsync();
+        if (!IsCurrentLoad(loadSource))
+        {
+            return EmptyGridData();
+        }
 
         // Cancellation is deliberately silent here: see the remarks above.
         return await RunFetchAsync(
+            loadSource,
             async token =>
             {
                 var filters = ExtractGridFilters(state.FilterDefinitions);
@@ -781,6 +814,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 var window = ComputeVirtualWindow(state.StartIndex, state.Count);
 
                 var fetched = await fetchAsync(filters, window.FirstPage, window.PageSize, sortColumn, sortDirection, token);
+                ThrowIfSuperseded(loadSource);
                 if (!fetched.TryGetValue(out var page))
                 {
                     return FailedFetch(fetched, EmptyGridData);
@@ -790,6 +824,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 if (window.NeedsSecondPage)
                 {
                     var continued = await fetchAsync(filters, window.FirstPage + 1, window.PageSize, sortColumn, sortDirection, token);
+                    ThrowIfSuperseded(loadSource);
                     if (!continued.TryGetValue(out var nextPage))
                     {
                         return FailedFetch(continued, EmptyGridData);
@@ -800,6 +835,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
                 // Trim to exactly the requested window; the tail of the data set legitimately yields fewer.
                 var slice = items.Skip(window.Offset).Take(Math.Max(state.Count, 0)).ToList();
+                EmptyConfirmed = page.TotalItems == 0;
                 SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
                 return new GridData<TDto> { Items = slice, TotalItems = page.TotalItems };
             },
@@ -827,28 +863,37 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// (<see cref="CancelLoading"/>) cancels the current source without replacing it, so the latest
     /// load still ends the loading state.
     /// </para>
+    /// <para>
+    /// The load's source is the one its reset swapped in, passed here rather than re-read from
+    /// <c>_cts</c>: the reset awaits the previous load's cancellation, and a newer load can swap its
+    /// own source in during that await, which a re-read would then claim as this load's (U-20). The
+    /// fetch bodies call <see cref="ThrowIfSuperseded"/> after every await, so a superseded load ends
+    /// on the silent cancellation path without touching the rows, the failure flag or the empty state.
+    /// </para>
     /// </summary>
     /// <typeparam name="TResult">What the loader returns to its caller.</typeparam>
+    /// <param name="loadSource">The cancellation source this load's reset swapped in.</param>
     /// <param name="fetchAsync">The fetch body; receives the bounded token.</param>
     /// <param name="onCancelled">The result to return on cancellation (user, disposal or pre-render timeout).</param>
     /// <param name="onFailed">The result to return when the body throws; <see cref="LoadFailed"/> is set first.</param>
     /// <param name="showCancelSnackbar">Whether a cancellation raises the informational toast.</param>
     /// <param name="additionalToken">An extra token to link in; <see cref="CancellationToken.None"/> links nothing.</param>
     private async Task<TResult> RunFetchAsync<TResult>(
+        CancellationTokenSource loadSource,
         Func<CancellationToken, Task<TResult>> fetchAsync,
         Func<TResult> onCancelled,
         Func<TResult> onFailed,
         bool showCancelSnackbar,
         CancellationToken additionalToken)
     {
-        var loadSource = _cts;
         IsLoading = true;
         LoadFailed = false;
+        EmptyConfirmed = false;
         StateHasChanged();
 
         try
         {
-            using var fetchCts = CreateFetchCts(additionalToken);
+            using var fetchCts = CreateFetchCts(loadSource, additionalToken);
             return await fetchAsync(fetchCts.Token);
         }
         catch (OperationCanceledException)
@@ -859,11 +904,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             // component has nobody to tell, so both end silently. A user cancel (CancelLoading)
             // cancels the current source without replacing it, so it still toasts. During pre-render
             // the toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
-            if (showCancelSnackbar && ReferenceEquals(loadSource, _cts) && !_disposed)
+            if (showCancelSnackbar && IsCurrentLoad(loadSource) && !_disposed)
             {
                 Toast.Info(Localizer["Grid.Snackbar.LoadCancelled"]);
             }
 
+            return onCancelled();
+        }
+        catch (Exception) when (!IsCurrentLoad(loadSource))
+        {
+            // A superseded load's failure describes a query nobody is showing any more.
             return onCancelled();
         }
         catch (Exception ex)
@@ -874,7 +924,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         finally
         {
-            if (ReferenceEquals(loadSource, _cts))
+            if (IsCurrentLoad(loadSource))
             {
                 IsLoading = false;
             }
@@ -926,15 +976,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <see cref="PrerenderFetchTimeoutMs"/> so a cold or unreachable backend cannot block prerendering
     /// (and therefore the page load) indefinitely. The caller owns disposal via a <see langword="using"/> statement.
     /// </summary>
+    /// <param name="loadSource">The source of the load the fetch belongs to (see <see cref="RunFetchAsync{TResult}"/>).</param>
     /// <param name="additionalToken">
     /// An extra token to link in (the virtualized path forwards MudBlazor's own per-window token).
     /// <see cref="CancellationToken.None"/> links nothing extra.
     /// </param>
-    private CancellationTokenSource CreateFetchCts(CancellationToken additionalToken)
+    private CancellationTokenSource CreateFetchCts(CancellationTokenSource loadSource, CancellationToken additionalToken)
     {
         var cts = additionalToken.CanBeCanceled
-            ? CancellationTokenSource.CreateLinkedTokenSource(_cts.LifetimeToken(), additionalToken)
-            : CancellationTokenSource.CreateLinkedTokenSource(_cts.LifetimeToken());
+            ? CancellationTokenSource.CreateLinkedTokenSource(loadSource.LifetimeToken(), additionalToken)
+            : CancellationTokenSource.CreateLinkedTokenSource(loadSource.LifetimeToken());
         if (!RendererInfo.IsInteractive)
         {
             cts.CancelAfter(PrerenderFetchTimeoutMs);
@@ -951,7 +1002,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null)
     {
-        await ResetCancellationTokenAsync();
+        var loadSource = await ResetCancellationTokenAsync();
+        if (!IsCurrentLoad(loadSource))
+        {
+            return;
+        }
 
         // Cancellation (component disposal or user cancellation) keeps the cards already shown and
         // raises no toast. A failure of any kind, the additionalFilters callback included, sets
@@ -960,12 +1015,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // Retry render below what is already loaded and Retry re-requests the same page.
         Func<bool> onFailed = MobileCurrentPage > 1 ? static () => false : ClearMobileItems;
         await RunFetchAsync(
+            loadSource,
             async token =>
             {
                 var filters = new Dictionary<string, (string Operator, string Value)>();
                 additionalFilters?.Invoke(filters);
 
                 var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, token);
+                ThrowIfSuperseded(loadSource);
                 if (!fetched.TryGetValue(out var page))
                 {
                     return FailedFetch(fetched, onFailed);
@@ -973,6 +1030,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
                 MobileItems = page.Items;
                 MobileTotalItems = page.TotalItems;
+                EmptyConfirmed = page.TotalItems == 0;
 
                 // Page size 0, like the virtualized path above: the restore guards skip a saved size of
                 // 0, and MobilePageSize is never restored from state anyway. Persisting it would only
@@ -994,7 +1052,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         return false;
     }
 
-    private async Task ResetCancellationTokenAsync()
+    /// <summary>
+    /// Starts a load: swaps in a fresh source and cancels the previous load's. Returns the source it
+    /// swapped in, which identifies the load from then on (see <see cref="IsCurrentLoad"/>).
+    /// </summary>
+    private async Task<CancellationTokenSource> ResetCancellationTokenAsync()
     {
         // Swap in a fresh source FIRST so the caller always has a valid (non-disposed) token, then
         // tear down the previous one. A debounced grid reload (e.g. a search-box blur) can fire
@@ -1002,7 +1064,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // ObjectDisposedException, which would surface as an unhandled render exception and trip the
         // blazor-error-ui banner. Tolerate that race instead.
         var previous = _cts;
-        _cts = new CancellationTokenSource();
+        var current = new CancellationTokenSource();
+        _cts = current;
 
         if (previous is not null)
         {
@@ -1015,6 +1078,30 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             {
                 // Component was disposed mid-flight; the previous source is already gone.
             }
+        }
+
+        // The swap above, not a re-read of _cts after the await: a newer load may have swapped its
+        // own source in while the previous one was being cancelled.
+        return current;
+    }
+
+    /// <summary>
+    /// True while <paramref name="loadSource"/> is still the newest load's source. A newer
+    /// <see cref="ResetCancellationTokenAsync"/> replaces it; a user cancel and disposal do not, so
+    /// those still end through the current load.
+    /// </summary>
+    private bool IsCurrentLoad(CancellationTokenSource loadSource) => ReferenceEquals(loadSource, _cts);
+
+    /// <summary>
+    /// Ends a superseded load on <see cref="RunFetchAsync{TResult}"/>'s silent cancellation path.
+    /// Called after every await of a fetch body, before it applies anything, so the newest load
+    /// always owns the rows, the failure flag and the empty state (U-20).
+    /// </summary>
+    private void ThrowIfSuperseded(CancellationTokenSource loadSource)
+    {
+        if (!IsCurrentLoad(loadSource))
+        {
+            throw new OperationCanceledException("Superseded by a newer load.");
         }
     }
 

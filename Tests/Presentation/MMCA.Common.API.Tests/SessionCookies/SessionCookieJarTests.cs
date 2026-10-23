@@ -108,6 +108,37 @@ public sealed class SessionCookieJarTests
         }
     }
 
+    [Fact]
+    public void Append_InDevelopmentOverHttps_SetsSecure()
+    {
+        // The local stack runs on HTTPS: a request that arrived over TLS gets TLS-only cookies even in
+        // Development, so only a plain http://localhost run goes without the flag.
+        var context = new DefaultHttpContext();
+        context.Request.IsHttps = true;
+
+        SessionCookieJar.Append(context, "access-value", "refresh-value", CreateEnvironment(Environments.Development));
+
+        foreach (SetCookieHeaderValue cookie in ParseSetCookies(context))
+        {
+            cookie.Secure.Should().BeTrue("a request that arrived over TLS gets TLS-only cookies");
+            cookie.HttpOnly.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public void Delete_InDevelopmentOverHttps_MatchesTheSecureFlagOfAppend()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.IsHttps = true;
+
+        SessionCookieJar.Delete(context, CreateEnvironment(Environments.Development));
+
+        foreach (SetCookieHeaderValue cookie in ParseSetCookies(context))
+        {
+            cookie.Secure.Should().BeTrue();
+        }
+    }
+
     // ── Delete ──
     [Fact]
     public void Delete_ExpiresBothCookies()
