@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Web.SameOriginProxy;
 
 namespace MMCA.Common.UI.Web.Hardening;
@@ -40,6 +41,27 @@ public static class UiRateLimitingExtensions
     /// while staying inside the per-IP window.
     /// </summary>
     private const string BlazorTransportPrefix = "/_blazor";
+
+    /// <summary>
+    /// Wraps a rate limiter's <c>OnRejected</c> callback so every 429 carries a <c>Retry-After</c>
+    /// header, in whole seconds rounded up, whenever the rejecting lease has a
+    /// <see cref="MetadataName.RetryAfter"/> hint (the fixed-window limiter does; a concurrency
+    /// rejection does not, and sends no header). A callback configured before this registration
+    /// still runs, after the header is written.
+    /// </summary>
+    /// <param name="previous">The callback already configured, if any.</param>
+    /// <returns>The callback to assign to <c>RateLimiterOptions.OnRejected</c>.</returns>
+    internal static Func<OnRejectedContext, CancellationToken, ValueTask> WithRetryAfterHeader(
+        Func<OnRejectedContext, CancellationToken, ValueTask>? previous) =>
+        (context, cancellationToken) =>
+        {
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            {
+                context.HttpContext.Response.Headers.RetryAfter = RetryAfterHeader.Format(retryAfter);
+            }
+
+            return previous?.Invoke(context, cancellationToken) ?? ValueTask.CompletedTask;
+        };
 
     /// <summary>
     /// Path prefixes that are never limited: the liveness and readiness probes (throttling them
@@ -188,7 +210,11 @@ public static class UiRateLimitingExtensions
             var settings = configuration.GetSection(UiRateLimitingSettings.SectionName)
                 .Get<UiRateLimitingSettings>() ?? new UiRateLimitingSettings();
 
-            services.AddRateLimiter(options => options.RejectionStatusCode = StatusCodes.Status429TooManyRequests);
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.OnRejected = WithRetryAfterHeader(options.OnRejected);
+            });
 
             if (!settings.Enabled)
             {

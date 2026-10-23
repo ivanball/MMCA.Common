@@ -875,6 +875,7 @@
         "dependencies": {
           "MMCA.Common.API": "[1.0.0, )",
           "MMCA.Common.Aspire": "[1.0.0, )",
+          "MMCA.Common.Shared": "[1.0.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Microsoft.Extensions.ServiceDiscovery": "[10.11.0, )",
           "Yarp.ReverseProxy": "[2.3.0, )"

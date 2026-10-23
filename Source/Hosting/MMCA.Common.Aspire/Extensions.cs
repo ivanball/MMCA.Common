@@ -61,6 +61,16 @@ public static partial class Extensions
                     // names the two verbs rather than using DisableForUnsafeHttpMethods (that helper
                     // also switches the retry off for PUT and DELETE).
                     options.Retry.DisableFor(HttpMethod.Post, HttpMethod.Patch);
+
+                    // ShouldRetryAfterHeader (on by default) makes the retry wait out a 429's
+                    // Retry-After, which a rate limiter sets to the rest of its window: up to a minute
+                    // holding the request. A 429 asking for more than MaxRetryAfterWait is not retried
+                    // here, matching the UI service base classes, so a refused action is one request.
+                    var shouldHandle = options.Retry.ShouldHandle;
+                    options.Retry.ShouldHandle = args =>
+                        RetryAfterHeader.ExceedsRetryBudget(args.Outcome.Result, TimeProvider.System)
+                            ? ValueTask.FromResult(false)
+                            : shouldHandle(args);
                 });
                 http.AddServiceDiscovery();
 

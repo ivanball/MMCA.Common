@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -52,6 +53,37 @@ public sealed class ServiceDefaultsRetryTests
             Outcome.FromException<HttpResponseMessage>(new TimeoutRejectedException()));
 
         handled.Should().BeFalse("the timed-out POST may still be executing on the server");
+    }
+
+    // ShouldRetryAfterHeader would otherwise hold the request for the rest of the limiter's window
+    // (up to a minute); a 429 asking for more than MaxRetryAfterWait is not retried at this hop.
+    [Theory]
+    [InlineData(9, false)]
+    [InlineData(60, false)]
+    [InlineData(8, true)]
+    [InlineData(2, true)]
+    public async Task StandardRetry_OnA429_RetriesOnlyWithinTheRetryAfterBudget(int retryAfterSeconds, bool retried)
+    {
+        var options = ResolveProbeOptions();
+        using var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(retryAfterSeconds));
+
+        var handled = await ShouldHandleAsync(options, HttpMethod.Get, Outcome.FromResult(response));
+
+        handled.Should().Be(retried);
+    }
+
+    [Fact]
+    public async Task StandardRetry_OnA429WithoutRetryAfter_KeepsItsRetry()
+    {
+        var options = ResolveProbeOptions();
+
+        var handled = await ShouldHandleAsync(
+            options,
+            HttpMethod.Get,
+            Outcome.FromResult(new HttpResponseMessage(HttpStatusCode.TooManyRequests)));
+
+        handled.Should().BeTrue();
     }
 
     private static HttpStandardResilienceOptions ResolveProbeOptions()

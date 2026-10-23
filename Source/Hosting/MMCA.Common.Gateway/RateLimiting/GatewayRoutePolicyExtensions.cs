@@ -66,6 +66,10 @@ public static class GatewayRoutePolicyExtensions
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+                // OnRejected is one shared slot on RateLimiterOptions, so the edge limiter in
+                // MMCA.Common.Aspire installs the same header writer; each chains the one before it.
+                options.OnRejected = GatewayRetryAfter.WithRetryAfterHeader(options.OnRejected);
+
                 foreach (var (name, policy) in settings.RateLimiterPolicies)
                 {
                     if (string.IsNullOrWhiteSpace(name))

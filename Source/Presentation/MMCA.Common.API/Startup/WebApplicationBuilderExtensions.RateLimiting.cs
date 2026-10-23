@@ -11,12 +11,33 @@ using MMCA.Common.API.RateLimiting;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Resilience;
 using StackExchange.Redis;
 
 namespace MMCA.Common.API.Startup;
 
 public static partial class WebApplicationBuilderExtensions
 {
+    /// <summary>
+    /// Wraps a rate limiter's <c>OnRejected</c> callback so every 429 carries a <c>Retry-After</c>
+    /// header, in whole seconds rounded up, whenever the rejecting lease has a
+    /// <see cref="MetadataName.RetryAfter"/> hint. A callback the host set before this registration
+    /// still runs, after the header is written, so it can read or override it.
+    /// </summary>
+    /// <param name="previous">The callback already configured, if any.</param>
+    /// <returns>The callback to assign to <c>RateLimiterOptions.OnRejected</c>.</returns>
+    internal static Func<Microsoft.AspNetCore.RateLimiting.OnRejectedContext, CancellationToken, ValueTask> WithRetryAfterHeader(
+        Func<Microsoft.AspNetCore.RateLimiting.OnRejectedContext, CancellationToken, ValueTask>? previous) =>
+        (context, cancellationToken) =>
+        {
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            {
+                context.HttpContext.Response.Headers.RetryAfter = RetryAfterHeader.Format(retryAfter);
+            }
+
+            return previous?.Invoke(context, cancellationToken) ?? ValueTask.CompletedTask;
+        };
+
     /// <summary>
     /// Named rate-limit policy throttling ANONYMOUS authentication attempts per client IP. Apply it
     /// with <c>[EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]</c> on
@@ -397,6 +418,10 @@ public static partial class WebApplicationBuilderExtensions
             return services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                // Tell the refused caller when its window resets. The fixed-window and Redis limiters
+                // carry the hint; a lease without it (a concurrency rejection) sends no header.
+                options.OnRejected = WithRetryAfterHeader(options.OnRejected);
 
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                     httpContext => GlobalRateLimitPartition(httpContext, settings));

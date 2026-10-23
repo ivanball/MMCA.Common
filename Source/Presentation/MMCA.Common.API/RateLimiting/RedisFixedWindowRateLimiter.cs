@@ -154,10 +154,13 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
 
         if (permitCount > _permitLimit)
         {
-            return RedisRateLimitLease.Rejected;
+            // No retry-after hint: no later window can hold a request larger than the whole
+            // allowance, so telling the client when to come back would be a lie.
+            return RedisRateLimitLease.Rejected(retryAfter: null);
         }
 
-        var window = _timeProvider.GetUtcNow().ToUnixTimeSeconds() / 60;
+        var now = _timeProvider.GetUtcNow();
+        var window = now.ToUnixTimeSeconds() / 60;
         var key = string.Create(CultureInfo.InvariantCulture, $"rl:{_partitionKey}:{window}");
 
         try
@@ -169,7 +172,9 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
                 [permitCount, KeyTtlSeconds]).ConfigureAwait(false);
             var count = (long)result;
 
-            return count <= _permitLimit ? RedisRateLimitLease.Acquired : RedisRateLimitLease.Rejected;
+            return count <= _permitLimit
+                ? RedisRateLimitLease.Acquired
+                : RedisRateLimitLease.Rejected(TimeUntilNextWindow(now, window));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -182,6 +187,17 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
         }
     }
 
+    /// <summary>
+    /// The time left until the window after <paramref name="window"/> opens, which is when a rejected
+    /// partition's allowance resets: <c>(window + 1) * 60 - now</c>, in the same unix-minute arithmetic
+    /// the key uses.
+    /// </summary>
+    /// <param name="now">The instant the window was read at.</param>
+    /// <param name="window">The unix minute the request was counted in.</param>
+    /// <returns>The time until the next window starts.</returns>
+    internal static TimeSpan TimeUntilNextWindow(DateTimeOffset now, long window) =>
+        DateTimeOffset.FromUnixTimeSeconds((window + 1) * 60) - now;
+
     [LoggerMessage(
         Level = LogLevel.Warning,
         Message = "Distributed rate limiting is failing open for partition '{PartitionKey}': the Redis counter is unreachable, so requests are permitted uncounted until it recovers")]
@@ -189,36 +205,60 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
 }
 
 /// <summary>
-/// The leases <see cref="RedisFixedWindowRateLimiter"/> hands out. All are stateless and carry no
-/// metadata, so one shared instance of each serves every request rather than allocating a lease
-/// per call.
+/// The leases <see cref="RedisFixedWindowRateLimiter"/> hands out. <see cref="Acquired"/> and
+/// <see cref="Undecided"/> are stateless and carry no metadata, so one shared instance of each serves
+/// every request. A rejection is allocated per call because it carries
+/// <see cref="MetadataName.RetryAfter"/>: the time until the partition's window resets, which the
+/// rate-limiter <c>OnRejected</c> callback turns into the 429's <c>Retry-After</c> header.
 /// </summary>
 internal sealed class RedisRateLimitLease : RateLimitLease
 {
-    /// <summary>The lease returned when the request is permitted.</summary>
-    internal static readonly RedisRateLimitLease Acquired = new(isAcquired: true);
+    private static readonly string[] RetryAfterMetadataNames = [MetadataName.RetryAfter.Name];
 
-    /// <summary>The lease returned when the window's allowance is exhausted.</summary>
-    internal static readonly RedisRateLimitLease Rejected = new(isAcquired: false);
+    /// <summary>The lease returned when the request is permitted.</summary>
+    internal static readonly RedisRateLimitLease Acquired = new(isAcquired: true, retryAfter: null);
 
     /// <summary>
     /// The lease the synchronous path returns. Not acquired, so the middleware falls through to the
-    /// asynchronous path; kept distinct from <see cref="Rejected"/> because nothing was counted and
-    /// nothing was refused. Like the others it carries no retry-after metadata.
+    /// asynchronous path; kept distinct from a rejection because nothing was counted and nothing was
+    /// refused, so it carries no retry-after metadata.
     /// </summary>
-    internal static readonly RedisRateLimitLease Undecided = new(isAcquired: false);
+    internal static readonly RedisRateLimitLease Undecided = new(isAcquired: false, retryAfter: null);
 
-    private RedisRateLimitLease(bool isAcquired) => IsAcquired = isAcquired;
+    private readonly TimeSpan? _retryAfter;
+
+    private RedisRateLimitLease(bool isAcquired, TimeSpan? retryAfter)
+    {
+        IsAcquired = isAcquired;
+        _retryAfter = retryAfter;
+    }
 
     /// <inheritdoc />
     public override bool IsAcquired { get; }
 
     /// <inheritdoc />
-    public override IEnumerable<string> MetadataNames => [];
+    public override IEnumerable<string> MetadataNames => _retryAfter is null ? [] : RetryAfterMetadataNames;
+
+    /// <summary>
+    /// Creates the lease returned when the window's allowance is exhausted.
+    /// </summary>
+    /// <param name="retryAfter">
+    /// The time until the window resets, or <see langword="null"/> when no later window can satisfy
+    /// the request.
+    /// </param>
+    /// <returns>A lease that is not acquired.</returns>
+    internal static RedisRateLimitLease Rejected(TimeSpan? retryAfter) => new(isAcquired: false, retryAfter);
 
     /// <inheritdoc />
     public override bool TryGetMetadata(string metadataName, out object? metadata)
     {
+        if (_retryAfter is { } retryAfter
+            && string.Equals(metadataName, MetadataName.RetryAfter.Name, StringComparison.Ordinal))
+        {
+            metadata = retryAfter;
+            return true;
+        }
+
         metadata = null;
         return false;
     }

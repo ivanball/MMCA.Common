@@ -75,11 +75,85 @@ public sealed class DistributedRateLimitingMiddlewareTests
             Times.Exactly(2));
     }
 
-    private static async Task<WebApplication> CreateHostAsync(IConnectionMultiplexer connection, RateLimitingSettings settings)
+    // The 429 tells the client when the shared window resets: the Redis lease carries the time to the
+    // end of the current minute, and OnRejected writes it as whole seconds.
+    [Fact]
+    public async Task Rejection_ByTheSharedCounter_CarriesRetryAfterUntilTheWindowResets()
+    {
+        var (connection, _) = CreateConnection(1, 2);
+        await using var app = await CreateHostAsync(
+            connection.Object,
+            new RateLimitingSettings { GlobalPermitLimit = 1, Distributed = true });
+        using var client = app.GetTestClient();
+
+        using var first = await SendAsAliceAsync(client);
+        using var second = await SendAsAliceAsync(client);
+
+        first.Headers.RetryAfter.Should().BeNull("a permitted request has nothing to wait for");
+        second.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        second.Headers.RetryAfter.Should().NotBeNull();
+        second.Headers.RetryAfter!.Delta.Should().NotBeNull("the header is written in whole seconds, not as a date");
+        second.Headers.RetryAfter.Delta!.Value.Should().BeGreaterThan(TimeSpan.Zero)
+            .And.BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
+    }
+
+    [Fact]
+    public async Task Rejection_ByTheInMemoryWindow_CarriesRetryAfter()
+    {
+        var (connection, _) = CreateConnection();
+        await using var app = await CreateHostAsync(
+            connection.Object,
+            new RateLimitingSettings { GlobalPermitLimit = 1 });
+        using var client = app.GetTestClient();
+
+        using var first = await SendAsAliceAsync(client);
+        using var second = await SendAsAliceAsync(client);
+
+        second.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        second.Headers.RetryAfter?.Delta.Should().NotBeNull();
+        second.Headers.RetryAfter!.Delta!.Value.Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
+    }
+
+    // A rejection callback the host configured first still runs: the header writer chains it.
+    [Fact]
+    public async Task Rejection_StillRunsAnOnRejectedTheHostConfiguredEarlier()
+    {
+        var (connection, _) = CreateConnection();
+        var hostCallbackRan = false;
+        await using var app = await CreateHostAsync(
+            connection.Object,
+            new RateLimitingSettings { GlobalPermitLimit = 1 },
+            services => services.AddRateLimiter(options => options.OnRejected = (_, _) =>
+            {
+                hostCallbackRan = true;
+                return ValueTask.CompletedTask;
+            }));
+        using var client = app.GetTestClient();
+
+        using var first = await SendAsAliceAsync(client);
+        using var second = await SendAsAliceAsync(client);
+
+        second.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        second.Headers.RetryAfter.Should().NotBeNull();
+        hostCallbackRan.Should().BeTrue();
+    }
+
+    private static async Task<HttpResponseMessage> SendAsAliceAsync(HttpClient client)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/probe", UriKind.Relative));
+        request.Headers.Add(HeaderAuthenticationHandler.UserHeader, "alice");
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<WebApplication> CreateHostAsync(
+        IConnectionMultiplexer connection,
+        RateLimitingSettings settings,
+        Action<IServiceCollection>? configureBefore = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        configureBefore?.Invoke(builder.Services);
         builder.Services.AddSingleton(connection);
         builder.Services.AddAuthentication(HeaderAuthenticationHandler.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(HeaderAuthenticationHandler.SchemeName, _ => { });

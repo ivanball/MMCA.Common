@@ -30,6 +30,14 @@ public static class HttpResilienceDefaults
     public static int MaxRetryAttempts => 1;
 
     /// <summary>
+    /// The longest <c>Retry-After</c> a client will wait out before retrying a
+    /// <c>429 Too Many Requests</c>: eight seconds, the longest step of the UI retry backoff. A 429 asking for more
+    /// than this is not retried at all and surfaces to the caller at once, so a refused user action
+    /// costs one request rather than a held connection waiting out the rest of a rate-limit window.
+    /// </summary>
+    public static TimeSpan MaxRetryAfterWait => TimeSpan.FromSeconds(8);
+
+    /// <summary>
     /// Recycle pooled connections every 10 minutes so DNS changes (e.g. ACA replica rollover)
     /// are picked up without an app restart.
     /// </summary>

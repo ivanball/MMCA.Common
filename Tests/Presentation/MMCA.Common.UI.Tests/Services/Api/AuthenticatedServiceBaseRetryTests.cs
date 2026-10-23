@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using AwesomeAssertions;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.UI.Services.Api;
 
 namespace MMCA.Common.UI.Tests.Services.Api;
@@ -134,6 +136,140 @@ public sealed class AuthenticatedServiceBaseRetryTests
         var (attempts, _) = await RunThroughApiPipelineAsync(new HttpMethod(method), idempotencyKey, HttpRequestError.ResponseEnded);
 
         attempts.Should().Be(4, "an idempotent verb or a keyed write is safe to resend");
+    }
+
+    // -- Retry-After on a 429 --
+    // A 429 asking for longer than MaxRetryAfterWait is the rate limiter saying "not this window":
+    // the refusal surfaces at once instead of three more requests and a held connection.
+    [Theory]
+    [InlineData(9)]
+    [InlineData(60)]
+    public async Task RetryPolicy_A429WithRetryAfterOverTheBudget_IsSentOnce(int retryAfterSeconds)
+    {
+        var backoffCalls = 0;
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(_ =>
+        {
+            backoffCalls++;
+            return TimeSpan.Zero;
+        });
+        var attempts = 0;
+
+        using var final = await policy.ExecuteAsync(() =>
+        {
+            attempts++;
+            return Task.FromResult(TooManyRequests(new RetryConditionHeaderValue(TimeSpan.FromSeconds(retryAfterSeconds))));
+        });
+
+        attempts.Should().Be(1);
+        backoffCalls.Should().Be(0);
+        final.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
+    public async Task RetryPolicy_A429WithADateRetryAfterOverTheBudget_IsSentOnce()
+    {
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero));
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(_ => TimeSpan.Zero, clock);
+        var attempts = 0;
+
+        using var final = await policy.ExecuteAsync(() =>
+        {
+            attempts++;
+            return Task.FromResult(TooManyRequests(new RetryConditionHeaderValue(clock.GetUtcNow().AddSeconds(30))));
+        });
+
+        attempts.Should().Be(1);
+    }
+
+    // At or under the budget the policy waits exactly what the server asked for, not the backoff.
+    [Fact]
+    public async Task RetryPolicy_A429WithRetryAfterWithinTheBudget_WaitsThatDelayInsteadOfTheBackoff()
+    {
+        var backoffCalls = 0;
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(_ =>
+        {
+            backoffCalls++;
+            return TimeSpan.Zero;
+        });
+        var attempts = 0;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        using var final = await policy.ExecuteAsync(() =>
+        {
+            attempts++;
+            return Task.FromResult(attempts == 1
+                ? TooManyRequests(new RetryConditionHeaderValue(TimeSpan.FromSeconds(1)))
+                : new HttpResponseMessage(HttpStatusCode.OK));
+        });
+
+        attempts.Should().Be(2);
+        final.StatusCode.Should().Be(HttpStatusCode.OK);
+        backoffCalls.Should().Be(0, "the server named the delay, so the backoff is not consulted");
+        stopwatch.Elapsed.Should().BeGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(900));
+    }
+
+    [Theory]
+    [InlineData(8)]
+    [InlineData(5)]
+    [InlineData(0)]
+    public void RetryDelay_ForA429WithinTheBudget_IsTheRetryAfter(int retryAfterSeconds)
+    {
+        using var response = TooManyRequests(new RetryConditionHeaderValue(TimeSpan.FromSeconds(retryAfterSeconds)));
+
+        AuthenticatedServiceBase.RetryDelay(1, response, _ => TimeSpan.FromSeconds(42), TimeProvider.System)
+            .Should().Be(TimeSpan.FromSeconds(retryAfterSeconds));
+    }
+
+    [Fact]
+    public void RetryDelay_ForA429WithADateRetryAfter_MeasuresItAgainstTheClock()
+    {
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero));
+        using var response = TooManyRequests(new RetryConditionHeaderValue(clock.GetUtcNow().AddSeconds(6)));
+
+        AuthenticatedServiceBase.RetryDelay(1, response, _ => TimeSpan.FromSeconds(42), clock)
+            .Should().Be(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void RetryDelay_ForA5xxWithRetryAfter_KeepsTheBackoff()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(1));
+
+        AuthenticatedServiceBase.RetryDelay(2, response, attempt => TimeSpan.FromSeconds(attempt * 10), TimeProvider.System)
+            .Should().Be(TimeSpan.FromSeconds(20));
+    }
+
+    // A 429 that names no delay keeps today's 2s/4s/8s backoff and all three retries.
+    [Fact]
+    public async Task RetryPolicy_A429WithoutRetryAfter_KeepsTheBackoff()
+    {
+        var backoffAttempts = new List<int>();
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(attempt =>
+        {
+            backoffAttempts.Add(attempt);
+            return TimeSpan.Zero;
+        });
+        var attempts = 0;
+
+        using var final = await policy.ExecuteAsync(() =>
+        {
+            attempts++;
+            return Task.FromResult(TooManyRequests(retryAfter: null));
+        });
+
+        attempts.Should().Be(4);
+        backoffAttempts.Should().Equal(1, 2, 3);
+    }
+
+    private static HttpResponseMessage TooManyRequests(RetryConditionHeaderValue? retryAfter)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri("https://api.example.com/events/1")),
+        };
+        response.Headers.RetryAfter = retryAfter;
+        return response;
     }
 
     private static async Task<(int Attempts, Exception? Thrown)> RunThroughApiPipelineAsync(
