@@ -6,7 +6,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
-namespace MMCA.Common.Application.Tests.Users;
+namespace MMCA.Common.Application.Tests.Users.UseCases.ChangePreferences;
 
 /// <summary>
 /// Exercises the shared preference-write workflow (ADR-027 / ADR-028), above all the partial-update
