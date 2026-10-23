@@ -114,6 +114,40 @@ public class ResultTests
             .WithMessage("*At least one result*");
     }
 
+    // ── TryGetValue ──
+    [Fact]
+    public void TryGetValue_OnSuccess_ReturnsTrueWithValue()
+    {
+        var result = Result.Success("value");
+
+        var found = result.TryGetValue(out var value);
+
+        found.Should().BeTrue();
+        value.Should().Be("value");
+    }
+
+    [Fact]
+    public void TryGetValue_OnFailure_ReturnsFalseWithDefault()
+    {
+        var result = Result.Failure<string>(Error.Validation("err1", "first"));
+
+        var found = result.TryGetValue(out var value);
+
+        found.Should().BeFalse();
+        value.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryGetValue_OnSuccessWithNullableNullValue_ReturnsTrueWithNull()
+    {
+        var result = Result.Success<string?>(null);
+
+        var found = result.TryGetValue(out var value);
+
+        found.Should().BeTrue();
+        value.Should().BeNull();
+    }
+
     // ── Map ──
     [Fact]
     public void Map_OnSuccess_TransformsValue()
