@@ -4,3 +4,4 @@ MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationSta
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SessionEnded -> System.EventHandler?
+MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.DeepLinkDispatcher(System.TimeProvider! timeProvider) -> void

@@ -7,14 +7,78 @@ namespace MMCA.Common.UI.Services.Capabilities.Navigation;
 /// listener is attached, otherwise buffers the most recent route (capacity one) so a
 /// cold-start tap survives until the Blazor router renders. Registered as a singleton:
 /// native callers resolve it from the MAUI root service provider.
+/// <list type="bullet">
+/// <item><b>One listener.</b> A route goes to exactly one listener, the most recently attached one
+/// still subscribed. A plain multicast event fanned one QR scan out to every <c>DeepLinkListener</c>
+/// in the task (a recreated activity, a Custom Tab returning into the app leaves a second WebView),
+/// so one scan became two sponsor-visit posts and the second answered "already visited" on a first
+/// visit (A-27).</item>
+/// <item><b>One delivery.</b> The same route published again within <see cref="DuplicateWindow"/>
+/// is the same delivery seen twice (a launch intent republished on activity recreation, an
+/// <c>OnNewIntent</c> for the intent that started the activity), so it is dropped rather than
+/// navigated a second time.</item>
+/// </list>
 /// </summary>
 public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
 {
+    /// <summary>
+    /// How long a published route counts as the same delivery. Short enough that a deliberate rescan
+    /// of the same code still navigates; long enough to cover an activity recreation.
+    /// </summary>
+    internal static readonly TimeSpan DuplicateWindow = TimeSpan.FromSeconds(2);
+
+    private readonly TimeProvider _timeProvider;
     private readonly Lock _gate = new();
+    private readonly List<EventHandler<DeepLinkRouteEventArgs>> _listeners = [];
     private string? _pendingRoute;
+    private string? _lastRoute;
+    private DateTimeOffset _lastRouteAt = DateTimeOffset.MinValue;
+
+    /// <summary>Creates a dispatcher on the system clock.</summary>
+    public DeepLinkDispatcher()
+        : this(TimeProvider.System)
+    {
+    }
+
+    /// <summary>Creates a dispatcher on the given clock.</summary>
+    /// <param name="timeProvider">Clock for the duplicate window.</param>
+    public DeepLinkDispatcher(TimeProvider timeProvider) =>
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
     /// <inheritdoc />
-    public event EventHandler<DeepLinkRouteEventArgs>? RouteRequested;
+    /// <remarks>
+    /// Explicit accessors keep the subscription order, so <see cref="Publish"/> can pick the newest
+    /// listener instead of invoking every one. A listener subscribing again moves to the end.
+    /// </remarks>
+    public event EventHandler<DeepLinkRouteEventArgs>? RouteRequested
+    {
+        add
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _listeners.Remove(value);
+                _listeners.Add(value);
+            }
+        }
+
+        remove
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _listeners.Remove(value);
+            }
+        }
+    }
 
     /// <summary>
     /// Whether <paramref name="route"/> is safe to hand to in-app navigation: an app-origin-relative
@@ -112,29 +176,39 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
                 nameof(route));
         }
 
-        // Read the handler INSIDE the lock: the decision (raise now, or buffer for the listener that
-        // has not attached yet) and the buffer write have to be one step. Reading it outside allowed
-        // this interleaving, which drops the route: Publish sees no handler, the listener subscribes,
-        // the listener drains an empty buffer, then Publish writes into a buffer nobody will read
-        // again. That is the warm-boot deep link on a native head, where the callback thread and the
-        // first render are genuinely concurrent.
+        // Pick the listener INSIDE the lock: the duplicate check, the decision (raise now, or buffer
+        // for the listener that has not attached yet) and the buffer write have to be one step.
+        // Reading it outside allowed this interleaving, which drops the route: Publish sees no
+        // listener, the listener subscribes, the listener drains an empty buffer, then Publish writes
+        // into a buffer nobody will read again. That is the warm-boot deep link on a native head,
+        // where the callback thread and the first render are genuinely concurrent.
         //
         // Under the lock the two orders are the only ones left. If the subscription was visible, the
         // event fires. If it was not, the buffer write completes before the lock is released, and the
         // listener's TryConsumePending, which must take the same lock afterwards, finds the route.
-        EventHandler<DeepLinkRouteEventArgs>? handler;
+        EventHandler<DeepLinkRouteEventArgs> listener;
         lock (_gate)
         {
-            handler = RouteRequested;
-            if (handler is null)
+            var now = _timeProvider.GetUtcNow();
+            if (string.Equals(route, _lastRoute, StringComparison.Ordinal) && now - _lastRouteAt < DuplicateWindow)
+            {
+                return;
+            }
+
+            _lastRoute = route;
+            _lastRouteAt = now;
+
+            if (_listeners.Count == 0)
             {
                 _pendingRoute = route;
                 return;
             }
+
+            listener = _listeners[^1];
         }
 
         // Invoked outside the lock: a listener that navigates on this callback must not run under it.
-        handler.Invoke(this, new DeepLinkRouteEventArgs(route));
+        listener.Invoke(this, new DeepLinkRouteEventArgs(route));
     }
 
     /// <inheritdoc />

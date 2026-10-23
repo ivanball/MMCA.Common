@@ -35,6 +35,8 @@
     private async Task SetCulture(string culture)
     {
         // Persist to the signed-in user's profile (best-effort; no-op when anonymous) before the reload.
+        // The writer sends saves in call order, so this await also lets a theme save still in flight
+        // finish (bounded) instead of the reload cutting it off.
         var writer = Services.GetService<IUserPreferenceWriter>();
         if (writer is not null)
         {

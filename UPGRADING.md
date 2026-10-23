@@ -52,6 +52,13 @@ render the call has not reached yet.
 A presentational child that receives the page's flags as parameters takes it as one more
 `[Parameter] public bool EmptyConfirmed`, replacing a gate computed from `!Loading && !LoadFailed`.
 
+**`DeepLinkDispatcher` delivers each route to one listener** (A-27): the most recently subscribed
+one still attached, not every subscriber, and the same route published again within 2 seconds is
+dropped. No call site changes. A test
+that subscribed two handlers and expected both to fire now sees only the newer one; a test that
+publishes the same route twice must advance a `FakeTimeProvider` passed to the new
+`DeepLinkDispatcher(TimeProvider)` constructor past `2 s` between the calls.
+
 ## [1.250.0] - 2026-10-21
 
 **The role administration controls are named so that the name contains the visible text (WCAG

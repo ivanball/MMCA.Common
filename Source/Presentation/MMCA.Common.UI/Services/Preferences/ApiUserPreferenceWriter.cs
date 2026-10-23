@@ -34,6 +34,8 @@ public sealed class ApiUserPreferenceWriter(
     /// <summary>Matches the token-storage skew, so this agrees with the layer that does the refreshing.</summary>
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
+    private readonly Lock _gate = new();
+
     private sealed record UserPreferencesRequest(string? Culture, string? Theme);
 
     /// <summary>
@@ -44,8 +46,44 @@ public sealed class ApiUserPreferenceWriter(
     /// </summary>
     private string? _rejectedToken;
 
+    /// <summary>The newest save, which the next one waits on before it sends.</summary>
+    private Task _lastSave = Task.CompletedTask;
+
+    /// <summary>
+    /// How long a save waits for the one before it. Bounded so a hung earlier request delays a later
+    /// save (and the culture switch's reload behind it) by a few seconds at most, never indefinitely.
+    /// </summary>
+    internal TimeSpan PreviousSaveWait { get; init; } = TimeSpan.FromSeconds(5);
+
     /// <inheritdoc/>
-    public async Task SaveAsync(string? culture, string? theme, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// Saves are sent one at a time, in call order. A theme toggle followed quickly by a language
+    /// switch otherwise sent two concurrent PUTs, and the switcher force-reloads as soon as its own
+    /// save returns: the reload cut off the theme PUT still in flight (WASM), or the two raced on the
+    /// user row's concurrency token, so the server kept the old theme and the next sign-in applied it.
+    /// Serializing here makes the switcher's existing await also drain the earlier save.
+    /// </remarks>
+    public Task SaveAsync(string? culture, string? theme, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            var save = SaveAfterAsync(_lastSave, culture, theme, cancellationToken);
+            _lastSave = save;
+            return save;
+        }
+    }
+
+    private async Task SaveAfterAsync(Task previous, string? culture, string? theme, CancellationToken cancellationToken)
+    {
+        // Best-effort either way: a fault, a timeout or a cancellation of the earlier save only ends the
+        // wait, and this save goes ahead.
+        await previous.WaitAsync(PreviousSaveWait, cancellationToken)
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+
+        await PutAsync(culture, theme, cancellationToken);
+    }
+
+    private async Task PutAsync(string? culture, string? theme, CancellationToken cancellationToken)
     {
         var token = await tokenStorageService.GetAccessTokenAsync();
 
