@@ -4,7 +4,7 @@ using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using OtpNet;
 
-namespace MMCA.Common.Infrastructure.Tests.Auth;
+namespace MMCA.Common.Infrastructure.Tests.Auth.TwoFactor;
 
 /// <summary>
 /// Verifies the TOTP second factor's cryptography: secrets an authenticator app can key from, codes

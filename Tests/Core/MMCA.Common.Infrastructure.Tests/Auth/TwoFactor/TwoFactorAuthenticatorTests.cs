@@ -9,7 +9,7 @@ using MMCA.Common.Shared.Abstractions;
 using Moq;
 using OtpNet;
 
-namespace MMCA.Common.Infrastructure.Tests.Auth;
+namespace MMCA.Common.Infrastructure.Tests.Auth.TwoFactor;
 
 /// <summary>
 /// Verifies the sign-in second-factor challenge: an account with no active factor passes straight
