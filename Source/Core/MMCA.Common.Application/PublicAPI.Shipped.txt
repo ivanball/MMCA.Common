@@ -337,6 +337,7 @@ MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService.User.
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService.UserId.get -> int?
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher.HashPassword(string! password) -> (byte[]! Hash, byte[]! Salt)
+MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher.NeedsRehash(byte[]! hash) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher.VerifyPassword(string! password, byte[]! hash, byte[]! salt) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.ISoftDeletedUserValidator
 MMCA.Common.Application.Interfaces.Infrastructure.Auth.ISoftDeletedUserValidator.IsUserSoftDeletedAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
@@ -452,8 +453,6 @@ MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<T
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(MMCA.Common.Domain.Interfaces.IRowVersioned! childEntity, byte[]! rowVersion) -> void
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(TEntity! entity, byte[]! rowVersion) -> void
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.TouchConcurrencyToken(TEntity! entity) -> void
-MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity! entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.UpdateRange(System.Collections.Generic.IEnumerable<TEntity!>! entities) -> void
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.OutboxDeadLetter
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.OutboxDeadLetter.<Clone>$() -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.OutboxDeadLetter!
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.OutboxDeadLetter.DataSource.get -> string!
@@ -1342,6 +1341,7 @@ virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ChallengeS
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CheckEmailConfirmed(TUser! untrackedUser) -> MMCA.Common.Shared.Abstractions.Result!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateAccessTokenForSession(TUser! user, System.Guid sessionId) -> string!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateRefreshUserMissingError() -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.Logger.get -> Microsoft.Extensions.Logging.ILogger!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.OnUserRegisteredAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser!>!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateLoginCandidateAsync(TUser! untrackedUser, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateRefreshCandidateAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!

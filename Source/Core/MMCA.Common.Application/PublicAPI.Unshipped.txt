@@ -1,5 +1,1 @@
 ﻿#nullable enable
-*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity! entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.UpdateRange(System.Collections.Generic.IEnumerable<TEntity!>! entities) -> void
-MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher.NeedsRehash(byte[]! hash) -> bool
-virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.Logger.get -> Microsoft.Extensions.Logging.ILogger!

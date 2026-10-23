@@ -1,2 +1,1 @@
 #nullable enable
-MMCA.Common.Infrastructure.Auth.PasswordHasher.NeedsRehash(byte[]! hash) -> bool

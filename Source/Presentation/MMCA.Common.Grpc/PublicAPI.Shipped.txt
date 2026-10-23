@@ -28,7 +28,7 @@ MMCA.Common.Grpc.Authentication.ServiceTokenSettings.Validate(System.ComponentMo
 MMCA.Common.Grpc.DependencyInjection
 MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGrpcServiceDefaults() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTypedGrpcClient<TClient>(string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTypedGrpcClient<TClient>(string! serviceName, System.Action<Microsoft.Extensions.Http.Resilience.HttpStandardResilienceOptions!>? configureResilience = null) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
 MMCA.Common.Grpc.Exceptions.ResultFailureException
 MMCA.Common.Grpc.Exceptions.ResultFailureException.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
 MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException() -> void
@@ -78,7 +78,7 @@ static MMCA.Common.Grpc.Authentication.ServiceTokenHttpClientBuilderExtensions.W
 static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Grpc.DependencyInjection.AddGrpcServiceDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName, System.Action<Microsoft.Extensions.Http.Resilience.HttpStandardResilienceOptions!>? configureResilience = null) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
 static MMCA.Common.Grpc.GrpcWireFormat.FormatDecimal(decimal value) -> string!
 static MMCA.Common.Grpc.GrpcWireFormat.FormatUtc(System.DateTime value) -> string!
 static MMCA.Common.Grpc.GrpcWireFormat.FormatUtcOrEmpty(System.DateTime? value) -> string!

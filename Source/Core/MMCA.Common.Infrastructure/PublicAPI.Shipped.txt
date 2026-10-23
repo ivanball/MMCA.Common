@@ -59,6 +59,7 @@ MMCA.Common.Infrastructure.Auth.LoginProtectionSettings.RegistrationRateLimitWin
 MMCA.Common.Infrastructure.Auth.LoginProtectionSettings.RegistrationRateLimitWindowMinutes.init -> void
 MMCA.Common.Infrastructure.Auth.PasswordHasher
 MMCA.Common.Infrastructure.Auth.PasswordHasher.HashPassword(string! password) -> (byte[]! Hash, byte[]! Salt)
+MMCA.Common.Infrastructure.Auth.PasswordHasher.NeedsRehash(byte[]! hash) -> bool
 MMCA.Common.Infrastructure.Auth.PasswordHasher.PasswordHasher() -> void
 MMCA.Common.Infrastructure.Auth.PasswordHasher.VerifyPassword(string! password, byte[]! hash, byte[]! salt) -> bool
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService
