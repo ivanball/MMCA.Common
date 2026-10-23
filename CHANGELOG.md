@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.253.0] - 2026-10-23
+
+### Security
+
+- The auth services no longer put an email address in a cache key. `LoginProtectionService` (`login:lockout:`, `login:attempts:`), `PasswordResetTokenService` (`pwdreset:token:`, `pwdreset:req:`) and `EmailConfirmationTokenService` (`emailconfirm:token:`, `emailconfirm:req:`) used to key on the normalized address. A key reaches further than its entry: it becomes a Redis key name, `HybridCacheService` logs it in its read-fault warnings, and Redis client exception messages quote it. A Redis fault during sign-in therefore wrote users' addresses to the application logs. Each key now carries a hex SHA-256 of the normalized address, so every spelling of one account still lands on one key. Pinned by `AuthCacheKeyPrivacyTests`, which includes a read fault on the real two-level cache.
+- **Consumer action: none in code.** The key names change, so entries written before the upgrade are orphaned once: lockouts and failed-attempt counters restart from zero, and a password-reset or email-confirmation link sent before the deploy stops working (the user requests a new one). Old entries expire on their own TTL.
+
 ## [1.252.0] - 2026-10-23
 
 ### Added

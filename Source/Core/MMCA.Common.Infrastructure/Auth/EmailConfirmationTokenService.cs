@@ -127,9 +127,9 @@ public sealed class EmailConfirmationTokenService(
     /// </summary>
     /// <param name="email">The raw address from the request.</param>
     /// <returns>The key for that address.</returns>
-    private static string TokenKey(string email) => $"emailconfirm:token:{EmailIdentity.Normalize(email)}";
+    private static string TokenKey(string email) => $"emailconfirm:token:{EmailIdentity.KeySegment(email)}";
 
-    private static string RequestKey(string email) => $"emailconfirm:req:{EmailIdentity.Normalize(email)}";
+    private static string RequestKey(string email) => $"emailconfirm:req:{EmailIdentity.KeySegment(email)}";
 
     private static byte[] HashToken(string token) =>
         SHA256.HashData(Encoding.UTF8.GetBytes(token));

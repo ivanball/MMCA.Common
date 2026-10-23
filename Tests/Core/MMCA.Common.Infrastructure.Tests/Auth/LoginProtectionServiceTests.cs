@@ -16,10 +16,11 @@ namespace MMCA.Common.Infrastructure.Tests.Auth;
 public sealed class LoginProtectionServiceTests
 {
     private const string TestEmail = "user@example.com";
-    private const string AttemptsKey = $"login:attempts:{TestEmail}";
-    private const string LockoutKey = $"login:lockout:{TestEmail}";
     private const string TestIp = "203.0.113.7";
     private const string RegistrationKey = $"registration:ip:{TestIp}";
+
+    private static readonly string AttemptsKey = $"login:attempts:{EmailIdentity.KeySegment(TestEmail)}";
+    private static readonly string LockoutKey = $"login:lockout:{EmailIdentity.KeySegment(TestEmail)}";
 
     // ── Lockout check ──
     [Fact]
@@ -292,7 +293,7 @@ public sealed class LoginProtectionServiceTests
         await sut.IncrementFailedAttemptsAsync("Not-An-Email");
         await sut.IncrementFailedAttemptsAsync("  not-an-email  ");
 
-        cache.Values["login:attempts:not-an-email"].Should().Be(2L);
+        cache.Values[$"login:attempts:{EmailIdentity.KeySegment("not-an-email")}"].Should().Be(2L);
         cache.Values.Should().HaveCount(1);
     }
 

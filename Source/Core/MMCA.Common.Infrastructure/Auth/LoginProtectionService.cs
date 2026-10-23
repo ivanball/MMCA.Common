@@ -42,9 +42,9 @@ public sealed partial class LoginProtectionService(
     /// A malformed address (which never matches a user, but still increments a counter) falls back
     /// to the same trim-and-lowercase shape so its attempts collapse onto one key too.
     /// </summary>
-    private static string LockoutKey(string email) => $"login:lockout:{EmailIdentity.Normalize(email)}";
+    private static string LockoutKey(string email) => $"login:lockout:{EmailIdentity.KeySegment(email)}";
 
-    private static string AttemptsKey(string email) => $"login:attempts:{EmailIdentity.Normalize(email)}";
+    private static string AttemptsKey(string email) => $"login:attempts:{EmailIdentity.KeySegment(email)}";
 
     /// <inheritdoc />
     public async Task<Result> CheckLockoutAsync(string email, CancellationToken cancellationToken = default)
