@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Components.PageState;
 
 namespace MMCA.Common.UI.Pages.Common;
 
@@ -41,6 +43,56 @@ public abstract class DetailPageBase : ComponentBase, IDisposable
     /// to leave the page state alone. Disposed with the page.
     /// </summary>
     protected LatestLoadGuard LoadGuard { get; } = new();
+
+    /// <summary>
+    /// Gets where the route-driven load stands. A page renders <see cref="DetailLoadStateContent"/>
+    /// for every state but <see cref="DetailLoadState.Loaded"/>, so a record that does not exist and
+    /// a record that could not be fetched never share the same "not found" body.
+    /// </summary>
+    protected DetailLoadState LoadState { get; private set; } = DetailLoadState.Loading;
+
+    /// <summary>
+    /// Starts a route-driven load: supersedes the one in flight through <see cref="LoadGuard"/> and
+    /// puts the page back in <see cref="DetailLoadState.Loading"/>.
+    /// </summary>
+    /// <returns>The token the load passes to its awaited calls and the generation it completes with.</returns>
+    protected (CancellationToken Token, int Generation) BeginLoad()
+    {
+        var started = LoadGuard.Begin();
+        LoadState = DetailLoadState.Loading;
+        return started;
+    }
+
+    /// <summary>
+    /// Records the outcome of the load started by <see cref="BeginLoad"/>, unless a newer load has
+    /// superseded it: <see cref="DetailLoadState.Loaded"/> on success,
+    /// <see cref="DetailLoadState.NotFound"/> for a not-found failure, and
+    /// <see cref="DetailLoadState.Failed"/> for every other failure.
+    /// </summary>
+    /// <param name="generation">The generation <see cref="BeginLoad"/> returned.</param>
+    /// <param name="result">The result of the page's primary fetch.</param>
+    /// <returns>
+    /// <see langword="true"/> when the load is still current and succeeded, so the page may adopt
+    /// the value; <see langword="false"/> when it failed or was superseded.
+    /// </returns>
+    protected bool CompleteLoad(int generation, Result result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (!LoadGuard.IsCurrent(generation))
+        {
+            return false;
+        }
+
+        if (result.IsSuccess)
+        {
+            LoadState = DetailLoadState.Loaded;
+            return true;
+        }
+
+        LoadState = result.IsNotFound() ? DetailLoadState.NotFound : DetailLoadState.Failed;
+        return false;
+    }
 
     /// <summary>Gets a value indicating whether the inline editor is open.</summary>
     protected bool IsEditing { get; private set; }

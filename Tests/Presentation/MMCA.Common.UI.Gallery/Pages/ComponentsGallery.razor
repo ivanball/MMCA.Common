@@ -28,6 +28,11 @@
         <PageErrorState Message="Could not load the sample data." />
     </MudPaper>
 
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Detail load failed</MudText>
+    <MudPaper Outlined="true" Class="pa-2">
+        <DetailLoadStateContent State="DetailLoadState.Failed" />
+    </MudPaper>
+
     <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile card list</MudText>
     <MobileCardList TItem="SampleItem" Items="_items" TotalItems="_items.Count" PageSize="10">
         <CardTemplate>
