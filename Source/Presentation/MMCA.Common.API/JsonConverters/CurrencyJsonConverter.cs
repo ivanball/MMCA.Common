@@ -27,10 +27,10 @@ public sealed class CurrencyJsonConverter : JsonConverter<Currency>
             return Money.Zero().Currency;
 
         var result = Currency.FromCode(code);
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var currency))
             throw new JsonException($"Invalid currency code: {code}");
 
-        return result.Value!;
+        return currency;
     }
 
     /// <inheritdoc />

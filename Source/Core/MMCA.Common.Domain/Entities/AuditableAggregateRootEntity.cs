@@ -137,10 +137,10 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
     /// {
     ///     var result = RemoveChildOrNotFound&lt;OrderLine, OrderLineIdentifierType&gt;(
     ///         _lines, lineId, nameof(RemoveOrderLine));
-    ///     if (result.IsFailure)
+    ///     if (!result.TryGetValue(out var removed))
     ///         return Result.Failure(result.Errors);
     ///
-    ///     AddDomainEvent(new OrderLineChanged(DomainEntityState.Deleted, Id, result.Value!.Id));
+    ///     AddDomainEvent(new OrderLineChanged(DomainEntityState.Deleted, Id, removed.Id));
     ///     return Result.Success();
     /// }
     /// </code>
@@ -163,12 +163,10 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
         where TChildId : notnull
     {
         var childResult = GetChildOrNotFound<TChild, TChildId>(collection, childId, source);
-        if (childResult.IsFailure)
+        if (!childResult.TryGetValue(out var child))
         {
             return childResult;
         }
-
-        var child = childResult.Value!;
 
         var deleteResult = child.Delete();
         if (deleteResult.IsFailure)

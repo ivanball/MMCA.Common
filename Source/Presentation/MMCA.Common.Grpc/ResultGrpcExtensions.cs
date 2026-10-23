@@ -89,12 +89,12 @@ public static class ResultGrpcExtensions
         public T UnwrapOrThrow()
         {
             ArgumentNullException.ThrowIfNull(result);
-            if (result.IsFailure)
+            if (!result.TryGetValue(out var value))
             {
                 throw new ResultFailureException(result.Errors);
             }
 
-            return result.Value!;
+            return value;
         }
     }
 

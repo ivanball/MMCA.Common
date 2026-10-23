@@ -82,16 +82,13 @@ public abstract class CreateEntityHandlerBase<TCreateRequest, TEntity, TIdentifi
         ArgumentNullException.ThrowIfNull(attemptUnitOfWork);
 
         var prepared = await PrepareAsync(attemptUnitOfWork, command, cancellationToken).ConfigureAwait(false);
-        if (prepared.IsFailure)
+        if (!prepared.TryGetValue(out var request))
             return Result.Failure<TEntityDTO>(prepared.Errors);
 
-        var request = prepared.Value!;
-
         var result = await requestMapper.CreateEntityAsync(request, cancellationToken).ConfigureAwait(false);
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var entity))
             return Result.Failure<TEntityDTO>(result.Errors);
 
-        var entity = result.Value!;
         var repository = attemptUnitOfWork.GetRepository<TEntity, TIdentifierType>();
 
         await PersistAsync(attemptUnitOfWork, repository, entity, cancellationToken).ConfigureAwait(false);

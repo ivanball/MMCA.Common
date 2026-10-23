@@ -507,10 +507,10 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             fields: fields,
             asTracking: asTracking,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (getResult.IsFailure)
+        if (!getResult.TryGetValue(out var found))
             return Result.Failure<object>(getResult.Errors);
 
-        var dto = DTOMapper.MapToDTO(getResult.Value!);
+        var dto = DTOMapper.MapToDTO(found);
 
         // Same rule as the list path: only shape when a field subset was requested.
         return string.IsNullOrWhiteSpace(fields)

@@ -139,7 +139,7 @@ internal static class EntityCsvExporter<TEntityDTO>
                 {
                     var result = await fetchPageAsync(pageNumber, cancellationToken).ConfigureAwait(false);
 
-                    if (result.IsFailure)
+                    if (!result.TryGetValue(out var page))
                     {
                         if (!started)
                             return Result.Failure(result.Errors);
@@ -152,7 +152,6 @@ internal static class EntityCsvExporter<TEntityDTO>
                         break;
                     }
 
-                    var page = result.Value!;
                     var items = page.Items;
 
                     if (!started)

@@ -135,13 +135,13 @@ public abstract partial class IdentityModuleDbSeederBase<TUser>(
 
         var (hash, salt) = PasswordHasher.HashPassword(account.Password);
         var userResult = CreateUser(account, hash, salt);
-        if (userResult.IsFailure)
+        if (!userResult.TryGetValue(out var user))
         {
             return;
         }
 
         var repository = UnitOfWork.GetRepository<TUser, UserIdentifierType>();
-        await repository.AddAsync(userResult.Value!, cancellationToken).ConfigureAwait(false);
+        await repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
         try
         {

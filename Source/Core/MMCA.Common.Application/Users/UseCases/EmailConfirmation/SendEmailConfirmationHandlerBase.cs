@@ -59,13 +59,12 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         ArgumentNullException.ThrowIfNull(command);
 
         var emailResult = Email.Create(command.Request.Email);
-        if (emailResult.IsFailure)
+        if (!emailResult.TryGetValue(out var email))
         {
             EmailConfirmationRejected(logger, "malformed address");
             return Result.Success();
         }
 
-        var email = emailResult.Value!;
         var user = await FindUntrackedByEmailAsync(email, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
@@ -82,13 +81,11 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         }
 
         var tokenResult = await tokenService.IssueAsync(email.Value, user.Id, cancellationToken).ConfigureAwait(false);
-        if (tokenResult.IsFailure)
+        if (!tokenResult.TryGetValue(out var token))
         {
             EmailConfirmationRejected(logger, "request throttled");
             return Result.Success();
         }
-
-        var token = tokenResult.Value!;
 
         try
         {

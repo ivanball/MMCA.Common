@@ -276,12 +276,10 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         var (hash, salt) = passwordHasher.HashPassword(request.Password);
         var userResult = CreateUser(request, hash, salt);
-        if (userResult.IsFailure)
+        if (!userResult.TryGetValue(out var user))
         {
             return Result.Failure<AuthenticationResponse>(userResult.Errors);
         }
-
-        var user = userResult.Value!;
 
         await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
