@@ -1,0 +1,50 @@
+@inject IStringLocalizer<DetailLoadStateContent> L
+
+@* The body of a single-record page while it is not showing its record: the loading spinner, the
+   "not found" alert for a record that does not exist, or an error with Retry for a record that could
+   not be fetched. The last two are separate states on purpose (see DetailLoadState): a transport
+   failure that reads "not found" tells the reader not to try again. Once the state is Loaded the
+   component renders ChildContent, so a page may either wrap its record markup or render this
+   component only in its not-loaded branch. *@
+
+@switch (State)
+{
+    case DetailLoadState.Loading:
+        <PageLoadingState Label="@LoadingLabel" />
+        break;
+    case DetailLoadState.NotFound:
+        <PageErrorState Message="@(NotFoundMessage ?? L["Error.NotFound"].Value)" />
+        break;
+    case DetailLoadState.Failed:
+        <div class="d-flex flex-column align-center pa-6" role="alert">
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Color="Color.Error" Class="mb-2" />
+            <MudText Typo="Typo.subtitle1" Color="Color.Error" Class="mb-2">@(FailedMessage ?? L["Error.LoadFailed"].Value)</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="OnRetry">@L["Button.Retry"]</MudButton>
+        </div>
+        break;
+    default:
+        @ChildContent
+        break;
+}
+
+@code {
+    /// <summary>Where the page's load stands (a <c>DetailPageBase</c> page passes its <c>LoadState</c>).</summary>
+    [Parameter] public DetailLoadState State { get; set; }
+
+    /// <summary>Accessible label for the loading spinner; <c>PageLoadingState</c> localizes a default.</summary>
+    [Parameter] public string? LoadingLabel { get; set; }
+
+    /// <summary>Text for a record that does not exist; defaults to a generic localized message.</summary>
+    [Parameter] public string? NotFoundMessage { get; set; }
+
+    /// <summary>Text for a load that failed; defaults to a generic localized message.</summary>
+    [Parameter] public string? FailedMessage { get; set; }
+
+    /// <summary>Runs the page's load again (typically the same method its route change calls).</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    /// <summary>The record markup, rendered once <see cref="State"/> is <see cref="DetailLoadState.Loaded"/>.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

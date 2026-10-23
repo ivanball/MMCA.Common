@@ -90,12 +90,10 @@ internal sealed class EFPermissionGrantStore(
             timeProvider.GetUtcNow().UtcDateTime,
             grantedBy);
 
-        if (grantResult.IsFailure)
+        if (!grantResult.TryGetValue(out var grant))
         {
             return Result.Failure(grantResult.Errors);
         }
-
-        var grant = grantResult.Value!;
 
         // Check-then-act, and the unique index is what makes losing the race harmless: a concurrent
         // duplicate insert fails at the database, the loser catches that failure below and answers

@@ -95,12 +95,10 @@ public abstract class DataExportControllerBase<TQuery>(
         Result<UserDataExportDTO> result = await exportHandler
             .HandleAsync(query, cancellationToken).ConfigureAwait(false);
 
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var export))
         {
             return HandleFailure(result.Errors);
         }
-
-        UserDataExportDTO export = result.Value!;
 
         // Serialized here rather than returned as an ObjectResult so the response really is a file:
         // Ok(export) would negotiate content and render inline, and the point of this endpoint is a

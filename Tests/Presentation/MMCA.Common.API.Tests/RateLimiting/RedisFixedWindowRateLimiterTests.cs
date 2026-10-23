@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Threading.RateLimiting;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -55,6 +56,85 @@ public sealed class RedisFixedWindowRateLimiterTests
         using var lease = await sut.AcquireAsync();
 
         lease.IsAcquired.Should().BeFalse();
+    }
+
+    // The rejection names the time to the end of the current one-minute window, so the 429 can tell
+    // the client when its allowance resets. FixedInstant is 12:34:56, four seconds before 12:35:00.
+    [Fact]
+    public async Task AcquireAsync_PastTheLimit_CarriesTheTimeToTheEndOfTheWindow()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 6);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var lease = await sut.AcquireAsync();
+
+        lease.IsAcquired.Should().BeFalse();
+        lease.MetadataNames.Should().Equal(MetadataName.RetryAfter.Name);
+        lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter).Should().BeTrue();
+        retryAfter.Should().Be(TimeSpan.FromSeconds(4));
+    }
+
+    [Fact]
+    public async Task AcquireAsync_PastTheLimitEarlyInAWindow_WaitsOutTheRestOfIt()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 6);
+        var instant = new DateTimeOffset(2026, 1, 1, 12, 34, 0, 250, TimeSpan.Zero);
+        await using var sut = new RedisFixedWindowRateLimiter(
+            connection.Object, "global:alice", 5, NullLogger.Instance, new FakeTimeProvider(instant));
+
+        using var lease = await sut.AcquireAsync();
+
+        lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter).Should().BeTrue();
+        retryAfter.Should().Be(TimeSpan.FromMilliseconds(59_750));
+    }
+
+    // Each rejection carries its own hint, so it cannot be a shared instance.
+    [Fact]
+    public async Task AcquireAsync_EachRejectionIsItsOwnLease()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 6);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var first = await sut.AcquireAsync();
+        using var second = await sut.AcquireAsync();
+
+        first.Should().NotBeSameAs(second);
+    }
+
+    [Fact]
+    public async Task AcquireAsync_WhenPermitted_CarriesNoMetadata()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 1);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var lease = await sut.AcquireAsync();
+
+        lease.MetadataNames.Should().BeEmpty();
+        lease.TryGetMetadata(MetadataName.RetryAfter, out _).Should().BeFalse();
+    }
+
+    // No later window can hold a request larger than the whole allowance, so no hint is given.
+    [Fact]
+    public async Task AcquireAsync_WhenPermitCountExceedsTheLimit_CarriesNoRetryAfter()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 1);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var lease = await sut.AcquireAsync(permitCount: 6);
+
+        lease.TryGetMetadata(MetadataName.RetryAfter, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AttemptAcquire_CarriesNoRetryAfter()
+    {
+        var (connection, _) = CreateConnection(incrementResult: 1);
+        await using var sut = CreateLimiter(connection.Object, permitLimit: 5);
+
+        using var lease = sut.AttemptAcquire();
+
+        lease.TryGetMetadata(MetadataName.RetryAfter, out _).Should().BeFalse(
+            "the synchronous path refused nothing, so it has no window to report");
     }
 
     // Only the increment that CREATES the window's key sets its TTL. Re-stamping the expiry on

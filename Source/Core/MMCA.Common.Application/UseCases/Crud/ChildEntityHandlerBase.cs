@@ -129,7 +129,7 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
             return Result.Failure<TChildDTO>(Error.NotFound.WithSource(HandlerName).WithTarget(typeof(TParent).Name));
 
         var result = Apply(parent, command);
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var child))
             return Result.Failure<TChildDTO>(result.Errors);
 
         try
@@ -155,8 +155,6 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
 
             return Result.Failure<TChildDTO>(duplicate.Errors);
         }
-
-        var child = result.Value!;
 
         LogAdded(parent, child, command);
         await OnAddedAsync(parent, child, command, cancellationToken).ConfigureAwait(false);

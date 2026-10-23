@@ -78,9 +78,9 @@ public abstract class LegalAcceptanceControllerBase(
             .GetForCurrentUserAsync(currentUserId.Value, currentVersion, cancellationToken)
             .ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var acceptance)
             ? HandleFailure(result.Errors)
-            : Ok(LegalAcceptancePolicy.Normalize(currentVersion, result.Value!));
+            : Ok(LegalAcceptancePolicy.Normalize(currentVersion, acceptance));
     }
 
     /// <summary>
@@ -120,8 +120,8 @@ public abstract class LegalAcceptanceControllerBase(
             .AcceptForCurrentUserAsync(currentUserId.Value, currentVersion!, cancellationToken)
             .ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var acceptance)
             ? HandleFailure(result.Errors)
-            : Ok(LegalAcceptancePolicy.Normalize(currentVersion, result.Value!));
+            : Ok(LegalAcceptancePolicy.Normalize(currentVersion, acceptance));
     }
 }

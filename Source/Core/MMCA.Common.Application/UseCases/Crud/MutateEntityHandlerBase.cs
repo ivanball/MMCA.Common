@@ -373,9 +373,9 @@ public abstract class MutateEntityHandlerBase<TCommand, TEntity, TIdentifierType
     {
         var result = await MutateCoreAsync(command, cancellationToken).ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var mutated)
             ? Result.Failure<TEntityDTO>(result.Errors)
-            : Result.Success(dtoMapper.MapToDTO(result.Value!));
+            : Result.Success(dtoMapper.MapToDTO(mutated));
     }
 }
 
@@ -420,9 +420,9 @@ public abstract class MutateEntityPayloadHandlerBase<TCommand, TEntity, TIdentif
 
         var result = await MutateCoreAsync(UnitOfWork, command, context, cancellationToken).ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var mutated)
             ? Result.Failure<TResultPayload>(result.Errors)
-            : BuildResult(result.Value!, command, context);
+            : BuildResult(mutated, command, context);
     }
 
     /// <summary>

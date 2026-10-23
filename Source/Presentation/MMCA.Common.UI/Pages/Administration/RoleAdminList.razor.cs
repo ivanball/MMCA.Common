@@ -120,7 +120,7 @@ public partial class RoleAdminList : ComponentBase, IDisposable
         {
             var result = await Roles.GetAllAsync(_cts.LifetimeToken());
             _loadResult = result;
-            _roles = result.IsSuccess ? result.Value! : [];
+            _roles = result.TryGetValue(out var roles) ? roles : [];
         }
         finally
         {

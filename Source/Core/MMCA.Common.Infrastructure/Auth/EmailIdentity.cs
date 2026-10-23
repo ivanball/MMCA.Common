@@ -26,7 +26,7 @@ internal static class EmailIdentity
 
         var result = Email.Create(email);
 #pragma warning disable CA1308 // Matches Email's own RFC 5321 lowercase normalization.
-        return result.IsSuccess ? result.Value!.Value : email.Trim().ToLowerInvariant();
+        return result.TryGetValue(out var normalized) ? normalized.Value : email.Trim().ToLowerInvariant();
 #pragma warning restore CA1308
     }
 }

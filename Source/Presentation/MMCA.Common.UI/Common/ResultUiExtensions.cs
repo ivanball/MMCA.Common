@@ -14,7 +14,7 @@ namespace MMCA.Common.UI.Common;
 /// The page-side half of the Result transport (ADR-030): the four things a Blazor page ever does
 /// with a failed <see cref="Result"/>, written once so no page hand-rolls them again.
 /// <list type="bullet">
-///   <item><see cref="TryGetValue{T}(Result{T}, out T)"/>: unwrap the value, or fall through to the error branch.</item>
+///   <item><see cref="Result{T}.TryGetValue(out T)"/> (on the result itself): unwrap the value, or fall through to the error branch.</item>
 ///   <item><see cref="OnFailureSetError{T}(Result{T}, Action{string}, IStringLocalizer)"/>: push the message into a page field rendered by an inline alert.</item>
 ///   <item><see cref="NotifyOnFailure{T}(Result{T}, IToastService, IStringLocalizer, ToastSeverity)"/>: raise the message as a toast.</item>
 ///   <item><see cref="HasErrorType"/> and friends: branch on WHY it failed (a 401 redirect, a 404 empty state).</item>
@@ -84,41 +84,7 @@ public static class ResultUiExtensions
     private static readonly ResourceManager SharedResources = new(typeof(SharedResource));
 
     /// <summary>
-    /// Unwraps a successful <see cref="Result{T}"/> inside a conditional, the way
-    /// <c>Dictionary.TryGetValue</c> does, so the success and failure branches sit side by side
-    /// without a null check that the type system cannot verify.
-    /// </summary>
-    /// <typeparam name="T">The success value type.</typeparam>
-    /// <param name="result">The result to unwrap.</param>
-    /// <param name="value">The success value when this returns <see langword="true"/>.</param>
-    /// <returns><see langword="true"/> when the result succeeded and carries a non-null value.</returns>
-    /// <example>
-    /// <code>
-    /// if ((await Service.GetPagedAsync(filters, 1, 10, null, null, cancellationToken: token)).TryGetValue(out var page))
-    /// {
-    ///     _items = page.Items;
-    /// }
-    /// </code>
-    /// </example>
-    public static bool TryGetValue<T>(this Result<T> result, [NotNullWhen(true)] out T? value)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-
-        // The failure branch is decided by IsFailure, not by the value: for a value type (a
-        // (Items, TotalItems) tuple, an int count) the default is never null, so a null test alone
-        // would report every failure as a success.
-        if (result.IsFailure)
-        {
-            value = default;
-            return false;
-        }
-
-        value = result.Value;
-        return value is not null;
-    }
-
-    /// <summary>
-    /// <see cref="TryGetValue{T}(Result{T}, out T)"/> with the errors handed back on the failing
+    /// <see cref="Result{T}.TryGetValue(out T)"/> with the errors handed back on the failing
     /// branch, for a page that wants to inspect them rather than only render them.
     /// <para>
     /// One edge is worth knowing: a <em>success</em> that carries a null value also takes the

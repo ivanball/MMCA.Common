@@ -57,34 +57,6 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    // ── UpdateRange ──
-    [Fact]
-    public async Task UpdateRange_UpdatesMultipleEntities()
-    {
-        var entity1 = TestEntity.Create(1, "Original1");
-        var entity2 = TestEntity.Create(2, "Original2");
-        await _sut.AddAsync(entity1);
-        await _sut.AddAsync(entity2);
-        await _context.SaveChangesAsync();
-
-        entity1.Name = "Updated1";
-        entity2.Name = "Updated2";
-        _sut.UpdateRange([entity1, entity2]);
-        await _context.SaveChangesAsync();
-
-        var found1 = await _sut.GetByIdAsync(1);
-        var found2 = await _sut.GetByIdAsync(2);
-        found1!.Name.Should().Be("Updated1");
-        found2!.Name.Should().Be("Updated2");
-    }
-
-    [Fact]
-    public void UpdateRange_NullEntities_Throws()
-    {
-        var act = () => _sut.UpdateRange(null!);
-        act.Should().Throw<ArgumentNullException>();
-    }
-
     // ── ExecuteDeleteAsync ──
     [Fact]
     public async Task ExecuteDeleteAsync_DeletesMatchingEntities()

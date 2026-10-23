@@ -40,6 +40,10 @@
     <ProjectReference Include="..\MMCA.Common.UI\MMCA.Common.UI.csproj" />
     <ProjectReference Include="..\MMCA.Common.API\MMCA.Common.API.csproj" />
     <ProjectReference Include="..\..\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <!-- Shared is every package's base layer and already a transitive dependency of all three bridges;
+         referenced directly because DisableTransitiveProjectReferences hides it from the compiler, and
+         the UI limiter's Retry-After header comes from the one helper there (RetryAfterHeader). -->
+    <ProjectReference Include="..\..\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

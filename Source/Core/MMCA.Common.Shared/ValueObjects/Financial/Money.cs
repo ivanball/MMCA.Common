@@ -102,8 +102,8 @@ public sealed record Money : ValueObject, IJsonOnDeserialized
     public static Money operator +(Money first, Money second)
     {
         var result = Add(first, second);
-        return result.IsSuccess
-            ? result.Value!
+        return result.TryGetValue(out var sum)
+            ? sum
             : throw new InvalidOperationException(result.Errors[0].Message);
     }
 

@@ -69,9 +69,9 @@ public sealed class NotificationsController(
         var command = new SendPushNotificationCommand(request, userId.Value) { DedupKey = dedupKey };
         Result<PushNotificationDTO> result = await sendHandler.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var created)
             ? HandleFailure(result.Errors)
-            : Created(new Uri(string.Create(CultureInfo.InvariantCulture, $"/notifications/{result.Value!.Id}"), UriKind.Relative), result.Value);
+            : Created(new Uri(string.Create(CultureInfo.InvariantCulture, $"/notifications/{created.Id}"), UriKind.Relative), created);
     }
 
     /// <summary>Gets push notification history (GET /api/notifications).</summary>

@@ -58,47 +58,6 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    // ── UpdateAsync ──
-    [Fact]
-    public async Task UpdateAsync_ModifiesTrackedEntity()
-    {
-        var entity = TestEntity.Create(1, "Original");
-        await _sut.AddAsync(entity);
-        await _context.SaveChangesAsync();
-
-        entity.Name = "Updated";
-        await _sut.UpdateAsync(entity);
-        await _context.SaveChangesAsync();
-
-        var found = await _sut.GetByIdAsync(1);
-        found!.Name.Should().Be("Updated");
-    }
-
-    [Fact]
-    public async Task UpdateAsync_NullEntity_Throws()
-    {
-        var act = () => _sut.UpdateAsync(null!);
-        await act.Should().ThrowAsync<ArgumentNullException>();
-    }
-
-    [Fact]
-    public async Task UpdateAsync_UntrackedEntity_AttachesAndUpdates()
-    {
-        var entity = TestEntity.Create(1, "Original");
-        await _sut.AddAsync(entity);
-        await _context.SaveChangesAsync();
-
-        _context.ChangeTracker.Clear();
-
-        var detached = TestEntity.Create(1, "Detached Update");
-        await _sut.UpdateAsync(detached);
-        await _context.SaveChangesAsync();
-
-        _context.ChangeTracker.Clear();
-        var found = await _sut.GetByIdAsync(1);
-        found!.Name.Should().Be("Detached Update");
-    }
-
     // ── GetByIdAsync ──
     [Fact]
     public async Task GetByIdAsync_ExistingEntity_ReturnsEntity()
@@ -414,26 +373,6 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         var count = await _context.SaveChangesAsync();
 
         count.Should().Be(2);
-    }
-
-    // ── GetFullErrorTextAndRollbackEntityChanges (via constraint violation) ──
-    [Fact]
-    public async Task UpdateAsync_TrackedEntity_WithConflictingValues_CompletesWithoutException()
-    {
-        // Arrange: add two entities
-        var entity1 = TestEntity.Create(1, "First");
-        var entity2 = TestEntity.Create(2, "Second");
-        await _sut.AddAsync(entity1);
-        await _sut.AddAsync(entity2);
-        await _context.SaveChangesAsync();
-
-        // Act: update tracked entity with same values as another entity (no unique constraint, so this succeeds)
-        var updatedEntity = TestEntity.Create(1, "Second");
-        await _sut.UpdateAsync(updatedEntity);
-
-        // Assert: the update completed
-        var found = await _sut.GetByIdAsync(1);
-        found!.Name.Should().Be("Second");
     }
 
     // ── SetOriginalRowVersion (child-entity overload, ADR-035) ──

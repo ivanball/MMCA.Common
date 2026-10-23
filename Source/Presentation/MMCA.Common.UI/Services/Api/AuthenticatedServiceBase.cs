@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using MMCA.Common.Shared.Http;
+using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using Polly;
 using Polly.Retry;
@@ -21,6 +22,8 @@ public abstract class AuthenticatedServiceBase(
     /// Polly retry policy: 3 retries on <see cref="HttpRequestException"/> or a retryable response
     /// status (see <c>IsRetryableResponse</c>), with exponential backoff (2s, 4s, 8s) plus up to
     /// one second of random jitter so a fleet of clients does not re-converge on the same instant.
+    /// A 429 that names a <c>Retry-After</c> is waited out for exactly that long instead, and is not
+    /// retried at all when it asks for more than <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/>.
     /// Every retried response is disposed; the caller owns the final one. A POST or PATCH response is
     /// retried only when its request carried an <c>Idempotency-Key</c> (see <c>IsReplaySafe</c>).
     /// </summary>
@@ -104,10 +107,18 @@ public abstract class AuthenticatedServiceBase(
     /// protocol will not start working within the retry window, so retrying only burns the budget
     /// and delays the error the caller needs to see. 408 (Request Timeout) and 429 (Too Many
     /// Requests) are the server explicitly inviting a later attempt, which the backoff supplies.
+    /// A 429 whose <c>Retry-After</c> asks for longer than
+    /// <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/> is the exception: the rate-limit window
+    /// will not reset within any wait worth holding the user for, so the refusal surfaces at once.
     /// </remarks>
-    private static bool IsRetryableResponse(HttpResponseMessage response)
+    private static bool IsRetryableResponse(HttpResponseMessage response, TimeProvider timeProvider)
     {
         if (response.StatusCode is HttpStatusCode.NotImplemented or HttpStatusCode.HttpVersionNotSupported)
+        {
+            return false;
+        }
+
+        if (RetryAfterHeader.ExceedsRetryBudget(response, timeProvider))
         {
             return false;
         }
@@ -189,6 +200,26 @@ public abstract class AuthenticatedServiceBase(
 #pragma warning restore S2245, CA5394
 
     /// <summary>
+    /// The wait before retry <paramref name="attempt"/>: the delay a 429's <c>Retry-After</c> names
+    /// (the retry predicate has already refused one over <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/>),
+    /// otherwise <paramref name="backoff"/>. Only a 429 is read, so a 5xx keeps the backoff.
+    /// </summary>
+    /// <param name="attempt">The 1-based retry attempt.</param>
+    /// <param name="response">The response being retried, or <see langword="null"/> for a transport failure.</param>
+    /// <param name="backoff">The backoff for a response that names no delay.</param>
+    /// <param name="timeProvider">The clock a date-form <c>Retry-After</c> is measured against.</param>
+    /// <returns>How long to wait before the next attempt.</returns>
+    internal static TimeSpan RetryDelay(
+        int attempt,
+        HttpResponseMessage? response,
+        Func<int, TimeSpan> backoff,
+        TimeProvider timeProvider) =>
+        response is { StatusCode: HttpStatusCode.TooManyRequests }
+            && RetryAfterHeader.TryGetDelay(response, timeProvider, out var retryAfter)
+            ? retryAfter
+            : backoff(attempt);
+
+    /// <summary>
     /// Builds the retry policy. Internal and backoff-injectable so a test can exercise the disposal
     /// contract below without waiting out the real delays.
     /// </summary>
@@ -200,8 +231,26 @@ public abstract class AuthenticatedServiceBase(
     /// carries no result, hence the null-conditional. The final response is NOT disposed here, since
     /// the caller owns it.
     /// </remarks>
-    internal static AsyncRetryPolicy<HttpResponseMessage> BuildRetryPolicy(Func<int, TimeSpan> backoff) => Policy
-        .Handle<HttpRequestException>(IsRetryableException)
-        .OrResult<HttpResponseMessage>(IsRetryableResponse)
-        .WaitAndRetryAsync(3, backoff, onRetry: (outcome, _) => outcome.Result?.Dispose());
+    /// <param name="backoff">The backoff for an attempt whose response names no <c>Retry-After</c>.</param>
+    /// <param name="timeProvider">
+    /// The clock a date-form <c>Retry-After</c> is measured against; defaults to <see cref="TimeProvider.System"/>.
+    /// </param>
+    /// <returns>The retry policy.</returns>
+    internal static AsyncRetryPolicy<HttpResponseMessage> BuildRetryPolicy(
+        Func<int, TimeSpan> backoff,
+        TimeProvider? timeProvider = null)
+    {
+        var clock = timeProvider ?? TimeProvider.System;
+        return Policy
+            .Handle<HttpRequestException>(IsRetryableException)
+            .OrResult<HttpResponseMessage>(response => IsRetryableResponse(response, clock))
+            .WaitAndRetryAsync(
+                3,
+                sleepDurationProvider: (attempt, outcome, _) => RetryDelay(attempt, outcome.Result, backoff, clock),
+                onRetryAsync: (outcome, _, _, _) =>
+                {
+                    outcome.Result?.Dispose();
+                    return Task.CompletedTask;
+                });
+    }
 }

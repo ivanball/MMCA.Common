@@ -79,17 +79,6 @@ public sealed class ResultUiExtensionsTests
     }
 
     [Fact]
-    public void TryGetValue_ReturnsFalse_ForASuccessCarryingNull()
-    {
-        var result = Result.Success<string?>(null);
-
-        bool unwrapped = result.TryGetValue(out var value);
-
-        unwrapped.Should().BeFalse("a page cannot bind a null payload even though the call succeeded");
-        value.Should().BeNull();
-    }
-
-    [Fact]
     public void TryGetValue_WithErrors_HandsBackAnEmptyErrorList_OnSuccess()
     {
         var result = Result.Success(42);
@@ -124,16 +113,6 @@ public sealed class ResultUiExtensionsTests
         unwrapped.Should().BeFalse();
         value.Should().Be(0);
         errors.Should().ContainSingle();
-    }
-
-    [Fact]
-    public void TryGetValue_Throws_ForANullResult()
-    {
-        Result<string> result = null!;
-
-        Func<bool> act = () => result.TryGetValue(out _);
-
-        act.Should().Throw<ArgumentNullException>();
     }
 
     // == LocalizedErrorMessages ==

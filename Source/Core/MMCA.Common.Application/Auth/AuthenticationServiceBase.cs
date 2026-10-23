@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Application.Auth.Sessions;
@@ -6,6 +8,7 @@ using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
@@ -71,6 +74,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     IOptions<EmailConfirmationSettings>? emailConfirmationSettings = null) : IAuthenticationService
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
 {
+    /// <summary>The best-effort operation name (and metric tag) for the sign-in rehash.</summary>
+    private const string PasswordRehashOperation = "password-rehash";
+
     /// <summary>
     /// The second-factor method that satisfied THIS request's challenge, or null. Armed by
     /// <see cref="LoginAsync"/> before the token is minted and carried over by
@@ -118,6 +124,17 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </para>
     /// </summary>
     protected string? CurrentTermsVersion => validators.CurrentTermsVersion;
+
+    /// <summary>
+    /// The logger for the best-effort password rehash after a successful sign-in (see
+    /// <see cref="IPasswordRehashableUser"/>). Defaults to a no-op logger; an app that wants the log
+    /// line overrides it with its own injected logger (for example
+    /// <c>protected override ILogger Logger =&gt; logger;</c>). A virtual property rather than a
+    /// constructor argument so the constructor stays within the framework's dependency ceiling and
+    /// every existing subclass keeps compiling. A failed rehash is counted on the
+    /// <c>MMCA.Common.BestEffort</c> meter whether or not this is overridden.
+    /// </summary>
+    protected virtual ILogger Logger => NullLogger.Instance;
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> LoginAsync(
@@ -206,15 +223,20 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Reset failed attempts and lockout on successful login.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
+        Result<AuthenticationResponse> issued;
         _multiFactorMethod = MultiFactorMethodFor(secondFactor.Value);
         try
         {
-            return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+            issued = await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _multiFactorMethod = null;
         }
+
+        await RehashPasswordIfNeededAsync(issued, user, request.Password).ConfigureAwait(false);
+
+        return issued;
     }
 
     /// <inheritdoc />
@@ -254,12 +276,10 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         var (hash, salt) = passwordHasher.HashPassword(request.Password);
         var userResult = CreateUser(request, hash, salt);
-        if (userResult.IsFailure)
+        if (!userResult.TryGetValue(out var user))
         {
             return Result.Failure<AuthenticationResponse>(userResult.Errors);
         }
-
-        var user = userResult.Value!;
 
         await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
@@ -619,6 +639,11 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// decoy material would not: a hasher that rejects material of the wrong size before deriving
     /// anything (the shipped one does) answers it instantly once the decoy's sizes stop matching its
     /// own, which silently reopens the timing gap.
+    /// <para>
+    /// Hashing always derives at the hasher's CURRENT work factor, so this costs what a verification
+    /// of a current-format record costs. A record still on an older work factor costs that older
+    /// amount until its owner signs in once and <see cref="RehashPasswordIfNeededAsync"/> upgrades it.
+    /// </para>
     /// </remarks>
     private void BurnPasswordVerificationCost(string password)
     {
@@ -631,6 +656,56 @@ public abstract class AuthenticationServiceBase<TUser>(
     }
 
     /// <summary>
+    /// Upgrades the stored hash to the hasher's current format and work factor after a successful
+    /// sign-in, while the verified plaintext is still in hand. Runs only when the app's <c>User</c>
+    /// opts in through <see cref="IPasswordRehashableUser"/> and the hasher reports
+    /// <see cref="IPasswordHasher.NeedsRehash"/>.
+    /// </summary>
+    /// <remarks>
+    /// It runs AFTER the tokens are issued and saves on its own through the unit of work, so the
+    /// session save never carries the user row and a failure here (a refused invariant, a
+    /// concurrency conflict, a dropped connection) cannot fail a sign-in that has already succeeded:
+    /// it is logged and counted through <see cref="BestEffort"/>, and the record is simply upgraded on
+    /// a later sign-in. <see cref="CancellationToken.None"/> is deliberate: the sign-in is complete,
+    /// and an abandoned request must not turn into a cancellation surfacing from it.
+    /// </remarks>
+    /// <param name="issued">The token issuance result; nothing is rehashed unless it succeeded.</param>
+    /// <param name="user">The tracked user that has just signed in.</param>
+    /// <param name="password">The verified plaintext password.</param>
+    private Task RehashPasswordIfNeededAsync(Result<AuthenticationResponse> issued, TUser user, string password)
+    {
+        if (issued.IsFailure || user is not IPasswordRehashableUser rehashable)
+        {
+            return Task.CompletedTask;
+        }
+
+        return BestEffort.ExecuteAsync(
+            PasswordRehashOperation,
+            Logger,
+            async ct =>
+            {
+                if (!passwordHasher.NeedsRehash(rehashable.PasswordHash))
+                {
+                    return;
+                }
+
+                var (hash, salt) = passwordHasher.HashPassword(password);
+                var applied = rehashable.RehashPassword(hash, salt);
+                if (applied.IsFailure)
+                {
+                    AuthenticationServiceLog.PasswordRehashRejected(
+                        Logger,
+                        user.Id,
+                        string.Join(", ", applied.Errors.Select(e => e.Code)));
+                    return;
+                }
+
+                await unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+            },
+            CancellationToken.None);
+    }
+
+    /// <summary>
     /// The registration conflict, returned both by the up-front email check and by the
     /// unique-index race recovery in <see cref="RegisterAsync"/> so the two paths are
     /// indistinguishable to the caller.
@@ -638,4 +713,16 @@ public abstract class AuthenticationServiceBase<TUser>(
     private static Result<AuthenticationResponse> EmailAlreadyExistsFailure() =>
         Result.Failure<AuthenticationResponse>(
             Error.Conflict(AuthErrorCodes.EmailAlreadyExists, "An account with this email already exists.", nameof(RegisterAsync)));
+}
+
+/// <summary>
+/// Source-generated log messages for <see cref="AuthenticationServiceBase{TUser}"/>. A separate
+/// non-generic companion so the public base does not have to be partial.
+/// </summary>
+internal static partial class AuthenticationServiceLog
+{
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Password rehash for user {UserId} was refused by the aggregate ({ErrorCodes}); the sign-in is unaffected and the stored hash is unchanged")]
+    internal static partial void PasswordRehashRejected(ILogger logger, UserIdentifierType userId, string errorCodes);
 }

@@ -305,6 +305,25 @@ MMCA.Common.UI.Components.Notifications.NotificationListener.DisposeAsync() -> S
 MMCA.Common.UI.Components.Notifications.NotificationListener.NotificationListener() -> void
 MMCA.Common.UI.Components.Notifications.PendingToastHost
 MMCA.Common.UI.Components.Notifications.PendingToastHost.PendingToastHost() -> void
+MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadState.Failed = 3 -> MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadState.Loaded = 1 -> MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadState.Loading = 0 -> MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadState.NotFound = 2 -> MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.ChildContent.set -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.DetailLoadStateContent() -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.FailedMessage.get -> string?
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.FailedMessage.set -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.LoadingLabel.get -> string?
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.LoadingLabel.set -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.NotFoundMessage.get -> string?
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.NotFoundMessage.set -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.OnRetry.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.OnRetry.set -> void
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.State.get -> MMCA.Common.UI.Components.PageState.DetailLoadState
+MMCA.Common.UI.Components.PageState.DetailLoadStateContent.State.set -> void
 MMCA.Common.UI.Components.PageState.EmptyState
 MMCA.Common.UI.Components.PageState.EmptyState.EmptyState() -> void
 MMCA.Common.UI.Components.PageState.EmptyState.Icon.get -> string!
@@ -612,13 +631,16 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ToggleDensity() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase
 MMCA.Common.UI.Pages.Common.DetailPageBase.BeginEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.BeginLoad() -> (System.Threading.CancellationToken Token, int Generation)
 MMCA.Common.UI.Pages.Common.DetailPageBase.ClearDirty() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.CompleteLoad(int generation, MMCA.Common.Shared.Abstractions.Result! result) -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.DetailPageBase() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.EndEdit() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.IsDirty.get -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.IsEditing.get -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.LoadGuard.get -> MMCA.Common.UI.Common.LatestLoadGuard!
+MMCA.Common.UI.Pages.Common.DetailPageBase.LoadState.get -> MMCA.Common.UI.Components.PageState.DetailLoadState
 MMCA.Common.UI.Pages.Common.DetailPageBase.MarkDirty() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.PageToken.get -> System.Threading.CancellationToken
 MMCA.Common.UI.Pages.Common.ErrorMessages
@@ -1431,7 +1453,6 @@ static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure(this MMCA.Common
 static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, MMCA.Common.UI.Common.Interfaces.IToastService! toast, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error) -> MMCA.Common.Shared.Abstractions.Result<T>!
 static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError(this MMCA.Common.Shared.Abstractions.Result! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result<T>!
-static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value) -> bool
 static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value, out System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> bool
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultRetryDelay.get -> System.TimeSpan
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultTimeout.get -> System.TimeSpan
@@ -1568,6 +1589,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Notifications.NotificationBell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.NotificationListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.PendingToastHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.PageState.DetailLoadStateContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.EmptyState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageErrorState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -206,6 +206,27 @@ public sealed class Result<T> : Result
     /// <summary>Gets the success value. <see langword="null"/> when <see cref="Result.IsFailure"/> is <see langword="true"/>.</summary>
     public T? Value { get; }
 
+    /// <summary>
+    /// Gets the success value when this result succeeded. Prefer it to reading <see cref="Value"/>
+    /// after an <see cref="Result.IsSuccess"/> check: the compiler tracks this check, so
+    /// <paramref name="value"/> needs no <c>!</c> in the <see langword="true"/> branch, and deleting
+    /// or reordering the check breaks the build instead of letting a null escape. When
+    /// <typeparamref name="T"/> is itself nullable, <paramref name="value"/> stays nullable.
+    /// </summary>
+    /// <param name="value">The success value, or the default of <typeparamref name="T"/> on failure.</param>
+    /// <returns><see langword="true"/> when the result succeeded.</returns>
+    public bool TryGetValue([MaybeNullWhen(false)] out T value)
+    {
+        if (IsFailure)
+        {
+            value = default;
+            return false;
+        }
+
+        value = Value!;
+        return true;
+    }
+
     /// <summary>Initializes a new success result with the specified value.</summary>
     /// <param name="value">The success value.</param>
     internal Result(T value) => Value = value;

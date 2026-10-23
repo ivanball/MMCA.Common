@@ -18,12 +18,39 @@ public sealed class PasswordHasherTests
     }
 
     [Fact]
-    public void HashPassword_Produces64ByteHashAnd32ByteSalt()
+    public void HashPassword_Produces69ByteVersionedHashAnd32ByteSalt()
     {
         var (hash, salt) = _sut.HashPassword("SecurePassword123");
 
-        hash.Should().HaveCount(64);
+        hash.Should().HaveCount(69, "a 1-byte version, a 4-byte iteration count and the 64-byte PBKDF2 output");
         salt.Should().HaveCount(32);
+    }
+
+    // ── NeedsRehash ──
+    [Fact]
+    public void NeedsRehash_ForAHashItJustProduced_IsFalse()
+    {
+        var (hash, _) = _sut.HashPassword("SecurePassword123");
+
+        _sut.NeedsRehash(hash).Should().BeFalse();
+    }
+
+    [Fact]
+    public void NeedsRehash_ForALegacy64ByteHash_IsTrue() =>
+        _sut.NeedsRehash(new byte[64]).Should().BeTrue();
+
+    [Fact]
+    public void NeedsRehash_ForUnrecognizedMaterial_IsFalse()
+    {
+        _sut.NeedsRehash([]).Should().BeFalse();
+        _sut.NeedsRehash(new byte[65]).Should().BeFalse();
+    }
+
+    [Fact]
+    public void NeedsRehash_WithNullHash_Throws()
+    {
+        var act = () => _sut.NeedsRehash(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

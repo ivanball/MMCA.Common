@@ -7,7 +7,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 /// <summary>
 /// MiniProfiler decorator for <see cref="IRepository{TEntity,TIdentifierType}"/>.
 /// Extends <see cref="EFReadRepositoryDecorator{TEntity,TIdentifierType}"/> with profiled
-/// write operations (add, update). Uses <see cref="ProfilingHelper"/> for timing.
+/// write operations (add, set-based update and delete). Uses <see cref="ProfilingHelper"/> for timing.
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
@@ -27,16 +27,6 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
     public Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(AddRangeAsync),
             () => _inner.AddRangeAsync(entities, cancellationToken));
-
-    public Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default) =>
-        ProfilingHelper.ProfileAsync(ClassName, nameof(UpdateAsync),
-            () => _inner.UpdateAsync(entity, cancellationToken));
-
-    public void UpdateRange(IEnumerable<TEntity> entities)
-    {
-        using var step = ProfilingHelper.BeginStep(ClassName, nameof(UpdateRange));
-        _inner.UpdateRange(entities);
-    }
 
     public void SetOriginalRowVersion(TEntity entity, byte[] rowVersion) =>
         _inner.SetOriginalRowVersion(entity, rowVersion);

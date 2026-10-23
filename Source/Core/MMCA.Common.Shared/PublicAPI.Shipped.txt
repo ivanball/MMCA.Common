@@ -90,6 +90,7 @@ MMCA.Common.Shared.Abstractions.Result<T>.Map<TOut>(System.Func<T, TOut>! mapper
 MMCA.Common.Shared.Abstractions.Result<T>.Match<TResult>(System.Func<T, TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> TResult
 MMCA.Common.Shared.Abstractions.Result<T>.MatchAsync<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>!>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, System.Threading.Tasks.Task<TResult>!>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Shared.Abstractions.Result<T>.Tap(System.Action<T>! action) -> MMCA.Common.Shared.Abstractions.Result<T>!
+MMCA.Common.Shared.Abstractions.Result<T>.TryGetValue(out T value) -> bool
 MMCA.Common.Shared.Abstractions.Result<T>.Value.get -> T?
 MMCA.Common.Shared.Abstractions.ResultExtensions
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute
@@ -543,8 +544,8 @@ MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UnavailableReason.get -> str
 MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UnavailableReason.init -> void
 MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UserDataExportSectionDTO() -> void
 MMCA.Common.Shared.Resilience.BrokerResilienceDefaults
-MMCA.Common.Shared.Resilience.GrpcResilienceDefaults
 MMCA.Common.Shared.Resilience.HttpResilienceDefaults
+MMCA.Common.Shared.Resilience.RetryAfterHeader
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.ResultJsonConverterFactory() -> void
 MMCA.Common.Shared.ValueObjects.Contact.Address
@@ -963,21 +964,23 @@ static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.BreakDuration.get 
 static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.FailureRatio.get -> double
 static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.MinimumThroughput.get -> int
 static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.SamplingDuration.get -> System.TimeSpan
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.AttemptTimeout.get -> System.TimeSpan
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.BreakDuration.get -> System.TimeSpan
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.FailureRatio.get -> double
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MaxRetryAttempts.get -> int
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MinimumThroughput.get -> int
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.SamplingDuration.get -> System.TimeSpan
-static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.AttemptTimeout.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.CircuitBreakerSamplingDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.GrpcAttemptTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.GrpcCircuitBreakerBreakDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio.get -> double
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.GrpcCircuitBreakerMinimumThroughput.get -> int
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.GrpcTotalRequestTimeout.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.KeepAlivePingDelay.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.KeepAlivePingTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.MaxRetryAfterWait.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.MaxRetryAttempts.get -> int
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionIdleTimeout.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionLifetime.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.RetryAfterHeader.ExceedsRetryBudget(System.Net.Http.HttpResponseMessage? response, System.TimeProvider! timeProvider) -> bool
+static MMCA.Common.Shared.Resilience.RetryAfterHeader.Format(System.TimeSpan retryAfter) -> string!
+static MMCA.Common.Shared.Resilience.RetryAfterHeader.TryGetDelay(System.Net.Http.HttpResponseMessage! response, System.TimeProvider! timeProvider, out System.TimeSpan delay) -> bool
 static MMCA.Common.Shared.ValueObjects.Contact.Address.Create(string! addressLine1, string? addressLine2, string? city, string? state, string? zipCode, string? country) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Contact.Address!>!
 static MMCA.Common.Shared.ValueObjects.Contact.Address.operator !=(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Contact.Address.operator ==(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool

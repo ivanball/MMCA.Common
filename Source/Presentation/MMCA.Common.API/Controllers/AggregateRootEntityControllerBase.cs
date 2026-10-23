@@ -83,14 +83,13 @@ public abstract class AggregateRootEntityControllerBase<
     {
         var result = await CreateHandler.HandleAsync(request, cancellationToken).ConfigureAwait(false);
 
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var created))
         {
             return HandleFailure(result.Errors);
         }
 
         // Link answers an absolute URL; the fallback is host-relative. Each is parsed with its own
         // kind, because RelativeOrAbsolute reads "/x/1" as a file URI on Unix.
-        var created = result.Value!;
         var location = Url.Link(GetByIdRouteName, new { id = created.Id }) is { } link
             ? new Uri(link, UriKind.Absolute)
             : new Uri(CollectionMemberPath(created.Id), UriKind.Relative);

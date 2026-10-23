@@ -176,7 +176,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
                 return;
             }
 
-            if (role.IsFailure)
+            if (!role.TryGetValue(out var loadedRole))
             {
                 _loadResult = role;
                 Reset();
@@ -189,7 +189,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
                 return;
             }
 
-            if (catalog.IsFailure)
+            if (!catalog.TryGetValue(out var permissionCatalog))
             {
                 _loadResult = catalog;
                 Reset();
@@ -197,11 +197,11 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
             }
 
             _compiled.Clear();
-            _compiled.UnionWith(role.Value!.RegisteredPermissions);
+            _compiled.UnionWith(loadedRole.RegisteredPermissions);
             _stored.Clear();
-            _stored.UnionWith(role.Value.StoredPermissions);
+            _stored.UnionWith(loadedRole.StoredPermissions);
 
-            _groups = Group(catalog.Value!.Permissions);
+            _groups = Group(permissionCatalog.Permissions);
         }
         catch (OperationCanceledException) when (!_load.IsCurrent(generation))
         {
@@ -303,7 +303,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
             var savedRole = Role;
             var result = await Roles.SetStoredPermissionsAsync(savedRole, permissions, _cts.LifetimeToken());
             var formStillShowsSavedRole = string.Equals(savedRole, Role, StringComparison.Ordinal);
-            if (result.IsFailure)
+            if (!result.TryGetValue(out var saved))
             {
                 if (formStillShowsSavedRole)
                 {
@@ -320,9 +320,9 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
             if (formStillShowsSavedRole)
             {
                 _compiled.Clear();
-                _compiled.UnionWith(result.Value!.RegisteredPermissions);
+                _compiled.UnionWith(saved.RegisteredPermissions);
                 _stored.Clear();
-                _stored.UnionWith(result.Value.StoredPermissions);
+                _stored.UnionWith(saved.StoredPermissions);
                 _isDirty = false;
             }
 

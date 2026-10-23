@@ -182,11 +182,11 @@ public abstract class EntityControllerBase<
             pageSize: pageSize,
             asTracking: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (result.IsFailure)
+        if (!result.TryGetValue(out var page))
             return HandleFailure(result.Errors);
 
-        Response.AppendPaginationHeader(result.Value!.PaginationMetadata);
-        return Ok(result.Value);
+        Response.AppendPaginationHeader(page.PaginationMetadata);
+        return Ok(page);
     }
 
     /// <summary>
@@ -329,12 +329,12 @@ public abstract class EntityControllerBase<
             asTracking: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return result.IsFailure
+        return !result.TryGetValue(out var lookups)
             ? HandleFailure(result.Errors)
             : Ok(
                 new CollectionResult<BaseLookup<TIdentifierType>>
                 {
-                    Items = [.. result.Value!]
+                    Items = [.. lookups]
                 });
     }
 

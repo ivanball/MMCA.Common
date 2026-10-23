@@ -22,5 +22,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Gateway\MMCA.Common.Gateway.csproj" />
+    <!-- Test-only: the Retry-After parity test pins the package's internal header copy to the one
+         in MMCA.Common.Shared. The package itself still references no MMCA project. -->
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
 </Project>

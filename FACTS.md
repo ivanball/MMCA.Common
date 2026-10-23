@@ -60,7 +60,7 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.Grpc` | `MMCA.Common.Shared` |
 | `MMCA.Common.UI` | `MMCA.Common.Shared` |
 | `MMCA.Common.UI.Maui` | `MMCA.Common.UI` |
-| `MMCA.Common.UI.Web` | `MMCA.Common.API`, `MMCA.Common.UI`, `MMCA.Common.Aspire` |
+| `MMCA.Common.UI.Web` | `MMCA.Common.Shared`, `MMCA.Common.API`, `MMCA.Common.UI`, `MMCA.Common.Aspire` |
 | `MMCA.Common.AI.Testing` | `MMCA.Common.AI` |
 | `MMCA.Common.Aspire` | `MMCA.Common.Shared` |
 | `MMCA.Common.Aspire.Hosting` | (none) |

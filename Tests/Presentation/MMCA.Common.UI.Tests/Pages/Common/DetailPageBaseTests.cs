@@ -1,5 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Components.Rendering;
+using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Components.PageState;
 using MMCA.Common.UI.Pages.Common;
 
 namespace MMCA.Common.UI.Tests.Pages.Common;
@@ -56,6 +58,67 @@ public sealed class DetailPageBaseTests : BunitTestBase
     }
 
     [Fact]
+    public void LoadState_StartsLoading() =>
+        new ProbePage().State.Should().Be(DetailLoadState.Loading);
+
+    [Fact]
+    public void CompleteLoad_OnSuccess_IsLoadedAndAdoptsTheValue()
+    {
+        var page = new ProbePage();
+        var (_, generation) = page.CallBeginLoad();
+
+        var adopt = page.CallCompleteLoad(generation, Result.Success(42));
+
+        adopt.Should().BeTrue();
+        page.State.Should().Be(DetailLoadState.Loaded);
+    }
+
+    [Fact]
+    public void CompleteLoad_OnNotFound_IsNotFound()
+    {
+        var page = new ProbePage();
+        var (_, generation) = page.CallBeginLoad();
+
+        var adopt = page.CallCompleteLoad(generation, Result.Failure<int>(Error.NotFound));
+
+        adopt.Should().BeFalse();
+        page.State.Should().Be(DetailLoadState.NotFound);
+    }
+
+    [Fact]
+    public void CompleteLoad_OnAnyOtherFailure_IsFailed_AndARetryGoesBackToLoading()
+    {
+        var page = new ProbePage();
+        var (_, generation) = page.CallBeginLoad();
+
+        var adopt = page.CallCompleteLoad(generation, Result.Failure<int>(Error.Failure("Http.Unavailable", "Service unavailable")));
+
+        adopt.Should().BeFalse();
+        page.State.Should().Be(DetailLoadState.Failed);
+
+        var (_, retryGeneration) = page.CallBeginLoad();
+        page.State.Should().Be(DetailLoadState.Loading);
+
+        page.CallCompleteLoad(retryGeneration, Result.Success(42)).Should().BeTrue();
+        page.State.Should().Be(DetailLoadState.Loaded);
+    }
+
+    [Fact]
+    public void CompleteLoad_ForASupersededLoad_LeavesTheStateToTheNewerLoad()
+    {
+        var page = new ProbePage();
+        var (_, stale) = page.CallBeginLoad();
+        var (_, current) = page.CallBeginLoad();
+
+        var adopt = page.CallCompleteLoad(stale, Result.Failure<int>(Error.NotFound));
+
+        adopt.Should().BeFalse();
+        page.State.Should().Be(DetailLoadState.Loading);
+        page.CallCompleteLoad(current, Result.Success(42)).Should().BeTrue();
+        page.State.Should().Be(DetailLoadState.Loaded);
+    }
+
+    [Fact]
     public void Dispose_CancelsThePageTokenAndRetiresTheLoadGuard()
     {
         var page = new ProbePage();
@@ -108,6 +171,12 @@ public sealed class DetailPageBaseTests : BunitTestBase
         public CancellationToken Token => PageToken;
 
         public MMCA.Common.UI.Common.LatestLoadGuard Guard => LoadGuard;
+
+        public DetailLoadState State => LoadState;
+
+        public (CancellationToken Token, int Generation) CallBeginLoad() => BeginLoad();
+
+        public bool CallCompleteLoad(int generation, Result result) => CompleteLoad(generation, result);
 
         public void CallBeginEdit() => BeginEdit();
 

@@ -16,4 +16,14 @@ public interface IPasswordHasher
     /// <param name="salt">The stored salt.</param>
     /// <returns><see langword="true"/> if the password matches the hash.</returns>
     bool VerifyPassword(string password, byte[] hash, byte[] salt);
+
+    /// <summary>
+    /// Whether a stored hash that has just verified was derived with parameters other than the ones
+    /// <see cref="HashPassword"/> uses now (an older format or work factor), so the caller should
+    /// re-derive it from the plaintext it is holding. The default answers <see langword="false"/>,
+    /// which keeps a custom hasher compiling and never triggers a rehash.
+    /// </summary>
+    /// <param name="hash">The stored password hash.</param>
+    /// <returns><see langword="true"/> if the hash should be replaced by a fresh <see cref="HashPassword"/> result.</returns>
+    bool NeedsRehash(byte[] hash) => false;
 }

@@ -5,8 +5,10 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.Shared.Resilience;
 
 namespace MMCA.Common.Aspire.Gateway;
 
@@ -60,6 +62,27 @@ public static class GatewayRateLimitingExtensions
     /// no reference to this one, so the proof travels on the request rather than being re-derived.
     /// </summary>
     internal const string TrustedInternalCallerItemKey = "MMCA.Common.Gateway.TrustedInternalCaller";
+
+    /// <summary>
+    /// Wraps a rate limiter's <c>OnRejected</c> callback so every 429 carries a <c>Retry-After</c>
+    /// header, in whole seconds rounded up, whenever the rejecting lease has a
+    /// <see cref="MetadataName.RetryAfter"/> hint (the fixed-window limiter does; a concurrency
+    /// rejection does not, and sends no header). A callback configured before this registration
+    /// still runs, after the header is written.
+    /// </summary>
+    /// <param name="previous">The callback already configured, if any.</param>
+    /// <returns>The callback to assign to <c>RateLimiterOptions.OnRejected</c>.</returns>
+    internal static Func<OnRejectedContext, CancellationToken, ValueTask> WithRetryAfterHeader(
+        Func<OnRejectedContext, CancellationToken, ValueTask>? previous) =>
+        (context, cancellationToken) =>
+        {
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            {
+                context.HttpContext.Response.Headers.RetryAfter = RetryAfterHeader.Format(retryAfter);
+            }
+
+            return previous?.Invoke(context, cancellationToken) ?? ValueTask.CompletedTask;
+        };
 
     /// <summary>
     /// Path prefixes that are exempt whatever the configuration says: liveness/readiness probes and
@@ -299,6 +322,10 @@ public static class GatewayRateLimitingExtensions
             return services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                // OnRejected is one shared slot on RateLimiterOptions, so the route-policy registration
+                // in MMCA.Common.Gateway installs the same header writer; each chains the one before it.
+                options.OnRejected = WithRetryAfterHeader(options.OnRejected);
 
                 // Chained, so a request must satisfy the per-IP window AND the replica-wide
                 // concurrency ceiling. Assignment (not AddPolicy), so calling this twice replaces

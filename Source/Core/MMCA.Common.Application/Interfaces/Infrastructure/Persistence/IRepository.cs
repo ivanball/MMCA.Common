@@ -386,18 +386,6 @@ public interface IWriteRepository<TEntity, TIdentifierType>
         IEnumerable<TEntity> entities,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Marks an existing entity as modified for persistence.</summary>
-    /// <param name="entity">The entity to update.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task UpdateAsync(
-        TEntity entity,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>Marks multiple existing entities as modified for persistence in a single batch.</summary>
-    /// <param name="entities">The entities to update.</param>
-    void UpdateRange(IEnumerable<TEntity> entities);
-
     /// <summary>
     /// Applies a client-supplied optimistic-concurrency token as the tracked entity's original
     /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (answered as

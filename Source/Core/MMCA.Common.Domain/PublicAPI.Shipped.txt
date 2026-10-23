@@ -27,6 +27,8 @@ MMCA.Common.Domain.Auth.ILegalAcceptingUser.AcceptedTermsVersion.get -> string?
 MMCA.Common.Domain.Auth.ILegalAcceptingUser.TermsAcceptedOn.get -> System.DateTime?
 MMCA.Common.Domain.Auth.IPasswordChangeableUser
 MMCA.Common.Domain.Auth.IPasswordChangeableUser.ChangePassword(byte[]! newPasswordHash, byte[]! newPasswordSalt) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.IPasswordRehashableUser
+MMCA.Common.Domain.Auth.IPasswordRehashableUser.RehashPassword(byte[]! newPasswordHash, byte[]! newPasswordSalt) -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.ITwoFactorUserState
 MMCA.Common.Domain.Auth.ITwoFactorUserState.IsTwoFactorEnabled.get -> bool
 MMCA.Common.Domain.Auth.ITwoFactorUserState.TwoFactorRecoveryCodeHashes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

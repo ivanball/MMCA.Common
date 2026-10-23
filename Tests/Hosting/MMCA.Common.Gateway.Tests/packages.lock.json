@@ -182,6 +182,9 @@
           "Yarp.ReverseProxy": "[2.3.0, )"
         }
       },
+      "mmca.common.shared": {
+        "type": "Project"
+      },
       "xunit.v3.extensibility.core": {
         "type": "CentralTransitive",
         "requested": "[4.0.2, )",

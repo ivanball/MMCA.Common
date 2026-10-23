@@ -75,7 +75,7 @@ public sealed class AuthSessionIssuer(
         // The session is opened BEFORE the access token is minted, because the token carries the
         // session's id in its `sid` claim and a session only has an id once it has been created.
         var opened = await OpenSessionAsync(userId, now, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
-        if (opened.IsFailure)
+        if (!opened.TryGetValue(out var issued))
         {
             return Result.Failure<AuthenticationResponse>(opened.Errors);
         }
@@ -83,8 +83,8 @@ public sealed class AuthSessionIssuer(
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success(new AuthenticationResponse(
-            mintAccessToken(opened.Value!.SessionId),
-            opened.Value.RefreshToken,
+            mintAccessToken(issued.SessionId),
+            issued.RefreshToken,
             now.Add(AccessTokenLifetime)));
     }
 
@@ -103,14 +103,14 @@ public sealed class AuthSessionIssuer(
         var sessionResult = await ResolveRotatableSessionAsync(userId, refreshToken, now, cancellationToken)
             .ConfigureAwait(false);
 
-        if (sessionResult.IsFailure)
+        if (!sessionResult.TryGetValue(out var session))
         {
             return Result.Failure<AuthenticationResponse>(sessionResult.Errors);
         }
 
-        var rotated = await RotateSessionAsync(sessionResult.Value!, userId, now, ipAddress, userAgent, cancellationToken)
+        var rotated = await RotateSessionAsync(session, userId, now, ipAddress, userAgent, cancellationToken)
             .ConfigureAwait(false);
-        if (rotated.IsFailure)
+        if (!rotated.TryGetValue(out var successor))
         {
             return Result.Failure<AuthenticationResponse>(rotated.Errors);
         }
@@ -119,8 +119,8 @@ public sealed class AuthSessionIssuer(
         // new `sid` too: a client's current-device marker follows the rotation instead of pointing at
         // the session the rotation just revoked.
         return Result.Success(new AuthenticationResponse(
-            mintAccessToken(rotated.Value!.SessionId),
-            rotated.Value.RefreshToken,
+            mintAccessToken(successor.SessionId),
+            successor.RefreshToken,
             now.Add(AccessTokenLifetime)));
     }
 
@@ -365,12 +365,11 @@ public sealed class AuthSessionIssuer(
             ipAddress,
             userAgent);
 
-        if (sessionResult.IsFailure)
+        if (!sessionResult.TryGetValue(out var session))
         {
             return Result.Failure<IssuedSession>(sessionResult.Errors);
         }
 
-        var session = sessionResult.Value!;
         await EnforceSessionCapAsync(userId, now, cancellationToken).ConfigureAwait(false);
         await refreshSessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
 
@@ -408,12 +407,11 @@ public sealed class AuthSessionIssuer(
             ipAddress,
             userAgent);
 
-        if (successorResult.IsFailure)
+        if (!successorResult.TryGetValue(out var successor))
         {
             return Result.Failure<IssuedSession>(successorResult.Errors);
         }
 
-        var successor = successorResult.Value!;
         var rotated = await refreshSessions
             .TryRotateAsync(session, successor, now, cancellationToken)
             .ConfigureAwait(false);

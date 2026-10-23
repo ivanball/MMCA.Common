@@ -90,12 +90,11 @@ public sealed partial class SendPushNotificationHandler(
             recipientIds.Count,
             dedupKey,
             command.Request.ScopeKey);
-        if (createResult.IsFailure)
+        if (!createResult.TryGetValue(out var notification))
         {
             return Result.Failure<PushNotificationDTO>(createResult.Errors);
         }
 
-        PushNotification notification = createResult.Value!;
         var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
         await repository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
 
