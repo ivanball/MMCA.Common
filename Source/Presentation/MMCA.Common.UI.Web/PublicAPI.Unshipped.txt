@@ -1,2 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Web.Services.ServerTokenStorageService.SessionEnded -> System.EventHandler?

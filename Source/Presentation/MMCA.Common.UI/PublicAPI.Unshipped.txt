@@ -1,7 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.EmptyConfirmed.get -> bool
-MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache) -> void
-MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage
-MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.SessionEnded -> System.EventHandler?
-MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SessionEnded -> System.EventHandler?
-MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.DeepLinkDispatcher(System.TimeProvider! timeProvider) -> void

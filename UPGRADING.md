@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.251.0] - 2026-10-23
 
 **`ViewerTimeZone.Format` renders an empty string until the browser zone is read.** Before, it
 painted UTC during prerender and the first interactive render. A page that calls

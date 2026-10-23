@@ -588,6 +588,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.DataGridListPageBase() ->
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.DenseGrid.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.EmptyConfirmed.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Id.get -> System.Guid
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsLoading.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsMobile.get -> bool
@@ -750,6 +751,7 @@ MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.JsFetchSessionCookieSync(M
 MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache) -> void
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.NotifyUserAuthentication(string! token) -> void
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.NotifyUserLogout() -> void
 MMCA.Common.UI.Services.Auth.OAuth.ConfigurationOAuthUISettings
@@ -778,6 +780,8 @@ MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.GetRefreshTokenAsync() -> 
 MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService
@@ -798,6 +802,7 @@ MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider) -> void
@@ -1031,6 +1036,7 @@ MMCA.Common.UI.Services.Capabilities.Media.PickedMedia.FileName.get -> string!
 MMCA.Common.UI.Services.Capabilities.Media.PickedMedia.PickedMedia(System.IO.Stream! content, string! fileName, string! contentType) -> void
 MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher
 MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.DeepLinkDispatcher() -> void
+MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.DeepLinkDispatcher(System.TimeProvider! timeProvider) -> void
 MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.Publish(string! route) -> void
 MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.RouteRequested -> System.EventHandler<MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkRouteEventArgs!>?
 MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.TryConsumePending(out string? route) -> bool
