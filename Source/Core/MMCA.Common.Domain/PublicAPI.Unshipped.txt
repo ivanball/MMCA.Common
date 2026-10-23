@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Domain.Auth.IPasswordRehashableUser
+MMCA.Common.Domain.Auth.IPasswordRehashableUser.RehashPassword(byte[]! newPasswordHash, byte[]! newPasswordSalt) -> MMCA.Common.Shared.Abstractions.Result!
