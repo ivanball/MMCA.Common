@@ -1,6 +1,7 @@
 using Grpc.Net.ClientFactory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Grpc.Interceptors;
 using MMCA.Common.Shared.Resilience;
 
@@ -63,7 +64,9 @@ public static class DependencyInjection
         ///   <item><see cref="JwtForwardingClientInterceptor"/>: forwards the inbound user's bearer
         ///   token; when there is none and <c>AddServiceTokenClient</c> registered an
         ///   <c>IServiceTokenProvider</c>, attaches this service's own token instead.</item>
-        ///   <item>Standard Polly resilience handler: matches the HTTP defaults from <c>MMCA.Common.Aspire</c>.</item>
+        ///   <item>Standard Polly resilience handler: the east-west gRPC values from
+        ///   <see cref="HttpResilienceDefaults"/> (its <c>Grpc</c>-prefixed members), then
+        ///   <paramref name="configureResilience"/> when the caller passes one.</item>
         /// </list>
         /// <para>
         /// Generated gRPC client classes (e.g. <c>Catalog.V1.ProductVariantService.ProductVariantServiceClient</c>)
@@ -85,8 +88,16 @@ public static class DependencyInjection
         /// </summary>
         /// <typeparam name="TClient">The generated gRPC client class.</typeparam>
         /// <param name="serviceName">The Aspire service-discovery name (e.g. <c>"catalog"</c>).</param>
+        /// <param name="configureResilience">
+        /// Optional per-client override, applied AFTER the framework defaults so it only needs to set what
+        /// differs (for example a longer <c>AttemptTimeout</c> for an edge that is legitimately slow). Keep
+        /// <c>CircuitBreaker.SamplingDuration</c> at least twice the attempt timeout: the resilience library
+        /// validates it when the client is first resolved.
+        /// </param>
         /// <returns>The <see cref="IHttpClientBuilder"/> for further customization.</returns>
-        public IHttpClientBuilder AddTypedGrpcClient<TClient>(string serviceName)
+        public IHttpClientBuilder AddTypedGrpcClient<TClient>(
+            string serviceName,
+            Action<HttpStandardResilienceOptions>? configureResilience = null)
             where TClient : class
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
@@ -122,16 +133,16 @@ public static class DependencyInjection
             // AddStandardResilienceHandler returns IHttpStandardResiliencePipelineBuilder; the
             // pipeline is wired onto the same IHttpClientBuilder, so return the original builder
             // for chaining further customization (e.g., additional message handlers). Every value
-            // comes from GrpcResilienceDefaults: its timeouts are the east-west path's own, sized from
+            // comes from HttpResilienceDefaults (its Grpc-prefixed members): its timeouts are the east-west path's own, sized from
             // measured gRPC latency (tighter than the outbound-HTTP 30s/90s), its retry budget is the
             // one MMCA.Common.Aspire's ConfigureHttpClientDefaults applies, and its circuit-breaker
             // values are explicit because an east-west gRPC call bypasses the Gateway's active health
             // checks.
             builder.AddStandardResilienceHandler(options =>
             {
-                options.AttemptTimeout.Timeout = GrpcResilienceDefaults.AttemptTimeout;
-                options.TotalRequestTimeout.Timeout = GrpcResilienceDefaults.TotalRequestTimeout;
-                options.Retry.MaxRetryAttempts = GrpcResilienceDefaults.MaxRetryAttempts;
+                options.AttemptTimeout.Timeout = HttpResilienceDefaults.GrpcAttemptTimeout;
+                options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.GrpcTotalRequestTimeout;
+                options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
 
                 // Every gRPC call is a POST, so the unsafe-method opt-out would switch the retry off
                 // entirely. Instead only a failure to reach the service BEFORE the request was sent
@@ -146,10 +157,13 @@ public static class DependencyInjection
                         or HttpRequestError.ConnectionError
                         or HttpRequestError.SecureConnectionError,
                 });
-                options.CircuitBreaker.SamplingDuration = GrpcResilienceDefaults.SamplingDuration;
-                options.CircuitBreaker.FailureRatio = GrpcResilienceDefaults.FailureRatio;
-                options.CircuitBreaker.MinimumThroughput = GrpcResilienceDefaults.MinimumThroughput;
-                options.CircuitBreaker.BreakDuration = GrpcResilienceDefaults.BreakDuration;
+                options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
+                options.CircuitBreaker.FailureRatio = HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio;
+                options.CircuitBreaker.MinimumThroughput = HttpResilienceDefaults.GrpcCircuitBreakerMinimumThroughput;
+                options.CircuitBreaker.BreakDuration = HttpResilienceDefaults.GrpcCircuitBreakerBreakDuration;
+
+                // The caller's override runs last, so it wins over every default above.
+                configureResilience?.Invoke(options);
             });
             return builder;
         }

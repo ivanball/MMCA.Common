@@ -50,7 +50,7 @@ public sealed class ResilienceHandlerTests
 
     // ── The configured pipeline must carry the shared east-west values, breaker included ──
     [Fact]
-    public void AddTypedGrpcClient_ConfiguresTheGrpcResilienceDefaults()
+    public void AddTypedGrpcClient_ConfiguresTheGrpcResilienceValues()
     {
         var services = new ServiceCollection();
 
@@ -65,15 +65,50 @@ public sealed class ResilienceHandlerTests
             .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
             .Get($"{nameof(FakeGrpcClient)}-standard");
 
-        options.AttemptTimeout.Timeout.Should().Be(GrpcResilienceDefaults.AttemptTimeout);
-        options.TotalRequestTimeout.Timeout.Should().Be(GrpcResilienceDefaults.TotalRequestTimeout);
-        options.Retry.MaxRetryAttempts.Should().Be(GrpcResilienceDefaults.MaxRetryAttempts);
-        options.CircuitBreaker.SamplingDuration.Should().Be(GrpcResilienceDefaults.SamplingDuration);
+        options.AttemptTimeout.Timeout.Should().Be(HttpResilienceDefaults.GrpcAttemptTimeout);
+        options.TotalRequestTimeout.Timeout.Should().Be(HttpResilienceDefaults.GrpcTotalRequestTimeout);
+        options.Retry.MaxRetryAttempts.Should().Be(HttpResilienceDefaults.MaxRetryAttempts);
+        options.CircuitBreaker.SamplingDuration.Should().Be(HttpResilienceDefaults.CircuitBreakerSamplingDuration);
         options.CircuitBreaker.FailureRatio.Should().Be(
-            GrpcResilienceDefaults.FailureRatio,
+            HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio,
             "east-west gRPC calls bypass the Gateway's active health checks, so the breaker shape is explicit rather than left at the library default");
-        options.CircuitBreaker.MinimumThroughput.Should().Be(GrpcResilienceDefaults.MinimumThroughput);
-        options.CircuitBreaker.BreakDuration.Should().Be(GrpcResilienceDefaults.BreakDuration);
+        options.CircuitBreaker.MinimumThroughput.Should().Be(HttpResilienceDefaults.GrpcCircuitBreakerMinimumThroughput);
+        options.CircuitBreaker.BreakDuration.Should().Be(HttpResilienceDefaults.GrpcCircuitBreakerBreakDuration);
+    }
+
+    // -- A per-client override runs after the defaults: it wins where it sets a value and leaves the rest --
+    [Fact]
+    public void AddTypedGrpcClient_AppliesTheOverrideAfterTheDefaults()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTypedGrpcClient<FakeGrpcClient>(
+            "fake-service",
+            options => options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(15));
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
+            .Get($"{nameof(FakeGrpcClient)}-standard");
+
+        options.AttemptTimeout.Timeout.Should().Be(TimeSpan.FromSeconds(15));
+        options.TotalRequestTimeout.Timeout.Should().Be(HttpResilienceDefaults.GrpcTotalRequestTimeout);
+        options.CircuitBreaker.FailureRatio.Should().Be(HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio);
+    }
+
+    [Fact]
+    public void AddTypedGrpcClient_WithoutAnOverride_KeepsTheDefaults()
+    {
+        var services = new ServiceCollection();
+
+        services.AddTypedGrpcClient<FakeGrpcClient>("fake-service", configureResilience: null);
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
+            .Get($"{nameof(FakeGrpcClient)}-standard");
+
+        options.AttemptTimeout.Timeout.Should().Be(HttpResilienceDefaults.GrpcAttemptTimeout);
     }
 
     // -- The retry must never replay a call that may have reached the handler (L80) --
@@ -138,32 +173,24 @@ public sealed class ResilienceHandlerTests
 
     // ── The values themselves, pinned so a silent edit shows up as a failing test ──
     [Fact]
-    public void GrpcResilienceDefaults_PinTheEastWestValues()
+    public void GrpcResilienceValues_PinTheEastWestValues()
     {
-        GrpcResilienceDefaults.AttemptTimeout.Should().Be(TimeSpan.FromSeconds(8));
-        GrpcResilienceDefaults.TotalRequestTimeout.Should().Be(TimeSpan.FromSeconds(20));
-        GrpcResilienceDefaults.SamplingDuration.Should().Be(TimeSpan.FromSeconds(60));
-        GrpcResilienceDefaults.MaxRetryAttempts.Should().Be(1);
-        GrpcResilienceDefaults.FailureRatio.Should().Be(0.5);
-        GrpcResilienceDefaults.MinimumThroughput.Should().Be(10);
-        GrpcResilienceDefaults.BreakDuration.Should().Be(TimeSpan.FromSeconds(10));
-    }
-
-    // -- The retry budget and breaker window stay tied to the outbound-HTTP path; the timeouts are gRPC's own --
-    [Fact]
-    public void GrpcResilienceDefaults_ShareTheHttpRetryBudgetAndSamplingWindow()
-    {
-        GrpcResilienceDefaults.SamplingDuration.Should().Be(HttpResilienceDefaults.CircuitBreakerSamplingDuration);
-        GrpcResilienceDefaults.MaxRetryAttempts.Should().Be(HttpResilienceDefaults.MaxRetryAttempts);
+        HttpResilienceDefaults.GrpcAttemptTimeout.Should().Be(TimeSpan.FromSeconds(8));
+        HttpResilienceDefaults.GrpcTotalRequestTimeout.Should().Be(TimeSpan.FromSeconds(20));
+        HttpResilienceDefaults.CircuitBreakerSamplingDuration.Should().Be(TimeSpan.FromSeconds(60));
+        HttpResilienceDefaults.MaxRetryAttempts.Should().Be(1);
+        HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio.Should().Be(0.5);
+        HttpResilienceDefaults.GrpcCircuitBreakerMinimumThroughput.Should().Be(10);
+        HttpResilienceDefaults.GrpcCircuitBreakerBreakDuration.Should().Be(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
-    public void GrpcResilienceDefaults_TimeoutsAreTighterThanTheHttpPath()
+    public void GrpcResilienceValues_TimeoutsAreTighterThanTheHttpPath()
     {
-        GrpcResilienceDefaults.AttemptTimeout.Should().BeLessThan(HttpResilienceDefaults.AttemptTimeout);
-        GrpcResilienceDefaults.TotalRequestTimeout.Should().BeLessThan(HttpResilienceDefaults.TotalRequestTimeout);
-        GrpcResilienceDefaults.TotalRequestTimeout.Should().BeGreaterThanOrEqualTo(
-            GrpcResilienceDefaults.AttemptTimeout * (GrpcResilienceDefaults.MaxRetryAttempts + 1),
+        HttpResilienceDefaults.GrpcAttemptTimeout.Should().BeLessThan(HttpResilienceDefaults.AttemptTimeout);
+        HttpResilienceDefaults.GrpcTotalRequestTimeout.Should().BeLessThan(HttpResilienceDefaults.TotalRequestTimeout);
+        HttpResilienceDefaults.GrpcTotalRequestTimeout.Should().BeGreaterThanOrEqualTo(
+            HttpResilienceDefaults.GrpcAttemptTimeout * (HttpResilienceDefaults.MaxRetryAttempts + 1),
             "the total budget must leave room for every attempt");
     }
 
@@ -180,6 +207,6 @@ public sealed class ResilienceHandlerTests
             .Get($"{nameof(FakeGrpcClient)}-standard");
 
         act.Should().NotThrow();
-        GrpcResilienceDefaults.SamplingDuration.Should().BeGreaterThanOrEqualTo(GrpcResilienceDefaults.AttemptTimeout * 2);
+        HttpResilienceDefaults.CircuitBreakerSamplingDuration.Should().BeGreaterThanOrEqualTo(HttpResilienceDefaults.GrpcAttemptTimeout * 2);
     }
 }

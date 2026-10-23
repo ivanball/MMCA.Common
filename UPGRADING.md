@@ -60,6 +60,25 @@ differences to know:
 
 The three-argument overload, `TryGetValue(out value, out errors)`, is unchanged.
 
+**`GrpcResilienceDefaults` is removed (breaking); its values live in `HttpResilienceDefaults`.** Every
+resilience number is now in one class, with the east-west gRPC path's own values `Grpc`-prefixed.
+
+| Removed | Use instead |
+|---------|-------------|
+| `GrpcResilienceDefaults.AttemptTimeout` | `HttpResilienceDefaults.GrpcAttemptTimeout` |
+| `GrpcResilienceDefaults.TotalRequestTimeout` | `HttpResilienceDefaults.GrpcTotalRequestTimeout` |
+| `GrpcResilienceDefaults.FailureRatio` | `HttpResilienceDefaults.GrpcCircuitBreakerFailureRatio` |
+| `GrpcResilienceDefaults.MinimumThroughput` | `HttpResilienceDefaults.GrpcCircuitBreakerMinimumThroughput` |
+| `GrpcResilienceDefaults.BreakDuration` | `HttpResilienceDefaults.GrpcCircuitBreakerBreakDuration` |
+| `GrpcResilienceDefaults.SamplingDuration` | `HttpResilienceDefaults.CircuitBreakerSamplingDuration` |
+| `GrpcResilienceDefaults.MaxRetryAttempts` | `HttpResilienceDefaults.MaxRetryAttempts` |
+
+The fix: replace the type and member names per the table. `AddTypedGrpcClient<TClient>(serviceName)`
+keeps compiling unchanged; its new optional `configureResilience` callback runs after the framework
+defaults, so to give one slow edge a longer budget pass only what differs, for example
+`options => options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(15)` (keep
+`CircuitBreaker.SamplingDuration` at least twice the attempt timeout; the library validates it).
+
 **Password hashes carry their own work factor (no action needed to keep signing in).** New hashes
 are 69 bytes (version byte, iteration count, digest) at 210,000 iterations; existing 64-byte hashes
 keep verifying at 600,000. To upgrade stored hashes as users sign in, implement

@@ -1,1 +1,5 @@
 #nullable enable
+*REMOVED*MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTypedGrpcClient<TClient>(string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+*REMOVED*static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTypedGrpcClient<TClient>(string! serviceName, System.Action<Microsoft.Extensions.Http.Resilience.HttpStandardResilienceOptions!>? configureResilience = null) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName, System.Action<Microsoft.Extensions.Http.Resilience.HttpStandardResilienceOptions!>? configureResilience = null) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
