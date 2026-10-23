@@ -32,6 +32,42 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.252.0] - 2026-10-23
+
+**`IWriteRepository.UpdateAsync` and `UpdateRange` are removed (breaking).** A tracked aggregate
+already saves its changes on `SaveChangesAsync`, and on an untracked entity the two methods called
+`DbSet.Update`, which marks every column modified and invites a lost update. No consumer called them.
+
+| Removed | Use instead |
+|---------|-------------|
+| `IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity, CancellationToken)` | Load the aggregate tracked, change it through its own methods, then `SaveChangesAsync` |
+| `IWriteRepository<TEntity, TIdentifierType>.UpdateRange(IEnumerable<TEntity>)` | The same, per aggregate |
+
+The fix: none for production code. A hand-written test fake that implemented the two members keeps
+compiling (they become ordinary public methods); delete them.
+
+**The one-argument `ResultUiExtensions.TryGetValue` is removed (breaking).** `Result<T>.TryGetValue`
+is now an instance method, and C# binds an instance method ahead of an extension, so every existing
+`result.TryGetValue(out var value)` call already resolves to it and no call site changes. Two
+differences to know:
+
+1. A SUCCESS carrying a null value returns `true` with a null `value` (the extension returned
+   `false`). The framework's own client services never produce that shape: a 2xx with no body fails
+   with `Http.EmptyResponse`.
+2. On a `Result<T?>` the value stays nullable in the success branch, so the compiler may now ask for
+   a null check (CS8602 and friends under `TreatWarningsAsErrors`). Add the check; do not suppress it
+   with `!`, since that null is real.
+
+The three-argument overload, `TryGetValue(out value, out errors)`, is unchanged.
+
+**Password hashes carry their own work factor (no action needed to keep signing in).** New hashes
+are 69 bytes (version byte, iteration count, digest) at 210,000 iterations; existing 64-byte hashes
+keep verifying at 600,000. To upgrade stored hashes as users sign in, implement
+`IPasswordRehashableUser` on the Identity `User` aggregate: a `RehashPassword(hash, salt)` that
+replaces the two fields with the same invariants as `ChangePassword` but raises NO domain event.
+Without it, legacy hashes simply stay legacy. A column sized for exactly 64 bytes would truncate the
+new hash, so confirm the `PasswordHash` column has no fixed length of 64.
+
 ## [1.251.0] - 2026-10-23
 
 **`ViewerTimeZone.Format` renders an empty string until the browser zone is read.** Before, it

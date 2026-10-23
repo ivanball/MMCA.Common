@@ -4,6 +4,37 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.252.0] - 2026-10-23
+
+### Added
+
+- `Result<T>.TryGetValue(out T value)` (MMCA.Common.Shared), annotated `[MaybeNullWhen(false)]`: the compiler tracks the check, so the value needs no `!` in the success branch, and deleting or reordering the check breaks the build instead of letting a null escape. A `Result<T?>` keeps its value nullable, so a real null is never hidden.
+- `DetailLoadState` and `DetailLoadStateContent` (MMCA.Common.UI.Components.PageState): a single-record page renders loading, not found, or an error with a Retry button as separate states, so a failed fetch no longer reads as "not found". `DetailPageBase` gains `LoadState`, `BeginLoad()` and `CompleteLoad(generation, result)`, which map an `ErrorType.NotFound` failure to NotFound and every other failure to Failed, and leave the state alone for a superseded load.
+- `HttpResilienceDefaults.MaxRetryAfterWait` (8 seconds) sets the longest `Retry-After` a client waits out before retrying a 429.
+- `RetryAfterHeader` (MMCA.Common.Shared.Resilience) formats a rate-limit retry hint as a `Retry-After` value and reads either header form back (`Format`, `TryGetDelay`, `ExceedsRetryBudget`).
+- Every MMCA rate limiter (API `AddCommonRateLimiting`, UI.Web `AddUiRateLimiting`, Aspire `AddGatewayRateLimiting`, Gateway `AddGatewayRoutePolicies`) answers a 429 with a `Retry-After` header in whole seconds when the rejecting limiter has a retry hint, and still runs any `OnRejected` callback the host configured earlier.
+- `IPasswordHasher.NeedsRehash(byte[] hash)`, a default interface member that returns false, so a custom hasher compiles unchanged. `PasswordHasher` returns true for a legacy 64-byte hash and for a stored iteration count other than the current one.
+- `IPasswordRehashableUser` (MMCA.Common.Domain.Auth): an opt-in `Result RehashPassword(byte[] newPasswordHash, byte[] newPasswordSalt)` that replaces password material without raising a password-changed event.
+- `AuthenticationServiceBase` rehashes an outdated password after a successful sign-in when the user implements `IPasswordRehashableUser`, and saves it through the unit of work. The rehash is best effort: a failure is logged and counted on `besteffort.dispatch.failed` (operation `password-rehash`) and never fails the sign-in. `AuthenticationServiceBase.Logger`, a protected virtual property (default no-op), receives that log line when a subclass overrides it.
+
+### Changed
+
+- `PasswordHasher` writes a versioned 69-byte hash: a 0x01 version byte, a 4-byte big-endian iteration count, then the 64-byte PBKDF2-HMAC-SHA512 digest. New hashes use 210,000 iterations, the OWASP figure for PBKDF2-HMAC-SHA512 (600,000 is its figure for SHA-256). Existing 64-byte hashes still verify at 600,000 iterations and are upgraded on the next sign-in for an opted-in user. No schema migration is needed. Supersedes ADR-102.
+- `PasswordHasher.VerifyPassword` accepts only a 32-byte salt with either a 64-byte legacy hash or a 69-byte version-0x01 hash whose stored count is between 100,000 and 2,000,000. All other material verifies nothing.
+- East-west gRPC clients use their own timeouts, 8 seconds per attempt and 20 seconds in total, instead of the outbound-HTTP 30s/90s. The values are about ten times the measured in-cluster p99 (784 ms worst edge). `GrpcResilienceDefaults` no longer forwards these two values from `HttpResilienceDefaults`.
+- The UI service base retry policy waits exactly the `Retry-After` delay on a 429 that names one within `MaxRetryAfterWait`, instead of the 2/4/8 second backoff.
+
+### Fixed
+
+- The distributed Redis rate limiter's rejection carries the time until its one-minute window resets, so a 429 from the shared counter tells the client when to come back. It used to carry no metadata at all.
+- A 429 whose `Retry-After` exceeds `MaxRetryAfterWait` is no longer retried by the UI service base classes or by the `AddServiceDefaults` standard resilience handler. A rate-limited user action costs one request instead of up to four, and never holds a connection for the rest of a rate-limit window.
+
+### Breaking
+
+- **Breaking:** `IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity, CancellationToken)` and `IWriteRepository<TEntity, TIdentifierType>.UpdateRange(IEnumerable<TEntity>)` are removed, with their `EFRepository` implementations. A tracked aggregate already saves its changes on `SaveChangesAsync`, and on an untracked entity the methods called `DbSet.Update`, which marks every column modified and invites a lost update. No consumer calls them; no code change needed. A test fake that implemented them keeps compiling with two dead members to delete.
+- **Breaking:** the one-argument `ResultUiExtensions.TryGetValue<T>(this Result<T>, out T?)` (MMCA.Common.UI) is removed. `Result<T>.TryGetValue` is an instance method, which C# prefers over an extension, so every existing call already binds to it and no call site changes. The one behaviour difference: a SUCCESS carrying a null value now returns true (the extension returned false), and on a `Result<T?>` the value stays nullable, so the compiler may ask for a null check the extension used to hide. The framework's own client services never produce a success with a null value. The three-argument overload with `errors` is unchanged.
+
+
 ## [1.251.0] - 2026-10-23
 
 ### Added
