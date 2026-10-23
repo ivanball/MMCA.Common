@@ -22,7 +22,7 @@ internal static class SessionCookieJar
 
     internal static void Append(HttpContext context, string accessToken, string refreshToken, IWebHostEnvironment environment, SameSiteMode sameSite)
     {
-        var options = BuildOptions(environment, ResolveLifetime(context), sameSite);
+        var options = BuildOptions(context, environment, ResolveLifetime(context), sameSite);
         context.Response.Cookies.Append(SessionCookieEndpoints.AccessTokenCookieName, accessToken, options);
         context.Response.Cookies.Append(SessionCookieEndpoints.RefreshTokenCookieName, refreshToken, options);
     }
@@ -52,16 +52,20 @@ internal static class SessionCookieJar
 
     internal static void Delete(HttpContext context, IWebHostEnvironment environment, SameSiteMode sameSite)
     {
-        var options = BuildOptions(environment, TimeSpan.Zero, sameSite);
+        var options = BuildOptions(context, environment, TimeSpan.Zero, sameSite);
         context.Response.Cookies.Delete(SessionCookieEndpoints.AccessTokenCookieName, options);
         context.Response.Cookies.Delete(SessionCookieEndpoints.RefreshTokenCookieName, options);
     }
 
-#pragma warning disable S2092 // Secure is conditional on the hosting environment (false only in Development, so http://localhost dev still works); it is true for every non-Development environment
-    private static CookieOptions BuildOptions(IWebHostEnvironment environment, TimeSpan lifetime, SameSiteMode sameSite) => new()
+    // Secure outside Development whatever the request scheme: production sits behind a TLS-terminating
+    // ingress (Azure Container Apps), where the app sees plain http and Request.IsHttps is false. In
+    // Development the request decides, so the local HTTPS stack gets TLS-only cookies and only a plain
+    // http://localhost run goes without the flag.
+#pragma warning disable S2092 // Secure is false only for a Development request that arrived over plain http (http://localhost dev still works); it is true for every non-Development environment and for every HTTPS request
+    private static CookieOptions BuildOptions(HttpContext context, IWebHostEnvironment environment, TimeSpan lifetime, SameSiteMode sameSite) => new()
     {
         HttpOnly = true,
-        Secure = !environment.IsDevelopment(),
+        Secure = !environment.IsDevelopment() || context.Request.IsHttps,
         SameSite = sameSite,
         Path = "/",
         MaxAge = lifetime > TimeSpan.Zero ? lifetime : null,

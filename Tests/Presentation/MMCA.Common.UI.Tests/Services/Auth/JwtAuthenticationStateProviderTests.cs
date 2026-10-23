@@ -130,6 +130,39 @@ public class JwtAuthenticationStateProviderTests
         receivedState!.User.Identity!.IsAuthenticated.Should().BeFalse();
     }
 
+    // ── A-34: a session the storage reports ended on the server ──
+    [Fact]
+    public async Task WhenTheStorageReportsTheSessionEnded_EmptiesTheReadCacheAndNotifiesAnonymous()
+    {
+        var storage = new SessionEndingStorage();
+        var readCache = new Mock<MMCA.Common.UI.Services.Caching.IUiReadCache>();
+        var sut = new JwtAuthenticationStateProvider(storage, readCache.Object);
+        Task<AuthenticationState>? notified = null;
+        sut.AuthenticationStateChanged += task => notified = task;
+
+        storage.EndSession();
+
+        readCache.Verify(c => c.Clear(), Times.Once, "its entries were read under the session that ended");
+        notified.Should().NotBeNull();
+        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    /// <summary>A storage whose session the test ends on demand.</summary>
+    private sealed class SessionEndingStorage : ISessionAwareTokenStorage
+    {
+        public event EventHandler? SessionEnded;
+
+        public void EndSession() => SessionEnded?.Invoke(this, EventArgs.Empty);
+
+        public Task<string?> GetAccessTokenAsync() => Task.FromResult<string?>(null);
+
+        public Task<string?> GetRefreshTokenAsync() => Task.FromResult<string?>(null);
+
+        public Task SetTokensAsync(string accessToken, string refreshToken) => Task.CompletedTask;
+
+        public Task ClearTokensAsync() => Task.CompletedTask;
+    }
+
     // ── Helpers ──
     private static string GenerateToken(
         DateTime expires,

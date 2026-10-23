@@ -141,4 +141,103 @@ public sealed class ApiUserPreferenceWriterTests
 
         handler.CallCount.Should().Be(2, "nothing was rejected, so nothing should be suppressed");
     }
+
+    [Fact]
+    public async Task SaveAsync_WhileAnEarlierSaveIsInFlight_SendsOnlyAfterItCompletes()
+    {
+        // A theme toggle followed within a second or two by a language switch: the switcher awaits its
+        // own save and then force-reloads. Sent concurrently, the theme PUT was cut off by that reload
+        // (WASM) or lost the User row's rowversion race to the culture PUT, so the next sign-in applied
+        // the stale server theme. The culture save must wait for the theme save first.
+        var ct = TestContext.Current.CancellationToken;
+        using var handler = new GatedFirstRequestHandler();
+        var writer = CreateWriter(handler);
+
+        var themeSave = writer.SaveAsync(culture: null, theme: "dark", ct);
+        await handler.FirstRequestArrived.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        var cultureSave = writer.SaveAsync(culture: "es", theme: null, ct);
+
+        // Long enough for an unserialized second PUT to reach the handler.
+        await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
+        handler.Bodies.Should().HaveCount(1, "the culture PUT must not overtake the theme PUT still in flight");
+
+        handler.ReleaseFirstRequest();
+        await Task.WhenAll(themeSave, cultureSave).WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        handler.Bodies.Should().HaveCount(2);
+        handler.Bodies[0].Should().Contain("dark");
+        handler.Bodies[1].Should().Contain("es");
+    }
+
+    [Fact]
+    public async Task SaveAsync_WhenTheEarlierSaveHangs_SendsAfterTheBoundedWait()
+    {
+        // The wait is bounded: a hung earlier PUT must not hold the culture switch's reload forever.
+        var ct = TestContext.Current.CancellationToken;
+        using var handler = new GatedFirstRequestHandler();
+        var writer = CreateWriter(handler, previousSaveWait: TimeSpan.FromMilliseconds(100));
+
+        var hungSave = writer.SaveAsync(culture: null, theme: "dark", ct);
+        await handler.FirstRequestArrived.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        await writer.SaveAsync(culture: "es", theme: null, ct).WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        handler.Bodies.Should().HaveCount(2);
+        handler.Bodies[1].Should().Contain("es");
+
+        handler.ReleaseFirstRequest();
+        await hungSave.WaitAsync(TimeSpan.FromSeconds(5), ct);
+    }
+
+    private static ApiUserPreferenceWriter CreateWriter(HttpMessageHandler handler, TimeSpan? previousSaveWait = null)
+    {
+        var storage = new Mock<ITokenStorageService>();
+        storage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync(FreshJwt());
+        return new ApiUserPreferenceWriter(new StubHttpClientFactory(handler), storage.Object)
+        {
+            PreviousSaveWait = previousSaveWait ?? TimeSpan.FromSeconds(5),
+        };
+    }
+
+    /// <summary>Holds the first request until released; answers every later one at once.</summary>
+    private sealed class GatedFirstRequestHandler : HttpMessageHandler
+    {
+        private readonly TaskCompletionSource _firstArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly List<string> _bodies = [];
+
+        public Task FirstRequestArrived => _firstArrived.Task;
+
+        public IReadOnlyList<string> Bodies
+        {
+            get
+            {
+                lock (_bodies)
+                {
+                    return [.. _bodies];
+                }
+            }
+        }
+
+        public void ReleaseFirstRequest() => _release.TrySetResult();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            bool isFirst;
+            lock (_bodies)
+            {
+                _bodies.Add(body);
+                isFirst = _bodies.Count == 1;
+            }
+
+            if (isFirst)
+            {
+                _firstArrived.TrySetResult();
+                await _release.Task.WaitAsync(cancellationToken);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        }
+    }
 }

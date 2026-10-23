@@ -1,15 +1,24 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Navigation;
 
 namespace MMCA.Common.UI.Tests.Services.Capabilities;
 
 /// <summary>
 /// Covers <see cref="DeepLinkDispatcher"/>: live dispatch when a listener is attached, the
-/// single-entry cold-start buffer (last-write-wins, consumed exactly once), and argument
-/// validation.
+/// single-entry cold-start buffer (last-write-wins, consumed exactly once), argument
+/// validation, and A-27: one route reaches exactly one listener (the newest still attached) and
+/// the same route republished inside the duplicate window is one delivery.
 /// </summary>
 public sealed class DeepLinkDispatcherTests
 {
+    private const string SponsorRoute = "/engage/sponsors/5";
+    private const string RoomRoute = "/engage/rooms/3";
+
+    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 10, 17, 14, 0, 0, TimeSpan.Zero));
+
     [Fact]
     public void Publish_WithoutListener_BuffersRouteForSingleConsumption()
     {
@@ -109,6 +118,151 @@ public sealed class DeepLinkDispatcherTests
             sut.TryConsumePending(out _).Should().BeFalse(
                 "a route left in the buffer after the listener has subscribed and drained has no future consumer");
         }
+    }
+
+    [Fact]
+    public void Publish_WithTwoListenersAttached_DeliversOnlyToTheNewest()
+    {
+        var sut = new DeepLinkDispatcher();
+        var older = new List<string>();
+        var newer = new List<string>();
+        sut.RouteRequested += (_, e) => older.Add(e.Route);
+        sut.RouteRequested += (_, e) => newer.Add(e.Route);
+
+        sut.Publish(SponsorRoute);
+
+        newer.Should().Equal(SponsorRoute);
+        older.Should().BeEmpty("a second listener must not turn one scan into a second visit post (A-27)");
+    }
+
+    [Fact]
+    public void Publish_TheSameRouteTwiceInARow_IsOneDelivery()
+    {
+        var sut = new DeepLinkDispatcher();
+        var delivered = new List<string>();
+        sut.RouteRequested += (_, e) => delivered.Add(e.Route);
+
+        sut.Publish(SponsorRoute);
+        sut.Publish(SponsorRoute);
+
+        delivered.Should().Equal(SponsorRoute);
+    }
+
+    [Fact]
+    public void Publish_AfterTheNewestListenerDetaches_DeliversToTheOneStillAttached()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+        var older = new List<string>();
+        sut.RouteRequested += (_, e) => older.Add(e.Route);
+        sut.RouteRequested += Newer;
+        sut.RouteRequested -= Newer;
+
+        sut.Publish(SponsorRoute);
+
+        older.Should().Equal(SponsorRoute);
+
+        static void Newer(object? sender, DeepLinkRouteEventArgs e) =>
+            throw new InvalidOperationException("detached listener invoked");
+    }
+
+    [Fact]
+    public void Publish_AfterAnOlderListenerResubscribes_DeliversToIt()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+        var first = new List<string>();
+        var second = new List<string>();
+        sut.RouteRequested += First;
+        sut.RouteRequested += (_, e) => second.Add(e.Route);
+        sut.RouteRequested += First;
+
+        sut.Publish(SponsorRoute);
+
+        first.Should().Equal(SponsorRoute);
+        second.Should().BeEmpty("subscribing again moves a listener to the end of the order");
+
+        void First(object? sender, DeepLinkRouteEventArgs e) => first.Add(e.Route);
+    }
+
+    [Fact]
+    public void Publish_TheSameRouteAgainInsideTheWindow_IsOneDelivery()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+        var delivered = new List<string>();
+        sut.RouteRequested += (_, e) => delivered.Add(e.Route);
+
+        sut.Publish(SponsorRoute);
+        _clock.Advance(DeepLinkDispatcher.DuplicateWindow - TimeSpan.FromMilliseconds(1));
+        sut.Publish(SponsorRoute);
+
+        delivered.Should().Equal(SponsorRoute);
+    }
+
+    [Fact]
+    public void Publish_TheSameRouteWhileBuffered_IsNotDrainedTwice()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+
+        sut.Publish(SponsorRoute);
+        sut.TryConsumePending(out _).Should().BeTrue();
+
+        // The launch intent republished on recreation, after the cold-start drain already took it.
+        sut.Publish(SponsorRoute);
+
+        sut.TryConsumePending(out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Publish_TheSameRouteAfterTheWindow_IsDeliveredAgain()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+        var delivered = new List<string>();
+        sut.RouteRequested += (_, e) => delivered.Add(e.Route);
+
+        sut.Publish(SponsorRoute);
+        _clock.Advance(DeepLinkDispatcher.DuplicateWindow);
+        sut.Publish(SponsorRoute);
+
+        delivered.Should().Equal(SponsorRoute, SponsorRoute);
+    }
+
+    [Fact]
+    public void Publish_ADifferentRouteInsideTheWindow_IsDelivered()
+    {
+        var sut = new DeepLinkDispatcher(_clock);
+        var delivered = new List<string>();
+        sut.RouteRequested += (_, e) => delivered.Add(e.Route);
+
+        sut.Publish(SponsorRoute);
+        sut.Publish(RoomRoute);
+
+        delivered.Should().Equal(SponsorRoute, RoomRoute);
+    }
+
+    [Fact]
+    public void Constructor_RejectsANullClock()
+    {
+        var act = () => new DeepLinkDispatcher(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Registration_ResolvesWithOrWithoutARegisteredClock(bool registerClock)
+    {
+        // The capability defaults register the type by implementation: the container must still pick
+        // a constructor whether or not the host registers a TimeProvider.
+        var services = new ServiceCollection();
+        if (registerClock)
+        {
+            services.AddSingleton<TimeProvider>(_clock);
+        }
+
+        services.AddDeviceCapabilityDefaults();
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IDeepLinkDispatcher>().Should().BeOfType<DeepLinkDispatcher>();
     }
 
     [Theory]

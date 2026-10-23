@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using Moq;
@@ -329,6 +330,93 @@ public sealed class WasmTokenStorageServiceTests
         await clear;
 
         (await sut.GetAccessTokenAsync()).Should().BeNull("a completed logout leaves no token in memory");
+    }
+
+    // == A-34: a held session that ended remotely signs the shell out ==
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenAHeldSessionWasRevokedRemotely_ClearsTheTokenAndNotifiesLogout()
+    {
+        // "Sign out everywhere" on another device (or a deleted account): the refresh answers a
+        // definitive no-session for a session this client held. The shell must flip to anonymous
+        // instead of staying signed in behind 401s.
+        var (sut, provider, refresher) = await CreateSignedInSutAsync(TokenAcquisition.NoSession);
+        Task<AuthenticationState>? notified = null;
+        provider.AuthenticationStateChanged += task => notified = task;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notified.Should().NotBeNull("a session that ended on the server is a sign-out");
+        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
+        (await provider.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated.Should().BeFalse();
+        (await sut.GetAccessTokenAsync()).Should().BeNull("the ended session's token is gone from memory");
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenTheRefreshFailsTransiently_DoesNotSignTheShellOut()
+    {
+        var (sut, provider, _) = await CreateSignedInSutAsync(TokenAcquisition.Unavailable);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(0, "a 429, 5xx or dropped connection says nothing about the session");
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenTheRefreshFailsTransientlyThenSaysNoSession_StillNotifiesLogout()
+    {
+        // The transient failure drops the stale token from memory, but the client still held a
+        // session, so the definitive answer that follows is still a sign-out.
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TokenAcquisition.Unavailable)
+            .ReturnsAsync(TokenAcquisition.NoSession);
+        var (sut, provider, _) = await CreateSignedInSutAsync(refresher);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_WhenAnAnonymousVisitorHasNoSession_DoesNotNotifyLogout()
+    {
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(TokenAcquisition.NoSession);
+        var sut = new WasmTokenStorageService(Mock.Of<ISessionCookieSync>(), refresher.Object, timeProvider: null);
+        var provider = new JwtAuthenticationStateProvider(sut);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(0, "nobody was signed in, so there is nothing to sign out");
+    }
+
+    private static Task<(WasmTokenStorageService Sut, JwtAuthenticationStateProvider Provider, Mock<ISessionAwareTokenRefresher> Refresher)> CreateSignedInSutAsync(
+        TokenAcquisition outcome)
+    {
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(outcome);
+        return CreateSignedInSutAsync(refresher);
+    }
+
+    private static async Task<(WasmTokenStorageService Sut, JwtAuthenticationStateProvider Provider, Mock<ISessionAwareTokenRefresher> Refresher)> CreateSignedInSutAsync(
+        Mock<ISessionAwareTokenRefresher> refresher)
+    {
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        var sut = new WasmTokenStorageService(cookieSync.Object, refresher.Object, timeProvider: null);
+        var provider = new JwtAuthenticationStateProvider(sut);
+
+        // Signed in at login; the access token is now inside the 30-second refresh skew.
+        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
+        return (sut, provider, refresher);
     }
 
     private static (WasmTokenStorageService Sut, TaskCompletionSource<bool> PendingClear, TaskCompletionSource<TokenAcquisition> PendingAcquisition) CreateGatedClearSut()

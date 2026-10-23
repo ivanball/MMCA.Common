@@ -60,6 +60,31 @@ public sealed class ViewerTimeZoneTests : BunitTestBase
         sut.ToViewerTime(WinterNoonUtc).Should().Be(new DateTime(2026, 1, 15, 12, 0, 0, DateTimeKind.Unspecified));
     }
 
+    [Fact]
+    public async Task Format_BeforeTheZoneIsRead_RendersAPlaceholderInsteadOfUtc()
+    {
+        // Prerender (and the first interactive render) cannot read the browser zone. Painting the UTC
+        // time there and the viewer's time after hydration made every timestamp jump; the placeholder
+        // stays put until the one value that will not change is known.
+        await using var sut = CreateWithBrowserZone("Asia/Tokyo");
+
+        sut.Format(WinterNoonUtc, "HH:mm").Should().BeEmpty();
+
+        (await sut.EnsureResolvedAsync()).Should().BeTrue();
+        sut.Format(WinterNoonUtc, "HH:mm").Should().Be("21:00");
+    }
+
+    [Fact]
+    public async Task EnsureResolvedAsync_WhenTheBrowserIsOnUtc_StillAsksForARerender()
+    {
+        // The zone does not move, but the rendered text does (placeholder to time), so a page that
+        // re-renders only on true must still get it.
+        await using var sut = CreateWithBrowserZone("UTC");
+
+        (await sut.EnsureResolvedAsync()).Should().BeTrue();
+        sut.Format(WinterNoonUtc, "HH:mm").Should().Be("12:00");
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -68,7 +93,7 @@ public sealed class ViewerTimeZoneTests : BunitTestBase
     {
         await using var sut = CreateWithBrowserZone(zoneId);
 
-        (await sut.EnsureResolvedAsync()).Should().BeFalse("UTC was already the zone, so nothing changed");
+        (await sut.EnsureResolvedAsync()).Should().BeTrue("the zone stays UTC, but the formatted text moves off the placeholder");
 
         sut.IsResolved.Should().BeTrue();
         sut.Zone.Should().Be(TimeZoneInfo.Utc);
@@ -98,7 +123,7 @@ public sealed class ViewerTimeZoneTests : BunitTestBase
         JSInterop.SetupModule(ModulePath).Setup<string?>("getTimeZone").SetException(new JSException("Intl unavailable"));
         await using var sut = new ViewerTimeZone(JSInterop.JSRuntime);
 
-        (await sut.EnsureResolvedAsync()).Should().BeFalse();
+        (await sut.EnsureResolvedAsync()).Should().BeTrue("the browser will not do better on a retry, so UTC is now the final answer to render");
 
         sut.Zone.Should().Be(TimeZoneInfo.Utc);
     }

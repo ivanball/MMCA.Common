@@ -60,6 +60,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         public bool LoadFailedNow => LoadFailed;
 
+        public bool EmptyConfirmedNow => EmptyConfirmed;
+
         public int CurrentPageNow => CurrentPageState;
 
         public int RowsPerPageNow => RowsPerPageState;
@@ -676,6 +678,111 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.MobileTotalNow.Should().Be(8);
         cut.Instance.LoadingNow.Should().BeFalse();
         cut.Instance.LoadFailedNow.Should().BeFalse();
+    }
+
+    // == EmptyConfirmed: only the newest completed result proves the list empty (U-35) ==
+    [Fact]
+    public async Task EmptyConfirmed_IsFalseUntilALoadCompletesEmpty_AndWhileTheNextLoadIsInFlight()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse("nothing has loaded yet");
+
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(0);
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
+        cut.Instance.EmptyConfirmedNow.Should().BeTrue();
+
+        var pending = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        cut.Instance.Fetch = (_, _, _, _, _, _) => pending.Task;
+        Task<GridData<WidgetRow>>? load = null;
+        await cut.InvokeAsync(() => { load = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse("the previous empty answer is not the newest load's");
+
+        pending.SetResult(Result.Success<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([new WidgetRow(1, "Ada")], 1)));
+        await load!;
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse("the newest load returned rows");
+    }
+
+    [Fact]
+    public async Task EmptyConfirmed_AfterAFailedLoad_StaysFalse()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => LoadFailure("The widget service is unavailable.");
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
+
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse("a failure renders the error, not the empty state");
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task EmptyConfirmed_OnTheMobilePath_FollowsTheCompletedTotal()
+    {
+        var cut = Render<TestGridPage>();
+
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(0);
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+        cut.Instance.EmptyConfirmedNow.Should().BeTrue();
+
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(1, new WidgetRow(1, "Ada"));
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse();
+    }
+
+    // == Overlapping mobile loads (U-20) ==
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenASupersededFetchAnswersAfterTheNewest_KeepsTheNewestRows()
+    {
+        // An early reload (the viewport subscription, a late sessionStorage restore) supersedes the
+        // first mobile load while its request is on the wire. That request ignores the token and
+        // answers AFTER the newest load has rendered, with the page of the query being replaced (here
+        // empty). The newest load owns the final render: its cards stay and the empty state never paints.
+        var cut = Render<TestGridPage>();
+        var supersededFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, _) =>
+            ++calls == 1 ? supersededFetch.Task : Loaded(2, new WidgetRow(1, "Ada"), new WidgetRow(2, "Grace"));
+
+        Task? supersededLoad = null;
+        await cut.InvokeAsync(() => { supersededLoad = cut.Instance.LoadMobileAsync(); });
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+        cut.Instance.MobileItemsNow.Should().HaveCount(2);
+
+        supersededFetch.SetResult(Result.Success<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([], 0)));
+        await supersededLoad!;
+
+        cut.Instance.MobileItemsNow.Should().HaveCount(2, "a superseded load must not overwrite the newest load's cards");
+        cut.Instance.MobileTotalNow.Should().Be(2);
+        cut.Instance.LoadingNow.Should().BeFalse();
+        cut.Instance.LoadFailedNow.Should().BeFalse();
+        calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenASupersededFetchFailsAfterTheNewest_KeepsTheNewestRowsAndStaysQuiet()
+    {
+        // The same race, ending in a failure (a request the newer reset cancelled, reported by the
+        // service as a failed Result). It describes a query nobody is showing any more, so it neither
+        // empties the cards nor raises the failure flag or its toast.
+        var cut = Render<TestGridPage>();
+        var supersededFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, _) =>
+            ++calls == 1 ? supersededFetch.Task : Loaded(1, new WidgetRow(1, "Ada"));
+
+        Task? supersededLoad = null;
+        await cut.InvokeAsync(() => { supersededLoad = cut.Instance.LoadMobileAsync(); });
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        supersededFetch.SetResult(Result.Failure<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(
+            Error.Failure("Widgets.LoadFailed", "The request was cancelled.")));
+        await supersededLoad!;
+
+        cut.Instance.MobileItemsNow.Should().ContainSingle().Which.Name.Should().Be("Ada");
+        cut.Instance.LoadFailedNow.Should().BeFalse("the failure belongs to a superseded load");
+        _toast.Verify(t => t.Show(It.IsAny<string>(), It.IsAny<ToastSeverity>()), Times.Never);
     }
 
     [Fact]

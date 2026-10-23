@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using MMCA.Common.API.SessionCookies;
@@ -453,6 +454,82 @@ public sealed class ServerTokenStorageServiceTests
         await clear;
 
         (await sut.GetAccessTokenAsync()).Should().BeNull("a completed logout leaves no token in memory");
+    }
+
+    // == A-34: a held session that ended remotely signs the circuit out ==
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuit_WhenAHeldSessionWasRevokedRemotely_ClearsTheTokenAndNotifiesLogout()
+    {
+        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.NoSession);
+        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
+        Task<AuthenticationState>? notified = null;
+        provider.AuthenticationStateChanged += task => notified = task;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notified.Should().NotBeNull("a session that ended on the server is a sign-out");
+        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
+        (await provider.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnHubConnection_WhenTheSessionTheCircuitStartedWithIsGone_NotifiesLogout()
+    {
+        // The circuit started signed in from the connection request's cookie and has stored nothing
+        // itself; that cookie's token is now inside the refresh skew and the refresh says no session.
+        var (sut, provider) = CreateSessionAwareCircuitSut(
+            HubConnectionContext(accessToken: CreateJwt(DateTime.UtcNow.AddSeconds(10))),
+            TokenAcquisition.NoSession);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuit_WhenTheRefreshFailsTransiently_DoesNotSignTheCircuitOut()
+    {
+        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.Unavailable);
+        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(0, "a 429, 5xx or dropped connection says nothing about the session");
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_OnCircuit_WhenAnAnonymousVisitorHasNoSession_DoesNotNotifyLogout()
+    {
+        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.NoSession);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        notifications.Should().Be(0, "nobody was signed in, so there is nothing to sign out");
+    }
+
+    private static (ServerTokenStorageService Sut, JwtAuthenticationStateProvider Provider) CreateSessionAwareCircuitSut(
+        HttpContext? httpContext,
+        TokenAcquisition outcome)
+    {
+        var accessor = new Mock<IHttpContextAccessor>();
+        accessor.SetupGet(a => a.HttpContext).Returns(httpContext);
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(outcome);
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        var sut = new ServerTokenStorageService(
+            accessor.Object,
+            new CookieTokenReader(accessor.Object),
+            cookieSync.Object,
+            refresher.Object,
+            timeProvider: null);
+        return (sut, new JwtAuthenticationStateProvider(sut));
     }
 
     private static (ServerTokenStorageService Sut, Mock<ISessionAwareTokenRefresher> Refresher, TaskCompletionSource<TokenAcquisition> Pending) CreateGatedCircuitSut(

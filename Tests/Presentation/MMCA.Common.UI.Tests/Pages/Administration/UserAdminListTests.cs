@@ -164,6 +164,70 @@ public sealed class UserAdminListTests : BunitTestBase
     }
 
     /// <summary>
+    /// U-35: the grid repaints its NoRecordsContent in every render where it holds no rows and is not
+    /// loading, and the page's loading flag clears (and renders) before MudDataGrid has received the
+    /// rows. A load that ends WITH rows must therefore never hand the empty state a confirmed empty,
+    /// in any intermediate render, including the one before the first fetch starts.
+    /// </summary>
+    [Fact]
+    public void ALoadThatReturnsRows_NeverConfirmsTheEmptyStateInAnyIntermediateRender()
+    {
+        var recorder = new NoRecordsContentRecorder();
+        ComponentFactories.Add(recorder);
+        RenderMudProviders();
+
+        var cut = RenderList();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("grace@example.com"));
+        recorder.Renders.Should().NotContain(
+            r => r.EmptyConfirmed && !r.LoadFailed,
+            "the empty text may only paint once the newest completed load proved the list empty");
+    }
+
+    [Fact]
+    public void ALoadThatReturnsNoRows_ConfirmsTheEmptyStateOnceComplete()
+    {
+        SetupUsers();
+        var recorder = new NoRecordsContentRecorder();
+        ComponentFactories.Add(recorder);
+        RenderMudProviders();
+
+        var cut = RenderList();
+
+        cut.WaitForAssertion(() => recorder.Renders.Should().NotBeEmpty().And.Subject.Last().EmptyConfirmed.Should().BeTrue());
+    }
+
+    /// <summary>
+    /// Stands in for <c>ListNoRecordsContent</c> and records the parameters of every render the grid
+    /// gives it, so the test sees intermediate renders the final markup no longer shows.
+    /// </summary>
+    private sealed class NoRecordsContentRecorder : IComponentFactory
+    {
+        public List<(bool EmptyConfirmed, bool LoadFailed)> Renders { get; } = [];
+
+        public bool CanCreate(Type componentType) =>
+            componentType == typeof(MMCA.Common.UI.Components.PageState.ListNoRecordsContent);
+
+        public IComponent Create(Type componentType) => new RecordingComponent(Renders);
+
+        private sealed class RecordingComponent(List<(bool EmptyConfirmed, bool LoadFailed)> renders) : IComponent
+        {
+            public void Attach(RenderHandle renderHandle)
+            {
+            }
+
+            public Task SetParametersAsync(ParameterView parameters)
+            {
+                // The real component defaults EmptyConfirmed to true when a page does not pass it.
+                var emptyConfirmed = !parameters.TryGetValue<bool>("EmptyConfirmed", out var confirmed) || confirmed;
+                parameters.TryGetValue<bool>("LoadFailed", out var loadFailed);
+                renders.Add((emptyConfirmed, loadFailed));
+                return Task.CompletedTask;
+            }
+        }
+    }
+
+    /// <summary>
     /// A failed fetch renders zero rows, which is visually identical to a genuinely empty list, so
     /// the shared <c>ListNoRecordsContent</c> must take over with its inline error and Retry.
     /// </summary>

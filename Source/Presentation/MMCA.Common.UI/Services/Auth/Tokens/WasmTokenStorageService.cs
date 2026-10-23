@@ -15,6 +15,10 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// once. A transient failure (a 429, a 5xx, a dropped connection) is never remembered: the next read
 /// hydrates again.
 /// </para>
+/// <para>
+/// When that definitive answer comes for a session this client HELD (revoked from another device, or
+/// the account deleted), <see cref="SessionEnded"/> fires so the auth state signs the shell out (A-34).
+/// </para>
 /// </summary>
 /// <param name="sessionCookieSync">Seeds and clears the HttpOnly session cookies.</param>
 /// <param name="tokenRefresher">Acquires an access token from the session cookies.</param>
@@ -22,7 +26,7 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 public sealed class WasmTokenStorageService(
     ISessionCookieSync sessionCookieSync,
     ITokenRefresher tokenRefresher,
-    TimeProvider? timeProvider) : ITokenStorageService
+    TimeProvider? timeProvider) : ISessionAwareTokenStorage
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
@@ -42,6 +46,16 @@ public sealed class WasmTokenStorageService(
     /// discards its stale answer (M234).
     /// </summary>
     private int _tokenVersion;
+
+    /// <summary>
+    /// Whether this client holds a session: set by a login and by every hydrate that acquired a token,
+    /// cleared by a logout and when the session is found ended. A transient failure leaves it alone,
+    /// so a definitive answer that follows one still counts as the end of a held session.
+    /// </summary>
+    private volatile bool _sessionHeld;
+
+    /// <inheritdoc />
+    public event EventHandler? SessionEnded;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WasmTokenStorageService"/> class on the system
@@ -104,6 +118,7 @@ public sealed class WasmTokenStorageService(
         Interlocked.Increment(ref _tokenVersion);
         _anonymousUntil = default;
         _accessToken = accessToken;
+        _sessionHeld = true;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
         // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
         // set) so AuthUIService reports Auth.TokenStorageUnavailable instead of a login that silently signs
@@ -118,6 +133,7 @@ public sealed class WasmTokenStorageService(
     {
         Interlocked.Increment(ref _tokenVersion);
         _accessToken = null;
+        _sessionHeld = false;
         // Best-effort by contract (IAuthUIService.LogoutAsync never fails), so a false is ignored. A caller
         // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
         // server-side revoke.
@@ -138,14 +154,18 @@ public sealed class WasmTokenStorageService(
         // refresher without that capability keeps the previous reading: its null means "no session".
         // A login or logout that lands while the acquisition is in flight wins (M234): the answer was
         // read from the session as it was before, so it is discarded together with its grace.
+        // Only a session-aware refresher can say "no session" for certain; a plain refresher's null is
+        // read as no session for the grace, but is not proof enough to sign a held session out.
         var version = Volatile.Read(ref _tokenVersion);
         string? acquired;
         var unavailable = false;
+        var definitiveNoSession = false;
         if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
         {
             var acquisition = await sessionAware.TryAcquireAccessTokenAsync().ConfigureAwait(false);
             acquired = acquisition.AccessToken;
             unavailable = acquisition.IsUnavailable;
+            definitiveNoSession = acquired is null && !unavailable;
         }
         else
         {
@@ -162,6 +182,18 @@ public sealed class WasmTokenStorageService(
         if (_accessToken is null && !unavailable)
         {
             _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
+        }
+
+        if (_accessToken is not null)
+        {
+            _sessionHeld = true;
+        }
+        else if (definitiveNoSession && _sessionHeld)
+        {
+            // The session this client held ended on the server (A-34): the token is already gone
+            // from memory, and the auth state is told so the shell signs out.
+            _sessionHeld = false;
+            SessionEnded?.Invoke(this, EventArgs.Empty);
         }
 
         return _accessToken;

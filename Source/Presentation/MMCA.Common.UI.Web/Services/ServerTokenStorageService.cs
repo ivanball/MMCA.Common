@@ -20,7 +20,10 @@ namespace MMCA.Common.UI.Web.Services;
 /// <see cref="AnonymousGrace"/> after a hydrate comes back with a DEFINITIVE "no session" (see
 /// <see cref="ISessionAwareTokenRefresher"/>), instead of one token round trip per API call; a
 /// session created in another tab is seen within that window, and <see cref="SetTokensAsync"/> ends
-/// it at once. A transient failure is never remembered: the next read hydrates again.
+/// it at once. A transient failure is never remembered: the next read hydrates again. When that
+/// definitive answer comes for a session the circuit HELD (stored here, or carried by the connection
+/// request's cookie the circuit started with), <see cref="SessionEnded"/> fires so the auth state
+/// signs the circuit out (A-34).
 /// </para>
 /// <para>
 /// On the circuit <see cref="IHttpContextAccessor.HttpContext"/> is NOT null: it is the request that
@@ -46,7 +49,7 @@ public sealed class ServerTokenStorageService(
     CookieTokenReader cookieTokenReader,
     ISessionCookieSync sessionCookieSync,
     ITokenRefresher tokenRefresher,
-    TimeProvider? timeProvider) : ITokenStorageService
+    TimeProvider? timeProvider) : ISessionAwareTokenStorage
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
@@ -72,6 +75,16 @@ public sealed class ServerTokenStorageService(
     /// circuit: from then on the in-memory token wins over the connection request's stale cookie.
     /// </summary>
     private volatile bool _memoryIsAuthoritative;
+
+    /// <summary>
+    /// Whether the circuit holds a session: set by a login, by a hydrate that acquired a token, and by
+    /// a connection request whose cookie carried one; cleared by a logout and when the session is
+    /// found ended. A transient failure leaves it alone.
+    /// </summary>
+    private volatile bool _sessionHeld;
+
+    /// <inheritdoc />
+    public event EventHandler? SessionEnded;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerTokenStorageService"/> class on the system
@@ -153,6 +166,7 @@ public sealed class ServerTokenStorageService(
         _anonymousUntil = default;
         _accessToken = accessToken;
         _memoryIsAuthoritative = true;
+        _sessionHeld = true;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
         // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
         // set) so AuthUIService reports Auth.TokenStorageUnavailable instead of a login that silently signs
@@ -170,6 +184,7 @@ public sealed class ServerTokenStorageService(
         // A logout must not be undone by the connection request's cookie, which still holds the token
         // the circuit started with: from here the next read re-acquires from the (cleared) session.
         _memoryIsAuthoritative = true;
+        _sessionHeld = false;
         // Best-effort by contract (IAuthUIService.LogoutAsync never fails), so a false is ignored. A caller
         // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
         // server-side revoke.
@@ -190,14 +205,18 @@ public sealed class ServerTokenStorageService(
         // refresher without that capability keeps the previous reading: its null means "no session".
         // A login or logout that lands while the acquisition is in flight wins (M234): the answer was
         // read from the session as it was before, so it is discarded together with its grace.
+        // Only a session-aware refresher can say "no session" for certain; a plain refresher's null is
+        // read as no session for the grace, but is not proof enough to sign a held session out.
         var version = Volatile.Read(ref _tokenVersion);
         string? acquired;
         var unavailable = false;
+        var definitiveNoSession = false;
         if (tokenRefresher is ISessionAwareTokenRefresher sessionAware)
         {
             var acquisition = await sessionAware.TryAcquireAccessTokenAsync().ConfigureAwait(false);
             acquired = acquisition.AccessToken;
             unavailable = acquisition.IsUnavailable;
+            definitiveNoSession = acquired is null && !unavailable;
         }
         else
         {
@@ -216,6 +235,18 @@ public sealed class ServerTokenStorageService(
         if (_accessToken is null && !unavailable)
         {
             _anonymousUntil = _timeProvider.GetUtcNow() + AnonymousGrace;
+        }
+
+        if (_accessToken is not null)
+        {
+            _sessionHeld = true;
+        }
+        else if (definitiveNoSession && _sessionHeld)
+        {
+            // The session the circuit held ended on the server (A-34): the token is already gone
+            // from memory, and the auth state is told so the circuit signs out.
+            _sessionHeld = false;
+            SessionEnded?.Invoke(this, EventArgs.Empty);
         }
 
         return _accessToken;
@@ -247,7 +278,12 @@ public sealed class ServerTokenStorageService(
         // Circuit before any token was stored here: the connection request's cookie is the session the
         // circuit started with. No cookie answers anonymous as before and a fresh one is used, but an
         // expired one is never handed back (it would 401 every call for the life of the circuit): the
-        // refresher re-acquires instead.
+        // refresher re-acquires instead. Either way a cookie token means the circuit started signed in.
+        if (token is not null)
+        {
+            _sessionHeld = true;
+        }
+
         return token is null || JwtTokenInfo.IsFresh(token, ExpirySkew);
     }
 
