@@ -50,3 +50,5 @@ static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureBlobFileStorag
 static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureNotificationHubsPush(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.SectionName -> string!
 static readonly MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.SectionName -> string!
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureServiceBusTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureServiceBusTransport() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

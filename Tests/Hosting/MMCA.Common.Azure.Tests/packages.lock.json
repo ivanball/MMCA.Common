@@ -756,11 +756,9 @@
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Azure.Messaging.ServiceBus": "[7.21.0, )",
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.11, )",
-          "MassTransit.Azure.ServiceBus.Core": "[8.5.11, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",

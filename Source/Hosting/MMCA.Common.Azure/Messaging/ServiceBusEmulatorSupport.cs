@@ -3,12 +3,12 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using MassTransit;
 
-namespace MMCA.Common.Infrastructure.Messaging;
+namespace MMCA.Common.Azure.Messaging;
 
 /// <summary>
 /// Everything the Azure Service Bus transport needs to run against the OFFICIAL local emulator
 /// instead of a real namespace, kept in one place so the production path in
-/// <c>ConfigureBrokerTransport</c> stays a single unconditional <c>cfg.Host(connectionString)</c>.
+/// <c>AzureServiceBusTransport</c> stays a single unconditional <c>cfg.Host(connectionString)</c>.
 /// <para>
 /// The emulator is entered only when the resolved connection string carries
 /// <c>UseDevelopmentEmulator=true</c> (<see cref="IsEmulatorConnectionString"/>). A real Azure

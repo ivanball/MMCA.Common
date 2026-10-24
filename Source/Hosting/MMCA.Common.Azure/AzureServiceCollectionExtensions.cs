@@ -7,8 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
+using MMCA.Common.Azure.Messaging;
 using MMCA.Common.Azure.Notifications;
 using MMCA.Common.Azure.Storage;
+using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Azure;
 
@@ -101,5 +103,18 @@ public static class AzureServiceCollectionExtensions
 
             return services;
         }
+
+        /// <summary>
+        /// Registers the Azure Service Bus broker transport, so <c>AddBrokerMessaging</c> can select it
+        /// with <c>MessageBus:Provider=AzureServiceBus</c>. Call it BEFORE <c>AddBrokerMessaging</c>,
+        /// which picks the transport while it registers the bus. The connection string resolves the
+        /// usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:messaging</c>); one
+        /// carrying <c>UseDevelopmentEmulator=true</c> targets the local emulator and needs
+        /// <c>MessageBus:EmulatorAdminEndpoint</c>. Registration only: a host whose provider is
+        /// something else is unaffected.
+        /// </summary>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddAzureServiceBusTransport() =>
+            services.AddBrokerTransport(new AzureServiceBusTransport());
     }
 }

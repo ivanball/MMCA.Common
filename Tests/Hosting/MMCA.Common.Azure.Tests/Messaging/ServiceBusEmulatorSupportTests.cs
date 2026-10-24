@@ -1,8 +1,9 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
+using MMCA.Common.Azure.Messaging;
 using MMCA.Common.Infrastructure.Messaging;
 
-namespace MMCA.Common.Infrastructure.Tests.Messaging;
+namespace MMCA.Common.Azure.Tests.Messaging;
 
 /// <summary>
 /// Unit tests for the Azure Service Bus emulator branch: the detection that decides whether it runs
@@ -88,7 +89,7 @@ public sealed class ServiceBusEmulatorSupportTests
             .GetSection(MessageBusSettings.SectionName)
             .Get<MessageBusSettings>()!;
 
-        settings.Provider.Should().Be(MessageBusProvider.AzureServiceBus);
+        settings.Provider.Should().Be("AzureServiceBus");
         settings.EmulatorAdminEndpoint.Should().Be("http://localhost:33012");
     }
 

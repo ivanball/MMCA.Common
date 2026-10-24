@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Transports;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
@@ -78,7 +79,7 @@ internal sealed partial class StartupConfigurationSummaryService(
                 tenancyMode);
         }
 
-        if (bus.Provider == MessageBusProvider.RabbitMq && !bus.EnableDelayedRedelivery)
+        if (MessageBusProviders.IsRabbitMq(bus.Provider) && !bus.EnableDelayedRedelivery)
         {
             LogRabbitMqDelayedRedeliveryOff(logger, bus.RetryLimit);
         }
@@ -139,7 +140,7 @@ internal sealed partial class StartupConfigurationSummaryService(
         ILogger logger,
         string frameworkVersion,
         string dataSourceEngines,
-        MessageBusProvider messageBusProvider,
+        string messageBusProvider,
         bool enableDelayedRedelivery,
         string cacheMode,
         string tenancyMode);

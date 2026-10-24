@@ -1,24 +1,31 @@
 using System.ComponentModel.DataAnnotations;
+using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Infrastructure.Messaging;
 
 /// <summary>
 /// Configuration for the cross-service message bus, bound from the <c>MessageBus</c> section.
-/// Selects the transport implementation: <see cref="MessageBusProvider.InProcess"/> for the
-/// modular monolith, <see cref="MessageBusProvider.RabbitMq"/> for development microservice
-/// deployments, and <see cref="MessageBusProvider.AzureServiceBus"/> for production.
+/// Selects the transport implementation: <see cref="MessageBusProviders.InProcess"/> for the
+/// modular monolith, <see cref="MessageBusProviders.RabbitMq"/> for development microservice
+/// deployments, and an adapter-registered broker (e.g. <c>AzureServiceBus</c> from
+/// <c>MMCA.Common.Azure</c>) for production.
 /// </summary>
 public sealed class MessageBusSettings
 {
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "MessageBus";
 
-    /// <summary>Gets the transport selector. Defaults to <see cref="MessageBusProvider.InProcess"/>.</summary>
-    public MessageBusProvider Provider { get; init; } = MessageBusProvider.InProcess;
+    /// <summary>
+    /// Gets the transport selector, compared case-insensitively. Defaults to
+    /// <see cref="MessageBusProviders.InProcess"/>. <see cref="MessageBusProviders.InProcess"/> and
+    /// <see cref="MessageBusProviders.RabbitMq"/> are built in; any other value names an
+    /// <see cref="IBrokerTransport"/> an adapter package registers before <c>AddBrokerMessaging</c>
+    /// (e.g. <c>AzureServiceBus</c> through <c>AddAzureServiceBusTransport()</c>).
+    /// </summary>
+    public string Provider { get; init; } = MessageBusProviders.InProcess;
 
     /// <summary>
-    /// Gets the broker connection string when <see cref="Provider"/> is
-    /// <see cref="MessageBusProvider.RabbitMq"/> or <see cref="MessageBusProvider.AzureServiceBus"/>.
+    /// Gets the broker connection string when <see cref="Provider"/> names a broker transport.
     /// Aspire-resourced deployments inject this via <c>ConnectionStrings:rabbitmq</c> or
     /// <c>ConnectionStrings:messaging</c>; the property is read directly so the value can come
     /// from any configuration source.
@@ -113,9 +120,8 @@ public sealed class MessageBusSettings
     /// needs no schema work.
     /// <para>
     /// Leave it unset and <see cref="IsInboxEnabled"/> resolves it from
-    /// <see cref="Provider"/>: ON for a broker (<see cref="MessageBusProvider.RabbitMq"/>,
-    /// <see cref="MessageBusProvider.AzureServiceBus"/>), OFF for
-    /// <see cref="MessageBusProvider.InProcess"/>, which has no redelivery to dedup. Broker
+    /// <see cref="Provider"/>: ON for any broker transport, OFF for
+    /// <see cref="MessageBusProviders.InProcess"/>, which has no redelivery to dedup. Broker
     /// delivery is at-least-once by contract: a consumer that acks after a network blip, a
     /// redelivered message after a lease expiry, or an outbox row republished after a crash all
     /// hand the same event to the same handlers twice, and with the inbox off every one of those
@@ -135,10 +141,10 @@ public sealed class MessageBusSettings
     /// <summary>
     /// Gets the RESOLVED inbox posture: the explicit <see cref="EnableInbox"/> value when the host
     /// set one, otherwise <see langword="true"/> for a broker transport and <see langword="false"/>
-    /// for <see cref="MessageBusProvider.InProcess"/>. Every framework component reads this rather
+    /// for <see cref="MessageBusProviders.InProcess"/>. Every framework component reads this rather
     /// than the raw setting.
     /// </summary>
-    public bool IsInboxEnabled => EnableInbox ?? Provider != MessageBusProvider.InProcess;
+    public bool IsInboxEnabled => EnableInbox ?? !MessageBusProviders.IsInProcess(Provider);
 
     /// <summary>
     /// Gets the explicit override for the transactional outbox, or <see langword="null"/> (the
@@ -148,9 +154,8 @@ public sealed class MessageBusSettings
     /// events synchronously and no outbox rows are written.
     /// <para>
     /// Leave it unset and <see cref="IsOutboxEnabled"/> resolves it from <see cref="Provider"/>: ON
-    /// for a broker (<see cref="MessageBusProvider.RabbitMq"/>,
-    /// <see cref="MessageBusProvider.AzureServiceBus"/>), OFF for
-    /// <see cref="MessageBusProvider.InProcess"/>. A single-process application dispatches every
+    /// for a broker transport, OFF for
+    /// <see cref="MessageBusProviders.InProcess"/>. A single-process application dispatches every
     /// event inside the same process that raised it, so the store-and-forward hop buys it nothing
     /// but two background services, a table and a poll loop; a broker deployment cannot deliver at
     /// all without it, because the only correct publish path crosses a process boundary.
@@ -169,10 +174,10 @@ public sealed class MessageBusSettings
     /// <summary>
     /// Gets the RESOLVED outbox posture: the explicit <see cref="EnableOutbox"/> value when the host
     /// set one, otherwise <see langword="true"/> for a broker transport and <see langword="false"/>
-    /// for <see cref="MessageBusProvider.InProcess"/>. Every framework component reads this rather
+    /// for <see cref="MessageBusProviders.InProcess"/>. Every framework component reads this rather
     /// than the raw setting.
     /// </summary>
-    public bool IsOutboxEnabled => EnableOutbox ?? Provider != MessageBusProvider.InProcess;
+    public bool IsOutboxEnabled => EnableOutbox ?? !MessageBusProviders.IsInProcess(Provider);
 
     /// <summary>
     /// Gets a value indicating whether second-level (broker-scheduled) redelivery is applied on
@@ -187,8 +192,8 @@ public sealed class MessageBusSettings
     /// Set it to <see langword="true"/> only on a broker where the plugin is installed.
     /// </para>
     /// <para>
-    /// This flag is IGNORED by <see cref="MessageBusProvider.AzureServiceBus"/>, which supports
-    /// scheduled redelivery natively and therefore always applies
+    /// This flag is read by the RabbitMQ transport only. A transport whose broker schedules
+    /// natively (Azure Service Bus, from <c>MMCA.Common.Azure</c>) ignores it and always applies
     /// <see cref="RedeliveryIntervalsSeconds"/>.
     /// </para>
     /// </summary>
@@ -202,10 +207,9 @@ public sealed class MessageBusSettings
     /// out a dependency restart, a failover and a short incident without an operator replaying
     /// the error queue by hand.
     /// <para>
-    /// Applied unconditionally on <see cref="MessageBusProvider.AzureServiceBus"/> (native
-    /// scheduled delivery) and only when <see cref="EnableDelayedRedelivery"/> is
-    /// <see langword="true"/> on <see cref="MessageBusProvider.RabbitMq"/> (needs the
-    /// delayed-message-exchange plugin).
+    /// Applied unconditionally on Azure Service Bus (native scheduled delivery) and only when
+    /// <see cref="EnableDelayedRedelivery"/> is <see langword="true"/> on
+    /// <see cref="MessageBusProviders.RabbitMq"/> (needs the delayed-message-exchange plugin).
     /// </para>
     /// </summary>
     public IReadOnlyList<int> RedeliveryIntervalsSeconds { get; init; } = [60, 600, 3600];
@@ -230,23 +234,4 @@ public sealed class MessageBusSettings
     /// <see cref="PrefetchCount"/>.
     /// </summary>
     public int? ConcurrentMessageLimit { get; init; }
-}
-
-/// <summary>Available message bus transports.</summary>
-public enum MessageBusProvider
-{
-    /// <summary>
-    /// In-process dispatch via <c>InProcessMessageBus</c> — used by the modular monolith deployment.
-    /// </summary>
-    InProcess = 0,
-
-    /// <summary>
-    /// MassTransit on RabbitMQ — used by development microservice deployments and tests.
-    /// </summary>
-    RabbitMq = 1,
-
-    /// <summary>
-    /// MassTransit on Azure Service Bus — used by production microservice deployments.
-    /// </summary>
-    AzureServiceBus = 2,
 }

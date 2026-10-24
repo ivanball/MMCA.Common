@@ -8,6 +8,7 @@ using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Infrastructure;
 
@@ -22,10 +23,13 @@ public static partial class DependencyInjection
         /// <para>
         /// The transport is selected by <see cref="MessageBusSettings.Provider"/>:
         /// <list type="bullet">
-        ///   <item><see cref="MessageBusProvider.RabbitMq"/> — local dev (Aspire RabbitMQ container).</item>
-        ///   <item><see cref="MessageBusProvider.AzureServiceBus"/> — production deployments.</item>
-        ///   <item><see cref="MessageBusProvider.InProcess"/> — no-op; this method returns without
+        ///   <item><see cref="MessageBusProviders.RabbitMq"/> — built in; local dev (Aspire RabbitMQ container).</item>
+        ///   <item><see cref="MessageBusProviders.InProcess"/> — no-op; this method returns without
         ///   modifying the container, leaving the default <see cref="InProcessMessageBus"/> in place.</item>
+        ///   <item>Any other name — the <see cref="IBrokerTransport"/> an adapter package registered
+        ///   under it, e.g. <c>AzureServiceBus</c> through <c>AddAzureServiceBusTransport()</c> from
+        ///   <c>MMCA.Common.Azure</c>. The adapter call must come BEFORE this one; a name with no
+        ///   registered transport throws here, naming the package and the call.</item>
         /// </list>
         /// </para>
         /// <para>
@@ -46,7 +50,7 @@ public static partial class DependencyInjection
             var settings = configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()
                 ?? new MessageBusSettings();
 
-            if (settings.Provider == MessageBusProvider.InProcess)
+            if (MessageBusProviders.IsInProcess(settings.Provider))
             {
                 return services;
             }
@@ -56,7 +60,13 @@ public static partial class DependencyInjection
             // broker bus whose only delivery channel was turned off.
             EnsureOutboxAvailableForProvider(settings);
 
-            var connectionString = ResolveBrokerConnectionString(configuration, settings);
+            // Resolved before AddMassTransit so an unregistered provider fails without leaving a
+            // half-registered bus behind.
+            var transport = ResolveBrokerTransport(services, settings.Provider);
+            var transportContext = new BrokerTransportContext(
+                settings,
+                ResolveBrokerConnectionString(configuration, settings),
+                configuration);
 
             services.AddMassTransit(x =>
             {
@@ -84,7 +94,7 @@ public static partial class DependencyInjection
                 }
 
                 configureConsumers?.Invoke(x);
-                ConfigureBrokerTransport(x, settings, connectionString);
+                transport.Configure(x, transportContext);
             });
 
             // Swap the default in-process bus for the broker-backed one. Use Replace so we
@@ -122,6 +132,75 @@ public static partial class DependencyInjection
 
             return services;
         }
+
+        /// <summary>
+        /// Registers a broker transport that <see cref="AddBrokerMessaging"/> can select by name
+        /// through <c>MessageBus:Provider</c>. Adapter packages call this from their own registration
+        /// method (for example <c>AddAzureServiceBusTransport()</c>); a host calls it directly only
+        /// for a transport of its own. Must run BEFORE <see cref="AddBrokerMessaging"/>, which picks
+        /// the transport while it registers the bus. Idempotent per transport type, so registering
+        /// the same adapter twice is harmless; when two transports share a name, the last one
+        /// registered wins.
+        /// </summary>
+        /// <param name="transport">The transport instance.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddBrokerTransport(IBrokerTransport transport)
+        {
+            ArgumentNullException.ThrowIfNull(transport);
+
+            if (string.IsNullOrWhiteSpace(transport.Name))
+            {
+                throw new ArgumentException("A broker transport must have a non-empty Name.", nameof(transport));
+            }
+
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IBrokerTransport>(transport));
+
+            return services;
+        }
+    }
+
+    /// <summary>
+    /// Picks the transport for a broker provider: the built-in RabbitMQ transport, else the LAST
+    /// adapter transport registered under that name (instances only, read straight off the
+    /// collection because the choice has to be made while the bus is being registered, before any
+    /// provider exists).
+    /// </summary>
+    /// <param name="services">The service collection being configured.</param>
+    /// <param name="provider">The configured <c>MessageBus:Provider</c>.</param>
+    /// <returns>The transport to configure the bus with.</returns>
+    /// <exception cref="InvalidOperationException">No transport is registered under <paramref name="provider"/>.</exception>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static IBrokerTransport ResolveBrokerTransport(IServiceCollection services, string provider)
+    {
+        if (MessageBusProviders.IsRabbitMq(provider))
+        {
+            return new RabbitMqBrokerTransport();
+        }
+
+        var registered = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IBrokerTransport) && !descriptor.IsKeyedService)
+            .Select(descriptor => descriptor.ImplementationInstance)
+            .OfType<IBrokerTransport>()
+            .ToList();
+
+        var match = registered.LastOrDefault(t => string.Equals(t.Name, provider, StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+        {
+            return match;
+        }
+
+        var available = string.Join(
+            ", ",
+            new[] { MessageBusProviders.InProcess, MessageBusProviders.RabbitMq }.Concat(registered.Select(t => t.Name)));
+        var remedy = MessageBusProviders.KnownAdapterTransports.TryGetValue(provider, out var adapter)
+            ? $"Reference the {adapter.Package} package and call {adapter.Registration} BEFORE AddBrokerMessaging(...)."
+            : $"Register an IBrokerTransport named '{provider}' with services.AddBrokerTransport(...) BEFORE AddBrokerMessaging(...), or correct the provider name.";
+
+        throw new InvalidOperationException(
+            $"MessageBus:Provider is '{provider}', but no broker transport by that name is registered. {remedy} Available providers: {available}.");
     }
 
     /// <summary>
@@ -144,7 +223,7 @@ public static partial class DependencyInjection
         Justification = "Called from AddInfrastructure and AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static void EnsureOutboxAvailableForProvider(MessageBusSettings settings)
     {
-        if (settings.Provider != MessageBusProvider.InProcess && settings.EnableOutbox == false)
+        if (!MessageBusProviders.IsInProcess(settings.Provider) && settings.EnableOutbox == false)
         {
             throw new InvalidOperationException(
                 $"MessageBus:EnableOutbox=false is not supported with the '{settings.Provider}' transport. A broker deployment publishes integration events exclusively through the outbox (BrokerEventBus writes the rows, OutboxProcessor publishes them), so disabling it drops every cross-service event silently. Remove MessageBus:EnableOutbox (or set it to true) for a broker transport; the setting exists to let a single-process host opt out of store-and-forward.");
@@ -175,154 +254,4 @@ public static partial class DependencyInjection
         return configuration.GetConnectionString("rabbitmq")
             ?? configuration.GetConnectionString("messaging");
     }
-
-    /// <summary>
-    /// Wires MassTransit to the configured broker transport using the resolved connection string.
-    /// Every receive endpoint gets an exponential-backoff <c>UseMessageRetry</c> policy (configured
-    /// by <see cref="MessageBusSettings.RetryLimit"/> and friends) so a transient handler failure is
-    /// retried in-process instead of dead-lettering on the first exception.
-    /// Extracted out of <c>AddBrokerMessaging</c> to keep that method's cyclomatic complexity
-    /// below the analyzer threshold.
-    /// </summary>
-    /// <remarks>
-    /// Second-level redelivery (<c>UseDelayedRedelivery</c>) sits ABOVE the in-process retry policy:
-    /// in-process retry absorbs a blip measured in seconds, delayed redelivery reschedules the
-    /// message through the broker over <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/>
-    /// (one minute, ten minutes, one hour by default) so an outage measured in minutes or hours
-    /// does not dead-letter the event. It is registered before <c>UseMessageRetry</c> so the retry
-    /// filter runs innermost: every immediate attempt is exhausted before a redelivery is scheduled.
-    /// <para>
-    /// The two transports differ in posture. Azure Service Bus schedules messages natively, so
-    /// redelivery is applied UNCONDITIONALLY there. RabbitMQ needs the
-    /// <c>rabbitmq_delayed_message_exchange</c> plugin, which the Aspire development container does
-    /// not ship, so it is gated behind <see cref="MessageBusSettings.EnableDelayedRedelivery"/>
-    /// (default <see langword="false"/>) and must only be turned on against a broker that has the
-    /// plugin installed.
-    /// </para>
-    /// </remarks>
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
-    private static void ConfigureBrokerTransport(
-        IBusRegistrationConfigurator x,
-        MessageBusSettings settings,
-        string? connectionString)
-    {
-        switch (settings.Provider)
-        {
-            case MessageBusProvider.RabbitMq:
-                x.UsingRabbitMq((context, cfg) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(connectionString))
-                    {
-                        cfg.Host(new Uri(connectionString));
-                    }
-
-                    // Opt-in: needs the rabbitmq_delayed_message_exchange plugin, which the Aspire
-                    // development container does not ship. Registered before UseMessageRetry so the
-                    // retry filter stays innermost (all immediate attempts first, then a scheduled
-                    // redelivery).
-                    if (settings.EnableDelayedRedelivery)
-                    {
-                        TimeSpan[] intervals = BuildRedeliveryIntervals(settings);
-                        if (intervals.Length > 0)
-                        {
-                            cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
-                        }
-                    }
-
-                    cfg.UseMessageRetry(r => r.Exponential(
-                        settings.RetryLimit,
-                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
-                        TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
-                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
-                    ApplyBackpressure(cfg, settings);
-                    cfg.ConfigureEndpoints(context);
-                });
-                break;
-
-            case MessageBusProvider.AzureServiceBus:
-                x.UsingAzureServiceBus((context, cfg) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(connectionString))
-                    {
-                        // The emulator branch exists so a development stack can run the SAME
-                        // transport production runs. It is entered only when the connection string
-                        // carries UseDevelopmentEmulator=true, a token no real namespace emits, so
-                        // the production path below is reached byte-for-byte as before.
-                        if (Messaging.ServiceBusEmulatorSupport.IsEmulatorConnectionString(connectionString))
-                        {
-                            Messaging.ServiceBusEmulatorSupport.ConfigureEmulatorHost(
-                                cfg, connectionString, settings.EmulatorAdminEndpoint);
-                        }
-                        else
-                        {
-                            cfg.Host(connectionString);
-                        }
-                    }
-
-                    // Unconditional: Azure Service Bus schedules messages natively, so there is no
-                    // plugin to install and no configuration in which this can fail at bus start.
-                    // The EnableDelayedRedelivery flag is deliberately not consulted on this
-                    // transport, because it exists only to gate the RabbitMQ plugin requirement.
-                    TimeSpan[] intervals = BuildRedeliveryIntervals(settings);
-                    if (intervals.Length > 0)
-                    {
-                        cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
-                    }
-
-                    cfg.UseMessageRetry(r => r.Exponential(
-                        settings.RetryLimit,
-                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
-                        TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
-                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
-                    ApplyBackpressure(cfg, settings);
-                    cfg.ConfigureEndpoints(context);
-                });
-                break;
-
-            case MessageBusProvider.InProcess:
-            default:
-                // Caller short-circuits InProcess before reaching this method.
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Applies the two backpressure knobs to the bus factory configurator, which is where MassTransit
-    /// carries them onto every receive endpoint <c>ConfigureEndpoints</c> then builds. Both are
-    /// optional and both are range-guarded HERE rather than with a <c>[Range]</c> attribute:
-    /// <c>AddBrokerMessaging</c> binds this section with <c>Get&lt;MessageBusSettings&gt;()</c>, which
-    /// never runs DataAnnotations, so an annotation would document the bound without enforcing it. A
-    /// value of zero or less is left unapplied, so the transport keeps its own default instead of
-    /// receiving a window that would stall the endpoint.
-    /// </summary>
-    /// <param name="cfg">The transport's bus factory configurator.</param>
-    /// <param name="settings">The bound message-bus settings.</param>
-    private static void ApplyBackpressure(IBusFactoryConfigurator cfg, MessageBusSettings settings)
-    {
-        if (settings.PrefetchCount is > 0)
-        {
-            cfg.PrefetchCount = settings.PrefetchCount.Value;
-        }
-
-        if (settings.ConcurrentMessageLimit is > 0)
-        {
-            cfg.ConcurrentMessageLimit = settings.ConcurrentMessageLimit.Value;
-        }
-    }
-
-    /// <summary>
-    /// Maps <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/> to the
-    /// <see cref="TimeSpan"/> array MassTransit's redelivery configurator expects. Non-positive
-    /// entries are dropped: a zero or negative interval schedules an immediate redelivery, which
-    /// is what <c>UseMessageRetry</c> already does and would turn the second level into a hot loop.
-    /// Returns an empty array when nothing survives, and the caller then skips the filter entirely
-    /// rather than registering a redelivery policy with no attempts.
-    /// </summary>
-    private static TimeSpan[] BuildRedeliveryIntervals(MessageBusSettings settings) =>
-        [.. (settings.RedeliveryIntervalsSeconds ?? [])
-            .Where(seconds => seconds > 0)
-            .Select(seconds => TimeSpan.FromSeconds(seconds))];
 }

@@ -37,3 +37,27 @@
 *REMOVED*static MMCA.Common.Infrastructure.DependencyInjection.AddNativePushNotifications(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 *REMOVED*static readonly MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.SectionName -> string!
 *REMOVED*static readonly MMCA.Common.Infrastructure.Storage.FileStorageSettings.SectionName -> string!
+static MMCA.Common.Infrastructure.DependencyInjection.AddBrokerTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport! transport) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext
+MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies
+const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.InProcess = "InProcess" -> string!
+MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders
+const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.RabbitMq = "RabbitMq" -> string!
+MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.Name.get -> string!
+MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.Configure(MassTransit.IBusRegistrationConfigurator! configurator, MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext! context) -> void
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyReceivePolicies(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, bool applyDelayedRedelivery) -> void
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyMessageRetry(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> void
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyBackpressure(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> void
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> System.TimeSpan[]!
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.BrokerTransportContext(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, string? connectionString, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.Settings.get -> MMCA.Common.Infrastructure.Messaging.MessageBusSettings!
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.ConnectionString.get -> string?
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.Configuration.get -> Microsoft.Extensions.Configuration.IConfiguration!
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.Provider.get -> string!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddBrokerTransport(MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport! transport) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider.AzureServiceBus = 2 -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider.InProcess = 0 -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider.RabbitMq = 1 -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusSettings.Provider.get -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
