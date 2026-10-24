@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.UI.Pages.Auth.Login.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.Register.Dispose() -> void
+virtual MMCA.Common.UI.Pages.Auth.Login.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Auth.Register.Dispose(bool disposing) -> void
