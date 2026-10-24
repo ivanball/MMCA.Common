@@ -125,6 +125,9 @@
     <PackageVersion Include="MassTransit" Version="8.5.11" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
     <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.11" />
+    <!-- Amazon SQS/SNS transport (MMCA.Common.Aws), Apache-2.0 like the rest of the v8 line. Same
+         version as every MassTransit pin above: the transports and the core bump together. -->
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.11" />
     <!-- Azure Service Bus transport (MMCA.Common.Azure) and its emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing.Azure): the two
          clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
          working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older

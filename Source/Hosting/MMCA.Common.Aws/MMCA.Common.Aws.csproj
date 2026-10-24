@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Aws</PackageId>
-    <Description>MMCA framework: the AWS adapter. S3-compatible file storage (AWS S3, Cloudflare R2, MinIO, the GCS XML API); the core packages stay cloud-neutral</Description>
+    <Description>MMCA framework: the AWS adapter. S3-compatible file storage (AWS S3, Cloudflare R2, MinIO, the GCS XML API) and the Amazon SQS/SNS broker transport; the core packages stay cloud-neutral</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -14,6 +14,8 @@
          runs on AWS or an S3-compatible store, and opts into each capability with one registration
          call. -->
     <PackageReference Include="AWSSDK.S3" />
+    <!-- Amazon SQS/SNS transport. It brings AWSSDK.SQS and AWSSDK.SimpleNotificationService. -->
+    <PackageReference Include="MassTransit.AmazonSQS" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

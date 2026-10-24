@@ -11,6 +11,17 @@
           "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
         }
       },
+      "MassTransit.AmazonSQS": {
+        "type": "Direct",
+        "requested": "[8.5.11, )",
+        "resolved": "8.5.11",
+        "contentHash": "j8IB7IwluRzw292OOWQjeyGjbS//81vFs51oHOi2xzRHIUS7O2iGBa6xT5IuOk5IRMx8qNJKQz13VhBmFcn/0g==",
+        "dependencies": {
+          "AWSSDK.SQS": "4.0.100.14",
+          "AWSSDK.SimpleNotificationService": "4.0.100.15",
+          "MassTransit": "8.5.11"
+        }
+      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.315, )",
@@ -60,6 +71,22 @@
         "type": "Transitive",
         "resolved": "4.0.102.13",
         "contentHash": "vaYs/kwfB+Lv9PeVKYE4g2mQlzVtHImXLWgfTG8UgeCybUAPkew5kwb8GS6RhuzwvImbolyLHT+IM34WoM9lJg=="
+      },
+      "AWSSDK.SimpleNotificationService": {
+        "type": "Transitive",
+        "resolved": "4.0.100.15",
+        "contentHash": "PW5pYqLMexVGwgNFf3EWqyksyz/PwS+T/Q3Z6W7BDmVZD/LxWSzqdIj4mEZKUgRvrk6yNKDL670wQgMSAMrZMw==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.6, 5.0.0)"
+        }
+      },
+      "AWSSDK.SQS": {
+        "type": "Transitive",
+        "resolved": "4.0.100.14",
+        "contentHash": "bFMwWy14LyVocTM9kVfyVRgjbgJBkBXEJXi8i6KLVJV2PXVnVeTfwlxClMFTMDOPhYWlpmHzO2aHuaBdVlaFzg==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.6, 5.0.0)"
+        }
       },
       "Azure.Core": {
         "type": "Transitive",

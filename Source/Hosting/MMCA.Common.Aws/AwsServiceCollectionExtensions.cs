@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
+using MMCA.Common.Aws.Messaging;
 using MMCA.Common.Aws.Storage;
+using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Aws;
 
@@ -60,5 +62,21 @@ public static class AwsServiceCollectionExtensions
 
             return services;
         }
+
+        /// <summary>
+        /// Registers the Amazon SQS/SNS broker transport, so <c>AddBrokerMessaging</c> can select it
+        /// with <c>MessageBus:Provider=AmazonSqs</c>. Call it BEFORE <c>AddBrokerMessaging</c>, which
+        /// picks the transport while it registers the bus. Reads <c>MessageBus:AmazonSqs</c>:
+        /// <c>Region</c> (else the AWS SDK fallback chain), <c>ServiceUrl</c> (an endpoint override for
+        /// both SQS and SNS, e.g. LocalStack) and <c>AccessKeyId</c> + <c>SecretAccessKey</c> (else the
+        /// AWS default credential chain). The broker connection string is not used. Every
+        /// <c>MessageBus:RedeliveryIntervalsSeconds</c> value must be 900 or less (the SQS delay cap),
+        /// so the framework default <c>[60, 600, 3600]</c> needs overriding; <c>AddBrokerMessaging</c>
+        /// throws naming the interval otherwise. Registration only: a host whose provider is
+        /// something else is unaffected.
+        /// </summary>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddAmazonSqsTransport() =>
+            services.AddBrokerTransport(new AmazonSqsTransport());
     }
 }
