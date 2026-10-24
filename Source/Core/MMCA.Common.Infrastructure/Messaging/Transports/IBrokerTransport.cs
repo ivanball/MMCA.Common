@@ -9,7 +9,8 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports;
 /// every broker (the endpoint name formatter, consumer registration, the outbox-only publish path, the
 /// inbox), and hands the transport-specific part to the transport whose <see cref="Name"/> matches
 /// the configured provider. RabbitMQ is built in; every other transport ships in an adapter package
-/// (<c>MMCA.Common.Azure</c> for Azure Service Bus) with one registration method, so the core
+/// (<c>MMCA.Common.Azure</c> for Azure Service Bus, <c>MMCA.Common.Aws</c> for Amazon SQS/SNS) with
+/// one registration method, so the core
 /// packages never reference a vendor SDK and swapping the broker is a package reference, a
 /// registration call and a configuration value.
 /// </para>

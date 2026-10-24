@@ -32,6 +32,89 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.255.0] - 2026-10-24
+
+**The core packages are cloud-neutral (breaking).** Every Azure dependency moves out of
+MMCA.Common.Infrastructure, MMCA.Common.Aspire, MMCA.Common.API and MMCA.Common.Testing into two new
+packages, `MMCA.Common.Azure` and `MMCA.Common.Testing.Azure`; the new `MMCA.Common.Aws` is the AWS
+counterpart. No shim or `[Obsolete]` alias is left behind. Configuration sections and keys are
+unchanged.
+
+| Old | New |
+|-----|-----|
+| `builder.AddCommonKeyVaultConfiguration()` (MMCA.Common.Aspire, `KeyVaultConfigurationExtensions`) | `builder.AddAzureKeyVaultConfiguration()` (MMCA.Common.Azure, `AzureKeyVaultConfigurationExtensions`) |
+| `builder.AddCommonDataProtection()` (MMCA.Common.Aspire, `DataProtectionExtensions`) | `builder.AddAzureDataProtection()` (MMCA.Common.Azure, `AzureDataProtectionExtensions`) |
+| Azure Monitor wired by `AddServiceDefaults()` when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set | `builder.AddAzureMonitorExporter()` (MMCA.Common.Azure), AFTER `builder.AddServiceDefaults()` |
+| `services.AddNativePushNotifications(configuration)` (MMCA.Common.Infrastructure) | `services.AddAzureNotificationHubsPush(configuration)` (MMCA.Common.Azure) |
+| `services.AddAzureBlobFileStorage(configuration)` (MMCA.Common.Infrastructure) | Same call, now `MMCA.Common.Azure.AzureServiceCollectionExtensions` |
+| Azure Service Bus built into `AddBrokerMessaging` | `services.AddAzureServiceBusTransport()` (MMCA.Common.Azure), BEFORE `AddBrokerMessaging` |
+| `MMCA.Common.Infrastructure.Storage.FileStorageSettings` | `MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings` |
+| `MMCA.Common.Infrastructure.Storage.AzureBlobFileStorageService` | `MMCA.Common.Azure.Storage.AzureBlobFileStorageService` |
+| `MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings` | `MMCA.Common.Azure.Notifications.AzureNotificationHubSettings` |
+| `MMCA.Common.Infrastructure.Notifications.Push.AzureNotificationHubNativePushSender` | `MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender` |
+| `MMCA.Common.Infrastructure.Notifications.Push.AzureNotificationHubDeviceRegistrar` | `MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar` |
+| `MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase` | `MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase` (package MMCA.Common.Testing.Azure) |
+| `MessageBusProvider` enum, `MessageBusSettings.Provider` of that type | `string` `MessageBusSettings.Provider`; constants `MessageBusProviders.InProcess` / `RabbitMq` (`MMCA.Common.Infrastructure.Messaging.Transports`) |
+| `MessageBusSettings.RedeliveryIntervalsSeconds` defaulting to `[60, 600, 3600]` | `IReadOnlyList<int>?`, `null` when unconfigured; default in `MessageBusSettings.DefaultRedeliveryIntervalsSeconds`; effective list from `BrokerTransportPolicies.BuildRedeliveryIntervals(settings)` |
+| `Microsoft.Data.SqlClient.Extensions.Azure` through MMCA.Common.Infrastructure | Through MMCA.Common.Azure only |
+
+The `MessageBus:Provider` values are unchanged (`InProcess`, `RabbitMq`, `AzureServiceBus`, and the new
+`AmazonSqs`), compared case-insensitively; a blank value means `InProcess` and a numeric value such as
+`"2"` is no longer accepted. An unknown name now fails at `AddBrokerMessaging`, not when
+`AddInfrastructure` binds the section.
+
+**Configured redelivery intervals replace the default (behavior change).** The configuration binder
+appended a configured `MessageBus:RedeliveryIntervalsSeconds` to the property's `[60, 600, 3600]`
+initializer, so `[60, 300, 900]` bound as `{60, 600, 3600, 60, 300, 900}` and `[0]` never turned
+redelivery off. A host that sets the key now gets exactly that list. On Amazon SQS an unconfigured
+list defaults to `[60, 300, 900]`, and a configured interval over 900 seconds fails `AddBrokerMessaging`.
+
+**Configuration that asks for a missing adapter now fails at startup, naming the call.**
+
+| Configuration | Required call |
+|---------------|---------------|
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` set | `builder.AddAzureMonitorExporter()` |
+| `KeyVault:Uri` set | `builder.AddAzureKeyVaultConfiguration()` |
+| `DataProtection:BlobStorageUri` set | `builder.AddAzureDataProtection()` |
+| Any non-blank value under `FileStorage` | `services.AddAzureBlobFileStorage(configuration)` or `services.AddS3FileStorage(configuration)`, with a complete section |
+| `NativePush:Enabled=true` | `services.AddAzureNotificationHubsPush(configuration)`, with a complete section |
+| `MessageBus:Provider=AzureServiceBus` | `services.AddAzureServiceBusTransport()` before `AddBrokerMessaging` (fails at registration) |
+| `MessageBus:Provider=AmazonSqs` | `services.AddAmazonSqsTransport()` before `AddBrokerMessaging` (fails at registration) |
+
+The first five run as `ValidateOnStart` validators (the first three registered by `AddServiceDefaults()`,
+the other two by `AddInfrastructure`). A section holding only blank placeholders (an appsettings.json
+with `"ContainerName": ""`) stays silent.
+
+The fix, per host:
+
+1. **Package reference.** Every host that runs on Azure, and every process that connects to SQL
+   Server with `Authentication=Active Directory ...` (services, migration bundles, tools), references
+   `MMCA.Common.Azure`. A broker-parity test project that uses the Service Bus emulator fixture
+   references `MMCA.Common.Testing.Azure`; MMCA.Common.Testing no longer brings Testcontainers.ServiceBus,
+   Azure.Messaging.ServiceBus or MassTransit.Azure.ServiceBus.Core.
+2. **Usings.** Add `using MMCA.Common.Azure;` where the registration calls are made, and re-qualify the
+   moved types per the table (`MMCA.Common.Azure.Storage`, `MMCA.Common.Azure.Notifications`,
+   `MMCA.Common.Testing.Azure.Fixtures`, `MMCA.Common.Infrastructure.Messaging.Transports`).
+3. **Renamed calls.** `AddCommonKeyVaultConfiguration()` -> `AddAzureKeyVaultConfiguration()`,
+   `AddCommonDataProtection()` -> `AddAzureDataProtection()`,
+   `AddNativePushNotifications(configuration)` -> `AddAzureNotificationHubsPush(configuration)`.
+4. **Two new calls.** `builder.AddAzureMonitorExporter();` directly after `builder.AddServiceDefaults();`
+   in every host that receives `APPLICATIONINSIGHTS_CONNECTION_STRING` (called before
+   `AddServiceDefaults()` it throws), and `services.AddAzureServiceBusTransport();` before
+   `services.AddBrokerMessaging(...)` in every host whose `MessageBus:Provider` can be `AzureServiceBus`
+   (production, and a development stack whose AppHost selects the emulator).
+5. **Provider comparisons.** Replace `settings.Provider == MessageBusProvider.X` with a
+   case-insensitive string comparison or `MessageBusProviders.*`.
+6. **Redelivery intervals.** A host that configured `MessageBus:RedeliveryIntervalsSeconds` checks the
+   list is the complete one it wants; code that read the property for the effective intervals calls
+   `BrokerTransportPolicies.BuildRedeliveryIntervals(settings)`.
+7. **Lock files.** Regenerate `packages.lock.json` in package mode (`dotnet restore <slnx>
+   --force-evaluate`, `local.props` set aside).
+
+To run on AWS instead, reference `MMCA.Common.Aws` and call `services.AddS3FileStorage(configuration)`
+(`FileStorage:Bucket` plus `Region` or `ServiceUrl`) and `services.AddAmazonSqsTransport()` with
+`MessageBus:Provider=AmazonSqs` and `MessageBus:AmazonSqs:Region`.
+
 ## [1.252.0] - 2026-10-23
 
 **`IWriteRepository.UpdateAsync` and `UpdateRange` are removed (breaking).** A tracked aggregate

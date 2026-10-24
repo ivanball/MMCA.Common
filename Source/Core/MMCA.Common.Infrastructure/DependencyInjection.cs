@@ -216,7 +216,7 @@ public static partial class DependencyInjection
 
             // Startup tripwire: a FileStorage section or an enabled NativePush section whose service
             // still resolves to the inert core default means the vendor adapter call is missing (the
-            // implementations live in MMCA.Common.Azure). Fails the host naming the call instead of
+            // implementations live in MMCA.Common.Azure and MMCA.Common.Aws). Fails the host naming the call instead of
             // letting it run with uploads failing and pushes dropped.
             services.AddOptions<Configuration.CloudAdapterTripwireOptions>().ValidateOnStart();
             services.TryAddEnumerable(
@@ -353,7 +353,8 @@ public static partial class DependencyInjection
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 
             // Managed file storage (ADR-045): unconfigured default swapped by a storage adapter
-            // (AddAzureBlobFileStorage from MMCA.Common.Azure); the image processor is
+            // (AddAzureBlobFileStorage from MMCA.Common.Azure, AddS3FileStorage from
+            // MMCA.Common.Aws); the image processor is
             // dependency-free and always real.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
             services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();

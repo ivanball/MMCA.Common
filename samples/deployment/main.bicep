@@ -54,8 +54,9 @@ var commonTags = {
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = { name: acrName }
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = { name: logAnalyticsName }
 
-// Workspace-based Application Insights — the OTel exporter in MMCA.Common.Aspire ships to this when
-// APPLICATIONINSIGHTS_CONNECTION_STRING is set (see Aspire/Extensions.cs AddOpenTelemetryExporters).
+// Workspace-based Application Insights. The app ships telemetry here through
+// builder.AddAzureMonitorExporter() (MMCA.Common.Azure), called after AddServiceDefaults(); a host
+// that receives APPLICATIONINSIGHTS_CONNECTION_STRING without that call fails at startup.
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: '${prefix}-appi-${resourceToken}'
   location: location

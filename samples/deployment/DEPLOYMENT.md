@@ -43,9 +43,10 @@ with the container env var `ConnectionStrings__SQLServerConnectionString` bound 
 The platform resolves the reference at revision start using the app's identity, so no plaintext
 Container App secret and no value in the deployment output.
 
-Step 3 is also the only grant `AddCommonKeyVaultConfiguration()` (MMCA.Common.Aspire) needs: the app opts
-in by setting `KeyVault:Uri` to the vault URI, and the same managed identity reads the secrets as
-configuration. Name the secrets with a double dash where the configuration key has a colon
+Step 3 is also the only grant `AddAzureKeyVaultConfiguration()` (MMCA.Common.Azure) needs: the app opts
+in by referencing MMCA.Common.Azure, calling `builder.AddAzureKeyVaultConfiguration()` and setting
+`KeyVault:Uri` to the vault URI, and the same managed identity reads the secrets as configuration. A
+host that sets `KeyVault:Uri` without the call fails at startup, naming it. Name the secrets with a double dash where the configuration key has a colon
 (`ConnectionStrings--Default` binds to `ConnectionStrings:Default`).
 
 ## OIDC for the GitHub deploy identity (no stored cloud secret)

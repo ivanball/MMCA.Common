@@ -2,8 +2,9 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports;
 
 /// <summary>
 /// The <c>MessageBus:Provider</c> values the core packages handle themselves. Any other value names
-/// an <see cref="IBrokerTransport"/> an adapter package registers, e.g. <c>AzureServiceBus</c> from
-/// <c>MMCA.Common.Azure</c>. Values compare case-insensitively.
+/// an <see cref="IBrokerTransport"/> an adapter package registers: <c>AzureServiceBus</c> from
+/// <c>MMCA.Common.Azure</c> or <c>AmazonSqs</c> from <c>MMCA.Common.Aws</c>. Values compare
+/// case-insensitively.
 /// </summary>
 public static class MessageBusProviders
 {

@@ -27,8 +27,9 @@ public static partial class DependencyInjection
         ///   <item><see cref="MessageBusProviders.InProcess"/> — no-op; this method returns without
         ///   modifying the container, leaving the default <see cref="InProcessMessageBus"/> in place.</item>
         ///   <item>Any other name — the <see cref="IBrokerTransport"/> an adapter package registered
-        ///   under it, e.g. <c>AzureServiceBus</c> through <c>AddAzureServiceBusTransport()</c> from
-        ///   <c>MMCA.Common.Azure</c>. The adapter call must come BEFORE this one; a name with no
+        ///   under it: <c>AzureServiceBus</c> through <c>AddAzureServiceBusTransport()</c> from
+        ///   <c>MMCA.Common.Azure</c>, or <c>AmazonSqs</c> through <c>AddAmazonSqsTransport()</c> from
+        ///   <c>MMCA.Common.Aws</c>. The adapter call must come BEFORE this one; a name with no
         ///   registered transport throws here, naming the package and the call.</item>
         /// </list>
         /// </para>

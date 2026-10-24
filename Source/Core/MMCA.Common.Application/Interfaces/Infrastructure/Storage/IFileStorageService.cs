@@ -6,8 +6,10 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 /// Stores and deletes binary blobs (ADR-045), e.g. user avatar images. Implementations own the
 /// container/bucket; callers pass only a blob name scoped within it. The default implementation
 /// is unconfigured (uploads fail with a clear error) until a host
-/// registers a storage adapter with a complete <c>FileStorage</c> section, e.g.
-/// <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c>.
+/// registers a storage adapter with a complete <c>FileStorage</c> section:
+/// <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c> (Azure Blob Storage)
+/// or <c>AddS3FileStorage(configuration)</c> from <c>MMCA.Common.Aws</c> (Amazon S3 and
+/// S3-compatible stores such as Cloudflare R2 and MinIO).
 /// </summary>
 public interface IFileStorageService
 {
