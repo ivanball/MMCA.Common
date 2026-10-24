@@ -4,8 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Aspire;
 
-namespace MMCA.Common.Aspire.Tests.Telemetry;
+namespace MMCA.Common.Azure.Tests.Telemetry;
 
 /// <summary>
 /// Pins the Live Metrics off switch a deployed host relies on (rubric §31). Live Metrics is on by
@@ -15,7 +16,7 @@ namespace MMCA.Common.Aspire.Tests.Telemetry;
 /// rate. The switch is the distro's own <c>AzureMonitor</c> configuration section
 /// (<c>AzureMonitor__EnableLiveMetrics=false</c> as an environment variable), so there is no MMCA knob
 /// to keep in step; these tests fail if a distro upgrade stops honoring it through
-/// <c>ConfigureOpenTelemetry()</c>.
+/// <c>AddAzureMonitorExporter()</c>.
 /// </summary>
 public sealed class LiveMetricsConfigurationTests
 {
@@ -31,7 +32,7 @@ public sealed class LiveMetricsConfigurationTests
 
     private static AzureMonitorOptions ResolveOptions(Dictionary<string, string?> settings)
     {
-        // A syntactically valid connection string is what makes ConfigureOpenTelemetry() call
+        // A syntactically valid connection string is what makes AddAzureMonitorExporter() call
         // UseAzureMonitor(); the host is built but never started, so nothing is sent.
         settings["APPLICATIONINSIGHTS_CONNECTION_STRING"] =
             "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://localhost/";
@@ -40,6 +41,7 @@ public sealed class LiveMetricsConfigurationTests
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(settings);
         builder.ConfigureOpenTelemetry();
+        builder.AddAzureMonitorExporter();
 
         using var host = builder.Build();
         return host.Services.GetRequiredService<IOptionsMonitor<AzureMonitorOptions>>().CurrentValue;

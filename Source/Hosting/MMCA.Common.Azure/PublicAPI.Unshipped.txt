@@ -1,0 +1,52 @@
+#nullable enable
+const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string!
+MMCA.Common.Azure.AzureDataProtectionExtensions
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder
+MMCA.Common.Azure.AzureMonitorExporterExtensions
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder
+MMCA.Common.Azure.AzureServiceCollectionExtensions
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureBlobFileStorage(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureNotificationHubsPush(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar
+MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar.AzureNotificationHubDeviceRegistrar(Microsoft.Azure.NotificationHubs.INotificationHubClient! hubClient, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar!>! logger) -> void
+MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar.DeleteAsync(int userId, string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar.UpsertAsync(int userId, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender
+MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender.AzureNotificationHubNativePushSender(Microsoft.Azure.NotificationHubs.INotificationHubClient! hubClient, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender!>! logger) -> void
+MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Azure.Notifications.AzureNotificationHubNativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.AzureNotificationHubSettings() -> void
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.ConnectionString.get -> string?
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.ConnectionString.init -> void
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.Enabled.get -> bool
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.Enabled.init -> void
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.HubName.get -> string?
+MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.HubName.init -> void
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService.AzureBlobFileStorageService(Azure.Storage.Blobs.BlobContainerClient! containerClient, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Azure.Storage.AzureBlobFileStorageService!>! logger) -> void
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService.DeleteAsync(string! blobName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService.IsConfigured.get -> bool
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+MMCA.Common.Azure.Storage.AzureBlobFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.AzureBlobFileStorageSettings() -> void
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ConnectionString.get -> string?
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ConnectionString.init -> void
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ContainerName.get -> string?
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ContainerName.init -> void
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ServiceUri.get -> System.Uri?
+MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ServiceUri.init -> void
+static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureBlobFileStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureNotificationHubsPush(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static readonly MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.SectionName -> string!
+static readonly MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.SectionName -> string!

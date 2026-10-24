@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace MMCA.Common.Infrastructure.Notifications.Push;
+namespace MMCA.Common.Azure.Notifications;
 
 /// <summary>
 /// Builds the platform-native JSON payloads and user tag expressions for Azure Notification

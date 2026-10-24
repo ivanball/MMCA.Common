@@ -4,7 +4,7 @@ using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
-namespace MMCA.Common.Aspire;
+namespace MMCA.Common.Azure;
 
 /// <summary>
 /// Registration extension that layers an Azure Key Vault over the host configuration.
@@ -18,7 +18,7 @@ namespace MMCA.Common.Aspire;
 /// of both places and lets a rotation take effect on its own.
 /// </para>
 /// </summary>
-public static class KeyVaultConfigurationExtensions
+public static class AzureKeyVaultConfigurationExtensions
 {
     extension<TBuilder>(TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -55,7 +55,7 @@ public static class KeyVaultConfigurationExtensions
         /// </para>
         /// <para>
         /// This is deliberately NOT called from <c>AddServiceDefaults()</c>, for the same reason
-        /// <c>AddCommonDataProtection</c> is not: service defaults run in every host, a developer
+        /// <c>AddAzureDataProtection</c> is not: service defaults run in every host, a developer
         /// machine and a test host and the Helpdesk seed included, and an unconditional Azure
         /// dependency at startup would be a liability there rather than a feature. A host that wants
         /// vault-backed configuration opts in with this one call.
@@ -75,7 +75,7 @@ public static class KeyVaultConfigurationExtensions
         /// <exception cref="InvalidOperationException">
         /// <c>KeyVault:ReloadIntervalMinutes</c> is present but is not a positive whole number.
         /// </exception>
-        public TBuilder AddCommonKeyVaultConfiguration()
+        public TBuilder AddAzureKeyVaultConfiguration()
         {
             var vaultUri = builder.Configuration["KeyVault:Uri"];
 

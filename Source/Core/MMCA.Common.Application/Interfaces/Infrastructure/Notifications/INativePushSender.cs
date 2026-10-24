@@ -4,7 +4,8 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 /// Sends OS-level push notifications to registered device installations (ADR-044) - the third
 /// delivery channel beside the persisted inbox record and the SignalR real-time push handled by
 /// <see cref="IPushNotificationSender"/>. Reaches devices when the app is backgrounded or killed.
-/// Infrastructure implementations target Azure Notification Hubs (FCM v1 + APNs); the default is
+/// Adapter packages supply the implementation (MMCA.Common.Azure targets Azure Notification Hubs,
+/// FCM v1 + APNs); the default is
 /// a no-op until a hub is configured.
 /// </summary>
 public interface INativePushSender

@@ -2,7 +2,7 @@ using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 
-namespace MMCA.Common.Infrastructure.Notifications.Push;
+namespace MMCA.Common.Azure.Notifications;
 
 /// <summary>
 /// Azure Notification Hubs implementation of <see cref="INativePushSender"/> (ADR-044). Sends

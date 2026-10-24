@@ -6,7 +6,7 @@ using MassTransit;
 using Testcontainers.ServiceBus;
 using Xunit;
 
-namespace MMCA.Common.Testing.Fixtures;
+namespace MMCA.Common.Testing.Azure.Fixtures;
 
 /// <summary>
 /// Shared scaffolding for the Azure Service Bus emulator <b>broker-parity</b> test tier: a collection

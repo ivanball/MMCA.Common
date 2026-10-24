@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace MMCA.Common.Aspire;
+namespace MMCA.Common.Azure;
 
 /// <summary>
 /// Registration extension for a shared ASP.NET Core DataProtection key ring.
@@ -16,7 +16,7 @@ namespace MMCA.Common.Aspire;
 /// replica the same keys, which is what makes cookies and tokens portable across the deployment.
 /// </para>
 /// </summary>
-public static class DataProtectionExtensions
+public static class AzureDataProtectionExtensions
 {
     extension<TBuilder>(TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -49,7 +49,7 @@ public static class DataProtectionExtensions
         /// </para>
         /// </summary>
         /// <returns>The same builder instance for chaining.</returns>
-        public TBuilder AddCommonDataProtection()
+        public TBuilder AddAzureDataProtection()
         {
             var blobStorageUri = builder.Configuration["DataProtection:BlobStorageUri"];
 

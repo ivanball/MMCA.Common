@@ -1,8 +1,8 @@
 using System.Text.Json;
 using AwesomeAssertions;
-using MMCA.Common.Infrastructure.Notifications.Push;
+using MMCA.Common.Azure.Notifications;
 
-namespace MMCA.Common.Infrastructure.Tests.Notifications.Push;
+namespace MMCA.Common.Azure.Tests.Notifications;
 
 /// <summary>
 /// Tests for <see cref="NativePushPayloads"/> (ADR-044): the FCM v1 / APNs payload shapes the

@@ -15,7 +15,7 @@ namespace MMCA.Common.Aspire.Logging;
 /// <para>
 /// The provider registration is the load-bearing part. <c>UseSerilog()</c> replaces the whole
 /// <c>ILoggerFactory</c> and so silently bypasses every other provider, including the OpenTelemetry
-/// to Azure Monitor one wired by <c>AddServiceDefaults()</c>: a host that calls it publishes no
+/// to Azure Monitor one wired by <c>AddAzureMonitorExporter()</c> (MMCA.Common.Azure): a host that calls it publishes no
 /// application log line to App Insights at all. <c>builder.Logging.AddSerilog(...)</c> adds Serilog
 /// alongside the others instead, which is why this helper does that and never the former.
 /// </para>

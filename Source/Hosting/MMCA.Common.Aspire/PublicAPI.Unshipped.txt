@@ -1,1 +1,9 @@
-﻿#nullable enable
+#nullable enable
+*REMOVED*MMCA.Common.Aspire.DataProtectionExtensions
+*REMOVED*MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder)
+*REMOVED*MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder).AddCommonDataProtection() -> TBuilder
+*REMOVED*MMCA.Common.Aspire.KeyVaultConfigurationExtensions
+*REMOVED*MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
+*REMOVED*MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddCommonKeyVaultConfiguration() -> TBuilder
+*REMOVED*static MMCA.Common.Aspire.DataProtectionExtensions.AddCommonDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+*REMOVED*static MMCA.Common.Aspire.KeyVaultConfigurationExtensions.AddCommonKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder

@@ -338,13 +338,15 @@ public static partial class DependencyInjection
             services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
             services.TryAddTransient<ILiveChannelPublisher, NullLiveChannelPublisher>();
 
-            // Native push (ADR-044) defaults to inert no-ops; AddNativePushNotifications swaps in
-            // the Azure Notification Hubs implementations when an enabled hub is configured.
+            // Native push (ADR-044) defaults to inert no-ops; a vendor adapter swaps in a real
+            // implementation (AddAzureNotificationHubsPush from MMCA.Common.Azure when an enabled
+            // hub is configured).
             services.TryAddTransient<INativePushSender, NullNativePushSender>();
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 
-            // Managed file storage (ADR-045): unconfigured default swapped by
-            // AddAzureBlobFileStorage; the image processor is dependency-free and always real.
+            // Managed file storage (ADR-045): unconfigured default swapped by a storage adapter
+            // (AddAzureBlobFileStorage from MMCA.Common.Azure); the image processor is
+            // dependency-free and always real.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
             services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();
 

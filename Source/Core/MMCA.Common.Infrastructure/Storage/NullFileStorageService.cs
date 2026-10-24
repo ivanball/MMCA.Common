@@ -6,7 +6,7 @@ namespace MMCA.Common.Infrastructure.Storage;
 /// <summary>
 /// Unconfigured file storage (ADR-045). Uploads fail with a clear error so feature endpoints
 /// degrade cleanly; deletes succeed (there is nothing to delete). Swapped out by
-/// <c>AddAzureBlobFileStorage(configuration)</c>.
+/// a storage adapter, e.g. <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c>.
 /// </summary>
 public sealed class NullFileStorageService : IFileStorageService
 {

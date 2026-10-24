@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Shared.Abstractions;
 
-namespace MMCA.Common.Infrastructure.Storage;
+namespace MMCA.Common.Azure.Storage;
 
 /// <summary>
 /// Azure Blob Storage implementation of <see cref="IFileStorageService"/> (ADR-045). Works
@@ -20,6 +20,7 @@ public sealed class AzureBlobFileStorageService(
     public bool IsConfigured => true;
 
     /// <inheritdoc />
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Implements the grandfathered IFileStorageService overload pair (see the RS0026 suppression on IFileStorageService.UploadAsync); the type moved here from MMCA.Common.Infrastructure, so both overloads are unshipped in this package and the analyzer flags this one too")]
     public Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, CancellationToken cancellationToken = default) =>
         UploadAsync(blobName, content, contentType, FileUploadOptions.None, cancellationToken);
 

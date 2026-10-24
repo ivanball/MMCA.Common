@@ -5,7 +5,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 
-namespace MMCA.Common.Infrastructure.Notifications.Push;
+namespace MMCA.Common.Azure.Notifications;
 
 /// <summary>
 /// Azure Notification Hubs implementation of <see cref="IPushDeviceRegistrar"/> (ADR-044).

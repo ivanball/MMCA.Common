@@ -1,15 +1,12 @@
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
-using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Notifications.Live;
 using MMCA.Common.Infrastructure.Notifications.Push;
-using MMCA.Common.Infrastructure.Storage;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure;
@@ -68,78 +65,6 @@ public static partial class DependencyInjection
             // (NameIdentifier only), so a TryAdd here never took effect and a principal carrying only
             // the raw sub claim got a null UserIdentifier.
             services.Replace(ServiceDescriptor.Singleton<IUserIdProvider, ClaimBasedUserIdProvider>());
-
-            return services;
-        }
-
-        /// <summary>
-        /// Registers OS-level native push delivery through Azure Notification Hubs (ADR-044),
-        /// replacing the default <see cref="NullNativePushSender"/>/<see cref="NullPushDeviceRegistrar"/>
-        /// pair. Reads the <c>NativePush</c> section (<c>Enabled</c>, <c>ConnectionString</c>,
-        /// <c>HubName</c>); when disabled or incomplete the call is a no-op, so hosts register it
-        /// unconditionally and deployments switch the channel on by configuration alone (the hub
-        /// itself is provisioned before its FCM/APNs credentials exist).
-        /// </summary>
-        /// <param name="configuration">Application configuration providing the <c>NativePush</c> section.</param>
-        /// <returns>The service collection for chaining.</returns>
-        public IServiceCollection AddNativePushNotifications(IConfiguration configuration)
-        {
-            services.AddOptions<NativePushSettings>()
-                .Bind(configuration.GetSection(NativePushSettings.SectionName));
-
-            var settings = configuration.GetSection(NativePushSettings.SectionName).Get<NativePushSettings>();
-            if (settings is not { Enabled: true }
-                || string.IsNullOrWhiteSpace(settings.ConnectionString)
-                || string.IsNullOrWhiteSpace(settings.HubName))
-            {
-                return services;
-            }
-
-            services.TryAddSingleton<Microsoft.Azure.NotificationHubs.INotificationHubClient>(_ =>
-                Microsoft.Azure.NotificationHubs.NotificationHubClient.CreateClientFromConnectionString(
-                    settings.ConnectionString, settings.HubName));
-            services.AddTransient<INativePushSender, AzureNotificationHubNativePushSender>();
-            services.AddTransient<IPushDeviceRegistrar, AzureNotificationHubDeviceRegistrar>();
-
-            return services;
-        }
-
-        /// <summary>
-        /// Registers Azure Blob Storage as the <see cref="IFileStorageService"/> (ADR-045),
-        /// replacing the unconfigured <see cref="NullFileStorageService"/> default. Reads the
-        /// <c>FileStorage</c> section: <c>ServiceUri</c> (managed-identity auth via
-        /// DefaultAzureCredential, the production path) or <c>ConnectionString</c> (local
-        /// Azurite), plus the required <c>ContainerName</c>. An incomplete section makes this a
-        /// no-op, so hosts register it unconditionally.
-        /// </summary>
-        /// <param name="configuration">Application configuration providing the <c>FileStorage</c> section.</param>
-        /// <returns>The service collection for chaining.</returns>
-        public IServiceCollection AddAzureBlobFileStorage(IConfiguration configuration)
-        {
-            services.AddOptions<FileStorageSettings>()
-                .Bind(configuration.GetSection(FileStorageSettings.SectionName));
-
-            var settings = configuration.GetSection(FileStorageSettings.SectionName).Get<FileStorageSettings>();
-            if (settings is null || string.IsNullOrWhiteSpace(settings.ContainerName))
-            {
-                return services;
-            }
-
-            // An empty-string ServiceUri binds to a RELATIVE Uri; only an absolute one counts.
-            var hasServiceUri = settings.ServiceUri is { IsAbsoluteUri: true };
-            if (!hasServiceUri && string.IsNullOrWhiteSpace(settings.ConnectionString))
-            {
-                return services;
-            }
-
-            services.TryAddSingleton(_ =>
-            {
-                var serviceClient = hasServiceUri
-                    ? new Azure.Storage.Blobs.BlobServiceClient(settings.ServiceUri, new Azure.Identity.DefaultAzureCredential())
-                    : new Azure.Storage.Blobs.BlobServiceClient(settings.ConnectionString);
-                return serviceClient.GetBlobContainerClient(settings.ContainerName);
-            });
-            services.AddTransient<IFileStorageService, AzureBlobFileStorageService>();
 
             return services;
         }

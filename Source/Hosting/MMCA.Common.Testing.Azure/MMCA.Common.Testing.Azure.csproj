@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Testing.Azure</PackageId>
+    <Description>MMCA framework Azure test infrastructure: the Service Bus emulator broker-parity fixture base (Testcontainers + MassTransit v8 custom-clients host)</Description>
+    <!-- Same documentation relaxations as MMCA.Common.Testing (test infrastructure). -->
+    <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA2234;S2743</NoWarn>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <!-- ServiceBusEmulatorFixtureBase owns the Azure Service Bus emulator container, its two clients and
+         the one MassTransit bus for the broker-parity tier. Consumers of this tier need a Docker daemon.
+         MassTransit stays on v8 by policy (v9 is commercial-licensed); Azure.Messaging.ServiceBus 7.20.2
+         is the first line with working emulator admin-plane support. -->
+    <PackageReference Include="Testcontainers.ServiceBus" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />
+    <!-- Direct only to lift the vulnerable SSH.NET that Testcontainers floors at 2025.1.0
+         (GHSA-q939-rpr3-3284); no code here uses it. See the pin comment in Directory.Packages.props. -->
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

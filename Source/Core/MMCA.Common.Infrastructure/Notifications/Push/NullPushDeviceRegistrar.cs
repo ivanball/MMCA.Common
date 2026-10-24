@@ -7,7 +7,8 @@ namespace MMCA.Common.Infrastructure.Notifications.Push;
 /// <summary>
 /// No-op device registrar (ADR-044). Accepts and discards registrations so clients can call
 /// the Devices endpoints unconditionally; nothing is stored until a downstream host calls
-/// <c>AddNativePushNotifications()</c> with an enabled hub configuration.
+/// a push adapter (<c>AddAzureNotificationHubsPush(configuration)</c> from <c>MMCA.Common.Azure</c>)
+/// with an enabled hub configuration.
 /// </summary>
 public sealed class NullPushDeviceRegistrar : IPushDeviceRegistrar
 {

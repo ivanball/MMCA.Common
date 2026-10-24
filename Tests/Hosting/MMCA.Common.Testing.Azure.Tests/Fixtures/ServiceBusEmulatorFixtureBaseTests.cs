@@ -1,8 +1,8 @@
 using AwesomeAssertions;
-using MMCA.Common.Testing.Fixtures;
+using MMCA.Common.Testing.Azure.Fixtures;
 using Xunit;
 
-namespace MMCA.Common.Testing.Tests.Fixtures;
+namespace MMCA.Common.Testing.Azure.Tests.Fixtures;
 
 /// <summary>
 /// Covers the container-free contract of <see cref="ServiceBusEmulatorFixtureBase"/>: the image pin, the

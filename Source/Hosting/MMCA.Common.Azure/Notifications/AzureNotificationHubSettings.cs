@@ -1,12 +1,12 @@
-namespace MMCA.Common.Infrastructure.Notifications.Push;
+namespace MMCA.Common.Azure.Notifications;
 
 /// <summary>
-/// Native push delivery settings bound from the <c>NativePush</c> configuration section
+/// Azure Notification Hubs native push settings bound from the <c>NativePush</c> configuration section
 /// (ADR-044). Deployments provision the hub with <see cref="Enabled"/> <see langword="false"/>
 /// until platform credentials (FCM v1 service account, APNs auth key) are uploaded to it, so
 /// the pipeline ships inert and is switched on by configuration alone.
 /// </summary>
-public sealed class NativePushSettings
+public sealed class AzureNotificationHubSettings
 {
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "NativePush";

@@ -3,11 +3,11 @@ using AwesomeAssertions;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Azure.NotificationHubs.Messaging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MMCA.Common.Infrastructure.Notifications.Push;
+using MMCA.Common.Azure.Notifications;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
 
-namespace MMCA.Common.Infrastructure.Tests.Notifications.Push;
+namespace MMCA.Common.Azure.Tests.Notifications;
 
 /// <summary>
 /// Tests for the Azure Notification Hubs device registrar (ADR-044), focused on the ownership

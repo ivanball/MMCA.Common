@@ -7,10 +7,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
-namespace MMCA.Common.Aspire.Tests.Configuration;
+namespace MMCA.Common.Azure.Tests;
 
 /// <summary>
-/// Guards the configuration gate on <c>AddCommonKeyVaultConfiguration</c>: no <c>KeyVault:Uri</c>
+/// Guards the configuration gate on <c>AddAzureKeyVaultConfiguration</c>: no <c>KeyVault:Uri</c>
 /// means the host gains no configuration source and takes no Azure dependency at startup, while a
 /// configured URI appends the Key Vault source that later reads the vault.
 /// <para>
@@ -24,18 +24,18 @@ namespace MMCA.Common.Aspire.Tests.Configuration;
 /// this extension is responsible for.
 /// </para>
 /// </summary>
-public sealed class KeyVaultConfigurationExtensionsTests
+public sealed class AzureKeyVaultConfigurationExtensionsTests
 {
     private const string KeyVaultAssemblyName = "Azure.Extensions.AspNetCore.Configuration.Secrets";
 
     [Fact]
-    public void AddCommonKeyVaultConfiguration_WithoutVaultUri_AddsNoConfigurationSource()
+    public void AddAzureKeyVaultConfiguration_WithoutVaultUri_AddsNoConfigurationSource()
     {
         var builder = Host.CreateApplicationBuilder();
         var configuration = builder.Configuration;
         var sourceCountBefore = configuration.Sources.Count;
 
-        builder.AddCommonKeyVaultConfiguration();
+        builder.AddAzureKeyVaultConfiguration();
 
         configuration.Sources.Count
             .Should().Be(
@@ -48,14 +48,14 @@ public sealed class KeyVaultConfigurationExtensionsTests
     }
 
     [Fact]
-    public void AddCommonKeyVaultConfiguration_WithVaultUri_AppendsTheKeyVaultConfigurationSource()
+    public void AddAzureKeyVaultConfiguration_WithVaultUri_AppendsTheKeyVaultConfigurationSource()
     {
         var builder = SourceCollectingBuilderWith(new(StringComparer.Ordinal)
         {
             ["KeyVault:Uri"] = "https://mmca-tests.vault.azure.net/",
         });
 
-        builder.AddCommonKeyVaultConfiguration();
+        builder.AddAzureKeyVaultConfiguration();
 
         builder.Configuration.Sources
             .Should().ContainSingle(
@@ -67,7 +67,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
     }
 
     [Fact]
-    public void AddCommonKeyVaultConfiguration_WithReloadIntervalMinutes_StillAppendsTheKeyVaultConfigurationSource()
+    public void AddAzureKeyVaultConfiguration_WithReloadIntervalMinutes_StillAppendsTheKeyVaultConfigurationSource()
     {
         var builder = SourceCollectingBuilderWith(new(StringComparer.Ordinal)
         {
@@ -75,7 +75,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
             ["KeyVault:ReloadIntervalMinutes"] = "15",
         });
 
-        builder.AddCommonKeyVaultConfiguration();
+        builder.AddAzureKeyVaultConfiguration();
 
         IsKeyVaultSource(builder.Configuration.Sources[^1])
             .Should().BeTrue(
@@ -83,7 +83,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
     }
 
     [Fact]
-    public void AddCommonKeyVaultConfiguration_WithMalformedVaultUri_Throws()
+    public void AddAzureKeyVaultConfiguration_WithMalformedVaultUri_Throws()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
@@ -91,7 +91,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
             ["KeyVault:Uri"] = "not-a-vault-uri",
         });
 
-        var act = () => builder.AddCommonKeyVaultConfiguration();
+        var act = () => builder.AddAzureKeyVaultConfiguration();
 
         act.Should().Throw<UriFormatException>(
             because: "a typo in the vault URI must stop the host at startup rather than let it run on whatever configuration it happened to have");
@@ -102,7 +102,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
     }
 
     [Fact]
-    public void AddCommonKeyVaultConfiguration_WithNonPositiveReloadIntervalMinutes_Throws()
+    public void AddAzureKeyVaultConfiguration_WithNonPositiveReloadIntervalMinutes_Throws()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
@@ -111,7 +111,7 @@ public sealed class KeyVaultConfigurationExtensionsTests
             ["KeyVault:ReloadIntervalMinutes"] = "0",
         });
 
-        var act = () => builder.AddCommonKeyVaultConfiguration();
+        var act = () => builder.AddAzureKeyVaultConfiguration();
 
         act.Should().Throw<InvalidOperationException>(
             because: "a reload interval that cannot be honored must fail loudly: quietly falling back to no reload would leave a rotated secret unused until the next restart, and nobody would notice until it mattered")

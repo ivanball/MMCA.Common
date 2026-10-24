@@ -1,10 +1,10 @@
 using Microsoft.Data.SqlClient;
 
-namespace MMCA.Common.Infrastructure.Tests.SqlClient;
+namespace MMCA.Common.Azure.Tests.SqlClient;
 
 /// <summary>
-/// Pins the <c>Microsoft.Data.SqlClient.Extensions.Azure</c> reference that <c>MMCA.Common.Infrastructure</c>
-/// carries beside its SqlClient 7 pin. Since SqlClient 7.0 the Entra ID authentication providers are no
+/// Pins the <c>Microsoft.Data.SqlClient.Extensions.Azure</c> reference that <c>MMCA.Common.Azure</c>
+/// carries beside the SqlClient 7 pin. Since SqlClient 7.0 the Entra ID authentication providers are no
 /// longer in the core driver, and a host whose connection string says
 /// <c>Authentication=Active Directory Managed Identity</c> fails at startup with
 /// "Cannot find an authentication provider for 'ActiveDirectoryManagedIdentity'" when the extension is

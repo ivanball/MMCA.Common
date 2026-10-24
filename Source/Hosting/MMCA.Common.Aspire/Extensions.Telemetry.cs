@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -114,11 +113,12 @@ public static partial class Extensions
                             .AddHttpClientInstrumentation();
                     }
 
-                    // Drops recurring outbox poll spans (and their SqlClient children from the
-                    // Azure Monitor distro) from export — idle polling would otherwise dominate
-                    // telemetry ingestion cost. Must be registered here, before
-                    // AddOpenTelemetryExporters() below, so its OnEnd clears the Recorded flag
-                    // before the exporters' batch processors check it.
+                    // Drops recurring outbox poll spans (and their SqlClient children from a
+                    // vendor distro such as Azure Monitor) from export — idle polling would
+                    // otherwise dominate telemetry ingestion cost. Must be registered here, before
+                    // AddOpenTelemetryExporters() below and before any adapter exporter (which is
+                    // why AddAzureMonitorExporter() runs after AddServiceDefaults()), so its OnEnd
+                    // clears the Recorded flag before the exporters' batch processors check it.
                     tracing.AddProcessor(new Telemetry.OutboxPollFilterProcessor());
 
                     if (filterProbeTelemetry)
@@ -145,17 +145,15 @@ public static partial class Extensions
         }
 
         /// <summary>
-        /// Conditionally enables telemetry exporters based on the environment:
-        /// <list type="bullet">
-        ///   <item>OTLP when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is present (the Aspire
-        ///     dashboard sets this automatically; standalone deployments must supply it
-        ///     explicitly).</item>
-        ///   <item>Azure Monitor (Application Insights) when
-        ///     <c>APPLICATIONINSIGHTS_CONNECTION_STRING</c> is present — set by the cloud
-        ///     deployment (e.g., Container Apps Bicep) so logs, metrics, and traces flow to
-        ///     the workspace-based Application Insights resource.</item>
-        /// </list>
+        /// Enables the one built-in, vendor-neutral exporter: OTLP when
+        /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is present (the Aspire dashboard sets this
+        /// automatically; standalone deployments must supply it explicitly).
+        /// <para>
+        /// A vendor exporter is an adapter package's registration, made AFTER this method has run
+        /// (for example <c>AddAzureMonitorExporter()</c> from <c>MMCA.Common.Azure</c>), so the
+        /// filter processors registered above still run before that exporter's batch processor.
         /// Both can be active simultaneously; each exporter only ships its own copy.
+        /// </para>
         /// </summary>
         private void AddOpenTelemetryExporters()
         {
@@ -165,14 +163,6 @@ public static partial class Extensions
             if (useOtlpExporter)
             {
                 builder.Services.AddOpenTelemetry().UseOtlpExporter();
-            }
-
-            var useAzureMonitor = !string.IsNullOrWhiteSpace(
-                builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]);
-
-            if (useAzureMonitor)
-            {
-                builder.Services.AddOpenTelemetry().UseAzureMonitor();
             }
         }
     }
@@ -255,8 +245,9 @@ public static partial class Extensions
         if (IsInstrumentationDisabled(configuration, "Telemetry:DisableHttpClientMetrics"))
         {
             // Skipping AddHttpClientInstrumentation is NOT enough on its own. A deployed
-            // host also calls UseAzureMonitor() (see AddOpenTelemetryExporters below), and
-            // the Azure Monitor distro adds the System.Net.Http meter itself, so
+            // host may also register a vendor exporter distro (AddAzureMonitorExporter() from
+            // MMCA.Common.Azure calls UseAzureMonitor()), and the Azure Monitor distro adds
+            // the System.Net.Http meter itself, so
             // http.client.open_connections kept flowing and stayed the single largest
             // AppMetrics stream in both production workspaces despite the toggle being on.
             // A View applies to the whole MeterProvider regardless of which component added

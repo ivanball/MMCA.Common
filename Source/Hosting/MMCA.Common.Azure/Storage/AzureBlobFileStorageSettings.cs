@@ -1,13 +1,13 @@
-namespace MMCA.Common.Infrastructure.Storage;
+namespace MMCA.Common.Azure.Storage;
 
 /// <summary>
-/// Blob file-storage settings bound from the <c>FileStorage</c> configuration section
+/// Azure Blob file-storage settings bound from the <c>FileStorage</c> configuration section
 /// (ADR-045). Production sets <see cref="ServiceUri"/> (managed-identity auth via
 /// DefaultAzureCredential); local development can use <see cref="ConnectionString"/>
 /// (e.g. Azurite) instead. When neither is set the section is incomplete and
 /// <c>AddAzureBlobFileStorage</c> leaves the unconfigured default in place.
 /// </summary>
-public sealed class FileStorageSettings
+public sealed class AzureBlobFileStorageSettings
 {
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "FileStorage";

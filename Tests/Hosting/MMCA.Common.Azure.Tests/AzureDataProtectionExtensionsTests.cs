@@ -6,24 +6,24 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace MMCA.Common.Aspire.Tests.DataProtection;
+namespace MMCA.Common.Azure.Tests;
 
 /// <summary>
-/// Guards the two-stage configuration gate on <c>AddCommonDataProtection</c>: no
+/// Guards the two-stage configuration gate on <c>AddAzureDataProtection</c>: no
 /// <c>DataProtection:BlobStorageUri</c> means the host keeps the in-memory default and takes no
 /// Azure dependency at startup, while a configured URI swaps the key-ring repository for the blob
 /// one so every replica shares a key ring. Both tests assert on the resolved options of a built
 /// service provider, so neither needs Azure credentials nor any network access: the blob client is
 /// constructed lazily by the repository, never at registration time.
 /// </summary>
-public sealed class DataProtectionExtensionsTests
+public sealed class AzureDataProtectionExtensionsTests
 {
     [Fact]
-    public void AddCommonDataProtection_WithoutBlobStorageUri_RegistersNothing()
+    public void AddAzureDataProtection_WithoutBlobStorageUri_RegistersNothing()
     {
         var builder = BuilderWith([]);
 
-        builder.AddCommonDataProtection();
+        builder.AddAzureDataProtection();
 
         builder.Services.Any(d => d.ServiceType == typeof(IDataProtectionProvider))
             .Should().BeFalse(
@@ -37,7 +37,7 @@ public sealed class DataProtectionExtensionsTests
     }
 
     [Fact]
-    public void AddCommonDataProtection_WithBlobStorageUri_PersistsTheKeyRingToBlobStorage()
+    public void AddAzureDataProtection_WithBlobStorageUri_PersistsTheKeyRingToBlobStorage()
     {
         var builder = BuilderWith(new()
         {
@@ -45,7 +45,7 @@ public sealed class DataProtectionExtensionsTests
             ["DataProtection:ApplicationName"] = "mmca-data-protection-tests",
         });
 
-        builder.AddCommonDataProtection();
+        builder.AddAzureDataProtection();
 
         var provider = builder.Services.BuildServiceProvider();
 
