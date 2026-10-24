@@ -214,10 +214,10 @@ public static partial class DependencyInjection
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, Configuration.StartupConfigurationSummaryService>());
 
-            // Startup tripwire: a FileStorage section or an enabled NativePush section whose service
-            // still resolves to the inert core default means the vendor adapter call is missing (the
-            // implementations live in MMCA.Common.Azure and MMCA.Common.Aws). Fails the host naming the call instead of
-            // letting it run with uploads failing and pushes dropped.
+            // Startup tripwire: an enabled NativePush section whose sender still resolves to the inert
+            // core default means the vendor adapter call is missing (the implementation lives in
+            // MMCA.Common.Azure). Fails the host naming the call instead of letting it run with pushes
+            // dropped. FileStorage is deliberately not checked; CloudAdapterTripwire says why.
             services.AddOptions<Configuration.CloudAdapterTripwireOptions>().ValidateOnStart();
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IValidateOptions<Configuration.CloudAdapterTripwireOptions>, Configuration.CloudAdapterTripwire>());

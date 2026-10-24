@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.256.0] - 2026-10-24
+
+### Fixed
+
+- **A `FileStorage` section no longer fails host startup.** The 1.255.0 startup tripwire treated any
+  non-blank `FileStorage` value as a declaration that the host stores files, so a service that never
+  stores files failed to start (and failed its build-time OpenAPI generation) whenever it shared
+  configuration with one that does, for example one user-secrets id across every service of a
+  solution. `CloudAdapterTripwire` now checks only `NativePush:Enabled`, a key that does declare
+  intent. A host that stores files and lost its adapter call still fails each upload with
+  `FileStorage.NotConfigured` from `NullFileStorageService`. The `AddServiceDefaults()` checks
+  (`APPLICATIONINSIGHTS_CONNECTION_STRING`, `KeyVault:Uri`, `DataProtection:BlobStorageUri`) are
+  unchanged.
+
 ## [1.255.0] - 2026-10-24
 
 ### Added
