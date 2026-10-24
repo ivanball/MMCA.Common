@@ -1,9 +1,10 @@
 using System.Reflection;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
@@ -35,14 +36,14 @@ namespace MMCA.Common.Infrastructure.Configuration;
 /// <param name="dataSources">The named data source entries (read for presence only).</param>
 /// <param name="messageBus">The bound message bus settings.</param>
 /// <param name="tenancy">The bound tenancy settings; the defaults when the host never called <c>AddMultiTenancy</c>.</param>
-/// <param name="cacheService">The cache the host resolved, whose implementation names the cache mode.</param>
+/// <param name="services">The root provider, asked which cache registrations exist; the cache itself is never resolved.</param>
 /// <param name="logger">Logger for the summary and the warning.</param>
 internal sealed partial class StartupConfigurationSummaryService(
     IOptions<ConnectionStringSettings> connectionStrings,
     DataSourcesSettings dataSources,
     IOptions<MessageBusSettings> messageBus,
     IOptions<TenancySettings> tenancy,
-    ICacheService cacheService,
+    IServiceProvider services,
     ILogger<StartupConfigurationSummaryService> logger)
     : IHostedService
 {
@@ -64,7 +65,7 @@ internal sealed partial class StartupConfigurationSummaryService(
         {
             var engines = DataSourceResolver.ResolveConfiguredEngines(connectionStrings.Value, dataSources);
             var engineNames = engines.Count == 0 ? "none" : string.Join(", ", engines);
-            var cacheMode = CacheMode(cacheService);
+            var cacheMode = CacheMode(services);
             var tenancyMode = TenancyMode(tenancy.Value);
 
             LogConfigurationSummary(
@@ -88,16 +89,30 @@ internal sealed partial class StartupConfigurationSummaryService(
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    /// <summary>Names the cache tier from the registered implementation.</summary>
-    /// <param name="cache">The resolved cache service.</param>
-    /// <returns><c>hybrid</c>, <c>distributed</c>, <c>memory</c>, or <c>custom</c> for a host's own implementation.</returns>
-    internal static string CacheMode(ICacheService cache) => cache switch
+    /// <summary>
+    /// Names the cache tier by repeating the decision the <c>ICacheService</c> factories make, WITHOUT
+    /// resolving <c>ICacheService</c>: both factories resolve <c>IConnectionMultiplexer</c>, so
+    /// constructing the cache here would open a Redis-backed host's connection at startup instead of
+    /// on first use. <c>AddCommonHybridCache</c> registers <see cref="HybridCache"/> (checked by
+    /// registration, not by resolving it), and the <c>AddCaching</c> factory picks the distributed
+    /// cache when the resolved <see cref="IDistributedCache"/> is not the in-memory one. Resolving
+    /// <see cref="IDistributedCache"/> does not connect: the Redis implementation connects lazily.
+    /// </summary>
+    /// <param name="services">The root provider.</param>
+    /// <returns><c>hybrid</c>, <c>distributed</c>, or <c>memory</c>.</returns>
+    internal static string CacheMode(IServiceProvider services)
     {
-        HybridCacheService => "hybrid",
-        DistributedCacheService => "distributed",
-        MemoryCacheService => "memory",
-        _ => "custom",
-    };
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (services.GetService<IServiceProviderIsService>()?.IsService(typeof(HybridCache)) == true)
+        {
+            return "hybrid";
+        }
+
+        return services.GetService<IDistributedCache>() is not null and not MemoryDistributedCache
+            ? "distributed"
+            : "memory";
+    }
 
     /// <summary>Names the tenancy mode from the bound settings.</summary>
     /// <param name="settings">The tenancy settings.</param>

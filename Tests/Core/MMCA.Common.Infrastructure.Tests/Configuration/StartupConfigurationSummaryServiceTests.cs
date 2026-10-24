@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using AwesomeAssertions;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.Application;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
+using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Tests.Configuration;
 
@@ -44,6 +46,43 @@ public sealed class StartupConfigurationSummaryServiceTests
         recorder.Entries
             .Where(e => e.Category == SummaryCategory && e.Level == LogLevel.Information)
             .Should().ContainSingle("the summary is written once per host start");
+    }
+
+    [Theory]
+    [InlineData(false, "cache distributed")]
+    [InlineData(true, "cache hybrid")]
+    public async Task HostStart_WithARedisBackedCache_NeverResolvesTheConnectionMultiplexer(bool hybrid, string expectedCacheMode)
+    {
+        // Both ICacheService factories resolve IConnectionMultiplexer. The summary must name the cache
+        // mode without constructing the cache, or every Redis-backed host would open its Redis
+        // connection at startup instead of on first use.
+        var multiplexerResolutions = 0;
+        var recorder = new RecordingLoggerProvider();
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration.AddInMemoryCollection(BaseSettings());
+        builder.Logging.AddProvider(recorder);
+
+        builder.Services.AddApplication();
+        builder.Services.AddSingleton<IDistributedCache, NonMemoryDistributedCache>();
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        {
+            Interlocked.Increment(ref multiplexerResolutions);
+            throw new InvalidOperationException("The startup summary must not resolve IConnectionMultiplexer.");
+        });
+        builder.Services.AddInfrastructure(builder.Configuration);
+        if (hybrid)
+        {
+            builder.Services.AddCommonHybridCache();
+        }
+
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        multiplexerResolutions.Should().Be(0, "the Redis connection is opened on first use, never by the summary");
+        recorder.Entries.Should()
+            .ContainSingle(e => e.Category == SummaryCategory && e.Level == LogLevel.Information)
+            .Which.Message.Should().Contain(expectedCacheMode);
     }
 
     [Fact]
@@ -170,6 +209,36 @@ public sealed class StartupConfigurationSummaryServiceTests
         var sut = ActivatorUtilities.CreateInstance<StartupConfigurationSummaryService>(provider);
         await sut.StartAsync(TestContext.Current.CancellationToken);
         return recorder;
+    }
+
+    /// <summary>
+    /// Stands in for the Redis distributed cache: any <see cref="IDistributedCache"/> other than the
+    /// in-memory one is what the cache factories treat as distributed. Never called by these tests.
+    /// </summary>
+    private sealed class NonMemoryDistributedCache : IDistributedCache
+    {
+        public byte[]? Get(string key) => null;
+
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default) => Task.FromResult<byte[]?>(null);
+
+        public void Refresh(string key)
+        {
+        }
+
+        public Task RefreshAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+
+        public void Remove(string key)
+        {
+        }
+
+        public Task RemoveAsync(string key, CancellationToken token = default) => Task.CompletedTask;
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+        {
+        }
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default) =>
+            Task.CompletedTask;
     }
 
     private sealed record LogEntry(string Category, LogLevel Level, string Message, IReadOnlyList<string> StateValues);
