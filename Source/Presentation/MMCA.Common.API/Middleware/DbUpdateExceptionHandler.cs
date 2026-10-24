@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MMCA.Common.API.Concurrency;
 
 namespace MMCA.Common.API.Middleware;
 
@@ -29,6 +30,13 @@ public sealed class DbUpdateExceptionHandler(
             return false;
 
         logger.LogError(dbUpdateException, "Unhandled database update exception occurred");
+
+        // Only the concurrency kind is counted: a unique-key or foreign-key failure is a different
+        // problem with its own remedy, and folding it in would hide the contention signal.
+        if (dbUpdateException is DbUpdateConcurrencyException concurrencyException)
+        {
+            ConcurrencyConflictMetrics.RecordConflict(concurrencyException);
+        }
 
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
 

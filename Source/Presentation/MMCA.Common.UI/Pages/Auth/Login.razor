@@ -225,7 +225,7 @@
         {
             // The service reports every outcome as a Result, so the only catch left is for a
             // genuine fault in the navigation/preference tail below.
-            var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password));
+            var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password), _cts.LifetimeToken());
             if (result.IsFailure)
             {
                 _errorMessage = PasswordLoginErrorMessage(result);
@@ -233,6 +233,10 @@
             }
 
             await ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // Expected during component disposal or an InteractiveAuto render-mode transition.
         }
         catch
         {

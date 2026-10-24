@@ -5,11 +5,17 @@ using MMCA.Common.UI.Common;
 namespace MMCA.Common.UI.Pages.Auth;
 
 /// <summary>
-/// Code-behind for the <c>/login</c> page: the external sign-in refusal it is sent back with, and the
-/// words for a refused password sign-in.
+/// Code-behind for the <c>/login</c> page: the external sign-in refusal it is sent back with, the
+/// words for a refused password sign-in, and the page lifetime that cancels an in-flight sign-in.
 /// </summary>
-public partial class Login
+public partial class Login : IDisposable
 {
+    // Cancelled on dispose, so a sign-in still in flight when the user navigates away (or an
+    // InteractiveAuto render-mode transition tears the page down) stops instead of completing into
+    // a component that is gone.
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+
     /// <summary>
     /// Set when device storage dropped the OAuth attempt; the web-redirect provider buttons are then
     /// disabled, because a flow started there would be refused at completion.
@@ -22,6 +28,27 @@ public partial class Login
     /// </summary>
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Cancels any in-flight sign-in; safe to call more than once.</summary>
+    /// <param name="disposing">Whether managed state is being released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed || !disposing)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
 
     /// <summary>
     /// Maps the machine error code to words; the raw code is never shown. Any code other than the
@@ -84,7 +111,12 @@ public partial class Login
         string? oauthState;
         try
         {
-            oauthState = await OAuthFlowState.BeginAsync();
+            oauthState = await OAuthFlowState.BeginAsync(_cts.LifetimeToken());
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // The page went away mid-write: there is nothing left to navigate from.
+            return;
         }
         catch (InvalidOperationException)
         {

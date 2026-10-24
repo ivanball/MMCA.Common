@@ -150,6 +150,25 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
             : PickSubstituteEngine(configured) ?? FrameworkDefaultEngine;
     }
 
+    /// <summary>
+    /// Lists, straight from configuration, the engines the host configures at least one connection
+    /// string for, in the framework's registration order. The startup configuration summary reads it
+    /// so it can name the engines without ever touching a connection string itself.
+    /// </summary>
+    /// <param name="connectionStrings">The top-level connection strings.</param>
+    /// <param name="dataSources">The named data source entries.</param>
+    /// <returns>The configured engines; empty when the host configures no database at all.</returns>
+    internal static IReadOnlyList<DataSource> ResolveConfiguredEngines(
+        ConnectionStringSettings connectionStrings,
+        DataSourcesSettings dataSources)
+    {
+        ArgumentNullException.ThrowIfNull(connectionStrings);
+        ArgumentNullException.ThrowIfNull(dataSources);
+
+        var configured = ConfiguredEngines(connectionStrings, dataSources);
+        return [.. DataSourceEngines.All.Select(registered => registered.Engine).Where(configured.Contains)];
+    }
+
     /// <summary>The engines carrying at least one connection string anywhere in configuration.</summary>
     private static HashSet<DataSource> ConfiguredEngines(
         ConnectionStringSettings connectionStrings,

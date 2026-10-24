@@ -207,6 +207,13 @@ public static partial class DependencyInjection
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, EventUpcasterStartupValidator>());
 
+            // One Information line per host start naming the resolved posture (version, engines, bus,
+            // cache, tenancy), plus the RabbitMQ delayed-redelivery-off Warning. Every service host
+            // passes through here; TryAddEnumerable keeps it to one line when several modules call
+            // AddInfrastructure.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, Configuration.StartupConfigurationSummaryService>());
+
             services.TryAddSingleton<Persistence.Outbox.Processing.IOutboxSignal, Persistence.Outbox.Processing.OutboxSignal>();
 
             // The outbox is a transport decision, not a persistence one: a broker deployment cannot

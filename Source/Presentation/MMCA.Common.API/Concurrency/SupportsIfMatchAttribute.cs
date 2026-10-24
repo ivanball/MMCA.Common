@@ -129,10 +129,12 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
     /// <param name="executed">The executed action context.</param>
     private static void RewriteConflictToPreconditionFailed(ActionExecutedContext executed)
     {
-        if (executed.Exception is DbUpdateConcurrencyException)
+        if (executed.Exception is DbUpdateConcurrencyException concurrencyException)
         {
             // The global handler would map this to 409 like any other DbUpdateException. Under an
-            // explicit precondition it is a failed precondition, so it is answered here instead.
+            // explicit precondition it is a failed precondition, so it is answered here instead, and
+            // counted here, because marking it handled means the global handler never sees it.
+            ConcurrencyConflictMetrics.RecordConflict(concurrencyException);
             executed.Result = PreconditionFailedResult(executed.HttpContext);
             executed.ExceptionHandled = true;
             return;

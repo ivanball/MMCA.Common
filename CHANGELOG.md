@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.254.0] - 2026-10-24
+
+### Added
+
+- One startup configuration summary per host (MMCA.Common.Infrastructure). `AddInfrastructure` registers a hosted service that writes a single Information line when the host starts: the MMCA.Common informational version, the database engines the host configures, the message bus provider with its `EnableDelayedRedelivery` value, the cache mode (`memory`, `distributed` or `hybrid`, read from the cache registrations without constructing the cache, so a Redis-backed host still connects on first use) and the tenancy mode (`off`, `shared-database`, or `database-per-tenant`). The engines are derived from whether a connection string is set, never from its text, so no connection string, key or other secret is logged. The registration uses `TryAddEnumerable`, so a host whose modules each call `AddInfrastructure` still writes one line. **Consumer action:** none.
+- A startup Warning when `MessageBus:Provider` is `RabbitMq` and `MessageBus:EnableDelayedRedelivery` is false: a handler failure that outlasts the in-process retries is dead-lettered instead of being rescheduled through the broker. The warning names the `rabbitmq_delayed_message_exchange` plugin and the setting. A local Aspire stack on RabbitMQ shows it by design, because the development container does not ship the plugin. Azure Service Bus and the in-process bus never log it.
+- The `persistence.concurrency.conflict` counter (meter `MMCA.Common.Persistence`, tag `entity_type`) counts every optimistic-concurrency conflict the API answers: the 409 from `DbUpdateExceptionHandler` and the 412 from `SupportsIfMatchAttribute`, once per conflict. Other `DbUpdateException` failures are not counted. `AddServiceDefaults` (MMCA.Common.Aspire) exports the new meter. No alert ships on it.
+- `SUPPORT.md`: where to ask, how to report a vulnerability, which versions are supported, commercial support, and the continuity statement.
+
+### Fixed
+
+- `/login` and `/register` (MMCA.Common.UI) cancel their in-flight sign-in or registration when the page is disposed. `Login` and `Register` implement `IDisposable` (with a protected virtual `Dispose(bool)`) and pass the page-lifetime token to `IAuthUIService.LoginAsync` and `RegisterAsync`, and to the OAuth attempt write on the web-redirect provider buttons. A result that already arrived is handled exactly as before. **Consumer action:** none; a subclass that overrides `Dispose(bool)` calls the base.
+
+### Breaking
+
+- **Breaking:** `AddTypedServiceClient<TInterface, TImplementation>(string serviceName)` (MMCA.Common.Infrastructure) is removed. No first-party consumer (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) calls it; gRPC through `AddTypedGrpcClient<TClient>` is the supported cross-service client. A host that used it registers the typed `HttpClient` itself with `AddHttpClient<TInterface, TImplementation>` plus `AddStandardResilienceHandler`.
+
 ## [1.253.0] - 2026-10-23
 
 ### Added
