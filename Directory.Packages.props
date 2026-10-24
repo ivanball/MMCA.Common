@@ -280,6 +280,9 @@
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
          tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
     <PackageVersion Include="Testcontainers.ServiceBus" Version="4.16.0" />
+    <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
+         .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
+    <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via

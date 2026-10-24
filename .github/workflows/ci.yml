@@ -843,6 +843,45 @@ jobs:
         # 2026-09-30); adding a test means raising this number in the same PR.
         run: dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 3
 
+  aws-integration:
+    name: AWS integration (Testcontainers LocalStack)
+    needs: changes
+    runs-on: ubuntu-latest
+    # The redis-integration budget plus headroom for the larger LocalStack image pull.
+    timeout-minutes: 20
+    # MMCA.Common.Aws against LocalStack: the S3-compatible store and the SQS/SNS broker transport.
+    # The unit tier asserts the requests the adapter builds; only a real endpoint settles whether the
+    # S3 API accepts them (checksum posture, path-style addressing), whether Content-Type and
+    # Content-Disposition come back on the object, and whether the ambient MMCA-* headers survive SNS
+    # + SQS, whose 10-attribute cap MassTransit does not police. Ubuntu runners ship a Docker daemon,
+    # so Testcontainers works with no extra setup. Not a required check: promoting it is a
+    # branch-protection setting.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run AWS integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not pull a LocalStack image and
+        # start a container. The JOB still runs (and posts its context green) so adding this check to
+        # branch protection stays safe on docs-only PRs, matching the pattern the other jobs use.
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
+        # loop must not require), so build/run this project directly by path, like
+        # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS,
+        # 2026-10-24); adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 5
+
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)
     needs: changes
