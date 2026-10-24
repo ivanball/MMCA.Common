@@ -16,7 +16,7 @@ _As of: 2026-10-24 (framework v1.254.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **22**
+## Published packages — **25**
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.AI`
@@ -34,13 +34,16 @@ Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; t
 13. `MMCA.Common.AI.Testing`
 14. `MMCA.Common.Aspire`
 15. `MMCA.Common.Aspire.Hosting`
-16. `MMCA.Common.Gateway`
-17. `MMCA.Common.Testing`
-18. `MMCA.Common.Testing.Architecture`
-19. `MMCA.Common.Testing.Aspire`
-20. `MMCA.Common.Testing.E2E`
-21. `MMCA.Common.Testing.UI`
-22. `MMCA.Common`
+16. `MMCA.Common.Aws`
+17. `MMCA.Common.Azure`
+18. `MMCA.Common.Gateway`
+19. `MMCA.Common.Testing`
+20. `MMCA.Common.Testing.Architecture`
+21. `MMCA.Common.Testing.Aspire`
+22. `MMCA.Common.Testing.Azure`
+23. `MMCA.Common.Testing.E2E`
+24. `MMCA.Common.Testing.UI`
+25. `MMCA.Common`
 
 ## Package dependency graph
 Which other `MMCA.Common.*` packages each package references directly, read from the `<ProjectReference>`
@@ -64,10 +67,13 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.AI.Testing` | `MMCA.Common.AI` |
 | `MMCA.Common.Aspire` | `MMCA.Common.Shared` |
 | `MMCA.Common.Aspire.Hosting` | (none) |
+| `MMCA.Common.Aws` | `MMCA.Common.Infrastructure` |
+| `MMCA.Common.Azure` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Gateway` | (none) |
 | `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
 | `MMCA.Common.Testing.Architecture` | (none) |
 | `MMCA.Common.Testing.Aspire` | `MMCA.Common.Testing` |
+| `MMCA.Common.Testing.Azure` | (none) |
 | `MMCA.Common.Testing.E2E` | (none) |
 | `MMCA.Common.Testing.UI` | `MMCA.Common.UI` |
 | `MMCA.Common` | `MMCA.Common.Application`, `MMCA.Common.Domain`, `MMCA.Common.Infrastructure`, `MMCA.Common.Shared`, `MMCA.Common.API`, `MMCA.Common.Aspire` |
@@ -78,10 +84,10 @@ The ADRs live in the Website repo (`docs-src/adr/`), published at
 it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
-- **159 test methods across 63 abstract `*TestsBase` classes**, shipped once in the
+- **161 test methods across 64 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **466** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **468** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric
