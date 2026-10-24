@@ -125,7 +125,10 @@
     <PackageVersion Include="MassTransit" Version="8.5.11" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
     <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.11" />
-    <!-- Service Bus emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing): the two
+    <!-- Amazon SQS/SNS transport (MMCA.Common.Aws), Apache-2.0 like the rest of the v8 line. Same
+         version as every MassTransit pin above: the transports and the core bump together. -->
+    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.11" />
+    <!-- Azure Service Bus transport (MMCA.Common.Azure) and its emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing.Azure): the two
          clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
          working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older
          transitive MassTransit.Azure.ServiceBus.Core would otherwise resolve. -->
@@ -141,20 +144,19 @@
          gives the reason). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
+         and the GCS XML API through one client. The 4.x line sends request checksums by default,
+         which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.6" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <!-- Shared DataProtection key ring (MMCA.Common.Aspire.AddCommonDataProtection). Blobs persists
+    <!-- Shared DataProtection key ring (MMCA.Common.Azure.AddAzureDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.4" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.4" />
-    <!-- Pinned directly to force transitive resolution to the patched servicing version: the
-         DataProtection.Blobs/Keys chain otherwise pulls 10.0.7 (five high advisories, NU1903).
-         Projects with the AspNetCore framework reference prune this away; consumers WITHOUT it
-         (Aspire AppHosts) resolve the transitive as a real package and need the lifted version. -->
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.13" />
     <!-- Pinned directly to lift the transitive off GHSA-846f-f764-76mx / GHSA-2fmv-rv2c-59x7
          (NU1903/NU1902, every version up to 9.0.20 and 10.0.12): Microsoft.Data.SqlClient 7.x pulls
          9.0.13 or 9.0.18 and Aspire.Hosting.SqlServer pulls 10.0.12. The shared framework does not
@@ -162,7 +164,7 @@
          that take those packages directly (Infrastructure, Testing, Aspire.Hosting); everything else
          inherits it through a project reference. -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
-    <!-- Azure Key Vault as a configuration source (MMCA.Common.Aspire.AddCommonKeyVaultConfiguration).
+    <!-- Azure Key Vault as a configuration source (MMCA.Common.Azure.AddAzureKeyVaultConfiguration).
          Opt-in and gated on KeyVault:Uri, so an unconfigured host never contacts a vault and local
          development stays Azure-free. Reuses the Azure.Identity pin above for the
          DefaultAzureCredential the provider authenticates with; the host identity needs the
@@ -269,10 +271,13 @@
          the Redis and MsSql pins. -->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.16.0" />
-    <!-- Service Bus emulator fixture base in MMCA.Common.Testing: same Testcontainers family version.
+    <!-- Service Bus emulator fixture base in MMCA.Common.Testing.Azure: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
          tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
     <PackageVersion Include="Testcontainers.ServiceBus" Version="4.16.0" />
+    <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
+         .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
+    <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
@@ -309,7 +314,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
     <!-- Same version as Microsoft.Data.SqlClient: since 7.0 the Entra ID authentication providers live
-         here, and MMCA.Common.Infrastructure references it so every consumer host that connects with
+         here, and MMCA.Common.Azure references it so every Azure host that connects with
          Authentication=Active Directory Managed Identity keeps working (the 2026-09-16 ADC startup
          failure). Bump the two together. -->
     <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.1" />

@@ -56,11 +56,6 @@
           "xunit.v3.mtp-v2": "[4.0.2]"
         }
       },
-      "Apache.Arrow": {
-        "type": "Transitive",
-        "resolved": "22.1.0",
-        "contentHash": "mTdHWGsNCWpKyQxqyNcSS+q4BtBTSOUfhdG+Lwo6eAOznCLSwrZQ5VKtDG2G8VrUp1ul4DwWHefoBS1umjO/VQ=="
-      },
       "Asp.Versioning.Abstractions": {
         "type": "Transitive",
         "resolved": "10.2.1",
@@ -249,15 +244,6 @@
           "System.Memory.Data": "10.0.10"
         }
       },
-      "Azure.Core.Amqp": {
-        "type": "Transitive",
-        "resolved": "1.3.1",
-        "contentHash": "AY1ZM4WwLBb9L2WwQoWs7wS2XKYg83tp3yVVdgySdebGN0FuIszuEqCy3Nhv6qHpbkjx/NGuOTsUbF/oNGBgwA==",
-        "dependencies": {
-          "Microsoft.Azure.Amqp": "2.6.7",
-          "System.Memory.Data": "1.0.2"
-        }
-      },
       "Azure.Provisioning": {
         "type": "Transitive",
         "resolved": "1.6.0",
@@ -326,15 +312,6 @@
         "contentHash": "/yFMJGQYPPvBSrupjJ388qqXZ1h70Yrer1vG+z+jddgovEmIE7IhShU6ZGIi24IPArY8HBH6FFtgVK369TWhmQ==",
         "dependencies": {
           "Azure.Core": "1.54.0"
-        }
-      },
-      "Azure.Storage.Common": {
-        "type": "Transitive",
-        "resolved": "12.29.0",
-        "contentHash": "0VqPcAinzXFJDAELqC+VPFUL6AaU1mmIpDAHarr7DVw3zcJrlo4k3Xc3TCTVBkDgY6YUOjJ00Fd9ZB9En5H2Jg==",
-        "dependencies": {
-          "Azure.Core": "1.60.0",
-          "System.IO.Hashing": "10.0.9"
         }
       },
       "BouncyCastle.Cryptography": {
@@ -502,11 +479,6 @@
         "type": "Transitive",
         "resolved": "10.0.13",
         "contentHash": "8xzbDfEOWg5GRp5byA42Axr4TbockbxCvdHTYk27ZIdst79DO0CLBp/Zw5sduK2goRii7of4EeuTjG/yPH4tsg=="
-      },
-      "Microsoft.Azure.Amqp": {
-        "type": "Transitive",
-        "resolved": "2.7.0",
-        "contentHash": "gm/AEakujttMzrDhZ5QpRz3fICVkYDn/oDG9SmxDP+J7R8JDBXYU9WWG7hr6wQy40mY+wjUF0yUGXDPRDRNJwQ=="
       },
       "Microsoft.Azure.Cosmos": {
         "type": "Transitive",
@@ -1005,15 +977,6 @@
           "Microsoft.IdentityModel.Abstractions": "8.14.0"
         }
       },
-      "Microsoft.Identity.Client.Broker": {
-        "type": "Transitive",
-        "resolved": "4.84.2",
-        "contentHash": "928ySLeGz1xtvydwq6h9tv7TbxrtA4ZzavLKUqRJh0PW6BGcEJwpI8W8vf2PlQdYemGm/oyGjdzYzdY/I8r/4A==",
-        "dependencies": {
-          "Microsoft.Identity.Client": "4.84.2",
-          "Microsoft.Identity.Client.NativeInterop": "0.20.6"
-        }
-      },
       "Microsoft.Identity.Client.Extensions.Msal": {
         "type": "Transitive",
         "resolved": "4.84.2",
@@ -1022,11 +985,6 @@
           "Microsoft.Identity.Client": "4.84.2",
           "System.Security.Cryptography.ProtectedData": "4.5.0"
         }
-      },
-      "Microsoft.Identity.Client.NativeInterop": {
-        "type": "Transitive",
-        "resolved": "0.20.6",
-        "contentHash": "noyfdMfVxyWpM6xUDmlW6gUvZ5ci24z7Qoy15JvynTQfZV5vTD2NEdsnT5Gy4ngViwgdIp5iRjRy10jAKXFAgw=="
       },
       "Microsoft.IdentityModel.Abstractions": {
         "type": "Transitive",
@@ -1446,7 +1404,6 @@
           "Asp.Versioning.Mvc.ApiExplorer": "[10.2.1, )",
           "AspNet.Security.OAuth.Apple": "[10.0.0, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
-          "Azure.Messaging.ServiceBus": "[7.21.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
           "MMCA.Common.Infrastructure": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.13, )",
@@ -1496,19 +1453,13 @@
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Azure.Identity": "[1.21.0, )",
-          "Azure.Messaging.ServiceBus": "[7.21.0, )",
-          "Azure.Storage.Blobs": "[12.30.1, )",
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.11, )",
-          "MassTransit.Azure.ServiceBus.Core": "[8.5.11, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",
-          "Microsoft.Azure.NotificationHubs": "[4.2.0, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
-          "Microsoft.Data.SqlClient.Extensions.Azure": "[7.1.1, )",
           "Microsoft.EntityFrameworkCore.Cosmos": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.13, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.13, )",
@@ -1532,10 +1483,8 @@
         "type": "Project",
         "dependencies": {
           "AwesomeAssertions": "[9.6.0, )",
-          "Azure.Messaging.ServiceBus": "[7.21.0, )",
           "MMCA.Common.API": "[1.0.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit.Azure.ServiceBus.Core": "[8.5.11, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.13, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.13, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
@@ -1547,7 +1496,6 @@
           "System.Security.Cryptography.Pkcs": "[10.0.13, )",
           "Testcontainers.MsSql": "[4.16.0, )",
           "Testcontainers.RabbitMq": "[4.16.0, )",
-          "Testcontainers.ServiceBus": "[4.16.0, )",
           "Yarp.ReverseProxy": "[2.3.0, )",
           "xunit.v3.extensibility.core": "[4.0.2, )"
         }
@@ -1900,28 +1848,6 @@
           "Azure.Core": "1.53.0"
         }
       },
-      "Azure.Messaging.ServiceBus": {
-        "type": "CentralTransitive",
-        "requested": "[7.21.0, )",
-        "resolved": "7.21.0",
-        "contentHash": "ohX6LPD0ykJciyjAHrsF92vqL7GWXjRqUon2vaZ4pg0H+5TdO7S/9zWcmi5OBpcgP6oBxs/RfHvts9YaL/SAMg==",
-        "dependencies": {
-          "Azure.Core": "1.62.0",
-          "Azure.Core.Amqp": "1.3.1",
-          "Microsoft.Azure.Amqp": "2.7.0"
-        }
-      },
-      "Azure.Storage.Blobs": {
-        "type": "CentralTransitive",
-        "requested": "[12.30.1, )",
-        "resolved": "12.30.1",
-        "contentHash": "ywPqtDHLH5MY0Cp/wfLQgqhHOuJmD+bYVJawjXudtaQr9aJB+9orhk8oE6hHPy5s8H5bzq2q/mDkESf8w1rzBg==",
-        "dependencies": {
-          "Apache.Arrow": "22.1.0",
-          "Azure.Core": "1.60.0",
-          "Azure.Storage.Common": "12.29.0"
-        }
-      },
       "Cronos": {
         "type": "CentralTransitive",
         "requested": "[0.13.0, )",
@@ -1983,17 +1909,6 @@
           "Microsoft.Extensions.Hosting.Abstractions": "10.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.0",
           "Microsoft.Extensions.Options": "10.0.0"
-        }
-      },
-      "MassTransit.Azure.ServiceBus.Core": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.11, )",
-        "resolved": "8.5.11",
-        "contentHash": "XrH9L7UAOKD0Os1WwnikBaiM3ivazCig853fipTO35zKEhCamGIYrZPiEmFkJT+d4v0Ia5j7RSYyRAMUCBtn5A==",
-        "dependencies": {
-          "Azure.Identity": "1.21.0",
-          "Azure.Messaging.ServiceBus": "7.21.0",
-          "MassTransit": "8.5.11"
         }
       },
       "MassTransit.RabbitMQ": {
@@ -2063,16 +1978,6 @@
           "StackExchange.Redis": "2.7.27"
         }
       },
-      "Microsoft.Azure.NotificationHubs": {
-        "type": "CentralTransitive",
-        "requested": "[4.2.0, )",
-        "resolved": "4.2.0",
-        "contentHash": "LOCxFB/sB1frfuXjecdDRDKEHkH+I1qKRatS5NyWIgYhpKhIcAlPNIJajcwLgQBShckdc3hMG9E+75CnL3qDhQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Caching.Memory": "6.0.1",
-          "Newtonsoft.Json": "13.0.1"
-        }
-      },
       "Microsoft.Data.SqlClient": {
         "type": "CentralTransitive",
         "requested": "[7.1.1, )",
@@ -2090,21 +1995,6 @@
           "System.Configuration.ConfigurationManager": "9.0.18",
           "System.Security.Cryptography.Pkcs": "9.0.18",
           "System.Threading.RateLimiting": "9.0.18"
-        }
-      },
-      "Microsoft.Data.SqlClient.Extensions.Azure": {
-        "type": "CentralTransitive",
-        "requested": "[7.1.1, )",
-        "resolved": "7.1.1",
-        "contentHash": "3/Z+6JJKGUw8+shNtftUSGOagt7XCbuhXknZjzXQfDr5aA4lUEMtU/MMNSiwMIrkviYslNKvFh1yWOArudDxQA==",
-        "dependencies": {
-          "Azure.Core": "1.51.1",
-          "Azure.Identity": "1.18.0",
-          "Microsoft.Data.SqlClient.Extensions.Abstractions": "[7.1.1, 8.0.0)",
-          "Microsoft.Data.SqlClient.Internal.Logging": "[7.1.1, 8.0.0)",
-          "Microsoft.Extensions.Caching.Memory": "8.0.1",
-          "Microsoft.Identity.Client": "4.84.2",
-          "Microsoft.Identity.Client.Broker": "4.84.2"
         }
       },
       "Microsoft.EntityFrameworkCore.Cosmos": {
@@ -2433,16 +2323,6 @@
         "contentHash": "aKMDJmB1xXDcspTyohGhe/nSBV/TY0VYN/gsLJyGoGUQGirUDff+wHvEJt+C0w1WIWAwwkLd7GGIQjy3RnowRw==",
         "dependencies": {
           "Testcontainers": "4.16.0"
-        }
-      },
-      "Testcontainers.ServiceBus": {
-        "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "+/J+aXtHZCZW+58jg0ZtCxyr5+VMS2kZZNMuWoCJeJKfc/e7C6YbKi/jXevR6E0cd73jFK1K4BGXoaYwNvtPIw==",
-        "dependencies": {
-          "Testcontainers": "4.16.0",
-          "Testcontainers.MsSql": "4.16.0"
         }
       },
       "xunit.v3.extensibility.core": {

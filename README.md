@@ -77,7 +77,10 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.UI.Maui` | .NET MAUI UI head (the one MAUI-TFM package; built and packed by dedicated windows jobs, outside `MMCA.Common.slnx`, ADR-042) |
 | `MMCA.Common.Aspire` | Service defaults, OpenTelemetry, health checks, Polly resilience |
 | `MMCA.Common.Aspire.Hosting` | Aspire AppHost extensions: RabbitMQ broker, JWKS service discovery, gRPC project wiring |
+| `MMCA.Common.Azure` | The Microsoft Azure adapter: Key Vault configuration, the Blob + Key Vault DataProtection key ring, the Azure Monitor exporter, Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport and the Entra SQL authentication provider. Each capability is one registration call; the core packages reference no cloud SDK |
+| `MMCA.Common.Aws` | The AWS adapter: S3-compatible file storage (Amazon S3, Cloudflare R2, MinIO, the GCS XML API) and the Amazon SQS/SNS broker transport |
 | `MMCA.Common.Testing` | Integration test base, JWT generator, fixtures |
+| `MMCA.Common.Testing.Azure` | The Azure Service Bus emulator broker-parity fixture base (Testcontainers + the MassTransit v8 custom-clients host) |
 | `MMCA.Common.Testing.Aspire` | AppHost integration testing on `Aspire.Hosting.Testing`: collection fixture with per-resource readiness waits, a precondition gate, and typed health/JWKS/h2c/data-source assertions |
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
 | `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers |

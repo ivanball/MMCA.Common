@@ -99,6 +99,54 @@
            Text="Layer violation: $(MSBuildProjectName) must not reference %(_ForbiddenAiRefs.Filename). The language-model boundary (MMCA.Common.AI and its MMCA.Common.AI.* adapters) depends on Microsoft.Extensions.AI and a provider SDK only." />
   </Target>
 
+  <!-- Cloud vendor boundary: the core packages are cloud-neutral. Every Azure or AWS SDK (and every
+       MassTransit transport for one) lives in an adapter package - MMCA.Common.Azure,
+       MMCA.Common.Aws, MMCA.Common.Testing.Azure - that references the core, never the other way
+       round. A vendor reference in a core package would force that cloud's SDK, credentials story
+       and advisory stream on every consumer, including the ones that run on another cloud or none.
+
+       Matched on the PACKAGE ID of every PackageReference this project carries: an Azure.* /
+       Microsoft.Azure.* / AWSSDK.* prefix, a MassTransit.Azure* / MassTransit.AmazonSQS transport,
+       or a ".Azure" segment anywhere in the id (Microsoft.Data.SqlClient.Extensions.Azure,
+       Aspire.Hosting.Azure.*, Microsoft.Extensions.Azure).
+
+       Exactly two existing references are exempt, each because it is a database ENGINE rather than a
+       cloud service the core opts a host into:
+         - Microsoft.EntityFrameworkCore.Cosmos in MMCA.Common.Infrastructure: Cosmos is one of the
+           four EF engines (ADR-006/018/113). Its id matches no pattern, but it pulls
+           Microsoft.Azure.Cosmos transitively, so it is named here and CloudVendorIsolationTestsBase
+           allows the Microsoft.Azure.Cosmos namespace in Infrastructure alone.
+         - Aspire.Hosting.Azure.CosmosDB in MMCA.Common.Aspire.Hosting: the AppHost-side Cosmos
+           emulator resource behind WithCosmosDataSource, which never reaches a service process.
+       The runtime half is CloudVendorIsolationTestsBase (no core assembly names a vendor type or
+       references a vendor or adapter assembly). -->
+  <PropertyGroup>
+    <_MmcaIsCloudAdapter Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Aws' OR '$(MSBuildProjectName)' == 'MMCA.Common.Testing.Azure'">true</_MmcaIsCloudAdapter>
+  </PropertyGroup>
+  <Target Name="EnforceCloudVendorBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="'$(_MmcaIsCloudAdapter)' != 'true'">
+    <ItemGroup>
+      <_CloudVendorExemptRefs Include="Microsoft.EntityFrameworkCore.Cosmos" Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Infrastructure'" />
+      <_CloudVendorExemptRefs Include="Aspire.Hosting.Azure.CosmosDB" Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Aspire.Hosting'" />
+      <_CloudVendorCandidateRefs Include="@(PackageReference)" Exclude="@(_CloudVendorExemptRefs)" />
+      <_ForbiddenCloudVendorRefs Include="@(_CloudVendorCandidateRefs)"
+        Condition="$([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('azure.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('microsoft.azure.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('awssdk.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('masstransit.azure'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('masstransit.amazonsqs'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().Contains('.azure.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().EndsWith('.azure'))" />
+      <_ForbiddenCloudAdapterRefs Include="@(ProjectReference)"
+        Condition="'%(Filename)' == 'MMCA.Common.Azure' OR '%(Filename)' == 'MMCA.Common.Aws' OR '%(Filename)' == 'MMCA.Common.Testing.Azure'" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenCloudVendorRefs->Count()) &gt; 0"
+           Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenCloudVendorRefs.Identity). The core packages are cloud-neutral; move the dependency into the vendor adapter (MMCA.Common.Azure or MMCA.Common.Aws) and expose it through a core abstraction." />
+    <Error Condition="@(_ForbiddenCloudAdapterRefs->Count()) &gt; 0"
+           Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference %(_ForbiddenCloudAdapterRefs.Filename). Adapter packages reference the core, never the other way round." />
+  </Target>
+
   <!-- UI: depends only on Shared -->
   <Target Name="EnforceUILayerBoundary"
           BeforeTargets="ResolveProjectReferences"

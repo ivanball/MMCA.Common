@@ -1,0 +1,19 @@
+#nullable enable
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
+const MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
+const MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
+static MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?

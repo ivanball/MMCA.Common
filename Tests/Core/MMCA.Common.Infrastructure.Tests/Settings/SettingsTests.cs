@@ -277,7 +277,7 @@ public class MessageBusSettingsTests
 
     [Fact]
     public void Default_Provider_IsInProcess() =>
-        new MessageBusSettings().Provider.Should().Be(MessageBusProvider.InProcess);
+        new MessageBusSettings().Provider.Should().Be("InProcess");
 
     [Fact]
     public void Default_EnableInbox_IsUnset_SoTheTransportDecides() =>
@@ -286,19 +286,21 @@ public class MessageBusSettingsTests
     // Unset resolves from the transport: a broker redelivers by contract, so dedup is ON; in-process
     // dispatch has no redelivery to dedup, so it stays OFF and the InboxMessages table is untouched.
     [Theory]
-    [InlineData(MessageBusProvider.InProcess, false)]
-    [InlineData(MessageBusProvider.RabbitMq, true)]
-    [InlineData(MessageBusProvider.AzureServiceBus, true)]
-    public void IsInboxEnabled_Unset_ResolvesFromTheTransport(MessageBusProvider provider, bool expected) =>
+    [InlineData("InProcess", false)]
+    [InlineData("RabbitMq", true)]
+    [InlineData("AzureServiceBus", true)]
+    [InlineData("inprocess", false)]
+    [InlineData("", false)]
+    public void IsInboxEnabled_Unset_ResolvesFromTheTransport(string provider, bool expected) =>
         new MessageBusSettings { Provider = provider }.IsInboxEnabled.Should().Be(expected);
 
     // An explicit value wins in BOTH directions: a host that has not migrated InboxMessages can turn
     // it off under a broker, and a monolith can turn it on.
     [Theory]
-    [InlineData(MessageBusProvider.RabbitMq, false)]
-    [InlineData(MessageBusProvider.AzureServiceBus, false)]
-    [InlineData(MessageBusProvider.InProcess, true)]
-    public void IsInboxEnabled_Explicit_OverridesTheTransportDefault(MessageBusProvider provider, bool configured) =>
+    [InlineData("RabbitMq", false)]
+    [InlineData("AzureServiceBus", false)]
+    [InlineData("InProcess", true)]
+    public void IsInboxEnabled_Explicit_OverridesTheTransportDefault(string provider, bool configured) =>
         new MessageBusSettings { Provider = provider, EnableInbox = configured }
             .IsInboxEnabled.Should().Be(configured);
 
@@ -310,19 +312,19 @@ public class MessageBusSettingsTests
     // exclusively through the outbox, while an in-process host dispatches inside the process that
     // raised the event and pays nothing for store-and-forward it never uses.
     [Theory]
-    [InlineData(MessageBusProvider.InProcess, false)]
-    [InlineData(MessageBusProvider.RabbitMq, true)]
-    [InlineData(MessageBusProvider.AzureServiceBus, true)]
-    public void IsOutboxEnabled_Unset_ResolvesFromTheTransport(MessageBusProvider provider, bool expected) =>
+    [InlineData("InProcess", false)]
+    [InlineData("RabbitMq", true)]
+    [InlineData("AzureServiceBus", true)]
+    public void IsOutboxEnabled_Unset_ResolvesFromTheTransport(string provider, bool expected) =>
         new MessageBusSettings { Provider = provider }.IsOutboxEnabled.Should().Be(expected);
 
     // A monolith that wants at-least-once delivery across a crash turns it back on. Turning it OFF
     // under a broker parses here and is refused at registration instead, where the failure can name
     // the consequence.
     [Theory]
-    [InlineData(MessageBusProvider.InProcess, true)]
-    [InlineData(MessageBusProvider.InProcess, false)]
-    public void IsOutboxEnabled_Explicit_OverridesTheTransportDefault(MessageBusProvider provider, bool configured) =>
+    [InlineData("InProcess", true)]
+    [InlineData("InProcess", false)]
+    public void IsOutboxEnabled_Explicit_OverridesTheTransportDefault(string provider, bool configured) =>
         new MessageBusSettings { Provider = provider, EnableOutbox = configured }
             .IsOutboxEnabled.Should().Be(configured);
 
@@ -335,7 +337,13 @@ public class MessageBusSettingsTests
 
     [Fact]
     public void Default_RedeliveryIntervalsSeconds_IsOneMinuteTenMinutesOneHour() =>
-        new MessageBusSettings().RedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
+        MessageBusSettings.DefaultRedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
+
+    // Unset must stay null: the binder appends a configured list to a non-null initializer, so a
+    // default living on the property would make the intervals impossible to replace by configuration.
+    [Fact]
+    public void Default_RedeliveryIntervalsSeconds_IsUnsetSoTheTransportDefaultApplies() =>
+        new MessageBusSettings().RedeliveryIntervalsSeconds.Should().BeNull();
 
     [Fact]
     public void ResilienceProperties_RoundTrip()

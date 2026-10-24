@@ -112,15 +112,6 @@ MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.SetBearerToken(string
 MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>
 MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.ProductionHostApplicationFactory() -> void
 MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.StartedHost.get -> Microsoft.Extensions.Hosting.IHost?
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
 MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>
 MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Client.get -> System.Net.Http.HttpClient?
 MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConnectionString.get -> string!
@@ -197,8 +188,6 @@ abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntry
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DatabaseNamePrefix.get -> string!
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlBaseEnvironmentVariable.get -> string!
 const MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.RefreshBaselineEnvironmentVariable = "MMCA_UPDATE_OPENAPI_BASELINE" -> string!
-const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
-const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultIssuer = "https://localhost:6001" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultKeyId = "mmca-test-key" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultPrivateKeyPem = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCedtKTDLOuAnty\nz7CUuupqR+sK9s4iIMzj4C3At9FPsiZmQkBBgr50NFTxJd1nVTL2w+PXK8GyEV8A\no5h/ZvSsRyNm9T8meJ5F5w0NiS55yruymVezGtF0oG/3LWVEyBBy7U2jHyuYQMRE\nsSATEulXjJPez0Yo8WiU/5pXtEm1XliZYYGM9KfMCjKSJiUoLDESNFVWqNNDH9ns\ngrFaUMX6XOWv9eeYMKJ7gbm2KGEX5AS/I0GXl7ctCzn98Z8797YUjsVfXB402vX+\nQ9dVwn2U5qR+8um9pZgZhjsj3QoF8eza+oG/AqOHIT9pGIOlDLcU1gHkGR8mu1Ra\n6UGNh3iNAgMBAAECggEAJ3pEtZu5e8VkidLSFAuI8Ndf6AhajEgNo0urOlLRE4C3\nbkxdA7UVy49qBfW/9clU/AMLVQSyqbEIMPmQuVSl6fGDEVhR1jzAeXu5VcDyUic+\noZzwK0+oFN0PZ83oZ71L08XozJWsX67q9o4GBpp0hXohMKYEvZh+zHftNKJWppco\n1G6Lto3ELzlShhbOosoNce1Y8jByY2cc617MO1S/I6tB3NPsiZMRKgC/j3ATWimD\nx9ElTIc3lsT+aopol95pkGsIvfh3tCXeaUuCZ+rWEX4xtVtPpm+f1hjDxZcGHwL4\nDxGZKtTAmkbA9u2beMEhtCYE6fwVKDzD/K4ZF8HzYQKBgQDbZD9t7i3EYTuF4Ej2\nLoDeRIG1g7eXBcHqWWeBZnQa/fqlFnzqkphVOKxzVB9s9HDK0Ku3khe9wJI5XHFx\ntDWUaIMTdAGUIXs9aMPbRz1RKXXuKDGdDlyoNhziy21NI6wJiwQh8ul4mImZ3AzV\n9kcleRwrscRhgVVBONcg6LVBhQKBgQC45+/SSC/Z8mlrhizzHfjm9bsb40o5Lz9b\nDOTJF7y0o1FXaXMSSotKuEo8TE8PastMmcRmArtx69gcmESn+7VglMCOW6m554Jd\nM3T7dEbU9Dl8WOciWphplOkGljOQco4HR9iEQttCDxMmlTyvuyYt0bsLBVy0K636\nRiXrLcgFaQKBgFy1WhBsK67mn66M/of5Ur+aF23KwVPyPOV47kJCNyII3VfRzuuZ\nEwJANq9thvIVwWwTDd0+wQWQULoolE/GJTYXi/w2c0xTca6bjNgmnISljo4bMgv6\nO7FhXIeCCygjwNkvg4mNCpfJbaw0zr/DmID/UqYsMp45dvtet5nSfHW5AoGACD5/\nGNcTGxqNzLd8xZIuiM2n/ARUSNxsbLjUcorWZQ9rDwSqlsQwFbLFzI5yb/OJAO9S\nLGIuzVOAnTXEyeCVI6s+MpqvpJRH4bProVJ73f7NmVe1Zni3lu2Gvj5wKh6Rao2v\nf6YjdHyLlArPW95yQ1S4jDM/AOF5rlD2W9f8tRECgYB4i3qu1eOUP8ND29qpiz3Z\nkX0Kz8MJF/W8SI3EuWR06iOtnEQvUA19GGl+eP31+eeOLEDyJceGGGMHH42ERxq0\nNLZaLd5FHebRvFwxbzD24nYBU8q/WawRmyG/u2TEGZ09jvtzX/XgkrxCFNFQpEoZ\nDuIPM0H4W9l7v/kASh6DKQ==\n-----END PRIVATE KEY-----" -> string!
@@ -227,7 +216,6 @@ static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator ==(MMCA.Comm
 static MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ComposeConnectionString(string! baseConnectionString, string! databaseName, string? applicationName = null) -> string!
 static MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.IsolateCrossServiceHost<TEntryPoint>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.NextId() -> int
-static MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
 static MMCA.Common.Testing.Support.DependencyInjectionAssert.ReturnsSameCollection(System.Func<Microsoft.Extensions.DependencyInjection.IServiceCollection!, Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> void
 static MMCA.Common.Testing.Support.FeatureManagementTestExtensions.ConfigureTestFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Testing.Support.JwtTokenGenerator.ConfigureInProcessTokenValidation(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions! options, string! audience) -> void
@@ -257,10 +245,4 @@ virtual MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.ProbePath.get -
 virtual MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.AllowsHeaderResolution.get -> bool
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ConfigureSharedEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.OnContainersStartedAsync() -> System.Threading.Tasks.ValueTask
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
-virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?
 virtual MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConfigureTestEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void

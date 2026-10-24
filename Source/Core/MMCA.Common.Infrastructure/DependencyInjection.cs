@@ -214,6 +214,14 @@ public static partial class DependencyInjection
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, Configuration.StartupConfigurationSummaryService>());
 
+            // Startup tripwire: a FileStorage section or an enabled NativePush section whose service
+            // still resolves to the inert core default means the vendor adapter call is missing (the
+            // implementations live in MMCA.Common.Azure and MMCA.Common.Aws). Fails the host naming the call instead of
+            // letting it run with uploads failing and pushes dropped.
+            services.AddOptions<Configuration.CloudAdapterTripwireOptions>().ValidateOnStart();
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<Configuration.CloudAdapterTripwireOptions>, Configuration.CloudAdapterTripwire>());
+
             services.TryAddSingleton<Persistence.Outbox.Processing.IOutboxSignal, Persistence.Outbox.Processing.OutboxSignal>();
 
             // The outbox is a transport decision, not a persistence one: a broker deployment cannot
@@ -338,13 +346,16 @@ public static partial class DependencyInjection
             services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
             services.TryAddTransient<ILiveChannelPublisher, NullLiveChannelPublisher>();
 
-            // Native push (ADR-044) defaults to inert no-ops; AddNativePushNotifications swaps in
-            // the Azure Notification Hubs implementations when an enabled hub is configured.
+            // Native push (ADR-044) defaults to inert no-ops; a vendor adapter swaps in a real
+            // implementation (AddAzureNotificationHubsPush from MMCA.Common.Azure when an enabled
+            // hub is configured).
             services.TryAddTransient<INativePushSender, NullNativePushSender>();
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 
-            // Managed file storage (ADR-045): unconfigured default swapped by
-            // AddAzureBlobFileStorage; the image processor is dependency-free and always real.
+            // Managed file storage (ADR-045): unconfigured default swapped by a storage adapter
+            // (AddAzureBlobFileStorage from MMCA.Common.Azure, AddS3FileStorage from
+            // MMCA.Common.Aws); the image processor is
+            // dependency-free and always real.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
             services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();
 

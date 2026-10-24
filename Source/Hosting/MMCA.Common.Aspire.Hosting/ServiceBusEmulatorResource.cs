@@ -18,7 +18,7 @@ namespace MMCA.Common.Aspire.Hosting;
 /// <see cref="ConnectionStringExpression"/> is the emulator connection-string form, ending in
 /// <c>UseDevelopmentEmulator=true</c>. That suffix is not decoration: it is what keeps the Azure SDK
 /// clients on plain TCP/HTTP against a local host, and it is the marker
-/// <c>MMCA.Common.Infrastructure</c> detects to take its emulator configuration branch. A real Azure
+/// <c>MMCA.Common.Azure</c>'s Service Bus transport detects to take its emulator configuration branch. A real Azure
 /// Service Bus connection string never carries it, so production behavior cannot be reached by
 /// accident.
 /// </para>

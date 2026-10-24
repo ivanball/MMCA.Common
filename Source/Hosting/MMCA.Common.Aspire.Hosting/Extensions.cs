@@ -277,12 +277,13 @@ public static class Extensions
         /// Wires a service to the local Azure Service Bus emulator instead of RabbitMQ, so the
         /// development stack runs the production transport. Sets
         /// <c>MessageBus:Provider=AzureServiceBus</c>, the AMQP connection string, and the
-        /// management-plane address the infrastructure layer needs to build MassTransit v8's
+        /// management-plane address the Azure Service Bus transport needs to build MassTransit v8's
         /// administration client. Adds a wait-for so the service does not start before the emulator
         /// container is up.
         /// <para>
         /// The connection string carries <c>UseDevelopmentEmulator=true</c>, which is the marker
-        /// <c>AddBrokerMessaging</c> keys its emulator branch off. Everything a real Azure Service Bus
+        /// the Azure Service Bus transport (<c>AddAzureServiceBusTransport()</c> from <c>MMCA.Common.Azure</c>,
+        /// which the service must register) keys its emulator branch off. Everything a real Azure Service Bus
         /// deployment does is left untouched: a production connection string never carries that
         /// suffix, so the emulator path cannot be entered by accident.
         /// </para>

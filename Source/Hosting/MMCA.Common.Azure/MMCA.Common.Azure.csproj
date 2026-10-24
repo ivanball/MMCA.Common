@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Azure</PackageId>
+    <Description>MMCA framework: the Microsoft Azure adapter. Key Vault configuration, the Blob + Key Vault DataProtection key ring, the Azure Monitor exporter, Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport and the Entra SQL authentication provider; the core packages stay cloud-neutral</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.Azure.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The adapter's whole job is to hold the Azure SDKs so the core packages do not have to
+         (EnforceCloudVendorBoundary in Source/Build/MMCA.Common.LayerEnforcement.targets and
+         CloudVendorIsolationTestsBase hold that line). A host references this package only when it
+         runs on Azure, and opts into each capability with one registration call. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
+    <!-- DefaultAzureCredential for Key Vault, the DataProtection sinks and Blob storage. -->
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <!-- Native push (ADR-044): Notification Hubs installations + FCM v1 / APNs native sends. -->
+    <PackageReference Include="Microsoft.Azure.NotificationHubs" />
+    <!-- Azure Service Bus transport. Azure.Messaging.ServiceBus is direct for the emulator's
+         custom-clients Host() overload and to lift the older transitive the MassTransit transport
+         would otherwise resolve; see the pin note in Directory.Packages.props. -->
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />
+    <!-- SqlClient 7.0 moved the Entra ID providers (Active Directory Managed Identity, Default, ...)
+         out of the core driver into this extension package, which registers them on load. Without it a
+         production host whose connection string says Authentication=Active Directory Managed Identity
+         throws "Cannot find an authentication provider" at startup (ADC, 2026-09-16). It needs no
+         registration call: a host that references this package carries it in its dependency graph.
+         Keep the version in step with Microsoft.Data.SqlClient; SqlClientEntraAuthenticationTests pins
+         the registration. -->
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

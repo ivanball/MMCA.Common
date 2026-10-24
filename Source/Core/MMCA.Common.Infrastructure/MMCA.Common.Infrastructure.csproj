@@ -19,7 +19,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
     <!-- Security pin: forces the transitive MessagePack (pulled by SignalR.StackExchangeRedis) to a
          patched version. See the MessagePack note in Directory.Packages.props. -->
@@ -28,12 +27,6 @@
     <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
          vulnerable 9.0.13 (NU1903); see the pin note in Directory.Packages.props. -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
-    <!-- SqlClient 7.0 moved the Entra ID providers (Active Directory Managed Identity, Default, ...)
-         out of the core driver into this extension package, which registers them on load. Without it a
-         production host whose connection string says Authentication=Active Directory Managed Identity
-         throws "Cannot find an authentication provider" at startup (ADC, 2026-09-16). Keep the two
-         versions in step; SqlClientEntraAuthenticationTests pins the registration. -->
-    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
@@ -54,10 +47,6 @@
     </PackageReference>
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.RabbitMQ" />
-    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />
-    <PackageReference Include="Microsoft.Azure.NotificationHubs" />
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" />
