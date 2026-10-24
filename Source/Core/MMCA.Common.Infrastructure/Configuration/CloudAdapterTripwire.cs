@@ -47,7 +47,7 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
                 && scope.ServiceProvider.GetService<IFileStorageService>() is null or NullFileStorageService)
             {
                 failures.Add(
-                    "The FileStorage section is configured, but IFileStorageService is still the unconfigured NullFileStorageService, so every upload fails. Either no storage adapter is registered or its section is incomplete: reference MMCA.Common.Azure and call services.AddAzureBlobFileStorage(configuration), with FileStorage:ContainerName plus FileStorage:ServiceUri or FileStorage:ConnectionString.");
+                    "The FileStorage section is configured, but IFileStorageService is still the unconfigured NullFileStorageService, so every upload fails. Either no storage adapter is registered or its section is incomplete: reference MMCA.Common.Azure and call services.AddAzureBlobFileStorage(configuration), with FileStorage:ContainerName plus FileStorage:ServiceUri or FileStorage:ConnectionString; or reference MMCA.Common.Aws and call services.AddS3FileStorage(configuration), with FileStorage:Bucket (S3, R2, MinIO or GCS).");
             }
 
             if (bool.TryParse(configuration[NativePushEnabledKey], out var nativePushEnabled)

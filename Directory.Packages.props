@@ -141,6 +141,10 @@
          gives the reason). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
+         and the GCS XML API through one client. The 4.x line sends request checksums by default,
+         which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.6" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->

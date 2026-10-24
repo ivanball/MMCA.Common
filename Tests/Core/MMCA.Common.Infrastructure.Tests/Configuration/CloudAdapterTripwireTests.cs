@@ -47,7 +47,8 @@ public sealed class CloudAdapterTripwireTests
         var result = Validate(new() { ["FileStorage:ContainerName"] = "avatars", ["FileStorage:ServiceUri"] = "https://acct.blob.core.windows.net" });
 
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("FileStorage").And.Contain("AddAzureBlobFileStorage(configuration)").And.Contain("MMCA.Common.Azure");
+        result.FailureMessage.Should().Contain("FileStorage").And.Contain("AddAzureBlobFileStorage(configuration)").And.Contain("MMCA.Common.Azure")
+            .And.Contain("AddS3FileStorage(configuration)").And.Contain("MMCA.Common.Aws");
     }
 
     [Fact]

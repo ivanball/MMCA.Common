@@ -58,6 +58,9 @@ public sealed partial class ErrorResourceCoverageTests
         // The Azure adapter emits the FileStorage.* and PushDevice.* codes the shared resources carry
         // (the blob store and the Notification Hubs registrar moved there from Infrastructure).
         Path.Combine("Source", "Hosting", "MMCA.Common.Azure"),
+
+        // The AWS adapter's S3 store emits the same FileStorage.* codes.
+        Path.Combine("Source", "Hosting", "MMCA.Common.Aws"),
     ];
 
     private static readonly HashSet<string> ExcludedFiles = new(StringComparer.Ordinal)
