@@ -302,7 +302,8 @@ public static partial class Extensions
         // broker transport's consumer faults plus outbox circuit-breaker openings
         // (inert in a host that stays on the in-process bus), the output-cache
         // eviction consumer's failed tag evictions, the swallowed failures of
-        // best-effort side effects (both inert until a host opts into them), and the
+        // best-effort side effects (both inert until a host opts into them), the
+        // optimistic-concurrency conflicts the API answers, and the
         // optional AI package's token spend plus call duration (inert until a host
         // adds that package and enables Ai:Enabled).
         metrics.AddMeter("MMCA.Common.Outbox")
@@ -313,6 +314,7 @@ public static partial class Extensions
             .AddMeter("MMCA.Common.OutputCache")
             .AddMeter("MMCA.Common.BestEffort")
             .AddMeter("MMCA.Common.InternalCommands")
+            .AddMeter("MMCA.Common.Persistence")
             .AddMeter(AiTelemetryName);
 
         // Polly's own meter (ADR-009). The standard resilience handler above is on every
