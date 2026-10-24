@@ -1,1 +1,11 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase
+MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase.CloudVendorIsolationTestsBase() -> void
+static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.CloudVendorDependencies -> System.Collections.Generic.IReadOnlyList<string!>!
+static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.CloudVendorAssemblyPrefixes -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase.CloudNeutralAssemblies.get -> System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>!
+virtual MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase.AllowedVendorPrefixes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyCollection<string!>!>!
+MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase.CloudNeutralAssemblies_ShouldNotName_ACloudVendorType() -> void
+MMCA.Common.Testing.Architecture.CloudVendorIsolationTestsBase.CloudNeutralAssemblies_ShouldNotReference_ACloudVendorAssembly() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CloudNeutralAssembliesNameNoVendorType(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyCollection<string!>!>! allowedPrefixes) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CloudNeutralAssembliesReferenceNoVendorAssembly(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyCollection<string!>!>! allowedPrefixes) -> void

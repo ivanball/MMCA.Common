@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Aspire.Warmup;
 using MMCA.Common.Shared.Resilience;
 
@@ -33,6 +36,14 @@ public static partial class Extensions
             builder.AddDefaultHealthChecks();
             builder.AddWarmupReadiness();
             builder.Services.AddServiceDiscovery();
+
+            // Startup tripwire for vendor integrations the configuration asks for but no adapter
+            // call registered (an Application Insights connection string with no exporter, a vault
+            // URI with no configuration source, a key-ring blob with no DataProtection sink). Runs
+            // with the other ValidateOnStart validators, before any hosted service starts.
+            builder.Services.AddOptions<HostIntegrationTripwireOptions>().ValidateOnStart();
+            builder.Services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<HostIntegrationTripwireOptions>, HostIntegrationTripwire>());
 
             // HttpClient defaults applied via ConfigureHttpClientDefaults — affects every
             // HttpClient registered downstream (typed clients, named clients, YARP forwarder).

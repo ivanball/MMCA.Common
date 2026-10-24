@@ -1,6 +1,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.Aspire.Integrations;
 
 namespace MMCA.Common.Azure;
 
@@ -33,8 +34,27 @@ public static class AzureMonitorExporterExtensions
         /// </para>
         /// </summary>
         /// <returns>The same builder instance for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// <c>AddServiceDefaults()</c> (or <c>ConfigureOpenTelemetry()</c>) has not run yet. Enforced
+        /// whether or not the connection string is set, so a misordered host fails on a developer
+        /// machine rather than only in the deployment that sets it.
+        /// </exception>
         public TBuilder AddAzureMonitorExporter()
         {
+            if (!builder.Services.Any(descriptor =>
+                    descriptor.ServiceType == typeof(HostIntegrationMarker)
+                    && !descriptor.IsKeyedService
+                    && descriptor.ImplementationInstance is HostIntegrationMarker marker
+                    && string.Equals(marker.Name, HostIntegrationNames.ServiceDefaultsTelemetry, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "AddAzureMonitorExporter() must run after AddServiceDefaults() (or ConfigureOpenTelemetry()): the outbox-poll and probe filter processors service defaults register have to run before the Azure Monitor exporter's batch processor, or the spans they drop are exported anyway. Move the call below builder.AddServiceDefaults().");
+            }
+
+            // The receipt the core startup tripwire checks: APPLICATIONINSIGHTS_CONNECTION_STRING set
+            // without this call fails the host instead of starting it with no telemetry export.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureMonitorExporter));
+
             if (string.IsNullOrWhiteSpace(builder.Configuration[ConnectionStringKey]))
             {
                 return builder;

@@ -2,6 +2,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.Aspire.Integrations;
 
 namespace MMCA.Common.Azure;
 
@@ -51,6 +52,10 @@ public static class AzureDataProtectionExtensions
         /// <returns>The same builder instance for chaining.</returns>
         public TBuilder AddAzureDataProtection()
         {
+            // The receipt the core startup tripwire checks: DataProtection:BlobStorageUri set without
+            // this call fails the host instead of running every replica on its own key ring.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureDataProtection));
+
             var blobStorageUri = builder.Configuration["DataProtection:BlobStorageUri"];
 
             // Gate 1 (blob persistence). Absent means "do nothing": a developer machine, a test host,

@@ -73,5 +73,9 @@
     <!-- TestingAspireBoundaryTests asserts the compiled MMCA.Common.Testing.Aspire assembly reaches
          no core layer directly: the runtime half of EnforceTestingAspireLayerBoundary. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Aspire\MMCA.Common.Testing.Aspire.csproj" />
+    <!-- CloudVendorIsolationTests holds the service defaults and the test infrastructure package to the
+         cloud-vendor boundary too: the runtime half of EnforceCloudVendorBoundary. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
   </ItemGroup>
 </Project>

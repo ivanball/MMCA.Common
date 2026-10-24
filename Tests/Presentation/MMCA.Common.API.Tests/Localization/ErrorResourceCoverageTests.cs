@@ -54,6 +54,10 @@ public sealed partial class ErrorResourceCoverageTests
         Path.Combine("Source", "Core", "MMCA.Common.Application"),
         Path.Combine("Source", "Core", "MMCA.Common.Infrastructure"),
         Path.Combine("Source", "Presentation", "MMCA.Common.API"),
+
+        // The Azure adapter emits the FileStorage.* and PushDevice.* codes the shared resources carry
+        // (the blob store and the Notification Hubs registrar moved there from Infrastructure).
+        Path.Combine("Source", "Hosting", "MMCA.Common.Azure"),
     ];
 
     private static readonly HashSet<string> ExcludedFiles = new(StringComparer.Ordinal)

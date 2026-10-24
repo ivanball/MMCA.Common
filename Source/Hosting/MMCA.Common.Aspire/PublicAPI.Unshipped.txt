@@ -7,3 +7,11 @@
 *REMOVED*MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddCommonKeyVaultConfiguration() -> TBuilder
 *REMOVED*static MMCA.Common.Aspire.DataProtectionExtensions.AddCommonDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
 *REMOVED*static MMCA.Common.Aspire.KeyVaultConfigurationExtensions.AddCommonKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureDataProtection = "AzureDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.ServiceDefaultsTelemetry = "ServiceDefaultsTelemetry" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureKeyVaultConfiguration = "AzureKeyVaultConfiguration" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureMonitorExporter = "AzureMonitorExporter" -> string!
+MMCA.Common.Aspire.Integrations.HostIntegrationNames
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker.HostIntegrationMarker(string! name) -> void
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker.Name.get -> string!

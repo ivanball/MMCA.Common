@@ -2,7 +2,9 @@ using System.Globalization;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.Aspire.Integrations;
 
 namespace MMCA.Common.Azure;
 
@@ -77,6 +79,10 @@ public static class AzureKeyVaultConfigurationExtensions
         /// </exception>
         public TBuilder AddAzureKeyVaultConfiguration()
         {
+            // The receipt the core startup tripwire checks: KeyVault:Uri set without this call fails
+            // the host instead of starting it with every vault secret missing.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureKeyVaultConfiguration));
+
             var vaultUri = builder.Configuration["KeyVault:Uri"];
 
             // The gate. Absent means "do nothing": a developer machine, a test host and the Helpdesk

@@ -117,8 +117,9 @@ public static partial class Extensions
                     // vendor distro such as Azure Monitor) from export — idle polling would
                     // otherwise dominate telemetry ingestion cost. Must be registered here, before
                     // AddOpenTelemetryExporters() below and before any adapter exporter (which is
-                    // why AddAzureMonitorExporter() runs after AddServiceDefaults()), so its OnEnd
-                    // clears the Recorded flag before the exporters' batch processors check it.
+                    // why AddAzureMonitorExporter() refuses to run ahead of AddServiceDefaults()),
+                    // so its OnEnd clears the Recorded flag before the exporters' batch processors
+                    // check it.
                     tracing.AddProcessor(new Telemetry.OutboxPollFilterProcessor());
 
                     if (filterProbeTelemetry)
@@ -140,6 +141,10 @@ public static partial class Extensions
                 });
 
             builder.AddOpenTelemetryExporters();
+
+            // The receipt a vendor exporter checks for: it must be registered after the filter
+            // processors above, so AddAzureMonitorExporter() refuses to run ahead of this call.
+            builder.Services.AddSingleton(new Integrations.HostIntegrationMarker(Integrations.HostIntegrationNames.ServiceDefaultsTelemetry));
 
             return builder;
         }
