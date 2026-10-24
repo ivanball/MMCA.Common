@@ -110,7 +110,8 @@ public sealed class AzureServiceCollectionExtensionsTests
     public void CoreTripwire_IsSatisfied_OnceTheAdaptersAreRegistered()
     {
         // The end-to-end proof of the guard's silent case: the same configuration that fails a host
-        // without the adapter calls validates cleanly with them.
+        // without the adapter calls validates cleanly with them. Only native push trips it; the
+        // FileStorage section rides along and is deliberately not checked.
         var configuration = ConfigurationWith(new()
         {
             ["ConnectionStrings:SqliteConnectionString"] = "Data Source=:memory:",
@@ -127,7 +128,8 @@ public sealed class AzureServiceCollectionExtensionsTests
         var failing = () => withoutAdapters.GetRequiredService<IStartupValidator>().Validate();
         var passing = () => withAdapters.GetRequiredService<IStartupValidator>().Validate();
 
-        failing.Should().Throw<OptionsValidationException>().WithMessage("*AddAzureBlobFileStorage*");
+        failing.Should().Throw<OptionsValidationException>().WithMessage("*AddAzureNotificationHubsPush*")
+            .Which.Message.Should().NotContain("AddAzureBlobFileStorage");
         passing.Should().NotThrow();
     }
 

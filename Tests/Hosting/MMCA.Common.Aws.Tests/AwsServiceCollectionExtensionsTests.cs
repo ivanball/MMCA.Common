@@ -139,9 +139,10 @@ public sealed class AwsServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void CoreTripwire_IsSatisfied_OnceTheS3AdapterIsRegistered()
+    public void CoreTripwire_IgnoresAnS3Section_WithOrWithoutTheAdapter()
     {
-        // The same configuration that fails a host without the adapter call validates cleanly with it.
+        // A FileStorage section declares no intent (it is often shared across a solution's services),
+        // so a host without the adapter call starts too; its uploads fail with FileStorage.NotConfigured.
         var configuration = ConfigurationWith(new()
         {
             ["ConnectionStrings:SqliteConnectionString"] = "Data Source=:memory:",
@@ -152,11 +153,11 @@ public sealed class AwsServiceCollectionExtensionsTests
         using var withoutAdapter = BuildProvider(configuration, registerAdapter: false);
         using var withAdapter = BuildProvider(configuration, registerAdapter: true);
 
-        var failing = () => withoutAdapter.GetRequiredService<IStartupValidator>().Validate();
-        var passing = () => withAdapter.GetRequiredService<IStartupValidator>().Validate();
+        var unregistered = () => withoutAdapter.GetRequiredService<IStartupValidator>().Validate();
+        var registered = () => withAdapter.GetRequiredService<IStartupValidator>().Validate();
 
-        failing.Should().Throw<OptionsValidationException>().WithMessage("*AddS3FileStorage*");
-        passing.Should().NotThrow();
+        unregistered.Should().NotThrow();
+        registered.Should().NotThrow();
     }
 
     private static ServiceProvider BuildProvider(IConfiguration configuration, bool registerAdapter)
