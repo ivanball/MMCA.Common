@@ -7,10 +7,9 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Matches the FrameworkReference on MMCA.Common.Aspire itself. Without it the ASP.NET Core
-         pieces the tested code touches (DataProtection above all) resolve as standalone packages
-         instead of being pruned to the shared framework, which drags in a vulnerable
-         System.Security.Cryptography.Xml that the framework itself does not ship. -->
+    <!-- Matches the FrameworkReference on MMCA.Common.Aspire itself, so the ASP.NET Core pieces the
+         tested code touches resolve from the shared framework (and are pruned from the package
+         graph) exactly as they do in a consuming host, instead of as standalone packages. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
