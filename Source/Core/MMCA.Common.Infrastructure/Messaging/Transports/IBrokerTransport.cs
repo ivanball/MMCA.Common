@@ -31,7 +31,7 @@ public interface IBrokerTransport
     /// <summary>
     /// Selects and configures this transport on the bus being registered: one
     /// <c>Using{Transport}</c> call whose bus-factory callback sets the host, applies the shared
-    /// receive policies (<see cref="BrokerTransportPolicies.ApplyReceivePolicies"/>) and ends with
+    /// receive policies (one of the <c>BrokerTransportPolicies.ApplyReceivePolicies</c> overloads) and ends with
     /// <c>ConfigureEndpoints(context)</c>.
     /// </summary>
     /// <param name="configurator">The MassTransit registration configurator, consumers already added.</param>

@@ -20,18 +20,10 @@ namespace MMCA.Common.Aws.Messaging;
 /// <c>MessageBus:EnableDelayedRedelivery</c> (which exists only to gate the RabbitMQ plugin) is not
 /// consulted. SQS does cap any delay at 15 minutes, and MassTransit silently shortens a longer one
 /// to the cap, so a configured interval over 900 seconds would quietly redeliver far sooner than
-/// asked. Registration therefore fails on one, naming it; the framework default
-/// (<c>[60, 600, 3600]</c>) is such a list, so an SQS host sets its own (for example
-/// <c>[60, 300, 900]</c>) or <c>[0]</c> to turn redelivery off.
-/// </para>
-/// <para>
-/// The intervals are read from the <c>MessageBus:RedeliveryIntervalsSeconds</c> section itself
-/// rather than from the bound <see cref="MessageBusSettings"/>: the configuration binder APPENDS a
-/// configured list to the property's <c>[60, 600, 3600]</c> initializer instead of replacing it, so
-/// the bound value of a host that configured <c>[60, 300, 900]</c> still carries the one-hour
-/// default and could never pass the cap. For the same reason the shared policies are applied as
-/// their three parts (redelivery with these intervals, then <c>ApplyMessageRetry</c>, then
-/// <c>ApplyBackpressure</c>), in the order <c>ApplyReceivePolicies</c> uses.
+/// asked. An UNCONFIGURED <c>MessageBus:RedeliveryIntervalsSeconds</c> therefore uses
+/// <see cref="DefaultRedeliveryIntervalsSeconds"/> (<c>[60, 300, 900]</c>) instead of the framework
+/// default, whose one-hour step SQS cannot delay, while an EXPLICITLY configured interval over 900
+/// seconds fails registration, naming it. <c>[0]</c> turns redelivery off.
 /// </para>
 /// <para>
 /// The ambient <c>MMCA-*</c> headers <c>BrokerMessageBus</c> stamps are kept OUT of the SQS/SNS
@@ -54,6 +46,13 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
     internal const string AmbientHeaderPrefix = "MMCA-";
 
     private readonly Func<RegionEndpoint?> _fallbackRegion;
+
+    /// <summary>
+    /// Gets the redelivery intervals, in seconds, an SQS host runs when it configures none: one
+    /// minute, five minutes, fifteen minutes, the same three-step spread as the framework default
+    /// with the last step at the SQS delay cap.
+    /// </summary>
+    internal static IReadOnlyList<int> DefaultRedeliveryIntervalsSeconds { get; } = [60, 300, MaxDelaySeconds];
 
     /// <summary>Initializes a new instance that falls back to the AWS SDK region chain.</summary>
     public AmazonSqsTransport()
@@ -82,7 +81,7 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
         // Everything that can be wrong with the configuration is checked HERE, while
         // AddBrokerMessaging runs, rather than inside the bus-factory callback, which only runs when
         // the bus is first resolved.
-        var redeliveryIntervals = ResolveRedeliveryIntervals(settings, context.Configuration);
+        var redeliveryIntervals = ResolveRedeliveryIntervals(settings);
         var region = ResolveRegion(sqsSettings.Region, _fallbackRegion);
         var credentials = AwsStaticCredentials.Resolve(
             sqsSettings.AccessKeyId, sqsSettings.SecretAccessKey, AmazonSqsTransportSettings.SectionName);
@@ -107,44 +106,28 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
                 h.AllowTransportHeader(IsTransportHeader);
             });
 
-            // ApplyReceivePolicies(cfg, settings, applyDelayedRedelivery: true) in its three parts, so
-            // redelivery runs on the intervals resolved above (see the type remarks). Same order:
-            // redelivery outermost, then the in-process retry, then backpressure.
-            if (redeliveryIntervals.Length > 0)
-            {
-                cfg.UseDelayedRedelivery(r => r.Intervals(redeliveryIntervals));
-            }
-
-            BrokerTransportPolicies.ApplyMessageRetry(cfg, settings);
-            BrokerTransportPolicies.ApplyBackpressure(cfg, settings);
+            BrokerTransportPolicies.ApplyReceivePolicies(cfg, settings, redeliveryIntervals);
             cfg.ConfigureEndpoints(busContext);
         });
     }
 
     /// <summary>
-    /// Resolves the second-level redelivery intervals: the list configured under
-    /// <c>MessageBus:RedeliveryIntervalsSeconds</c> when there is one, read from that section on its
-    /// own so the binder's append onto the <c>[60, 600, 3600]</c> initializer cannot leak the defaults
-    /// in, else the settings' own value (the default). Non-positive entries are dropped exactly as
-    /// <see cref="BrokerTransportPolicies.BuildRedeliveryIntervals"/> drops them, so <c>[0]</c> turns
-    /// redelivery off, and the result is checked against the SQS delay cap.
+    /// Resolves the second-level redelivery intervals: the configured list when there is one, else
+    /// <see cref="DefaultRedeliveryIntervalsSeconds"/>, through
+    /// <see cref="BrokerTransportPolicies.BuildRedeliveryIntervals(MessageBusSettings, IReadOnlyList{int})"/>
+    /// (so non-positive entries are dropped and <c>[0]</c> turns redelivery off), then checked
+    /// against the SQS delay cap.
     /// </summary>
     /// <param name="settings">The bound message-bus settings.</param>
-    /// <param name="configuration">The application configuration.</param>
     /// <returns>The positive intervals, in configured order.</returns>
     /// <exception cref="InvalidOperationException">An interval is longer than 900 seconds.</exception>
-    internal static TimeSpan[] ResolveRedeliveryIntervals(MessageBusSettings settings, IConfiguration configuration)
+    internal static TimeSpan[] ResolveRedeliveryIntervals(MessageBusSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(configuration);
 
-        var configured = configuration
-            .GetSection($"{MessageBusSettings.SectionName}:{nameof(MessageBusSettings.RedeliveryIntervalsSeconds)}")
-            .Get<int[]>();
-        var source = configured is null ? settings : new MessageBusSettings { RedeliveryIntervalsSeconds = configured };
-
-        EnsureRedeliveryWithinDelayCap(source);
-        return BrokerTransportPolicies.BuildRedeliveryIntervals(source);
+        var intervals = BrokerTransportPolicies.BuildRedeliveryIntervals(settings, DefaultRedeliveryIntervalsSeconds);
+        EnsureWithinDelayCap(intervals);
+        return intervals;
     }
 
     /// <summary>
@@ -158,18 +141,16 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
 
     /// <summary>
     /// Fails when a redelivery interval the transport would schedule exceeds the SQS delay cap.
-    /// Checked against the intervals <see cref="BrokerTransportPolicies.BuildRedeliveryIntervals"/>
-    /// keeps (positive ones only), so a list of non-positive entries stays the way to switch
-    /// redelivery off.
+    /// Checked against the positive intervals only, so a list of non-positive entries stays the way
+    /// to switch redelivery off.
     /// </summary>
-    /// <param name="settings">Settings carrying the intervals to check.</param>
+    /// <param name="intervals">The intervals the transport would schedule.</param>
     /// <exception cref="InvalidOperationException">An interval is longer than 900 seconds.</exception>
-    internal static void EnsureRedeliveryWithinDelayCap(MessageBusSettings settings)
+    internal static void EnsureWithinDelayCap(IReadOnlyList<TimeSpan> intervals)
     {
-        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(intervals);
 
-        var tooLong = BrokerTransportPolicies.BuildRedeliveryIntervals(settings)
-            .FirstOrDefault(interval => interval.TotalSeconds > MaxDelaySeconds);
+        var tooLong = intervals.FirstOrDefault(interval => interval.TotalSeconds > MaxDelaySeconds);
         if (tooLong == default)
         {
             return;
@@ -177,7 +158,7 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
 
         throw new InvalidOperationException(string.Create(
             CultureInfo.InvariantCulture,
-            $"MessageBus:RedeliveryIntervalsSeconds contains {tooLong.TotalSeconds:0} seconds, but Amazon SQS caps a message delay at {MaxDelaySeconds} seconds (15 minutes) and MassTransit would silently shorten it to the cap. Set every interval to {MaxDelaySeconds} or less, for example [60, 300, 900], or set it to [0] to turn second-level redelivery off for the {ProviderName} transport."));
+            $"MessageBus:RedeliveryIntervalsSeconds contains {tooLong.TotalSeconds:0} seconds, but Amazon SQS caps a message delay at {MaxDelaySeconds} seconds (15 minutes) and MassTransit would silently shorten it to the cap. Set every interval to {MaxDelaySeconds} or less, for example [60, 300, 900] (the {ProviderName} default when the key is not configured), or set it to [0] to turn second-level redelivery off for the {ProviderName} transport."));
     }
 
     /// <summary>

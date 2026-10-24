@@ -16,7 +16,8 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports;
 /// every immediate attempt is exhausted before a redelivery is scheduled.
 /// <para>
 /// Whether a transport applies redelivery is the transport's call, because it depends on the broker:
-/// Azure Service Bus schedules messages natively and applies it unconditionally, while RabbitMQ needs
+/// Azure Service Bus and Amazon SQS schedule messages natively and apply it unconditionally (SQS with
+/// a default of its own inside its 15-minute delay cap), while RabbitMQ needs
 /// the <c>rabbitmq_delayed_message_exchange</c> plugin and gates it behind
 /// <see cref="MessageBusSettings.EnableDelayedRedelivery"/>.
 /// </para>
@@ -26,8 +27,9 @@ public static class BrokerTransportPolicies
     /// <summary>
     /// Applies the shared receive policies to a transport's bus factory configurator, in the order
     /// they must run: delayed redelivery (when <paramref name="applyDelayedRedelivery"/> and at least
-    /// one interval survives), then the exponential in-process retry, then backpressure. The caller
-    /// still ends with <c>ConfigureEndpoints(context)</c>.
+    /// one interval survives <see cref="BuildRedeliveryIntervals(MessageBusSettings)"/>), then the
+    /// exponential in-process retry, then backpressure. The caller still ends with
+    /// <c>ConfigureEndpoints(context)</c>.
     /// </summary>
     /// <param name="cfg">The transport's bus factory configurator.</param>
     /// <param name="settings">The bound message-bus settings.</param>
@@ -37,13 +39,30 @@ public static class BrokerTransportPolicies
         ArgumentNullException.ThrowIfNull(cfg);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (applyDelayedRedelivery)
+        ApplyReceivePolicies(cfg, settings, applyDelayedRedelivery ? BuildRedeliveryIntervals(settings) : []);
+    }
+
+    /// <summary>
+    /// Applies the shared receive policies with redelivery intervals the transport resolved itself,
+    /// for a transport whose broker needs a default of its own or validates the intervals against a
+    /// delay cap (build them with
+    /// <see cref="BuildRedeliveryIntervals(MessageBusSettings, IReadOnlyList{int})"/>). Same order as
+    /// the other overload: delayed redelivery (skipped when <paramref name="redeliveryIntervals"/> is
+    /// empty), then the exponential in-process retry, then backpressure.
+    /// </summary>
+    /// <param name="cfg">The transport's bus factory configurator.</param>
+    /// <param name="settings">The bound message-bus settings.</param>
+    /// <param name="redeliveryIntervals">The second-level redelivery intervals; empty turns redelivery off.</param>
+    public static void ApplyReceivePolicies(IBusFactoryConfigurator cfg, MessageBusSettings settings, IReadOnlyList<TimeSpan> redeliveryIntervals)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(redeliveryIntervals);
+
+        if (redeliveryIntervals.Count > 0)
         {
-            TimeSpan[] intervals = BuildRedeliveryIntervals(settings);
-            if (intervals.Length > 0)
-            {
-                cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
-            }
+            TimeSpan[] intervals = [.. redeliveryIntervals];
+            cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
         }
 
         ApplyMessageRetry(cfg, settings);
@@ -99,20 +118,35 @@ public static class BrokerTransportPolicies
 
     /// <summary>
     /// Maps <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/> to the
-    /// <see cref="TimeSpan"/> array MassTransit's redelivery configurator expects. Non-positive
-    /// entries are dropped: a zero or negative interval schedules an immediate redelivery, which
-    /// is what <c>UseMessageRetry</c> already does and would turn the second level into a hot loop.
-    /// Returns an empty array when nothing survives, and the caller then skips the filter entirely
-    /// rather than registering a redelivery policy with no attempts. A transport with a delay cap of
-    /// its own validates the result against it.
+    /// <see cref="TimeSpan"/> array MassTransit's redelivery configurator expects, falling back to
+    /// <see cref="MessageBusSettings.DefaultRedeliveryIntervalsSeconds"/> when nothing is configured.
+    /// Non-positive entries are dropped: a zero or negative interval schedules an immediate
+    /// redelivery, which is what <c>UseMessageRetry</c> already does and would turn the second level
+    /// into a hot loop. Returns an empty array when nothing survives (a configured <c>[0]</c>), and the
+    /// caller then skips the filter entirely rather than registering a redelivery policy with no
+    /// attempts.
     /// </summary>
     /// <param name="settings">The bound message-bus settings.</param>
     /// <returns>The positive redelivery intervals, in configured order.</returns>
-    public static TimeSpan[] BuildRedeliveryIntervals(MessageBusSettings settings)
+    public static TimeSpan[] BuildRedeliveryIntervals(MessageBusSettings settings) =>
+        BuildRedeliveryIntervals(settings, MessageBusSettings.DefaultRedeliveryIntervalsSeconds);
+
+    /// <summary>
+    /// Maps <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/> exactly as
+    /// <see cref="BuildRedeliveryIntervals(MessageBusSettings)"/> does, but falls back to a
+    /// transport-specific default when nothing is configured. A transport whose broker caps a message
+    /// delay passes a default inside the cap, so an unconfigured host runs, and validates the result,
+    /// so an explicitly configured interval over the cap still fails at registration.
+    /// </summary>
+    /// <param name="settings">The bound message-bus settings.</param>
+    /// <param name="defaultIntervalsSeconds">The intervals, in seconds, used when none are configured.</param>
+    /// <returns>The positive redelivery intervals, in configured order.</returns>
+    public static TimeSpan[] BuildRedeliveryIntervals(MessageBusSettings settings, IReadOnlyList<int> defaultIntervalsSeconds)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(defaultIntervalsSeconds);
 
-        return [.. (settings.RedeliveryIntervalsSeconds ?? [])
+        return [.. (settings.RedeliveryIntervalsSeconds ?? defaultIntervalsSeconds)
             .Where(seconds => seconds > 0)
             .Select(seconds => TimeSpan.FromSeconds(seconds))];
     }

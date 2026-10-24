@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using MassTransit;
+using Microsoft.Extensions.Configuration;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Messaging.Transports;
 using Moq;
@@ -27,6 +28,44 @@ public sealed class BrokerTransportPoliciesTests
     public void BuildRedeliveryIntervals_NothingPositive_ReturnsEmpty() =>
         BrokerTransportPolicies.BuildRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [0, -1] })
             .Should().BeEmpty();
+
+    [Fact]
+    public void BuildRedeliveryIntervals_BoundFromConfiguration_ConfiguredListReplacesTheDefault()
+    {
+        // The exact binding AddBrokerMessaging performs. A configured list must REPLACE the default,
+        // not be appended to it: an append makes the defaults impossible to shorten by configuration.
+        var bound = Bind(new Dictionary<string, string?>
+        {
+            ["MessageBus:RedeliveryIntervalsSeconds:0"] = "60",
+            ["MessageBus:RedeliveryIntervalsSeconds:1"] = "300",
+            ["MessageBus:RedeliveryIntervalsSeconds:2"] = "900",
+        });
+
+        bound.RedeliveryIntervalsSeconds.Should().Equal(60, 300, 900);
+        BrokerTransportPolicies.BuildRedeliveryIntervals(bound)
+            .Should().Equal(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(900));
+    }
+
+    [Fact]
+    public void BuildRedeliveryIntervals_BoundFromConfiguration_UnconfiguredYieldsTheDefault() =>
+        BrokerTransportPolicies.BuildRedeliveryIntervals(Bind(new Dictionary<string, string?> { ["MessageBus:Provider"] = "RabbitMq" }))
+            .Should().Equal(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10), TimeSpan.FromHours(1));
+
+    [Fact]
+    public void BuildRedeliveryIntervals_BoundFromConfiguration_AZeroEntryTurnsRedeliveryOff() =>
+        BrokerTransportPolicies.BuildRedeliveryIntervals(Bind(new Dictionary<string, string?> { ["MessageBus:RedeliveryIntervalsSeconds:0"] = "0" }))
+            .Should().BeEmpty();
+
+    [Fact]
+    public void BuildRedeliveryIntervals_WithATransportDefault_AppliesItOnlyWhenNothingIsConfigured()
+    {
+        int[] transportDefault = [30, 90];
+
+        BrokerTransportPolicies.BuildRedeliveryIntervals(new MessageBusSettings(), transportDefault)
+            .Should().Equal(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(90));
+        BrokerTransportPolicies.BuildRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [5, 0] }, transportDefault)
+            .Should().Equal(TimeSpan.FromSeconds(5));
+    }
 
     [Fact]
     public void ApplyBackpressure_PositiveValues_ReachTheConfigurator()
@@ -79,6 +118,32 @@ public sealed class BrokerTransportPoliciesTests
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ApplyReceivePolicies_WithExplicitIntervals_RegistersRedeliveryOnlyWhenThereAreAny(bool withIntervals)
+    {
+        var settings = new MessageBusSettings();
+        TimeSpan[] intervals = withIntervals ? [TimeSpan.FromSeconds(30)] : [];
+
+        var bus = Bus.Factory.CreateUsingInMemory(cfg =>
+        {
+            BrokerTransportPolicies.ApplyReceivePolicies(cfg, settings, intervals);
+            cfg.ReceiveEndpoint("policies-probe-explicit", e => e.Handler<ProbeMessage>(_ => Task.CompletedTask));
+        });
+
+        var probe = System.Text.Json.JsonSerializer.Serialize(bus.GetProbeResult());
+        probe.Should().ContainEquivalentOf("retry");
+        if (withIntervals)
+        {
+            probe.Should().ContainEquivalentOf("redeliver");
+        }
+        else
+        {
+            probe.Should().NotContainEquivalentOf("redeliver");
+        }
+    }
+
     [Fact]
     public void Helpers_RejectNullArguments()
     {
@@ -94,6 +159,11 @@ public sealed class BrokerTransportPoliciesTests
             () => BrokerTransportPolicies.ApplyBackpressure(null!, settings),
             () => BrokerTransportPolicies.ApplyBackpressure(cfg, null!),
             () => BrokerTransportPolicies.BuildRedeliveryIntervals(null!),
+            () => BrokerTransportPolicies.ApplyReceivePolicies(null!, settings, Array.Empty<TimeSpan>()),
+            () => BrokerTransportPolicies.ApplyReceivePolicies(cfg, null!, Array.Empty<TimeSpan>()),
+            () => BrokerTransportPolicies.ApplyReceivePolicies(cfg, settings, redeliveryIntervals: null!),
+            () => BrokerTransportPolicies.BuildRedeliveryIntervals(null!, [60]),
+            () => BrokerTransportPolicies.BuildRedeliveryIntervals(settings, null!),
         ];
 
         foreach (var call in calls)
@@ -101,6 +171,11 @@ public sealed class BrokerTransportPoliciesTests
             call.Should().Throw<ArgumentNullException>();
         }
     }
+
+    private static MessageBusSettings Bind(Dictionary<string, string?> values) =>
+        new ConfigurationBuilder().AddInMemoryCollection(values).Build()
+            .GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()
+            ?? new MessageBusSettings();
 
     /// <summary>The message the probe endpoint handles, so the consume pipe carries the policies.</summary>
     public sealed record ProbeMessage(int Id);

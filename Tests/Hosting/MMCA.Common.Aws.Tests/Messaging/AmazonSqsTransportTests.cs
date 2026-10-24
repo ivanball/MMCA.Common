@@ -86,12 +86,24 @@ public sealed class AmazonSqsTransportTests
     }
 
     [Fact]
-    public void AddBrokerMessaging_WithTheDefaultRedeliveryIntervals_FailsNamingTheIntervalAndTheCap()
+    public async Task AddBrokerMessaging_WithNoRedeliveryIntervalsConfigured_BuildsOnTheSqsDefault()
     {
-        // The framework default [60, 600, 3600] holds a one-hour interval, which SQS cannot delay.
+        // The framework default [60, 600, 3600] holds a one-hour step SQS cannot delay, so an
+        // unconfigured SQS host runs on the transport's own default instead of failing.
         var services = new ServiceCollection().AddLogging().AddAmazonSqsTransport();
 
-        var act = () => services.AddBrokerMessaging(ConfigurationWith(SqsSettings()));
+        services.AddBrokerMessaging(ConfigurationWith(SqsSettings()));
+        await using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IBusControl>().Address.Scheme.Should().Be("amazonsqs");
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_WithAConfiguredIntervalOverTheCap_FailsNamingTheIntervalAndTheCap()
+    {
+        var services = new ServiceCollection().AddLogging().AddAmazonSqsTransport();
+
+        var act = () => services.AddBrokerMessaging(ConfigurationWith(SqsSettings("60", "3600")));
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*RedeliveryIntervalsSeconds contains 3600 seconds*900 seconds (15 minutes)*");
@@ -100,57 +112,50 @@ public sealed class AmazonSqsTransportTests
     [Theory]
     [InlineData(901)]
     [InlineData(3600)]
-    public void EnsureRedeliveryWithinDelayCap_RejectsAnIntervalOverTheCap(int seconds)
+    public void ResolveRedeliveryIntervals_RejectsAConfiguredIntervalOverTheCap(int seconds)
     {
-        var act = () => AmazonSqsTransport.EnsureRedeliveryWithinDelayCap(
+        var act = () => AmazonSqsTransport.ResolveRedeliveryIntervals(
             new MessageBusSettings { RedeliveryIntervalsSeconds = [60, seconds] });
 
         act.Should().Throw<InvalidOperationException>().WithMessage(string.Create(CultureInfo.InvariantCulture, $"*contains {seconds} seconds*"));
     }
 
     [Fact]
-    public void EnsureRedeliveryWithinDelayCap_AcceptsTheCapItself_AnEmptyList_AndDroppedEntries()
+    public void ResolveRedeliveryIntervals_AcceptsTheCapItself_AnEmptyList_AndDroppedEntries()
     {
-        var atCap = () => AmazonSqsTransport.EnsureRedeliveryWithinDelayCap(new MessageBusSettings { RedeliveryIntervalsSeconds = [60, 300, 900] });
-        var off = () => AmazonSqsTransport.EnsureRedeliveryWithinDelayCap(new MessageBusSettings { RedeliveryIntervalsSeconds = [] });
-        var nonPositive = () => AmazonSqsTransport.EnsureRedeliveryWithinDelayCap(new MessageBusSettings { RedeliveryIntervalsSeconds = [0, -1] });
-
-        atCap.Should().NotThrow();
-        off.Should().NotThrow();
-        nonPositive.Should().NotThrow();
+        AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [60, 300, 900] })
+            .Should().Equal(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(900));
+        AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [] }).Should().BeEmpty();
+        AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [0, -1] }).Should().BeEmpty();
     }
 
     [Fact]
-    public void ResolveRedeliveryIntervals_UsesExactlyTheConfiguredList()
+    public void ResolveRedeliveryIntervals_BoundFromConfiguration_UsesExactlyTheConfiguredList()
     {
-        // The cap is only satisfiable if a configured list REPLACES [60, 600, 3600]. The binder
-        // appends it to that initializer instead, so the transport reads the section on its own.
-        var configuration = ConfigurationWith(SqsSettings("60", "300", "900"));
+        var configuration = ConfigurationWith(SqsSettings("60", "120", "240"));
         var bound = configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()!;
 
-        AmazonSqsTransport.ResolveRedeliveryIntervals(bound, configuration)
-            .Should().Equal(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(900));
+        AmazonSqsTransport.ResolveRedeliveryIntervals(bound)
+            .Should().Equal(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(120), TimeSpan.FromSeconds(240));
     }
 
     [Fact]
-    public void ResolveRedeliveryIntervals_WithAZeroEntry_TurnsRedeliveryOff()
+    public void ResolveRedeliveryIntervals_BoundFromConfiguration_AZeroEntryTurnsRedeliveryOff()
     {
         var configuration = ConfigurationWith(SqsSettings("0"));
         var bound = configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()!;
 
-        AmazonSqsTransport.ResolveRedeliveryIntervals(bound, configuration).Should().BeEmpty();
+        AmazonSqsTransport.ResolveRedeliveryIntervals(bound).Should().BeEmpty();
     }
 
     [Fact]
-    public void ResolveRedeliveryIntervals_WithNothingConfigured_ChecksTheSettingsValue()
+    public void ResolveRedeliveryIntervals_WithNothingConfigured_UsesTheSqsDefaultInsideTheCap()
     {
-        var withinCap = new MessageBusSettings { RedeliveryIntervalsSeconds = [30] };
+        AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings())
+            .Should().Equal(TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(300), TimeSpan.FromSeconds(900));
 
-        AmazonSqsTransport.ResolveRedeliveryIntervals(withinCap, ConfigurationWith(new()))
+        AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings { RedeliveryIntervalsSeconds = [30] })
             .Should().Equal(TimeSpan.FromSeconds(30));
-
-        var act = () => AmazonSqsTransport.ResolveRedeliveryIntervals(new MessageBusSettings(), ConfigurationWith(new()));
-        act.Should().Throw<InvalidOperationException>().WithMessage("*3600 seconds*");
     }
 
     [Fact]

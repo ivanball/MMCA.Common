@@ -337,7 +337,13 @@ public class MessageBusSettingsTests
 
     [Fact]
     public void Default_RedeliveryIntervalsSeconds_IsOneMinuteTenMinutesOneHour() =>
-        new MessageBusSettings().RedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
+        MessageBusSettings.DefaultRedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
+
+    // Unset must stay null: the binder appends a configured list to a non-null initializer, so a
+    // default living on the property would make the intervals impossible to replace by configuration.
+    [Fact]
+    public void Default_RedeliveryIntervalsSeconds_IsUnsetSoTheTransportDefaultApplies() =>
+        new MessageBusSettings().RedeliveryIntervalsSeconds.Should().BeNull();
 
     [Fact]
     public void ResilienceProperties_RoundTrip()

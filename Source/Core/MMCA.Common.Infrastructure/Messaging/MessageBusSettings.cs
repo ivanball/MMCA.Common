@@ -7,8 +7,8 @@ namespace MMCA.Common.Infrastructure.Messaging;
 /// Configuration for the cross-service message bus, bound from the <c>MessageBus</c> section.
 /// Selects the transport implementation: <see cref="MessageBusProviders.InProcess"/> for the
 /// modular monolith, <see cref="MessageBusProviders.RabbitMq"/> for development microservice
-/// deployments, and an adapter-registered broker (e.g. <c>AzureServiceBus</c> from
-/// <c>MMCA.Common.Azure</c>) for production.
+/// deployments, and an adapter-registered broker (<c>AzureServiceBus</c> from
+/// <c>MMCA.Common.Azure</c>, <c>AmazonSqs</c> from <c>MMCA.Common.Aws</c>) for production.
 /// </summary>
 public sealed class MessageBusSettings
 {
@@ -193,26 +193,45 @@ public sealed class MessageBusSettings
     /// </para>
     /// <para>
     /// This flag is read by the RabbitMQ transport only. A transport whose broker schedules
-    /// natively (Azure Service Bus, from <c>MMCA.Common.Azure</c>) ignores it and always applies
+    /// natively (Azure Service Bus from <c>MMCA.Common.Azure</c>, Amazon SQS from
+    /// <c>MMCA.Common.Aws</c>) ignores it and always applies
     /// <see cref="RedeliveryIntervalsSeconds"/>.
     /// </para>
     /// </summary>
     public bool EnableDelayedRedelivery { get; init; }
 
     /// <summary>
-    /// Gets the second-level redelivery intervals, in seconds. Each entry is one scheduled
-    /// redelivery attempt after the in-process retry policy is exhausted; the message
-    /// dead-letters only after the last interval also fails. Defaults to
-    /// <c>[60, 600, 3600]</c> (one minute, ten minutes, one hour), a spread wide enough to ride
-    /// out a dependency restart, a failover and a short incident without an operator replaying
-    /// the error queue by hand.
+    /// Gets the framework's default second-level redelivery intervals, in seconds:
+    /// <c>[60, 600, 3600]</c> (one minute, ten minutes, one hour), a spread wide enough to ride out
+    /// a dependency restart, a failover and a short incident without an operator replaying the
+    /// error queue by hand. A transport applies it when <see cref="RedeliveryIntervalsSeconds"/> is
+    /// not configured, unless it passes a default of its own to
+    /// <see cref="BrokerTransportPolicies.BuildRedeliveryIntervals(MessageBusSettings, IReadOnlyList{int})"/>
+    /// (a broker with a shorter delay cap does).
+    /// </summary>
+    public static IReadOnlyList<int> DefaultRedeliveryIntervalsSeconds { get; } = [60, 600, 3600];
+
+    /// <summary>
+    /// Gets the configured second-level redelivery intervals, in seconds, or <see langword="null"/>
+    /// (the default) to use the transport's default, which is
+    /// <see cref="DefaultRedeliveryIntervalsSeconds"/> unless the transport declares its own. Each
+    /// entry is one scheduled redelivery attempt after the in-process retry policy is exhausted; the
+    /// message dead-letters only after the last interval also fails. A configured list REPLACES the
+    /// default; it is never merged with it. Non-positive entries are dropped, so <c>[0]</c> turns
+    /// second-level redelivery off (an empty array cannot be expressed in configuration).
     /// <para>
-    /// Applied unconditionally on Azure Service Bus (native scheduled delivery) and only when
-    /// <see cref="EnableDelayedRedelivery"/> is <see langword="true"/> on
-    /// <see cref="MessageBusProviders.RabbitMq"/> (needs the delayed-message-exchange plugin).
+    /// The property has no initializer on purpose: the configuration binder appends a configured
+    /// list to an existing collection instead of replacing it, so a non-null default would make the
+    /// defaults impossible to shorten by configuration.
+    /// </para>
+    /// <para>
+    /// Applied only when <see cref="EnableDelayedRedelivery"/> is <see langword="true"/> on
+    /// <see cref="MessageBusProviders.RabbitMq"/> (needs the delayed-message-exchange plugin); a
+    /// transport whose broker schedules natively (Azure Service Bus from <c>MMCA.Common.Azure</c>,
+    /// Amazon SQS from <c>MMCA.Common.Aws</c>) applies it unconditionally.
     /// </para>
     /// </summary>
-    public IReadOnlyList<int> RedeliveryIntervalsSeconds { get; init; } = [60, 600, 3600];
+    public IReadOnlyList<int>? RedeliveryIntervalsSeconds { get; init; }
 
     /// <summary>
     /// Gets the number of messages the transport may hold locally ahead of the consumer, or

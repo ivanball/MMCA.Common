@@ -69,11 +69,11 @@ public static class AwsServiceCollectionExtensions
         /// picks the transport while it registers the bus. Reads <c>MessageBus:AmazonSqs</c>:
         /// <c>Region</c> (else the AWS SDK fallback chain), <c>ServiceUrl</c> (an endpoint override for
         /// both SQS and SNS, e.g. LocalStack) and <c>AccessKeyId</c> + <c>SecretAccessKey</c> (else the
-        /// AWS default credential chain). The broker connection string is not used. Every
-        /// <c>MessageBus:RedeliveryIntervalsSeconds</c> value must be 900 or less (the SQS delay cap),
-        /// so the framework default <c>[60, 600, 3600]</c> needs overriding; <c>AddBrokerMessaging</c>
-        /// throws naming the interval otherwise. Registration only: a host whose provider is
-        /// something else is unaffected.
+        /// AWS default credential chain). The broker connection string is not used. An unconfigured
+        /// <c>MessageBus:RedeliveryIntervalsSeconds</c> defaults to <c>[60, 300, 900]</c> on this
+        /// transport; a configured value over 900 (the SQS delay cap) makes <c>AddBrokerMessaging</c>
+        /// throw naming the interval. Registration only: a host whose provider is something else is
+        /// unaffected.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAmazonSqsTransport() =>

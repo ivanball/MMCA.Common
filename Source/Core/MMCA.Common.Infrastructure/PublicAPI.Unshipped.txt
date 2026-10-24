@@ -61,3 +61,8 @@ MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.De
 *REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider.InProcess = 0 -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
 *REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusProvider.RabbitMq = 1 -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
 *REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusSettings.Provider.get -> MMCA.Common.Infrastructure.Messaging.MessageBusProvider
+*REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RedeliveryIntervalsSeconds.get -> System.Collections.Generic.IReadOnlyList<int>!
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RedeliveryIntervalsSeconds.get -> System.Collections.Generic.IReadOnlyList<int>?
+static MMCA.Common.Infrastructure.Messaging.MessageBusSettings.DefaultRedeliveryIntervalsSeconds.get -> System.Collections.Generic.IReadOnlyList<int>!
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyReceivePolicies(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.Collections.Generic.IReadOnlyList<System.TimeSpan>! redeliveryIntervals) -> void
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.Collections.Generic.IReadOnlyList<int>! defaultIntervalsSeconds) -> System.TimeSpan[]!
