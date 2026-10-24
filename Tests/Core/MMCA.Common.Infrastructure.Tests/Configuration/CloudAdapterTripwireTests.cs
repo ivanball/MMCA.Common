@@ -12,26 +12,20 @@ using Moq;
 namespace MMCA.Common.Infrastructure.Tests.Configuration;
 
 /// <summary>
-/// The Infrastructure startup tripwire: a configured <c>FileStorage</c> section or an enabled
-/// <c>NativePush</c> section whose service still resolves to the inert core default fails the host,
-/// naming the adapter call; a real implementation, or no configuration, stays silent.
+/// The Infrastructure startup tripwire: an enabled <c>NativePush</c> section whose sender still
+/// resolves to the inert core default fails the host, naming the adapter call; a real implementation,
+/// or no configuration, stays silent. A <c>FileStorage</c> section never trips it.
 /// </summary>
 public sealed class CloudAdapterTripwireTests
 {
     private static ValidateOptionsResult Validate(
         Dictionary<string, string?> settings,
-        IFileStorageService? fileStorage = null,
         INativePushSender? nativePush = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
         services.AddTransient<IFileStorageService, NullFileStorageService>();
         services.AddTransient<INativePushSender, NullNativePushSender>();
-        if (fileStorage is not null)
-        {
-            services.AddSingleton(fileStorage);
-        }
-
         if (nativePush is not null)
         {
             services.AddSingleton(nativePush);
@@ -42,26 +36,10 @@ public sealed class CloudAdapterTripwireTests
     }
 
     [Fact]
-    public void FileStorageConfigured_WithTheNullDefault_FailsNamingTheAdapterCall()
-    {
-        var result = Validate(new() { ["FileStorage:ContainerName"] = "avatars", ["FileStorage:ServiceUri"] = "https://acct.blob.core.windows.net" });
-
-        result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("FileStorage").And.Contain("AddAzureBlobFileStorage(configuration)").And.Contain("MMCA.Common.Azure")
-            .And.Contain("AddS3FileStorage(configuration)").And.Contain("MMCA.Common.Aws");
-    }
-
-    [Fact]
-    public void FileStorageConfigured_WithAnAdapter_Succeeds() =>
-        Validate(
-            new() { ["FileStorage:ContainerName"] = "avatars", ["FileStorage:ServiceUri"] = "https://acct.blob.core.windows.net" },
-            fileStorage: Mock.Of<IFileStorageService>())
-            .Succeeded.Should().BeTrue();
-
-    [Fact]
-    public void FileStorageWithOnlyBlankPlaceholders_StaysSilent() =>
-        Validate(new() { ["FileStorage:ContainerName"] = string.Empty })
-            .Succeeded.Should().BeTrue("an appsettings.json that ships blank placeholders has not configured storage");
+    public void FileStorageConfigured_WithTheNullDefault_StaysSilent() =>
+        Validate(new() { ["FileStorage:ContainerName"] = "avatars", ["FileStorage:ConnectionString"] = "UseDevelopmentStorage=true" })
+            .Succeeded.Should().BeTrue(
+                "a FileStorage section is shared configuration (one user-secrets id across every service of a solution), not a declaration that this host stores files");
 
     [Fact]
     public void NativePushEnabled_WithTheNullDefault_FailsNamingTheAdapterCall()
@@ -90,9 +68,9 @@ public sealed class CloudAdapterTripwireTests
         Validate([]).Succeeded.Should().BeTrue();
 
     [Fact]
-    public void BothMisconfigured_ReportsBothInOneFailure() =>
+    public void FileStorageAlongsideEnabledNativePush_ReportsOnlyNativePush() =>
         Validate(new() { ["FileStorage:ConnectionString"] = "UseDevelopmentStorage=true", ["NativePush:Enabled"] = "true" })
-            .Failures.Should().HaveCount(2);
+            .Failures.Should().ContainSingle().Which.Should().Contain("NativePush:Enabled");
 
     [Fact]
     public void NoConfigurationRegistered_Skips()

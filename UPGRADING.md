@@ -32,6 +32,13 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.256.0] - 2026-10-24
+
+No consumer change. The `FileStorage` row of the 1.255.0 startup-tripwire table no longer applies:
+a non-blank `FileStorage` section without a storage adapter call now starts normally, and an upload
+on such a host fails with `FileStorage.NotConfigured` as it did before 1.255.0. A host that removed or
+blanked a shared `FileStorage` section only to get past the 1.255.0 check can restore it.
+
 ## [1.255.0] - 2026-10-24
 
 **The core packages are cloud-neutral (breaking).** Every Azure dependency moves out of
