@@ -1,19 +1,1 @@
 #nullable enable
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
-*REMOVED*MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
-*REMOVED*const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
-*REMOVED*const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
-*REMOVED*static MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
-*REMOVED*virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?

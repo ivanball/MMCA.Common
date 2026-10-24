@@ -3,9 +3,6 @@ MMCA.Common.Aspire.Caching.RedisCachingExtensions
 MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder)
 MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder).AddRedisCaching(string! connectionName = "redis") -> TBuilder
 MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder).AddRedisOutputCaching(string! connectionName = "redis") -> TBuilder
-MMCA.Common.Aspire.DataProtectionExtensions
-MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder).AddCommonDataProtection() -> TBuilder
 MMCA.Common.Aspire.Extensions
 MMCA.Common.Aspire.Extensions.extension(Microsoft.AspNetCore.Builder.WebApplication!)
 MMCA.Common.Aspire.Extensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCachedHealthChecks(string! path, System.Func<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration!, bool>? predicate) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
@@ -73,12 +70,13 @@ MMCA.Common.Aspire.Health.HealthReportCacheOptions.CacheSeconds.init -> void
 MMCA.Common.Aspire.Health.HealthReportCacheOptions.HealthReportCacheOptions() -> void
 MMCA.Common.Aspire.HealthCheckTags
 MMCA.Common.Aspire.HealthEndpointPaths
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker.HostIntegrationMarker(string! name) -> void
+MMCA.Common.Aspire.Integrations.HostIntegrationMarker.Name.get -> string!
+MMCA.Common.Aspire.Integrations.HostIntegrationNames
 MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions
 MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
 MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).ConfigureEndpointsWithHealthProbe(Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols defaultProtocols, bool redeclareCleartextEndpoint = true, int cleartextPort = 8080) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
-MMCA.Common.Aspire.KeyVaultConfigurationExtensions
-MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddCommonKeyVaultConfiguration() -> TBuilder
 MMCA.Common.Aspire.Logging.SerilogHostExtensions
 MMCA.Common.Aspire.Logging.SerilogHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
 MMCA.Common.Aspire.Logging.SerilogHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).AddCommonSerilog(string! logFilePath, System.Action<Serilog.LoggerConfiguration!>? configure = null) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
@@ -142,6 +140,10 @@ const MMCA.Common.Aspire.HealthCheckTags.Ready = "ready" -> string!
 const MMCA.Common.Aspire.HealthEndpointPaths.Alive = "/alive" -> string!
 const MMCA.Common.Aspire.HealthEndpointPaths.Health = "/health" -> string!
 const MMCA.Common.Aspire.HealthEndpointPaths.Ready = "/health/ready" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureDataProtection = "AzureDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureKeyVaultConfiguration = "AzureKeyVaultConfiguration" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureMonitorExporter = "AzureMonitorExporter" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.ServiceDefaultsTelemetry = "ServiceDefaultsTelemetry" -> string!
 const MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.DefaultCleartextPort = 8080 -> int
 const MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.HealthProbePortConfigKey = "HealthProbe:Port" -> string!
 const MMCA.Common.Aspire.Security.CspNonce.ItemKey = "MMCA.CspNonce" -> string!
@@ -155,7 +157,6 @@ override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnEnd(System
 override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnStart(System.Diagnostics.Activity! data) -> void
 static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
 static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisOutputCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
-static MMCA.Common.Aspire.DataProtectionExtensions.AddCommonDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
 static MMCA.Common.Aspire.Extensions.AddDefaultHealthChecks<TBuilder>(this TBuilder builder) -> TBuilder
 static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireDatabase = false) -> TBuilder
 static MMCA.Common.Aspire.Extensions.AddServiceDefaults<TBuilder>(this TBuilder builder) -> TBuilder
@@ -173,7 +174,6 @@ static MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.UseGatewayRateLi
 static MMCA.Common.Aspire.GatewayCorsExtensions.AddCommonGatewayCors(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aspire.HealthEndpointPaths.IsProbePath(string? path) -> bool
 static MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.ConfigureEndpointsWithHealthProbe(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols defaultProtocols, bool redeclareCleartextEndpoint = true, int cleartextPort = 8080) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
-static MMCA.Common.Aspire.KeyVaultConfigurationExtensions.AddCommonKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
 static MMCA.Common.Aspire.Logging.SerilogHostExtensions.AddCommonSerilog(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, string! logFilePath, System.Action<Serilog.LoggerConfiguration!>? configure = null) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
 static MMCA.Common.Aspire.Logging.SerilogHostExtensions.CreateBootstrapLoggerFactory() -> Microsoft.Extensions.Logging.ILoggerFactory!
 static MMCA.Common.Aspire.Security.CspNonce.Get(Microsoft.AspNetCore.Http.HttpContext! context) -> string?

@@ -527,6 +527,7 @@ MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.get -> string!
 MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.set -> void
 MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.ForgotPasswordModel() -> void
 MMCA.Common.UI.Pages.Auth.Login
+MMCA.Common.UI.Pages.Auth.Login.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.Login.Error.get -> string?
 MMCA.Common.UI.Pages.Auth.Login.Error.set -> void
 MMCA.Common.UI.Pages.Auth.Login.Login() -> void
@@ -551,6 +552,7 @@ MMCA.Common.UI.Pages.Auth.OAuthComplete.State.set -> void
 MMCA.Common.UI.Pages.Auth.PasswordComplexityAttribute
 MMCA.Common.UI.Pages.Auth.PasswordComplexityAttribute.PasswordComplexityAttribute() -> void
 MMCA.Common.UI.Pages.Auth.Register
+MMCA.Common.UI.Pages.Auth.Register.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.Register.Register() -> void
 MMCA.Common.UI.Pages.Auth.RegisterModel
 MMCA.Common.UI.Pages.Auth.RegisterModel.AcceptedTerms.get -> bool
@@ -1545,6 +1547,8 @@ virtual MMCA.Common.UI.Components.Notifications.NotificationBell.Dispose(bool di
 virtual MMCA.Common.UI.Layout.NavMenu.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Administration.RoleAdminList.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Auth.Login.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Auth.Register.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.GridRef.get -> MudBlazor.MudDataGrid<TDto>?

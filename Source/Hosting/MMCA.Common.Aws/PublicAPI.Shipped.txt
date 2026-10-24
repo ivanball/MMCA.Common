@@ -1,1 +1,45 @@
 #nullable enable
+MMCA.Common.Aws.AwsServiceCollectionExtensions
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAmazonSqsTransport() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddS3FileStorage(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AccessKeyId.get -> string?
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AccessKeyId.init -> void
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AmazonSqsTransportSettings() -> void
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.Region.get -> string?
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.Region.init -> void
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.SecretAccessKey.get -> string?
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.SecretAccessKey.init -> void
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.ServiceUrl.get -> System.Uri?
+MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.ServiceUrl.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageService
+MMCA.Common.Aws.Storage.S3FileStorageService.DeleteAsync(string! blobName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Aws.Storage.S3FileStorageService.IsConfigured.get -> bool
+MMCA.Common.Aws.Storage.S3FileStorageService.S3FileStorageService(Amazon.S3.IAmazonS3! s3Client, Microsoft.Extensions.Options.IOptions<MMCA.Common.Aws.Storage.S3FileStorageSettings!>! options, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Aws.Storage.S3FileStorageService!>! logger) -> void
+MMCA.Common.Aws.Storage.S3FileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+MMCA.Common.Aws.Storage.S3FileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+MMCA.Common.Aws.Storage.S3FileStorageSettings
+MMCA.Common.Aws.Storage.S3FileStorageSettings.AccessKeyId.get -> string?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.AccessKeyId.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.Bucket.get -> string?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.Bucket.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ForcePathStyle.get -> bool
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ForcePathStyle.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.PublicBaseUrl.get -> System.Uri?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.PublicBaseUrl.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.Region.get -> string?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.Region.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.RequestChecksumCalculation.get -> Amazon.Runtime.RequestChecksumCalculation
+MMCA.Common.Aws.Storage.S3FileStorageSettings.RequestChecksumCalculation.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ResponseChecksumValidation.get -> Amazon.Runtime.ResponseChecksumValidation
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ResponseChecksumValidation.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.S3FileStorageSettings() -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.SecretAccessKey.get -> string?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.SecretAccessKey.init -> void
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ServiceUrl.get -> System.Uri?
+MMCA.Common.Aws.Storage.S3FileStorageSettings.ServiceUrl.init -> void
+static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAmazonSqsTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddS3FileStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static readonly MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.SectionName -> string!
+static readonly MMCA.Common.Aws.Storage.S3FileStorageSettings.SectionName -> string!
