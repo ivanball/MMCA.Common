@@ -261,6 +261,18 @@ jobs:
         # (restore included). They reference MMCA.Common source projects — no GitHub Packages token needed.
         run: dotnet build Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release
 
+      # The browser builds are a function of the Microsoft.Playwright version alone, so that version
+      # (not a hash of the whole props file, which every unrelated bump changed) keys the cache below.
+      - name: Resolve Playwright version
+        if: needs.changes.outputs.code == 'true'
+        id: playwright-version
+        run: |
+          version=$(grep -oP '<PackageVersion Include="Microsoft\.Playwright" Version="\K[^"]+' Directory.Packages.props)
+          if [ -z "$version" ]; then
+            echo "::error::Microsoft.Playwright PackageVersion not found in Directory.Packages.props"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       # Browser binaries are ~100-300 MB per engine and were re-downloaded on all three legs of every
       # run. PLAYWRIGHT_BROWSERS_PATH (workflow env) redirects the install into the workspace so
       # actions/cache can carry it; the key includes the engine, since each leg installs only its own.
@@ -270,19 +282,37 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ github.workspace }}/.ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('Tests/Presentation/MMCA.Common.UI.E2E.Tests/packages.lock.json', 'Directory.Packages.props') }}
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
 
+      # The OS packages come from the runner's apt mirror on every run (cache hit or not), and a
+      # stalled transfer there hangs without erroring: webkit's ~130-package dependency set sat on one
+      # .deb until the job's 20-minute timeout (PRs #592 and #603). apt's own timeouts do not catch a
+      # trickling connection, so each attempt is bounded from outside (timeout signals the whole
+      # process group, sudo apt-get included) and retried; healthy installs take under a minute.
       - name: Install Playwright (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
+        timeout-minutes: 14
         run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             # Binaries restored from cache; only the OS-level shared libraries still need installing,
             # which is the cheap half of --with-deps.
-            pwsh "$script" install-deps ${{ matrix.browser }}
+            command=(install-deps ${{ matrix.browser }})
           else
-            pwsh "$script" install --with-deps ${{ matrix.browser }}
+            command=(install --with-deps ${{ matrix.browser }})
           fi
+          for attempt in 1 2 3; do
+            if timeout --kill-after=30 240 pwsh "$script" "${command[@]}"; then
+              exit 0
+            fi
+            echo "::warning::Playwright install attempt $attempt failed or timed out; retrying"
+            # An interrupted apt run leaves dpkg half-configured and its lock held; settle both first.
+            sudo dpkg --configure -a || true
+          done
+          echo "::error::Playwright install failed after 3 attempts"
+          exit 1
 
       - name: Run UI E2E (axe + render smoke)
         if: needs.changes.outputs.code == 'true'
