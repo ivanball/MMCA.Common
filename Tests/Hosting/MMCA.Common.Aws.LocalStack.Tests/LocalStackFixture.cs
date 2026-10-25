@@ -1,5 +1,7 @@
+using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using Amazon.SecretsManager;
+using Amazon.SimpleNotificationService;
 using Amazon.SimpleSystemsManagement;
 using Microsoft.Extensions.Configuration;
 using Testcontainers.LocalStack;
@@ -9,7 +11,7 @@ using Testcontainers.LocalStack;
 namespace MMCA.Common.Aws.LocalStack.Tests;
 
 /// <summary>
-/// One LocalStack container for the whole tier (S3, SQS, SNS, Secrets Manager and Systems Manager),
+/// One LocalStack container for the whole tier (S3, SQS, SNS, Secrets Manager, Systems Manager and DynamoDB),
 /// started once per assembly. The image is pinned: LocalStack's later images need an auth token,
 /// and an unpinned tag would turn that change into a red CI run nobody caused. LocalStack accepts any key pair, so the tier uses a
 /// fixed dummy one and never touches the AWS default credential chain.
@@ -82,6 +84,41 @@ public sealed class LocalStackFixture : IAsyncLifetime
     /// <returns>The client; the caller (or the container it is registered in) disposes it.</returns>
     public AmazonSimpleSystemsManagementClient CreateSsmClient() =>
         new(new BasicAWSCredentials(DummyKey, DummyKey), new AmazonSimpleSystemsManagementConfig { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region });
+
+    /// <summary>The <c>NativePush</c> keys enabling SNS mobile push against LocalStack.</summary>
+    /// <param name="table">The installations table.</param>
+    /// <param name="topicArn">The broadcast topic.</param>
+    /// <param name="fcmApplicationArn">The FCM platform application.</param>
+    /// <param name="apnsApplicationArn">The APNs platform application, if any.</param>
+    /// <returns>The configuration keys.</returns>
+    public Dictionary<string, string?> NativePushSettings(string table, string topicArn, string fcmApplicationArn, string? apnsApplicationArn = null) => new()
+    {
+        ["NativePush:Enabled"] = "true",
+        ["NativePush:Sns:InstallationsTable"] = table,
+        ["NativePush:Sns:BroadcastTopicArn"] = topicArn,
+        ["NativePush:Sns:FcmPlatformApplicationArn"] = fcmApplicationArn,
+        ["NativePush:Sns:ApnsPlatformApplicationArn"] = apnsApplicationArn,
+        ["NativePush:Sns:Region"] = Region,
+        ["NativePush:Sns:ServiceUrl"] = ServiceUrl.AbsoluteUri,
+        ["NativePush:Sns:AccessKeyId"] = DummyKey,
+        ["NativePush:Sns:SecretAccessKey"] = DummyKey,
+    };
+
+    /// <summary>An SNS client on LocalStack, for arranging platform applications and topics and asserting endpoints.</summary>
+    /// <returns>The client; the caller disposes it.</returns>
+    public AmazonSimpleNotificationServiceClient CreateSnsClient() => new(Credentials, SnsConfig());
+
+    /// <summary>The SNS client configuration pointing at LocalStack, for a test that builds its own client.</summary>
+    /// <returns>The configuration.</returns>
+    public AmazonSimpleNotificationServiceConfig SnsConfig() => new() { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region };
+
+    /// <summary>Gets the dummy key pair LocalStack accepts.</summary>
+    public static AWSCredentials Credentials => new BasicAWSCredentials(DummyKey, DummyKey);
+
+    /// <summary>A DynamoDB client on LocalStack, for arranging the installations table and asserting its rows.</summary>
+    /// <returns>The client; the caller disposes it.</returns>
+    public AmazonDynamoDBClient CreateDynamoDbClient() =>
+        new(new BasicAWSCredentials(DummyKey, DummyKey), new AmazonDynamoDBConfig { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region });
 
     /// <inheritdoc />
     public async ValueTask InitializeAsync() => await _container.StartAsync();

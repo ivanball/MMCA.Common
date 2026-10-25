@@ -1,13 +1,14 @@
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Infrastructure.Notifications.Push;
 
 namespace MMCA.Common.Azure.Notifications;
 
 /// <summary>
 /// Azure Notification Hubs implementation of <see cref="INativePushSender"/> (ADR-044). Sends
 /// the FCM v1 and APNs native payloads per call; user-targeted sends resolve installations via
-/// <c>user:{id}</c> tags in OR-chunks of <see cref="NativePushPayloads.MaxTagsPerExpression"/>
+/// <c>user:{id}</c> tags in OR-chunks of <see cref="NativePushUserTags.MaxTagsPerExpression"/>
 /// (the hub's tag-expression cap). Callers treat this channel as best-effort: the send handler
 /// wraps it in a non-fatal catch.
 /// </summary>
@@ -21,7 +22,7 @@ public sealed partial class AzureNotificationHubNativePushSender(
         var fcmPayload = NativePushPayloads.BuildFcmV1Payload(title, body, metadata);
         var apnsPayload = NativePushPayloads.BuildApnsPayload(title, body, metadata);
 
-        foreach (var tagExpression in NativePushPayloads.BuildUserTagExpressions(userIds))
+        foreach (var tagExpression in NativePushUserTags.BuildUserTagExpressions(userIds))
         {
             await hubClient.SendNotificationAsync(new FcmV1Notification(fcmPayload), tagExpression, cancellationToken).ConfigureAwait(false);
             await hubClient.SendNotificationAsync(new AppleNotification(apnsPayload), tagExpression, cancellationToken).ConfigureAwait(false);

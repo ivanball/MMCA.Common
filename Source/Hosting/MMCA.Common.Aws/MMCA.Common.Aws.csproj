@@ -22,6 +22,11 @@
     <PackageReference Include="Amazon.AspNetCore.DataProtection.SSM" />
     <!-- RDS IAM database authentication tokens for PostgreSQL (AddAwsRdsIamAuthentication). -->
     <PackageReference Include="AWSSDK.RDS" />
+    <!-- SNS mobile push (AddAmazonSnsPush). Referenced directly, not left to MassTransit.AmazonSQS:
+         the push code calls it on its own, and the pin keeps it at or above the transport's floor. -->
+    <PackageReference Include="AWSSDK.SimpleNotificationService" />
+    <!-- The DynamoDB installation registry behind SNS mobile push (AddAmazonSnsPush). -->
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

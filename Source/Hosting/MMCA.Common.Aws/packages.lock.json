@@ -12,6 +12,15 @@
           "AWSSDK.SimpleSystemsManagement": "4.0.7.3"
         }
       },
+      "AWSSDK.DynamoDBv2": {
+        "type": "Direct",
+        "requested": "[4.0.109.1, )",
+        "resolved": "4.0.109.1",
+        "contentHash": "GJeycIKL2UyUVf5ew5bVezy4LIeWZm1oWt1Dvx6LK+oGar99Nexzbp7IsmHHII/mWJKRDRirbW7LOTBggYeeNg==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
+        }
+      },
       "AWSSDK.RDS": {
         "type": "Direct",
         "requested": "[4.0.107.1, )",
@@ -35,6 +44,15 @@
         "requested": "[4.0.100.21, )",
         "resolved": "4.0.100.21",
         "contentHash": "oHV0IWy8XcigxJl4F0QL5R9H25XPhAIhIzOYx8GzEGRG4f3A9MBxdd9eoHe8guG+AASPf0tYCaji4vNb3UZCRg==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
+        }
+      },
+      "AWSSDK.SimpleNotificationService": {
+        "type": "Direct",
+        "requested": "[4.0.100.21, )",
+        "resolved": "4.0.100.21",
+        "contentHash": "rZvac1zJU1eop7xOQv6FRa0114j/HmefT8Hz8eKgWizLzEEy17epB/rk2+ITyqi7R2HoyNDAqd0M7ogQJsgdiQ==",
         "dependencies": {
           "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
         }
@@ -114,14 +132,6 @@
         "contentHash": "VIuOwVg1SQsBcIsJk0scmV8iyYRy4zV06JuJl4WEFBHHjluMOLI9U1IVoTzhL6DYE0oZHy/8/WePFzgdCC6kmQ==",
         "dependencies": {
           "AWSSDK.Core": "4.0.3.17"
-        }
-      },
-      "AWSSDK.SimpleNotificationService": {
-        "type": "Transitive",
-        "resolved": "4.0.100.15",
-        "contentHash": "PW5pYqLMexVGwgNFf3EWqyksyz/PwS+T/Q3Z6W7BDmVZD/LxWSzqdIj4mEZKUgRvrk6yNKDL670wQgMSAMrZMw==",
-        "dependencies": {
-          "AWSSDK.Core": "[4.0.102.6, 5.0.0)"
         }
       },
       "AWSSDK.SimpleSystemsManagement": {

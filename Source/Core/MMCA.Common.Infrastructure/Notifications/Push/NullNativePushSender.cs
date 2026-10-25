@@ -5,8 +5,8 @@ namespace MMCA.Common.Infrastructure.Notifications.Push;
 /// <summary>
 /// No-op native push sender (ADR-044). Registered as the default implementation so the third
 /// notification channel resolves everywhere and silently does nothing until a downstream host
-/// calls a push adapter (<c>AddAzureNotificationHubsPush(configuration)</c> from <c>MMCA.Common.Azure</c>)
-/// with an enabled hub configuration.
+/// calls a push adapter (<c>AddAzureNotificationHubsPush(configuration)</c> from <c>MMCA.Common.Azure</c>,
+/// or <c>AddAmazonSnsPush(configuration)</c> from <c>MMCA.Common.Aws</c>) with an enabled configuration.
 /// </summary>
 public sealed class NullNativePushSender : INativePushSender
 {
