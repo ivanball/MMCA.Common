@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-10-24 (framework v1.256.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-10-25 (framework v1.256.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
@@ -67,7 +67,7 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.AI.Testing` | `MMCA.Common.AI` |
 | `MMCA.Common.Aspire` | `MMCA.Common.Shared` |
 | `MMCA.Common.Aspire.Hosting` | (none) |
-| `MMCA.Common.Aws` | `MMCA.Common.Infrastructure` |
+| `MMCA.Common.Aws` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Azure` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Gateway` | (none) |
 | `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
