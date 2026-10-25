@@ -195,6 +195,14 @@
          as the PostgreSQL password. Pinned at the version the Cloud clients above already resolve
          transitively, so the direct reference moves nothing in the graph; Apache-2.0. -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.76.0" />
+    <!-- Firebase Cloud Messaging native push (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): the
+         HTTP v1 send (SendEachAsync) and the broadcast topic subscriptions, over Application Default
+         Credentials. Google-authored on the same Google.Apis.Auth line as the Cloud clients; Apache-2.0. -->
+    <PackageVersion Include="FirebaseAdmin" Version="3.7.0" />
+    <!-- The FCM installation registry (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): one Firestore
+         document per installation, a transaction for the ownership rule and a UserId equality query
+         for user-targeted sends. gRPC over Google.Api.Gax.Grpc, the Secret Manager line; Apache-2.0. -->
+    <PackageVersion Include="Google.Cloud.Firestore" Version="4.5.0" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
@@ -329,6 +337,9 @@
          .slnx, own CI job): fake-gcs-server has no Testcontainers module, so the tier runs it as a
          generic container on the core package. Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <!-- Google Cloud emulator tier only: the Firestore emulator for the FCM installation registry.
+         Same Testcontainers family version. -->
+    <PackageVersion Include="Testcontainers.Firestore" Version="4.16.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via

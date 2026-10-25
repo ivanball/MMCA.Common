@@ -1,10 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
+using Google.Cloud.Firestore;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Gcp.CloudSql;
+using MMCA.Common.Gcp.Notifications;
 using MMCA.Common.Gcp.Storage;
 using MMCA.Common.Infrastructure;
 
@@ -99,6 +102,67 @@ public static class GcpServiceCollectionExtensions
             CloudSqlIamAuthenticationConfigurator.EnsureConfiguredConnectionStringsAreEncrypted(configuration);
 
             return services.AddNpgsqlDataSourceConfigurator(new CloudSqlIamAuthenticationConfigurator());
+        }
+
+        /// <summary>
+        /// Registers OS-level native push delivery through Firebase Cloud Messaging (ADR-044),
+        /// replacing the core <c>NullNativePushSender</c> / <c>NullPushDeviceRegistrar</c> pair. Sends go
+        /// over the FCM HTTP v1 API (FirebaseAdmin) with Application Default Credentials. An FCM token
+        /// carries no owner, so a Firestore collection is the installation registry: one document per
+        /// installation id (fields <c>UserId</c>, <c>Platform</c>, <c>PushChannel</c>, <c>UpdatedAt</c>),
+        /// and the ownership rules of <see cref="IPushDeviceRegistrar"/> (handover on a matching push
+        /// channel, owner-scoped delete) are Firestore transactions on it. A broadcast is one message to
+        /// an FCM topic every registered token subscribes to. Only FCM registration tokens are accepted:
+        /// FCM delivers to iOS when the iOS app registers its FCM token (the message carries the APNs
+        /// block), and a raw APNs token fails validation with <c>PushDevice.UnsupportedPlatform</c>.
+        /// <para>
+        /// Reads the shared gate <c>NativePush:Enabled</c> and the <c>NativePush:Fcm</c> section:
+        /// <c>ProjectId</c> (the Firebase project, which also holds the Firestore database),
+        /// <c>InstallationsCollection</c> and <c>BroadcastTopic</c>. When the gate is off, or any of the
+        /// three is missing, the call is a no-op, so hosts register it unconditionally and deployments
+        /// switch the channel on by configuration alone. Credentials come from Application Default
+        /// Credentials (workload identity in production, <c>GOOGLE_APPLICATION_CREDENTIALS</c> or
+        /// <c>gcloud auth application-default login</c> locally), so there is no key-file setting.
+        /// </para>
+        /// <para>
+        /// The Firestore database (native mode, the project's default database) is provisioned outside
+        /// the application; <c>UserId</c> equality is served by the automatic single-field index. The
+        /// identity needs <c>roles/firebasecloudmessaging.admin</c> (sends and topic management) and
+        /// <c>roles/datastore.user</c>. A <see cref="FirestoreDb"/> the host registered first is used as
+        /// is, so it must point at the same project. FirebaseAdmin's app registry is process-global, so
+        /// each registration creates its own uniquely named app on first use and deletes it with the
+        /// service provider; a host that creates its own default app is unaffected.
+        /// </para>
+        /// </summary>
+        /// <param name="configuration">Application configuration providing the <c>NativePush</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// <c>NativePush:Fcm:BroadcastTopic</c> is not a valid FCM topic name.
+        /// </exception>
+        public IServiceCollection AddFirebaseCloudMessagingPush(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var section = configuration.GetSection(FcmNativePushSettings.SectionPath);
+            var settings = section.Get<FcmNativePushSettings>();
+            if (!bool.TryParse(configuration[FcmNativePushSettings.EnabledKey], out var enabled)
+                || !enabled
+                || settings is not { IsComplete: true })
+            {
+                return services;
+            }
+
+            // A malformed topic fails here, at registration, rather than on every device registration.
+            settings.EnsureValidTopic();
+
+            services.AddOptions<FcmNativePushSettings>().Bind(section);
+            services.TryAddSingleton(_ => FcmPushClientFactory.CreateFirestore(settings));
+            services.TryAddSingleton<IFcmMessagingClient>(_ => FcmPushClientFactory.CreateMessaging(settings));
+            services.TryAddSingleton<IFcmInstallationRegistry, FirestoreInstallationRegistry>();
+            services.AddTransient<INativePushSender, FcmNativePushSender>();
+            services.AddTransient<IPushDeviceRegistrar, FcmPushDeviceRegistrar>();
+
+            return services;
         }
     }
 }

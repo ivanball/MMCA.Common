@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!-- Exercises the Google Cloud adapter against fake-gcs-server via Testcontainers: Cloud Storage
-         object storage and the DataProtection key ring (its generation-precondition writes). NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker
+         object storage and the DataProtection key ring (its generation-precondition writes), plus the
+         FCM installation registry against the Firestore emulator (its ownership transactions). NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker
          daemon and runs in its own CI job (gcp-integration), kept out of the fast solution-wide unit
          feedback loop (same posture as the AWS LocalStack, Redis, PostgreSQL and SQL Server tiers).
 
@@ -26,6 +27,8 @@
     <PackageReference Include="AwesomeAssertions" />
     <!-- fake-gcs-server has no Testcontainers module, so the fixture runs it as a generic container. -->
     <PackageReference Include="Testcontainers" />
+    <!-- The Firestore emulator behind the FCM installation registry (FCM itself has no emulator). -->
+    <PackageReference Include="Testcontainers.Firestore" />
     <!-- Direct only to lift the vulnerable SSH.NET that Testcontainers floors at 2025.1.0
          (GHSA-q939-rpr3-3284). This project has no path to MMCA.Common.Testing, so it cannot
          inherit that pin and needs its own. See the comment in Directory.Packages.props. -->

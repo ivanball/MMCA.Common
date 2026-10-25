@@ -6,6 +6,9 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <InternalsVisibleTo Include="MMCA.Common.Gcp.Tests" />
+    <!-- FCM has no emulator: the Firestore emulator tier swaps in a recording FCM client (an internal
+         interface) so the registry rules run end to end through the shipped registrar and sender. -->
+    <InternalsVisibleTo Include="MMCA.Common.Gcp.Emulator.Tests" />
   </ItemGroup>
   <ItemGroup>
     <!-- The adapter's whole job is to hold the Google Cloud SDKs so the core packages do not have to
@@ -21,6 +24,10 @@
     <!-- Application Default Credentials for the Cloud SQL IAM login token (AddCloudSqlIamAuthentication).
          Already transitive through the Cloud clients; referenced directly because the code uses it. -->
     <PackageReference Include="Google.Apis.Auth" />
+    <!-- Firebase Cloud Messaging native push and its Firestore installation registry
+         (AddFirebaseCloudMessagingPush). -->
+    <PackageReference Include="FirebaseAdmin" />
+    <PackageReference Include="Google.Cloud.Firestore" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

@@ -348,7 +348,8 @@ public static partial class DependencyInjection
 
             // Native push (ADR-044) defaults to inert no-ops; a vendor adapter swaps in a real
             // implementation (AddAzureNotificationHubsPush from MMCA.Common.Azure, AddAmazonSnsPush
-            // from MMCA.Common.Aws, each when its NativePush configuration is enabled and complete).
+            // from MMCA.Common.Aws, AddFirebaseCloudMessagingPush from MMCA.Common.Gcp, each when its
+            // NativePush configuration is enabled and complete).
             services.TryAddTransient<INativePushSender, NullNativePushSender>();
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 

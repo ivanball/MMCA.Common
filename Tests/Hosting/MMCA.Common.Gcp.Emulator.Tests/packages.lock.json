@@ -68,6 +68,15 @@
           "SharpZipLib": "1.4.2"
         }
       },
+      "Testcontainers.Firestore": {
+        "type": "Direct",
+        "requested": "[4.16.0, )",
+        "resolved": "4.16.0",
+        "contentHash": "Kl1+PI0soKcRWKudS0t1zOvGaKZHnRqNr8uQAyqm99LCwegITCbUvfPg8nuHP9HzAHsRf6BwVUpm4+X7emZE3w==",
+        "dependencies": {
+          "Testcontainers": "4.16.0"
+        }
+      },
       "xunit.v3": {
         "type": "Direct",
         "requested": "[4.0.2, )",
@@ -231,6 +240,16 @@
           "Google.Apis.Auth": "1.76.0"
         }
       },
+      "Google.Cloud.Firestore.V1": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "ReBMGDG3wJ9VSwLocYcJGBJGvC8V2eFHKrzlChNEeXgXV8FHeqXA0xIMkNxJL2LcKWTzPTO25FC3kw5qER3DZg==",
+        "dependencies": {
+          "Google.Api.Gax.Grpc": "[4.13.1, 5.0.0)",
+          "Google.Cloud.Location": "[2.4.0, 3.0.0)",
+          "Google.LongRunning": "[3.5.0, 4.0.0)"
+        }
+      },
       "Google.Cloud.Iam.V1": {
         "type": "Transitive",
         "resolved": "3.5.0",
@@ -318,8 +337,8 @@
       },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg=="
+        "resolved": "10.0.12",
+        "contentHash": "vHPomsJPqUvf1ExdzCCSEUMQqloONPTBMGqNqBUdr4UgSTs9bCzH1oLkuS6WgUgIu+xqWngQbjelUBNlDuzLWQ=="
       },
       "Microsoft.Bcl.Cryptography": {
         "type": "Transitive",
@@ -849,7 +868,9 @@
       "mmca.common.gcp": {
         "type": "Project",
         "dependencies": {
+          "FirebaseAdmin": "[3.7.0, )",
           "Google.Apis.Auth": "[1.76.0, )",
+          "Google.Cloud.Firestore": "[4.5.0, )",
           "Google.Cloud.Kms.V1": "[3.27.0, )",
           "Google.Cloud.SecretManager.V1": "[2.8.0, )",
           "Google.Cloud.Storage.V1": "[5.0.0, )",
@@ -957,6 +978,16 @@
         "resolved": "0.13.0",
         "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
       },
+      "FirebaseAdmin": {
+        "type": "CentralTransitive",
+        "requested": "[3.7.0, )",
+        "resolved": "3.7.0",
+        "contentHash": "9XRXSMGmEBarZm1ojMDqRUDUvWGKwDiJh52D19TqUDOdNu43ZMnGg5k8Az6A758rZu5rV7qo2sLofH0J+OEcyg==",
+        "dependencies": {
+          "Google.Api.Gax.Rest": "4.13.1",
+          "Google.Apis.Auth": "1.73.0"
+        }
+      },
       "FluentValidation.DependencyInjectionExtensions": {
         "type": "CentralTransitive",
         "requested": "[12.2.0, )",
@@ -975,6 +1006,16 @@
           "Google.Apis": "1.76.0",
           "Google.Apis.Core": "1.76.0",
           "System.Management": "7.0.2"
+        }
+      },
+      "Google.Cloud.Firestore": {
+        "type": "CentralTransitive",
+        "requested": "[4.5.0, )",
+        "resolved": "4.5.0",
+        "contentHash": "Jv7tWGtC6q7GhNJJM3G+N2pwiYpaWTW2wMQZPqiWfLpEeVGY4vw5uLtbANxM7VNfsouGj1zRhRr0KMhVorDgtA==",
+        "dependencies": {
+          "Google.Cloud.Firestore.V1": "4.5.0",
+          "Microsoft.Bcl.AsyncInterfaces": "10.0.12"
         }
       },
       "Google.Cloud.Kms.V1": {

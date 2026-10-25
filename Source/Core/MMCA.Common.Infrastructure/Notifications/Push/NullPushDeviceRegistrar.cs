@@ -8,7 +8,8 @@ namespace MMCA.Common.Infrastructure.Notifications.Push;
 /// No-op device registrar (ADR-044). Accepts and discards registrations so clients can call
 /// the Devices endpoints unconditionally; nothing is stored until a downstream host calls
 /// a push adapter (<c>AddAzureNotificationHubsPush(configuration)</c> from <c>MMCA.Common.Azure</c>,
-/// or <c>AddAmazonSnsPush(configuration)</c> from <c>MMCA.Common.Aws</c>) with an enabled configuration.
+/// <c>AddAmazonSnsPush(configuration)</c> from <c>MMCA.Common.Aws</c>, or
+/// <c>AddFirebaseCloudMessagingPush(configuration)</c> from <c>MMCA.Common.Gcp</c>) with an enabled configuration.
 /// </summary>
 public sealed class NullPushDeviceRegistrar : IPushDeviceRegistrar
 {
