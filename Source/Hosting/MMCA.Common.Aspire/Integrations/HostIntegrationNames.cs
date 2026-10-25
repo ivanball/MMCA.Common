@@ -33,4 +33,7 @@ public static class HostIntegrationNames
 
     /// <summary>Registered by <c>AddGoogleCloudDataProtection()</c> (MMCA.Common.Gcp).</summary>
     public const string GoogleCloudDataProtection = "GoogleCloudDataProtection";
+
+    /// <summary>Registered by <c>AddGoogleCloudTelemetryExporter()</c> (MMCA.Common.Gcp).</summary>
+    public const string GoogleCloudTelemetryExporter = "GoogleCloudTelemetryExporter";
 }

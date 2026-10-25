@@ -32,3 +32,7 @@ MMCA.Common.Gcp.GcpServiceCollectionExtensions.extension(Microsoft.Extensions.De
 static MMCA.Common.Gcp.GcpServiceCollectionExtensions.AddCloudSqlIamAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Gcp.GcpServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddFirebaseCloudMessagingPush(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Gcp.GcpServiceCollectionExtensions.AddFirebaseCloudMessagingPush(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Gcp.GoogleCloudTelemetryExporterExtensions
+MMCA.Common.Gcp.GoogleCloudTelemetryExporterExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Gcp.GoogleCloudTelemetryExporterExtensions.extension<TBuilder>(TBuilder).AddGoogleCloudTelemetryExporter() -> TBuilder
+static MMCA.Common.Gcp.GoogleCloudTelemetryExporterExtensions.AddGoogleCloudTelemetryExporter<TBuilder>(this TBuilder builder) -> TBuilder

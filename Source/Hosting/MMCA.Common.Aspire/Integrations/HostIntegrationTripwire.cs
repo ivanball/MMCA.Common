@@ -42,6 +42,9 @@ internal sealed class HostIntegrationTripwire(
     /// <summary>The configuration key whose presence requires the Google Cloud DataProtection key ring.</summary>
     internal const string DataProtectionGcsObjectUriKey = "DataProtection:GcsObjectUri";
 
+    /// <summary>The configuration key whose presence requires the Google Cloud telemetry exporter.</summary>
+    internal const string GoogleCloudTelemetryProjectIdKey = "GoogleCloudTelemetry:ProjectId";
+
     /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
     private static readonly string[] KeyRingKeys =
     [
@@ -91,6 +94,11 @@ internal sealed class HostIntegrationTripwire(
             DataProtectionGcsObjectUriKey,
             HostIntegrationNames.GoogleCloudDataProtection,
             "the Google Cloud DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Gcp and call builder.AddGoogleCloudDataProtection()",
+            failures);
+        Check(
+            GoogleCloudTelemetryProjectIdKey,
+            HostIntegrationNames.GoogleCloudTelemetryExporter,
+            "no Google Cloud telemetry exporter is registered, so no trace or log reaches Cloud Trace or Cloud Logging. Reference MMCA.Common.Gcp and call builder.AddGoogleCloudTelemetryExporter() after AddServiceDefaults()",
             failures);
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration

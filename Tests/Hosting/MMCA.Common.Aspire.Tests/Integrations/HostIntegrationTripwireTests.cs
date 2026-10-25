@@ -23,6 +23,7 @@ public sealed class HostIntegrationTripwireTests
         { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "AddAwsDataProtection()", "MMCA.Common.Aws" },
         { "GoogleSecretManager:NamePrefix", HostIntegrationNames.GoogleSecretManagerConfiguration, "AddGoogleSecretManagerConfiguration()", "MMCA.Common.Gcp" },
         { "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection, "AddGoogleCloudDataProtection()", "MMCA.Common.Gcp" },
+        { "GoogleCloudTelemetry:ProjectId", HostIntegrationNames.GoogleCloudTelemetryExporter, "AddGoogleCloudTelemetryExporter()", "MMCA.Common.Gcp" },
     };
 
     public static TheoryData<string, string, string, string> KeyRingPairs => new()
