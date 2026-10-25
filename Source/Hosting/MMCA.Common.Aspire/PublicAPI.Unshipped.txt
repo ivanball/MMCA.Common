@@ -1,1 +1,3 @@
 #nullable enable
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsDataProtection = "AwsDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsSecretsManagerConfiguration = "AwsSecretsManagerConfiguration" -> string!

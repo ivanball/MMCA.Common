@@ -14,11 +14,13 @@ namespace MMCA.Common.Aspire.Tests.Integrations;
 /// </summary>
 public sealed class HostIntegrationTripwireTests
 {
-    public static TheoryData<string, string, string> Integrations => new()
+    public static TheoryData<string, string, string, string> Integrations => new()
     {
-        { "APPLICATIONINSIGHTS_CONNECTION_STRING", HostIntegrationNames.AzureMonitorExporter, "AddAzureMonitorExporter()" },
-        { "KeyVault:Uri", HostIntegrationNames.AzureKeyVaultConfiguration, "AddAzureKeyVaultConfiguration()" },
-        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "AddAzureDataProtection()" },
+        { "APPLICATIONINSIGHTS_CONNECTION_STRING", HostIntegrationNames.AzureMonitorExporter, "AddAzureMonitorExporter()", "MMCA.Common.Azure" },
+        { "KeyVault:Uri", HostIntegrationNames.AzureKeyVaultConfiguration, "AddAzureKeyVaultConfiguration()", "MMCA.Common.Azure" },
+        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "AddAzureDataProtection()", "MMCA.Common.Azure" },
+        { "SecretsManager:NamePrefix", HostIntegrationNames.AwsSecretsManagerConfiguration, "AddAwsSecretsManagerConfiguration()", "MMCA.Common.Aws" },
+        { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "AddAwsDataProtection()", "MMCA.Common.Aws" },
     };
 
     private static ValidateOptionsResult Validate(Dictionary<string, string?> settings, params string[] registered)
@@ -30,31 +32,33 @@ public sealed class HostIntegrationTripwireTests
 
     [Theory]
     [MemberData(nameof(Integrations))]
-    public void ConfiguredWithoutTheAdapterCall_FailsNamingTheCall(string key, string integration, string call)
+    public void ConfiguredWithoutTheAdapterCall_FailsNamingTheCall(string key, string integration, string call, string package)
     {
         _ = integration;
 
         var result = Validate(new() { [key] = "https://example.invalid/" });
 
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain(key).And.Contain(call).And.Contain("MMCA.Common.Azure");
+        result.FailureMessage.Should().Contain(key).And.Contain(call).And.Contain(package);
     }
 
     [Theory]
     [MemberData(nameof(Integrations))]
-    public void ConfiguredWithTheAdapterCall_Succeeds(string key, string integration, string call)
+    public void ConfiguredWithTheAdapterCall_Succeeds(string key, string integration, string call, string package)
     {
         _ = call;
+        _ = package;
 
         Validate(new() { [key] = "https://example.invalid/" }, integration).Succeeded.Should().BeTrue();
     }
 
     [Theory]
     [MemberData(nameof(Integrations))]
-    public void BlankOrAbsent_StaysSilent(string key, string integration, string call)
+    public void BlankOrAbsent_StaysSilent(string key, string integration, string call, string package)
     {
         _ = integration;
         _ = call;
+        _ = package;
 
         Validate(new() { [key] = "  " }).Succeeded.Should().BeTrue("a blank value is how a template leaves the integration off");
         Validate([]).Succeeded.Should().BeTrue();
@@ -72,6 +76,36 @@ public sealed class HostIntegrationTripwireTests
 
         result.Failures.Should().HaveCount(3);
     }
+
+    [Fact]
+    public void BothDataProtectionKeyRings_Fail_EvenWithBothAdapterCalls()
+    {
+        // Two configured key rings is the split-brain the shared key ring exists to prevent: some
+        // replicas or services would mint cookies on one ring and others could not read them.
+        var result = Validate(
+            new()
+            {
+                ["DataProtection:BlobStorageUri"] = "https://blob.example.invalid/keys/keys.xml",
+                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+            },
+            HostIntegrationNames.AzureDataProtection,
+            HostIntegrationNames.AwsDataProtection);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle()
+            .Which.Should().Contain("DataProtection:BlobStorageUri").And.Contain("DataProtection:SsmParameterPrefix");
+    }
+
+    [Fact]
+    public void OneDataProtectionKeyRing_WithABlankOther_StaysSilent() =>
+        Validate(
+            new()
+            {
+                ["DataProtection:BlobStorageUri"] = "  ",
+                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+            },
+            HostIntegrationNames.AwsDataProtection)
+            .Succeeded.Should().BeTrue("a blank placeholder for the other cloud's key ring is not a second key ring");
 
     [Fact]
     public void AddServiceDefaults_ValidatesOnStart_AndFailsTheHost()

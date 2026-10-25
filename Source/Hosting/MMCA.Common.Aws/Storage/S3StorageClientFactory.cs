@@ -1,4 +1,3 @@
-using Amazon;
 using Amazon.S3;
 
 namespace MMCA.Common.Aws.Storage;
@@ -16,8 +15,8 @@ internal static class S3StorageClientFactory
     /// <summary>
     /// Maps the settings onto an <see cref="AmazonS3Config"/>. A <see cref="S3FileStorageSettings.ServiceUrl"/>
     /// selects an S3-compatible endpoint, and <see cref="S3FileStorageSettings.Region"/> then becomes
-    /// its signing region; without one, the region selects the AWS endpoint. The two are mutually
-    /// exclusive on the SDK config (setting a region endpoint clears the service URL), hence the branch.
+    /// its signing region; without one, the region selects the AWS endpoint (see
+    /// <see cref="AwsClientEndpoint.Apply"/>).
     /// </summary>
     /// <param name="settings">The bound settings.</param>
     /// <returns>The client configuration.</returns>
@@ -32,18 +31,7 @@ internal static class S3StorageClientFactory
             ResponseChecksumValidation = settings.ResponseChecksumValidation,
         };
 
-        if (settings.ServiceUrl is { IsAbsoluteUri: true } serviceUrl)
-        {
-            config.ServiceURL = serviceUrl.AbsoluteUri;
-            if (!string.IsNullOrWhiteSpace(settings.Region))
-            {
-                config.AuthenticationRegion = settings.Region;
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(settings.Region))
-        {
-            config.RegionEndpoint = RegionEndpoint.GetBySystemName(settings.Region);
-        }
+        AwsClientEndpoint.Apply(config, settings.ServiceUrl, settings.Region);
 
         return config;
     }

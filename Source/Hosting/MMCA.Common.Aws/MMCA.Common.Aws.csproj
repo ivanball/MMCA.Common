@@ -16,6 +16,10 @@
     <PackageReference Include="AWSSDK.S3" />
     <!-- Amazon SQS/SNS transport. It brings AWSSDK.SQS and AWSSDK.SimpleNotificationService. -->
     <PackageReference Include="MassTransit.AmazonSQS" />
+    <!-- Secrets Manager as a configuration source (AddAwsSecretsManagerConfiguration). -->
+    <PackageReference Include="AWSSDK.SecretsManager" />
+    <!-- The shared DataProtection key ring in Systems Manager Parameter Store (AddAwsDataProtection). -->
+    <PackageReference Include="Amazon.AspNetCore.DataProtection.SSM" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
@@ -23,6 +27,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <!-- For HostIntegrationMarker: the host-level calls leave the receipt the startup tripwire checks. -->
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

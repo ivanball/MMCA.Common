@@ -25,6 +25,12 @@ internal sealed class HostIntegrationTripwire(
     /// <summary>The configuration key whose presence requires the Azure DataProtection key ring.</summary>
     internal const string DataProtectionBlobStorageUriKey = "DataProtection:BlobStorageUri";
 
+    /// <summary>The configuration key whose presence requires the Secrets Manager configuration source.</summary>
+    internal const string SecretsManagerNamePrefixKey = "SecretsManager:NamePrefix";
+
+    /// <summary>The configuration key whose presence requires the AWS DataProtection key ring.</summary>
+    internal const string DataProtectionSsmParameterPrefixKey = "DataProtection:SsmParameterPrefix";
+
     private readonly HashSet<string> _registered = [.. markers.Select(marker => marker.Name)];
 
     /// <inheritdoc />
@@ -47,15 +53,36 @@ internal sealed class HostIntegrationTripwire(
             HostIntegrationNames.AzureDataProtection,
             "the Azure DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Azure and call builder.AddAzureDataProtection()",
             failures);
+        Check(
+            SecretsManagerNamePrefixKey,
+            HostIntegrationNames.AwsSecretsManagerConfiguration,
+            "no Secrets Manager configuration source was added, so every secret under that prefix is missing from configuration. Reference MMCA.Common.Aws and call builder.AddAwsSecretsManagerConfiguration() early in Program.cs",
+            failures);
+        Check(
+            DataProtectionSsmParameterPrefixKey,
+            HostIntegrationNames.AwsDataProtection,
+            "the AWS DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Aws and call builder.AddAwsDataProtection()",
+            failures);
+
+        // Two configured key rings is not a stronger setup, it is a split one: whichever registration
+        // runs last owns the repository, so services that disagree on the order, or that call only
+        // one of the two adapters, mint cookies and tokens the others cannot decrypt. One ring only.
+        if (IsSet(DataProtectionBlobStorageUriKey) && IsSet(DataProtectionSsmParameterPrefixKey))
+        {
+            failures.Add(
+                $"{DataProtectionBlobStorageUriKey} and {DataProtectionSsmParameterPrefixKey} are both set, but a host keeps exactly one DataProtection key ring. Clear the one for the cloud this host does not run on.");
+        }
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 
     private void Check(string key, string integration, string consequence, List<string> failures)
     {
-        if (!string.IsNullOrWhiteSpace(configuration[key]) && !_registered.Contains(integration))
+        if (IsSet(key) && !_registered.Contains(integration))
         {
             failures.Add($"{key} is set, but {consequence}.");
         }
     }
+
+    private bool IsSet(string key) => !string.IsNullOrWhiteSpace(configuration[key]);
 }

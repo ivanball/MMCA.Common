@@ -878,9 +878,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like
-        # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS,
-        # 2026-10-24); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 5
+        # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS + 2 Secrets
+        # Manager + 1 DataProtection, 2026-10-24); adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 8
 
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)

@@ -21,4 +21,10 @@ public static class HostIntegrationNames
 
     /// <summary>Registered by <c>AddAzureDataProtection()</c> (MMCA.Common.Azure).</summary>
     public const string AzureDataProtection = "AzureDataProtection";
+
+    /// <summary>Registered by <c>AddAwsSecretsManagerConfiguration()</c> (MMCA.Common.Aws).</summary>
+    public const string AwsSecretsManagerConfiguration = "AwsSecretsManagerConfiguration";
+
+    /// <summary>Registered by <c>AddAwsDataProtection()</c> (MMCA.Common.Aws).</summary>
+    public const string AwsDataProtection = "AwsDataProtection";
 }
