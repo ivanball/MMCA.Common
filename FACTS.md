@@ -16,7 +16,7 @@ _As of: 2026-10-25 (framework v1.256.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **25**
+## Published packages — **26**
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.AI`
@@ -37,13 +37,14 @@ Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; t
 16. `MMCA.Common.Aws`
 17. `MMCA.Common.Azure`
 18. `MMCA.Common.Gateway`
-19. `MMCA.Common.Testing`
-20. `MMCA.Common.Testing.Architecture`
-21. `MMCA.Common.Testing.Aspire`
-22. `MMCA.Common.Testing.Azure`
-23. `MMCA.Common.Testing.E2E`
-24. `MMCA.Common.Testing.UI`
-25. `MMCA.Common`
+19. `MMCA.Common.Gcp`
+20. `MMCA.Common.Testing`
+21. `MMCA.Common.Testing.Architecture`
+22. `MMCA.Common.Testing.Aspire`
+23. `MMCA.Common.Testing.Azure`
+24. `MMCA.Common.Testing.E2E`
+25. `MMCA.Common.Testing.UI`
+26. `MMCA.Common`
 
 ## Package dependency graph
 Which other `MMCA.Common.*` packages each package references directly, read from the `<ProjectReference>`
@@ -70,6 +71,7 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.Aws` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Azure` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Gateway` | (none) |
+| `MMCA.Common.Gcp` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
 | `MMCA.Common.Testing.Architecture` | (none) |
 | `MMCA.Common.Testing.Aspire` | `MMCA.Common.Testing` |

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Gcp</PackageId>
-    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage, Secret Manager configuration and the Cloud Storage DataProtection key ring with optional Cloud KMS encryption, over Application Default Credentials; the core packages stay cloud-neutral</Description>
+    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage, Secret Manager configuration, the Cloud Storage DataProtection key ring with optional Cloud KMS encryption, FCM native push over a Firestore installation registry, Cloud SQL IAM authentication for PostgreSQL and the Telemetry (OTLP) API exporter for traces and logs, over Application Default Credentials; the core packages stay cloud-neutral</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
