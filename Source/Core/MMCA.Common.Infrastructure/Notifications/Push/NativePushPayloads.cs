@@ -4,9 +4,11 @@ namespace MMCA.Common.Infrastructure.Notifications.Push;
 
 /// <summary>
 /// Builds the platform-native JSON payloads for OS-level push (ADR-044): the FCM v1 message and the
-/// APNs alert. Shared by every native push adapter (Azure Notification Hubs forwards them verbatim,
-/// SNS mobile push wraps them in its per-platform message structure), so one notification looks the
-/// same on a device whichever cloud delivered it. Pure System.Text.Json, no vendor SDK.
+/// APNs alert. Azure Notification Hubs forwards them verbatim and SNS mobile push wraps them in its
+/// per-platform message structure; the FCM adapter (MMCA.Common.Gcp) does not call them, because
+/// FirebaseAdmin takes a typed message, so it maps the same fields and a test pins the equivalence.
+/// Either way one notification looks the same on a device whichever cloud delivered it. Pure
+/// System.Text.Json, no vendor SDK.
 /// </summary>
 public static class NativePushPayloads
 {

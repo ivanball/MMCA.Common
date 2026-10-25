@@ -20,6 +20,8 @@ public abstract class DependencyVersionTestsBase
         "MassTransit",
         "MassTransit.RabbitMQ",
         "MassTransit.Azure.ServiceBus.Core",
+        "MassTransit.AmazonSQS",
+        "MassTransit.SqlTransport.PostgreSQL",
     ];
 
     [Fact]
