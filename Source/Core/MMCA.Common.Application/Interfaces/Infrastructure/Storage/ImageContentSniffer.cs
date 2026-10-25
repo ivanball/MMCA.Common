@@ -2,10 +2,9 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 
 /// <summary>
 /// Dependency-free magic-byte sniffing for uploaded images: the accepted formats are decided by the
-/// actual bytes, never the client-declared content type or file extension. The upload-side companion
-/// to <see cref="IImageProcessor"/> (ADR-045): callers narrow the accepted inputs to jpeg/png/webp
-/// here, then hand the content to the processor, whose re-encoding keeps only pixels. App-specific
-/// size limits and error codes stay in the calling handler.
+/// actual bytes, never the client-declared content type or file extension (ADR-045): callers narrow
+/// the accepted inputs to jpeg/png/webp here, before storing the content or handing it to their own
+/// image normalizer. App-specific size limits and error codes stay in the calling handler.
 /// </summary>
 public static class ImageContentSniffer
 {

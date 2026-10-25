@@ -205,9 +205,6 @@
   <data name="FileStorage.UploadFailed" xml:space="preserve">
     <value>No se pudo almacenar el archivo.</value>
   </data>
-  <data name="Image.Undecodable" xml:space="preserve">
-    <value>El archivo cargado no es una imagen compatible.</value>
-  </data>
   <data name="InternalCommands.InvalidOlderThan" xml:space="preserve">
     <value>OlderThan debe ser cero o mayor.</value>
   </data>

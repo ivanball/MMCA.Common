@@ -100,9 +100,6 @@ public sealed partial class ErrorResourceCoverageTests
         "Filter.Type.NotSupported",
         "Filter.Value.Invalid",
 
-        // States the image's pixel dimensions.
-        "Image.TooLarge",
-
         // Name the command type or the unknown data source.
         "InternalCommands.NotSerializable",
         "InternalCommands.UnknownDataSource",
