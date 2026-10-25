@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNpgsqlDataSourceConfigurator(MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator.Configure(Npgsql.NpgsqlDataSourceBuilder! builder) -> void
+static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

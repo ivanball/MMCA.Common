@@ -18,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace MMCA.Common.Infrastructure.PostgreSQL.Tests;
@@ -60,20 +61,7 @@ public sealed class PostgreSQLPersistenceTests : IAsyncLifetime
             NullLogger<DataSourceResolver>.Instance);
 
         var assemblyProvider = new FixedAssemblyProvider();
-        var registry = new EntityDataSourceRegistry(assemblyProvider, _resolver);
-
-        _serviceProvider = new ServiceCollection()
-            .AddSingleton(TimeProvider.System)
-            .AddSingleton<ILoggerFactory, NullLoggerFactory>()
-            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
-            .AddSingleton<IDomainEventDispatcher, RecordingDomainEventDispatcher>()
-            .AddSingleton<IOutboxSignal, OutboxSignal>()
-            .AddSingleton<AuditSaveChangesInterceptor>()
-            .AddSingleton<DomainEventSaveChangesInterceptor>()
-            .AddSingleton<IEntityDataSourceRegistry>(registry)
-            .AddSingleton<IDataSourceResolver>(_resolver)
-            .BuildServiceProvider();
-
+        _serviceProvider = BuildServiceProvider(_resolver, configurator: null);
         _physicalFactory = new PhysicalDbContextFactory(_serviceProvider, _resolver, assemblyProvider);
 
         // The whole point of the first assertion: this is where a predicate PostgreSQL cannot parse
@@ -259,15 +247,85 @@ public sealed class PostgreSQLPersistenceTests : IAsyncLifetime
         pending.Should().ContainSingle(m => m.Payload.Contains(code, StringComparison.Ordinal));
     }
 
+    // The data-source path an RDS IAM host takes: the connection string carries no password at all,
+    // and the server only accepts the connection because the configured data source asks its
+    // periodic password provider for one. The query runs through the shipped context, so this proves
+    // the context really is handed the configured data source rather than the bare string.
+    [Fact]
+    public async Task APeriodicPasswordProvider_AuthenticatesThroughTheConfiguredDataSource()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString());
+        var configurator = new PeriodicPasswordConfigurator(builder.Password!);
+        builder.Password = null;
+
+        var resolver = new DataSourceResolver(
+            Options.Create(new ConnectionStringSettings { PostgreSQLConnectionString = builder.ConnectionString }),
+            new DataSourcesSettings(),
+            NullLogger<DataSourceResolver>.Instance);
+
+        await using var provider = BuildServiceProvider(resolver, configurator);
+        var factory = new PhysicalDbContextFactory(provider, resolver, new FixedAssemblyProvider());
+
+        await using var context = factory.Create(resolver.ResolveLogical(DataSource.PostgreSQL, DataSourceKey.DefaultName));
+        var tables = await context.Database
+            .SqlQueryRaw<string>("""SELECT tablename AS "Value" FROM pg_tables WHERE schemaname = 'dbo'""")
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        tables.Should().Contain("OutboxMessages");
+        configurator.PasswordRequests.Should().BePositive("the password reached the server only through the provider");
+    }
+
     private static string NewCode() => $"code-{Guid.NewGuid():N}";
 
     private ApplicationDbContext CreateContext() =>
         _physicalFactory.Create(_resolver.ResolveLogical(DataSource.PostgreSQL, DataSourceKey.DefaultName));
 
+    private static ServiceProvider BuildServiceProvider(IDataSourceResolver resolver, INpgsqlDataSourceConfigurator? configurator)
+    {
+        var services = new ServiceCollection()
+            .AddSingleton(TimeProvider.System)
+            .AddSingleton<ILoggerFactory, NullLoggerFactory>()
+            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddSingleton<IDomainEventDispatcher, RecordingDomainEventDispatcher>()
+            .AddSingleton<IOutboxSignal, OutboxSignal>()
+            .AddSingleton<AuditSaveChangesInterceptor>()
+            .AddSingleton<DomainEventSaveChangesInterceptor>()
+            .AddSingleton<IEntityDataSourceRegistry>(new EntityDataSourceRegistry(new FixedAssemblyProvider(), resolver))
+            .AddSingleton(resolver);
+
+        if (configurator is not null)
+        {
+            services.AddNpgsqlDataSourceConfigurator(configurator);
+        }
+
+        return services.BuildServiceProvider();
+    }
+
     private sealed class FixedAssemblyProvider : IEntityConfigurationAssemblyProvider
     {
         public IReadOnlyList<System.Reflection.Assembly> GetConfigurationAssemblies() =>
             [typeof(PostgreSQLPersistenceTests).Assembly];
+    }
+
+    /// <summary>
+    /// Stands in for the RDS IAM configurator: the password comes from a periodic provider, exactly
+    /// the Npgsql mechanism the AWS adapter uses for its tokens.
+    /// </summary>
+    private sealed class PeriodicPasswordConfigurator(string password) : INpgsqlDataSourceConfigurator
+    {
+        private int _passwordRequests;
+
+        public int PasswordRequests => Volatile.Read(ref _passwordRequests);
+
+        public void Configure(NpgsqlDataSourceBuilder builder) =>
+            builder.UsePeriodicPasswordProvider(
+                (_, _) =>
+                {
+                    Interlocked.Increment(ref _passwordRequests);
+                    return ValueTask.FromResult(password);
+                },
+                TimeSpan.FromMinutes(10),
+                TimeSpan.FromSeconds(30));
     }
 
     /// <summary>

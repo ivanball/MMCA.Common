@@ -156,6 +156,10 @@
          SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
          AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
     <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.3" />
+    <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
+         only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
+         v4 line as AWSSDK.S3. -->
+    <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.1" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->

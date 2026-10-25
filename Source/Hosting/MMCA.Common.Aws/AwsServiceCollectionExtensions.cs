@@ -1,10 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
+using Amazon;
 using Amazon.S3;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Aws.Messaging;
+using MMCA.Common.Aws.Rds;
 using MMCA.Common.Aws.Storage;
 using MMCA.Common.Infrastructure;
 
@@ -78,5 +80,49 @@ public static class AwsServiceCollectionExtensions
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAmazonSqsTransport() =>
             services.AddBrokerTransport(new AmazonSqsTransport());
+
+        /// <summary>
+        /// Switches every PostgreSQL connection onto RDS IAM database authentication (Amazon RDS and
+        /// Aurora PostgreSQL): the password becomes a short-lived token signed locally for the
+        /// connection string's own host, port and user, refreshed every 10 minutes (30 seconds after a
+        /// failure) through the core data-source configurator, so the contexts and the readiness check
+        /// share one data source per connection string. Reads <c>Rds:IamAuthentication</c>:
+        /// <c>Enabled</c> (the gate; absent or false makes this a no-op), <c>Region</c> (the database's
+        /// region, else the AWS SDK region chain) and <c>AccessKeyId</c> + <c>SecretAccessKey</c> (else
+        /// the AWS default credential chain). The connection strings carry no password, and each must
+        /// require TLS (<c>SSL Mode=Require</c>, <c>VerifyCA</c> or <c>VerifyFull</c>), because the token
+        /// is sent as the password. SQL Server, SQLite and Cosmos sources are untouched: RDS has no IAM
+        /// authentication for SQL Server.
+        /// </summary>
+        /// <param name="configuration">Application configuration providing <c>Rds:IamAuthentication</c> and the connection strings.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// A configured PostgreSQL connection string does not require TLS (the message names its key),
+        /// or only one of <c>AccessKeyId</c> / <c>SecretAccessKey</c> is set.
+        /// </exception>
+        public IServiceCollection AddAwsRdsIamAuthentication(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration.GetSection(RdsIamAuthenticationSettings.SectionPath).Get<RdsIamAuthenticationSettings>();
+            if (settings is not { Enabled: true })
+            {
+                return services;
+            }
+
+            var credentials = AwsStaticCredentials.Resolve(
+                settings.AccessKeyId,
+                settings.SecretAccessKey,
+                RdsIamAuthenticationSettings.SectionPath);
+
+            // Deterministic: a connection string already in configuration that would send the token
+            // in clear fails here, at registration, not on the first query.
+            RdsIamAuthenticationConfigurator.EnsureConfiguredConnectionStringsAreEncrypted(configuration);
+
+            var region = string.IsNullOrWhiteSpace(settings.Region) ? null : RegionEndpoint.GetBySystemName(settings.Region);
+
+            return services.AddNpgsqlDataSourceConfigurator(new RdsIamAuthenticationConfigurator(region, credentials));
+        }
+
     }
 }

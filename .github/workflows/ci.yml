@@ -799,9 +799,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        # Floor = the exact [Fact] count in PostgreSQLPersistenceTests.cs (7, 2026-09-30); adding a
+        # Floor = the exact [Fact] count in PostgreSQLPersistenceTests.cs (8, 2026-10-24); adding a
         # test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 7
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 8
 
   sqlserver-integration:
     name: SQL Server integration (Testcontainers)

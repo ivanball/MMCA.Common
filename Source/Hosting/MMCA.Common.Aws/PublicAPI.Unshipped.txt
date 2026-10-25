@@ -5,5 +5,7 @@ MMCA.Common.Aws.AwsDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAws
 MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions
 MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.extension<TBuilder>(TBuilder)
 MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.extension<TBuilder>(TBuilder).AddAwsSecretsManagerConfiguration() -> TBuilder
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAwsRdsIamAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aws.AwsDataProtectionExtensions.AddAwsDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
 static MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.AddAwsSecretsManagerConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAwsRdsIamAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

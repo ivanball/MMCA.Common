@@ -752,6 +752,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.RDS": "[4.0.107.1, )",
           "AWSSDK.S3": "[4.0.104.6, )",
           "AWSSDK.SecretsManager": "[4.0.100.21, )",
           "Amazon.AspNetCore.DataProtection.SSM": "[4.0.3, )",
@@ -867,6 +868,15 @@
         "contentHash": "UxCf65iCF2nU1u7AcB320abjL4CRg5swCgJECY6mKk1j5lrGMfVtskWwriGs1T29pYdRig9Vra3SPnP+4G82pA==",
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.2"
+        }
+      },
+      "AWSSDK.RDS": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.107.1, )",
+        "resolved": "4.0.107.1",
+        "contentHash": "4oYTugiBauVzmvBbmCss6NtcfBzLaExBN+16+kkJ043+OLP2RBdtbf6AjzqRoE4C+WQ5L9pIxCNjYRfHyUYsnA==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
         }
       },
       "AWSSDK.S3": {

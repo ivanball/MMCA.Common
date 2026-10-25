@@ -12,6 +12,15 @@
           "AWSSDK.SimpleSystemsManagement": "4.0.7.3"
         }
       },
+      "AWSSDK.RDS": {
+        "type": "Direct",
+        "requested": "[4.0.107.1, )",
+        "resolved": "4.0.107.1",
+        "contentHash": "4oYTugiBauVzmvBbmCss6NtcfBzLaExBN+16+kkJ043+OLP2RBdtbf6AjzqRoE4C+WQ5L9pIxCNjYRfHyUYsnA==",
+        "dependencies": {
+          "AWSSDK.Core": "[4.0.102.13, 5.0.0)"
+        }
+      },
       "AWSSDK.S3": {
         "type": "Direct",
         "requested": "[4.0.104.6, )",

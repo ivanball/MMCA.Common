@@ -20,6 +20,8 @@
     <PackageReference Include="AWSSDK.SecretsManager" />
     <!-- The shared DataProtection key ring in Systems Manager Parameter Store (AddAwsDataProtection). -->
     <PackageReference Include="Amazon.AspNetCore.DataProtection.SSM" />
+    <!-- RDS IAM database authentication tokens for PostgreSQL (AddAwsRdsIamAuthentication). -->
+    <PackageReference Include="AWSSDK.RDS" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
