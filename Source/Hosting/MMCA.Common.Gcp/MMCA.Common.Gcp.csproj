@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Gcp</PackageId>
+    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage over Application Default Credentials; the core packages stay cloud-neutral</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.Gcp.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The adapter's whole job is to hold the Google Cloud SDKs so the core packages do not have to
+         (EnforceCloudVendorBoundary in Source/Build/MMCA.Common.LayerEnforcement.targets and
+         CloudVendorIsolationTestsBase hold that line). A host references this package only when it
+         runs on Google Cloud, and opts into each capability with one registration call. -->
+    <!-- Google Cloud Storage as the file store (AddGoogleCloudStorage). -->
+    <PackageReference Include="Google.Cloud.Storage.V1" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

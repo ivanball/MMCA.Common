@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Matches the FrameworkReference on MMCA.Common.Gcp itself, so the hosting abstractions prune
+         to the shared framework instead of resolving as standalone packages. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- No test here reaches Google Cloud: clients are built against a placeholder endpoint and
+         asserted for their configuration, and the storage service runs against a mocked
+         StorageClient. The real round trips live in the emulator tier
+         (Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests). -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Gcp\MMCA.Common.Gcp.csproj" />
+    <!-- For CloudVendorRulesTests: the Google SDK assemblies this project already loads are the
+         fixtures that prove the cloud-vendor rules reject a Google dependency. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
+  </ItemGroup>
+</Project>

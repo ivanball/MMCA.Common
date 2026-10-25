@@ -25,5 +25,6 @@
          their configuration, and the storage service runs against a mocked IAmazonS3. The real
          round trips live in the LocalStack tier (Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests). -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aws\MMCA.Common.Aws.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
 </Project>

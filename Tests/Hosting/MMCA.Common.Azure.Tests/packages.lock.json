@@ -458,6 +458,11 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
+      "Mono.Cecil": {
+        "type": "Transitive",
+        "resolved": "0.11.6",
+        "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
+      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.4",
@@ -781,6 +786,14 @@
       },
       "mmca.common.shared": {
         "type": "Project"
+      },
+      "mmca.common.testing.architecture": {
+        "type": "Project",
+        "dependencies": {
+          "AwesomeAssertions": "[9.6.0, )",
+          "NetArchTest.eNhancedEdition": "[1.4.5, )",
+          "xunit.v3.extensibility.core": "[4.0.2, )"
+        }
       },
       "Aspire.StackExchange.Redis": {
         "type": "CentralTransitive",
@@ -1123,6 +1136,15 @@
         "requested": "[4.5.4, )",
         "resolved": "4.5.4",
         "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA=="
+      },
+      "NetArchTest.eNhancedEdition": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.5, )",
+        "resolved": "1.4.5",
+        "contentHash": "dfWIjcLS2MBGz403OoT+vxr/4Dz/f7MnQhEwmgaf7PXlWzG39LSiUPhW7OPx9Ebg/GNWvDAttlpq5FY0mG/qkg==",
+        "dependencies": {
+          "Mono.Cecil": "0.11.6"
+        }
       },
       "Npgsql": {
         "type": "CentralTransitive",

@@ -169,6 +169,10 @@
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.109.1" />
+    <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
+         client over Application Default Credentials (workload identity, no HMAC keys). Brings the
+         Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
+    <PackageVersion Include="Google.Cloud.Storage.V1" Version="5.0.0" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
@@ -299,6 +303,10 @@
     <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
          .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
+    <!-- Google Cloud emulator tier only (Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests, outside the
+         .slnx, own CI job): fake-gcs-server has no Testcontainers module, so the tier runs it as a
+         generic container on the core package. Same Testcontainers family version. -->
+    <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via

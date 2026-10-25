@@ -4,9 +4,19 @@ public static partial class ArchitectureRules
 {
     /// <summary>
     /// Cloud-vendor namespaces and the framework's vendor adapter packages, none of which a
-    /// cloud-neutral assembly may name: the Azure and AWS SDKs, the MassTransit transports for their
-    /// brokers, and the adapters that hold them (<c>MMCA.Common.Azure</c>, <c>MMCA.Common.Aws</c>,
-    /// <c>MMCA.Common.Testing.Azure</c>).
+    /// cloud-neutral assembly may name: the Azure, AWS and Google Cloud SDKs (<c>Google</c> covers
+    /// <c>Google.Cloud.*</c>, <c>Google.Apis.*</c>, <c>Google.Api.Gax</c> and the <c>Google</c>
+    /// namespace itself, where <c>GoogleApiException</c> lives; <c>FirebaseAdmin</c> and
+    /// <c>Grpc.Auth</c>, the Google credential bridge for gRPC, sit outside it), the MassTransit
+    /// transports for their brokers, and the adapters that hold them (<c>MMCA.Common.Azure</c>,
+    /// <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>, <c>MMCA.Common.Testing.Azure</c>).
+    /// <para>
+    /// NetArchTest matches these as whole namespace segments: <c>Google</c> matches <c>Google</c> and
+    /// every <c>Google.*</c> namespace, while an entry with a trailing dot (<c>Google.</c>) matches
+    /// nothing. <c>Google</c> also matches <c>Google.Protobuf</c>, the protobuf runtime gRPC contracts
+    /// compile against. No cloud-neutral assembly names or references it today; if one ever has to,
+    /// that is the one exact exemption to add, not a narrower Google entry.
+    /// </para>
     /// <para>
     /// The adapters reference the core; the reverse edge is what turns "runs on any cloud" into "pulls
     /// one cloud's SDK, credential chain and advisory stream into every consumer".
@@ -14,29 +24,40 @@ public static partial class ArchitectureRules
     /// </summary>
     public static readonly IReadOnlyList<string> CloudVendorDependencies =
     [
-        "Azure.",
-        "Microsoft.Azure.",
-        "Amazon.",
+        // Whole namespace roots, no trailing dot: NetArchTest matches by namespace segment, so an entry
+        // ending in "." matches nothing and the type-level rule would pass vacuously.
+        "Azure",
+        "Microsoft.Azure",
+        "Amazon",
+        "Google",
+        "FirebaseAdmin",
+        "Grpc.Auth",
         "MassTransit.AzureServiceBusTransport",
         "MassTransit.AmazonSqsTransport",
         "MMCA.Common.Azure",
         "MMCA.Common.Aws",
+        "MMCA.Common.Gcp",
         "MMCA.Common.Testing.Azure",
     ];
 
     /// <summary>
     /// Assembly-name prefixes a cloud-neutral assembly may not reference: the vendor SDK assemblies,
-    /// the vendor broker transports, and the adapter packages.
+    /// the vendor broker transports, and the adapter packages. Plain string prefixes, so the trailing
+    /// dot keeps <c>Google.</c> off an unrelated <c>GoogleGson</c>-style name.
     /// </summary>
     public static readonly IReadOnlyList<string> CloudVendorAssemblyPrefixes =
     [
         "Azure.",
         "Microsoft.Azure.",
         "AWSSDK.",
+        "Google.",
+        "FirebaseAdmin",
+        "Grpc.Auth",
         "MassTransit.Azure",
         "MassTransit.AmazonSqs",
         "MMCA.Common.Azure",
         "MMCA.Common.Aws",
+        "MMCA.Common.Gcp",
         "MMCA.Common.Testing.Azure",
     ];
 
@@ -73,7 +94,7 @@ public static partial class ArchitectureRules
 
             ArchitectureAssert.NoViolations(result,
                 $"{name} must stay cloud-neutral: move the vendor dependency into the adapter package "
-                    + "(MMCA.Common.Azure or MMCA.Common.Aws) behind a core abstraction");
+                    + "(MMCA.Common.Azure, MMCA.Common.Aws or MMCA.Common.Gcp) behind a core abstraction");
         }
     }
 
