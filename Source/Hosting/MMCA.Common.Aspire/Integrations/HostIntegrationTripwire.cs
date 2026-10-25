@@ -31,6 +31,25 @@ internal sealed class HostIntegrationTripwire(
     /// <summary>The configuration key whose presence requires the AWS DataProtection key ring.</summary>
     internal const string DataProtectionSsmParameterPrefixKey = "DataProtection:SsmParameterPrefix";
 
+    /// <summary>
+    /// The configuration key whose presence requires the Google Secret Manager configuration source.
+    /// The adapter's gate is this prefix AND <c>GoogleSecretManager:ProjectId</c>; the prefix is the
+    /// one checked because it is what declares that this host reads its settings from Secret Manager
+    /// (the same key the Secrets Manager check reads), while a project id alone names a location.
+    /// </summary>
+    internal const string GoogleSecretManagerNamePrefixKey = "GoogleSecretManager:NamePrefix";
+
+    /// <summary>The configuration key whose presence requires the Google Cloud DataProtection key ring.</summary>
+    internal const string DataProtectionGcsObjectUriKey = "DataProtection:GcsObjectUri";
+
+    /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
+    private static readonly string[] KeyRingKeys =
+    [
+        DataProtectionBlobStorageUriKey,
+        DataProtectionSsmParameterPrefixKey,
+        DataProtectionGcsObjectUriKey,
+    ];
+
     private readonly HashSet<string> _registered = [.. markers.Select(marker => marker.Name)];
 
     /// <inheritdoc />
@@ -63,14 +82,25 @@ internal sealed class HostIntegrationTripwire(
             HostIntegrationNames.AwsDataProtection,
             "the AWS DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Aws and call builder.AddAwsDataProtection()",
             failures);
+        Check(
+            GoogleSecretManagerNamePrefixKey,
+            HostIntegrationNames.GoogleSecretManagerConfiguration,
+            "no Secret Manager configuration source was added, so every secret under that prefix is missing from configuration. Reference MMCA.Common.Gcp and call builder.AddGoogleSecretManagerConfiguration() early in Program.cs (it also needs GoogleSecretManager:ProjectId)",
+            failures);
+        Check(
+            DataProtectionGcsObjectUriKey,
+            HostIntegrationNames.GoogleCloudDataProtection,
+            "the Google Cloud DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Gcp and call builder.AddGoogleCloudDataProtection()",
+            failures);
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration
         // runs last owns the repository, so services that disagree on the order, or that call only
-        // one of the two adapters, mint cookies and tokens the others cannot decrypt. One ring only.
-        if (IsSet(DataProtectionBlobStorageUriKey) && IsSet(DataProtectionSsmParameterPrefixKey))
+        // one of the adapters, mint cookies and tokens the others cannot decrypt. One ring only.
+        var keyRings = KeyRingKeys.Where(IsSet).ToList();
+        if (keyRings.Count > 1)
         {
             failures.Add(
-                $"{DataProtectionBlobStorageUriKey} and {DataProtectionSsmParameterPrefixKey} are both set, but a host keeps exactly one DataProtection key ring. Clear the one for the cloud this host does not run on.");
+                $"More than one of {string.Join(", ", KeyRingKeys)} is set ({string.Join(" and ", keyRings)}), but a host keeps exactly one DataProtection key ring. Clear the ones for the clouds this host does not run on.");
         }
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);

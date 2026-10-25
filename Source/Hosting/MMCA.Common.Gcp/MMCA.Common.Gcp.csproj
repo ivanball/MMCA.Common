@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Gcp</PackageId>
-    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage over Application Default Credentials; the core packages stay cloud-neutral</Description>
+    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage, Secret Manager configuration and the Cloud Storage DataProtection key ring with optional Cloud KMS encryption, over Application Default Credentials; the core packages stay cloud-neutral</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -14,6 +14,10 @@
          runs on Google Cloud, and opts into each capability with one registration call. -->
     <!-- Google Cloud Storage as the file store (AddGoogleCloudStorage). -->
     <PackageReference Include="Google.Cloud.Storage.V1" />
+    <!-- Secret Manager as a configuration source (AddGoogleSecretManagerConfiguration). -->
+    <PackageReference Include="Google.Cloud.SecretManager.V1" />
+    <!-- Cloud KMS encryption of the DataProtection key ring at rest (AddGoogleCloudDataProtection). -->
+    <PackageReference Include="Google.Cloud.Kms.V1" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
@@ -21,6 +25,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <!-- For HostIntegrationMarker: the host-level calls leave the receipt the startup tripwire checks. -->
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

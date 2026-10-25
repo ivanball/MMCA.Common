@@ -27,4 +27,10 @@ public static class HostIntegrationNames
 
     /// <summary>Registered by <c>AddAwsDataProtection()</c> (MMCA.Common.Aws).</summary>
     public const string AwsDataProtection = "AwsDataProtection";
+
+    /// <summary>Registered by <c>AddGoogleSecretManagerConfiguration()</c> (MMCA.Common.Gcp).</summary>
+    public const string GoogleSecretManagerConfiguration = "GoogleSecretManagerConfiguration";
+
+    /// <summary>Registered by <c>AddGoogleCloudDataProtection()</c> (MMCA.Common.Gcp).</summary>
+    public const string GoogleCloudDataProtection = "GoogleCloudDataProtection";
 }

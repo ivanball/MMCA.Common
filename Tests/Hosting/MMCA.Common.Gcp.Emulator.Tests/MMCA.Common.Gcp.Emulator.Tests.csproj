@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!-- Exercises the Google Cloud adapter against fake-gcs-server via Testcontainers: Cloud Storage
-         object storage. NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker
+         object storage and the DataProtection key ring (its generation-precondition writes). NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker
          daemon and runs in its own CI job (gcp-integration), kept out of the fast solution-wide unit
          feedback loop (same posture as the AWS LocalStack, Redis, PostgreSQL and SQL Server tiers).
 

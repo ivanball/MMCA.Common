@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Configuration;
 
 [assembly: AssemblyFixture(typeof(MMCA.Common.Gcp.Emulator.Tests.FakeGcsServerFixture))]
@@ -41,6 +42,18 @@ public sealed class FakeGcsServerFixture : IAsyncLifetime
         ["FileStorage:GcsBucket"] = bucket,
         ["FileStorage:GcsServiceUrl"] = ServiceUrl.AbsoluteUri,
     };
+
+    /// <summary>
+    /// A Cloud Storage client on the emulator's JSON API without credentials, the posture the adapter
+    /// takes for a plain-HTTP endpoint; the caller owns it.
+    /// </summary>
+    /// <returns>The client.</returns>
+    public StorageClient CreateStorageClient() =>
+        new StorageClientBuilder
+        {
+            BaseUri = $"{ServiceUrl.AbsoluteUri.TrimEnd('/')}/storage/v1/",
+            UnauthenticatedAccess = true,
+        }.Build();
 
     /// <inheritdoc />
     public async ValueTask InitializeAsync()

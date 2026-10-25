@@ -21,6 +21,15 @@ public sealed class HostIntegrationTripwireTests
         { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "AddAzureDataProtection()", "MMCA.Common.Azure" },
         { "SecretsManager:NamePrefix", HostIntegrationNames.AwsSecretsManagerConfiguration, "AddAwsSecretsManagerConfiguration()", "MMCA.Common.Aws" },
         { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "AddAwsDataProtection()", "MMCA.Common.Aws" },
+        { "GoogleSecretManager:NamePrefix", HostIntegrationNames.GoogleSecretManagerConfiguration, "AddGoogleSecretManagerConfiguration()", "MMCA.Common.Gcp" },
+        { "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection, "AddGoogleCloudDataProtection()", "MMCA.Common.Gcp" },
+    };
+
+    public static TheoryData<string, string, string, string> KeyRingPairs => new()
+    {
+        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection },
+        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
+        { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
     };
 
     private static ValidateOptionsResult Validate(Dictionary<string, string?> settings, params string[] registered)
@@ -95,6 +104,62 @@ public sealed class HostIntegrationTripwireTests
         result.Failures.Should().ContainSingle()
             .Which.Should().Contain("DataProtection:BlobStorageUri").And.Contain("DataProtection:SsmParameterPrefix");
     }
+
+    [Theory]
+    [MemberData(nameof(KeyRingPairs))]
+    public void AnyTwoDataProtectionKeyRings_Fail_EvenWithBothAdapterCalls(string firstKey, string firstIntegration, string secondKey, string secondIntegration)
+    {
+        var result = Validate(
+            new()
+            {
+                [firstKey] = "gs://keys/keys.xml",
+                [secondKey] = "gs://keys/keys.xml",
+            },
+            firstIntegration,
+            secondIntegration);
+
+        result.Failed.Should().BeTrue();
+        // The message lists every key-ring key, so the pair that is actually set is asserted as named.
+        result.Failures.Should().ContainSingle()
+            .Which.Should().Contain($"({firstKey} and {secondKey})");
+    }
+
+    [Fact]
+    public void AllThreeDataProtectionKeyRings_FailOnce_NamingEach()
+    {
+        var result = Validate(
+            new()
+            {
+                ["DataProtection:BlobStorageUri"] = "https://blob.example.invalid/keys/keys.xml",
+                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+                ["DataProtection:GcsObjectUri"] = "gs://mmca-keys/keys.xml",
+            },
+            HostIntegrationNames.AzureDataProtection,
+            HostIntegrationNames.AwsDataProtection,
+            HostIntegrationNames.GoogleCloudDataProtection);
+
+        result.Failures.Should().ContainSingle()
+            .Which.Should().Contain("(DataProtection:BlobStorageUri and DataProtection:SsmParameterPrefix and DataProtection:GcsObjectUri)");
+    }
+
+    [Fact]
+    public void GoogleSecretManagerProjectIdAlone_StaysSilent() =>
+        // The prefix is what declares "this host reads its settings from Secret Manager"; a project id
+        // alone names a location, not a set of secrets, and other Google settings may share it.
+        Validate(new() { ["GoogleSecretManager:ProjectId"] = "mmca-prod" })
+            .Succeeded.Should().BeTrue();
+
+    [Fact]
+    public void OneGoogleKeyRing_WithBlankOthers_StaysSilent() =>
+        Validate(
+            new()
+            {
+                ["DataProtection:BlobStorageUri"] = "  ",
+                ["DataProtection:SsmParameterPrefix"] = string.Empty,
+                ["DataProtection:GcsObjectUri"] = "gs://mmca-keys/keys.xml",
+            },
+            HostIntegrationNames.GoogleCloudDataProtection)
+            .Succeeded.Should().BeTrue("blank placeholders for the other clouds' key rings are not extra key rings");
 
     [Fact]
     public void OneDataProtectionKeyRing_WithABlankOther_StaysSilent() =>

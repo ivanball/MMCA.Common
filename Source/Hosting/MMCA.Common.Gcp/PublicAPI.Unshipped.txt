@@ -20,3 +20,11 @@ MMCA.Common.Gcp.Storage.GcsFileStorageSettings.GcsServiceUrl.get -> System.Uri?
 MMCA.Common.Gcp.Storage.GcsFileStorageSettings.GcsServiceUrl.init -> void
 static MMCA.Common.Gcp.GcpServiceCollectionExtensions.AddGoogleCloudStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.Gcp.Storage.GcsFileStorageSettings.SectionName -> string!
+MMCA.Common.Gcp.GoogleCloudDataProtectionExtensions
+MMCA.Common.Gcp.GoogleCloudDataProtectionExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Gcp.GoogleCloudDataProtectionExtensions.extension<TBuilder>(TBuilder).AddGoogleCloudDataProtection() -> TBuilder
+MMCA.Common.Gcp.GoogleSecretManagerConfigurationExtensions
+MMCA.Common.Gcp.GoogleSecretManagerConfigurationExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Gcp.GoogleSecretManagerConfigurationExtensions.extension<TBuilder>(TBuilder).AddGoogleSecretManagerConfiguration() -> TBuilder
+static MMCA.Common.Gcp.GoogleCloudDataProtectionExtensions.AddGoogleCloudDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Gcp.GoogleSecretManagerConfigurationExtensions.AddGoogleSecretManagerConfiguration<TBuilder>(this TBuilder builder) -> TBuilder

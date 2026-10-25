@@ -893,8 +893,11 @@ jobs:
     # tier asserts the object the adapter builds; only a real endpoint settles whether the API accepts
     # the client's resumable upload, whether Content-Type, Content-Disposition and Cache-Control come
     # back as object metadata, whether the returned URL addresses the object and whether a delete of
-    # a missing object maps to success. Ubuntu runners ship a Docker daemon, so Testcontainers works
-    # with no extra setup. Not a required check: promoting it is a branch-protection setting.
+    # a missing object maps to success. The DataProtection key ring runs against the same server:
+    # only a real endpoint settles whether a stale IfGenerationMatch write is rejected with 412 (the
+    # retry that keeps a concurrent writer's key), and whether two hosts on one object share a key
+    # ring. Ubuntu runners ship a Docker daemon, so Testcontainers works with no extra setup. Not a
+    # required check: promoting it is a branch-protection setting.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -917,9 +920,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like
-        # aws-integration. Floor = the exact [Fact] count in the project (3 Cloud Storage,
-        # 2026-10-25); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests/MMCA.Common.Gcp.Emulator.Tests.csproj -c Release --minimum-expected-tests 3
+        # aws-integration. Floor = the exact [Fact] count in the project (3 Cloud Storage + 3
+        # DataProtection key ring, 2026-10-25); adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests/MMCA.Common.Gcp.Emulator.Tests.csproj -c Release --minimum-expected-tests 6
 
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)

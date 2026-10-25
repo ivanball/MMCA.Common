@@ -173,6 +173,17 @@
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="5.0.0" />
+    <!-- Secret Manager as a configuration source (MMCA.Common.Gcp.AddGoogleSecretManagerConfiguration):
+         a hand-written provider that lists the secrets under one name prefix and reads the latest
+         version of each through the synchronous client methods. gRPC over Google.Api.Gax.Grpc and
+         Grpc.Net.Client; Apache-2.0. -->
+    <PackageVersion Include="Google.Cloud.SecretManager.V1" Version="2.8.0" />
+    <!-- Cloud KMS encryption of the DataProtection key ring at rest
+         (MMCA.Common.Gcp.AddGoogleCloudDataProtection, DataProtection:GcpKmsKeyName). The official
+         Google.Cloud.AspNetCore.DataProtection.Kms is prerelease only (a stable package cannot
+         depend on it, NU5104), so the IXmlEncryptor/IXmlDecryptor pair is hand-written over this
+         client. Same Google.Api.Gax.Grpc line as Secret Manager; Apache-2.0. -->
+    <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.27.0" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
