@@ -1,1 +1,9 @@
 #nullable enable
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNpgsqlDataSourceConfigurator(MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator.Configure(Npgsql.NpgsqlDataSourceBuilder! builder) -> void
+static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
+static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApnsPayload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
+static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
+const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.PostgreSql = "PostgreSql" -> string!

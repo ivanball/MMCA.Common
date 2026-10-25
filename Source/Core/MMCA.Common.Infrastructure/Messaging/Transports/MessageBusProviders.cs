@@ -1,7 +1,8 @@
 namespace MMCA.Common.Infrastructure.Messaging.Transports;
 
 /// <summary>
-/// The <c>MessageBus:Provider</c> values the core packages handle themselves. Any other value names
+/// The <c>MessageBus:Provider</c> values the core packages handle themselves (<see cref="InProcess"/>,
+/// <see cref="RabbitMq"/> and <see cref="PostgreSql"/>). Any other value names
 /// an <see cref="IBrokerTransport"/> an adapter package registers: <c>AzureServiceBus</c> from
 /// <c>MMCA.Common.Azure</c> or <c>AmazonSqs</c> from <c>MMCA.Common.Aws</c>. Values compare
 /// case-insensitively.
@@ -16,6 +17,14 @@ public static class MessageBusProviders
 
     /// <summary>MassTransit on RabbitMQ, the development microservice deployment and the test tier.</summary>
     public const string RabbitMq = "RabbitMq";
+
+    /// <summary>
+    /// MassTransit's SQL transport on PostgreSQL: queues, topics and scheduled messages live in tables
+    /// of a PostgreSQL database, so any managed PostgreSQL (Cloud SQL, Amazon RDS, Azure Database for
+    /// PostgreSQL) or a self-hosted one is the broker. Built in and cloud-neutral: it needs a
+    /// database, not a cloud service.
+    /// </summary>
+    public const string PostgreSql = "PostgreSql";
 
     /// <summary>
     /// The adapter-supplied transports the framework knows how to point a host at, keyed by provider
@@ -40,4 +49,10 @@ public static class MessageBusProviders
     /// <returns><see langword="true"/> for <see cref="RabbitMq"/>.</returns>
     internal static bool IsRabbitMq(string? provider) =>
         string.Equals(provider, RabbitMq, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether <paramref name="provider"/> selects the built-in PostgreSQL transport.</summary>
+    /// <param name="provider">The configured provider name.</param>
+    /// <returns><see langword="true"/> for <see cref="PostgreSql"/>.</returns>
+    internal static bool IsPostgreSql(string? provider) =>
+        string.Equals(provider, PostgreSql, StringComparison.OrdinalIgnoreCase);
 }

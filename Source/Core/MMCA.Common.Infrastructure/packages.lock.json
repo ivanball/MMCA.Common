@@ -27,6 +27,17 @@
           "RabbitMQ.Client": "7.2.2"
         }
       },
+      "MassTransit.SqlTransport.PostgreSQL": {
+        "type": "Direct",
+        "requested": "[8.5.11, )",
+        "resolved": "8.5.11",
+        "contentHash": "fA5rZvp2TqURHYJRT4s2z6eXjVYoeDuUPFBgLjrLQE94Phg7gGISUGfbxtO+NzzGwMlhco0xzQvQKUjeUxBYKA==",
+        "dependencies": {
+          "Dapper": "2.1.89",
+          "MassTransit": "8.5.11",
+          "Npgsql": "8.0.7"
+        }
+      },
       "MessagePack": {
         "type": "Direct",
         "requested": "[3.1.12, )",
@@ -269,6 +280,11 @@
           "System.ClientModel": "1.1.0",
           "System.Memory.Data": "6.0.0"
         }
+      },
+      "Dapper": {
+        "type": "Transitive",
+        "resolved": "2.1.89",
+        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
       },
       "FluentValidation": {
         "type": "Transitive",

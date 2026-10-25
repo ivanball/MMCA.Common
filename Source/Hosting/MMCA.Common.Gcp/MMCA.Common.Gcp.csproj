@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Gcp</PackageId>
+    <Description>MMCA framework: the Google Cloud adapter. Google Cloud Storage file storage, Secret Manager configuration, the Cloud Storage DataProtection key ring with optional Cloud KMS encryption, FCM native push over a Firestore installation registry, Cloud SQL IAM authentication for PostgreSQL and the Telemetry (OTLP) API exporter for traces and logs, over Application Default Credentials; the core packages stay cloud-neutral</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.Gcp.Tests" />
+    <!-- FCM has no emulator: the Firestore emulator tier swaps in a recording FCM client (an internal
+         interface) so the registry rules run end to end through the shipped registrar and sender. -->
+    <InternalsVisibleTo Include="MMCA.Common.Gcp.Emulator.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The adapter's whole job is to hold the Google Cloud SDKs so the core packages do not have to
+         (EnforceCloudVendorBoundary in Source/Build/MMCA.Common.LayerEnforcement.targets and
+         CloudVendorIsolationTestsBase hold that line). A host references this package only when it
+         runs on Google Cloud, and opts into each capability with one registration call. -->
+    <!-- Google Cloud Storage as the file store (AddGoogleCloudStorage). -->
+    <PackageReference Include="Google.Cloud.Storage.V1" />
+    <!-- Secret Manager as a configuration source (AddGoogleSecretManagerConfiguration). -->
+    <PackageReference Include="Google.Cloud.SecretManager.V1" />
+    <!-- Cloud KMS encryption of the DataProtection key ring at rest (AddGoogleCloudDataProtection). -->
+    <PackageReference Include="Google.Cloud.Kms.V1" />
+    <!-- Application Default Credentials for the Cloud SQL IAM login token (AddCloudSqlIamAuthentication).
+         Already transitive through the Cloud clients; referenced directly because the code uses it. -->
+    <PackageReference Include="Google.Apis.Auth" />
+    <!-- Firebase Cloud Messaging native push and its Firestore installation registry
+         (AddFirebaseCloudMessagingPush). -->
+    <PackageReference Include="FirebaseAdmin" />
+    <PackageReference Include="Google.Cloud.Firestore" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <!-- For HostIntegrationMarker: the host-level calls leave the receipt the startup tripwire checks. -->
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

@@ -42,12 +42,20 @@ public sealed class CloudAdapterTripwireTests
                 "a FileStorage section is shared configuration (one user-secrets id across every service of a solution), not a declaration that this host stores files");
 
     [Fact]
-    public void NativePushEnabled_WithTheNullDefault_FailsNamingTheAdapterCall()
+    public void NativePushEnabled_WithTheNullDefault_FailsNamingAllThreeAdapterCalls()
     {
         var result = Validate(new() { ["NativePush:Enabled"] = "true" });
 
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("NativePush:Enabled").And.Contain("AddAzureNotificationHubsPush(configuration)");
+        result.FailureMessage.Should().Contain("NativePush:Enabled")
+            .And.Contain("MMCA.Common.Azure").And.Contain("AddAzureNotificationHubsPush(configuration)")
+            .And.Contain("NativePush:ConnectionString").And.Contain("NativePush:HubName")
+            .And.Contain("MMCA.Common.Aws").And.Contain("AddAmazonSnsPush(configuration)")
+            .And.Contain("NativePush:Sns:InstallationsTable").And.Contain("NativePush:Sns:BroadcastTopicArn")
+            .And.Contain("NativePush:Sns:FcmPlatformApplicationArn").And.Contain("NativePush:Sns:ApnsPlatformApplicationArn")
+            .And.Contain("MMCA.Common.Gcp").And.Contain("AddFirebaseCloudMessagingPush(configuration)")
+            .And.Contain("NativePush:Fcm:ProjectId").And.Contain("NativePush:Fcm:InstallationsCollection")
+            .And.Contain("NativePush:Fcm:BroadcastTopic");
     }
 
     [Fact]

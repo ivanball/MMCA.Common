@@ -24,5 +24,6 @@
     <!-- No test here reaches Azure: every client is constructed against a placeholder endpoint and
          asserted for its shape, never for a request. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Azure\MMCA.Common.Azure.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
 </Project>

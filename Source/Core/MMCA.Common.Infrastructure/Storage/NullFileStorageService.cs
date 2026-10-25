@@ -7,8 +7,9 @@ namespace MMCA.Common.Infrastructure.Storage;
 /// Unconfigured file storage (ADR-045). Uploads fail with a clear error so feature endpoints
 /// degrade cleanly; deletes succeed (there is nothing to delete). Swapped out by
 /// a storage adapter: <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c>
-/// (Azure Blob Storage) or <c>AddS3FileStorage(configuration)</c> from <c>MMCA.Common.Aws</c>
-/// (Amazon S3 and S3-compatible stores such as Cloudflare R2 and MinIO).
+/// (Azure Blob Storage), <c>AddS3FileStorage(configuration)</c> from <c>MMCA.Common.Aws</c>
+/// (Amazon S3 and S3-compatible stores such as Cloudflare R2 and MinIO) or
+/// <c>AddGoogleCloudStorage(configuration)</c> from <c>MMCA.Common.Gcp</c> (Google Cloud Storage).
 /// </summary>
 public sealed class NullFileStorageService : IFileStorageService
 {

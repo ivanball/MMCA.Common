@@ -38,7 +38,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             InstallationId = request.InstallationId,
             Platform = platform.Value,
             PushChannel = request.PushChannel,
-            Tags = [NativePushPayloads.UserTag(userId)],
+            Tags = [NativePushUserTags.UserTag(userId)],
         };
 
         try
@@ -122,16 +122,16 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             return false;
         }
 
-        var ownTag = NativePushPayloads.UserTag(userId);
+        var ownTag = NativePushUserTags.UserTag(userId);
         var ownedByAnotherUser = existing is { Tags: { } tags }
-            && tags.Any(tag => tag.StartsWith(NativePushPayloads.UserTagPrefix, StringComparison.Ordinal)
+            && tags.Any(tag => tag.StartsWith(NativePushUserTags.UserTagPrefix, StringComparison.Ordinal)
                 && !string.Equals(tag, ownTag, StringComparison.Ordinal));
         return ownedByAnotherUser
             && !string.Equals(existing.PushChannel, request.PushChannel, StringComparison.Ordinal);
     }
 
     private static bool OwnedBy(Installation installation, UserIdentifierType userId) =>
-        installation.Tags is { } tags && tags.Contains(NativePushPayloads.UserTag(userId), StringComparer.Ordinal);
+        installation.Tags is { } tags && tags.Contains(NativePushUserTags.UserTag(userId), StringComparer.Ordinal);
 
     private static Result DeleteFailed() =>
         Result.Failure(Error.Failure(

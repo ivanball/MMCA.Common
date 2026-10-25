@@ -61,6 +61,9 @@ public sealed partial class ErrorResourceCoverageTests
 
         // The AWS adapter's S3 store emits the same FileStorage.* codes.
         Path.Combine("Source", "Hosting", "MMCA.Common.Aws"),
+
+        // The Google Cloud adapter's Cloud Storage store emits the same FileStorage.* codes.
+        Path.Combine("Source", "Hosting", "MMCA.Common.Gcp"),
     ];
 
     private static readonly HashSet<string> ExcludedFiles = new(StringComparer.Ordinal)

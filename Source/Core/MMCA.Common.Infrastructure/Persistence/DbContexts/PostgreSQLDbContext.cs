@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 
@@ -43,45 +44,65 @@ public sealed class PostgreSQLDbContext(
     private readonly PersistenceSettings _persistenceSettings =
         serviceProvider.GetService<IOptions<PersistenceSettings>>()?.Value ?? new PersistenceSettings();
 
+    /// <summary>
+    /// The provider the shared data source is looked up in when an <see cref="INpgsqlDataSourceConfigurator"/>
+    /// is registered. An explicit field rather than a read of the primary constructor parameter, for
+    /// the CS9107 reason above. The data source itself is deliberately not held in a field: the
+    /// container owns and disposes it, and a context must not.
+    /// </summary>
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);
 
+        // Same options on both paths. With a configurator registered EF is handed the shared data
+        // source (its password provider included); without one, the raw connection string exactly as
+        // before, so a host that registers none sees no change at all.
+        var dataSource = NpgsqlDataSources.Resolve(_serviceProvider, PhysicalSource.ConnectionString);
+        if (dataSource is null)
+        {
+            optionsBuilder.UseNpgsql(PhysicalSource.ConnectionString, ConfigureNpgsql);
+        }
+        else
+        {
+            optionsBuilder.UseNpgsql(dataSource, ConfigureNpgsql);
+        }
+
         optionsBuilder
-            .UseNpgsql(
-                PhysicalSource.ConnectionString,
-                npgsql =>
-                {
-                    // Same contract as SQLServerDbContext and SqliteDbContext: without an explicit
-                    // assembly EF looks for migrations next to the context, which lives in
-                    // MMCA.Common.Infrastructure and has none.
-                    if (!string.IsNullOrEmpty(PhysicalSource.MigrationsAssembly))
-                    {
-                        npgsql.MigrationsAssembly(PhysicalSource.MigrationsAssembly);
-                    }
-
-                    // Without this every command silently inherits the ADO.NET default with no way
-                    // to tune it per environment.
-                    npgsql.CommandTimeout(_persistenceSettings.CommandTimeoutSeconds);
-
-                    // Retry transient failures (connection drops, a managed instance failing over,
-                    // a pooler recycling a backend) for the same reason the SQL Server context does:
-                    // a cold-start connection attempt must not surface as a user-facing 5xx.
-                    // NOTE: with retry-on-failure enabled, manual BeginTransactionAsync calls MUST
-                    // be wrapped in Database.CreateExecutionStrategy().ExecuteAsync; the
-                    // TransactionalCommandDecorator already does this.
-                    npgsql.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorCodesToAdd: null);
-                })
             // Suppressed for the microservices-extraction reason documented on SQLServerDbContext:
             // each extracted service host registers only its enabled modules' configurations, so its
             // runtime model is a strict subset of the migration snapshot.
             .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 
         base.OnConfiguring(optionsBuilder);
+    }
+
+    private void ConfigureNpgsql(NpgsqlDbContextOptionsBuilder npgsql)
+    {
+        // Same contract as SQLServerDbContext and SqliteDbContext: without an explicit
+        // assembly EF looks for migrations next to the context, which lives in
+        // MMCA.Common.Infrastructure and has none.
+        if (!string.IsNullOrEmpty(PhysicalSource.MigrationsAssembly))
+        {
+            npgsql.MigrationsAssembly(PhysicalSource.MigrationsAssembly);
+        }
+
+        // Without this every command silently inherits the ADO.NET default with no way
+        // to tune it per environment.
+        npgsql.CommandTimeout(_persistenceSettings.CommandTimeoutSeconds);
+
+        // Retry transient failures (connection drops, a managed instance failing over,
+        // a pooler recycling a backend) for the same reason the SQL Server context does:
+        // a cold-start connection attempt must not surface as a user-facing 5xx.
+        // NOTE: with retry-on-failure enabled, manual BeginTransactionAsync calls MUST
+        // be wrapped in Database.CreateExecutionStrategy().ExecuteAsync; the
+        // TransactionalCommandDecorator already does this.
+        npgsql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null);
     }
 
     /// <inheritdoc />

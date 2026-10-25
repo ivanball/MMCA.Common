@@ -139,6 +139,11 @@
         "resolved": "5.2.1",
         "contentHash": "wHARzQA695jwwKreOzNsq54KiGqKP38tv8hi8e2FXDEC/sA6BtrX90tVPDkOfVu13PbEzr00TCV8coikl+D1Iw=="
       },
+      "Dapper": {
+        "type": "Transitive",
+        "resolved": "2.1.89",
+        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
+      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -458,6 +463,11 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
+      "Mono.Cecil": {
+        "type": "Transitive",
+        "resolved": "0.11.6",
+        "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
+      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.4",
@@ -760,6 +770,7 @@
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.11, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
+          "MassTransit.SqlTransport.PostgreSQL": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
@@ -781,6 +792,14 @@
       },
       "mmca.common.shared": {
         "type": "Project"
+      },
+      "mmca.common.testing.architecture": {
+        "type": "Project",
+        "dependencies": {
+          "AwesomeAssertions": "[9.6.0, )",
+          "NetArchTest.eNhancedEdition": "[1.4.5, )",
+          "xunit.v3.extensibility.core": "[4.0.2, )"
+        }
       },
       "Aspire.StackExchange.Redis": {
         "type": "CentralTransitive",
@@ -965,6 +984,17 @@
           "RabbitMQ.Client": "7.2.2"
         }
       },
+      "MassTransit.SqlTransport.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[8.5.11, )",
+        "resolved": "8.5.11",
+        "contentHash": "fA5rZvp2TqURHYJRT4s2z6eXjVYoeDuUPFBgLjrLQE94Phg7gGISUGfbxtO+NzzGwMlhco0xzQvQKUjeUxBYKA==",
+        "dependencies": {
+          "Dapper": "2.1.89",
+          "MassTransit": "8.5.11",
+          "Npgsql": "8.0.7"
+        }
+      },
       "MessagePack": {
         "type": "CentralTransitive",
         "requested": "[3.1.12, )",
@@ -1123,6 +1153,15 @@
         "requested": "[4.5.4, )",
         "resolved": "4.5.4",
         "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA=="
+      },
+      "NetArchTest.eNhancedEdition": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.5, )",
+        "resolved": "1.4.5",
+        "contentHash": "dfWIjcLS2MBGz403OoT+vxr/4Dz/f7MnQhEwmgaf7PXlWzG39LSiUPhW7OPx9Ebg/GNWvDAttlpq5FY0mG/qkg==",
+        "dependencies": {
+          "Mono.Cecil": "0.11.6"
+        }
       },
       "Npgsql": {
         "type": "CentralTransitive",

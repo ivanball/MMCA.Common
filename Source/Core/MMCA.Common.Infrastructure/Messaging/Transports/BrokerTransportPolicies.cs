@@ -16,7 +16,7 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports;
 /// every immediate attempt is exhausted before a redelivery is scheduled.
 /// <para>
 /// Whether a transport applies redelivery is the transport's call, because it depends on the broker:
-/// Azure Service Bus and Amazon SQS schedule messages natively and apply it unconditionally (SQS with
+/// the PostgreSQL SQL transport, Azure Service Bus and Amazon SQS schedule messages natively and apply it unconditionally (SQS with
 /// a default of its own inside its 15-minute delay cap), while RabbitMQ needs
 /// the <c>rabbitmq_delayed_message_exchange</c> plugin and gates it behind
 /// <see cref="MessageBusSettings.EnableDelayedRedelivery"/>.

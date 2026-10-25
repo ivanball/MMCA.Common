@@ -1,1 +1,6 @@
 #nullable enable
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsDataProtection = "AwsDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsSecretsManagerConfiguration = "AwsSecretsManagerConfiguration" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleCloudDataProtection = "GoogleCloudDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleSecretManagerConfiguration = "GoogleSecretManagerConfiguration" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleCloudTelemetryExporter = "GoogleCloudTelemetryExporter" -> string!

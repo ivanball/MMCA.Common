@@ -216,7 +216,7 @@ public static partial class DependencyInjection
 
             // Startup tripwire: an enabled NativePush section whose sender still resolves to the inert
             // core default means the vendor adapter call is missing (the implementation lives in
-            // MMCA.Common.Azure). Fails the host naming the call instead of letting it run with pushes
+            // MMCA.Common.Azure or MMCA.Common.Aws). Fails the host naming the call instead of letting it run with pushes
             // dropped. FileStorage is deliberately not checked; CloudAdapterTripwire says why.
             services.AddOptions<Configuration.CloudAdapterTripwireOptions>().ValidateOnStart();
             services.TryAddEnumerable(
@@ -347,14 +347,15 @@ public static partial class DependencyInjection
             services.TryAddTransient<ILiveChannelPublisher, NullLiveChannelPublisher>();
 
             // Native push (ADR-044) defaults to inert no-ops; a vendor adapter swaps in a real
-            // implementation (AddAzureNotificationHubsPush from MMCA.Common.Azure when an enabled
-            // hub is configured).
+            // implementation (AddAzureNotificationHubsPush from MMCA.Common.Azure, AddAmazonSnsPush
+            // from MMCA.Common.Aws, AddFirebaseCloudMessagingPush from MMCA.Common.Gcp, each when its
+            // NativePush configuration is enabled and complete).
             services.TryAddTransient<INativePushSender, NullNativePushSender>();
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 
             // Managed file storage (ADR-045): unconfigured default swapped by a storage adapter
             // (AddAzureBlobFileStorage from MMCA.Common.Azure, AddS3FileStorage from
-            // MMCA.Common.Aws); the image processor is
+            // MMCA.Common.Aws, AddGoogleCloudStorage from MMCA.Common.Gcp); the image processor is
             // dependency-free and always real.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
             services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();

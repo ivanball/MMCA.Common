@@ -229,7 +229,9 @@ public static partial class Extensions
 
         foreach (var (name, connectionString) in postgresSources)
         {
-            healthChecks.AddNpgSql(connectionString, name: name);
+            // Probes the data source the contexts share when the host registered a configurator
+            // (RDS IAM tokens, for one), else the plain connection-string check.
+            PostgreSqlHealthCheckRegistration.Register(healthChecks, connectionString, name);
         }
 
         foreach (var (name, connectionString) in sqliteSources)

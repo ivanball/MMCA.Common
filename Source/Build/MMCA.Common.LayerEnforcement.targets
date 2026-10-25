@@ -99,16 +99,20 @@
            Text="Layer violation: $(MSBuildProjectName) must not reference %(_ForbiddenAiRefs.Filename). The language-model boundary (MMCA.Common.AI and its MMCA.Common.AI.* adapters) depends on Microsoft.Extensions.AI and a provider SDK only." />
   </Target>
 
-  <!-- Cloud vendor boundary: the core packages are cloud-neutral. Every Azure or AWS SDK (and every
-       MassTransit transport for one) lives in an adapter package - MMCA.Common.Azure,
-       MMCA.Common.Aws, MMCA.Common.Testing.Azure - that references the core, never the other way
-       round. A vendor reference in a core package would force that cloud's SDK, credentials story
-       and advisory stream on every consumer, including the ones that run on another cloud or none.
+  <!-- Cloud vendor boundary: the core packages are cloud-neutral. Every Azure, AWS or Google Cloud
+       SDK (and every MassTransit transport for one) lives in an adapter package - MMCA.Common.Azure,
+       MMCA.Common.Aws, MMCA.Common.Gcp, MMCA.Common.Testing.Azure - that references the core, never
+       the other way round. A vendor reference in a core package would force that cloud's SDK,
+       credentials story and advisory stream on every consumer, including the ones that run on
+       another cloud or none.
 
        Matched on the PACKAGE ID of every PackageReference this project carries: an Azure.* /
-       Microsoft.Azure.* / AWSSDK.* prefix, a MassTransit.Azure* / MassTransit.AmazonSQS transport,
-       or a ".Azure" segment anywhere in the id (Microsoft.Data.SqlClient.Extensions.Azure,
-       Aspire.Hosting.Azure.*, Microsoft.Extensions.Azure).
+       Microsoft.Azure.* / AWSSDK.* / Google.* prefix (Google.Cloud.*, Google.Apis.*, Google.Api.Gax.*),
+       FirebaseAdmin, Grpc.Auth (the Google credential bridge for gRPC), a MassTransit.Azure* /
+       MassTransit.AmazonSQS transport, or a ".Azure" segment anywhere in the id
+       (Microsoft.Data.SqlClient.Extensions.Azure, Aspire.Hosting.Azure.*, Microsoft.Extensions.Azure).
+       Google.* also matches Google.Protobuf, the protobuf runtime; no core project declares it today
+       (it only arrives transitively through Grpc.AspNetCore), so it is not exempt.
 
        Exactly two existing references are exempt, each because it is a database ENGINE rather than a
        cloud service the core opts a host into:
@@ -121,7 +125,7 @@
        The runtime half is CloudVendorIsolationTestsBase (no core assembly names a vendor type or
        references a vendor or adapter assembly). -->
   <PropertyGroup>
-    <_MmcaIsCloudAdapter Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Aws' OR '$(MSBuildProjectName)' == 'MMCA.Common.Testing.Azure'">true</_MmcaIsCloudAdapter>
+    <_MmcaIsCloudAdapter Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Aws' OR '$(MSBuildProjectName)' == 'MMCA.Common.Gcp' OR '$(MSBuildProjectName)' == 'MMCA.Common.Testing.Azure'">true</_MmcaIsCloudAdapter>
   </PropertyGroup>
   <Target Name="EnforceCloudVendorBoundary"
           BeforeTargets="ResolveProjectReferences"
@@ -134,15 +138,18 @@
         Condition="$([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('azure.'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('microsoft.azure.'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('awssdk.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('google.'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('firebaseadmin'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().Equals('grpc.auth'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('masstransit.azure'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('masstransit.amazonsqs'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().Contains('.azure.'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().EndsWith('.azure'))" />
       <_ForbiddenCloudAdapterRefs Include="@(ProjectReference)"
-        Condition="'%(Filename)' == 'MMCA.Common.Azure' OR '%(Filename)' == 'MMCA.Common.Aws' OR '%(Filename)' == 'MMCA.Common.Testing.Azure'" />
+        Condition="'%(Filename)' == 'MMCA.Common.Azure' OR '%(Filename)' == 'MMCA.Common.Aws' OR '%(Filename)' == 'MMCA.Common.Gcp' OR '%(Filename)' == 'MMCA.Common.Testing.Azure'" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenCloudVendorRefs->Count()) &gt; 0"
-           Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenCloudVendorRefs.Identity). The core packages are cloud-neutral; move the dependency into the vendor adapter (MMCA.Common.Azure or MMCA.Common.Aws) and expose it through a core abstraction." />
+           Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenCloudVendorRefs.Identity). The core packages are cloud-neutral; move the dependency into the vendor adapter (MMCA.Common.Azure, MMCA.Common.Aws or MMCA.Common.Gcp) and expose it through a core abstraction." />
     <Error Condition="@(_ForbiddenCloudAdapterRefs->Count()) &gt; 0"
            Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference %(_ForbiddenCloudAdapterRefs.Filename). Adapter packages reference the core, never the other way round." />
   </Target>

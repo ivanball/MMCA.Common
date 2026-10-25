@@ -8,7 +8,8 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports;
 /// This is the whole broker boundary. <c>AddBrokerMessaging</c> owns everything that is the same on
 /// every broker (the endpoint name formatter, consumer registration, the outbox-only publish path, the
 /// inbox), and hands the transport-specific part to the transport whose <see cref="Name"/> matches
-/// the configured provider. RabbitMQ is built in; every other transport ships in an adapter package
+/// the configured provider. RabbitMQ and PostgreSQL (MassTransit's SQL transport, cloud-neutral
+/// because it needs only a database) are built in; every other transport ships in an adapter package
 /// (<c>MMCA.Common.Azure</c> for Azure Service Bus, <c>MMCA.Common.Aws</c> for Amazon SQS/SNS) with
 /// one registration method, so the core
 /// packages never reference a vendor SDK and swapping the broker is a package reference, a

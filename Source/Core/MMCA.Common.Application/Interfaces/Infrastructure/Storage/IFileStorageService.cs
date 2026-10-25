@@ -7,9 +7,10 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 /// container/bucket; callers pass only a blob name scoped within it. The default implementation
 /// is unconfigured (uploads fail with a clear error) until a host
 /// registers a storage adapter with a complete <c>FileStorage</c> section:
-/// <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c> (Azure Blob Storage)
-/// or <c>AddS3FileStorage(configuration)</c> from <c>MMCA.Common.Aws</c> (Amazon S3 and
-/// S3-compatible stores such as Cloudflare R2 and MinIO).
+/// <c>AddAzureBlobFileStorage(configuration)</c> from <c>MMCA.Common.Azure</c> (Azure Blob Storage),
+/// <c>AddS3FileStorage(configuration)</c> from <c>MMCA.Common.Aws</c> (Amazon S3 and
+/// S3-compatible stores such as Cloudflare R2 and MinIO) or
+/// <c>AddGoogleCloudStorage(configuration)</c> from <c>MMCA.Common.Gcp</c> (Google Cloud Storage).
 /// </summary>
 public interface IFileStorageService
 {

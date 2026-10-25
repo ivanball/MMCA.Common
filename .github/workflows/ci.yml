@@ -775,7 +775,8 @@ jobs:
     # assertion cannot express it: a partial-index predicate written the SQL Server way
     # ([ProcessedOn] IS NULL), a soft-delete predicate comparing a boolean to 0, and a DateTime whose
     # Kind is not UTC all build a perfectly valid EF model and are rejected by the server. This tier
-    # runs the shipped PostgreSQLDbContext against a real PostgreSQL. Ubuntu runners ship a Docker
+    # runs the shipped PostgreSQLDbContext, and the built-in PostgreSql broker transport (MassTransit's
+    # SQL transport), against a real PostgreSQL. Ubuntu runners ship a Docker
     # daemon, so Testcontainers works with no extra setup.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -799,9 +800,11 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        # Floor = the exact [Fact] count in PostgreSQLPersistenceTests.cs (7, 2026-09-30); adding a
-        # test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 7
+        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (8) and
+        # PostgreSqlBrokerTransportTests.cs (3: the built-in PostgreSql broker's header round trip,
+        # delayed redelivery and shared data-source authentication), 11 on 2026-10-25; adding a test
+        # means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 11
 
   sqlserver-integration:
     name: SQL Server integration (Testcontainers)
@@ -878,9 +881,57 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like
-        # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS,
-        # 2026-10-24); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 5
+        # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS + 2 Secrets
+        # Manager + 1 DataProtection + 6 SNS push, 2026-10-24); adding a test means raising this
+        # number in the same PR.
+        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 14
+
+  gcp-integration:
+    name: Google Cloud integration (Testcontainers fake-gcs-server + Firestore emulator)
+    needs: changes
+    runs-on: ubuntu-latest
+    # fake-gcs-server is a small single-binary image, but the Firestore emulator ships inside the
+    # google-cloud-cli emulators image (about 1.7 GB), so the budget allows for its pull.
+    timeout-minutes: 20
+    # MMCA.Common.Gcp against fake-gcs-server: the Cloud Storage store over the JSON API. The unit
+    # tier asserts the object the adapter builds; only a real endpoint settles whether the API accepts
+    # the client's resumable upload, whether Content-Type, Content-Disposition and Cache-Control come
+    # back as object metadata, whether the returned URL addresses the object and whether a delete of
+    # a missing object maps to success. The DataProtection key ring runs against the same server:
+    # only a real endpoint settles whether a stale IfGenerationMatch write is rejected with 412 (the
+    # retry that keeps a concurrent writer's key), and whether two hosts on one object share a key
+    # ring. The FCM installation registry runs against the Firestore emulator: only a real Firestore
+    # settles whether the ownership transaction refuses another device's installation, hands over the
+    # same device, lets exactly one of two racing claims win, and whether the UserId WhereIn query
+    # (30 values at a time) and the conditional deletes behave (FCM itself has no emulator, so the
+    # send side is a recording fake). Ubuntu runners ship a Docker daemon, so Testcontainers works
+    # with no extra setup. Not a required check: promoting it is a branch-protection setting.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run Google Cloud integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not pull an emulator image and
+        # start a container. The JOB still runs (and posts its context green) so adding this check to
+        # branch protection stays safe on docs-only PRs, matching the pattern the other jobs use.
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
+        # loop must not require), so build/run this project directly by path, like
+        # aws-integration. Floor = the exact [Fact] count in the project (3 Cloud Storage + 3
+        # DataProtection key ring + 8 FCM installation registry, 2026-10-25); adding a test means
+        # raising this number in the same PR.
+        run: dotnet test Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests/MMCA.Common.Gcp.Emulator.Tests.csproj -c Release --minimum-expected-tests 14
 
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)

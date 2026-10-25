@@ -18,7 +18,7 @@ public sealed class MessageBusSettings
     /// <summary>
     /// Gets the transport selector, compared case-insensitively. Defaults to
     /// <see cref="MessageBusProviders.InProcess"/>. <see cref="MessageBusProviders.InProcess"/> and
-    /// <see cref="MessageBusProviders.RabbitMq"/> are built in; any other value names an
+    /// <see cref="MessageBusProviders.RabbitMq"/> and <see cref="MessageBusProviders.PostgreSql"/> are built in; any other value names an
     /// <see cref="IBrokerTransport"/> an adapter package registers before <c>AddBrokerMessaging</c>
     /// (e.g. <c>AzureServiceBus</c> through <c>AddAzureServiceBusTransport()</c>).
     /// </summary>
@@ -227,8 +227,9 @@ public sealed class MessageBusSettings
     /// <para>
     /// Applied only when <see cref="EnableDelayedRedelivery"/> is <see langword="true"/> on
     /// <see cref="MessageBusProviders.RabbitMq"/> (needs the delayed-message-exchange plugin); a
-    /// transport whose broker schedules natively (Azure Service Bus from <c>MMCA.Common.Azure</c>,
-    /// Amazon SQS from <c>MMCA.Common.Aws</c>) applies it unconditionally.
+    /// transport whose broker schedules natively (the built-in <see cref="MessageBusProviders.PostgreSql"/>,
+    /// Azure Service Bus from <c>MMCA.Common.Azure</c>, Amazon SQS from <c>MMCA.Common.Aws</c>) applies
+    /// it unconditionally.
     /// </para>
     /// </summary>
     public IReadOnlyList<int>? RedeliveryIntervalsSeconds { get; init; }

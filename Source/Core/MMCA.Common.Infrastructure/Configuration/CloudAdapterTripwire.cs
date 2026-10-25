@@ -50,7 +50,7 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
                 && scope.ServiceProvider.GetService<INativePushSender>() is null or NullNativePushSender)
             {
                 failures.Add(
-                    "NativePush:Enabled is true, but INativePushSender is still the no-op NullNativePushSender, so no OS-level push is delivered. Either no push adapter is registered or its section is incomplete: reference MMCA.Common.Azure and call services.AddAzureNotificationHubsPush(configuration), with NativePush:ConnectionString and NativePush:HubName.");
+                    "NativePush:Enabled is true, but INativePushSender is still the no-op NullNativePushSender, so no OS-level push is delivered. Either no push adapter is registered or its section is incomplete: reference MMCA.Common.Azure and call services.AddAzureNotificationHubsPush(configuration), with NativePush:ConnectionString and NativePush:HubName; or reference MMCA.Common.Aws and call services.AddAmazonSnsPush(configuration), with NativePush:Sns:InstallationsTable, NativePush:Sns:BroadcastTopicArn and NativePush:Sns:FcmPlatformApplicationArn and/or NativePush:Sns:ApnsPlatformApplicationArn; or reference MMCA.Common.Gcp and call services.AddFirebaseCloudMessagingPush(configuration), with NativePush:Fcm:ProjectId, NativePush:Fcm:InstallationsCollection and NativePush:Fcm:BroadcastTopic.");
             }
         }
 
