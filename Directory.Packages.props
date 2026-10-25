@@ -35,7 +35,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.2" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.3" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -64,7 +64,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.13" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
-    <PackageVersion Include="StackExchange.Redis" Version="3.4.5" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.4.20" />
     <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
          (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
          never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
@@ -109,7 +109,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="12.60.0" />
+    <PackageVersion Include="Anthropic" Version="13.3.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -194,7 +194,7 @@
          OAuth2 access token from Application Default Credentials for the sqlservice.login scope, used
          as the PostgreSQL password. Pinned at the version the Cloud clients above already resolve
          transitively, so the direct reference moves nothing in the graph; Apache-2.0. -->
-    <PackageVersion Include="Google.Apis.Auth" Version="1.76.0" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.77.0" />
     <!-- Firebase Cloud Messaging native push (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): the
          HTTP v1 send (SendEachAsync) and the broadcast topic subscriptions, over Application Default
          Credentials. Google-authored on the same Google.Apis.Auth line as the Cloud clients; Apache-2.0. -->
@@ -203,20 +203,22 @@
          document per installation, a transaction for the ownership rule and a UserId equality query
          for user-targeted sends. gRPC over Google.Api.Gax.Grpc, the Secret Manager line; Apache-2.0. -->
     <PackageVersion Include="Google.Cloud.Firestore" Version="4.5.0" />
-    <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
-         workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
-         ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- Image normalization for ADR-045 uploads (SkiaSharpImageProcessor); MIT. The Linux native
+         assets are referenced explicitly (NoDependencies: no fontconfig needed for decode/encode)
+         because the managed package carries none for Linux and the failure would otherwise surface
+         at the first upload, not at build time. Bump both together. -->
+    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <!-- Shared DataProtection key ring (MMCA.Common.Azure.AddAzureDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
-    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.4" />
-    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.4" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.5" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.5" />
     <!-- Pinned directly to lift the transitive off GHSA-846f-f764-76mx / GHSA-2fmv-rv2c-59x7
          (NU1903/NU1902, every version up to 9.0.20 and 10.0.12): Microsoft.Data.SqlClient 7.x pulls
          9.0.13 or 9.0.18 and Aspire.Hosting.SqlServer pulls 10.0.12. The shared framework does not
-         carry this package, so nothing prunes it. Lifted by direct references in the three projects
-         that take those packages directly (Infrastructure, Testing, Aspire.Hosting); everything else
+         carry this package, so nothing prunes it. Lifted by direct references in the four projects
+         that take those packages directly (Infrastructure, Testing, Aspire, Aspire.Hosting); everything else
          inherits it through a project reference. -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <!-- Azure Key Vault as a configuration source (MMCA.Common.Azure.AddAzureKeyVaultConfiguration).
@@ -255,7 +257,7 @@
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.110" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.120" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
@@ -266,7 +268,7 @@
          Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
-    <!-- HELD at 1.1.0.30 2026-08-28, re-verified 2026-09-30 on MAUI 10.0.110: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
+    <!-- HELD at 1.1.0.30 2026-08-28, re-verified 2026-10-25 on MAUI 10.0.120: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
          10.0.100 (Fragment 1.8.9.3 / Activity 1.13.0.1 / Lifecycle 2.11.0.1 / SavedState 1.5.0.1 /
          Collection.Jvm 1.6.0.1 resolved past the .Ktx packages' upper bounds). -->
     <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
@@ -274,20 +276,20 @@
          (ADR-044). Bindings track the Google Play services train, not the MAUI one, but they pull
          AndroidX packages: verify a restore of the android TFM after any bump (the Biometric pin
          above is the one that reacts first, with NU1608). -->
-    <!-- HELD at 124.1.2 2026-08-28, re-verified 2026-09-30 on MAUI 10.0.110 with 125.1.3: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
+    <!-- HELD at 124.1.2 2026-08-28, re-verified 2026-10-25 on MAUI 10.0.120 with 125.1.3: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
          Activity 1.13.0.1, Fragment 1.8.9.3, SavedState 1.5.0.1, Collection.Jvm 1.6.0.1) past the
          .Ktx packages' upper bounds and fails the android restore with NU1608. -->
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.110" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.120" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
          Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.315" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.317" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -303,13 +305,16 @@
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
          2.12.5 now floors it at 1.8.5. CPM does not pin transitives, so the two bUnit-referencing projects
-         keep a direct PackageReference to hold it at this central version. -->
+         keep a direct PackageReference to hold it at this central version.
+         HELD at 1.8.5 2026-10-25: 1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated
+         HtmlSelectElementWrapper does not implement (TypeLoadException on set_SelectedIndex in every
+         bUnit Find). Take 1.8.6+ only together with a bUnit release built against it. -->
     <PackageVersion Include="AngleSharp" Version="1.8.5" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
     <PackageVersion Include="Deque.AxeCore.Commons" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
     <!-- Redis integration tier only (Tests/Core/MMCA.Common.Infrastructure.Redis.Tests, outside the
          .slnx, own CI job): a real Redis is the only way to assert the storage FORMAT the cache
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
@@ -429,20 +434,20 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.2" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.2" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.4" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.4" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.13" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.2" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.2" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.2" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.2" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.4" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.2" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.4" />
     <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
          MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
          SDK's own version, the same shape as the consumer AppHosts. -->

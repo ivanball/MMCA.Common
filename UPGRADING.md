@@ -32,6 +32,27 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Image normalization runs on SkiaSharp (breaking).** MMCA.Common.Infrastructure drops
+SixLabors.ImageSharp for SkiaSharp (MIT).
+
+| Removed | Replacement |
+|---|---|
+| `MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor` | `MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor` (same constants, same `IImageProcessor` behavior) |
+| `DependencyVersionTestsBase.ImageSharpPackageIds` | none (the ImageSharp pin is gone) |
+| `DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3()` | none |
+
+The mechanical fix:
+
+1. Code that resolves `IImageProcessor` from DI needs no change. Code that names
+   `ImageSharpImageProcessor` directly renames it to `SkiaSharpImageProcessor`.
+2. A `DependencyVersionTestsBase` subclass that overrides `ImageSharpPackageIds` deletes the override.
+3. Delete the five ImageSharp `NuGetAuditSuppress` entries (GHSA-j9gm-c75j-xc9q, GHSA-jjfr-hcj7-qf5w,
+   GHSA-wmxv-xphr-5c9g, GHSA-j3p4-wp97-rph4, GHSA-gwg2-r3hj-4w44) from `Directory.Build.props`.
+4. Linux hosts need no extra package: `SkiaSharp.NativeAssets.Linux.NoDependencies` arrives
+   transitively with MMCA.Common.Infrastructure. Regenerate `packages.lock.json` files.
+
 ## [1.256.0] - 2026-10-24
 
 No consumer change. The `FileStorage` row of the 1.255.0 startup-tripwire table no longer applies:

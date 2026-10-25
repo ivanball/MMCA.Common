@@ -1,1 +1,3 @@
 #nullable enable
+*REMOVED*MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3() -> void
+*REMOVED*virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharpPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!

@@ -6,7 +6,17 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Breaking
+
+- **Breaking:** image normalization runs on SkiaSharp (MIT) instead of SixLabors.ImageSharp. `MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor` is removed and replaced by `SkiaSharpImageProcessor`, which keeps the same `IImageProcessor` behavior and the same `MaxDecodedPixels` / `MaxDecodedDimension` constants, and `AddInfrastructure` registers it as before. `DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3` and `ImageSharpPackageIds` are removed with the pin they guarded. MMCA.Common.Infrastructure now depends on `SkiaSharp` and `SkiaSharp.NativeAssets.Linux.NoDependencies` 4.153.1 and no longer on `SixLabors.ImageSharp`, so the five ImageSharp 3.1.12 advisories accepted in 1.234.0 no longer apply and their `NuGetAuditSuppress` entries are gone; consumers delete theirs. Map and fix: UPGRADING.md, [Unreleased].
+
+### Changed
+
+- Dependency updates: Aspire 13.6.2 -> 13.6.4, Anthropic 12.60.0 -> 13.3.0 (MMCA.Common.AI.Anthropic; the SDK's only breaking change is support for API version 2026-10-21), Microsoft.Maui.Controls and Microsoft.AspNetCore.Components.WebView.Maui 10.0.110 -> 10.0.120, StackExchange.Redis 3.4.5 -> 3.4.20, Microsoft.Playwright 1.63.0 -> 1.64.1, Meziantou.Analyzer 3.0.315 -> 3.0.317, Google.Apis.Auth 1.76.0 -> 1.77.0, Azure.Extensions.AspNetCore.DataProtection.Blobs 1.5.4 -> 1.5.5 and .Keys 1.6.4 -> 1.6.5, Scalar.AspNetCore 2.18.2 -> 2.18.3. AngleSharp stays at 1.8.5: 1.8.6 breaks bUnit 2.12.5 at runtime (TypeLoadException in its generated select-element wrapper). Holds re-verified on MAUI 10.0.120 and unchanged: Xamarin.AndroidX.Biometric 1.1.0.30 and Xamarin.Firebase.Messaging 124.1.2 (NU1608 on the android restore), MassTransit 8.x, Microsoft.OpenApi 2.x.
+
 ### Fixed
+
+- MMCA.Common.Aspire references `Microsoft.Data.SqlClient` directly, so the SQL Server health check runs on the central 7.1.1 driver instead of the 5.2.2 floor `AspNetCore.HealthChecks.SqlServer` 9.0.0 carries. That floor pulled in the deprecated `Azure.Identity` 1.11.4, `Microsoft.Identity.Client` 4.61.3, `Microsoft.Identity.Client.Extensions.Msal` 4.61.3 and the legacy `Microsoft.IdentityModel.*` 6.35.0 packages.
 
 - **The MassTransit v8 ceiling now covers every MassTransit package the framework pins.** `DependencyVersionTestsBase.MassTransitPackageIds` listed only `MassTransit`, `MassTransit.RabbitMQ` and `MassTransit.Azure.ServiceBus.Core`, so a v9 bump of `MassTransit.AmazonSQS` (pinned since 1.255.0) or `MassTransit.SqlTransport.PostgreSQL` (1.257.0) went unchecked. Both are now in the default list. Only MMCA.Common subclasses the base with that list; a consumer that subclasses it keeps overriding the list with the ids its own `Directory.Packages.props` declares.
 - The `NativePushPayloads` doc comment no longer says every push adapter calls it: the FCM adapter maps the same fields onto FirebaseAdmin's typed message instead.
