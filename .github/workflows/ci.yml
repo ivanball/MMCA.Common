@@ -26,6 +26,12 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Exact SDK for every setup-dotnet step. A channel ('10.0.x') installs through the aka.ms link,
+  # which since 2026-10-25 redirects to dotnetorigin.blob.core.windows.net and gets
+  # 409 PublicAccessNotPermitted; an exact version downloads from builds.dotnet.microsoft.com.
+  # Return to '10.0.x' once https://aka.ms/dotnet/10.0/dotnet-sdk-linux-x64.tar.gz answers 200.
+  # Same pin in release.yml and load-tests.yml.
+  DOTNET_SDK_VERSION: '10.0.403'
   # Redirect Playwright's browser install out of ~/.cache/ms-playwright and into the workspace so
   # actions/cache can carry it between runs (see the ui-e2e "Cache Playwright browsers" step). Both
   # the install and the test run read this, so it must be workflow-level, not step-level.
@@ -98,7 +104,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -189,7 +195,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -241,7 +247,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -261,6 +267,20 @@ jobs:
         # (restore included). They reference MMCA.Common source projects — no GitHub Packages token needed.
         run: dotnet build Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release
 
+      # The browser builds are a function of the Microsoft.Playwright version alone, so that version
+      # (not a hash of the whole props file, which every unrelated bump changed) keys the cache below.
+      - name: Resolve Playwright version
+        if: needs.changes.outputs.code == 'true'
+        id: playwright-version
+        run: |
+          version=$(grep -oP '<PackageVersion Include="Microsoft\.Playwright" Version="\K[^"]+' Directory.Packages.props)
+          if [ -z "$version" ]; then
+            echo "::error::Microsoft.Playwright PackageVersion not found in Directory.Packages.props"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # The runner image pins the OS package versions the apt cache below holds.
+          echo "image=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+
       # Browser binaries are ~100-300 MB per engine and were re-downloaded on all three legs of every
       # run. PLAYWRIGHT_BROWSERS_PATH (workflow env) redirects the install into the workspace so
       # actions/cache can carry it; the key includes the engine, since each leg installs only its own.
@@ -270,19 +290,58 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ github.workspace }}/.ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('Tests/Presentation/MMCA.Common.UI.E2E.Tests/packages.lock.json', 'Directory.Packages.props') }}
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
 
+      # The engine's OS packages (webkit: ~130 .debs, 117 MB) otherwise come from the runner's apt
+      # mirror on EVERY run, and that mirror can crawl without erroring: webkit sat in the install
+      # until the job's 20-minute timeout (PRs #592 and #603). The .debs land in this cached directory
+      # instead, so a warm run installs offline, and a cold one resumes across retries rather than
+      # restarting. restore-keys reuses an older image's set; apt fetches only what changed.
+      - name: Cache apt packages (${{ matrix.browser }})
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ github.workspace }}/.apt-archives/*.deb
+          key: apt-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}-${{ steps.playwright-version.outputs.image }}
+          restore-keys: apt-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}-
+
+      # Every attempt is bounded and retried. The OS half runs the Playwright CLI as root under
+      # `sudo timeout`, so apt-get is in timeout's own process group and dies with it; letting the CLI
+      # elevate itself put apt-get behind a separate sudo session that survived the timeout and held
+      # the dpkg lock against every retry.
       - name: Install Playwright (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
+        timeout-minutes: 14
         run: |
+          archives="$GITHUB_WORKSPACE/.apt-archives"
+          mkdir -p "$archives/partial"
+          printf '%s\n' \
+            'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
+            "Dir::Cache::Archives \"$archives/\";" 'APT::Keep-Downloaded-Packages "true";' \
+            'Binary::apt::APT::Keep-Downloaded-Packages "true";' 'APT::Sandbox::User "root";' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-playwright > /dev/null
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            # Binaries restored from cache; only the OS-level shared libraries still need installing,
-            # which is the cheap half of --with-deps.
-            pwsh "$script" install-deps ${{ matrix.browser }}
-          else
-            pwsh "$script" install --with-deps ${{ matrix.browser }}
+
+          retry() { # retry <seconds-per-attempt> <command...>
+            local budget=$1; shift
+            for attempt in 1 2 3; do
+              if "$@"; then return 0; fi
+              echo "::warning::'$*' attempt $attempt failed or timed out ($budget s budget); retrying"
+              sudo dpkg --configure -a || true
+            done
+            echo "::error::'$*' failed after 3 attempts"; return 1
+          }
+
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            retry 180 timeout --kill-after=20 180 pwsh "$script" install ${{ matrix.browser }}
           fi
+          # No -E: install-deps needs no runner environment, and root's own HOME keeps pwsh's caches
+          # out of the runner user's home.
+          retry 240 sudo timeout --kill-after=20 240 pwsh "$script" install-deps ${{ matrix.browser }}
+
+          # The post-job cache save runs as the runner user.
+          sudo chown -R "$(id -u):$(id -g)" "$archives"
+          echo "apt archive: $(find "$archives" -maxdepth 1 -name '*.deb' | wc -l) .deb files"
 
       - name: Run UI E2E (axe + render smoke)
         if: needs.changes.outputs.code == 'true'
@@ -320,7 +379,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -364,7 +423,7 @@ jobs:
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
       - name: Download coverage artifacts
         if: needs.changes.outputs.code == 'true'
@@ -484,7 +543,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -652,7 +711,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -740,7 +799,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -786,7 +845,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -828,7 +887,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -867,7 +926,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -914,7 +973,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -958,7 +1017,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |

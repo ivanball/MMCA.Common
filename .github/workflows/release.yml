@@ -6,6 +6,10 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Exact SDK: a '10.0.x' channel install goes through the aka.ms link, which since 2026-10-25
+  # redirects to storage answering 409 PublicAccessNotPermitted. Pinned with ci.yml; return to
+  # '10.0.x' when https://aka.ms/dotnet/10.0/dotnet-sdk-linux-x64.tar.gz answers 200.
+  DOTNET_SDK_VERSION: '10.0.403'
 
 jobs:
   publish:
@@ -47,7 +51,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -185,7 +189,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.

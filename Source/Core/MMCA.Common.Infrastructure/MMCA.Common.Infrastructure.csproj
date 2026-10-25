@@ -51,7 +51,8 @@
          Cloud-neutral: it needs a PostgreSQL database, not a cloud service, so it is core rather than
          an adapter. Referenced unconditionally like RabbitMQ. -->
     <PackageReference Include="MassTransit.SqlTransport.PostgreSQL" />
-    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" />
     <PackageReference Include="MinVer">

@@ -17,7 +17,14 @@
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="AspNetCore.HealthChecks.Sqlite" />
+    <!-- Microsoft.Data.SqlClient is referenced directly so the SQL Server check runs on the same 7.x
+         driver as MMCA.Common.Infrastructure, rather than the 5.2.2 floor the health-check package
+         carries (that floor drags in the deprecated Azure.Identity 1.11.4 / MSAL 4.61.3 chain). -->
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
+         vulnerable 9.0.18 (NU1903); see the pin note in Directory.Packages.props. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <!-- Redis wiring is owned by the framework (Caching/RedisCachingExtensions): the raw Aspire
          integrations register an untagged health check that gates readiness and issues CLUSTER INFO,
          which Azure Managed Redis refuses. The wrapper turns those checks off and Common contributes

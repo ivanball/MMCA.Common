@@ -358,7 +358,7 @@ public static partial class DependencyInjection
             // MMCA.Common.Aws, AddGoogleCloudStorage from MMCA.Common.Gcp); the image processor is
             // dependency-free and always real.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
-            services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();
+            services.TryAddSingleton<IImageProcessor, SkiaSharpImageProcessor>();
 
             return services;
         }
