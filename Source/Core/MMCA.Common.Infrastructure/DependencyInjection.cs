@@ -355,10 +355,10 @@ public static partial class DependencyInjection
 
             // Managed file storage (ADR-045): unconfigured default swapped by a storage adapter
             // (AddAzureBlobFileStorage from MMCA.Common.Azure, AddS3FileStorage from
-            // MMCA.Common.Aws, AddGoogleCloudStorage from MMCA.Common.Gcp); the image processor is
-            // dependency-free and always real.
+            // MMCA.Common.Aws, AddGoogleCloudStorage from MMCA.Common.Gcp). Image normalization is the
+            // application's own concern: decoding needs a native image library, which every consumer
+            // of this package would otherwise carry.
             services.TryAddTransient<IFileStorageService, NullFileStorageService>();
-            services.TryAddSingleton<IImageProcessor, SkiaSharpImageProcessor>();
 
             return services;
         }
