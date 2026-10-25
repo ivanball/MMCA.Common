@@ -22,10 +22,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Exact SDK: a '10.0.x' channel install goes through the aka.ms link, which since 2026-10-25
-  # redirects to storage answering 409 PublicAccessNotPermitted. Pinned with ci.yml; return to
-  # '10.0.x' when https://aka.ms/dotnet/10.0/dotnet-sdk-linux-x64.tar.gz answers 200.
-  DOTNET_SDK_VERSION: '10.0.403'
 
 concurrency:
   group: load-tests-${{ github.ref }}
@@ -45,7 +41,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+          dotnet-version: '10.0.x'
           # Same cache key as ci.yml: the committed lock files plus Directory.Packages.props.
           cache: true
           cache-dependency-path: |
