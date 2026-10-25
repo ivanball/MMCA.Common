@@ -59,13 +59,13 @@
       },
       "MassTransit.AmazonSQS": {
         "type": "Direct",
-        "requested": "[8.5.11, )",
-        "resolved": "8.5.11",
-        "contentHash": "j8IB7IwluRzw292OOWQjeyGjbS//81vFs51oHOi2xzRHIUS7O2iGBa6xT5IuOk5IRMx8qNJKQz13VhBmFcn/0g==",
+        "requested": "[8.5.12, )",
+        "resolved": "8.5.12",
+        "contentHash": "O78/23QqOCKtyXqDuRyWz6ultsjNBbk4Vk9/gisJN3tvLGra4YWNT5eeVan5ybC+7IHHR4DH+avRm73QOb/Q+A==",
         "dependencies": {
           "AWSSDK.SQS": "4.0.100.14",
           "AWSSDK.SimpleNotificationService": "4.0.100.15",
-          "MassTransit": "8.5.11"
+          "MassTransit": "8.5.12"
         }
       },
       "Meziantou.Analyzer": {
@@ -172,8 +172,8 @@
       },
       "MassTransit.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.5.11",
-        "contentHash": "NVPW88Ge9vFlPboZCDTDsXKUOJygD76HAA3JBIC68XVFWzJ4X2mxDx20jCoFeA3xU9dj3jnNAvHwvIcEuc6zRg=="
+        "resolved": "8.5.12",
+        "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
@@ -625,7 +625,7 @@
         "dependencies": {
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.11, )",
+          "MassTransit": "[8.5.12, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
           "MassTransit.SqlTransport.PostgreSQL": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
@@ -732,11 +732,11 @@
       },
       "MassTransit": {
         "type": "CentralTransitive",
-        "requested": "[8.5.11, )",
-        "resolved": "8.5.11",
-        "contentHash": "zQDMTrxSfZDseZerNZV16K+TO2XOQYKUl+l/CoaJFjzzl2M+1ZVY7F5i8srnVP034fiX69vzaQxEup2GSK38kw==",
+        "requested": "[8.5.12, )",
+        "resolved": "8.5.12",
+        "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
         "dependencies": {
-          "MassTransit.Abstractions": "8.5.11"
+          "MassTransit.Abstractions": "8.5.12"
         }
       },
       "MassTransit.RabbitMQ": {
