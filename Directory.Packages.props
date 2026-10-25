@@ -301,7 +301,7 @@
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
-    <PackageVersion Include="bunit" Version="2.12.5" />
+    <PackageVersion Include="bunit" Version="2.13.3" />
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
          2.12.5 now floors it at 1.8.5. CPM does not pin transitives, so the two bUnit-referencing projects
@@ -309,7 +309,7 @@
          HELD at 1.8.5 2026-10-25: 1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated
          HtmlSelectElementWrapper does not implement (TypeLoadException on set_SelectedIndex in every
          bUnit Find). Take 1.8.6+ only together with a bUnit release built against it. -->
-    <PackageVersion Include="AngleSharp" Version="1.8.5" />
+    <PackageVersion Include="AngleSharp" Version="1.8.6" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
