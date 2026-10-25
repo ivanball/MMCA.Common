@@ -4,11 +4,11 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.258.0] - 2026-10-25
 
 ### Breaking
 
-- **Breaking:** image normalization runs on SkiaSharp (MIT) instead of SixLabors.ImageSharp. `MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor` is removed and replaced by `SkiaSharpImageProcessor`, which keeps the same `IImageProcessor` behavior and the same `MaxDecodedPixels` / `MaxDecodedDimension` constants, and `AddInfrastructure` registers it as before. `DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3` and `ImageSharpPackageIds` are removed with the pin they guarded. MMCA.Common.Infrastructure now depends on `SkiaSharp` and `SkiaSharp.NativeAssets.Linux.NoDependencies` 4.153.1 and no longer on `SixLabors.ImageSharp`, so the five ImageSharp 3.1.12 advisories accepted in 1.234.0 no longer apply and their `NuGetAuditSuppress` entries are gone; consumers delete theirs. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking:** image normalization runs on SkiaSharp (MIT) instead of SixLabors.ImageSharp. `MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor` is removed and replaced by `SkiaSharpImageProcessor`, which keeps the same `IImageProcessor` behavior and the same `MaxDecodedPixels` / `MaxDecodedDimension` constants, and `AddInfrastructure` registers it as before. `DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3` and `ImageSharpPackageIds` are removed with the pin they guarded. MMCA.Common.Infrastructure now depends on `SkiaSharp` and `SkiaSharp.NativeAssets.Linux.NoDependencies` 4.153.1 and no longer on `SixLabors.ImageSharp`, so the five ImageSharp 3.1.12 advisories accepted in 1.234.0 no longer apply and their `NuGetAuditSuppress` entries are gone; consumers delete theirs. Map and fix: UPGRADING.md, [1.258.0].
 
 ### Changed
 
