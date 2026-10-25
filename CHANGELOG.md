@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.259.0] - 2026-10-25
+
+### Breaking
+
+- **Breaking:** image normalization leaves the framework. `IImageProcessor` (MMCA.Common.Application) and `SkiaSharpImageProcessor` (MMCA.Common.Infrastructure) are removed, `AddInfrastructure` no longer registers an image processor, and MMCA.Common.Infrastructure no longer depends on SkiaSharp. SkiaSharp's native libraries (about 490 MB per project: 322 MB for the three Windows builds, 149 MB for 13 Linux builds, 16 MB for macOS) were copied into every project that referenced MMCA.Common.Infrastructure. That ran consumer CI runners out of disk, and only one consumer use case ever called the processor. `ImageContentSniffer` stays: it is dependency-free and validates uploads in more than one consumer. An application that normalizes images owns its processor. Map and fix: UPGRADING.md, [1.259.0].
+
 ## [1.258.0] - 2026-10-25
 
 ### Breaking

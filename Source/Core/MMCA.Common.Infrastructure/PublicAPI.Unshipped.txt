@@ -12,8 +12,3 @@ const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.Postgr
 *REMOVED*MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
 *REMOVED*const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedDimension = 20000 -> int
 *REMOVED*const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedPixels = 50000000 -> long
-MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor
-MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor.SkiaSharpImageProcessor() -> void
-MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
-const MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor.MaxDecodedDimension = 20000 -> int
-const MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor.MaxDecodedPixels = 50000000 -> long

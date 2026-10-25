@@ -203,12 +203,6 @@
          document per installation, a transaction for the ownership rule and a UserId equality query
          for user-targeted sends. gRPC over Google.Api.Gax.Grpc, the Secret Manager line; Apache-2.0. -->
     <PackageVersion Include="Google.Cloud.Firestore" Version="4.5.0" />
-    <!-- Image normalization for ADR-045 uploads (SkiaSharpImageProcessor); MIT. The Linux native
-         assets are referenced explicitly (NoDependencies: no fontconfig needed for decode/encode)
-         because the managed package carries none for Linux and the failure would otherwise surface
-         at the first upload, not at build time. Bump both together. -->
-    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <!-- Shared DataProtection key ring (MMCA.Common.Azure.AddAzureDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->

@@ -32,6 +32,30 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.259.0] - 2026-10-25
+
+**Image normalization leaves the framework (breaking).** MMCA.Common.Infrastructure no longer
+depends on SkiaSharp, whose native libraries were copied into every consuming project.
+
+| Removed | Replacement |
+|---|---|
+| `MMCA.Common.Application.Interfaces.Infrastructure.Storage.IImageProcessor` | your application's own interface |
+| `MMCA.Common.Infrastructure.Storage.SkiaSharpImageProcessor` | your application's own implementation |
+| the `IImageProcessor` registration in `AddInfrastructure` | your application's own registration |
+
+The mechanical fix, only for an application that resolves `IImageProcessor`:
+
+1. Declare the interface in the application layer of the module that normalizes images, and copy
+   the 1.258.0 `SkiaSharpImageProcessor` (and its tests) into that module's infrastructure layer.
+2. Reference `SkiaSharp` there with `ExcludeAssets="native"`, and reference the native packages
+   (`SkiaSharp.NativeAssets.Linux.NoDependencies`, plus `SkiaSharp.NativeAssets.Win32` for local
+   Windows runs) only from the host that processes images and from the processor's own tests. A
+   ReadyToRun or RID-specific publish then ships a single platform's native library.
+3. Register the implementation in that module's dependency injection.
+
+`ImageContentSniffer` is unchanged. An application that never resolved `IImageProcessor` needs
+no change.
+
 ## [1.258.0] - 2026-10-25
 
 **Image normalization runs on SkiaSharp (breaking).** MMCA.Common.Infrastructure drops
