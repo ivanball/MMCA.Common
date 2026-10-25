@@ -26,6 +26,12 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Exact SDK for every setup-dotnet step. A channel ('10.0.x') installs through the aka.ms link,
+  # which since 2026-10-25 redirects to dotnetorigin.blob.core.windows.net and gets
+  # 409 PublicAccessNotPermitted; an exact version downloads from builds.dotnet.microsoft.com.
+  # Return to '10.0.x' once https://aka.ms/dotnet/10.0/dotnet-sdk-linux-x64.tar.gz answers 200.
+  # Same pin in release.yml and load-tests.yml.
+  DOTNET_SDK_VERSION: '10.0.403'
   # Redirect Playwright's browser install out of ~/.cache/ms-playwright and into the workspace so
   # actions/cache can carry it between runs (see the ui-e2e "Cache Playwright browsers" step). Both
   # the install and the test run read this, so it must be workflow-level, not step-level.
@@ -98,7 +104,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -189,7 +195,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -241,7 +247,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -373,7 +379,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -417,7 +423,7 @@ jobs:
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
 
       - name: Download coverage artifacts
         if: needs.changes.outputs.code == 'true'
@@ -537,7 +543,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -705,7 +711,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -793,7 +799,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -839,7 +845,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -881,7 +887,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -920,7 +926,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -967,7 +973,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
@@ -1011,7 +1017,7 @@ jobs:
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
           # Same cache posture and the same reasons as the redis-integration job above.
           cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
