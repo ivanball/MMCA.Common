@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
+using MMCA.Common.Gcp.CloudSql;
 using MMCA.Common.Gcp.Storage;
+using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Gcp;
 
@@ -57,6 +59,46 @@ public static class GcpServiceCollectionExtensions
             services.AddTransient<IFileStorageService, GcsFileStorageService>();
 
             return services;
+        }
+
+        /// <summary>
+        /// Switches every PostgreSQL connection onto Cloud SQL IAM database authentication: the
+        /// password becomes an OAuth2 access token from Application Default Credentials for the
+        /// <c>https://www.googleapis.com/auth/sqlservice.login</c> scope, handed to Npgsql through the
+        /// core data-source configurator (refreshed every minute, 30 seconds after a failure), so the
+        /// contexts, the readiness check and the built-in PostgreSQL broker share one data source per
+        /// connection string. Reads <c>CloudSql:IamAuthentication:Enabled</c>, the gate; absent or false
+        /// makes this a no-op. The connection strings carry no password (a static one alongside the
+        /// token makes Npgsql refuse the data source), name the IAM database user as <c>Username</c>
+        /// (a service account's email without <c>.gserviceaccount.com</c>), and must require TLS
+        /// (<c>SSL Mode=Require</c>, <c>VerifyCA</c> or <c>VerifyFull</c>), because the token is sent as
+        /// the password. Behind the Cloud SQL Auth Proxy use its <c>--auto-iam-authn</c> flag instead.
+        /// The identity needs <c>roles/cloudsql.instanceUser</c> and <c>roles/cloudsql.client</c>.
+        /// SQL Server, SQLite and Cosmos sources are untouched: Cloud SQL for SQL Server has no IAM
+        /// database authentication, so it keeps a password connection string (from Secret Manager
+        /// through <c>AddGoogleSecretManagerConfiguration</c>) or, on SQL Server 2022 and later, uses
+        /// Microsoft Entra ID through the SqlClient extension in MMCA.Common.Azure.
+        /// </summary>
+        /// <param name="configuration">Application configuration providing <c>CloudSql:IamAuthentication</c> and the connection strings.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// A configured PostgreSQL connection string does not require TLS (the message names its key).
+        /// </exception>
+        public IServiceCollection AddCloudSqlIamAuthentication(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration.GetSection(CloudSqlIamAuthenticationSettings.SectionPath).Get<CloudSqlIamAuthenticationSettings>();
+            if (settings is not { Enabled: true })
+            {
+                return services;
+            }
+
+            // Deterministic: a connection string already in configuration that would send the token
+            // in clear fails here, at registration, not on the first query.
+            CloudSqlIamAuthenticationConfigurator.EnsureConfiguredConnectionStringsAreEncrypted(configuration);
+
+            return services.AddNpgsqlDataSourceConfigurator(new CloudSqlIamAuthenticationConfigurator());
         }
     }
 }

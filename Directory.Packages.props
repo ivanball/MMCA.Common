@@ -128,6 +128,12 @@
     <!-- Amazon SQS/SNS transport (MMCA.Common.Aws), Apache-2.0 like the rest of the v8 line. Same
          version as every MassTransit pin above: the transports and the core bump together. -->
     <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.11" />
+    <!-- PostgreSQL SQL transport, the built-in cloud-neutral broker in MMCA.Common.Infrastructure
+         (MessageBus:Provider=PostgreSql): queues, topics and scheduling in tables of a PostgreSQL
+         database, so any managed Postgres (Cloud SQL, RDS, Azure Database) is a broker. Apache-2.0,
+         same v8 line and version as every MassTransit pin above. Brings Dapper; its Npgsql floor
+         resolves to the Npgsql pin below. -->
+    <PackageVersion Include="MassTransit.SqlTransport.PostgreSQL" Version="8.5.11" />
     <!-- Azure Service Bus transport (MMCA.Common.Azure) and its emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing.Azure): the two
          clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
          working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older
@@ -184,6 +190,11 @@
          depend on it, NU5104), so the IXmlEncryptor/IXmlDecryptor pair is hand-written over this
          client. Same Google.Api.Gax.Grpc line as Secret Manager; Apache-2.0. -->
     <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.27.0" />
+    <!-- Cloud SQL IAM database authentication (MMCA.Common.Gcp.AddCloudSqlIamAuthentication): an
+         OAuth2 access token from Application Default Credentials for the sqlservice.login scope, used
+         as the PostgreSQL password. Pinned at the version the Cloud clients above already resolve
+         transitively, so the direct reference moves nothing in the graph; Apache-2.0. -->
+    <PackageVersion Include="Google.Apis.Auth" Version="1.76.0" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->

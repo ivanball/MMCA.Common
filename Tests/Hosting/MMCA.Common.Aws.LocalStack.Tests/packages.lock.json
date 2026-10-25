@@ -126,6 +126,11 @@
         "resolved": "2.7.0",
         "contentHash": "U+12df8UEWHgBi04YVf/Lgi2dy3SItlIYvHjjEVa/BngCQIzDCDRBk50DDByCfDvSbe5pRNFr3b7UrVK2kMcLw=="
       },
+      "Dapper": {
+        "type": "Transitive",
+        "resolved": "2.1.89",
+        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
+      },
       "Docker.DotNet.Enhanced": {
         "type": "Transitive",
         "resolved": "4.3.3",
@@ -757,6 +762,7 @@
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.11, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
+          "MassTransit.SqlTransport.PostgreSQL": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
@@ -941,6 +947,17 @@
         "dependencies": {
           "MassTransit": "8.5.11",
           "RabbitMQ.Client": "7.2.2"
+        }
+      },
+      "MassTransit.SqlTransport.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[8.5.11, )",
+        "resolved": "8.5.11",
+        "contentHash": "fA5rZvp2TqURHYJRT4s2z6eXjVYoeDuUPFBgLjrLQE94Phg7gGISUGfbxtO+NzzGwMlhco0xzQvQKUjeUxBYKA==",
+        "dependencies": {
+          "Dapper": "2.1.89",
+          "MassTransit": "8.5.11",
+          "Npgsql": "8.0.7"
         }
       },
       "MessagePack": {

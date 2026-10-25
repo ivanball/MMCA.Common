@@ -775,7 +775,8 @@ jobs:
     # assertion cannot express it: a partial-index predicate written the SQL Server way
     # ([ProcessedOn] IS NULL), a soft-delete predicate comparing a boolean to 0, and a DateTime whose
     # Kind is not UTC all build a perfectly valid EF model and are rejected by the server. This tier
-    # runs the shipped PostgreSQLDbContext against a real PostgreSQL. Ubuntu runners ship a Docker
+    # runs the shipped PostgreSQLDbContext, and the built-in PostgreSql broker transport (MassTransit's
+    # SQL transport), against a real PostgreSQL. Ubuntu runners ship a Docker
     # daemon, so Testcontainers works with no extra setup.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -799,9 +800,11 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        # Floor = the exact [Fact] count in PostgreSQLPersistenceTests.cs (8, 2026-10-24); adding a
-        # test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 8
+        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (8) and
+        # PostgreSqlBrokerTransportTests.cs (3: the built-in PostgreSql broker's header round trip,
+        # delayed redelivery and shared data-source authentication), 11 on 2026-10-25; adding a test
+        # means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 11
 
   sqlserver-integration:
     name: SQL Server integration (Testcontainers)

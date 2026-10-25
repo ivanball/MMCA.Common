@@ -18,6 +18,9 @@
     <PackageReference Include="Google.Cloud.SecretManager.V1" />
     <!-- Cloud KMS encryption of the DataProtection key ring at rest (AddGoogleCloudDataProtection). -->
     <PackageReference Include="Google.Cloud.Kms.V1" />
+    <!-- Application Default Credentials for the Cloud SQL IAM login token (AddCloudSqlIamAuthentication).
+         Already transitive through the Cloud clients; referenced directly because the code uses it. -->
+    <PackageReference Include="Google.Apis.Auth" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

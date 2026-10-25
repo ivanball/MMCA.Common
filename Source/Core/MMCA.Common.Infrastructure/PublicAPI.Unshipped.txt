@@ -6,3 +6,4 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigu
 MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
 static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApnsPayload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
 static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
+const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.PostgreSql = "PostgreSql" -> string!

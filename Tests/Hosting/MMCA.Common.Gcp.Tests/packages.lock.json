@@ -88,6 +88,11 @@
         "resolved": "5.2.1",
         "contentHash": "wHARzQA695jwwKreOzNsq54KiGqKP38tv8hi8e2FXDEC/sA6BtrX90tVPDkOfVu13PbEzr00TCV8coikl+D1Iw=="
       },
+      "Dapper": {
+        "type": "Transitive",
+        "resolved": "2.1.89",
+        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
+      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -138,16 +143,6 @@
         "contentHash": "sIhJW2vT1cXE/yUFp1q1Mv7EUgbGu2uMIcqqv+BgElRdGQApxiYpZ/jG6hFkQB8/AG9kGurJOzLOM9PZ++GEtA==",
         "dependencies": {
           "Google.Apis.Core": "1.76.0"
-        }
-      },
-      "Google.Apis.Auth": {
-        "type": "Transitive",
-        "resolved": "1.76.0",
-        "contentHash": "WzRCykQ0OApOEFdUYYBJ6riIxs+xk635s0KsGb83zJcABa66DCgaAXiWZuZjSqnwA3hjm7u8mmzR4EUHpJ1UfQ==",
-        "dependencies": {
-          "Google.Apis": "1.76.0",
-          "Google.Apis.Core": "1.76.0",
-          "System.Management": "7.0.2"
         }
       },
       "Google.Apis.Core": {
@@ -785,6 +780,7 @@
       "mmca.common.gcp": {
         "type": "Project",
         "dependencies": {
+          "Google.Apis.Auth": "[1.76.0, )",
           "Google.Cloud.Kms.V1": "[3.27.0, )",
           "Google.Cloud.SecretManager.V1": "[2.8.0, )",
           "Google.Cloud.Storage.V1": "[5.0.0, )",
@@ -799,6 +795,7 @@
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.11, )",
           "MassTransit.RabbitMQ": "[8.5.11, )",
+          "MassTransit.SqlTransport.PostgreSQL": "[8.5.11, )",
           "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.13, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
@@ -908,6 +905,17 @@
           "FluentValidation": "12.2.0"
         }
       },
+      "Google.Apis.Auth": {
+        "type": "CentralTransitive",
+        "requested": "[1.76.0, )",
+        "resolved": "1.76.0",
+        "contentHash": "WzRCykQ0OApOEFdUYYBJ6riIxs+xk635s0KsGb83zJcABa66DCgaAXiWZuZjSqnwA3hjm7u8mmzR4EUHpJ1UfQ==",
+        "dependencies": {
+          "Google.Apis": "1.76.0",
+          "Google.Apis.Core": "1.76.0",
+          "System.Management": "7.0.2"
+        }
+      },
       "Google.Cloud.Kms.V1": {
         "type": "CentralTransitive",
         "requested": "[3.27.0, )",
@@ -964,6 +972,17 @@
         "dependencies": {
           "MassTransit": "8.5.11",
           "RabbitMQ.Client": "7.2.2"
+        }
+      },
+      "MassTransit.SqlTransport.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[8.5.11, )",
+        "resolved": "8.5.11",
+        "contentHash": "fA5rZvp2TqURHYJRT4s2z6eXjVYoeDuUPFBgLjrLQE94Phg7gGISUGfbxtO+NzzGwMlhco0xzQvQKUjeUxBYKA==",
+        "dependencies": {
+          "Dapper": "2.1.89",
+          "MassTransit": "8.5.11",
+          "Npgsql": "8.0.7"
         }
       },
       "MessagePack": {

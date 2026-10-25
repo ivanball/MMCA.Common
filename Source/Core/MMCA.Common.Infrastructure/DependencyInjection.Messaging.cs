@@ -24,6 +24,9 @@ public static partial class DependencyInjection
         /// The transport is selected by <see cref="MessageBusSettings.Provider"/>:
         /// <list type="bullet">
         ///   <item><see cref="MessageBusProviders.RabbitMq"/> — built in; local dev (Aspire RabbitMQ container).</item>
+        ///   <item><see cref="MessageBusProviders.PostgreSql"/>: built in; MassTransit's SQL transport
+        ///   on any PostgreSQL database, with its schema migrated at startup ahead of the bus
+        ///   (<c>MessageBus:PostgreSql:Schema</c>, <c>Role</c>, <c>MigrateOnStartup</c>).</item>
         ///   <item><see cref="MessageBusProviders.InProcess"/> — no-op; this method returns without
         ///   modifying the container, leaving the default <see cref="InProcessMessageBus"/> in place.</item>
         ///   <item>Any other name — the <see cref="IBrokerTransport"/> an adapter package registered
@@ -68,6 +71,14 @@ public static partial class DependencyInjection
                 settings,
                 ResolveBrokerConnectionString(configuration, settings),
                 configuration);
+
+            // The PostgreSQL transport's schema migration is a hosted service that must start before
+            // the bus hosted service AddMassTransit registers ahead of its callback, so it is added
+            // here rather than from IBrokerTransport.Configure.
+            if (transport is PostgreSqlBrokerTransport)
+            {
+                PostgreSqlBrokerTransport.RegisterServices(services, transportContext);
+            }
 
             services.AddMassTransit(x =>
             {
@@ -161,7 +172,7 @@ public static partial class DependencyInjection
     }
 
     /// <summary>
-    /// Picks the transport for a broker provider: the built-in RabbitMQ transport, else the LAST
+    /// Picks the transport for a broker provider: the built-in RabbitMQ or PostgreSQL transport, else the LAST
     /// adapter transport registered under that name (instances only, read straight off the
     /// collection because the choice has to be made while the bus is being registered, before any
     /// provider exists).
@@ -181,6 +192,11 @@ public static partial class DependencyInjection
             return new RabbitMqBrokerTransport();
         }
 
+        if (MessageBusProviders.IsPostgreSql(provider))
+        {
+            return new PostgreSqlBrokerTransport();
+        }
+
         var registered = services
             .Where(descriptor => descriptor.ServiceType == typeof(IBrokerTransport) && !descriptor.IsKeyedService)
             .Select(descriptor => descriptor.ImplementationInstance)
@@ -195,7 +211,7 @@ public static partial class DependencyInjection
 
         var available = string.Join(
             ", ",
-            new[] { MessageBusProviders.InProcess, MessageBusProviders.RabbitMq }.Concat(registered.Select(t => t.Name)));
+            new[] { MessageBusProviders.InProcess, MessageBusProviders.RabbitMq, MessageBusProviders.PostgreSql }.Concat(registered.Select(t => t.Name)));
         var remedy = MessageBusProviders.KnownAdapterTransports.TryGetValue(provider, out var adapter)
             ? $"Reference the {adapter.Package} package and call {adapter.Registration} BEFORE AddBrokerMessaging(...)."
             : $"Register an IBrokerTransport named '{provider}' with services.AddBrokerTransport(...) BEFORE AddBrokerMessaging(...), or correct the provider name.";
