@@ -1,4 +1,6 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Playwright;
 using MMCA.Common.Shared.Globalization;
 using MMCA.Common.Testing.E2E.Infrastructure;
 using MMCA.Common.UI.E2E.Tests.Infrastructure;
@@ -31,29 +33,33 @@ public sealed class PseudoLocalizationE2ETests : GalleryAxeTestBase
     public static TheoryData<string> ScannedPaths => new("/login", "/register", "/forgot-password", "/reset-password", "/components");
 
     /// <summary>
-    /// Bounded attempts for the sentinel render only. The <c>[!!</c> assertion flakes on webkit
-    /// (the required-check reds of 2026-07-11/12 that historically needed a manual
-    /// <c>rerun --failed</c>); chromium and firefox have never flaked here. The retry reloads the
-    /// page fresh each attempt, so a real localization regression still fails all three attempts;
-    /// the overflow assertion below is NOT retried (it has never flaked).
+    /// The culture reaches BOTH halves of an interactive page. The query string localizes only the
+    /// prerender: the interactive Server circuit opens on <c>/_blazor</c>, which carries no query
+    /// string, so without the culture cookie the circuit re-rendered the page in the default culture
+    /// and the <c>[!!</c> sentinel vanished. Whether <c>ContentAsync</c> read before or after that
+    /// swap was a race webkit usually lost (the "flake" behind the 2026-07 and 2026-10-25 reds; a
+    /// reload-and-retry could not help, since every reload repeats the race). The cookie is how a real
+    /// app carries the culture (the culture switcher writes it), and waiting for the network to go
+    /// idle makes the assertion read the interactive render, not whichever half arrived first.
     /// </summary>
-    private const int SentinelRenderAttempts = 3;
-
     [Theory]
     [MemberData(nameof(ScannedPaths))]
     public async Task PseudoLocale_RendersSentinel_AndDoesNotOverflowHorizontally(string path)
     {
-        var content = string.Empty;
-        for (var attempt = 1; attempt <= SentinelRenderAttempts; attempt++)
-        {
-            await Page.GotoAsync(WithPseudoCulture(path));
-            await Page.WaitForLoadStateAsync();
+        await Page.Context.AddCookiesAsync(
+        [
+            new Cookie
+            {
+                Name = CookieRequestCultureProvider.DefaultCookieName,
+                Value = Uri.EscapeDataString(CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(SupportedCultures.PseudoLocale))),
+                Url = BaseUrl,
+            },
+        ]);
 
-            content = await Page.ContentAsync();
-            if (content.Contains("[!!", StringComparison.Ordinal))
-                break;
-        }
+        await Page.GotoAsync(WithPseudoCulture(path));
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
+        var content = await Page.ContentAsync();
         Assert.Contains("[!!", content, StringComparison.Ordinal);
 
         var overflow = await HorizontalOverflowPixelsAsync();
