@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.260.0] - 2026-10-25
+
+### Changed
+
+- Dependency updates (#607): ASP.NET Core, EF Core and Microsoft.Extensions packages 10.0.13 -> 10.0.14 (Authentication.Google, Authentication.JwtBearer, Components.Authorization, Components.Web, Mvc.Testing, OpenApi, OutputCaching.StackExchangeRedis, SignalR.Client, SignalR.StackExchangeRedis, EntityFrameworkCore.Cosmos, .Design, .SqlServer, .Sqlite, .Tools, Configuration.Abstractions, Configuration.Json, Http, Localization, Options.DataAnnotations, System.Security.Cryptography.Pkcs), MassTransit family 8.5.11 -> 8.5.12, bunit 2.12.5 -> 2.13.3, AngleSharp 1.8.5 -> 1.8.6. Consumers that pin any of these must align to the same versions to avoid NU1605 package downgrades.
+
 ## [1.259.0] - 2026-10-25
 
 ### Breaking
