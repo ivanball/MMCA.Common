@@ -272,6 +272,8 @@ jobs:
             echo "::error::Microsoft.Playwright PackageVersion not found in Directory.Packages.props"; exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          # The runner image pins the OS package versions the apt cache below holds.
+          echo "image=${ImageOS:-unknown}-${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
 
       # Browser binaries are ~100-300 MB per engine and were re-downloaded on all three legs of every
       # run. PLAYWRIGHT_BROWSERS_PATH (workflow env) redirects the install into the workspace so
@@ -284,35 +286,56 @@ jobs:
           path: ${{ github.workspace }}/.ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
 
-      # The OS packages come from the runner's apt mirror on every run (cache hit or not), and a
-      # stalled transfer there hangs without erroring: webkit's ~130-package dependency set sat on one
-      # .deb until the job's 20-minute timeout (PRs #592 and #603). apt's own timeouts do not catch a
-      # trickling connection, so each attempt is bounded from outside (timeout signals the whole
-      # process group, sudo apt-get included) and retried; healthy installs take under a minute.
+      # The engine's OS packages (webkit: ~130 .debs, 117 MB) otherwise come from the runner's apt
+      # mirror on EVERY run, and that mirror can crawl without erroring: webkit sat in the install
+      # until the job's 20-minute timeout (PRs #592 and #603). The .debs land in this cached directory
+      # instead, so a warm run installs offline, and a cold one resumes across retries rather than
+      # restarting. restore-keys reuses an older image's set; apt fetches only what changed.
+      - name: Cache apt packages (${{ matrix.browser }})
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ github.workspace }}/.apt-archives/*.deb
+          key: apt-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}-${{ steps.playwright-version.outputs.image }}
+          restore-keys: apt-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}-
+
+      # Every attempt is bounded and retried. The OS half runs the Playwright CLI as root under
+      # `sudo timeout`, so apt-get is in timeout's own process group and dies with it; letting the CLI
+      # elevate itself put apt-get behind a separate sudo session that survived the timeout and held
+      # the dpkg lock against every retry.
       - name: Install Playwright (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
         timeout-minutes: 14
         run: |
-          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
-            | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
+          archives="$GITHUB_WORKSPACE/.apt-archives"
+          mkdir -p "$archives/partial"
+          printf '%s\n' \
+            'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
+            "Dir::Cache::Archives \"$archives/\";" 'APT::Keep-Downloaded-Packages "true";' \
+            'Binary::apt::APT::Keep-Downloaded-Packages "true";' 'APT::Sandbox::User "root";' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-playwright > /dev/null
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            # Binaries restored from cache; only the OS-level shared libraries still need installing,
-            # which is the cheap half of --with-deps.
-            command=(install-deps ${{ matrix.browser }})
-          else
-            command=(install --with-deps ${{ matrix.browser }})
+
+          retry() { # retry <seconds-per-attempt> <command...>
+            local budget=$1; shift
+            for attempt in 1 2 3; do
+              if "$@"; then return 0; fi
+              echo "::warning::'$*' attempt $attempt failed or timed out ($budget s budget); retrying"
+              sudo dpkg --configure -a || true
+            done
+            echo "::error::'$*' failed after 3 attempts"; return 1
+          }
+
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            retry 180 timeout --kill-after=20 180 pwsh "$script" install ${{ matrix.browser }}
           fi
-          for attempt in 1 2 3; do
-            if timeout --kill-after=30 240 pwsh "$script" "${command[@]}"; then
-              exit 0
-            fi
-            echo "::warning::Playwright install attempt $attempt failed or timed out; retrying"
-            # An interrupted apt run leaves dpkg half-configured and its lock held; settle both first.
-            sudo dpkg --configure -a || true
-          done
-          echo "::error::Playwright install failed after 3 attempts"
-          exit 1
+          # No -E: install-deps needs no runner environment, and root's own HOME keeps pwsh's caches
+          # out of the runner user's home.
+          retry 240 sudo timeout --kill-after=20 240 pwsh "$script" install-deps ${{ matrix.browser }}
+
+          # The post-job cache save runs as the runner user.
+          sudo chown -R "$(id -u):$(id -g)" "$archives"
+          echo "apt archive: $(find "$archives" -maxdepth 1 -name '*.deb' | wc -l) .deb files"
 
       - name: Run UI E2E (axe + render smoke)
         if: needs.changes.outputs.code == 'true'
