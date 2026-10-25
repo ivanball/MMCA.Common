@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **The MassTransit v8 ceiling now covers every MassTransit package the framework pins.** `DependencyVersionTestsBase.MassTransitPackageIds` listed only `MassTransit`, `MassTransit.RabbitMQ` and `MassTransit.Azure.ServiceBus.Core`, so a v9 bump of `MassTransit.AmazonSQS` (pinned since 1.255.0) or `MassTransit.SqlTransport.PostgreSQL` (1.257.0) went unchecked. Both are now in the default list. Only MMCA.Common subclasses the base with that list; a consumer that subclasses it keeps overriding the list with the ids its own `Directory.Packages.props` declares.
+- The `NativePushPayloads` doc comment no longer says every push adapter calls it: the FCM adapter maps the same fields onto FirebaseAdmin's typed message instead.
+- MMCA.Common.Testing.Azure.Tests gains the `CloudVendorRulesTests` pin its sibling adapter test projects have, on the type-level rule (the assembly rule also catches any `.Azure`-suffixed reference, so it cannot show that the `MMCA.Common.Testing.Azure` entry is load-bearing).
+
 ## [1.257.0] - 2026-10-24
 
 ### Added
