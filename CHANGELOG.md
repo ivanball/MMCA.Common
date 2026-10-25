@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.257.0] - 2026-10-24
+
+### Added
+
+- **AWS parity for the four capabilities that were Azure-only.** Every call is opt-in, each is a no-op until its gate key is set, and the core packages still reference no AWS SDK.
+  - `builder.AddAwsSecretsManagerConfiguration()` loads every secret under `SecretsManager:NamePrefix` into `IConfiguration` with the Key Vault naming rule (the prefix is stripped and `--` maps to `:`, so `adc/prod/ConnectionStrings--Default` arrives as `ConnectionStrings:Default`). Optional keys: `Region`, `ServiceUrl`, `AccessKeyId` + `SecretAccessKey` (else the AWS default credential chain), `ReloadIntervalMinutes`. String-valued secrets only; a batch read error fails startup naming the secret.
+  - `builder.AddAwsDataProtection()` persists the DataProtection key ring to Systems Manager Parameter Store (`Amazon.AspNetCore.DataProtection.SSM`) as KMS-encrypted SecureString parameters under `DataProtection:SsmParameterPrefix`, with optional `DataProtection:KmsKeyId`; `DataProtection:ApplicationName` is shared with the Azure call.
+  - `services.AddAmazonSnsPush(configuration)` swaps the null `INativePushSender` / `IPushDeviceRegistrar` for SNS mobile push (FCM v1 and APNs platform applications) with installations kept in a DynamoDB table (partition key `InstallationId`, global secondary index `UserId-index` on `UserId`). Keys: `NativePush:Enabled` plus `NativePush:Sns:FcmPlatformApplicationArn`, `ApnsPlatformApplicationArn`, `BroadcastTopicArn`, `InstallationsTable`, `Region`, `ServiceUrl`, `AccessKeyId`, `SecretAccessKey`. A conditional write keeps the existing ownership rules (a conflict unless the request presents the same push channel, owner-scoped delete); broadcast publishes to one topic every endpoint subscribes to; disabled endpoints are pruned on send.
+  - `services.AddAwsRdsIamAuthentication(configuration)` authenticates PostgreSQL connections to Amazon RDS / Aurora with IAM tokens (refreshed every 10 minutes), gated on `Rds:IamAuthentication:Enabled` with optional `Region`, `AccessKeyId`, `SecretAccessKey`. The connection string must carry `SSL Mode=Require` or stricter and no password. RDS for SQL Server has no IAM authentication: keep its password connection string in Secrets Manager and load it with `AddAwsSecretsManagerConfiguration()`.
+- `services.AddNpgsqlDataSourceConfigurator(configurator)` and `INpgsqlDataSourceConfigurator` (MMCA.Common.Infrastructure): when one is registered, `PostgreSQLDbContext` and the Npgsql health check share one `NpgsqlDataSource` per connection string, so a password provider reaches both. With none registered the connection-string path is unchanged.
+- `NativePushPayloads.BuildFcmV1Payload` / `BuildApnsPayload` are now public in MMCA.Common.Infrastructure (`MMCA.Common.Infrastructure.Notifications.Push`), shared by both push adapters; output is byte-identical to the former Azure-internal builders.
+- `HostIntegrationNames.AwsSecretsManagerConfiguration` and `AwsDataProtection`. `AddServiceDefaults()` now also fails startup when `SecretsManager:NamePrefix` or `DataProtection:SsmParameterPrefix` is set without its adapter call, and when both `DataProtection:BlobStorageUri` and `DataProtection:SsmParameterPrefix` are set (two key rings split cookies across replicas). The `NativePush:Enabled` startup failure names both adapter calls.
+- The `aws-integration` CI job (LocalStack) now also covers Secrets Manager load and reload, a key ring shared by two DataProtection providers, and the SNS + DynamoDB registry and publish paths (14 tests); the PostgreSQL tier covers a periodic password provider.
+
 ## [1.256.0] - 2026-10-24
 
 ### Fixed
