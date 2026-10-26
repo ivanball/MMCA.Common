@@ -8,6 +8,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Changed
 
+- Fixed: with the outbox off (the in-process default) or on a non-relational engine, `DomainEventSaveChangesInterceptor` dispatches each captured domain event on its own, so a throwing handler no longer stops the later events of the save. The failure is logged at Error as not retried, instead of the Warning that claimed the outbox processor would retry it; handlers that need retry need the outbox. `SafeDomainEventHandler` now says the event is redelivered only when the outbox is on. (M255)
+
 ### Fixed
 
 - Fixed: a `Money` JSON payload that omits the currency or sends it as `null` is refused as a `JsonException` instead of an `ArgumentNullException`, so the MVC body formatter answers 400 with the JSON path instead of a 500 (the Store catalog price and discount endpoints, for example). `Money.Create` still throws `ArgumentNullException` for a null currency. (M259)

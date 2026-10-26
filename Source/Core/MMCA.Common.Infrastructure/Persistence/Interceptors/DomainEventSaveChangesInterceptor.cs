@@ -47,7 +47,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// outbox is off (<c>MessageBus:EnableOutbox</c> resolving to false: set to false, or left unset,
 /// which is the in-process default) no rows are written
 /// and every captured event is dispatched in-process, exactly as a context without outbox support
-/// already behaves. A host that resolves no options keeps the outbox path.</param>
+/// already behaves. With the outbox off a handler failure is logged at Error and nothing retries
+/// it (each event dispatches on its own, so one failure does not stop the next); handlers that
+/// need retry need the outbox. A host that resolves no options keeps the outbox path.</param>
 /// <param name="outboxOptions">Supplies <c>Outbox:LeaseSeconds</c>, the lease a local event's row is
 /// inserted under while its in-process dispatch runs. A host that resolves no options gets the
 /// setting's default.</param>
@@ -371,7 +373,12 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         try
         {
             if (state.LocalEvents.Length > 0)
-                await domainEventDispatcher.DispatchAsync(state.LocalEvents, cancellationToken).ConfigureAwait(false);
+            {
+                if (state.LocalOutboxEntries.Count == 0)
+                    await DispatchUnbackedAsync(state.LocalEvents, cancellationToken).ConfigureAwait(false);
+                else
+                    await domainEventDispatcher.DispatchAsync(state.LocalEvents, cancellationToken).ConfigureAwait(false);
+            }
 
             ClearDomainEvents(state);
 
@@ -396,6 +403,27 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         {
             // Idempotent — covers the dispatch-failure path.
             ClearDomainEvents(state);
+        }
+    }
+
+    /// <summary>
+    /// Dispatches events that no outbox row backs (the outbox is off, or the engine is not
+    /// relational) one at a time. Nothing retries such an event, so one throwing handler must not
+    /// take the later events of the save down with it: each failure is logged at Error, naming the
+    /// event type, and the next event still dispatches.
+    /// </summary>
+    private async Task DispatchUnbackedAsync(IDomainEvent[] events, CancellationToken cancellationToken)
+    {
+        foreach (var domainEvent in events)
+        {
+            try
+            {
+                await domainEventDispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LogUnbackedDispatchFailed(logger, domainEvent.GetType().Name, ex);
+            }
         }
     }
 
@@ -435,6 +463,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "In-process domain event dispatch failed; the outbox processor will retry")]
     private static partial void LogDispatchError(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "In-process domain event {EventType} dispatch failed and no outbox row backs it (outbox disabled or non-relational engine): the event is not retried")]
+    private static partial void LogUnbackedDispatchFailed(ILogger logger, string eventType, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not release the outbox lease after a failed in-process dispatch; the outbox processor will retry once the lease expires")]
     private static partial void LogLeaseReleaseFailed(ILogger logger, Exception exception);

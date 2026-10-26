@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Interfaces;
@@ -23,13 +23,14 @@ public sealed class DomainEventSaveChangesInterceptorOutboxDisabledTests : IDisp
 {
     private readonly Mock<IDomainEventDispatcher> _mockDispatcher = new();
     private readonly Mock<IOutboxSignal> _mockSignal = new();
+    private readonly RecordingLogger _logger = new();
     private readonly DomainEventSaveChangesInterceptorOutboxRoutingTests.OutboxRoutingTestDbContext _dbContext;
 
     public DomainEventSaveChangesInterceptorOutboxDisabledTests()
     {
         var interceptor = new DomainEventSaveChangesInterceptor(
             _mockDispatcher.Object,
-            NullLogger<DomainEventSaveChangesInterceptor>.Instance,
+            _logger,
             _mockSignal.Object,
             timeProvider: TimeProvider.System,
             Options.Create(new MessageBusSettings { EnableOutbox = false }));
@@ -83,6 +84,38 @@ public sealed class DomainEventSaveChangesInterceptorOutboxDisabledTests : IDisp
     }
 
     [Fact]
+    public async Task SaveChangesAsync_AThrowingHandler_DoesNotStopTheNextEvent_AndLogsThatNothingRetries()
+    {
+        // M255: with no outbox row behind the dispatch, one batched call lost every event after the
+        // first throwing handler while the log claimed the outbox would retry. Each event now
+        // dispatches on its own and the failure is logged at Error as not retried.
+        var entity = new DomainEventSaveChangesInterceptorOutboxRoutingTests.TestAggregate { Id = 1, Name = "Test" };
+        var first = new DomainEventSaveChangesInterceptorOutboxRoutingTests.TestLocalEvent("A");
+        var second = new DomainEventSaveChangesInterceptorOutboxRoutingTests.TestLocalEvent("B");
+        entity.AddDomainEvent(first);
+        entity.AddDomainEvent(second);
+        _dbContext.TestAggregates.Add(entity);
+
+        _mockDispatcher
+            .Setup(d => d.DispatchAsync(
+                It.Is<IEnumerable<IDomainEvent>>(events => events.Contains(first)),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("handler failed"));
+
+        await _dbContext.SaveChangesAsync();
+
+        _mockDispatcher.Verify(
+            d => d.DispatchAsync(
+                It.Is<IEnumerable<IDomainEvent>>(events => events.Contains(second)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        entity.DomainEvents.Should().BeEmpty();
+        _logger.Entries.Where(e => e.Level == LogLevel.Error).Should().ContainSingle()
+            .Which.Message.Should().Contain("not retried");
+        _logger.Entries.Should().NotContain(e => e.Message.Contains("will retry", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void SaveChanges_Sync_LeavesTheEventsPendingForALaterAsyncSave()
     {
         // The sync path cannot await the dispatcher. With the outbox on, clearing the events is safe
@@ -97,5 +130,30 @@ public sealed class DomainEventSaveChangesInterceptorOutboxDisabledTests : IDisp
         entity.DomainEvents.Should().ContainSingle(
             "nothing persisted the event, so it must stay on the aggregate until something dispatches it");
         _dbContext.Set<OutboxMessage>().AsNoTracking().ToList().Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Hand-rolled capture of the interceptor's log lines; the interceptor is sealed and its
+    /// messages are source-generated, so the rendered text is what the assertions read.
+    /// </summary>
+    private sealed class RecordingLogger : ILogger<DomainEventSaveChangesInterceptor>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+            Entries.Add((logLevel, formatter(state, exception)));
+        }
     }
 }

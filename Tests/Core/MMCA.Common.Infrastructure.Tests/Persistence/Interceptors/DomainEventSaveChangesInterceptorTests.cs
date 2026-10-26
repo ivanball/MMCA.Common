@@ -108,7 +108,7 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
         entity.DomainEvents.Should().BeEmpty();
     }
 
-    // ── Dispatch failure: checks logger IsEnabled for warning ──
+    // -- Dispatch failure: logs the not-retried error, not the outbox warning (M255) --
     [Fact]
     public async Task SaveChangesAsync_WhenDispatchFails_ChecksLoggerIsEnabled()
     {
@@ -122,11 +122,19 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
 
         await _dbContext.SaveChangesAsync();
 
-        // Source-generated LoggerMessage calls IsEnabled before Log.
-        // Verify the interceptor attempted to log.
+        // With no outbox row behind the dispatch nothing retries the event, so the failure is
+        // logged once at Error and never as the outbox Warning.
+        _mockLogger.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
         _mockLogger.Verify(
             l => l.IsEnabled(LogLevel.Warning),
-            Times.Once);
+            Times.Never);
     }
 
     // ── Multiple aggregates: all events dispatched ──
@@ -143,15 +151,15 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
         _dbContext.TestAggregates.Add(entity1);
         _dbContext.TestAggregates.Add(entity2);
 
-        IDomainEvent[]? capturedEvents = null;
+        // With the outbox off each event dispatches on its own call (M255), so collect across calls.
+        var capturedEvents = new List<IDomainEvent>();
         _mockDispatcher
             .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<IDomainEvent>, CancellationToken>((events, _) => capturedEvents = [.. events])
+            .Callback<IEnumerable<IDomainEvent>, CancellationToken>((events, _) => capturedEvents.AddRange(events))
             .Returns(Task.CompletedTask);
 
         await _dbContext.SaveChangesAsync();
 
-        capturedEvents.Should().NotBeNull();
         capturedEvents.Should().HaveCount(3);
     }
 
