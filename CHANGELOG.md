@@ -34,6 +34,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Documentation
 
 - Documented: `DataExportControllerBase.CreateQuery` and `IUserOwnedRequest.CurrentUserRole` state that the role passed is the first role claim, the only one on the single-role tokens the framework mints, and that a host issuing multi-role tokens overrides `CreateQuery` to pass its privileged role when `IsInRole` holds. No behaviour change. (M256)
+- Documented: `PushNotificationSettings.HubPath` states that the shipped `NotificationHubService` client connects at the default `/hubs/notifications`, so a host moving the hub must also move the client, the gateway route, `RateLimiting:HubPathPrefixes` and the same-origin proxy exemption. No behaviour change. (L238)
 
 ## [1.260.0] - 2026-10-25
 

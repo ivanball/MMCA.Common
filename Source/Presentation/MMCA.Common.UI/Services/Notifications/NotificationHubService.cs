@@ -99,6 +99,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         // no client-held token.
         _sameOriginProxyEndpoint = apiSettings.Value.SameOriginApiEndpoint;
         string endpoint = _sameOriginProxyEndpoint ?? apiSettings.Value.ApiEndpoint ?? throw new ArgumentNullException(nameof(apiSettings));
+        // The default PushNotificationSettings.HubPath; see that setting's doc for what moving it takes.
         _hubUrl = endpoint.TrimEnd('/') + "/hubs/notifications";
     }
 
