@@ -59,7 +59,7 @@
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
     <!-- PostgreSQL provider (ADR-113). Npgsql ships on its own cadence, so its version tracks the EF
-         Core MAJOR (10.x) rather than the exact 10.0.11 patch the Microsoft-owned providers share;
+         Core MAJOR (10.x) rather than the exact 10.0.14 patch the Microsoft-owned providers share;
          10.0.3 is the current stable build for EF Core 10. -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.14" />
@@ -298,11 +298,11 @@
     <PackageVersion Include="bunit" Version="2.13.3" />
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
-         2.12.5 now floors it at 1.8.5. CPM does not pin transitives, so the two bUnit-referencing projects
+         2.13.3 now floors it at 1.8.6. CPM does not pin transitives, so the two bUnit-referencing projects
          keep a direct PackageReference to hold it at this central version.
-         HELD at 1.8.5 2026-10-25: 1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated
-         HtmlSelectElementWrapper does not implement (TypeLoadException on set_SelectedIndex in every
-         bUnit Find). Take 1.8.6+ only together with a bUnit release built against it. -->
+         1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
+         does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
+         only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
     <PackageVersion Include="AngleSharp" Version="1.8.6" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin

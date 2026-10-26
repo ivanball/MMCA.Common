@@ -65,7 +65,7 @@ public abstract class MiddlewarePipelineOrderTestsBase
         var builder = CreateBuilder();
 
         builder.StepNames.Should().Equal(ExpectedStepNames,
-            because: "the edge pipeline must run in exactly the documented order, outermost first: the pre-forwarded capture has to sit immediately before UseForwardedHeaders for jwks_uri to stay reachable, tenant resolution immediately after authentication so the claim strategy sees HttpContext.User, and the rate limiter after authentication per ADR-019 so the per-user cap engages");
+            because: "the edge pipeline must run in exactly the documented order, outermost first: the pre-forwarded capture has to sit immediately before UseForwardedHeaders so the captured pre-forwarded scheme and host stay faithful, tenant resolution immediately after authentication so the claim strategy sees HttpContext.User, and the rate limiter after authentication per ADR-019 so the per-user cap engages");
     }
 
     [Fact]

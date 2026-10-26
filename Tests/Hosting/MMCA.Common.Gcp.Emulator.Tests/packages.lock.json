@@ -889,6 +889,7 @@
           "MassTransit.RabbitMQ": "[8.5.12, )",
           "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
           "MessagePack": "[3.1.12, )",
+          "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.14, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.14, )",
           "Microsoft.Data.SqlClient": "[7.1.1, )",
           "Microsoft.EntityFrameworkCore.Cosmos": "[10.0.14, )",

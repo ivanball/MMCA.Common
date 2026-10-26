@@ -665,7 +665,8 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// It runs AFTER the tokens are issued and saves on its own through the unit of work, so the
     /// session save never carries the user row and a failure here (a refused invariant, a
     /// concurrency conflict, a dropped connection) cannot fail a sign-in that has already succeeded:
-    /// it is logged and counted through <see cref="BestEffort"/>, and the record is simply upgraded on
+    /// a refused invariant is logged as <c>PasswordRehashRejected</c> and returns, any other failure is
+    /// logged and counted through <see cref="BestEffort"/>, and the record is simply upgraded on
     /// a later sign-in. <see cref="CancellationToken.None"/> is deliberate: the sign-in is complete,
     /// and an abandoned request must not turn into a cancellation surfacing from it.
     /// </remarks>

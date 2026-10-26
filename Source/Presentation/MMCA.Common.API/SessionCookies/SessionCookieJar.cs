@@ -58,9 +58,10 @@ internal static class SessionCookieJar
     }
 
     // Secure outside Development whatever the request scheme: production sits behind a TLS-terminating
-    // ingress (Azure Container Apps), where the app sees plain http and Request.IsHttps is false. In
-    // Development the request decides, so the local HTTPS stack gets TLS-only cookies and only a plain
-    // http://localhost run goes without the flag.
+    // ingress (Azure Container Apps), where Request.IsHttps is true only once the forwarded-headers step
+    // has applied X-Forwarded-Proto, so the flag does not depend on it. In Development the request
+    // decides, so the local HTTPS stack gets TLS-only cookies and only a plain-http Development request
+    // (any host name) goes without the flag.
 #pragma warning disable S2092 // Secure is false only for a Development request that arrived over plain http (http://localhost dev still works); it is true for every non-Development environment and for every HTTPS request
     private static CookieOptions BuildOptions(HttpContext context, IWebHostEnvironment environment, TimeSpan lifetime, SameSiteMode sameSite) => new()
     {

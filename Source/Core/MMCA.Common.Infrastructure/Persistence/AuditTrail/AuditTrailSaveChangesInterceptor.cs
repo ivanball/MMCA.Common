@@ -572,8 +572,9 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
     }
 
     /// <summary>
-    /// Brings the tracked instance and its snapshot in line with the value just written by
-    /// <c>ExecuteUpdate</c>, so a later save on the same context does not re-issue the update. The
+    /// Brings the tracked instance in line with the value just written by <c>ExecuteUpdate</c>, which
+    /// bypasses the change tracker. The snapshot write keeps that CLR assignment from being detected
+    /// as a change, so a later save on the same context does not re-issue the update. The
     /// original-value write must precede clearing <c>IsModified</c>: clearing the flag reverts the
     /// current value to the original.
     /// </summary>

@@ -216,7 +216,7 @@ public static partial class DependencyInjection
 
             // Startup tripwire: an enabled NativePush section whose sender still resolves to the inert
             // core default means the vendor adapter call is missing (the implementation lives in
-            // MMCA.Common.Azure or MMCA.Common.Aws). Fails the host naming the call instead of letting it run with pushes
+            // MMCA.Common.Azure, MMCA.Common.Aws or MMCA.Common.Gcp). Fails the host naming the call instead of letting it run with pushes
             // dropped. FileStorage is deliberately not checked; CloudAdapterTripwire says why.
             services.AddOptions<Configuration.CloudAdapterTripwireOptions>().ValidateOnStart();
             services.TryAddEnumerable(

@@ -10,8 +10,8 @@ namespace MMCA.Common.API.Middleware;
 /// <summary>
 /// Translates EF Core <see cref="DbUpdateException"/> into an HTTP 409 Conflict
 /// ProblemDetails response. This covers concurrency conflicts, unique-constraint
-/// violations, and foreign-key failures. The inner exception message is included
-/// in the detail because it typically contains the database-level constraint name.
+/// violations, and foreign-key failures. The detail is a fixed generic message, so no
+/// database schema or constraint name leaks to the client; the full exception is logged.
 /// </summary>
 /// <param name="problemDetailsService">The service used to write RFC 9457 problem details.</param>
 /// <param name="logger">Logger for recording database update exceptions.</param>

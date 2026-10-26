@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed: the Redis output-cache store registered by `AddRedisOutputCaching` is now namespaced per application like the cache and distributed-lock keys (SEC-Common-53, ADR-135). `AddCaching` post-configures `RedisOutputCacheOptions.InstanceName` from the same prefix (`Cache:KeyPrefix` when set, otherwise `"{application namespace}:"`), so two applications on one Redis no longer serve or evict each other's output-cache entries and tag sets. An `InstanceName` a host sets explicitly is kept. On first deploy the output cache starts cold under the new prefix; no consumer change is needed. Infrastructure takes a direct `Microsoft.AspNetCore.OutputCaching.StackExchangeRedis` reference for the options type.
+- Fixed: source comments and XML docs that contradicted the code they describe (found by the 2026-10-26 ADR audit). Documentation text only.
+
 ## [1.261.0] - 2026-10-25
 
 ### Changed
