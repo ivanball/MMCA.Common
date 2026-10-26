@@ -47,6 +47,10 @@ public sealed class SnsPushDeviceRegistrarTests
             .ReturnsAsync(new PutItemResponse());
         _dynamoDb.Setup(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeleteItemResponse());
+
+        // The owner holds no other row by default, so a delete is the endpoint's last row.
+        _dynamoDb.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueryResponse());
         SetupNoRow();
     }
 
@@ -294,6 +298,38 @@ public sealed class SnsPushDeviceRegistrarTests
                 && r.ExpressionAttributeValues[":me"].S == "42"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    // M260: a second installation id of the same user (an app reinstall) still holds the endpoint,
+    // so deleting the first row must leave the endpoint and its subscription alone.
+    [Fact]
+    public async Task DeleteAsync_WhenAnotherRowOfTheOwnerSharesTheEndpoint_DeletesOnlyTheRow()
+    {
+        const string otherInstallationId = "9a8b7c6d5e4f40312a1b2c3d4e5f6a7b";
+        SetupRow(Owner, "token");
+        _dynamoDb.Setup(x => x.QueryAsync(
+                It.Is<QueryRequest>(r => r.IndexName == SnsInstallationRegistry.UserIdIndexName && r.ExpressionAttributeValues[":user"].S == "42"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueryResponse { Items = [OwnerRow(InstallationId), OwnerRow(otherInstallationId)] });
+
+        var result = await CreateSut().DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _sns.Verify(x => x.DeleteEndpointAsync(It.IsAny<DeleteEndpointRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sns.Verify(x => x.UnsubscribeAsync(It.IsAny<UnsubscribeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        _dynamoDb.Verify(x => x.DeleteItemAsync(
+            It.Is<DeleteItemRequest>(r => r.Key["InstallationId"].S == InstallationId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static Dictionary<string, AttributeValue> OwnerRow(string installationId) => new()
+    {
+        ["InstallationId"] = new() { S = installationId },
+        ["UserId"] = new() { S = "42" },
+        ["Platform"] = new() { S = "fcmv1" },
+        ["PushChannel"] = new() { S = "token" },
+        ["EndpointArn"] = new() { S = ExistingEndpointArn },
+        ["SubscriptionArn"] = new() { S = ExistingSubscriptionArn },
+    };
 
     [Fact]
     public async Task DeleteAsync_ByAnotherUser_SucceedsAndDeletesNothing()

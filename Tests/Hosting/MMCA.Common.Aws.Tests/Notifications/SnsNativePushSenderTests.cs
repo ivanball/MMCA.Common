@@ -135,6 +135,35 @@ public sealed class SnsNativePushSenderTests
             It.Is<DeleteEndpointRequest>(r => r.EndpointArn == EndpointArn("healthy")), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // M260: two installation ids holding one device token share one endpoint; the device is
+    // published to once, and a stale shared endpoint removes every row that points at it.
+    [Fact]
+    public async Task SendToUsersAsync_TwoRowsSharingAnEndpoint_PublishOnce()
+    {
+        SetupUser("1", Row("i1", "1", "shared"), Row("i2", "1", "shared"));
+
+        await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        _published.Should().ContainSingle().Which.TargetArn.Should().Be(EndpointArn("shared"));
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_ADisabledSharedEndpoint_IsRemovedOnce_WithEveryRowPointingAtIt()
+    {
+        SetupUser("1", Row("i1", "1", "shared"), Row("i2", "1", "shared"));
+        _sns.Setup(x => x.PublishAsync(It.IsAny<PublishRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new EndpointDisabledException("Endpoint is disabled"));
+
+        await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        _sns.Verify(x => x.PublishAsync(It.IsAny<PublishRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        _sns.Verify(x => x.DeleteEndpointAsync(
+            It.Is<DeleteEndpointRequest>(r => r.EndpointArn == EndpointArn("shared")), It.IsAny<CancellationToken>()), Times.Once);
+        _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _dynamoDb.Verify(x => x.DeleteItemAsync(
+            It.Is<DeleteItemRequest>(r => r.Key["InstallationId"].S == "i2"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task SendToUsersAsync_AnEndpointThatNoLongerExists_IsRemovedFromTheRegistry()
     {

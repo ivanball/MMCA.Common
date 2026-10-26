@@ -11,6 +11,11 @@ namespace MMCA.Common.Azure.Storage;
 /// Azure Blob Storage implementation of <see cref="IFileStorageService"/> (ADR-045). Works
 /// against the single container configured in <c>FileStorage:ContainerName</c>; the container
 /// itself (and its public-access level) is provisioned by infrastructure, not created here.
+/// A service failure (<see cref="RequestFailedException"/>) and a transport failure that never
+/// produced a service response (an <see cref="HttpRequestException"/>, an <see cref="IOException"/>,
+/// or a timeout after the retry policy, which Azure.Core surfaces as a cancellation the caller did not
+/// request) are both a <see cref="Result"/> failure with the <c>FileStorage.UploadFailed</c> /
+/// <c>FileStorage.DeleteFailed</c> codes; the caller's own cancellation still propagates.
 /// </summary>
 public sealed class AzureBlobFileStorageService(
     BlobContainerClient containerClient,
@@ -56,6 +61,14 @@ public sealed class AzureBlobFileStorageService(
                 message: "The file could not be stored.",
                 source: nameof(AzureBlobFileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "Blob upload failed");
+            return Result.Failure<Uri>(Error.Failure(
+                code: "FileStorage.UploadFailed",
+                message: "The file could not be stored.",
+                source: nameof(AzureBlobFileStorageService)));
+        }
     }
 
     /// <inheritdoc />
@@ -75,5 +88,23 @@ public sealed class AzureBlobFileStorageService(
                 message: "The file could not be deleted.",
                 source: nameof(AzureBlobFileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "Blob delete failed");
+            return Result.Failure(Error.Failure(
+                code: "FileStorage.DeleteFailed",
+                message: "The file could not be deleted.",
+                source: nameof(AzureBlobFileStorageService)));
+        }
     }
+
+    /// <summary>
+    /// A failure that never produced a service response: a connect or DNS failure, a dropped
+    /// connection, or a timeout after the client's own retries (surfaced as an
+    /// <see cref="OperationCanceledException"/> the caller did not request). The caller's own
+    /// cancellation is not one and keeps propagating.
+    /// </summary>
+    private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or IOException
+        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
 }

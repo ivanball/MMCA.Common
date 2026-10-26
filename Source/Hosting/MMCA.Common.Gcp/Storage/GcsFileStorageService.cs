@@ -17,7 +17,10 @@ namespace MMCA.Common.Gcp.Storage;
 /// implementations: the content type and the <see cref="FileUploadOptions"/> headers are stored with
 /// the object, an upload returns the object's URL, a delete of a missing object succeeds, and a
 /// service failure is a <see cref="Result"/> failure with the <c>FileStorage.UploadFailed</c> /
-/// <c>FileStorage.DeleteFailed</c> codes rather than an exception.
+/// <c>FileStorage.DeleteFailed</c> codes rather than an exception. So is a transport failure that
+/// never produced a service response (an <see cref="HttpRequestException"/>, an
+/// <see cref="IOException"/>, or a timeout the caller did not request); the caller's own
+/// cancellation still propagates.
 /// </summary>
 public sealed class GcsFileStorageService(
     StorageClient storageClient,
@@ -70,6 +73,14 @@ public sealed class GcsFileStorageService(
                 message: "The file could not be stored.",
                 source: nameof(GcsFileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "Cloud Storage object upload failed");
+            return Result.Failure<Uri>(Error.Failure(
+                code: "FileStorage.UploadFailed",
+                message: "The file could not be stored.",
+                source: nameof(GcsFileStorageService)));
+        }
     }
 
     /// <inheritdoc />
@@ -94,5 +105,23 @@ public sealed class GcsFileStorageService(
                 message: "The file could not be deleted.",
                 source: nameof(GcsFileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "Cloud Storage object delete failed");
+            return Result.Failure(Error.Failure(
+                code: "FileStorage.DeleteFailed",
+                message: "The file could not be deleted.",
+                source: nameof(GcsFileStorageService)));
+        }
     }
+
+    /// <summary>
+    /// A failure that never produced a service response: a connect or DNS failure, a dropped
+    /// connection, or a timeout after the client's own retries (surfaced as an
+    /// <see cref="OperationCanceledException"/> the caller did not request). The caller's own
+    /// cancellation is not one and keeps propagating.
+    /// </summary>
+    private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or IOException
+        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
 }

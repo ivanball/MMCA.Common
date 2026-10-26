@@ -127,6 +127,25 @@ public sealed class GcsFileStorageServiceTests
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
     }
 
+    // M261: a transport failure never becomes a GoogleApiException, and it is still a Result failure.
+    [Fact]
+    public async Task UploadAsync_TransportFailure_IsTheUploadFailedResult()
+    {
+        _client.Setup(c => c.UploadObjectAsync(
+                It.IsAny<StorageObject>(),
+                It.IsAny<Stream>(),
+                It.IsAny<UploadObjectOptions>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<IUploadProgress>>()))
+            .ThrowsAsync(new HttpRequestException("connection refused"));
+        await using var content = new MemoryStream([1]);
+
+        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
+    }
+
     [Fact]
     public async Task UploadAsync_RejectsNullOptions()
     {
@@ -178,6 +197,32 @@ public sealed class GcsFileStorageServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
+    }
+
+    // M261: a timeout the caller did not request is a transport failure, not an escaping exception.
+    [Fact]
+    public async Task DeleteAsync_TimeoutTheCallerDidNotRequest_IsTheDeleteFailedResult()
+    {
+        _client.Setup(c => c.DeleteObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DeleteObjectOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException("The request timed out."));
+
+        var result = await CreateSut().DeleteAsync("a.png", TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TheCallersOwnCancellation_StillPropagates()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+        _client.Setup(c => c.DeleteObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DeleteObjectOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+
+        var act = () => CreateSut().DeleteAsync("a.png", cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

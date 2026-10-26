@@ -16,7 +16,9 @@ namespace MMCA.Common.Aws.Storage;
 /// type and the <see cref="FileUploadOptions"/> headers are stored with the object, an upload returns
 /// the object's URL, a delete of a missing object succeeds, and a service failure is a
 /// <see cref="Result"/> failure with the <c>FileStorage.UploadFailed</c> / <c>FileStorage.DeleteFailed</c>
-/// codes rather than an exception.
+/// codes rather than an exception. So is a transport failure that never produced a service response
+/// (an <see cref="HttpRequestException"/>, an <see cref="IOException"/>, or a timeout the caller did
+/// not request); the caller's own cancellation still propagates.
 /// </summary>
 public sealed class S3FileStorageService(
     IAmazonS3 s3Client,
@@ -82,6 +84,14 @@ public sealed class S3FileStorageService(
                 message: "The file could not be stored.",
                 source: nameof(S3FileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "S3 object upload failed");
+            return Result.Failure<Uri>(Error.Failure(
+                code: "FileStorage.UploadFailed",
+                message: "The file could not be stored.",
+                source: nameof(S3FileStorageService)));
+        }
     }
 
     /// <inheritdoc />
@@ -104,6 +114,14 @@ public sealed class S3FileStorageService(
                 message: "The file could not be deleted.",
                 source: nameof(S3FileStorageService)));
         }
+        catch (Exception ex) when (IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "S3 object delete failed");
+            return Result.Failure(Error.Failure(
+                code: "FileStorage.DeleteFailed",
+                message: "The file could not be deleted.",
+                source: nameof(S3FileStorageService)));
+        }
     }
 
     /// <summary>
@@ -119,4 +137,14 @@ public sealed class S3FileStorageService(
     internal static bool SendsUnsignedPayload(S3FileStorageSettings settings) =>
         settings.ServiceUrl is { IsAbsoluteUri: true } serviceUrl
         && string.Equals(serviceUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A failure that never produced a service response: a connect or DNS failure, a dropped
+    /// connection, or a timeout after the client's own retries (surfaced as an
+    /// <see cref="OperationCanceledException"/> the caller did not request). The caller's own
+    /// cancellation is not one and keeps propagating.
+    /// </summary>
+    private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or IOException
+        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
 }
