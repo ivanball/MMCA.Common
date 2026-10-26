@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+### Fixed
+
+- Fixed: a `Money` JSON payload that omits the currency or sends it as `null` is refused as a `JsonException` instead of an `ArgumentNullException`, so the MVC body formatter answers 400 with the JSON path instead of a 500 (the Store catalog price and discount endpoints, for example). `Money.Create` still throws `ArgumentNullException` for a null currency. (M259)
+
 ## [1.260.0] - 2026-10-25
 
 ### Changed

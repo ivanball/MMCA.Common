@@ -32,15 +32,22 @@ public class MoneySerializationTests
     }
 
     // -- Missing / null currency --
+    // M259: a missing currency is a JsonException (a 400 on the MVC body path), never an
+    // ArgumentNullException (a 500).
     [Fact]
-    public void Deserialize_PayloadMissingCurrency_ThrowsArgumentNullException() =>
+    public void Deserialize_PayloadMissingCurrency_ThrowsJsonException() =>
         FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>("{\"Amount\":5}"))
-            .Should().Throw<ArgumentNullException>();
+            .Should().Throw<JsonException>();
 
     [Fact]
-    public void Deserialize_PayloadWithNullCurrency_ThrowsArgumentNullException() =>
+    public void Deserialize_PayloadWithNullCurrency_ThrowsJsonException() =>
         FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>("{\"Amount\":5,\"Currency\":null}"))
-            .Should().Throw<ArgumentNullException>();
+            .Should().Throw<JsonException>();
+
+    [Fact]
+    public void Deserialize_EmptyObject_ThrowsJsonException() =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Money>("{}"))
+            .Should().Throw<JsonException>();
 
     // -- Currency.None sentinel --
     [Fact]
