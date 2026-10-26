@@ -224,7 +224,7 @@ jobs:
     name: UI a11y + render smoke (${{ matrix.browser }})
     needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 34
     strategy:
       # Don't let one engine's failure cancel the others; surface each engine's result independently.
       fail-fast: false
@@ -305,7 +305,7 @@ jobs:
       # the dpkg lock against every retry.
       - name: Install Playwright (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
-        timeout-minutes: 14
+        timeout-minutes: 26
         run: |
           archives="$GITHUB_WORKSPACE/.apt-archives"
           mkdir -p "$archives/partial"
@@ -330,8 +330,12 @@ jobs:
             retry 180 timeout --kill-after=20 180 pwsh "$script" install ${{ matrix.browser }}
           fi
           # No -E: install-deps needs no runner environment, and root's own HOME keeps pwsh's caches
-          # out of the runner user's home.
-          retry 240 sudo timeout --kill-after=20 240 pwsh "$script" install-deps ${{ matrix.browser }}
+          # out of the runner user's home. A stalled transfer is already cut by the 30s apt HTTP
+          # timeouts above; the per-attempt bound only has to outlast a SLOW mirror. Downloaded .debs
+          # survive into the next attempt, so the three attempts add up: at 240s the webkit set (fonts,
+          # codecs, GStreamer, the largest of the three engines) missed all three on a slow
+          # azure.archive.ubuntu.com while still progressing (PR #615, 2026-10-26).
+          retry 480 sudo timeout --kill-after=20 480 pwsh "$script" install-deps ${{ matrix.browser }}
 
           # The post-job cache save runs as the runner user.
           sudo chown -R "$(id -u):$(id -g)" "$archives"
