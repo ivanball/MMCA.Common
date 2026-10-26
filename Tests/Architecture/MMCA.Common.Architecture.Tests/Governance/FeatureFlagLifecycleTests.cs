@@ -5,8 +5,8 @@ namespace MMCA.Common.Architecture.Tests.Governance;
 
 /// <summary>
 /// Runs the shared feature-flag lifecycle rules (ADR-031) against MMCA.Common's own Shared assembly
-/// through <see cref="FeatureFlagLifecycleTestsBase"/>, the same way MMCA.ADC and MMCA.Store subclass
-/// it for their module <c>*Features</c> classes. Not vacuous: it really walks
+/// through <see cref="FeatureFlagLifecycleTestsBase"/>, the same way MMCA.ADC, MMCA.Store and
+/// MMCA.Helpdesk subclass it for their module <c>*Features</c> classes. Not vacuous: it really walks
 /// <c>NotificationFeatures</c> and <c>PrivacyFeatures</c>, and the day the framework adds a flag
 /// without declaring its lifecycle this build fails.
 /// </summary>

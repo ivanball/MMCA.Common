@@ -53,7 +53,8 @@ public static class ClaimsPrincipalExtensions
     /// the narrower BCL <see cref="ClaimsPrincipal.IsInRole(string)"/> sees only the identity's own
     /// role claim type, so it can disagree with the authorization handler about who is privileged,
     /// and a check built on that disagreement (a cache bypass, an elevated payload) silently fails
-    /// open. Every role read goes through here.
+    /// open. Every role read that gates access goes through here; the UI NavMenu's BCL
+    /// <c>IsInRole</c> calls only decide which nav links are shown, not what the caller may do.
     /// </remarks>
     /// <param name="principal">The principal to read; a null principal yields an empty sequence.</param>
     public static IEnumerable<string> GetRoleValues(this ClaimsPrincipal? principal) =>

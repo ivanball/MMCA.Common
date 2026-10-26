@@ -90,7 +90,8 @@ public sealed class RefreshSessionSettings
     /// <b>It is a security trade-off.</b> A replay of a stolen token that arrives within this window of
     /// a legitimate rotation is answered 409 instead of revoking the user's whole session family
     /// (BR-206). Past the window the BR-206 answer applies unchanged, and only a row revoked as
-    /// <c>Rotated</c> qualifies: a row already flagged as reuse still revokes the family however recent.
+    /// <c>Rotated</c> qualifies: a row already flagged as reuse fails that request alone, without
+    /// revoking the family again, however recent.
     /// Set to <c>0</c> to treat every rotated token that comes back as reuse.
     /// </para>
     /// </summary>

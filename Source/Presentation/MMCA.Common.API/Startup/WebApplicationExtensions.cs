@@ -122,7 +122,7 @@ public static class WebApplicationExtensions
             {
                 if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
                 {
-#pragma warning disable S3330, S2092 // S3330: non-HttpOnly by default by design (ADR-027), the WASM client reads this cookie directly on startup (MmcaCultureBootstrap.SetBrowserCultureAsync); S2092: Secure is conditional on the hosting environment (false only in Development), same pattern as SessionCookieJar.BuildOptions
+#pragma warning disable S3330, S2092 // S3330: non-HttpOnly by default by design (ADR-027), the WASM client reads this cookie directly on startup (MmcaCultureBootstrap.SetBrowserCultureAsync); S2092: Secure is conditional on the hosting environment (false only in Development, even over HTTPS, unlike SessionCookieJar.BuildOptions, which also sets it for an HTTPS Development request)
                     context.Response.Cookies.Append(
                         CookieRequestCultureProvider.DefaultCookieName,
                         CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),

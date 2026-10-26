@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OutputCaching.StackExchangeRedis;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
@@ -55,6 +56,21 @@ public static partial class DependencyInjection
                 services.AddOptions<CacheSettings>();
                 services.AddOptions<Application.Settings.QueryCachePipelineSettings>();
             }
+
+            // The Redis output-cache store (MMCA.Common.Aspire AddRedisOutputCaching) takes the same
+            // namespace as the cache and lock keys, so two applications on one Redis do not share
+            // output-cache entries or tag sets (SEC-Common-53, ADR-135). InstanceName is safe here,
+            // unlike for IDistributedCache: the store prefixes its value AND tag keys itself, so tag
+            // eviction sees the same key shape. PostConfigure runs after the store's own Configure,
+            // and an InstanceName a host set explicitly is kept. Inert when no store is registered.
+            services.AddOptions<RedisOutputCacheOptions>()
+                .PostConfigure<IServiceProvider>((options, sp) =>
+                {
+                    if (string.IsNullOrEmpty(options.InstanceName))
+                    {
+                        options.InstanceName = CacheKeyNamespace.From(sp).Prefix;
+                    }
+                });
 
             services.TryAddSingleton<ICacheService>(sp =>
             {

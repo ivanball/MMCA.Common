@@ -62,7 +62,9 @@
         {
             // JS interop (cookie/localStorage read) is only available after the first interactive render.
             // A failure (asset missing, a malformed theme cookie) must not escape the root layout's
-            // lifecycle and kill the circuit: the page keeps its initial mode instead.
+            // lifecycle and kill the circuit: the page keeps its initial mode instead. ThemeInterop.TryAsync
+            // catches only the JS, disconnect and unavailable-interop failures; an interop timeout
+            // (TaskCanceledException) is not caught.
             // A known native value is authoritative at startup over a possibly stale WebView value.
             if (await ThemeInterop.TryAsync(() => ThemeService.InitializeAtStartupAsync(_nativeIsDarkMode)))
             {

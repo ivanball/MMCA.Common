@@ -34,7 +34,7 @@ public static partial class ApplicationNamespace
     public const string Fallback = "app";
 
     /// <summary>
-    /// The key the generic host writes the application name to (<c>WebHostDefaults.ApplicationNameKey</c>),
+    /// The key the generic host writes the application name to (<c>HostDefaults.ApplicationKey</c>),
     /// read when no <see cref="IHostEnvironment"/> is at hand.
     /// </summary>
     private const string HostApplicationNameKey = "applicationName";
