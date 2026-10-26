@@ -318,6 +318,51 @@ public sealed class OutboxCleanupServiceTests
             "deleting an undelivered event is the one cleanup action nothing can undo, so it is never silent");
     }
 
+    // -- L234: the dead-letter window runs from the last failed attempt (LockedUntil), falling back
+    // to OccurredOn, so a replayed or long-delayed row is not purged on the next sweep --
+    [Fact]
+    public async Task PurgeSweep_KeysTheDeadLetterWindowOnTheLastFailedAttempt_FallingBackToOccurredOn()
+    {
+        var timeProvider = new FakeTimeProvider(SweepStart);
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync(CancellationToken.None);
+        await using var context = CleanupTestContext.Create(connection);
+
+        var recentlyFailed = DeadLetteredOutboxMessage(
+            SweepStart.UtcDateTime.AddDays(-8), retryCount: 3, lockedUntil: SweepStart.UtcDateTime.AddHours(-1));
+        var longAgoFailed = DeadLetteredOutboxMessage(
+            SweepStart.UtcDateTime.AddDays(-8), retryCount: 3, lockedUntil: SweepStart.UtcDateTime.AddDays(-8));
+        var neverStamped = DeadLetteredOutboxMessage(SweepStart.UtcDateTime.AddDays(-8), retryCount: 3);
+        context.AddRange(recentlyFailed, longAgoFailed, neverStamped);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var (sut, sweepObserved, _, scopeServices) = CreateSweepSut(
+            timeProvider,
+            _ => context,
+            [DataSourceKey.Default(DataSource.Sqlite)],
+            new OutboxSettings
+            {
+                RetentionDays = 7,
+                CleanupIntervalHours = 1,
+                MaxRetries = 3,
+                DataSource = DataSource.Sqlite,
+            },
+            observedLogEvent: DeadLetterPurgedEvent);
+        await using var scope = scopeServices;
+        using var service = sut;
+
+        await service.StartAsync(CancellationToken.None);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await service.StopAsync(CancellationToken.None);
+
+        List<Guid> remaining = await context.Set<OutboxMessage>().AsNoTracking()
+            .Select(m => m.Id)
+            .ToListAsync(CancellationToken.None);
+        remaining.Should().BeEquivalentTo(
+            [recentlyFailed.Id],
+            "a row that failed an hour ago keeps its window however old its OccurredOn; an old failure and an unstamped row are purged");
+    }
+
     // ── Purge sweep: one unreachable source must not stop the others from being purged ──
     [Fact]
     public async Task PurgeSweep_WhenOneSourceThrows_StillPurgesTheOtherSources()
@@ -525,13 +570,14 @@ public sealed class OutboxCleanupServiceTests
         OccurredOn = occurredOn,
     };
 
-    private static OutboxMessage DeadLetteredOutboxMessage(DateTime occurredOn, int retryCount) => new()
+    private static OutboxMessage DeadLetteredOutboxMessage(DateTime occurredOn, int retryCount, DateTime? lockedUntil = null) => new()
     {
         EventType = "Test.Event",
         Payload = "{}",
         OccurredOn = occurredOn,
         RetryCount = retryCount,
         LastError = "boom",
+        LockedUntil = lockedUntil,
     };
 
     private static OutboxMessage PendingWithRetries(DateTime occurredOn, int retryCount) => new()

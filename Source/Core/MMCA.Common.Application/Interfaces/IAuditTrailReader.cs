@@ -30,8 +30,11 @@ public interface IAuditTrailReader
     /// The invariant string form of the entity's primary key; the parts of a composite key joined
     /// with <c>|</c> in the model's key order.
     /// </param>
-    /// <param name="page">The 1-based page number; values below 1 are treated as 1.</param>
-    /// <param name="pageSize">The page size; values below 1 are treated as 1.</param>
+    /// <param name="page">
+    /// The 1-based page number; values below 1 are treated as 1, and a page whose offset exceeds
+    /// <see cref="int.MaxValue"/> rows returns an empty list.
+    /// </param>
+    /// <param name="pageSize">The page size, clamped to 1..500.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The recorded changes for that entity, or an empty list when it has no history.</returns>
     Task<IReadOnlyList<AuditTrailEntryDTO>> GetForEntityAsync(

@@ -1047,7 +1047,10 @@ public sealed partial class OutboxProcessor(
         }
 
         message.RetryCount = _settings.MaxRetries;
-        message.LockedUntil = null;
+
+        // Stamped, not cleared: the dead-letter retention window runs from LockedUntil (the last
+        // failed attempt), and the row already leaves the poll through the RetryCount filter.
+        message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime;
         OutboxMetrics.DeadLetterCounter.Add(
             1,
             new KeyValuePair<string, object?>("event_type", message.EventType),

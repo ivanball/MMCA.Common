@@ -36,6 +36,12 @@ internal sealed class AuditTrailReader(
     IDataSourceResolver dataSourceResolver,
     IOptions<AuditTrailSettings> options) : IAuditTrailReader
 {
+    /// <summary>
+    /// The largest page one call returns, the same cap <c>OutboxAdministration.MaxPageSize</c>
+    /// applies to its own paged read.
+    /// </summary>
+    private const int MaxPageSize = 500;
+
     private readonly AuditTrailSettings _settings = options.Value;
 
     /// <inheritdoc />
@@ -47,7 +53,15 @@ internal sealed class AuditTrailReader(
         CancellationToken cancellationToken = default)
     {
         var effectivePage = page < 1 ? 1 : page;
-        var effectivePageSize = pageSize < 1 ? 1 : pageSize;
+        var effectivePageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
+        // Computed in long: (page - 1) * pageSize overflows int for a large page number, and the
+        // wrapped negative offset reads as 0 on some engines (the first page comes back).
+        var skip = (long)(effectivePage - 1) * effectivePageSize;
+        if (skip > int.MaxValue)
+        {
+            return [];
+        }
 
         var context = dbContextFactory.GetDbContext(
             dataSourceResolver.ResolveLogical(_settings.DataSource, DataSourceKey.DefaultName));
@@ -61,7 +75,7 @@ internal sealed class AuditTrailReader(
             .Where(row => row.EntityType == entityType && row.EntityKey == entityKey)
             .OrderByDescending(row => row.ChangedOn)
             .ThenByDescending(row => row.Id)
-            .Skip((effectivePage - 1) * effectivePageSize)
+            .Skip((int)skip)
             .Take(effectivePageSize)
             .Select(row => new AuditTrailEntryDTO
             {

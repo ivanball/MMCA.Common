@@ -136,7 +136,11 @@ public sealed partial class OutboxCleanupService(
     /// accumulate AND stay in the <c>ProcessedOn IS NULL</c> pending index that every poll re-scans.
     /// <para>
     /// Their window is <c>Outbox:DeadLetterRetentionDays</c>, falling back to <c>RetentionDays</c>,
-    /// and it is keyed on <c>OccurredOn</c> since they have no <c>ProcessedOn</c>. Past it they are
+    /// and it runs from the last failed attempt: the sweep keys on <c>LockedUntil</c>, which the
+    /// processor stamps on every failed attempt (the exhausting one included, and on the
+    /// unresolvable-type dead-letter path) and which a replay clears and the next failure re-stamps,
+    /// falling back to <c>OccurredOn</c> when it is null. A replayed or long-delayed row therefore
+    /// keeps its full window instead of being purged on the next sweep. Past it they are
     /// deleted, and the deletion is logged at Warning with its count, because it destroys the only
     /// record that the event was ever raised. Widen the window to keep them available for diagnosis
     /// and for replay through <c>IOutboxAdministration.ReplayDeadLettersAsync</c>.
@@ -156,7 +160,7 @@ public sealed partial class OutboxCleanupService(
         var expired = context.Set<OutboxMessage>()
             .Where(m => m.ProcessedOn == null
                 && m.RetryCount >= _settings.MaxRetries
-                && m.OccurredOn < deadLetterCutoff);
+                && (m.LockedUntil ?? m.OccurredOn) < deadLetterCutoff);
 
         var deadLettered = await expired.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 

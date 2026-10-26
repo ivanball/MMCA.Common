@@ -16,6 +16,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 - Fixed: a `Money` JSON payload that omits the currency or sends it as `null` is refused as a `JsonException` instead of an `ArgumentNullException`, so the MVC body formatter answers 400 with the JSON path instead of a 500 (the Store catalog price and discount endpoints, for example). `Money.Create` still throws `ArgumentNullException` for a null currency. (M259)
 - Fixed: the TOTP single-use guard in `TwoFactorAuthenticator` reads, compares and writes the last accepted time step under an `IDistributedLock` on the account's step key, so two concurrent submissions of one code can no longer both pass; a submission that cannot take the lock is answered as an invalid code. (L235)
+- Fixed: `IAuditTrailReader.GetForEntityAsync` computes the page offset in `long` and returns an empty page when it exceeds `int.MaxValue` rows, instead of wrapping to a negative offset (which SQLite reads as 0 and SQL Server rejects), and caps the page size at 500, the `OutboxAdministration` cap. (L233)
+- Fixed: the outbox dead-letter retention window runs from the last failed attempt instead of `OccurredOn`: the sweep keys on `LockedUntil` (stamped on every failed attempt, cleared by a replay and re-stamped by the next failure), falling back to `OccurredOn`, and the unresolvable-type dead-letter path stamps `LockedUntil` instead of clearing it. A replayed or long-delayed row that dead-letters again keeps its full window instead of being purged on the next sweep. No migration. (L234)
 
 ## [1.260.0] - 2026-10-25
 
