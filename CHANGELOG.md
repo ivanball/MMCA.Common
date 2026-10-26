@@ -9,10 +9,13 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Changed
 
 - Fixed: with the outbox off (the in-process default) or on a non-relational engine, `DomainEventSaveChangesInterceptor` dispatches each captured domain event on its own, so a throwing handler no longer stops the later events of the save. The failure is logged at Error as not retried, instead of the Warning that claimed the outbox processor would retry it; handlers that need retry need the outbox. `SafeDomainEventHandler` now says the event is redelivered only when the outbox is on. (M255)
+- Changed: a refresh token whose session was already revoked by reuse detection (`ReasonReuseDetected`) now fails that request alone, like a signed-out or cap-evicted session, instead of revoking the user's new sessions again. A swept row is dead by construction, so the re-revoke bought no theft containment and let any holder of a swept token sign the user out of their re-established sessions on demand. A genuine replay lands on a rotated row and keeps the BR-206 family revoke. Both presentation paths of `AuthSessionIssuer` change. UPGRADING.md, [Unreleased]. (L232)
+- Changed: the registration rate-limit cache key carries a hex SHA-256 of the client IP instead of the raw address, so the IP no longer appears in Redis key names or cache read-fault logs. The live per-IP registration counters restart once on deploy (the key names change). (L237)
 
 ### Fixed
 
 - Fixed: a `Money` JSON payload that omits the currency or sends it as `null` is refused as a `JsonException` instead of an `ArgumentNullException`, so the MVC body formatter answers 400 with the JSON path instead of a 500 (the Store catalog price and discount endpoints, for example). `Money.Create` still throws `ArgumentNullException` for a null currency. (M259)
+- Fixed: the TOTP single-use guard in `TwoFactorAuthenticator` reads, compares and writes the last accepted time step under an `IDistributedLock` on the account's step key, so two concurrent submissions of one code can no longer both pass; a submission that cannot take the lock is answered as an invalid code. (L235)
 
 ## [1.260.0] - 2026-10-25
 

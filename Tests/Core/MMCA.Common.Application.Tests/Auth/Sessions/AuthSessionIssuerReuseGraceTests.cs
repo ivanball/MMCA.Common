@@ -18,8 +18,9 @@ namespace MMCA.Common.Application.Tests.Auth.Sessions;
 /// (BR-206). A token that was rotated <b>within</b> the grace now gets a transient 409 (Conflict) and
 /// the family stays live, on both paths a spent token can arrive by: the lookup that finds the row
 /// already revoked, and the loser of the <see cref="IRefreshSessionStore.TryRotateAsync"/> claim (which
-/// must re-read the row untracked, since its own tracked copy still shows it live). Anything else that
-/// is already revoked keeps the BR-206 family revocation.
+/// must re-read the row untracked, since its own tracked copy still shows it live). A rotated token
+/// past the grace keeps the BR-206 family revocation; a row already swept by an earlier reuse event
+/// fails that request alone, like a sign-out (L232).
 /// </summary>
 public sealed class AuthSessionIssuerReuseGraceTests
 {
@@ -71,9 +72,10 @@ public sealed class AuthSessionIssuerReuseGraceTests
         otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
     }
 
-    // The loser re-reads the row and finds it revoked for a reason other than rotation: still BR-206.
+    // L232: the loser re-reads the row and finds it swept by a reuse event: the row is already dead,
+    // so only this request fails and the user's re-established sessions stay live.
     [Fact]
-    public async Task RotateAsync_WhenTheRotationLosesTheRaceToAReuseRevocation_RevokesTheFamily()
+    public async Task RotateAsync_WhenTheRotationLosesTheRaceToAReuseRevocation_FailsAlone_AndKeepsTheFamily()
     {
         var store = new RaceStore();
         var presented = store.SeedLive(PresentedToken);
@@ -84,9 +86,9 @@ public sealed class AuthSessionIssuerReuseGraceTests
         Result<AuthenticationResponse> result = await RotateAsync(store);
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
-        otherDevice.IsRevoked.Should().BeTrue();
-        otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken" && e.Type == ErrorType.Unauthorized);
+        otherDevice.IsRevoked.Should().BeFalse("a token already swept by reuse detection is not a new theft signal");
+        store.FamilyReads.Should().Be(0, "no family revocation runs for a row already flagged as reuse");
     }
 
     // The loser re-reads the row and finds a sign-out of that same row won the race: the device lost
@@ -144,21 +146,24 @@ public sealed class AuthSessionIssuerReuseGraceTests
         otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
     }
 
-    // (d) Already revoked as reuse, however recently: the grace covers rotation only.
-    [Fact]
-    public async Task RotateAsync_WhenTheTokenWasFlaggedAsReuseWithinTheGrace_StillRevokesTheFamily()
+    // (d) L232: already revoked as reuse, however recently or long ago: the row is dead by
+    // construction, so that request fails alone (Unauthorized, not Conflict) and nothing is revoked.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(300)]
+    public async Task RotateAsync_WhenTheTokenWasFlaggedAsReuse_FailsAlone_AndKeepsTheFamily(int secondsAgo)
     {
         var store = new RaceStore();
         var presented = store.SeedLive(PresentedToken);
-        presented.Revoke(Now.AddSeconds(-1), RefreshSession.ReasonReuseDetected);
+        presented.Revoke(Now.AddSeconds(-secondsAgo), RefreshSession.ReasonReuseDetected);
         var otherDevice = store.SeedLive("phone-token");
 
         Result<AuthenticationResponse> result = await RotateAsync(store);
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
-        otherDevice.IsRevoked.Should().BeTrue();
-        otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken" && e.Type == ErrorType.Unauthorized);
+        otherDevice.IsRevoked.Should().BeFalse("re-revoking on a swept token would sign the user out of their new sessions");
+        store.FamilyReads.Should().Be(0);
     }
 
     // A signed-out session is still not a theft signal inside the grace: that request alone fails.

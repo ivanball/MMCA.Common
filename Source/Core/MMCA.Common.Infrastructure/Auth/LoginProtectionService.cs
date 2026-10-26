@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -178,7 +180,16 @@ public sealed partial class LoginProtectionService(
         }
     }
 
-    private static string RegistrationKey(string ipAddress) => $"registration:ip:{ipAddress}";
+    /// <summary>
+    /// The registration counter key carries a hex SHA-256 of the trimmed client IP, never the IP
+    /// itself, for the reason <c>EmailIdentity.KeySegment</c> documents: a key travels further than
+    /// the entry it names (Redis key names, the two-level cache's read-fault warnings, Redis client
+    /// exception text), and none of those places may carry a client address.
+    /// </summary>
+    private static string RegistrationKey(string ipAddress) => $"registration:ip:{IpKeySegment(ipAddress)}";
+
+    private static string IpKeySegment(string ipAddress) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ipAddress.Trim())));
 
     /// <summary>
     /// Every cache fault counts as an outage except the caller's own cancellation, which keeps

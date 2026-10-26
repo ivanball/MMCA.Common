@@ -32,6 +32,17 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**A refresh token already swept by reuse detection fails alone (behaviour change, no code
+change).** `AuthSessionIssuer` now answers a refresh token whose session row was revoked with
+`RefreshSession.ReasonReuseDetected` exactly like a signed-out or cap-evicted one: that request
+fails with `Auth.InvalidRefreshToken` and nothing else is revoked. Before, presenting such a token
+revoked every live session the user had re-established since the reuse event. A rotated token
+presented past the reuse grace still revokes the whole family (BR-206). A consumer that asserts
+the old cascade in its own tests (a ReuseDetected row revoking the user's other sessions) inverts
+that assertion; nothing else changes.
+
 ## [1.259.0] - 2026-10-25
 
 **Image normalization leaves the framework (breaking).** MMCA.Common.Infrastructure no longer

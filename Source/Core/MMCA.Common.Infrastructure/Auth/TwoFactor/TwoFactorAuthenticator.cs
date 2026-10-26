@@ -26,19 +26,28 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// <b>A time-based code is accepted once.</b> The matched time step is remembered per account in
 /// <see cref="ICacheService"/> for as long as the verification window can still accept it, and a
 /// code whose step is not newer than the last accepted one is answered as invalid, so a code seen
-/// over someone's shoulder cannot be replayed inside its window.
+/// over someone's shoulder cannot be replayed inside its window. The read, the compare and the write
+/// of that step run under an <see cref="IDistributedLock"/> on the account's step key, so two
+/// concurrent submissions of one code cannot both pass; a submission that cannot take the lock is
+/// answered as invalid, never as a second success (the <c>PasswordResetTokenService</c> shape).
 /// </para>
 /// </remarks>
 /// <param name="twoFactorService">Verifies codes and matches recovery hashes.</param>
 /// <param name="store">Reads the account's state and spends recovery codes.</param>
 /// <param name="cache">Remembers the last accepted time step per account.</param>
 /// <param name="settings">The bound two-factor settings (period and window size).</param>
+/// <param name="distributedLock">Serializes acceptance of a time step per account.</param>
 internal sealed class TwoFactorAuthenticator(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
     ICacheService cache,
-    IOptions<TwoFactorSettings> settings) : ITwoFactorAuthenticator
+    IOptions<TwoFactorSettings> settings,
+    IDistributedLock distributedLock) : ITwoFactorAuthenticator
 {
+    private static readonly TimeSpan StepLockTimeToLive = TimeSpan.FromSeconds(10);
+
+    private static readonly TimeSpan StepLockWait = TimeSpan.FromSeconds(5);
+
     /// <inheritdoc />
     public async Task<Result<TwoFactorOutcome>> ChallengeAsync(
         UserIdentifierType userId,
@@ -116,6 +125,27 @@ internal sealed class TwoFactorAuthenticator(
     {
         var key = string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{userId}");
 
+        // The read, the compare and the write below are one critical section: without it, two
+        // submissions of one code that both read before either writes would both pass.
+        var handle = await distributedLock
+            .TryAcquireAsync($"lock:{key}", StepLockTimeToLive, StepLockWait, cancellationToken)
+            .ConfigureAwait(false);
+        if (handle is null)
+        {
+            return Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));
+        }
+
+        await using (handle.ConfigureAwait(false))
+        {
+            return await AcceptIfNewerAsync(key, matchedStep, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<Result<TwoFactorOutcome>> AcceptIfNewerAsync(
+        string key,
+        long matchedStep,
+        CancellationToken cancellationToken)
+    {
         // Shared-store read: a step accepted on another replica must be seen here, or a replayed code
         // would pass against a stale local copy inside its window.
         var last = await cache.GetFromSharedStoreAsync<long?>(key, cancellationToken).ConfigureAwait(false);

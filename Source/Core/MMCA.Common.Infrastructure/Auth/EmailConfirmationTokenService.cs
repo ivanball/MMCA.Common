@@ -29,6 +29,11 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// That separation is load-bearing: a shared key would make issuing a confirmation link silently
 /// invalidate an outstanding password-reset link for the same address, and the two have very
 /// different lifetimes.
+/// <para>
+/// Unlike <see cref="PasswordResetTokenService"/>, redemption takes no <see cref="IDistributedLock"/>:
+/// the read, compare and remove can race, but two concurrent redemptions of one token only confirm
+/// the same address twice, an idempotent outcome, so the lock would buy nothing.
+/// </para>
 /// </remarks>
 /// <param name="cacheService">The cache the token records live in.</param>
 /// <param name="settings">The bound email-confirmation settings.</param>
