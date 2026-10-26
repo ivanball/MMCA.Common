@@ -1032,11 +1032,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 MobileTotalItems = page.TotalItems;
                 EmptyConfirmed = page.TotalItems == 0;
 
-                // Page size 0, like the virtualized path above: the restore guards skip a saved size of
-                // 0, and MobilePageSize is never restored from state anyway. Persisting it would only
-                // overwrite the desktop grid's RowsPerPage, so a user who set 50 rows and then narrowed
-                // the viewport would come back to 10.
-                SaveCurrentState(0, 0, _savedSortColumn, _savedSortDescending);
+                // The card list has no pager of its own to persist (MobilePageSize is never restored
+                // from state), so the desktop grid's page and RowsPerPage are carried over unchanged:
+                // a user who set 50 rows and then narrowed the viewport comes back to 50, and the URL
+                // keeps its ps= parameter. Writing 0 here would restore nothing (the restore guards
+                // skip a saved size of 0) and strip ps= from the address bar.
+                SaveCurrentState(null, null, _savedSortColumn, _savedSortDescending);
                 return true;
             },
             onCancelled: static () => false,
@@ -1191,7 +1192,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         return (sortColumn, sortDirection);
     }
 
-    private void SaveCurrentState(int page, int pageSize, string? sortColumn, bool sortDescending)
+    /// <summary>
+    /// Persists the list state for this route and mirrors it to the URL and sessionStorage.
+    /// </summary>
+    /// <param name="page">The grid page, or <see langword="null"/> to keep the pager state as it is.</param>
+    /// <param name="pageSize">The grid RowsPerPage, or <see langword="null"/> to keep it as it is.</param>
+    /// <param name="sortColumn">The sort column.</param>
+    /// <param name="sortDescending">Whether the sort is descending.</param>
+    private void SaveCurrentState(int? page, int? pageSize, string? sortColumn, bool sortDescending)
     {
         // Drop stale writes outright: a debounced/late save landing after navigation must
         // neither persist under a foreign route key nor mirror grid params onto that page's URL.
@@ -1204,10 +1212,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         var existing = ListPageStateService.GetState(routePath);
         var filters = new Dictionary<string, string>();
         SaveFilters(filters);
+        var (keptPage, keptPageSize) = ResolvePagerState(page, pageSize, existing);
         var state = new ListPageState
         {
-            Page = page,
-            PageSize = pageSize,
+            Page = keptPage,
+            PageSize = keptPageSize,
             MobilePage = MobileCurrentPage,
             SortColumn = sortColumn,
             SortDescending = sortDescending,
@@ -1241,6 +1250,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         PersistDensity();
         StateHasChanged();
     }
+
+    /// <summary>
+    /// The pager values a save writes. Null keeps the pager state: the stored entry first, then the
+    /// URL- or state-restored values, so a fresh circuit's first save from the card list keeps
+    /// <c>?p=2&amp;ps=50</c> alive.
+    /// </summary>
+    private (int Page, int PageSize) ResolvePagerState(int? page, int? pageSize, ListPageState? existing) =>
+        (page ?? existing?.Page ?? _savedPage, pageSize ?? existing?.PageSize ?? _savedPageSize);
 
     /// <summary>
     /// Writes the current <see cref="DenseGrid"/> value through to the saved <see cref="ListPageState"/>,

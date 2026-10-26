@@ -27,6 +27,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: `FormsConventionTestsBase.AdminCreateForms_ReadRequirednessOffTheirModel` strips Razor and HTML comments from each scanned file before looking for `ModelValidation.IsRequired`, so a commented-out marker no longer satisfies it, the same treatment the marker and password checks got in M238. New `protected virtual string ModulesRoot` points the create-form scan at another folder. (M258)
 - Fixed: the slice-cohesion rule checks every handler interface a class implements, not only the first one, and the unique-source upcaster rule rejects a class declaring more than one `IEventUpcaster<,>` contract (the registry indexes one `SourceType` per instance, so such a class silently loses a rung of the chain). (L242)
 - Fixed: the Spanish accent gate no longer rejects unaccented `aun`, which is correct Spanish for "even" (the accented form means "still"); it joins `esta` and `solo` among the deliberately omitted words. (L243)
+- Fixed: the mobile card load of `DataGridListPageBase<TDto>` keeps the persisted desktop grid page and RowsPerPage (and the URL's `ps=`) instead of overwriting them with 0, which restored nothing and sent a user back to page 1 with 10 rows after narrowing the viewport. The virtualized grid still saves 0 (it has no pager). (L239)
 
 ### Documentation
 

@@ -875,8 +875,9 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
     public async Task LoadMobileDataAsync_DoesNotOverwriteThePersistedRowsPerPage()
     {
         // The mobile card fetch shares the persisted state with the desktop grid, and MobilePageSize
-        // is never restored from it. Writing it there only clobbered the user's real RowsPerPage:
-        // set 50 rows, narrow the viewport past the mobile breakpoint, come back to 10.
+        // is never restored from it. L239: writing 0 there restored nothing and stripped ps= from the
+        // URL, so the desktop preference is carried over instead: set 50 rows, narrow the viewport past
+        // the mobile breakpoint, come back to 50.
         var navigation = Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/widgets?p=0&ps=50");
         var cut = Render<TestGridPage>();
@@ -887,12 +888,44 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         var saved = Services.GetRequiredService<ListPageStateService>().GetState("/widgets");
         saved.Should().NotBeNull();
-        saved!.PageSize.Should().Be(
-            0,
-            "0 is skipped by the restore guards, exactly as the virtualized path already saves it");
+        saved!.PageSize.Should().Be(50, "the card list keeps the desktop grid's RowsPerPage as it was");
+        saved.Page.Should().Be(0);
+        navigation.Uri.Should().Contain("ps=50", "the mobile save must not strip the row-count preference from the URL");
         navigation.Uri.Should().NotContain(
             "ps=10",
             "MobilePageSize is a layout constant, not a row-count preference the user expressed");
+    }
+
+    [Fact]
+    public async Task LoadMobileDataAsync_KeepsAUrlRestoredPageAndRowsPerPage()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=2&ps=50");
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(8, new WidgetRow(1, "First"));
+
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        var saved = Services.GetRequiredService<ListPageStateService>().GetState("/widgets");
+        saved.Should().NotBeNull();
+        saved!.Page.Should().Be(2);
+        saved.PageSize.Should().Be(50);
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_StillSavesPageSizeZero_OnAPageRestoredWithRowsPerPage()
+    {
+        // The virtualized grid has no pager, so its save keeps writing 0 (L239 changes only the card list).
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?ps=50");
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(100, new WidgetRow(1, "First"));
+
+        await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 0, count: 10));
+
+        var saved = Services.GetRequiredService<ListPageStateService>().GetState("/widgets");
+        saved.Should().NotBeNull();
+        saved!.PageSize.Should().Be(0);
     }
 
     // == Virtualization: window arithmetic ==
