@@ -29,6 +29,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: the Spanish accent gate no longer rejects unaccented `aun`, which is correct Spanish for "even" (the accented form means "still"); it joins `esta` and `solo` among the deliberately omitted words. (L243)
 - Fixed: the mobile card load of `DataGridListPageBase<TDto>` keeps the persisted desktop grid page and RowsPerPage (and the URL's `ps=`) instead of overwriting them with 0, which restored nothing and sent a user back to page 1 with 10 rows after narrowing the viewport. The virtualized grid still saves 0 (it has no pager). (L239)
 - Fixed: the cached `/health` and `/health/ready` endpoints (`MapCachedHealthChecks`) write the same `Cache-Control: no-store, no-cache`, `Pragma: no-cache` and past `Expires` headers the stock `MapHealthChecks` writes, as their documentation promises. (L240)
+- Fixed: `E2ETestConfiguration` (MMCA.Common.Testing.E2E) parses `E2E_TIMEOUT`, `E2E_AUTH_TIMEOUT`, `E2E_AUTH_GRACE` and `E2E_SLOWMO` with the invariant culture (so `30,000` is 30000 under every machine culture) and falls back to the default for a timeout that is zero, negative or not finite (Playwright reads 0 as no timeout); `E2E_SLOWMO=0` stays valid. A new `MMCA.Common.Testing.E2E.Tests` project covers it. (L241)
 
 ### Documentation
 

@@ -61,6 +61,7 @@
     <Project Path="Tests/Hosting/MMCA.Common.Gcp.Tests/MMCA.Common.Gcp.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Aspire.Tests/MMCA.Common.Testing.Aspire.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Tests/MMCA.Common.Testing.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.Testing.E2E.Tests/MMCA.Common.Testing.E2E.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Azure.Tests/MMCA.Common.Testing.Azure.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Architecture/">
