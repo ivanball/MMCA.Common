@@ -316,6 +316,34 @@ jobs:
             | sudo tee /etc/apt/apt.conf.d/80-ci-playwright > /dev/null
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
 
+          # Put the fastest Ubuntu mirror first. The runner's apt sources read the mirror list in
+          # /etc/apt/apt-mirrors.txt (azure.archive.ubuntu.com first), and apt moves to the next entry
+          # only on an ERROR, never on a slow transfer: on 2026-10-26 the Azure mirror served ~25 KB/s
+          # for over an hour, so webkit's 117 MB of deps could not finish inside any bound (#615). Each
+          # candidate (the listed mirrors plus archive.ubuntu.com) gets a 20s probe of one ~1.4 MB index;
+          # a non-200 or failed probe scores 0, and the list is left alone when the first entry wins.
+          mirrors=/etc/apt/apt-mirrors.txt
+          if [ -f "$mirrors" ]; then
+            codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+            mapfile -t urls < <({ awk '{print $1}' "$mirrors"; echo 'http://archive.ubuntu.com/ubuntu/'; } | awk 'NF && !seen[$0]++')
+            best=""; best_speed=0
+            for u in "${urls[@]}"; do
+              probe=$(curl -fsS -o /dev/null --max-time 20 -w '%{http_code} %{speed_download}' \
+                "${u%/}/dists/${codename}-updates/main/binary-amd64/Packages.gz" 2>/dev/null) || true
+              speed=${probe##* }
+              [ "${probe%% *}" = "200" ] || speed=0
+              echo "apt mirror probe: $u ${speed%.*} B/s"
+              if awk -v a="$speed" -v b="$best_speed" 'BEGIN { exit !(a > b) }'; then best=$u; best_speed=$speed; fi
+            done
+            if [ -n "$best" ] && [ "$best" != "${urls[0]}" ]; then
+              {
+                printf '%s\tpriority:1\n' "$best"; n=2
+                for u in "${urls[@]}"; do [ "$u" = "$best" ] && continue; printf '%s\tpriority:%s\n' "$u" "$n"; n=$((n + 1)); done
+              } | sudo tee "$mirrors" > /dev/null
+              echo "::notice::apt mirror list reordered: $best first (${best_speed%.*} B/s)"
+            fi
+          fi
+
           retry() { # retry <seconds-per-attempt> <command...>
             local budget=$1; shift
             for attempt in 1 2 3; do
