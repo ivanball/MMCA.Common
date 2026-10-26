@@ -115,6 +115,19 @@ public sealed class PiiRedactionContentFidelityTests
         Redact(ChatRole.Assistant, clean).Should().BeSameAs(clean, "nothing was redacted, so nothing about it needs to change");
     }
 
+    // L244: the rebuilt message keeps its CreatedAt stamp.
+    [Fact]
+    public void ARedactedMessage_KeepsItsCreatedAt()
+    {
+        var createdAt = new DateTimeOffset(2026, 10, 25, 9, 0, 0, TimeSpan.Zero);
+        var message = new ChatMessage(ChatRole.User, "write to ada@example.com") { CreatedAt = createdAt };
+
+        var redacted = new PiiRedactionGuardrail().Redact([message])[0];
+
+        redacted.Text.Should().Be("write to [redacted-email]");
+        redacted.CreatedAt.Should().Be(createdAt);
+    }
+
     private static AIContent Redact(ChatRole role, AIContent content) =>
         new PiiRedactionGuardrail().Redact([new ChatMessage(role, [content])])[0].Contents.Should().ContainSingle().Subject;
 }
