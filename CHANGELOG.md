@@ -24,6 +24,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: the SNS native push adapter (MMCA.Common.Aws) publishes once per endpoint instead of once per installation row, so two installation ids holding one device token no longer deliver duplicates; a stale shared endpoint removes every row pointing at it; and deleting one installation removes the endpoint only when no other row of the same user still points at it, so a reinstall no longer lets the old installation id delete the new one's endpoint. A token shared across two users' installation ids remains a documented, self-healing edge. (M260)
 - Fixed: the S3 (MMCA.Common.Aws), Cloud Storage (MMCA.Common.Gcp) and Blob (MMCA.Common.Azure) file stores answer a transport failure that never produced a service response (`HttpRequestException`, `IOException`, or a timeout the caller did not request) with the `FileStorage.UploadFailed` / `FileStorage.DeleteFailed` Result instead of letting the exception escape as a 500; the caller's own cancellation still propagates. (M261)
 
+### Documentation
+
+- Documented: `DataExportControllerBase.CreateQuery` and `IUserOwnedRequest.CurrentUserRole` state that the role passed is the first role claim, the only one on the single-role tokens the framework mints, and that a host issuing multi-role tokens overrides `CreateQuery` to pass its privileged role when `IsInRole` holds. No behaviour change. (M256)
+
 ## [1.260.0] - 2026-10-25
 
 ### Changed
