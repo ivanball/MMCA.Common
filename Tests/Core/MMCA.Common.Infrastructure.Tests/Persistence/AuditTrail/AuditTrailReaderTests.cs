@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -68,6 +69,29 @@ public sealed class AuditTrailReaderTests : IDisposable
         var rows = await CreateReader().GetForEntityAsync(EntityType, "1", page: 0, pageSize: 0);
 
         rows.Should().ContainSingle().Which.PropertyName.Should().Be("Second");
+    }
+
+    // L233: the offset is computed in long, so a huge page number is past the end, not a wrapped
+    // negative offset that SQLite reads as 0 (which returned the first page).
+    [Fact]
+    public async Task GetForEntityAsync_PageNumberWhoseOffsetOverflowsInt_ReturnsEmpty()
+    {
+        await SeedAsync((EntityType, "1", "First", 1), (EntityType, "1", "Second", 2));
+
+        var rows = await CreateReader().GetForEntityAsync(EntityType, "1", page: 50_000_000, pageSize: 50);
+
+        rows.Should().BeEmpty();
+    }
+
+    // L233: the page size is capped at 500, the OutboxAdministration cap.
+    [Fact]
+    public async Task GetForEntityAsync_PageSizeAboveTheCap_ReturnsAtMost500Rows()
+    {
+        await SeedAsync([.. Enumerable.Range(1, 501).Select(i => (EntityType, "1", "P" + i.ToString(CultureInfo.InvariantCulture), i))]);
+
+        var rows = await CreateReader().GetForEntityAsync(EntityType, "1", page: 1, pageSize: 1000);
+
+        rows.Should().HaveCount(500);
     }
 
     [Fact]

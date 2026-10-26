@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,7 +19,9 @@ public sealed class LoginProtectionServiceTests
 {
     private const string TestEmail = "user@example.com";
     private const string TestIp = "203.0.113.7";
-    private const string RegistrationKey = $"registration:ip:{TestIp}";
+
+    // L237: the client IP is hashed into the key, never written raw.
+    private static readonly string RegistrationKey = $"registration:ip:{HashedIp(TestIp)}";
 
     private static readonly string AttemptsKey = $"login:attempts:{EmailIdentity.KeySegment(TestEmail)}";
     private static readonly string LockoutKey = $"login:lockout:{EmailIdentity.KeySegment(TestEmail)}";
@@ -222,6 +226,7 @@ public sealed class LoginProtectionServiceTests
 
         cache.Values[RegistrationKey].Should().Be(1L);
         cache.Ttls[RegistrationKey].Should().Be(TimeSpan.FromMinutes(60));
+        cache.Values.Keys.Should().NotContain(k => k.Contains(TestIp, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -399,6 +404,9 @@ public sealed class LoginProtectionServiceTests
     }
 
     // ── Helpers ──
+    private static string HashedIp(string ip) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip)));
+
     private static LoginProtectionService CreateOutageSut(out List<(LogLevel Level, string Message)> logged)
     {
         var sink = new List<(LogLevel Level, string Message)>();

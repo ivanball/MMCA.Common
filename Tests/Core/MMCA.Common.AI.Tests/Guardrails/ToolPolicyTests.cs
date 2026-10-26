@@ -17,6 +17,8 @@ public sealed class ToolPolicyTests
 {
     private static readonly IReadOnlyList<ChatMessage> Prompt = [new(ChatRole.User, "do the thing")];
 
+    private static readonly string[] SendEmailOnly = ["send_email"];
+
     private static AiSettings Settings(bool allowTools) => new()
     {
         Enabled = true,
@@ -160,6 +162,24 @@ public sealed class ToolPolicyTests
         options.AdditionalProperties = new AdditionalPropertiesDictionary
         {
             [ChatToolPolicy.ConfirmedToolsPropertyKey] = new[] { "send_email" },
+        };
+
+        await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.Tools.Should().ContainSingle().Which.Name.Should().Be("send_email");
+    }
+
+    // L245: options carried over the wire bind the stamp as a JsonElement; a confirmed tool must
+    // still reach the model instead of being stripped silently.
+    [Fact]
+    public async Task AConsequentialTool_IsOfferedWhenTheConfirmationArrivesAsAJsonArray()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+        var options = WithTools(new StubTool("send_email", consequential: true));
+        options.AdditionalProperties = new AdditionalPropertiesDictionary
+        {
+            [ChatToolPolicy.ConfirmedToolsPropertyKey] = JsonSerializer.SerializeToElement(SendEmailOnly),
         };
 
         await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);

@@ -62,7 +62,7 @@ public abstract class SafeDomainEventHandler<TDomainEvent>(ILogger logger) : IDo
     {
         logger.LogError(
             exception,
-            "Domain event handler {HandlerType} failed for event {EventType}. The outbox processor will redeliver the event.",
+            "Domain event handler {HandlerType} failed for event {EventType}. The event is redelivered by the outbox processor when the outbox is on.",
             GetType().Name,
             typeof(TDomainEvent).Name);
 

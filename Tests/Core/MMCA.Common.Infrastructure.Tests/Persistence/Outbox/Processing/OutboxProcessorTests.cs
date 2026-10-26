@@ -275,6 +275,8 @@ public sealed class OutboxProcessorTests : IDisposable
         deadLettered.ProcessedOn.Should().BeNull("a dead letter was never delivered");
         deadLettered.RetryCount.Should().Be(new OutboxSettings().MaxRetries);
         deadLettered.LastError.Should().Contain("Cannot resolve type");
+        deadLettered.LockedUntil.Should().NotBeNull(
+            "L234: the dead-letter retention window runs from this stamp, not from OccurredOn");
 
         // A later cycle must not pick the row up again, even once its type would resolve.
         await _dbContext.Set<OutboxMessage>()

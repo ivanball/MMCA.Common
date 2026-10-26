@@ -53,6 +53,13 @@ public abstract class FormsConventionTestsBase
     protected virtual int MinimumCreateForms => 1;
 
     /// <summary>
+    /// The folder the <c>*Create.razor</c> scan starts from: the repo's <c>Source/Modules</c> by
+    /// default. Override it to point the facts at a fixture tree.
+    /// </summary>
+    protected virtual string ModulesRoot =>
+        Path.Combine(ArchitectureMapBase.FindRepoRoot($"{Map.RepoToken}.slnx"), "Source", "Modules");
+
+    /// <summary>
     /// Literal markers every admin create form must contain in its <c>.razor</c> markup. The default is
     /// the model-bridge set: a form that still spelled <c>Required="true"</c> plus a
     /// <c>RequiredError</c> message on every field would be the regression, not the convention. The
@@ -164,7 +171,10 @@ public abstract class FormsConventionTestsBase
     /// the page keeps the parts <see cref="AdminCreateForms_KeepUnsavedChangesGuardAndValidation"/>
     /// checks. This widens the scan to follow the extraction rather than weakening it: every create
     /// form still declares at least one field as required by reading the model, and a form that inlines
-    /// its fields is still covered, because its own markup is scanned first.
+    /// its fields is still covered, because its own markup is scanned first. Razor and HTML comments
+    /// are stripped from each file BEFORE it joins the scan (so a commented-out
+    /// <c>ModelValidation.IsRequired</c> does not count, and an unterminated comment in one file cannot
+    /// swallow the next), the same treatment the marker and password checks get.
     /// </summary>
     [Fact]
     public void AdminCreateForms_ReadRequirednessOffTheirModel()
@@ -174,12 +184,12 @@ public abstract class FormsConventionTestsBase
         var violations = new List<string>();
         foreach (var form in createForms)
         {
-            var scanned = new StringBuilder(File.ReadAllText(form));
+            var scanned = new StringBuilder(StripAllComments(File.ReadAllText(form)));
 
             foreach (var fieldComponent in Directory.EnumerateFiles(
                 Path.GetDirectoryName(form)!, "*FormFields.razor", SearchOption.TopDirectoryOnly))
             {
-                scanned.Append(File.ReadAllText(fieldComponent));
+                scanned.Append(StripAllComments(File.ReadAllText(fieldComponent)));
             }
 
             if (!scanned.ToString().Contains("ModelValidation.IsRequired", StringComparison.Ordinal))
@@ -222,8 +232,7 @@ public abstract class FormsConventionTestsBase
 
     private string[] DiscoverCreateForms()
     {
-        var repoRoot = ArchitectureMapBase.FindRepoRoot($"{Map.RepoToken}.slnx");
-        var modulesDir = Path.Combine(repoRoot, "Source", "Modules");
+        var modulesDir = ModulesRoot;
 
         var createForms = Directory
             .EnumerateFiles(modulesDir, "*Create.razor", SearchOption.AllDirectories)

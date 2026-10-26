@@ -106,7 +106,9 @@ public sealed class OutboxSettings
     /// Gets the number of days a <b>dead-lettered</b> outbox message (retries exhausted, never
     /// delivered) is retained before <c>OutboxCleanupService</c> purges it. <c>0</c> (the default)
     /// falls back to <see cref="RetentionDays"/>. Set it higher than <see cref="RetentionDays"/>
-    /// to keep failed payloads around longer for diagnosis and manual replay.
+    /// to keep failed payloads around longer for diagnosis and manual replay. The window runs from
+    /// the last failed attempt (the row's <c>LockedUntil</c> stamp, falling back to
+    /// <c>OccurredOn</c>), which a replay resets.
     /// </summary>
     [Range(0, 3650)]
     public int DeadLetterRetentionDays { get; init; }

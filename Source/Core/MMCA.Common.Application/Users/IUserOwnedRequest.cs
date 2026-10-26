@@ -10,6 +10,10 @@ public interface IUserOwnedRequest : IUserScopedRequest
     /// <summary>The authenticated user making the request.</summary>
     UserIdentifierType CurrentUserId { get; }
 
-    /// <summary>The role claim of the authenticated user; may be <see langword="null"/>.</summary>
+    /// <summary>
+    /// The role claim of the authenticated user; may be <see langword="null"/>. Callers pass the first
+    /// role claim, the only one on the single-role tokens the framework mints; a host issuing
+    /// multi-role tokens passes its privileged role when the caller holds it.
+    /// </summary>
     string? CurrentUserRole { get; }
 }

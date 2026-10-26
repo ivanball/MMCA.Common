@@ -51,6 +51,18 @@ public sealed class SliceCohesionFitnessTests
                 "a contract that is a type parameter is not a type any folder can hold, so the framework's own generic handler bases stay exempt");
     }
 
+    // L242: registration wires a class for every handler interface it implements, so every contract
+    // is checked, not only the first one reflection lists.
+    [Fact]
+    public void AHandlerServingTwoStrandedContracts_IsFlaggedForBoth()
+    {
+        var act = () => ArchitectureRules.HandlersAreCoLocatedWithTheirContracts(_map);
+
+        var message = act.Should().Throw<XunitException>().Which.Message;
+        message.Should().Contain(nameof(GetFixtureFarQuery));
+        message.Should().Contain(nameof(GetFixtureSecondFarQuery));
+    }
+
     /// <summary>
     /// A map registering this test assembly as the Application layer, which is where the rule reads
     /// its handlers from.

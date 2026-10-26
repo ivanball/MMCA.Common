@@ -106,6 +106,20 @@ public sealed class S3FileStorageServiceTests
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
     }
 
+    // M261: a failed connection is not an AmazonServiceException, and it is still a Result failure.
+    [Fact]
+    public async Task UploadAsync_TransportFailure_IsTheUploadFailedResult()
+    {
+        _s3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection refused"));
+        await using var content = new MemoryStream([1]);
+
+        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
+    }
+
     [Fact]
     public async Task UploadAsync_RejectsNullOptions()
     {
@@ -136,6 +150,18 @@ public sealed class S3FileStorageServiceTests
     {
         _s3.Setup(s => s.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AmazonS3Exception("Access Denied"));
+
+        var result = await CreateSut().DeleteAsync("a.png", TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TransportFailure_IsTheDeleteFailedResult()
+    {
+        _s3.Setup(s => s.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("connection reset"));
 
         var result = await CreateSut().DeleteAsync("a.png", TestContext.Current.CancellationToken);
 

@@ -94,6 +94,7 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
         {
             AuthorName = message.AuthorName,
             MessageId = message.MessageId,
+            CreatedAt = message.CreatedAt,
             AdditionalProperties = message.AdditionalProperties,
         };
     }
@@ -124,19 +125,19 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
         TextReasoningContent { ProtectedData: not null } => content,
 
         TextContent { Text: { Length: > 0 } text } when HasContactDetails(text) =>
-            WithMetadataOf(content, new TextContent(RedactText(text))),
+            ContentMetadata.WithMetadataOf(content, new TextContent(RedactText(text))),
 
         TextReasoningContent { Text: { Length: > 0 } reasoning } when HasContactDetails(reasoning) =>
-            WithMetadataOf(content, new TextReasoningContent(RedactText(reasoning))),
+            ContentMetadata.WithMetadataOf(content, new TextReasoningContent(RedactText(reasoning))),
 
         FunctionResultContent { Result: { } result } call when ArgumentHasContactDetails(result) =>
-            WithMetadataOf(content, new FunctionResultContent(call.CallId, RedactArgument(result))
+            ContentMetadata.WithMetadataOf(content, new FunctionResultContent(call.CallId, RedactArgument(result))
             {
                 Exception = call.Exception,
             }),
 
         FunctionCallContent { Arguments: { } arguments } call when arguments.Values.Any(ArgumentHasContactDetails) =>
-            WithMetadataOf(content, new FunctionCallContent(
+            ContentMetadata.WithMetadataOf(content, new FunctionCallContent(
                 call.CallId,
                 call.Name,
                 arguments.ToDictionary(
@@ -154,18 +155,6 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
         // understand would be a far worse failure than leaving it alone.
         _ => content,
     };
-
-    /// <summary>
-    /// Copies the metadata a rebuilt item keeps from the item it replaces; see
-    /// <see cref="RedactContent"/> for why <see cref="AIContent.RawRepresentation"/> is not among it.
-    /// </summary>
-    private static TContent WithMetadataOf<TContent>(AIContent source, TContent rebuilt)
-        where TContent : AIContent
-    {
-        rebuilt.AdditionalProperties = source.AdditionalProperties;
-        rebuilt.Annotations = source.Annotations;
-        return rebuilt;
-    }
 
     private static object? RedactArgument(object? value) => value switch
     {

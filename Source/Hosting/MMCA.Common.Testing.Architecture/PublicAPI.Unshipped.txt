@@ -1,3 +1,5 @@
 #nullable enable
 *REMOVED*MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3() -> void
 *REMOVED*virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharpPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageNamespace = "MMCA.Common.AI" -> string!
+virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ModulesRoot.get -> string!

@@ -287,13 +287,15 @@ public sealed class AuthSessionIssuer(
     /// an unknown hash (or one belonging to another account) says nothing about a live session and is
     /// failed alone, since revoking the family on it would let anyone holding one of this user's
     /// expired access tokens sign them out everywhere by posting a random token; a <b>revoked</b> row
-    /// splits by why it was revoked: one already rotated away (or already flagged as reuse) has come
-    /// back, which is the BR-206 reuse signal that revokes every live session the user holds (unless it
-    /// was rotated within <see cref="RefreshSessionSettings.ReuseGraceSeconds"/>, a race answered 409
-    /// with nothing revoked), while one
-    /// that was signed out or evicted by the session cap only lost its session, so that request fails
-    /// alone; an <b>expired</b> row is an ordinary end of life, so that device re-authenticates and
-    /// the user's other devices keep working.
+    /// splits by why it was revoked: one already rotated away has come back, which is the BR-206 reuse
+    /// signal that revokes every live session the user holds (unless it was rotated within
+    /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/>, a race answered 409 with nothing
+    /// revoked), while one that was signed out, evicted by the session cap or already swept by an
+    /// earlier reuse event only lost its session, so that request fails alone (a swept row is dead by
+    /// construction, so re-revoking on it would only sign the user out of the sessions they
+    /// re-established, on demand of anyone holding a swept token); an <b>expired</b> row is an
+    /// ordinary end of life, so that device re-authenticates and the user's other devices keep
+    /// working.
     /// </summary>
     private async Task<Result<RefreshSession>> ResolveRotatableSessionAsync(
         UserIdentifierType userId,
@@ -319,9 +321,10 @@ public sealed class AuthSessionIssuer(
         {
             if (!IsReuseSignal(session))
             {
-                // Signed out (one device, everywhere, password change) or evicted by the session cap:
-                // this device simply lost its session, which is not a theft signal, so only this
-                // request fails and the user's other live sessions keep working.
+                // Signed out (one device, everywhere, password change), evicted by the session cap or
+                // already swept by an earlier reuse event: this device simply lost its session, which
+                // is not a new theft signal, so only this request fails and the user's other live
+                // sessions keep working.
                 return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
             }
 
@@ -427,9 +430,9 @@ public sealed class AuthSessionIssuer(
                 .ConfigureAwait(false);
             if (current is not null && !IsReuseSignal(current))
             {
-                // The race was lost to a sign-out or a cap eviction of this same row: that device
-                // lost its session, which is not a theft signal, so only this request fails, exactly
-                // as the lookup path answers the same row (ResolveRotatableSessionAsync).
+                // The race was lost to a sign-out, a cap eviction or a reuse sweep of this same row:
+                // that device lost its session, which is not a new theft signal, so only this request
+                // fails, exactly as the lookup path answers the same row (ResolveRotatableSessionAsync).
                 return Result.Failure<IssuedSession>(InvalidRefreshTokenError());
             }
 
@@ -438,8 +441,8 @@ public sealed class AuthSessionIssuer(
                 return Result.Failure<IssuedSession>(RefreshSupersededError());
             }
 
-            // Rotated longer ago than the grace, already flagged as reuse, or unreadable: that is
-            // indistinguishable from a replay, and it gets the replay answer: the whole live family
+            // Rotated longer ago than the grace, or unreadable: that is indistinguishable from a
+            // replay, and it gets the replay answer: the whole live family
             // goes (BR-206).
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
                 .ConfigureAwait(false);
@@ -453,9 +456,12 @@ public sealed class AuthSessionIssuer(
 
     /// <summary>
     /// Whether presenting this revoked session's token is token reuse (BR-206): it was already
-    /// rotated (the rotated reason or a successor hash) or already flagged as reuse. A session that
-    /// was signed out or evicted by the cap is not; any other or missing reason is treated as reuse,
-    /// which keeps the conservative answer for rows this code does not recognize.
+    /// rotated (the rotated reason or a successor hash). A session that was signed out, evicted by
+    /// the cap or already flagged as reuse is not: a flagged row was swept by an earlier reuse event
+    /// and is dead by construction, so presenting it fails that request alone instead of revoking the
+    /// user's newer sessions again (a genuine replay lands on a rotated row, which keeps the family
+    /// revoke). Any other or missing reason is treated as reuse, which keeps the conservative answer
+    /// for rows this code does not recognize.
     /// </summary>
     private static bool IsReuseSignal(RefreshSession session)
     {
@@ -464,14 +470,17 @@ public sealed class AuthSessionIssuer(
             return true;
         }
 
-        return session.ReasonRevoked is not (RefreshSession.ReasonSignedOut or RefreshSession.ReasonSessionCap);
+        return session.ReasonRevoked is not (RefreshSession.ReasonSignedOut
+            or RefreshSession.ReasonSessionCap
+            or RefreshSession.ReasonReuseDetected);
     }
 
     /// <summary>
     /// Whether a revoked session was rotated less than
     /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> ago, which makes a second presentation of
-    /// its token a rotation race rather than token reuse. Only the <c>Rotated</c> reason qualifies: a
-    /// row already flagged as reuse, signed out or evicted never does, however recent. A revocation
+    /// its token a rotation race rather than token reuse. Only the <c>Rotated</c> reason qualifies; a
+    /// row already flagged as reuse, signed out or evicted never reaches this check, because
+    /// <see cref="IsReuseSignal"/> fails it alone first, however recent. A revocation
     /// stamped slightly ahead of this clock (another replica's) counts as inside the grace.
     /// </summary>
     private bool IsWithinRotationGrace(RefreshSession session, DateTime now)

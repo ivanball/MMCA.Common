@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using AwesomeAssertions;
 using MassTransit;
+using MassTransit.Metadata;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Infrastructure.Messaging.Consumers;
@@ -23,9 +24,13 @@ public sealed class FaultIntegrationEventConsumerTests
         return context;
     }
 
-    private static Fault<TestFaultedEvent> FaultWith(Guid? faultedMessageId, params string[] exceptionMessages)
+    private static Fault<TestFaultedEvent> FaultWith(Guid? faultedMessageId, params string[] exceptionMessages) =>
+        FaultFrom(host: null, faultedMessageId, exceptionMessages);
+
+    private static Fault<TestFaultedEvent> FaultFrom(HostInfo? host, Guid? faultedMessageId, params string[] exceptionMessages)
     {
         var fault = new Mock<Fault<TestFaultedEvent>>();
+        fault.SetupGet(f => f.Host).Returns(host!);
         fault.SetupGet(f => f.FaultId).Returns(Guid.NewGuid());
         fault.SetupGet(f => f.FaultedMessageId).Returns(faultedMessageId);
         fault.SetupGet(f => f.Exceptions).Returns(
@@ -117,6 +122,74 @@ public sealed class FaultIntegrationEventConsumerTests
         await sut.Consume(ContextFor(FaultWith(Guid.NewGuid(), "boom")).Object);
 
         measurements.Should().Contain((1L, nameof(TestFaultedEvent)));
+    }
+
+    // -- L236: a co-consuming service observes other services' faults on the shared Fault<T> topic --
+    [Fact]
+    public async Task Consume_AFaultFromAnotherAssembly_IsNeitherLoggedAsErrorNorCounted()
+    {
+        const string otherAssembly = "Other.Service";
+        using MeterListener listener = StartFaultCounterListener(otherAssembly, out List<long> counted);
+        var logged = new List<(LogLevel Level, string Message)>();
+        var sut = new FaultIntegrationEventConsumer<TestFaultedEvent>(CapturingLogger(logged).Object);
+
+        await sut.Consume(ContextFor(FaultFrom(Mock.Of<HostInfo>(h => h.Assembly == otherAssembly), Guid.NewGuid(), "boom")).Object);
+
+        logged.Should().NotContain(e => e.Level == LogLevel.Error, "another service's fault is not this host's incident");
+        logged.Should().ContainSingle(e => e.Level == LogLevel.Debug).Which.Message.Should().Contain(otherAssembly);
+        counted.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Consume_AFaultFromThisHostsOwnAssembly_IsLoggedAndCounted()
+    {
+        string ownAssembly = HostMetadataCache.Host.Assembly ?? "MMCA.Common.Infrastructure.Tests";
+        using MeterListener listener = StartFaultCounterListener(ownAssembly, out List<long> counted);
+        var logged = new List<(LogLevel Level, string Message)>();
+        var sut = new FaultIntegrationEventConsumer<TestFaultedEvent>(CapturingLogger(logged).Object);
+
+        await sut.Consume(ContextFor(FaultFrom(Mock.Of<HostInfo>(h => h.Assembly == ownAssembly), Guid.NewGuid(), "boom")).Object);
+
+        logged.Should().ContainSingle(e => e.Level == LogLevel.Error);
+        counted.Should().ContainSingle().Which.Should().Be(1L);
+    }
+
+    /// <summary>
+    /// Records <c>broker.fault.count</c> measurements whose <c>faulting_assembly</c> tag equals
+    /// <paramref name="assembly"/>, so measurements from tests running in parallel do not leak in.
+    /// </summary>
+    private static MeterListener StartFaultCounterListener(string assembly, out List<long> measurements)
+    {
+        var gate = new System.Threading.Lock();
+        var sink = new List<long>();
+        measurements = sink;
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (string.Equals(instrument.Meter.Name, "MMCA.Common.Broker", StringComparison.Ordinal)
+                    && string.Equals(instrument.Name, "broker.fault.count", StringComparison.Ordinal))
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            foreach (KeyValuePair<string, object?> tag in tags)
+            {
+                if (string.Equals(tag.Key, "faulting_assembly", StringComparison.Ordinal)
+                    && string.Equals(tag.Value as string, assembly, StringComparison.Ordinal))
+                {
+                    lock (gate)
+                    {
+                        sink.Add(value);
+                    }
+                }
+            }
+        });
+        listener.Start();
+        return listener;
     }
 
     [Fact]

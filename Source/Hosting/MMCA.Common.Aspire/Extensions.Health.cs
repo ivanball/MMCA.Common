@@ -161,8 +161,10 @@ public static partial class Extensions
         /// <summary>
         /// Maps one anonymous probe endpoint served from <see cref="CachedHealthReportProvider"/>,
         /// answering exactly as <c>MapHealthChecks</c> does (the status name as
-        /// <c>text/plain</c>, <c>503</c> only when unhealthy) but running the dependency probes at
-        /// most once per cache window (SEC-Common-71, SEC-ADC-17).
+        /// <c>text/plain</c>, <c>503</c> only when unhealthy, and the same three no-cache headers:
+        /// <c>Cache-Control: no-store, no-cache</c>, <c>Pragma: no-cache</c> and an <c>Expires</c> in
+        /// the past) but running the dependency probes at most once per cache window
+        /// (SEC-Common-71, SEC-ADC-17).
         /// </summary>
         /// <param name="path">The endpoint path, used as the cache key so two endpoints never share a report.</param>
         /// <param name="predicate">Which registered checks take part; <see langword="null"/> means all of them.</param>
@@ -183,6 +185,12 @@ public static partial class Extensions
                         ? StatusCodes.Status503ServiceUnavailable
                         : StatusCodes.Status200OK;
                     httpContext.Response.ContentType = "text/plain";
+
+                    // The three values HealthCheckMiddleware writes when AllowCachingResponses is
+                    // false (its default): a probe answer must never be served from a cache.
+                    httpContext.Response.Headers.CacheControl = "no-store, no-cache";
+                    httpContext.Response.Headers.Pragma = "no-cache";
+                    httpContext.Response.Headers.Expires = "Thu, 01 Jan 1970 00:00:00 GMT";
 
                     await httpContext.Response
                         .WriteAsync(report.Status.ToString(), cancellationToken)

@@ -1,0 +1,7 @@
+@* Fixture for FormsConventionRequirednessFitnessTests (M258): the requiredness marker exists only
+   inside a Razor comment, so it renders nothing and must not satisfy the gate.
+<MudTextField @bind-Value="_model.Name" Required="@ModelValidation.IsRequired(_model, nameof(WidgetModel.Name))" />
+*@
+<MudForm Model="_model">
+    <WidgetFormFields Model="_model" />
+</MudForm>

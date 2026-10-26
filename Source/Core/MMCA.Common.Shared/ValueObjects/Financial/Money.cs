@@ -42,17 +42,23 @@ public sealed record Money : ValueObject, IJsonOnDeserialized
     /// Round-trip constructor: used by System.Text.Json and by EF Core when it materializes the
     /// owned type. Every round-trip must supply a currency, because "no currency" is represented by
     /// the <see cref="Financial.Currency.None"/> sentinel and never by <see langword="null"/>.
-    /// A materializer that can yield <see langword="null"/> (a JSON payload omitting the currency
-    /// property, or an EF value converter that maps an unknown code to <see langword="null"/>) is a
-    /// broken contract, so it fails fast here instead of surfacing later as a null reference.
+    /// A missing currency (a JSON payload omitting the currency property or carrying a JSON
+    /// <see langword="null"/>) is refused as a <see cref="JsonException"/>, so the MVC body formatter
+    /// answers 400 with the JSON path instead of a 500. An EF value converter that yields
+    /// <see langword="null"/> is a broken contract and fails fast with the same exception: a null
+    /// currency never becomes a value. <see cref="Create"/> keeps <see cref="ArgumentNullException"/>
+    /// for non-JSON callers.
     /// </summary>
     /// <param name="amount">The monetary amount.</param>
     /// <param name="currency">The currency; <see cref="Financial.Currency.None"/> for a currency-less zero.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="currency"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">Thrown when <paramref name="currency"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     private Money(decimal amount, Currency currency)
     {
-        ArgumentNullException.ThrowIfNull(currency);
+        if (currency is null)
+        {
+            throw new JsonException("Money requires a currency.");
+        }
 
         Amount = amount;
         Currency = currency;

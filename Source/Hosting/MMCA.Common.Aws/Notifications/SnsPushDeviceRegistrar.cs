@@ -14,6 +14,16 @@ namespace MMCA.Common.Aws.Notifications;
 /// one SNS platform endpoint (subscribed to the broadcast topic) plus one row in the DynamoDB
 /// registry, which is where ownership lives: the same handover and owner-scoped delete rules as the
 /// Notification Hubs registrar, enforced by conditional writes.
+/// <para>
+/// Endpoints are created by device token, so two installation ids of one user holding the same
+/// token (an app reinstall that minted a new id) share one endpoint. A delete therefore removes the
+/// endpoint only when no other row of that user still points at it; the row itself always goes.
+/// A token shared across two USERS' installation ids (a device that changed hands under a brand-new
+/// installation id) is not detectable through the <c>UserId</c> index, so deleting one user's row
+/// still removes the endpoint the other row points at; an <c>EndpointArn</c> index on the registry
+/// would close that edge. Until then it self-heals: the surviving row's next send finds the
+/// endpoint gone and drops the row, and the device re-registers on its next start.
+/// </para>
 /// </summary>
 /// <param name="registry">The installation registry.</param>
 /// <param name="sns">The SNS client.</param>
@@ -85,8 +95,17 @@ internal sealed class SnsPushDeviceRegistrar(
             // Endpoint first, row last: a failure part-way leaves the row, so the client's retry finds
             // it and finishes the job, rather than an endpoint still subscribed to broadcasts with no
             // row left to find it by. The row delete is conditional on the owner, so a row handed over
-            // in the meantime survives.
-            await registry.RemoveEndpointAsync(existing.EndpointArn, existing.SubscriptionArn, cancellationToken).ConfigureAwait(false);
+            // in the meantime survives. The endpoint goes only when no other row of this user still
+            // points at it (two installation ids holding one device token share an endpoint).
+            var ownerRows = await registry.QueryByUserAsync(owner, cancellationToken).ConfigureAwait(false);
+            var endpointShared = ownerRows.Any(row =>
+                !string.Equals(row.InstallationId, installationId, StringComparison.Ordinal)
+                && string.Equals(row.EndpointArn, existing.EndpointArn, StringComparison.Ordinal));
+            if (!endpointShared)
+            {
+                await registry.RemoveEndpointAsync(existing.EndpointArn, existing.SubscriptionArn, cancellationToken).ConfigureAwait(false);
+            }
+
             await registry.DeleteOwnedAsync(installationId, owner, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }

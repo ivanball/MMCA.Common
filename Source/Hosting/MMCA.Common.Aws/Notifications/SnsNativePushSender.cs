@@ -17,6 +17,12 @@ namespace MMCA.Common.Aws.Notifications;
 /// still receive. An endpoint SNS reports disabled (the platform rejected its token) or missing is
 /// removed together with its row, so a dead device stops costing a publish on every send.
 /// </para>
+/// <para>
+/// One publish per ENDPOINT, not per row: two installation ids holding the same device token share
+/// one SNS endpoint (the registrar creates endpoints by token), so a user's rows are grouped by
+/// <see cref="SnsInstallation.EndpointArn"/> and the device is published to once. A stale endpoint
+/// removes every row of its group, as the FCM adapter's per-token grouping does.
+/// </para>
 /// </summary>
 /// <param name="registry">The installation registry.</param>
 /// <param name="sns">The SNS client.</param>
@@ -49,9 +55,9 @@ internal sealed partial class SnsNativePushSender(
                 continue;
             }
 
-            foreach (var installation in installations)
+            foreach (var endpoint in installations.GroupBy(i => i.EndpointArn, StringComparer.Ordinal))
             {
-                if (await TryPublishAsync(installation, message, cancellationToken).ConfigureAwait(false))
+                if (await TryPublishAsync(endpoint, message, cancellationToken).ConfigureAwait(false))
                 {
                     delivered++;
                 }
@@ -76,14 +82,14 @@ internal sealed partial class SnsNativePushSender(
         LogNativePushBroadcast(logger, title);
     }
 
-    private async Task<bool> TryPublishAsync(SnsInstallation installation, string message, CancellationToken cancellationToken)
+    private async Task<bool> TryPublishAsync(IGrouping<string, SnsInstallation> endpoint, string message, CancellationToken cancellationToken)
     {
         try
         {
             await sns.PublishAsync(
                 new PublishRequest
                 {
-                    TargetArn = installation.EndpointArn,
+                    TargetArn = endpoint.Key,
                     Message = message,
                     MessageStructure = SnsPushMessage.Structure,
                 },
@@ -92,27 +98,34 @@ internal sealed partial class SnsNativePushSender(
         }
         catch (Exception ex) when (ex is EndpointDisabledException or NotFoundException)
         {
-            await RemoveStaleAsync(installation, cancellationToken).ConfigureAwait(false);
+            await RemoveStaleAsync(endpoint, cancellationToken).ConfigureAwait(false);
             return false;
         }
         catch (AmazonServiceException ex)
         {
-            LogPublishFailed(logger, ex, installation.EndpointArn);
+            LogPublishFailed(logger, ex, endpoint.Key);
             return false;
         }
     }
 
-    private async Task RemoveStaleAsync(SnsInstallation installation, CancellationToken cancellationToken)
+    /// <summary>
+    /// Removes a stale endpoint once and then every row that points at it, so no surviving row is
+    /// left to fail its own publish later.
+    /// </summary>
+    private async Task RemoveStaleAsync(IGrouping<string, SnsInstallation> endpoint, CancellationToken cancellationToken)
     {
-        LogStaleEndpointRemoved(logger, installation.EndpointArn);
+        LogStaleEndpointRemoved(logger, endpoint.Key);
         try
         {
-            await registry.RemoveEndpointAsync(installation.EndpointArn, installation.SubscriptionArn, cancellationToken).ConfigureAwait(false);
-            await registry.DeleteIfEndpointAsync(installation.InstallationId, installation.EndpointArn, cancellationToken).ConfigureAwait(false);
+            await registry.RemoveEndpointAsync(endpoint.Key, endpoint.First().SubscriptionArn, cancellationToken).ConfigureAwait(false);
+            foreach (var installation in endpoint)
+            {
+                await registry.DeleteIfEndpointAsync(installation.InstallationId, endpoint.Key, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (AmazonServiceException ex)
         {
-            LogStaleEndpointRemovalFailed(logger, ex, installation.EndpointArn);
+            LogStaleEndpointRemovalFailed(logger, ex, endpoint.Key);
         }
     }
 

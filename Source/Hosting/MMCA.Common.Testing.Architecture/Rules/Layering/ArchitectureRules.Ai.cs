@@ -3,14 +3,26 @@ namespace MMCA.Common.Testing.Architecture;
 public static partial class ArchitectureRules
 {
     /// <summary>
-    /// The governed language-model package. Every layer that is not Infrastructure reaches a model
+    /// The governed language-model package's assembly-name prefix (the adapter packages, such as
+    /// <c>MMCA.Common.AI.Anthropic</c>). Every layer that is not Infrastructure reaches a model
     /// through this package or not at all.
     /// </summary>
     /// <remarks>
-    /// Matched with the trailing dot on purpose: a bare <c>MMCA.Common.AI</c> prefix would also
-    /// match every <c>MMCA.Common.API.*</c> type and fail the rule on the API layer for no reason.
+    /// The two uses need two values. An assembly NAME is matched with a plain string
+    /// <c>StartsWith</c>, where the trailing dot is what keeps <c>MMCA.Common.API</c> out. A type's
+    /// NAMESPACE is matched by NetArchTest as whole segments, where an entry ending in a dot matches
+    /// nothing at all (the rule would pass vacuously); the type-level rule therefore uses
+    /// <see cref="GovernedAiPackageNamespace"/>, whose undotted root matches <c>MMCA.Common.AI</c> and
+    /// every <c>MMCA.Common.AI.*</c> namespace but never <c>MMCA.Common.API</c>, because <c>API</c>
+    /// and <c>AI</c> are different segments.
     /// </remarks>
     public const string GovernedAiPackagePrefix = "MMCA.Common.AI.";
+
+    /// <summary>
+    /// The governed language-model package's namespace root, matched by NetArchTest as whole
+    /// namespace segments (see <see cref="GovernedAiPackagePrefix"/> for why it carries no dot).
+    /// </summary>
+    public const string GovernedAiPackageNamespace = "MMCA.Common.AI";
 
     /// <summary>
     /// Language-model SDK namespaces that must not appear outside the model boundary.
@@ -68,7 +80,7 @@ public static partial class ArchitectureRules
         {
             var result = Types.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(GovernedAiPackagePrefix)
+                .HaveDependencyOnAny(GovernedAiPackageNamespace)
                 .GetResult();
 
             ArchitectureAssert.NoViolations(result,

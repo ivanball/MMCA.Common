@@ -168,6 +168,11 @@ public sealed class MessageBusSettings
     /// is a startup failure instead of silently dropped events. The <c>OutboxMessages</c> table stays
     /// part of the EF model either way, so switching the flag never needs a migration.
     /// </para>
+    /// <para>
+    /// With the outbox off a handler failure is logged at Error and nothing retries it; each event
+    /// dispatches on its own, so one failing handler does not stop the later events of the save.
+    /// Handlers that need retry need the outbox.
+    /// </para>
     /// </summary>
     public bool? EnableOutbox { get; init; }
 

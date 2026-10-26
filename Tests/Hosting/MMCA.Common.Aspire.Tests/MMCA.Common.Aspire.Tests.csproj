@@ -20,6 +20,9 @@
          configuration path exports into this reader, so a dropped instrument is asserted as absent
          rather than inferred from which Add*Instrumentation call was skipped. -->
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <!-- CachedHealthEndpointHeadersTests (L240): an in-memory TestServer host serves the cached probe
+         endpoints and the stock /alive side by side, so their response headers can be compared. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

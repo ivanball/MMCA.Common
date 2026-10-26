@@ -1,9 +1,16 @@
+using System.Globalization;
+
 namespace MMCA.Common.Testing.E2E.Infrastructure;
 
 /// <summary>
 /// Environment-variable-driven configuration for E2E tests.
 /// Each downstream project sets the <c>Default*</c> properties (via <c>[ModuleInitializer]</c>)
 /// to provide app-specific defaults (e.g. admin email). Environment variables always take precedence.
+/// <para>
+/// The millisecond settings are parsed with the invariant culture (so <c>30,000</c> is 30000 under
+/// every machine culture), and a value that is not a finite number at or above its minimum (1 for
+/// the timeouts, where Playwright reads 0 as "no timeout"; 0 for slow-mo) falls back to the default.
+/// </para>
 /// </summary>
 public static class E2ETestConfiguration
 {
@@ -16,7 +23,7 @@ public static class E2ETestConfiguration
         !string.Equals(Environment.GetEnvironmentVariable("E2E_HEADLESS"), "false", StringComparison.OrdinalIgnoreCase);
 
     public static float DefaultTimeout =>
-        float.TryParse(Environment.GetEnvironmentVariable("E2E_TIMEOUT"), out var t) ? t : 30_000;
+        ParseMilliseconds(Environment.GetEnvironmentVariable("E2E_TIMEOUT"), fallback: 30_000, minimum: 1);
 
     /// <summary>
     /// Timeout (ms) for the post-auth wait in <c>LoginAsync</c>/<c>RegisterNewUserAsync</c> — the slowest
@@ -25,7 +32,7 @@ public static class E2ETestConfiguration
     /// <c>E2E_AUTH_TIMEOUT</c>; otherwise it inherits <see cref="DefaultTimeout"/>.
     /// </summary>
     public static float AuthTimeout =>
-        float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_TIMEOUT"), out var t) ? t : DefaultTimeout;
+        ParseMilliseconds(Environment.GetEnvironmentVariable("E2E_AUTH_TIMEOUT"), fallback: DefaultTimeout, minimum: 1);
 
     /// <summary>
     /// Extra grace window (ms) the post-auth wait gives the success signal (the logout button) to appear
@@ -36,14 +43,14 @@ public static class E2ETestConfiguration
     /// without forcing WASM (which broke login). Tunable via <c>E2E_AUTH_GRACE</c>.
     /// </summary>
     public static float AuthGraceTimeout =>
-        float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_GRACE"), out var t) ? t : 15_000;
+        ParseMilliseconds(Environment.GetEnvironmentVariable("E2E_AUTH_GRACE"), fallback: 15_000, minimum: 1);
 
     /// <summary>
     /// Slows down each Playwright action by this many milliseconds. Useful for watching tests visually.
     /// Set E2E_SLOWMO=1000 for a 1-second delay between actions.
     /// </summary>
     public static float SlowMo =>
-        float.TryParse(Environment.GetEnvironmentVariable("E2E_SLOWMO"), out var s) ? s : 0;
+        ParseMilliseconds(Environment.GetEnvironmentVariable("E2E_SLOWMO"), fallback: 0, minimum: 0);
 
     /// <summary>
     /// Which Playwright browser engine to launch: <c>chromium</c> (default), <c>firefox</c>, or
@@ -62,6 +69,13 @@ public static class E2ETestConfiguration
     /// </summary>
     public static string? TracePath =>
         Environment.GetEnvironmentVariable("E2E_TRACE") is { Length: > 0 } path ? path : null;
+
+    private static float ParseMilliseconds(string? raw, float fallback, float minimum) =>
+        float.TryParse(raw, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
+            && float.IsFinite(value)
+            && value >= minimum
+            ? value
+            : fallback;
 
     public static class AdminCredentials
     {

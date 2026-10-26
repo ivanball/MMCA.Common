@@ -192,12 +192,73 @@ public sealed class TwoFactorAuthenticatorTests
         replayed.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
     }
 
+    // -- Concurrent submissions (L235) --
+    [Fact]
+    public async Task ChallengeAsync_WhenTheStepLockIsContended_RefusesAValidCodeAndWritesNothing()
+    {
+        // The read, compare and write of the last step are one critical section; a submission that
+        // cannot take the lock is answered as invalid, never as a second success.
+        var cache = new Mock<ICacheService>();
+        cache
+            .Setup(c => c.GetFromSharedStoreAsync<long?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((long?)null);
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireAsync(StepLockKey, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IAsyncDisposable?)null);
+        var (sut, _, secret) = CreateSut(enabled: true, cache: cache.Object, distributedLock: distributedLock.Object);
+
+        Result<TwoFactorOutcome> result = await sut.ChallengeAsync(TestUserId, CodeAt(secret));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
+        cache.Verify(
+            c => c.SetAsync(It.IsAny<string>(), It.IsAny<long?>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ChallengeAsync_TakesTheStepLock_AndReleasesItAfterAccepting()
+    {
+        var handle = new Mock<IAsyncDisposable>();
+        handle.Setup(h => h.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireAsync(StepLockKey, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(handle.Object);
+        var (sut, _, secret) = CreateSut(enabled: true, distributedLock: distributedLock.Object);
+
+        Result<TwoFactorOutcome> result = await sut.ChallengeAsync(TestUserId, CodeAt(secret));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(TwoFactorOutcome.VerifiedTotp);
+        handle.Verify(h => h.DisposeAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task VerifyEnrollmentCodeAsync_WhenTheStepLockIsContended_IsFalse()
+    {
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(l => l.TryAcquireAsync(StepLockKey, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IAsyncDisposable?)null);
+        var (sut, _, secret) = CreateSut(enabled: false, distributedLock: distributedLock.Object);
+
+        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, CodeAt(secret));
+
+        verified.Should().BeFalse();
+    }
+
     // ── Helpers ──
+    private static readonly string StepLockKey =
+        string.Create(CultureInfo.InvariantCulture, $"lock:twofactor:laststep:{TestUserId}");
+
     private static (TwoFactorAuthenticator Sut, FakeTwoFactorStore Store, string Secret) CreateSut(
         bool enabled,
         bool stateExists = true,
         int recoveryCodeCount = 0,
-        ICacheService? cache = null)
+        ICacheService? cache = null,
+        IDistributedLock? distributedLock = null)
     {
         var settings = Options.Create(new TwoFactorSettings { RecoveryCodeCount = Math.Max(recoveryCodeCount, 1) });
         var service = new TotpTwoFactorService(settings);
@@ -210,11 +271,27 @@ public sealed class TwoFactorAuthenticatorTests
             store.Seed(enabled, secret, set);
         }
 
-        return (new TwoFactorAuthenticator(service, store, cache ?? new FakeCacheService(), settings), store, secret);
+        return (
+            new TwoFactorAuthenticator(service, store, cache ?? new FakeCacheService(), settings, distributedLock ?? new FreeLock()),
+            store,
+            secret);
     }
 
     private static string CodeAt(string secret) =>
         new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp(DateTime.UtcNow);
+
+    /// <summary>An uncontended <see cref="IDistributedLock"/>: every acquire succeeds.</summary>
+    private sealed class FreeLock : IDistributedLock, IAsyncDisposable
+    {
+        public Task<IAsyncDisposable?> TryAcquireAsync(
+            string key,
+            TimeSpan ttl,
+            TimeSpan wait,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IAsyncDisposable?>(this);
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 
     /// <summary>In-memory <see cref="ICacheService"/> holding the last accepted time step.</summary>
     private sealed class FakeCacheService : ICacheService

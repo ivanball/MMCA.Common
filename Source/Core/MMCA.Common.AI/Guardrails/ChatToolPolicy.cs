@@ -32,7 +32,9 @@ public static class ChatToolPolicy
     /// <summary>
     /// The <see cref="ChatOptions.AdditionalProperties"/> key holding the names of the tools the
     /// caller has confirmed for THIS request, as an <see cref="IEnumerable{T}"/> of
-    /// <see cref="string"/> or as a single <see cref="string"/>.
+    /// <see cref="string"/> or as a single <see cref="string"/>. Options bound from JSON carry the
+    /// value as a <see cref="JsonElement"/>, so a JSON string and a JSON array of strings are read
+    /// the same way (non-string array items are ignored).
     /// </summary>
     /// <remarks>
     /// Per request, never per session: a confirmation that outlived the request it was given for
@@ -85,6 +87,16 @@ public static class ChatToolPolicy
         {
             string single => [single],
             IEnumerable<string> many => [.. many],
+
+            // Options carried over the wire bind their bag values as JsonElement, a struct that is
+            // neither a string nor a sequence, so without these arms a confirmed tool reads as
+            // unconfirmed and is stripped.
+            JsonElement { ValueKind: JsonValueKind.String } element => [element.GetString()!],
+            JsonElement { ValueKind: JsonValueKind.Array } element =>
+                [.. element.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString()!)
+                    .Where(name => name.Length > 0)],
 
             // A non-generic sequence (a JSON array bound as object[], say) still names tools.
             System.Collections.IEnumerable sequence =>

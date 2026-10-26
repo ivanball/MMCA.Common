@@ -17,6 +17,10 @@ public sealed class PushNotificationSettings
     /// Gets the SignalR hub endpoint path. The JWT bearer handlers accept the query-string
     /// <c>access_token</c> on this path (and under <c>/hubs</c>); a host moving the hub elsewhere
     /// must also set <c>RateLimiting:HubPathPrefixes</c>, which the rate limiter reads separately.
+    /// The shipped client (<c>NotificationHubService</c> in MMCA.Common.UI) connects at the default
+    /// <c>/hubs/notifications</c> and has no setting to follow a move, so a host that changes this
+    /// path must also change the client, plus the gateway route, <c>RateLimiting:HubPathPrefixes</c>
+    /// and the same-origin proxy exemption.
     /// </summary>
     public string HubPath { get; init; } = "/hubs/notifications";
 

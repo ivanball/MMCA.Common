@@ -116,7 +116,12 @@ public abstract class DataExportControllerBase<TQuery>(
     /// </summary>
     /// <param name="userId">The user whose data is exported.</param>
     /// <param name="currentUserId">The authenticated caller.</param>
-    /// <param name="currentUserRole">The authenticated caller's role claim; may be <see langword="null"/>.</param>
+    /// <param name="currentUserRole">
+    /// The authenticated caller's FIRST role claim (<c>ICurrentUserService.Role</c>), which is the only
+    /// one on the single-role tokens <c>TokenService</c> mints; may be <see langword="null"/>. A host
+    /// issuing multi-role tokens overrides this method to pass its privileged role when
+    /// <c>CurrentUserService.IsInRole</c> holds, as <c>OwnershipHelper.IsAdmin</c> does.
+    /// </param>
     /// <returns>The query to dispatch.</returns>
     protected abstract TQuery CreateQuery(
         UserIdentifierType userId,

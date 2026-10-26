@@ -110,7 +110,10 @@ public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatReques
     /// <remarks>
     /// Only <see cref="ChatRole.User"/> messages are rewritten, and they are rewritten into NEW
     /// instances: a caller holding its own conversation history must still hold exactly what it
-    /// built. Every other message is passed through as the same instance it came in as.
+    /// built. Every other message is passed through as the same instance it came in as. Inside a
+    /// rewritten message, a content item with no marker is the same instance it came in as, and a
+    /// rebuilt text item keeps its metadata (<see cref="AIContent.AdditionalProperties"/> and
+    /// <see cref="AIContent.Annotations"/>), as <see cref="PiiRedactionGuardrail"/> does.
     /// </remarks>
     public IReadOnlyList<ChatMessage> Redact(IReadOnlyList<ChatMessage> messages)
     {
@@ -332,7 +335,10 @@ public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatReques
         {
             if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
             {
-                contents.Add(new TextContent(RedactText(text.Text)));
+                var redacted = RedactText(text.Text);
+                contents.Add(string.Equals(redacted, text.Text, StringComparison.Ordinal)
+                    ? content
+                    : ContentMetadata.WithMetadataOf(content, new TextContent(redacted)));
             }
             else
             {
@@ -347,6 +353,7 @@ public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatReques
         {
             AuthorName = message.AuthorName,
             MessageId = message.MessageId,
+            CreatedAt = message.CreatedAt,
             AdditionalProperties = message.AdditionalProperties,
         };
     }
