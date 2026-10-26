@@ -32,6 +32,17 @@ public sealed class EventUpcasterFitnessTests
     public void UniqueSourceRule_DoesNotFlag_AnUpcasterWhoseSourceIsAnotherUpcastersTarget() =>
         RunUniqueSourceRule().Should().NotContain(nameof(FixtureCompliantV2ToV3Upcaster));
 
+    // L242: the registry indexes one SourceType per upcaster instance, so a class declaring two
+    // IEventUpcaster<,> contracts is one hop at runtime and must be rejected outright.
+    [Fact]
+    public void UniqueSourceRule_FlagsAClassDeclaringTwoUpcasterContracts()
+    {
+        var message = RunUniqueSourceRule();
+
+        message.Should().Contain(nameof(FixtureDoubleHopUpcaster));
+        message.Should().Contain("exactly one hop");
+    }
+
     [Fact]
     public void SchemaVersionRule_FlagsTheBackwardsUpcaster_ButNotTheCompliantLadder()
     {

@@ -7,14 +7,22 @@ public static partial class ArchitectureRules
     /// <summary>
     /// No two event upcasters claim the same source contract (ADR-090). The upcast chain has to be a
     /// function: with two upcasters reading one type, which handler sees the message would depend on
-    /// DI registration order.
+    /// DI registration order. An upcaster CLASS is also exactly one hop: the registry indexes one
+    /// <c>SourceType</c> per instance, so a class declaring two <c>IEventUpcaster&lt;,&gt;</c>
+    /// contracts runs as one of them and the chain silently loses the other rung.
     /// </summary>
     public static void EventUpcastersHaveUniqueSourceTypes(IArchitectureMap map)
     {
-        var violations = EventUpcasters(map)
+        var contested = EventUpcasters(map)
             .GroupBy(u => u.Source)
             .Where(g => g.Skip(1).Any())
-            .Select(g => $"  - {Describe(g.Key)} is upcast by {string.Join(", ", g.Select(u => Describe(u.Upcaster)).Order(StringComparer.Ordinal))}: exactly one upcaster may claim a source contract");
+            .Select(g => $"  - {Describe(g.Key)} is upcast by {string.Join(", ", g.Select(u => Describe(u.Upcaster)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))}: exactly one upcaster may claim a source contract");
+
+        var multiHop = UpcasterClasses(map)
+            .Where(u => u.Contracts.Count > 1)
+            .Select(u => $"  - {Describe(u.Upcaster)} declares {u.Contracts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} IEventUpcaster<,> contracts: the registry indexes one SourceType per instance, so an upcaster class must be exactly one hop");
+
+        var violations = contested.Concat(multiHop);
 
         ArchitectureAssert.NoViolations(violations,
             "an integration event may have at most one upcaster reading it, otherwise the contract a handler receives depends on DI registration order (ADR-090)");
@@ -57,7 +65,18 @@ public static partial class ArchitectureRules
     /// themselves: a module-bearing (consumer) map scans only module assemblies, while the framework's
     /// own module-less map scans every layer.
     /// </summary>
-    private static IEnumerable<(Type Upcaster, Type Source, Type Target)> EventUpcasters(IArchitectureMap map)
+    private static IEnumerable<(Type Upcaster, Type Source, Type Target)> EventUpcasters(IArchitectureMap map) =>
+        UpcasterClasses(map)
+            .SelectMany(u => u.Contracts.Select(contract => (
+                u.Upcaster,
+                Source: contract.GetGenericArguments()[0],
+                Target: contract.GetGenericArguments()[1])));
+
+    /// <summary>
+    /// The upcaster classes the map owns, each with EVERY <c>IEventUpcaster&lt;,&gt;</c> contract it
+    /// declares, so a second contract on one class is judged rather than ignored.
+    /// </summary>
+    private static IEnumerable<(Type Upcaster, IReadOnlyList<Type> Contracts)> UpcasterClasses(IArchitectureMap map)
     {
         var includeFrameworkLayers = map.ModuleNames.Count == 0;
         return map.Layers
@@ -66,21 +85,17 @@ public static partial class ArchitectureRules
             .Distinct()
             .SelectMany(a => a.ConcreteClasses)
             .Where(t => !t.ContainsGenericParameters)
-            .Select(t => (Upcaster: t, Contract: UpcasterContract(t)))
-            .Where(x => x.Contract is not null)
-            .Select(x => (
-                x.Upcaster,
-                Source: x.Contract!.GetGenericArguments()[0],
-                Target: x.Contract!.GetGenericArguments()[1]));
+            .Select(t => (Upcaster: t, Contracts: UpcasterContracts(t)))
+            .Where(x => x.Contracts.Count > 0);
     }
 
     /// <summary>
-    /// Matches <c>IEventUpcaster&lt;TSource, TTarget&gt;</c> by name and arity, so the rule library
-    /// keeps its no-compile-dependency idiom.
+    /// Matches every <c>IEventUpcaster&lt;TSource, TTarget&gt;</c> a type implements, by name and
+    /// arity, so the rule library keeps its no-compile-dependency idiom.
     /// </summary>
-    private static Type? UpcasterContract(Type type) =>
-        type.GetInterfaces().FirstOrDefault(i =>
-            i.IsGenericType && string.Equals(i.Name, "IEventUpcaster`2", StringComparison.Ordinal));
+    private static IReadOnlyList<Type> UpcasterContracts(Type type) =>
+        [.. type.GetInterfaces().Where(i =>
+            i.IsGenericType && string.Equals(i.Name, "IEventUpcaster`2", StringComparison.Ordinal))];
 
     /// <summary>
     /// Reads the declared <c>SchemaVersion</c> off an event contract without running a constructor:

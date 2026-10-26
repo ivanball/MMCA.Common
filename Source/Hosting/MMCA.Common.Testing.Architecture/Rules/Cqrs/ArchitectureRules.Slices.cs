@@ -31,6 +31,11 @@ public static partial class ArchitectureRules
     /// <c>IQueryHandler&lt;TQuery, ...&gt;</c>) has a generic-parameter contract and stays exempt,
     /// like any other contract that is not a concrete same-assembly type.
     /// </para>
+    /// <para>
+    /// <b>Every handler contract is checked.</b> Registration wires a class for every closed handler
+    /// interface it implements, so a class handling two commands is judged once per contract and each
+    /// stranded one is reported.
+    /// </para>
     /// </summary>
     public static void HandlersAreCoLocatedWithTheirContracts(IArchitectureMap map)
     {
@@ -38,15 +43,17 @@ public static partial class ArchitectureRules
 
         foreach (var handler in map.OfLayer(Layer.Application).SelectMany(a => a.Classes).Where(IsHandler))
         {
-            var contract = HandlerContract(handler);
-            if (contract is null || !IsSameAssemblyConcreteContract(contract, handler))
+            foreach (var contract in HandlerContracts(handler))
             {
-                continue;
-            }
+                if (!IsSameAssemblyConcreteContract(contract, handler))
+                {
+                    continue;
+                }
 
-            if (!NamespacesMatch(contract, handler))
-            {
-                offenders.Add($"  - {handler.FullName}: handles {contract.SimpleName} in '{contract.Namespace}' but lives in '{handler.Namespace}'");
+                if (!NamespacesMatch(contract, handler))
+                {
+                    offenders.Add($"  - {handler.FullName}: handles {contract.SimpleName} in '{contract.Namespace}' but lives in '{handler.Namespace}'");
+                }
             }
         }
 
@@ -84,12 +91,14 @@ public static partial class ArchitectureRules
             "a validator must live in the same namespace as the command/query it validates (vertical-slice cohesion)");
     }
 
-    /// <summary>The command/query type a handler serves (the first generic arg of its handler interface).</summary>
-    private static Type? HandlerContract(Type handler)
-    {
-        var handlerInterface = handler.GetInterfaces().FirstOrDefault(IsHandlerInterface);
-        return handlerInterface?.GetGenericArguments().FirstOrDefault();
-    }
+    /// <summary>
+    /// Every command/query type a handler serves: the first generic argument of each handler interface
+    /// it implements.
+    /// </summary>
+    private static IEnumerable<Type> HandlerContracts(Type handler) =>
+        handler.GetInterfaces()
+            .Where(IsHandlerInterface)
+            .Select(handlerInterface => handlerInterface.GetGenericArguments()[0]);
 
     /// <summary>The type a FluentValidation <c>AbstractValidator&lt;T&gt;</c> validates, or null if it is not a validator.</summary>
     private static Type? ValidatedType(Type type)

@@ -51,6 +51,10 @@
     <!-- Fixture privacy policies for PiiInventoryTestsBaseTests: read from disk by path, exactly as a
          consumer's subclass reads its own PRIVACY.md. -->
     <None Include="PiiInventoryFixtures\*.md" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Fixture Spanish resources for SpanishAccentFitnessTests (L243): read from disk by path, never
+         embedded, or the SDK would turn the .es.resx files into a satellite assembly. -->
+    <EmbeddedResource Remove="SpanishFixtures\**" />
+    <None Include="SpanishFixtures\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
@@ -77,5 +81,8 @@
          cloud-vendor boundary too: the runtime half of EnforceCloudVendorBoundary. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
+    <!-- AiBoundaryRulesTests (M257): a fixture names a governed MMCA.Common.AI type so the type-level
+         governed-AI rule can be shown to bite. The AI package takes no MMCA reference, so nothing else moves. -->
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />
   </ItemGroup>
 </Project>
