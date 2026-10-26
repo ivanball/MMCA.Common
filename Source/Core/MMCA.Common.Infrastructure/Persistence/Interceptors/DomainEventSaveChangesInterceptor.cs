@@ -410,7 +410,10 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// Dispatches events that no outbox row backs (the outbox is off, or the engine is not
     /// relational) one at a time. Nothing retries such an event, so one throwing handler must not
     /// take the later events of the save down with it: each failure is logged at Error, naming the
-    /// event type, and the next event still dispatches.
+    /// event type, and the next event still dispatches. The isolation is per event, not per handler:
+    /// the dispatcher runs one event's handlers in sequence, so a throwing handler still skips the
+    /// handlers registered after it for that same event. A host whose handlers must all run, or run
+    /// again, enables the outbox.
     /// </summary>
     private async Task DispatchUnbackedAsync(IDomainEvent[] events, CancellationToken cancellationToken)
     {

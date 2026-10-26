@@ -694,7 +694,7 @@ public sealed class AuthenticationServiceBaseTests
     // again, so the whole live family goes (BR-206). A ReuseDetected row fails alone (L232, below).
     [Theory]
     [InlineData(RefreshSession.ReasonRotated)]
-    public async Task RefreshTokenAsync_WhenTheSessionWasRotatedOrFlaggedAsReuse_RevokesTheWholeFamily(
+    public async Task RefreshTokenAsync_WhenTheSessionWasRotated_RevokesTheWholeFamily(
         string reason)
     {
         var (sut, mocks) = CreateSut();
