@@ -332,3 +332,4 @@ virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.Ad
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.EmailSavedMessage.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.NameSavedMessage.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ProfileSupportsEmailChange.get -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.DarkPaletteBackgrounds.get -> System.Collections.Generic.IReadOnlyList<string!>!

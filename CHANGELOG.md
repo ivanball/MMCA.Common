@@ -4,6 +4,16 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.264.0] - 2026-10-27
+
+### Added
+
+- Added: installable web app support for Blazor Web hosts (MMCA.Common.UI.Web, [ADR-136](https://ivanball.github.io/docs/adr/136-installable-web-app-service-worker.html)). `app.MapCommonServiceWorker()` serves `/service-worker.js` at the site root, anonymous, uncached and stamped with the package version so each release updates it. The worker handles GET navigations only: it sends every one to the network (with navigation preload) and shows the framework offline page (`_content/MMCA.Common.UI.Web/offline.html`) when the network fails. It never caches a page or a response, because a server-rendered page carries the signed-in user's data; API calls, the Blazor circuit, hubs and framework files never pass through it. `_content/MMCA.Common.UI.Web/pwa-register.js` registers it after the page `load` event, in a secure context only (a file, because the host CSP blocks inline script). `Pwa:ServiceWorker:Enabled=false` is the kill switch: it serves a worker with no fetch handler that deletes the offline cache, which every installed client takes on its next navigation. The host supplies the app identity itself (`manifest.webmanifest`, icons, `theme-color`); the existing CSP already allows a same-origin manifest and worker, and the UI rate limiter already exempts both paths. A host that maps nothing changes nothing.
+
+### Dependencies
+
+- `Polly` and `Polly.Core` 8.8.0 -> 8.8.1, `Google.Cloud.Firestore` 4.5.0 -> 4.6.0, and patch updates of `AWSSDK.DynamoDBv2`, `AWSSDK.RDS`, `AWSSDK.S3`, `AWSSDK.SecretsManager` and `AWSSDK.SimpleNotificationService` (Dependabot #620). Every lock file regenerated, the out-of-slnx projects included.
+
 ## [1.263.0] - 2026-10-27
 
 ### Added

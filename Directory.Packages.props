@@ -153,11 +153,11 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.6" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.7" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
-    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.0.100.21" />
+    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.0.100.22" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
          SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
          AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
@@ -165,16 +165,16 @@
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.1" />
+    <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.2" />
     <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints, the broadcast topic
          and per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.21" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.22" />
     <!-- The native push installation registry (MMCA.Common.Aws.AddAmazonSnsPush): one DynamoDB item
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.109.1" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.109.2" />
     <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
@@ -202,7 +202,7 @@
     <!-- The FCM installation registry (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): one Firestore
          document per installation, a transaction for the ownership rule and a UserId equality query
          for user-targeted sends. gRPC over Google.Api.Gax.Grpc, the Secret Manager line; Apache-2.0. -->
-    <PackageVersion Include="Google.Cloud.Firestore" Version="4.5.0" />
+    <PackageVersion Include="Google.Cloud.Firestore" Version="4.6.0" />
     <!-- Shared DataProtection key ring (MMCA.Common.Azure.AddAzureDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
@@ -237,13 +237,13 @@
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
     <PackageVersion Include="MudBlazor" Version="9.11.0" />
-    <PackageVersion Include="Polly" Version="8.8.0" />
+    <PackageVersion Include="Polly" Version="8.8.1" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
          rather than the Polly meta-package: Core carries the v8 resilience-pipeline API on its own,
          while Polly adds the v7 Policy compatibility shim that Infrastructure has no use for. Kept
          on the same version as the Polly pin above so the two never resolve to different Core
          assemblies in one graph. -->
-    <PackageVersion Include="Polly.Core" Version="8.8.0" />
+    <PackageVersion Include="Polly.Core" Version="8.8.1" />
     <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
          native binary, no network call, no image service, so it renders identically on every head
          including Blazor WebAssembly. -->

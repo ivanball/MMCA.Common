@@ -565,6 +565,16 @@ MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber
 MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? other) -> bool
 MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Value.get -> string!
 MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Code.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Code.init -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Deconstruct(out string! Code, out string! Name) -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Equals(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? other) -> bool
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Name.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Name.init -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.UsPostalRegion(string! Code, string! Name) -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Enumeration(int value, string! name) -> void
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Name.get -> string!
@@ -764,6 +774,9 @@ override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.<Clone>$() -> MMCA.
 override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Equals(object? obj) -> bool
 override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.GetHashCode() -> int
 override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.ToString() -> string!
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Equals(object? obj) -> bool
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.GetHashCode() -> int
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.ToString() -> string!
@@ -994,6 +1007,12 @@ static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Create(string! value)
 static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.operator !=(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.operator ==(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants.EnsurePhoneNumberIsValid(string! phoneNumber, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.operator !=(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? left, MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.operator ==(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? left, MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.All.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion!>!
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.IsKnownCode(string? code) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.IsValidZipCode(string? zipCode) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.ToCode(string? value) -> string?
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.All.get -> System.Collections.Generic.IReadOnlyCollection<TEnumeration!>!
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromName(string! name) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromValue(int value) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
