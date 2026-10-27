@@ -10,6 +10,7 @@ using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Notifications;
+using MMCA.Common.UI.Web.Pwa;
 using MudBlazor.Services;
 
 namespace MMCA.Common.UI.Gallery;
@@ -128,6 +129,9 @@ public static class GalleryHost
             Path.Combine(baseDir, $"{galleryAssemblyName}.staticwebassets.endpoints.json"));
 
         app.MapGet("/health", () => Results.Ok("Healthy"));
+
+        // The installable-web-app worker every consumer host maps (pwa-register.js in App.razor).
+        app.MapCommonServiceWorker();
 
         // The real Login/Register/Home pages live in the MMCA.Common.UI assembly; the gallery's own
         // pages (e.g. /components) come from App's assembly automatically.

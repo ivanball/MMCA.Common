@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+    Offline page the framework service worker (MapCommonServiceWorker) shows when a navigation cannot
+    reach the network. Self-contained on purpose: it is served from the worker's cache while offline,
+    so it can load nothing else, and it carries no script because the host CSP allows none inline.
+    "Try again" is a link to the current URL, which reloads the page the visitor asked for.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You are offline</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --text: #1f2933;
+            --muted: #52606d;
+            --surface: #ffffff;
+            --link: #0b5cad;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #e4e7eb;
+                --muted: #cbd2d9;
+                --surface: #121212;
+                --link: #8ab4f8;
+            }
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+            background: var(--surface);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            max-width: 28rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0 0 0.5rem;
+        }
+
+        p {
+            margin: 0 0 1.5rem;
+            color: var(--muted);
+        }
+
+        a {
+            color: var(--link);
+            font-weight: 600;
+        }
+
+        a:focus-visible {
+            outline: 3px solid var(--link);
+            outline-offset: 3px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>You are offline</h1>
+        <p>This page needs a connection. Check your network and try again.</p>
+        <a href="">Try again</a>
+    </main>
+</body>
+</html>
