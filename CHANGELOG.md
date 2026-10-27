@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [1.263.0] - 2026-10-27
+## [1.264.0] - 2026-10-27
 
 ### Added
 
@@ -13,6 +13,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Dependencies
 
 - `Polly` and `Polly.Core` 8.8.0 -> 8.8.1, `Google.Cloud.Firestore` 4.5.0 -> 4.6.0, and patch updates of `AWSSDK.DynamoDBv2`, `AWSSDK.RDS`, `AWSSDK.S3`, `AWSSDK.SecretsManager` and `AWSSDK.SimpleNotificationService` (Dependabot #620). Every lock file regenerated, the out-of-slnx projects included.
+
+## [1.263.0] - 2026-10-27
+
+### Added
+
+- Added: `UserPreferencesTestsBase.DarkPaletteBackgrounds` (MMCA.Common.Testing.E2E, protected virtual, default MudBlazor's PaletteDark background `#1a2027` and its rgba form). The two theme tests wait for `--mud-palette-background` to compute to one of these values. An app whose stylesheet re-points that variable at its own dark surface (MMCA.Store's rebrand uses `#1a1416`) overrides it with that value; before, the probe was hardcoded and those tests timed out while dark mode worked. Consumers that keep MudBlazor's dark palette change nothing.
 
 ## [1.262.0] - 2026-10-26
 

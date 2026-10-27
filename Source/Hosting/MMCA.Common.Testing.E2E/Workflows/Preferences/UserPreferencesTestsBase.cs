@@ -20,17 +20,26 @@ namespace MMCA.Common.Testing.E2E.Workflows.Preferences;
 /// </summary>
 public abstract class UserPreferencesTestsBase : E2ETestBase
 {
-    // MudBlazor emits the palette as CSS variables on :root; depending on version the value is the
-    // raw hex ("#1a2027") or its rgba form ("rgba(26,32,39,1)"). Accept either, whitespace-free.
+    // MudBlazor emits the palette as CSS variables on :root. The computed value is compared
+    // whitespace-free and lower-case against DarkPaletteBackgrounds.
     private const string DarkBackgroundProbeScript =
-        "() => { const v = getComputedStyle(document.documentElement)" +
+        "expected => { const v = getComputedStyle(document.documentElement)" +
         ".getPropertyValue('--mud-palette-background').replace(/\\s+/g, '').toLowerCase();" +
-        " return v === '#1a2027' || v === 'rgba(26,32,39,1)'; }";
+        " return expected.includes(v); }";
 
     protected UserPreferencesTestsBase(PlaywrightFixture fixture)
         : base(fixture)
     {
     }
+
+    /// <summary>
+    /// The values <c>--mud-palette-background</c> computes to in dark mode, whitespace-free and
+    /// lower-case. The default is MudBlazor's own PaletteDark background, as the raw hex or its rgba
+    /// form depending on the MudBlazor version. An app whose stylesheet re-points the variable at its
+    /// own dark surface overrides this with that value, or the theme tests time out while dark mode
+    /// works.
+    /// </summary>
+    protected virtual IReadOnlyList<string> DarkPaletteBackgrounds => ["#1a2027", "rgba(26,32,39,1)"];
 
     // Desktop container: the app bar's action cluster (NavMenu's mobile duplicate is display:none
     // at >=1024px but still in the DOM, so container scoping is what disambiguates).
@@ -103,6 +112,6 @@ public abstract class UserPreferencesTestsBase : E2ETestBase
     private async Task AssertDarkPaletteAsync() =>
         await Page.WaitForFunctionAsync(
             DarkBackgroundProbeScript,
-            null,
+            DarkPaletteBackgrounds.ToArray(),
             new PageWaitForFunctionOptions { Timeout = 15_000 }).ConfigureAwait(false);
 }
