@@ -85,7 +85,7 @@
         </article>
     </main>
     @* The contentinfo (footer) landmark must be top-level, not nested inside <main> (axe landmark-contentinfo-is-top-level). *@
-    @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText) || LegalSettingsOptions.Value.HasFooterLinks)
+    @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText) || LegalSettingsOptions.Value.HasFooterLinks || _footerComponents.Count > 0)
     {
         <footer class="app-footer" role="contentinfo">
             @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
@@ -116,7 +116,18 @@
                     }
                 </nav>
             }
+            @* Module footer content (IUIModule.FooterComponentTypes): an app's own footer links or brand
+               block, inside this one contentinfo landmark and on the footer's own full-width line. *@
+            @foreach (var componentType in _footerComponents)
+            {
+                <DynamicComponent Type="componentType" />
+            }
         </footer>
+    }
+    @* Opt-in (Layout:ClearToastsOnNavigation): removes toasts left over from the page being left. *@
+    @if (LayoutSettingsOptions.Value.ClearToastsOnNavigation)
+    {
+        <MMCA.Common.UI.Components.Notifications.StaleToastSweeper />
     }
     @foreach (var componentType in _layoutComponents)
     {
@@ -137,6 +148,7 @@
     private List<Type> _appBarComponents = [];
     private List<Type> _layoutComponents = [];
     private List<Type> _contentHeaderComponents = [];
+    private List<Type> _footerComponents = [];
     private ElementReference _mainContent;
 
     // Base-relative path and query of the page being shown, plus the fragment. The router re-renders
@@ -156,6 +168,7 @@
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
         _layoutComponents = UIModules.SelectMany(m => m.LayoutComponentTypes).ToList();
         _contentHeaderComponents = UIModules.SelectMany(m => m.ContentHeaderComponentTypes).ToList();
+        _footerComponents = UIModules.SelectMany(m => m.FooterComponentTypes).ToList();
 
         // Back the static ErrorMessages helper with the shared localizer (ADR-027). The layout renders for
         // every page in both Server and WASM, so this configures it once per circuit/host.

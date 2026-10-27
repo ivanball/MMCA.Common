@@ -27,4 +27,26 @@ public interface IUIModule
     /// the offline banner), e.g. a banner the user must see before the page itself.
     /// </summary>
     IReadOnlyList<Type> ContentHeaderComponentTypes => [];
+
+    /// <summary>
+    /// Component types rendered inside the layout's footer (the page's one <c>contentinfo</c>
+    /// landmark), after the configured footer text and legal links, e.g. an app's own footer links or
+    /// brand block. The footer is rendered when any module contributes one, even with no footer text
+    /// and no legal links configured. Empty (the default) leaves the footer exactly as before.
+    /// </summary>
+    /// <remarks>
+    /// Use this rather than <see cref="LayoutComponentTypes"/> for visible footer content: layout
+    /// components are siblings of the sidebar and main region in the desktop flex row, so visible
+    /// content there becomes an extra column instead of a footer.
+    /// </remarks>
+    IReadOnlyList<Type> FooterComponentTypes => [];
+
+    /// <summary>
+    /// A component type rendered by the framework's not-found page in place of its default content
+    /// (icon, title, message and home button), so an app can show its own 404. The page keeps its
+    /// title and still renders the Access Denied view for a re-executed 403. When several modules
+    /// supply one, the first registered wins. <see langword="null"/> (the default) keeps the
+    /// framework's not-found content.
+    /// </summary>
+    Type? NotFoundContentType => null;
 }

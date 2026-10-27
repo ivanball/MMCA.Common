@@ -77,3 +77,41 @@ export function markInteractive() {
         // No enhanced navigation on this host; the initial stamp is enough.
     }
 }
+
+// ── Colour-mode hook (opt-in, Layout:StampColorModeOnDocument) ──────────────────────────────
+// Mirrors the Day/Dark mode onto the document element as data-mmca-color-mode="light|dark", so an
+// app's own stylesheet can select on it. Deliberately not data-mmca-theme: that attribute belongs to
+// the MAUI head's pre-paint script and carries pre-paint rules in app.css. Enhanced navigation
+// resynchronises <html>'s attributes from the new document, so the last mode is re-stamped on
+// 'enhancedload', as the interactivity marker is.
+const COLOR_MODE_ATTRIBUTE = 'data-mmca-color-mode';
+
+let lastColorMode = null;
+let colorModeReStampAttached = false;
+
+function applyColorMode() {
+    if (lastColorMode === null) {
+        return;
+    }
+    try {
+        document.documentElement.setAttribute(COLOR_MODE_ATTRIBUTE, lastColorMode);
+    } catch {
+        // Best-effort: an app's styling hook never surfaces into theme handling.
+    }
+}
+
+export function stampColorMode(mode) {
+    lastColorMode = mode === 'dark' ? 'dark' : 'light';
+    applyColorMode();
+
+    if (colorModeReStampAttached) {
+        return;
+    }
+
+    try {
+        document.addEventListener('enhancedload', applyColorMode);
+        colorModeReStampAttached = true;
+    } catch {
+        // No enhanced navigation on this host; the stamp above is enough.
+    }
+}

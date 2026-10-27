@@ -1,1 +1,20 @@
 ﻿#nullable enable
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Code.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Code.init -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Deconstruct(out string! Code, out string! Name) -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Equals(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? other) -> bool
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Name.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Name.init -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.UsPostalRegion(string! Code, string! Name) -> void
+MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.ToString() -> string!
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.operator !=(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? left, MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion.operator ==(MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? left, MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.All.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegion!>!
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.IsKnownCode(string? code) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.IsValidZipCode(string? zipCode) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.UsPostalRegions.ToCode(string? value) -> string?
