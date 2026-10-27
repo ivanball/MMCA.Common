@@ -1,1 +1,2 @@
 #nullable enable
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.FillStateAsync(MMCA.Common.Testing.E2E.PageObjects.ProfilePage! profilePage) -> System.Threading.Tasks.Task!
