@@ -1,1 +1,11 @@
 #nullable enable
+MMCA.Common.UI.Common.Interfaces.IUIModule.FooterComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
+MMCA.Common.UI.Common.Interfaces.IUIModule.NotFoundContentType.get -> System.Type?
+MMCA.Common.UI.Common.Settings.LayoutSettings.ClearToastsOnNavigation.get -> bool
+MMCA.Common.UI.Common.Settings.LayoutSettings.ClearToastsOnNavigation.init -> void
+MMCA.Common.UI.Common.Settings.LayoutSettings.StampColorModeOnDocument.get -> bool
+MMCA.Common.UI.Common.Settings.LayoutSettings.StampColorModeOnDocument.init -> void
+MMCA.Common.UI.Components.Notifications.StaleToastSweeper
+MMCA.Common.UI.Components.Notifications.StaleToastSweeper.Dispose() -> void
+MMCA.Common.UI.Components.Notifications.StaleToastSweeper.StaleToastSweeper() -> void
+static readonly MMCA.Common.UI.Components.Notifications.StaleToastSweeper.Grace -> System.TimeSpan

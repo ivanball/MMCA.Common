@@ -47,4 +47,23 @@ public sealed class LayoutSettings
     /// unaffected either way.
     /// </summary>
     public bool HideNotificationPagesWhenUnregistered { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, a navigation to another page removes the toasts that were already
+    /// on screen before it (shown for longer than a short grace period), so a toast about the page being
+    /// left does not follow the user onto the next one. A toast raised as part of the navigation itself
+    /// (an action that reports its outcome and then moves on) is kept. <see langword="false"/> (the
+    /// default) leaves toasts to expire or be dismissed exactly as before.
+    /// </summary>
+    public bool ClearToastsOnNavigation { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the document element carries
+    /// <c>data-mmca-color-mode="light|dark"</c>, kept in step with the Day/Dark toggle, so an app's own
+    /// stylesheet can follow the mode (MudThemeProvider only swaps its palette variables, which gives
+    /// CSS nothing to select on). Set once the page is interactive, so a prerendered page has no value
+    /// until then. <see langword="false"/> (the default) sets nothing. The attribute is distinct from
+    /// the MAUI head's pre-paint <c>data-mmca-theme</c>, whose rules it does not trigger.
+    /// </summary>
+    public bool StampColorModeOnDocument { get; init; }
 }
