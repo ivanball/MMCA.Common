@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.265.1] - 2026-10-27
+
+### Added
+
+- Added: `ProfileManagementTestsBase.FillStateAsync(ProfilePage)` (MMCA.Common.Testing.E2E, protected virtual). `ChangeAddress_ShouldUpdateProfileAddress` typed "TS" into the State field, which fails on an app whose State field is a picker (a read-only MudSelect combobox cannot be filled). The default keeps typing into a text field; an app with a picker overrides it to choose an option. Consumers that keep a text field change nothing.
+
 ## [1.265.0] - 2026-10-27
 
 ### Added
