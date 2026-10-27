@@ -38,8 +38,12 @@
         <div class="appbar-container">
             <MudAppBar Elevation="1" Dense="true" Fixed="false" aria-label="@L["Layout.AppBar.Aria"]">
                 <div class="appbar-spacer"></div>
-                @* Culture + theme controls are available to everyone, authenticated or not. *@
+                @* Public module components, culture + theme are available to everyone, authenticated or not. *@
                 <span class="appbar-icon-actions">
+                    @foreach (var componentType in _publicAppBarComponents)
+                    {
+                        <DynamicComponent Type="componentType" />
+                    }
                     <CultureSwitcher />
                     <ThemeToggle />
                 </span>
@@ -146,6 +150,7 @@
 
 @code {
     private List<Type> _appBarComponents = [];
+    private List<Type> _publicAppBarComponents = [];
     private List<Type> _layoutComponents = [];
     private List<Type> _contentHeaderComponents = [];
     private List<Type> _footerComponents = [];
@@ -166,6 +171,7 @@
     protected override void OnInitialized()
     {
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
+        _publicAppBarComponents = UIModules.SelectMany(m => m.PublicAppBarComponentTypes).ToList();
         _layoutComponents = UIModules.SelectMany(m => m.LayoutComponentTypes).ToList();
         _contentHeaderComponents = UIModules.SelectMany(m => m.ContentHeaderComponentTypes).ToList();
         _footerComponents = UIModules.SelectMany(m => m.FooterComponentTypes).ToList();

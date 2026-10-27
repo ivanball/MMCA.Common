@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- Added: `IUIModule.PublicAppBarComponentTypes` (default empty). `AppBarComponentTypes` render for a signed-in user only, so an app had no app bar slot for a control a signed-out visitor needs (a storefront's search box or cart). Components in the new slot render for every visitor, ahead of the culture and theme controls, in `MainLayout`'s app bar and in `NavMenu`'s mobile quick-actions row; a component that should differ per sign-in state decides that itself. `AppBarComponentTypes` keep their authentication gate, and a module that contributes nothing leaves the app bar exactly as before.
+
 ## [1.264.0] - 2026-10-27
 
 ### Added
