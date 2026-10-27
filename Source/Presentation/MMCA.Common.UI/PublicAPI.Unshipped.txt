@@ -1,2 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Common.Interfaces.IUIModule.PublicAppBarComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!

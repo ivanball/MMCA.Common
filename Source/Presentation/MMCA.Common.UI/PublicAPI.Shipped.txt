@@ -33,6 +33,7 @@ MMCA.Common.UI.Common.Interfaces.IUIModule.FooterComponentTypes.get -> System.Co
 MMCA.Common.UI.Common.Interfaces.IUIModule.LayoutComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.NavItems.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Common.NavItem!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.NotFoundContentType.get -> System.Type?
+MMCA.Common.UI.Common.Interfaces.IUIModule.PublicAppBarComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
 MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error = 4 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info = 1 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
