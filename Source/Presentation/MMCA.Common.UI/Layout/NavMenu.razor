@@ -41,6 +41,10 @@
     @* role="group": aria-label is prohibited on a generic div (WCAG 4.1.2 / axe aria-prohibited-attr),
        and the row is a labelled set of related controls, which is exactly what group means. *@
     <div class="toprow-actions" role="group" aria-label="@L["Nav.QuickActions.Aria"]">
+        @foreach (var componentType in _publicAppBarComponents)
+        {
+            <DynamicComponent Type="componentType" />
+        }
         <CultureSwitcher />
         <ThemeToggle />
         <AuthorizeView>
@@ -179,6 +183,7 @@
 @code {
     private ClaimsPrincipal? _user;
     private List<Type> _appBarComponents = [];
+    private List<Type> _publicAppBarComponents = [];
     private List<NavItem> _generalItems = [];
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
@@ -214,6 +219,7 @@
     protected override async Task OnInitializedAsync()
     {
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
+        _publicAppBarComponents = UIModules.SelectMany(m => m.PublicAppBarComponentTypes).ToList();
         await RebuildFromAuthStateAsync(AuthStateProvider.GetAuthenticationStateAsync());
 
         // The sections are computed from the user, so an in-circuit sign-out (a failed silent refresh

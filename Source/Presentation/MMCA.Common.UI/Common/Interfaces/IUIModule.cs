@@ -16,8 +16,19 @@ public interface IUIModule
     /// <summary>Assembly containing Razor pages, used by <c>AddAdditionalAssemblies</c> for route discovery.</summary>
     Assembly Assembly { get; }
 
-    /// <summary>Component types rendered inside the top app bar (e.g., cart icon with badge).</summary>
+    /// <summary>
+    /// Component types rendered inside the top app bar for a signed-in user only (e.g., a notification
+    /// bell). Use <see cref="PublicAppBarComponentTypes"/> for a control every visitor needs.
+    /// </summary>
     IReadOnlyList<Type> AppBarComponentTypes => [];
+
+    /// <summary>
+    /// Component types rendered inside the top app bar (and the mobile quick-actions row) for every
+    /// visitor, signed in or not, ahead of the culture and theme controls, e.g. a site search box or a
+    /// cart icon a signed-out shopper also uses. A component that should look different per sign-in
+    /// state decides that itself. Empty (the default) leaves the app bar exactly as before.
+    /// </summary>
+    IReadOnlyList<Type> PublicAppBarComponentTypes => [];
 
     /// <summary>Component types rendered at the root layout level (e.g., drawers, overlays).</summary>
     IReadOnlyList<Type> LayoutComponentTypes => [];
