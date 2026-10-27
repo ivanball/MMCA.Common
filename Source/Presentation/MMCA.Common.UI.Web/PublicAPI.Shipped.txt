@@ -44,6 +44,9 @@ MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.PermitLimit.init -> void
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.UiRateLimitingSettings() -> void
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.get -> int
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.init -> void
+MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions
+MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
+MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonServiceWorker() -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonSameOriginApiProxy() -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
@@ -86,6 +89,8 @@ MMCA.Common.UI.Web._Imports.Execute() -> void
 MMCA.Common.UI.Web._Imports._Imports() -> void
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ApiSectionName = "Api" -> string!
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ClientConfigPath = "/client-config" -> string!
+const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.EnabledKey = "Pwa:ServiceWorker:Enabled" -> string!
+const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.ServiceWorkerPath = "/service-worker.js" -> string!
 const MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.SectionName = "SameOriginApiProxy" -> string!
 const MMCA.Common.UI.Web.Security.BlazorCspSettings.SectionName = "BlazorCsp" -> string!
 override MMCA.Common.UI.Web.Components.Pages.Error.OnInitialized() -> void
@@ -103,6 +108,7 @@ static MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.SectionName.get -
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.AddUiRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.UseUiRateLimiting(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.SectionName.get -> string!
+static MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.MapCommonServiceWorker(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
 static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions.MapCommonSameOriginApiProxy(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyServiceExtensions.AddCommonSameOriginApiProxy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.DefaultTokenIssuingPaths -> System.Collections.Generic.IReadOnlyList<string!>!

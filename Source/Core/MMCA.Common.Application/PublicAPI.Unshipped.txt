@@ -1,11 +1,1 @@
 ﻿#nullable enable
-*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Storage.IImageProcessor
-*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Storage.IImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
-MMCA.Common.Application.Validation.UsAddressValidator
-MMCA.Common.Application.Validation.UsAddressValidator.UsAddressValidator() -> void
-MMCA.Common.Application.Validation.UsCityRules<T>
-MMCA.Common.Application.Validation.UsCityRules<T>.UsCityRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
-MMCA.Common.Application.Validation.UsStateRules<T>
-MMCA.Common.Application.Validation.UsStateRules<T>.UsStateRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
-MMCA.Common.Application.Validation.UsZipCodeRules<T>
-MMCA.Common.Application.Validation.UsZipCodeRules<T>.UsZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void

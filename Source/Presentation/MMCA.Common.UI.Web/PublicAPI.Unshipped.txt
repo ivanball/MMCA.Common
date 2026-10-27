@@ -1,7 +1,1 @@
 ﻿#nullable enable
-const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.EnabledKey = "Pwa:ServiceWorker:Enabled" -> string!
-const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.ServiceWorkerPath = "/service-worker.js" -> string!
-MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions
-MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
-MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonServiceWorker() -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
-static MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.MapCommonServiceWorker(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!

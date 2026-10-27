@@ -125,6 +125,7 @@ MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.De
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddLegalAcceptance(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMultiTenancy(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNotificationInfrastructure() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNpgsqlDataSourceConfigurator(MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddPushNotifications(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddScheduledJob<TJob>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddScheduledJobs(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -242,6 +243,7 @@ MMCA.Common.Infrastructure.Notifications.NotificationHub
 MMCA.Common.Infrastructure.Notifications.NotificationHub.JoinChannelAsync(string! channelKey) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.NotificationHub.LeaveChannelAsync(string! channelKey) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.NotificationHub.NotificationHub(Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings!>! settings, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IChannelJoinAuthorizer? joinAuthorizer = null) -> void
+MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.NullNativePushSender() -> void
@@ -526,6 +528,8 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbig
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.TransactionCommitAmbiguousException(System.Exception! innerException, System.Collections.Generic.IReadOnlyList<string!>! committedSources, string? ambiguousSource, System.Collections.Generic.IReadOnlyList<string!>! rolledBackSources) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.TransactionCommitAmbiguousException(string! message) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.TransactionCommitAmbiguousException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator
+MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator.Configure(Npgsql.NpgsqlDataSourceBuilder! builder) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext
 MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext.PostgreSQLDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext
@@ -871,9 +875,6 @@ MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.LeaseSeconds.init -> voi
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.PollingIntervalSeconds.get -> int
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.PollingIntervalSeconds.init -> void
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.SchedulerSettings() -> void
-MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor
-MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.ImageSharpImageProcessor() -> void
-MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
 MMCA.Common.Infrastructure.Storage.NullFileStorageService
 MMCA.Common.Infrastructure.Storage.NullFileStorageService.DeleteAsync(string! blobName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Infrastructure.Storage.NullFileStorageService.IsConfigured.get -> bool
@@ -898,6 +899,7 @@ const MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.Configuratio
 const MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.Fallback = "app" -> string!
 const MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.EnableSslConfigKey = "Smtp:EnableSsl" -> string!
 const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.InProcess = "InProcess" -> string!
+const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.PostgreSql = "PostgreSql" -> string!
 const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.RabbitMq = "RabbitMq" -> string!
 const MMCA.Common.Infrastructure.Notifications.NotificationHub.JoinChannelMethod = "JoinChannel" -> string!
 const MMCA.Common.Infrastructure.Notifications.NotificationHub.LeaveChannelMethod = "LeaveChannel" -> string!
@@ -912,8 +914,6 @@ const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefault
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.DeleteBehaviorSourceAnnotation = "MMCA:DeleteBehaviorSource" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.ExplicitSource = "Explicit" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.OwnershipSource = "Ownership" -> string!
-const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedDimension = 20000 -> int
-const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedPixels = 50000000 -> long
 override MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnConnectedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnDisconnectedAsync(System.Exception? exception) -> System.Threading.Tasks.Task!
@@ -965,6 +965,7 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddInfrastructure(this Mic
 static MMCA.Common.Infrastructure.DependencyInjection.AddLegalAcceptance(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddMultiTenancy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddNotificationInfrastructure(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddPushNotifications(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJob<TJob>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJobs(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -984,6 +985,8 @@ static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.A
 static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyReceivePolicies(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, bool applyDelayedRedelivery) -> void
 static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> System.TimeSpan[]!
 static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.Collections.Generic.IReadOnlyList<int>! defaultIntervalsSeconds) -> System.TimeSpan[]!
+static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApnsPayload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
+static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
 static MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.ApplyPermissionGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
 static MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.ApplyRefreshSessionConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
 static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsAddress<TOwner>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>! builder, System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Contact.Address?>!>! navigationExpression, string! columnPrefix = "Address", bool required = false) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!

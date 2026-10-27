@@ -88,7 +88,6 @@ MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.ConventionDel
 MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.DeleteBehaviorConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.DependencyVersionTestsBase
 MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.DependencyVersionTestsBase() -> void
-MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharp_MustNotExceed_MajorVersion3() -> void
 MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransit_MustNotExceed_MajorVersion8() -> void
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlerSaveTestsBase() -> void
@@ -423,6 +422,7 @@ abstract MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.Map
 abstract MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageNamespace = "MMCA.Common.AI" -> string!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix = "MMCA.Common.AI." -> string!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractAttributeFullName = "MMCA.Common.Shared.Abstractions.ServiceContractAttribute" -> string!
 const MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ChangePasswordCardTag = "<ChangePasswordCard" -> string!
@@ -601,7 +601,6 @@ virtual MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Controlle
 virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.BicepResource.get -> string!
 virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ForbiddenResidencyClaims.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.ImageSharpPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransitPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.AllowedSavingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.MaxCallDepth.get -> int
@@ -615,6 +614,7 @@ virtual MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.Today.get
 virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.ExemptFolderSuffixes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.MaxDirectFiles.get -> int
 virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MinimumCreateForms.get -> int
+virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ModulesRoot.get -> string!
 virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.ProfileFormPath.get -> string?
 virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.RequiredMarkers.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.SourceRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

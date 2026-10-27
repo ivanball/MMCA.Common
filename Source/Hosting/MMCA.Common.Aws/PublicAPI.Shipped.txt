@@ -1,7 +1,15 @@
 #nullable enable
+MMCA.Common.Aws.AwsDataProtectionExtensions
+MMCA.Common.Aws.AwsDataProtectionExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aws.AwsDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAwsDataProtection() -> TBuilder
+MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions
+MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.extension<TBuilder>(TBuilder).AddAwsSecretsManagerConfiguration() -> TBuilder
 MMCA.Common.Aws.AwsServiceCollectionExtensions
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAmazonSnsPush(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAmazonSqsTransport() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAwsRdsIamAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddS3FileStorage(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings
 MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AccessKeyId.get -> string?
@@ -39,7 +47,11 @@ MMCA.Common.Aws.Storage.S3FileStorageSettings.SecretAccessKey.get -> string?
 MMCA.Common.Aws.Storage.S3FileStorageSettings.SecretAccessKey.init -> void
 MMCA.Common.Aws.Storage.S3FileStorageSettings.ServiceUrl.get -> System.Uri?
 MMCA.Common.Aws.Storage.S3FileStorageSettings.ServiceUrl.init -> void
+static MMCA.Common.Aws.AwsDataProtectionExtensions.AddAwsDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aws.AwsSecretsManagerConfigurationExtensions.AddAwsSecretsManagerConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAmazonSnsPush(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAmazonSqsTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAwsRdsIamAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddS3FileStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.SectionName -> string!
 static readonly MMCA.Common.Aws.Storage.S3FileStorageSettings.SectionName -> string!

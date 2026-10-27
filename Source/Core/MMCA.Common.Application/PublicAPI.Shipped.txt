@@ -498,8 +498,6 @@ MMCA.Common.Application.Interfaces.Infrastructure.Storage.IFileStorageService.De
 MMCA.Common.Application.Interfaces.Infrastructure.Storage.IFileStorageService.IsConfigured.get -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Storage.IFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Storage.IFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
-MMCA.Common.Application.Interfaces.Infrastructure.Storage.IImageProcessor
-MMCA.Common.Application.Interfaces.Infrastructure.Storage.IImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Storage.ImageContentSniffer
 MMCA.Common.Application.Interfaces.Mapping.ICreateRequest
 MMCA.Common.Application.Interfaces.Mapping.IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>
@@ -1102,6 +1100,14 @@ MMCA.Common.Application.Validation.StateRules<T>
 MMCA.Common.Application.Validation.StateRules<T>.StateRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
 MMCA.Common.Application.Validation.StrongPasswordRules<T>
 MMCA.Common.Application.Validation.StrongPasswordRules<T>.StrongPasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string? errorCode = null) -> void
+MMCA.Common.Application.Validation.UsAddressValidator
+MMCA.Common.Application.Validation.UsAddressValidator.UsAddressValidator() -> void
+MMCA.Common.Application.Validation.UsCityRules<T>
+MMCA.Common.Application.Validation.UsCityRules<T>.UsCityRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.UsStateRules<T>
+MMCA.Common.Application.Validation.UsStateRules<T>.UsStateRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.UsZipCodeRules<T>
+MMCA.Common.Application.Validation.UsZipCodeRules<T>.UsZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
 MMCA.Common.Application.Validation.ZipCodeRules<T>
 MMCA.Common.Application.Validation.ZipCodeRules<T>.ZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
 abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateAccessToken(TUser! user) -> string!

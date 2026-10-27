@@ -1,14 +1,1 @@
 #nullable enable
-MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNpgsqlDataSourceConfigurator(MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator
-MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator.Configure(Npgsql.NpgsqlDataSourceBuilder! builder) -> void
-static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
-static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApnsPayload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
-static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
-const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.PostgreSql = "PostgreSql" -> string!
-*REMOVED*MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor
-*REMOVED*MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.ImageSharpImageProcessor() -> void
-*REMOVED*MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
-*REMOVED*const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedDimension = 20000 -> int
-*REMOVED*const MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.MaxDecodedPixels = 50000000 -> long
