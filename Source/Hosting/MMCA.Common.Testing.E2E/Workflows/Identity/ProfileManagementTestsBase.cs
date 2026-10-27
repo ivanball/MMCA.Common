@@ -35,6 +35,19 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
     /// <summary>The snackbar text shown once the email save has completed (see <see cref="NameSavedMessage"/>).</summary>
     protected virtual string EmailSavedMessage => "Email updated successfully.";
 
+    /// <summary>
+    /// Sets the State field during the address test. The default types a value into a text field; an app
+    /// whose State field is a picker (a select over postal regions, say) overrides this to choose one of
+    /// its options, since a read-only combobox cannot be filled.
+    /// </summary>
+    /// <param name="profilePage">The profile page object, already on the page.</param>
+    /// <returns>A task that completes once the State value is set.</returns>
+    protected virtual Task FillStateAsync(ProfilePage profilePage)
+    {
+        ArgumentNullException.ThrowIfNull(profilePage);
+        return profilePage.StateField.FillAsync("TS");
+    }
+
     [Fact]
     public async Task ChangeName_ShouldUpdateProfileName()
     {
@@ -76,7 +89,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         // Act
         await profilePage.AddressLine1Field.FillAsync("123 Test Street").ConfigureAwait(false);
         await profilePage.CityField.FillAsync("TestCity").ConfigureAwait(false);
-        await profilePage.StateField.FillAsync("TS").ConfigureAwait(false);
+        await FillStateAsync(profilePage).ConfigureAwait(false);
         await profilePage.ZipCodeField.FillAsync("12345").ConfigureAwait(false);
         await profilePage.CountryField.FillAsync("TestCountry").ConfigureAwait(false);
         await profilePage.SaveAddressButton.ClickAsync().ConfigureAwait(false);
