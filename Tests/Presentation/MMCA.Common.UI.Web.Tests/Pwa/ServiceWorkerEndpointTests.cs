@@ -43,6 +43,10 @@ public sealed class ServiceWorkerEndpointTests
         var (_, script) = await InvokeAsync(app);
 
         script.Should().Contain("request.method !== 'GET' || request.mode !== 'navigate'");
+
+        // A text check, not a runtime one: the script must not call the cache-write APIs that would
+        // store a fetched response. The install handler's single cache.add stores the offline page,
+        // which is the one response the worker keeps.
         script.Should().NotContain("cache.put(");
         script.Should().NotContain("cache.addAll(");
     }

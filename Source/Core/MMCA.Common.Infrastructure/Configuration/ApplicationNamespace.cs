@@ -6,7 +6,8 @@ namespace MMCA.Common.Infrastructure.Configuration;
 
 /// <summary>
 /// The one name every piece of SHARED infrastructure is namespaced by: Redis cache keys,
-/// distributed-lock keys, the SignalR Redis backplane channel prefix and the message broker's
+/// distributed-lock keys, distributed rate-limit counter keys, the Redis output-cache
+/// <c>InstanceName</c>, the SignalR Redis backplane channel prefix and the message broker's
 /// endpoint (queue) prefix.
 /// </summary>
 /// <remarks>
@@ -68,9 +69,9 @@ public static partial class ApplicationNamespace
     }
 
     /// <summary>
-    /// Reduces a name to characters every one of the four consumers accepts. A Redis key tolerates
+    /// Reduces a name to characters every one of its consumers accepts. A Redis key tolerates
     /// almost anything, a MassTransit queue name and a SignalR channel prefix do not, and the whole
-    /// point is one value shared by all four.
+    /// point is one value shared by all of them.
     /// </summary>
     /// <param name="name">The raw name.</param>
     /// <returns>The sanitized name, or <see cref="Fallback"/> when nothing survives.</returns>

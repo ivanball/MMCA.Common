@@ -7,8 +7,9 @@ namespace MMCA.Common.Architecture.Tests.Layering;
 /// Runtime half of the <c>MMCA.Common.Testing.Aspire</c> layer boundary. The compile-time half is
 /// <c>EnforceTestingAspireLayerBoundary</c> in
 /// <c>Source/Build/MMCA.Common.LayerEnforcement.targets</c>, which rejects a forbidden
-/// <c>ProjectReference</c>; this half asserts the same rule against the compiled assembly, so a type
-/// that arrives through a transitive path rather than a declared reference is caught too.
+/// <c>ProjectReference</c>; this half asserts a narrower set of the same forbidden namespaces (it has
+/// no Application or Grpc entry) against the compiled assembly, so a dependency on one of them that
+/// arrives through a transitive path rather than a declared reference is caught too.
 /// <para>
 /// The rule matters because the package is AppHost-tier test infrastructure that consumers take
 /// alongside their smoke tier. Letting it reach the Domain, Infrastructure or API layers directly

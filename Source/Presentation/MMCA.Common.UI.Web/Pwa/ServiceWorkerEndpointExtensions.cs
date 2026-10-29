@@ -39,8 +39,10 @@ public static class ServiceWorkerEndpointExtensions
         /// <para>
         /// <b>Never caches pages or data.</b> A server-rendered page carries the signed-in user's
         /// data, so the worker sends every navigation to the network and falls back to the offline
-        /// page only when the network fails. It handles GET navigations alone: API calls, the Blazor
-        /// circuit, hubs, framework files and cookies never pass through it.
+        /// page only when the network fails. It handles GET navigations alone: every other request
+        /// (API calls, the Blazor circuit, hubs, framework files) reaches its fetch handler and is
+        /// left to the browser's default network handling, and a navigation it handles goes to the
+        /// network with the request's cookies as usual.
         /// </para>
         /// <para>
         /// <b>Updates with every release.</b> The package version is written into the script, so a

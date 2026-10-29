@@ -141,13 +141,8 @@
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
     <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
-    <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
-         Six Labors Split License: Apache 2.0 terms apply to open-source / small-revenue use,
-         which covers this project; revisit if that changes. PINNED to v3 by policy: v4 requires
-         a commercial license key at build time (DependencyVersionTests fails the build at major 4,
-         same pattern as the MassTransit v8 pin). The dependabot.yml ignore is narrower than that
-         ceiling: it holds the package at 3.1.x by ignoring every version >= 3.2.0 (its own comment
-         gives the reason). -->
+    <!-- Managed file storage (ADR-045): the MMCA.Common.Azure Blob Storage adapter and its
+         Azure.Identity credential. -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO

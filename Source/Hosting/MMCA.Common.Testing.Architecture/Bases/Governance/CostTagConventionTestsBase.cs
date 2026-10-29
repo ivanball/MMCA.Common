@@ -51,8 +51,9 @@ public abstract partial class CostTagConventionTestsBase
     protected virtual Assembly ResourceAssembly => GetType().Assembly;
 
     /// <summary>
-    /// Every container app declares a <c>tags:</c> line that unions a <c>service</c> key into the
-    /// shared tags, within the first lines of its resource body.
+    /// Every container app declares a <c>tags:</c> line containing a <c>service:</c> key (by convention
+    /// a union of the shared tags with that key), within the first lines of its resource body. The
+    /// check looks for the key on that line only, not for the union shape.
     /// </summary>
     [Fact]
     public void EveryContainerApp_CarriesAServiceTag()
@@ -70,7 +71,7 @@ public abstract partial class CostTagConventionTestsBase
             .ToArray();
 
         untagged.Should().BeEmpty(
-            because: "each container app must add a `service` tag to commonTags through a union with a service key, so its cost is attributable per service (untagged: "
+            because: "each container app's tags line must carry a `service:` key (normally a union of commonTags with a service key), so its cost is attributable per service (untagged: "
                 + string.Join(", ", untagged) + ")");
     }
 
