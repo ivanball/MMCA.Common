@@ -157,7 +157,7 @@ jobs:
         # test failure still gates. Coverage is report-only (see the `coverage` job).
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
-          # Floor at 2000 (suite is ~2,254): a discovery/filter regression that silently drops
+          # Floor at 2000, far below the suite size: a discovery/filter regression that silently drops
           # thousands of tests must fail the job, not pass green with a handful discovered.
           dotnet-coverage collect -f cobertura -o coverage.unit.cobertura.xml \
             "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000"

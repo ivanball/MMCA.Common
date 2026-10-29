@@ -92,7 +92,8 @@
                         @L["Auth.Login.OrContinueWith"]
                     </MudText>
                     @* Native heads route external sign-in through the system-browser broker
-                       (ADR-043); web heads keep the anchor redirect flow. Apple renders first:
+                       (ADR-043); web heads redirect from a button that mints the per-attempt
+                       state on click (Login.razor.cs). Apple renders first:
                        App Store guideline 4.8 requires Sign in with Apple as an equivalent
                        option wherever third-party login is offered, and Apple's HIG asks for
                        at least equal prominence. *@
