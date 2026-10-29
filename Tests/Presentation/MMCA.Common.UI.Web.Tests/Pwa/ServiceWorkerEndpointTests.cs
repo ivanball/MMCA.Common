@@ -35,7 +35,7 @@ public sealed class ServiceWorkerEndpointTests
     }
 
     [Fact]
-    public async Task TheActiveWorker_HandlesGetNavigationsOnly_AndNeverCachesAResponse()
+    public async Task TheActiveWorker_HandlesGetNavigationsOnly_AndNeverStoresAFetchedResponse()
     {
         await using var app = CreateApp();
         app.MapCommonServiceWorker();

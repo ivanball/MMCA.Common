@@ -48,8 +48,10 @@ public sealed class TestingAspireBoundaryTests
 
     [Fact]
     public void TestingAspire_ShouldNotDependOn_ServiceDefaults() =>
+        // No trailing dot: a dotted NetArchTest namespace entry matches nothing, so the segment form
+        // is the one that covers MMCA.Common.Aspire and every namespace under it.
         AssertNoDependency(
-            "MMCA.Common.Aspire.",
+            "MMCA.Common.Aspire",
             "the probe paths are mirrored constants precisely so this package never pulls the service-defaults graph");
 
     private static void AssertNoDependency(string forbiddenNamespace, string reason)
