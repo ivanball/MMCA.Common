@@ -92,7 +92,7 @@ internal static class FactsGenerator
         Console.WriteLine($"WROTE {Norm(outPath)}");
     }
 
-    // ---- git tag (MinVer source of the version)
+    // ---- git tag (the release version: release.yml packs with it and skips MinVer)
     private static string GitTag(string repo)
     {
         try
@@ -240,7 +240,8 @@ _As of: {{AS_OF}} (framework {{VERSION}}) — **generated from source by `build/
 > facts (test totals, scorecard indices) live in that repo's published scorecard, **not** here.
 
 ## Framework version
-- **Current: `{{VERSION}}`** (MinVer-derived from the git tag at `main` HEAD).
+- **Current: `{{VERSION}}`** (the latest release tag reachable from `main` HEAD; `release.yml` packs with
+  that tag as the version and skips MinVer).
 - All consumers (**MMCA.ADC**, **MMCA.Store**, MMCA.Helpdesk) track this version in **lockstep** — every
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).

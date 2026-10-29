@@ -33,7 +33,7 @@ There is no `push: main` trigger: `main` requires an up-to-date branch, so the P
 - **coverage**: the unit tier must stay >= 68.3% line.
 - Also run: **build-maui** (windows, four TFMs), **sample-deployment-validate**, and the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack) and **gcp-integration** (emulators), all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run); none of these is a required check.
 
-Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs from a separate `publish-maui` job off the same tag. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
+A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version with MinVer skipped, and MinVer versions every other build from git history (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs from a separate `publish-maui` job off the same tag. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
 
 Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive.
@@ -43,7 +43,7 @@ Gotchas:
 
 ## Source Layout
 
-All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from MinVer).
+All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, MinVer otherwise).
 
 ```
 Source/
@@ -53,8 +53,8 @@ Source/
                  no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each)
   Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx)
   Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.Aspire,Testing.E2E,
-                 Testing.UI,Testing.Architecture,AI.Testing} (+ Azure, Aws and Testing.Azure, the
-                 cloud vendor adapters)
+                 Testing.UI,Testing.Architecture,AI.Testing} (+ Azure, Aws, Gcp and Testing.Azure,
+                 the cloud vendor adapters)
 Tests/           mirrors Source/ plus Architecture/ and Performance/ (+ the AppHost tier and its
                  sample AppHost and service, all three outside the slnx)
 build/           facts (FACTS.md generator + drift gate), perfgate (benchmark baseline gate)
