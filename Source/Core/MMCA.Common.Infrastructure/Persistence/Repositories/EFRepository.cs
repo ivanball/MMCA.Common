@@ -9,8 +9,10 @@ using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// EF Core read-write repository supporting add and update operations.
-/// Extends <see cref="EFReadRepository{TEntity,TIdentifierType}"/> with mutation support.
+/// EF Core read-write repository: staged adds, original row-version handling for optimistic
+/// concurrency, and set-based <see cref="ExecuteDeleteAsync"/> / <see cref="ExecuteUpdateAsync"/>.
+/// Extends <see cref="EFReadRepository{TEntity,TIdentifierType}"/>; tracked entities are updated
+/// by mutating them, so there is no per-entity update method.
 /// Flushing is the unit of work's job, so this type stages changes and never saves.
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>

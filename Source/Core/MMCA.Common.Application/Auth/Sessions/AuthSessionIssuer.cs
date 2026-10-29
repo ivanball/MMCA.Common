@@ -389,8 +389,8 @@ public sealed class AuthSessionIssuer(
     /// row, and the store is what decides which of them owns the rotation. The loser re-reads the row
     /// untracked (<see cref="IRefreshSessionStore.FindByIdUntrackedAsync"/>): a rotation within
     /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> is answered 409 with nothing revoked, a
-    /// sign-out or cap eviction of the same row fails that request alone (as the lookup path does), and
-    /// anything else is answered exactly like a replay (family revoked, BR-206).
+    /// sign-out, cap eviction or earlier reuse sweep of the same row fails that request alone (as the
+    /// lookup path does), and anything else is answered exactly like a replay (family revoked, BR-206).
     /// </para>
     /// </summary>
     /// <returns>The plaintext successor token to hand to the client, and the successor's session id.</returns>
