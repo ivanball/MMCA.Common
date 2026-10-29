@@ -24,7 +24,8 @@ public static class JwtAuthorityExtensions
     {
         /// <summary>
         /// Returns the configured JWT bearer authority, or throws when
-        /// <see cref="JwtAuthorityConfigKey"/> is absent.
+        /// <see cref="JwtAuthorityConfigKey"/> is absent. A present but blank value is returned
+        /// as-is and rejected by <c>AddForwardedJwtBearer</c>'s own argument guard.
         /// </summary>
         /// <returns>The authority base URL to hand to <c>AddForwardedJwtBearer</c>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="configuration"/> is null.</exception>

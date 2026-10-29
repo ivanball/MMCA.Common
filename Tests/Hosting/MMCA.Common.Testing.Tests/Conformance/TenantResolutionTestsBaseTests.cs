@@ -9,7 +9,7 @@ namespace MMCA.Common.Testing.Tests.Conformance;
 /// <summary>
 /// Self-tests for <see cref="TenantResolutionTestsBase"/>: the base declares its three gates, a
 /// compliant configuration passes each of them, and each non-compliant configuration makes the
-/// matching gate throw. The probe subclasses are private, so xUnit never collects their inherited
+/// matching gate throw. The probe subclass is private, so xUnit never collects its inherited
 /// facts; the tests call those facts directly.
 /// </summary>
 public sealed class TenantResolutionTestsBaseTests

@@ -1,8 +1,9 @@
 // MMCA.Common.UI.Web service worker, served by MapCommonServiceWorker() at /service-worker.js.
 // It makes the host installable and shows an offline page when a navigation cannot reach the
 // network. It never caches pages or data: a server-rendered page carries the signed-in user's data,
-// so every navigation goes to the network. Only GET navigations are handled; API calls, the Blazor
-// circuit, hubs and framework files never pass through this worker.
+// so every navigation goes to the network. Only GET navigations are handled; every other request
+// (API calls, the Blazor circuit, hubs, framework files) returns from the fetch handler untouched
+// and takes the browser's default network path. The only cached response is the offline page.
 'use strict';
 
 const VERSION = '__MMCA_SW_VERSION__';

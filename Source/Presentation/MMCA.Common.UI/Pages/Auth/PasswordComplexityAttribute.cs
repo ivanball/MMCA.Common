@@ -7,9 +7,10 @@ namespace MMCA.Common.UI.Pages.Auth;
 /// Client-side password-complexity rule for the Register form: at least 8 characters with an
 /// uppercase, a lowercase, a digit, and a special (non-alphanumeric) character. It evaluates
 /// <see cref="PasswordComplexity"/>, the same Unicode-aware definition the server's
-/// <c>StrongPasswordRules</c> uses, so the EditForm gives the verdict the API would (rubric section 24
-/// validation parity). Empty input is left to <see cref="RequiredAttribute"/> so the field shows one
-/// clear message, not two.
+/// <c>StrongPasswordRules</c> uses, so the EditForm gives the verdict the API would wherever the
+/// server's validator applies <c>StrongPasswordRules</c> (rubric section 24 validation parity); a
+/// consumer whose server validator does not apply it is stricter on the form than on the API. Empty
+/// input is left to <see cref="RequiredAttribute"/> so the field shows one clear message, not two.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public sealed class PasswordComplexityAttribute : ValidationAttribute

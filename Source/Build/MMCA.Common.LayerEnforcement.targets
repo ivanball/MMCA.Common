@@ -212,10 +212,12 @@
        to any core layer would let a test-infrastructure package become a backdoor around the layer
        rules, so each one is named here.
 
-       MMCA.Common.Aspire (service defaults) is forbidden too, and that is deliberate rather than
-       incidental: the probe paths this package asserts are MIRRORED constants cross-asserted by a
-       unit test, precisely so an AppHost-tier package never drags the whole service-defaults graph
-       (Azure Monitor, OpenTelemetry, Key Vault) into a consumer's test project. -->
+       A direct reference to MMCA.Common.Aspire (service defaults) is forbidden too, and that is
+       deliberate rather than incidental (like every entry here, it is judged on the declared
+       reference only, so this target does not catch a transitive arrival): the probe paths this
+       package asserts are MIRRORED constants cross-asserted by a unit test, precisely so an
+       AppHost-tier package never drags the whole service-defaults graph (Azure Monitor,
+       OpenTelemetry, Key Vault) into a consumer's test project. -->
   <Target Name="EnforceTestingAspireLayerBoundary"
           BeforeTargets="ResolveProjectReferences"
           Condition="$(MSBuildProjectName) == 'MMCA.Common.Testing.Aspire'">

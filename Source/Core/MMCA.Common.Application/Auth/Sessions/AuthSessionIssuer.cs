@@ -30,8 +30,9 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// <para>
 /// Lifetimes come from the token service (<c>Jwt:AccessTokenExpirationMinutes</c>,
 /// <c>Jwt:RefreshTokenExpirationDays</c>) so the expiry reported to clients matches the JWT's actual
-/// <c>exp</c>; a non-positive value (a test double or a misconfigured host) falls back to the BR-205
-/// defaults of 15 minutes and 7 days.
+/// <c>exp</c>; a non-positive value falls back to the BR-205 defaults of 15 minutes and 7 days. A host
+/// that binds <c>JwtSettings</c> through <c>AddCommonAuthentication</c> fails startup on such a value,
+/// so the fallback covers test doubles and token services configured outside that binding.
 /// </para>
 /// </remarks>
 /// <param name="tokenService">Mints access and refresh tokens.</param>

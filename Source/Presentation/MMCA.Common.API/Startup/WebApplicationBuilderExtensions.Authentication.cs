@@ -96,9 +96,10 @@ public static partial class WebApplicationBuilderExtensions
                         // ValidIssuer is intentionally NOT set here. The JWT bearer
                         // middleware derives it from the OIDC discovery document's
                         // "issuer" field (served by MapOidcDiscoveryEndpoint). This
-                        // avoids a mismatch: authority is the Aspire service-discovery
-                        // URL (e.g. "http://identity") while the token's iss claim is
-                        // the public gateway URL (e.g. "https://localhost:6001").
+                        // avoids a mismatch: authority is whatever URL the AppHost or
+                        // deployment injects (the gateway's https endpoint locally, the
+                        // internal Identity app URL in Azure), which need not equal the
+                        // token's iss claim (the public gateway URL).
                         ValidAudience = audience,
                         // Pin the signature algorithm to RS256. The JWKS path only ever
                         // validates Identity's asymmetric (RS256) tokens, so this is

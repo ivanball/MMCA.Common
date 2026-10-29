@@ -62,8 +62,9 @@ public static class DependencyInjection
         ///   <c>appsettings.json</c> — otherwise Kestrel rejects HTTP/2 frames with
         ///   <c>HTTP_1_1_REQUIRED</c>.</item>
         ///   <item><see cref="JwtForwardingClientInterceptor"/>: forwards the inbound user's bearer
-        ///   token; when there is none and <c>AddServiceTokenClient</c> registered an
-        ///   <c>IServiceTokenProvider</c>, attaches this service's own token instead.</item>
+        ///   token only; a call with no user token goes out without one unless the client also
+        ///   opts in with <c>WithServiceToken()</c>, which adds <c>ServiceTokenClientInterceptor</c>
+        ///   to attach this service's own token.</item>
         ///   <item>Standard Polly resilience handler: the east-west gRPC values from
         ///   <see cref="HttpResilienceDefaults"/> (its <c>Grpc</c>-prefixed members), then
         ///   <paramref name="configureResilience"/> when the caller passes one.</item>
