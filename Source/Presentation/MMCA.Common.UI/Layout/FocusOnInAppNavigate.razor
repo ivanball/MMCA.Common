@@ -1,0 +1,8 @@
+@* Focus moves to the new page heading on IN-APP navigation only (Store local test run 2, X-06).
+   Blazor's FocusOnNavigate also fires on the first render, which put focus on the h1 of a freshly
+   loaded page, so the first Tab skipped "Skip to main content". Until the first navigation nothing
+   is rendered and focus stays at the document start. *@
+@if (_hasNavigated)
+{
+    <FocusOnNavigate RouteData="RouteData" Selector="@(Selector ?? "h1")" />
+}

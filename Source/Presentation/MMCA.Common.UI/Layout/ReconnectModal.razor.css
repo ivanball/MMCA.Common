@@ -19,6 +19,13 @@
     display: block;
 }
 
+/* Blazor leaves components-reconnect-show on the dialog once it adds components-reconnect-retrying,
+   so without this both "Rejoining the server..." and the "trying again in N seconds" line showed at
+   once from the first second of a drop. Retrying wins: it is the later, more specific state. */
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-first-attempt-visible {
+    display: none;
+}
+
 
 #components-reconnect-modal {
     background-color: white;
