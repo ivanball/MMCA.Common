@@ -140,13 +140,15 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(2));
 
         Task? load = null;
-        await cut.InvokeAsync(() => load = cut.Instance.OnSentinelVisible());
+        // A statement lambda: an expression lambda returning the Task would bind InvokeAsync's
+        // Func<Task> overload and wait for the very load this test holds open.
+        await cut.InvokeAsync(() => { load = cut.Instance.OnSentinelVisible(); });
 
-        await cut.WaitForAssertionAsync(() => cut.FindAll(".infinite-scroll-loading").Should().ContainSingle());
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".infinite-scroll-loading").Should().ContainSingle(), TimeSpan.FromSeconds(5));
 
         secondPage.SetResult(Result.Success<(IReadOnlyList<string>, int)>((["c", "d"], 4)));
-        await load!;
-        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(4));
+        await load!.WaitAsync(TimeSpan.FromSeconds(5));
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(4), TimeSpan.FromSeconds(5));
         cut.FindAll(".infinite-scroll-loading").Should().BeEmpty();
     }
 
