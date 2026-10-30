@@ -294,13 +294,15 @@ public static partial class WebApplicationBuilderExtensions
             });
         }
 
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
+        // whole window, so the wrapper reports the time actually left in it.
+        return RateLimitPartition.Get(partitionKey, _ => new RemainingWindowFixedWindowRateLimiter(new FixedWindowRateLimiterOptions
         {
             Window = TimeSpan.FromMinutes(1),
             PermitLimit = permitLimit,
             QueueLimit = queueLimit,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-        });
+        }));
     }
 
     /// <summary>

@@ -121,6 +121,35 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         cut.FindComponents<MudCard>().Count.Should().Be(2);
     }
 
+    // AC-41 (Store local test run 2): the next-page load starts from a JS callback, so the
+    // "Loading more items" status must paint while the fetch is in flight, not only after it ends.
+    [Fact]
+    public async Task WhileTheNextPageIsInFlight_TheLoadingMoreStatusRenders()
+    {
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+        var secondPage = new TaskCompletionSource<Result<(IReadOnlyList<string> Items, int TotalItems)>>();
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 2)
+            .Add(c => c.FetchPageResult, (page, _, _) => page == 1
+                ? Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["a", "b"], 4)))
+                : secondPage.Task));
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(2));
+
+        Task? load = null;
+        await cut.InvokeAsync(() => load = cut.Instance.OnSentinelVisible());
+
+        await cut.WaitForAssertionAsync(() => cut.FindAll(".infinite-scroll-loading").Should().ContainSingle());
+
+        secondPage.SetResult(Result.Success<(IReadOnlyList<string>, int)>((["c", "d"], 4)));
+        await load!;
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(4));
+        cut.FindAll(".infinite-scroll-loading").Should().BeEmpty();
+    }
+
     // U-20 (ADC local test run 8): an observe call the browser refuses (a JSException, e.g. the
     // sentinel element is already gone) is best effort. It must not escape the list's after-render:
     // the cards already loaded stay, and the list simply stops loading more.

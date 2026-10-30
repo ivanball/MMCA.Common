@@ -130,6 +130,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private int _savedPageSize;
     private string? _savedSortColumn;
     private bool _savedSortDescending;
+
+    // True while a sort restored from the URL or saved state has not yet been applied to the grid.
+    // Every list page seeds a default column sort, so the grid's own SortDefinitions are never
+    // empty on the first fetch; this flag lets the restored sort win until it is applied.
+    private bool _restoredSortPending;
+
+    // The grid's own sort when the restored sort began overriding it (see ResolveSortParameters).
+    private (string? Column, string? Direction)? _shadowedGridSort;
     private bool _suppressNextLocationChanged;
     private bool _locationHandlerRegistered;
     private bool _deferSessionPersist;
@@ -253,8 +261,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         MobileCurrentPage = effectiveState.MobilePage;
-        _savedSortColumn = effectiveState.SortColumn;
-        _savedSortDescending = effectiveState.SortDescending;
+        RestoreSort(effectiveState);
         DenseGrid = effectiveState.DenseGrid;
         RestoreFilters(effectiveState.Filters);
 
@@ -299,8 +306,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         {
             RowsPerPageState = urlState.PageSize;
         }
-        _savedSortColumn = urlState.SortColumn;
-        _savedSortDescending = urlState.SortDescending;
+        RestoreSort(urlState);
         DenseGrid = urlState.DenseGrid;
         MobileCurrentPage = urlState.MobilePage;
         RestoreFilters(urlState.Filters);
@@ -316,7 +322,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                     ApplyCurrentPageFromUrl(grid, urlState.Page);
                 }
 
-                await grid.ReloadServerData();
+                // Applying a restored sort reloads the grid itself; otherwise reload here.
+                if (!await ApplyRestoredSortToGridAsync(grid))
+                {
+                    await grid.ReloadServerData();
+                }
             }
             StateHasChanged();
         });
@@ -578,8 +588,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         MobileCurrentPage = state.MobilePage;
-        _savedSortColumn = state.SortColumn;
-        _savedSortDescending = state.SortDescending;
+        RestoreSort(state);
         DenseGrid = state.DenseGrid;
         RestoreFilters(state.Filters);
     }
@@ -597,11 +606,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // (sort/filters were restored after the first fetch returned defaults).
         if (VirtualizeGrid)
         {
-            if (needsReload && GridRef is { } virtualizedGrid)
-            {
-                await virtualizedGrid.ReloadServerData();
-            }
-
+            await ApplyRestoredSortOrReloadAsync(needsReload);
             return;
         }
 
@@ -623,13 +628,73 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // page-number restoration still works alongside rows-per-page restoration.
         RestoreCurrentPageAfterRowsPerPageReset();
 
-        // Session restore changed pagination state after the grid's initial ServerData
-        // call already returned defaults: reload with the correct parameters.
-        if (needsReload && GridRef is { } reloadGrid)
+        // A URL or saved sort the grid's default column sort shadowed: put it on the header (which
+        // reloads the grid). Otherwise, session restore changed pagination state after the grid's
+        // initial ServerData call already returned defaults: reload with the correct parameters.
+        await ApplyRestoredSortOrReloadAsync(needsReload);
+    }
+
+    /// <summary>Applies a pending restored sort to the grid, or reloads it when <paramref name="needsReload"/> asks.</summary>
+    /// <param name="needsReload">Whether restored state changed after the grid's first fetch.</param>
+    private async Task ApplyRestoredSortOrReloadAsync(bool needsReload)
+    {
+        if (GridRef is { } grid && !await ApplyRestoredSortToGridAsync(grid) && needsReload)
         {
-            await reloadGrid.ReloadServerData();
+            await grid.ReloadServerData();
         }
     }
+
+    /// <summary>Takes the sort restored from the URL or saved state and marks it pending for the grid.</summary>
+    /// <param name="state">The restored list state.</param>
+    private void RestoreSort(ListPageState state)
+    {
+        _savedSortColumn = state.SortColumn;
+        _savedSortDescending = state.SortDescending;
+        _restoredSortPending = !string.IsNullOrEmpty(state.SortColumn);
+        _shadowedGridSort = null;
+    }
+
+    /// <summary>
+    /// Puts a pending restored sort on <paramref name="grid"/> so the header shows it and later
+    /// fetches read it from the grid. Every list page seeds a default column sort, so without this a
+    /// shared <c>?s=Name&amp;sd=desc</c> link was rewritten to the default on first load.
+    /// </summary>
+    /// <param name="grid">The rendered grid.</param>
+    /// <returns><see langword="true"/> when the sort was applied, which reloads the grid's server data.</returns>
+    private async Task<bool> ApplyRestoredSortToGridAsync(MudDataGrid<TDto> grid)
+    {
+        if (!_restoredSortPending)
+        {
+            return false;
+        }
+
+        _restoredSortPending = false;
+        if (FindSortableColumn(grid, _savedSortColumn) is not { PropertyName: { } field } column)
+        {
+            return false;
+        }
+
+        var current = grid.SortDefinitions.Values.FirstOrDefault();
+        if (current is not null
+            && string.Equals(current.SortBy, _savedSortColumn, StringComparison.Ordinal)
+            && current.Descending == _savedSortDescending)
+        {
+            return false;
+        }
+
+        // The grid sorts on the server, so the local sort function is never invoked.
+        await grid.SetSortAsync(
+            field,
+            _savedSortDescending ? SortDirection.Descending : SortDirection.Ascending,
+            column.SortBy ?? (static _ => null),
+            column.Comparer);
+        return true;
+    }
+
+    private static Column<TDto>? FindSortableColumn(MudDataGrid<TDto> grid, string? propertyName) =>
+        string.IsNullOrEmpty(propertyName)
+            ? null
+            : grid.RenderedColumns.FirstOrDefault(c => string.Equals(c.PropertyName, propertyName, StringComparison.Ordinal));
 
     /// <summary>
     /// Extracts filters and sort from <paramref name="state"/>, manages the <see cref="CancellationTokenSource"/>,
@@ -1174,14 +1239,32 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     }
 
     /// <summary>
-    /// The grid's own sort, with a first-fetch fallback: when MudDataGrid has not yet picked up a
-    /// SortDefinition (typical on initial load with a URL-driven sort), the sort restored from the
-    /// query string is used instead, so the data lands sorted from the very first request.
+    /// The grid's own sort, with a first-fetch override: while a sort restored from the query string
+    /// or saved state is still pending (the grid shows its default column sort until the first-render
+    /// setup applies it), and whenever MudDataGrid has no SortDefinition yet, the restored sort is used
+    /// instead, so the data lands sorted from the very first request.
     /// </summary>
     private (string? SortColumn, string? SortDirection) ResolveSortParameters(
         IEnumerable<SortDefinition<TDto>>? sortDefinitions)
     {
         var (sortColumn, sortDirection) = ExtractSortParameters(sortDefinitions);
+
+        // A restored column the rendered grid does not have (a stale or hand-edited link) never
+        // overrides the grid's sort. The override lasts only while the grid still shows the sort it
+        // had when the override began: once that moves (the restored sort was applied, or the user
+        // sorted a column) the grid's own sort is authoritative again.
+        if (_restoredSortPending
+            && GridRef is { } grid
+            && FindSortableColumn(grid, _savedSortColumn) is not null)
+        {
+            _shadowedGridSort ??= (sortColumn, sortDirection);
+            if (_shadowedGridSort == (sortColumn, sortDirection))
+            {
+                return (_savedSortColumn, _savedSortDescending ? "desc" : "asc");
+            }
+
+            _restoredSortPending = false;
+        }
 
         if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
         {

@@ -1163,4 +1163,52 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         grid.RowsPerPage.Should().Be(10, "MudDataGrid's own default is left untouched");
     }
+
+    // == URL sort over the page's default column sort ==
+    private MudDataGrid<WidgetRow> RenderGridSortedByNameAscending(List<GridState<WidgetRow>> seen) =>
+        Render<MudDataGrid<WidgetRow>>(ps => ps
+            .Add(p => p.ServerData, (state, _) =>
+            {
+                seen.Add(state);
+                return Task.FromResult(new GridData<WidgetRow> { Items = [], TotalItems = 0 });
+            })
+            .Add(p => p.Columns, builder =>
+            {
+                builder.OpenComponent<PropertyColumn<WidgetRow, string>>(0);
+                builder.AddAttribute(1, nameof(PropertyColumn<,>.Property), (System.Linq.Expressions.Expression<Func<WidgetRow, string>>)(row => row.Name));
+                builder.AddAttribute(2, nameof(PropertyColumn<,>.InitialDirection), SortDirection.Ascending);
+                builder.CloseComponent();
+            })).Instance;
+
+    [Fact]
+    public void RestoreGridState_WithUrlSort_ReplacesTheDefaultColumnSortOnTheGrid()
+    {
+        // AC-39: every list page seeds a default column sort, which used to shadow ?s=Name&sd=desc,
+        // so a shared link reloaded ascending and the URL was rewritten to the default.
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?s=Name&sd=desc");
+        var seen = new List<GridState<WidgetRow>>();
+        var grid = RenderGridSortedByNameAscending(seen);
+        grid.SortDefinitions["Name"].Descending.Should().BeFalse("the grid starts on its default column sort");
+
+        Render<GridBackedTestPage>(ps => ps.Add(p => p.Grid, grid));
+
+        grid.SortDefinitions.Should().ContainKey("Name").WhoseValue.Descending.Should().BeTrue(
+            "the URL sort wins on first load and reaches the header");
+        seen[^1].SortDefinitions.Should().ContainSingle().Which.Descending.Should().BeTrue(
+            "applying the sort reloads the grid with it");
+    }
+
+    [Fact]
+    public void RestoreGridState_WithUrlSortOnAnUnknownColumn_KeepsTheDefaultSort()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?s=Bogus&sd=desc");
+        var grid = RenderGridSortedByNameAscending([]);
+
+        Render<GridBackedTestPage>(ps => ps.Add(p => p.Grid, grid));
+
+        grid.SortDefinitions.Should().ContainSingle().Which.Key.Should().Be("Name");
+        grid.SortDefinitions["Name"].Descending.Should().BeFalse("a stale or hand-edited column never overrides the grid");
+    }
 }

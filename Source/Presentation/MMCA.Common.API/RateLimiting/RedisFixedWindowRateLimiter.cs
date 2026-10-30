@@ -205,7 +205,8 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
 }
 
 /// <summary>
-/// The leases <see cref="RedisFixedWindowRateLimiter"/> hands out. <see cref="Acquired"/> and
+/// The leases <see cref="RedisFixedWindowRateLimiter"/> hands out (and the rejection
+/// <see cref="RemainingWindowFixedWindowRateLimiter"/> rewrites its framework lease to). <see cref="Acquired"/> and
 /// <see cref="Undecided"/> are stateless and carry no metadata, so one shared instance of each serves
 /// every request. A rejection is allocated per call because it carries
 /// <see cref="MetadataName.RetryAfter"/>: the time until the partition's window resets, which the

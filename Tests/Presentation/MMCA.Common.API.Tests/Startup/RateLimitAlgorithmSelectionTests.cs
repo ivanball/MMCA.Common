@@ -28,7 +28,7 @@ public sealed class RateLimitAlgorithmSelectionTests
 
         using var limiter = ResolveLimiter(partition);
 
-        limiter.Should().BeOfType<FixedWindowRateLimiter>();
+        limiter.Should().BeOfType<RemainingWindowFixedWindowRateLimiter>();
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class RateLimitAlgorithmSelectionTests
 
         using var limiter = ResolveLimiter(partition);
 
-        limiter.Should().BeOfType<FixedWindowRateLimiter>();
+        limiter.Should().BeOfType<RemainingWindowFixedWindowRateLimiter>();
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class RateLimitAlgorithmSelectionTests
 
         using var limiter = ResolveLimiter(partition);
 
-        limiter.Should().BeOfType<FixedWindowRateLimiter>();
+        limiter.Should().BeOfType<RemainingWindowFixedWindowRateLimiter>();
     }
 
     [Fact]

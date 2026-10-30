@@ -3,7 +3,20 @@
 // it, so the theme is applied once the interactive runtime calls get()), and mirrored to localStorage.
 const KEY = 'mmca_theme';
 
+// localStorage is read first, the cookie second (theme-prepaint.js reads in the same order). set()
+// writes both, but an Android WebView flushes its cookie store only every ~30 s, so a MAUI app killed
+// soon after a toggle relaunched with the PREVIOUS theme from the cookie while localStorage held the
+// new one (Store local test run 2, X-30).
 export function get() {
+    try {
+        const stored = localStorage.getItem(KEY);
+        if (stored === 'dark' || stored === 'light') {
+            return stored;
+        }
+    } catch {
+        // localStorage may be unavailable (private mode); the cookie is the fallback.
+    }
+
     const cookies = document.cookie ? document.cookie.split('; ') : [];
     for (const cookie of cookies) {
         const separator = cookie.indexOf('=');
@@ -14,17 +27,13 @@ export function get() {
             try {
                 return decodeURIComponent(cookie.substring(separator + 1));
             } catch {
-                // A malformed cookie value (URIError): fall through to localStorage; set() rewrites
-                // the cookie on the next toggle.
-                break;
+                // A malformed cookie value (URIError): set() rewrites the cookie on the next toggle.
+                return null;
             }
         }
     }
-    try {
-        return localStorage.getItem(KEY);
-    } catch {
-        return null;
-    }
+
+    return null;
 }
 
 export function set(value) {
@@ -33,7 +42,7 @@ export function set(value) {
     try {
         localStorage.setItem(KEY, value);
     } catch {
-        // localStorage may be unavailable (private mode); the cookie is the source of truth.
+        // localStorage may be unavailable (private mode); get() then falls back to the cookie.
     }
 }
 

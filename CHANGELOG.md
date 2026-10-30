@@ -4,6 +4,22 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.266.0] - 2026-10-30
+
+Fixes from Store Local Test Run 2 (manual suite, 2026-10-30).
+
+### Added
+
+- Added: `FocusOnInAppNavigate` (MMCA.Common.UI, `MMCA.Common.UI.Layout`), Blazor's `FocusOnNavigate` for in-app navigation only. `Routes` now uses it, so a fresh page load leaves focus at the document start and the first Tab reaches "Skip to main content"; Blazor's component also fired on the first render and put focus on the h1, so the first Tab skipped the skip link. Every in-app navigation still moves focus to the new page's h1.
+
+### Fixed
+
+- Fixed: `DataGridListPageBase` restores a sort from the URL or saved state over the page's default column sort. Every list page seeds a default sort, so `?s=Name&sd=desc` loaded ascending and the URL was rewritten to the default. The restored sort now drives the first fetch and is applied to the grid header; a column the grid does not have is ignored, and once the user sorts a column the grid's own sort is authoritative again.
+- Fixed: `MobileInfiniteScrollList` renders its "Loading more items" status while the next page is in flight. The load starts from a JS callback, so nothing rendered until the fetch ended and the status never painted.
+- Fixed: the in-memory fixed-window rate limiter's `Retry-After` states the seconds left in the current window, not the whole window (it always read 60). The Redis limiter already did.
+- Fixed: the reconnect dialog shows only the "trying again in N seconds" line while retrying. Blazor keeps the first-attempt class on the dialog, so "Rejoining the server..." showed at the same time.
+- Fixed: `theme.js` and `theme-prepaint.js` read the stored Day/Dark mode from localStorage first and the `mmca_theme` cookie second. An Android WebView flushes its cookie store lazily, so a MAUI app killed soon after a toggle relaunched in the previous mode.
+
 ## [1.265.1] - 2026-10-27
 
 ### Added
