@@ -19,9 +19,9 @@ public sealed partial class FocusOnInAppNavigate : ComponentBase, IDisposable
     [EditorRequired]
     public RouteData RouteData { get; set; } = default!;
 
-    /// <summary>Gets or sets the CSS selector of the element to focus after a navigation.</summary>
+    /// <summary>Gets or sets the CSS selector of the element to focus after a navigation; <c>h1</c> when unset.</summary>
     [Parameter]
-    public string Selector { get; set; } = "h1";
+    public string? Selector { get; set; }
 
     /// <inheritdoc />
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;

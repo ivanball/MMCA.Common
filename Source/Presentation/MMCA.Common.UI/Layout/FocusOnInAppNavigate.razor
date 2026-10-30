@@ -4,5 +4,5 @@
    is rendered and focus stays at the document start. *@
 @if (_hasNavigated)
 {
-    <FocusOnNavigate RouteData="RouteData" Selector="@Selector" />
+    <FocusOnNavigate RouteData="RouteData" Selector="@(Selector ?? "h1")" />
 }
