@@ -68,7 +68,7 @@ internal sealed class SnsPushDeviceRegistrar(
         {
             return await RegisterAsync(SnsInstallationRegistry.UserKey(userId), platform, applicationArn, request, cancellationToken).ConfigureAwait(false);
         }
-        catch (AmazonServiceException ex)
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             logger.LogError(ex, "Device installation upsert failed");
             return Result.Failure(Error.Failure(
@@ -109,7 +109,7 @@ internal sealed class SnsPushDeviceRegistrar(
             await registry.DeleteOwnedAsync(installationId, owner, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
-        catch (AmazonServiceException ex)
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             logger.LogError(ex, "Device installation delete failed");
             return Result.Failure(Error.Failure(
@@ -255,10 +255,21 @@ internal sealed class SnsPushDeviceRegistrar(
                 await sns.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = subscriptionArn }, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (AmazonServiceException ex)
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             // The registration outcome stands; an orphaned endpoint is waste, not a correctness problem.
             logger.LogWarning(ex, "Removing an SNS endpoint no installation accounts for failed");
         }
     }
+
+    /// <summary>
+    /// A failure that never produced a service response: a connect or DNS failure, a dropped
+    /// connection, or a timeout after the client's own retries (surfaced as an
+    /// <see cref="OperationCanceledException"/> the caller did not request). The AWS SDK lets these
+    /// escape unwrapped, so they are handled like a service failure; the caller's own cancellation
+    /// is not one and keeps propagating. Same predicate as <c>S3FileStorageService</c>.
+    /// </summary>
+    private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or IOException
+        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
 }

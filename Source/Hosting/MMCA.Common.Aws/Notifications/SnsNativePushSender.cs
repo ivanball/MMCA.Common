@@ -49,7 +49,7 @@ internal sealed partial class SnsNativePushSender(
             {
                 installations = await registry.QueryByUserAsync(userKey, cancellationToken).ConfigureAwait(false);
             }
-            catch (AmazonServiceException ex)
+            catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
             {
                 LogInstallationLookupFailed(logger, ex, userKey);
                 continue;
@@ -101,7 +101,7 @@ internal sealed partial class SnsNativePushSender(
             await RemoveStaleAsync(endpoint, cancellationToken).ConfigureAwait(false);
             return false;
         }
-        catch (AmazonServiceException ex)
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             LogPublishFailed(logger, ex, endpoint.Key);
             return false;
@@ -123,7 +123,7 @@ internal sealed partial class SnsNativePushSender(
                 await registry.DeleteIfEndpointAsync(installation.InstallationId, endpoint.Key, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (AmazonServiceException ex)
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             LogStaleEndpointRemovalFailed(logger, ex, endpoint.Key);
         }
@@ -146,4 +146,15 @@ internal sealed partial class SnsNativePushSender(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Removing the stale SNS endpoint {EndpointArn} failed")]
     private static partial void LogStaleEndpointRemovalFailed(ILogger logger, Exception exception, string endpointArn);
+
+    /// <summary>
+    /// A failure that never produced a service response: a connect or DNS failure, a dropped
+    /// connection, or a timeout after the client's own retries (surfaced as an
+    /// <see cref="OperationCanceledException"/> the caller did not request). The AWS SDK lets these
+    /// escape unwrapped, so they are handled like a service failure; the caller's own cancellation
+    /// is not one and keeps propagating. Same predicate as <c>S3FileStorageService</c>.
+    /// </summary>
+    private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or IOException
+        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
 }
