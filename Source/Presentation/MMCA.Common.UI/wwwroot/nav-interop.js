@@ -39,6 +39,27 @@ export function sessionRemove(key) {
     }
 }
 
+// Removes every key that starts with the prefix and nothing else (sign-out forgets the
+// list pages' mmca.lps:* state). Keys are collected first because removing while
+// walking sessionStorage by index shifts the indices. Returns how many were removed.
+export function sessionRemoveByPrefix(prefix) {
+    try {
+        const doomed = [];
+        for (let i = 0; i < window.sessionStorage.length; i++) {
+            const key = window.sessionStorage.key(i);
+            if (key !== null && key.startsWith(prefix)) {
+                doomed.push(key);
+            }
+        }
+        for (const key of doomed) {
+            window.sessionStorage.removeItem(key);
+        }
+        return doomed.length;
+    } catch {
+        return 0;
+    }
+}
+
 // ── History helpers ─────────────────────────────────────────────────────────
 
 export function historyLength() {

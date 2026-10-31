@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache, MMCA.Common.UI.Services.ListPageStateService? listPageState) -> void
+MMCA.Common.UI.Services.ListPageStateService.ClearAsync() -> System.Threading.Tasks.ValueTask
