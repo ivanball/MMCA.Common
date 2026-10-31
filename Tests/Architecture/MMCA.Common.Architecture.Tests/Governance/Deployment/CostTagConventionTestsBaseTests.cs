@@ -30,6 +30,16 @@ public sealed class CostTagConventionTestsBaseTests : CostTagConventionTestsBase
     }
 
     [Fact]
+    public void ConditionalAndLoopedContainerApps_AreDiscoveredAndChecked()
+    {
+        var assert = new ConditionalTemplate().EveryContainerApp_CarriesAServiceTag;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain("optionalApp", "a conditional (= if) app is a container app too")
+            .And.Contain("workerApps", "a looped (= [for]) app is a container app too");
+    }
+
+    [Fact]
     public void TooFewContainerApps_FailsTheFloor()
     {
         var assert = new HighFloorTemplate().EveryContainerApp_CarriesAServiceTag;
@@ -54,6 +64,16 @@ public sealed class CostTagConventionTestsBaseTests : CostTagConventionTestsBase
         protected override string DatabaseNamePrefix => "Fixture_";
 
         protected override string BicepResource => "fixtures.costtag-untagged.bicep";
+    }
+
+    // A floor of one, so the untagged check (not the floor) is what decides the outcome.
+    private sealed class ConditionalTemplate : CostTagConventionTestsBase
+    {
+        protected override int MinimumContainerApps => 1;
+
+        protected override string DatabaseNamePrefix => "Fixture_";
+
+        protected override string BicepResource => "fixtures.costtag-conditional.bicep";
     }
 
     private sealed class HighFloorTemplate : CostTagConventionTestsBase

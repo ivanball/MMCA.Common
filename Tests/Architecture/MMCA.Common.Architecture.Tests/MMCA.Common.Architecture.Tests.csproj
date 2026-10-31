@@ -30,6 +30,9 @@
     <EmbeddedResource Include="Fixtures\costtag-untagged.bicep">
       <LogicalName>fixtures.costtag-untagged.bicep</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\costtag-conditional.bicep">
+      <LogicalName>fixtures.costtag-conditional.bicep</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="Fixtures\backpressure-appsettings.json">
       <LogicalName>services.Fixture.appsettings.json</LogicalName>
     </EmbeddedResource>
