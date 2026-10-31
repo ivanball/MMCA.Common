@@ -26,6 +26,16 @@ public sealed class SpanishAccentFitnessTests
         act.Should().NotThrow();
     }
 
+    // L249: confirmo, visito, publico, limite and titulo are also correct unaccented verb forms
+    // ("Confirmo que acepto...", "que limite"), so a consent label must not need an exception.
+    [Fact]
+    public void UnaccentedVerbForms_ThatAreCorrectSpanish_AreAccepted()
+    {
+        var act = () => new FixtureSpanishTests(Path.Combine(FixtureRoot, "CompliantVerbForms")).Spanish_resources_keep_their_accents();
+
+        act.Should().NotThrow();
+    }
+
     [Fact]
     public void AWordMissingItsAccent_IsStillRejected()
     {

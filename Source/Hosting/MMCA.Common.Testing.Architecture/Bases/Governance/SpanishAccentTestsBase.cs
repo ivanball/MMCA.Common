@@ -20,7 +20,9 @@ namespace MMCA.Common.Testing.Architecture;
 /// The list holds words whose unaccented spelling is almost always the mistake in UI text. Words that
 /// are equally correct with and without the accent depending on meaning (<c>esta</c> as "this"
 /// against the verb form, <c>solo</c>, which no longer takes an accent, <c>aun</c>, which is "even"
-/// unaccented and "still" accented) are deliberately left out, and
+/// unaccented and "still" accented) are deliberately left out, as are words whose unaccented spelling
+/// is a verb form UI text uses (<c>confirmo</c> in "Confirmo que acepto...", <c>visito</c>,
+/// <c>publico</c>, <c>titulo</c>, and the subjunctive <c>limite</c>), and
 /// plurals that drop the accent by rule (<c>sesiones</c>, <c>aplicaciones</c>) never match.
 /// </para>
 /// </summary>
@@ -33,10 +35,10 @@ public abstract class SpanishAccentTestsBase
     private static readonly string[] DefaultUnaccentedWords =
     [
         "sesion", "codigo", "codigos", "contrasena", "contrasenas", "numero", "numeros", "maximo",
-        "minimo", "titulo", "direccion", "informacion", "posicion", "clasificacion", "electronico",
-        "electronica", "pagina", "paginas", "aqui", "mas", "todavia", "estan", "publico",
-        "ningun", "podra", "cerrara", "volvera", "encontro", "visito", "tenia", "aplicacion",
-        "limite", "puntuacion", "perdio", "confirmo",
+        "minimo", "direccion", "informacion", "posicion", "clasificacion", "electronico",
+        "electronica", "pagina", "paginas", "aqui", "mas", "todavia", "estan",
+        "ningun", "podra", "cerrara", "volvera", "encontro", "tenia", "aplicacion",
+        "puntuacion", "perdio",
     ];
 
     /// <summary>
