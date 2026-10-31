@@ -14,6 +14,8 @@ namespace MMCA.Common.UI.Components.Notifications;
 /// moves on, "Order created, taking you to it") is about the page being opened, so only toasts that
 /// had been on screen for longer than <see cref="Grace"/> before the navigation are removed. The
 /// first time each toast is seen is recorded from <see cref="ISnackbar.OnSnackbarsUpdated"/>.
+/// A location change that keeps the path and rewrites only the query string or fragment (a grid sort,
+/// filter or page change mirrored into the URL) does not leave the page, so it removes nothing.
 /// </remarks>
 public sealed class StaleToastSweeper : ComponentBase, IDisposable
 {
@@ -22,6 +24,7 @@ public sealed class StaleToastSweeper : ComponentBase, IDisposable
 
     private readonly Dictionary<Snackbar, DateTimeOffset> _firstSeen = [];
     private readonly Lock _sync = new();
+    private string _currentPath = string.Empty;
 
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
@@ -39,6 +42,7 @@ public sealed class StaleToastSweeper : ComponentBase, IDisposable
     /// <inheritdoc />
     protected override void OnInitialized()
     {
+        _currentPath = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath;
         Navigation.LocationChanged += OnLocationChanged;
         Snackbar.OnSnackbarsUpdated += OnSnackbarsUpdated;
         OnSnackbarsUpdated();
@@ -66,6 +70,13 @@ public sealed class StaleToastSweeper : ComponentBase, IDisposable
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
+        var path = Navigation.ToAbsoluteUri(e.Location).AbsolutePath;
+        if (string.Equals(path, _currentPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _currentPath = path;
         var cutoff = TimeProvider.GetUtcNow() - Grace;
         List<Snackbar> stale;
 
