@@ -1,19 +1,32 @@
 using System.Threading.RateLimiting;
 
-namespace MMCA.Common.API.RateLimiting;
+namespace MMCA.Common.RateLimiting;
 
 /// <summary>
 /// The in-memory fixed-window limiter with an honest <see cref="MetadataName.RetryAfter"/> hint. The
 /// framework's <see cref="FixedWindowRateLimiter"/> stamps every rejection with the whole window length,
 /// so a 429 always said <c>Retry-After: 60</c> however much of the minute was left (Store local test
 /// run 2, X-18). This wraps it, tracks when the current window opened, and rewrites the hint to the time
-/// remaining until the next one, the figure <see cref="RedisFixedWindowRateLimiter"/> already reports.
+/// remaining until the next one, the figure the distributed <c>RedisFixedWindowRateLimiter</c> already
+/// reports.
 /// </summary>
 /// <remarks>
+/// <para>
+/// One source file, compiled as an internal type into each package that runs an in-memory fixed
+/// window: <c>MMCA.Common.API</c> (<c>AddCommonRateLimiting</c>), <c>MMCA.Common.Aspire</c> (the
+/// gateway edge limiter), <c>MMCA.Common.UI.Web</c> (the Blazor host's edge limiter) and
+/// <c>MMCA.Common.Gateway</c> (the named route policies), each through a <c>Compile Include ... Link</c>
+/// in its project file; a linked source file keeps the Gateway package free of any MMCA reference. It
+/// cannot live in <c>MMCA.Common.Shared</c>, the only project API, Aspire and UI.Web all reference:
+/// <c>System.Threading.RateLimiting</c> ships in the ASP.NET Core shared framework, which Shared (also
+/// loaded by Blazor WebAssembly) does not reference.
+/// </para>
+/// <para>
 /// The owning <see cref="PartitionedRateLimiter{TResource}"/> drives replenishment by calling
 /// <see cref="TryReplenish"/> on its own timer (partition limiters never auto-replenish), and the inner
 /// limiter opens a new window on the first call at least one window after the last. This class applies
 /// the same rule to its own window start in the same call, so the two agree to within one timer tick.
+/// </para>
 /// </remarks>
 internal sealed class RemainingWindowFixedWindowRateLimiter : ReplenishingRateLimiter
 {
@@ -113,6 +126,35 @@ internal sealed class RemainingWindowFixedWindowRateLimiter : ReplenishingRateLi
         }
 
         lease.Dispose();
-        return RedisRateLimitLease.Rejected(TimeUntilNextWindow());
+        return new RejectedLease(TimeUntilNextWindow());
+    }
+
+    /// <summary>
+    /// The rejection handed back in place of the framework's: not acquired, carrying only the
+    /// remaining-window <see cref="MetadataName.RetryAfter"/> hint that the rate-limiter
+    /// <c>OnRejected</c> callback turns into the 429's <c>Retry-After</c> header.
+    /// </summary>
+    private sealed class RejectedLease(TimeSpan retryAfter) : RateLimitLease
+    {
+        private static readonly string[] RetryAfterMetadataNames = [MetadataName.RetryAfter.Name];
+
+        /// <inheritdoc />
+        public override bool IsAcquired => false;
+
+        /// <inheritdoc />
+        public override IEnumerable<string> MetadataNames => RetryAfterMetadataNames;
+
+        /// <inheritdoc />
+        public override bool TryGetMetadata(string metadataName, out object? metadata)
+        {
+            if (string.Equals(metadataName, MetadataName.RetryAfter.Name, StringComparison.Ordinal))
+            {
+                metadata = retryAfter;
+                return true;
+            }
+
+            metadata = null;
+            return false;
+        }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.RateLimiting;
 using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Web.SameOriginProxy;
 
@@ -122,12 +123,16 @@ public static class UiRateLimitingExtensions
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound settings.</param>
     /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix.</param>
+    /// <param name="timeProvider">
+    /// Clock for the window's remaining-time hint; <see langword="null"/> (production) is the system clock.
+    /// </param>
     /// <returns>The partition this request counts against.</returns>
     /// <remarks>Internal so the partition key is unit-testable via <c>InternalsVisibleTo</c>.</remarks>
     internal static RateLimitPartition<string> ClientIpPartition(
         HttpContext httpContext,
         UiRateLimitingSettings settings,
-        PathString proxyPathPrefix)
+        PathString proxyPathPrefix,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
@@ -145,14 +150,18 @@ public static class UiRateLimitingExtensions
             return RateLimitPartition.GetNoLimiter(UnknownIpPartitionKey);
         }
 
-        return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = settings.PermitLimit,
-            Window = TimeSpan.FromSeconds(settings.WindowSeconds),
-            QueueLimit = 0,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            AutoReplenishment = true,
-        });
+        // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
+        // whole window, so the wrapper reports the time actually left in it. The partitioned limiter
+        // drives replenishment on its own timer either way (it never lets a partition auto-replenish).
+        return RateLimitPartition.Get(clientIp, _ => new RemainingWindowFixedWindowRateLimiter(
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = settings.PermitLimit,
+                Window = TimeSpan.FromSeconds(settings.WindowSeconds),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            },
+            timeProvider));
     }
 
     /// <summary>

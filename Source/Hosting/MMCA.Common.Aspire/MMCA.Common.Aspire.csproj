@@ -9,6 +9,11 @@
     <InternalsVisibleTo Include="MMCA.Common.Aspire.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The in-memory fixed window with a remaining-window Retry-After, shared as one source file with
+         MMCA.Common.API and MMCA.Common.UI.Web (see the type's remarks for why it is not in Shared). -->
+    <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" />
     <!-- Readiness probe for a PostgreSQL data source (ADR-113). Npgsql is referenced directly
          alongside it so the driver this check opens a connection with is the same 10.x build

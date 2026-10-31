@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.RateLimiting;
 
 namespace MMCA.Common.Gateway.RateLimiting;
 
@@ -93,9 +94,15 @@ public static class GatewayRoutePolicyExtensions
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="policy">The named policy's settings.</param>
+    /// <param name="timeProvider">
+    /// Clock for the window's remaining-time hint; <see langword="null"/> (production) is the system clock.
+    /// </param>
     /// <returns>The partition this request counts against.</returns>
     /// <remarks>Internal (not private) so the partition-key selection is unit-testable.</remarks>
-    internal static RateLimitPartition<string> Partition(HttpContext httpContext, GatewayRoutePolicySettings policy)
+    internal static RateLimitPartition<string> Partition(
+        HttpContext httpContext,
+        GatewayRoutePolicySettings policy,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(policy);
@@ -107,15 +114,22 @@ public static class GatewayRoutePolicyExtensions
 
         var key = policy.PartitionKey(httpContext.Connection.RemoteIpAddress);
 
+        // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
+        // whole window, so the wrapper reports the time actually left in it. AutoReplenishment is off
+        // (the wrapper forces it): the middleware's partitioned endpoint limiter replenishes every
+        // partition on its own timer, which GetFixedWindowLimiter already relied on by turning the
+        // flag off itself.
         return key is null
             ? RateLimitPartition.GetNoLimiter(GatewayRoutePolicySettings.GlobalPartitionKey)
-            : RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = policy.PermitLimit,
-                Window = TimeSpan.FromSeconds(policy.WindowSeconds),
-                QueueLimit = policy.QueueLimit,
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                AutoReplenishment = true,
-            });
+            : RateLimitPartition.Get(key, _ => new RemainingWindowFixedWindowRateLimiter(
+                new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = policy.PermitLimit,
+                    Window = TimeSpan.FromSeconds(policy.WindowSeconds),
+                    QueueLimit = policy.QueueLimit,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = false,
+                },
+                timeProvider));
     }
 }

@@ -20,6 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The in-memory fixed window with a remaining-window Retry-After, shared as one source file with
+         MMCA.Common.API and MMCA.Common.Aspire (see the type's remarks for why it is not in Shared). -->
+    <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
