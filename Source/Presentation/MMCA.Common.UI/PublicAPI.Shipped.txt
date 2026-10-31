@@ -793,6 +793,7 @@ MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.SyncAsync(string! accessTo
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache) -> void
+MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache, MMCA.Common.UI.Services.ListPageStateService? listPageState) -> void
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.NotifyUserAuthentication(string! token) -> void
 MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.NotifyUserLogout() -> void
 MMCA.Common.UI.Services.Auth.OAuth.ConfigurationOAuthUISettings
@@ -1190,6 +1191,7 @@ MMCA.Common.UI.Services.ListPageState.SortColumn.init -> void
 MMCA.Common.UI.Services.ListPageState.SortDescending.get -> bool
 MMCA.Common.UI.Services.ListPageState.SortDescending.init -> void
 MMCA.Common.UI.Services.ListPageStateService
+MMCA.Common.UI.Services.ListPageStateService.ClearAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Services.ListPageStateService.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Services.ListPageStateService.GetState(string! routePath) -> MMCA.Common.UI.Services.ListPageState?
 MMCA.Common.UI.Services.ListPageStateService.HydrateFromSessionAsync(string! routePath) -> System.Threading.Tasks.ValueTask
