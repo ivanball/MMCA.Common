@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Globalization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.EmailConfirmation;
@@ -15,6 +16,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
+using MMCA.Common.Shared.Globalization;
 using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Application.Auth;
@@ -281,6 +283,12 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(userResult.Errors);
         }
 
+        var cultureResult = SeedRegistrationCulture(user);
+        if (cultureResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(cultureResult.Errors);
+        }
+
         await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
         try
@@ -491,6 +499,42 @@ public abstract class AuthenticationServiceBase<TUser>(
 
     /// <summary>Creates the app's <c>User</c> via its domain factory (default role, profile fields).</summary>
     protected abstract Result<TUser> CreateUser(RegisterRequest request, byte[] passwordHash, byte[] passwordSalt);
+
+    /// <summary>
+    /// Gives a new account with no stored language the language the registration request was made
+    /// in (ADR-027). The confirmation email is composed later by an internal command, outside this
+    /// request, in the recipient's STORED culture; without one it falls back to the default, so a user
+    /// who registered from the Spanish UI got the email in English. A user that does not implement
+    /// <see cref="IUserPreferences"/>, or whose <c>CreateUser</c> already set a culture, is left as is.
+    /// </summary>
+    private static Result SeedRegistrationCulture(TUser user)
+    {
+        if (user is not IUserPreferences preferences || preferences.PreferredCulture is not null || RequestCulture() is not { } culture)
+        {
+            return Result.Success();
+        }
+
+        return preferences.UpdatePreferences(culture, preferences.PreferredTheme);
+    }
+
+    /// <summary>
+    /// The request's UI culture (set by request localization from the caller's culture cookie or
+    /// Accept-Language), resolved to the closest supported culture, or null when there is nothing worth
+    /// storing: the invariant culture, the pseudo-locale (a test aid, never a stored preference), or a
+    /// culture that resolves to the default, which an email without a stored culture already speaks.
+    /// The default stays unstored so an account that never chose a language reads as having no preference.
+    /// </summary>
+    private static string? RequestCulture()
+    {
+        var name = CultureInfo.CurrentUICulture.Name;
+        if (string.IsNullOrEmpty(name) || SupportedCultures.IsPseudoLocale(name))
+        {
+            return null;
+        }
+
+        var resolved = SupportedCultures.ResolveClosest(name);
+        return string.Equals(resolved, SupportedCultures.Default, StringComparison.Ordinal) ? null : resolved;
+    }
 
     /// <summary>Mints the access token with the app's claim set and display-name choice.</summary>
     protected abstract string CreateAccessToken(TUser user);

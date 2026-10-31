@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **A new account now stores the language it registered in, so its confirmation email arrives in that language** (drift analysis 2026-10-31, D1: an ADC attendee who registered from the Spanish UI got the email in English). The email is composed later by an internal command, outside the request, in the recipient's stored culture. `AuthenticationServiceBase.RegisterAsync` now seeds `PreferredCulture` right after `CreateUser` when the user implements `IUserPreferences` and has none: the request's UI culture resolved to the closest supported culture, skipping the pseudo-locale and storing nothing for the default. A culture `CreateUser` already set is kept. No consumer code change; Store can delete its own copy of this seeding from its `CreateUser` override.
+
 ## [1.267.0] - 2026-10-31
 
 Fixes from Store Local Test Run 3 (manual suite, 2026-10-31), plus the remaining-window `Retry-After` on every fixed-window limiter.
