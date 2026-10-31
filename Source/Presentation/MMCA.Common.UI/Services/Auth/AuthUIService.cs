@@ -176,25 +176,9 @@ public sealed class AuthUIService(
 
         if (string.IsNullOrWhiteSpace(accessToken))
         {
-            try
-            {
-                await tokenStorageService.ClearTokensAsync();
-            }
-            catch (InvalidOperationException)
-            {
-                // JS interop not available (SSR prerender / disconnected circuit)
-            }
-
-            // The same reasoning as LogoutAsync: an unrefreshable session IS a sign-out, and the
-            // cached reads belong to the session that just ended.
-            readCache?.Clear();
-            await ClearLocalCacheAsync().ConfigureAwait(false);
-
-            if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
-            {
-                jwtProvider.NotifyUserLogout();
-            }
-
+            // The same local sign-out as LogoutAsync: an unrefreshable session IS a sign-out, and
+            // everything cached under it belongs to the session that just ended.
+            await SignOutLocallyAsync();
             return false;
         }
 
@@ -373,8 +357,9 @@ public sealed class AuthUIService(
     }
 
     /// <summary>
-    /// The local half of a sign-out: clears the stored tokens, the read cache and the device-local
-    /// cache, then tells Blazor's auth state.
+    /// The local half of a sign-out, shared by Logout, Sign out everywhere and an unrefreshable
+    /// session: clears the stored tokens, the read cache and the device-local cache, then lets the
+    /// auth state provider forget the list-page state and flip to anonymous.
     /// </summary>
     private async Task SignOutLocallyAsync()
     {
@@ -395,7 +380,7 @@ public sealed class AuthUIService(
 
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
         {
-            jwtProvider.NotifyUserLogout();
+            await jwtProvider.SignOutAsync().ConfigureAwait(false);
         }
     }
 

@@ -3,8 +3,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AwesomeAssertions;
+using Bunit;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using Moq;
@@ -143,6 +145,29 @@ public class JwtAuthenticationStateProviderTests
         storage.EndSession();
 
         readCache.Verify(c => c.Clear(), Times.Once, "its entries were read under the session that ended");
+        notified.Should().NotBeNull();
+        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    // ── Store Run 3 D7: a session that ended forgets the list-page search and filters ──
+    [Fact]
+    public async Task WhenTheStorageReportsTheSessionEnded_ForgetsTheListPageStateAndNotifiesAnonymous()
+    {
+        var storage = new SessionEndingStorage();
+        var interop = new BunitJSInterop();
+        var module = interop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js");
+        module.SetupVoid("sessionRemoveByPrefix", _ => true).SetVoidResult();
+        var listPageState = new ListPageStateService(interop.JSRuntime);
+        listPageState.SaveState("/my-orders", new ListPageState { Filters = new Dictionary<string, string> { ["search"] = "previous account" } });
+        var sut = new JwtAuthenticationStateProvider(storage, readCache: null, listPageState);
+        Task<AuthenticationState>? notified = null;
+        sut.AuthenticationStateChanged += task => notified = task;
+
+        storage.EndSession();
+
+        listPageState.GetState("/my-orders").Should().BeNull("the in-memory copy belongs to the session that ended");
+        module.Invocations["sessionRemoveByPrefix"].Should().ContainSingle()
+            .Which.Arguments.Should().ContainSingle().Which.Should().Be("mmca.lps:");
         notified.Should().NotBeNull();
         (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
     }

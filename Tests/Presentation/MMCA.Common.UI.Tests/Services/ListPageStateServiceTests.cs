@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Bunit;
 using Microsoft.JSInterop;
 using MMCA.Common.UI.Services;
 using Moq;
@@ -7,6 +8,8 @@ namespace MMCA.Common.UI.Tests.Services;
 
 public class ListPageStateServiceTests
 {
+    private const string NavInteropModulePath = "./_content/MMCA.Common.UI/nav-interop.js";
+
     [Fact]
     public void SaveState_ThenGetState_RoundTripsAllFields()
     {
@@ -135,5 +138,59 @@ public class ListPageStateServiceTests
 
         retrieved!.Page.Should().Be(7);
         retrieved.PageSize.Should().Be(100);
+    }
+
+    // ==================== Store Run 3 D7: logout forgets list-page state ====================
+    // The search and filters live in sessionStorage under mmca.lps:{route}, which outlives the
+    // session in the same tab. Sign-out forgets them, and only them.
+    [Fact]
+    public async Task ClearAsync_ForgetsEveryRouteHeldInMemory()
+    {
+        var (sut, _) = CreateWithSessionStorage();
+        sut.SaveState("/my-orders", new ListPageState { Filters = new Dictionary<string, string> { ["search"] = "previous user" } });
+        sut.SaveState("/products", new ListPageState { Page = 3, PageSize = 25 });
+
+        await sut.ClearAsync();
+
+        sut.GetState("/my-orders").Should().BeNull();
+        sut.GetState("/products").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ClearAsync_RemovesOnlyTheListPageKeysFromSessionStorage()
+    {
+        var (sut, module) = CreateWithSessionStorage();
+
+        await sut.ClearAsync();
+
+        var removal = module.Invocations["sessionRemoveByPrefix"].Should().ContainSingle().Subject;
+        removal.Arguments.Should().ContainSingle().Which.Should().Be(
+            "mmca.lps:",
+            "the removal is scoped to the list-page prefix, so the pending toast, navigation history and every other sessionStorage key survive");
+        module.Invocations.Should().ContainSingle("nothing else is touched: no per-key removal, no blanket clear");
+    }
+
+    [Fact]
+    public async Task ClearAsync_WhenTheCircuitIsGone_IsSwallowed()
+    {
+        var interop = new BunitJSInterop();
+        interop.SetupModule(NavInteropModulePath)
+            .SetupVoid("sessionRemoveByPrefix", _ => true)
+            .SetException(new JSDisconnectedException("circuit closed"));
+        var sut = new ListPageStateService(interop.JSRuntime);
+        sut.SaveState("/my-orders", new ListPageState { Page = 1 });
+
+        var act = async () => await sut.ClearAsync();
+
+        await act.Should().NotThrowAsync("a storage failure must never strand a user inside a session they asked to leave");
+        sut.GetState("/my-orders").Should().BeNull("the in-memory half clears whatever the storage did");
+    }
+
+    private static (ListPageStateService Sut, BunitJSModuleInterop Module) CreateWithSessionStorage()
+    {
+        var interop = new BunitJSInterop();
+        var module = interop.SetupModule(NavInteropModulePath);
+        module.SetupVoid("sessionRemoveByPrefix", _ => true).SetVoidResult();
+        return (new ListPageStateService(interop.JSRuntime), module);
     }
 }

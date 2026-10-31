@@ -6,9 +6,15 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.267.0] - 2026-10-31
+
+Fixes from Store Local Test Run 3 (manual suite, 2026-10-31), plus the remaining-window `Retry-After` on every fixed-window limiter.
+
 ### Fixed
 
 - **Every in-memory fixed-window rate limiter now answers a 429 with `Retry-After` set to the seconds left in the current window, not the whole window** (Store Local Test Run 2, X-18, saw `Retry-After: 60` from the Gateway edge limiter mid-window). The 1.266.0 remaining-window limiter, until then wired only into `AddCommonRateLimiting`, is now one internal source file (`Source/Build/RateLimiting/RemainingWindowFixedWindowRateLimiter.cs`) compiled into MMCA.Common.API, MMCA.Common.Aspire and MMCA.Common.UI.Web, and backs the Gateway edge limiter (`AddGatewayRateLimiting`) and the Blazor host limiter (`AddUiRateLimiting`) too. MMCA.Common.Gateway links the same source file for its named route policies (`AddGatewayRoutePolicies`), so it still takes no MMCA package reference. No public API change.
+- **Signing out now forgets every list page's saved search, filters and paging** (Store Local Test Run 3, D7: the next account signing in on the same tab saw the previous account's My Orders search applied). `JwtAuthenticationStateProvider` takes an optional `ListPageStateService` (new constructor overload, picked by DI on every head) and clears it on every sign-out: Logout, Sign out everywhere, an unrefreshable session, and a session ended on the server (`ISessionAwareTokenStorage.SessionEnded`). The new `ListPageStateService.ClearAsync()` empties the in-memory state and removes only the `mmca.lps:*` keys from `sessionStorage`.
+- **A list page no longer persists a prerendered grid page too large for the circuit-start message** (Store Local Test Run 3, D1: a 39 KB prerender snapshot exceeded SignalR's 32 KB `MaximumReceiveMessageSize`, so the circuit closed, reconnected and never became interactive). `DataGridListPageBase` now persists its last grid page only when its JSON is within 14 KB, through one internal helper (`PrerenderStateBudget.TryPersistAsJsonWithinBudget`); over the budget nothing is persisted and the first interactive load fetches, as it does without a prerender. No public API change.
 
 ## [1.266.0] - 2026-10-30
 

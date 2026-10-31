@@ -5,11 +5,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using AwesomeAssertions;
+using Bunit;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
+using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
@@ -17,6 +19,7 @@ using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
+using TestContext = Xunit.TestContext;
 
 namespace MMCA.Common.UI.Tests.Services.Auth;
 
@@ -37,6 +40,9 @@ namespace MMCA.Common.UI.Tests.Services.Auth;
 public sealed class AuthUIServiceTests : IDisposable
 {
     private const string StoredAccessToken = "stored-access-token";
+
+    /// <summary>The list page whose persisted search leaked to the next account (Store Run 3 D7).</summary>
+    private const string MyOrdersRoute = "/my-orders";
 
     /// <summary>An MMCA error array: every field round-trips, including the <c>type</c>.</summary>
     private const string MmcaErrorBody = """{ "title": "Unauthorized", "status": 401, "errors": [ { "code": "Auth.InvalidCredentials", "message": "Email or password is incorrect.", "type": "Unauthorized" } ] }""";
@@ -404,6 +410,82 @@ public sealed class AuthUIServiceTests : IDisposable
             c => c.ClearAsync(It.IsAny<CancellationToken>()),
             Times.Once,
             "an unrefreshable session IS a sign-out, so the snapshots belong to the session that ended");
+    }
+
+    // ==================== List-page state does not survive sign-out (Store Run 3 D7) ====================
+    // The search and filters a list page persisted (sessionStorage, mmca.lps:{route}) outlive the
+    // session in the same tab, so the next account signing in saw the previous one's search applied.
+    [Fact]
+    public async Task LogoutAsync_ForgetsTheListPageSearchAndFilters()
+    {
+        var (sut, listPageState, module) = CreateSutWithListPageState(HttpStatusCode.NoContent);
+
+        await sut.LogoutAsync();
+
+        ShouldHaveForgottenTheListPageState(listPageState, module);
+    }
+
+    [Fact]
+    public async Task RevokeAllSessionsAsync_On204_ForgetsTheListPageSearchAndFilters()
+    {
+        var (sut, listPageState, module) = CreateSutWithListPageState(HttpStatusCode.NoContent);
+
+        await sut.RevokeAllSessionsAsync(Ct);
+
+        ShouldHaveForgottenTheListPageState(listPageState, module);
+    }
+
+    [Fact]
+    public async Task TryRefreshTokenAsync_WhenTheSessionIsGone_ForgetsTheListPageSearchAndFilters()
+    {
+        _tokenRefresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        var (sut, listPageState, module) = CreateSutWithListPageState(HttpStatusCode.Unauthorized);
+
+        await sut.TryRefreshTokenAsync(Ct);
+
+        ShouldHaveForgottenTheListPageState(listPageState, module);
+    }
+
+    [Fact]
+    public async Task RevokeAllSessionsAsync_On503_KeepsTheListPageState()
+    {
+        var (sut, listPageState, module) = CreateSutWithListPageState(HttpStatusCode.ServiceUnavailable);
+
+        await sut.RevokeAllSessionsAsync(Ct);
+
+        listPageState.GetState(MyOrdersRoute).Should().NotBeNull("the session is still live");
+        module.Invocations["sessionRemoveByPrefix"].Should().BeEmpty();
+    }
+
+    private (AuthUIService Sut, ListPageStateService ListPageState, BunitJSModuleInterop Module) CreateSutWithListPageState(
+        HttpStatusCode statusCode)
+    {
+        var interop = new BunitJSInterop();
+        var module = interop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js");
+        module.SetupVoid("sessionRemoveByPrefix", _ => true).SetVoidResult();
+        var listPageState = new ListPageStateService(interop.JSRuntime);
+        listPageState.SaveState(
+            MyOrdersRoute,
+            new ListPageState { Filters = new Dictionary<string, string> { ["search"] = "previous account's search" } });
+
+        _handler.Dispose();
+        _handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.CreateResponse(statusCode, null));
+        var sut = new AuthUIService(
+            new StubHttpClientFactory(_handler),
+            _tokenStorage.Object,
+            _tokenRefresher.Object,
+            new JwtAuthenticationStateProvider(_tokenStorage.Object, readCache: null, listPageState),
+            _pushRegistration.Object,
+            readCache: null,
+            _localCache.Object);
+        return (sut, listPageState, module);
+    }
+
+    private static void ShouldHaveForgottenTheListPageState(ListPageStateService listPageState, BunitJSModuleInterop module)
+    {
+        listPageState.GetState(MyOrdersRoute).Should().BeNull("the in-memory copy belongs to the session that ended");
+        module.Invocations["sessionRemoveByPrefix"].Should().ContainSingle()
+            .Which.Arguments.Should().ContainSingle().Which.Should().Be("mmca.lps:", "only the list-page keys are removed");
     }
 
     // ==================== Logout ====================
