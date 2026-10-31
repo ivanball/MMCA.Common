@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.269.0] - 2026-10-31
+
+The PrerenderStateBudget API plus the fixes from the 2026-10-31 bug hunt.
+
 ### Added
 
 - **`PrerenderStateBudget` is public** (MMCA.Common.UI, `MMCA.Common.UI.Common`): `TryPersistAsJsonWithinBudget<TValue>` serializes once and persists only when the JSON fits `MaxJsonBytes` (14 KB), so a consumer page persisting content-sized prerender state keeps the circuit-start message under SignalR's 32 KB limit without re-implementing the check and serializing twice (drift analysis 2026-10-31: Store's CatalogBrowse copied it by hand). Additive; no consumer change required.
