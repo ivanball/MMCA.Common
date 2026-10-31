@@ -292,6 +292,17 @@ public sealed class SnsPushDeviceRegistrarTests
     }
 
     [Fact]
+    public async Task UpsertAsync_SdkTimeout_ReturnsAFailureResult()
+    {
+        _dynamoDb.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("The operation has timed out"));
+
+        var result = await CreateSut().UpsertAsync(Owner, Request(), TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.UpsertFailed");
+    }
+
+    [Fact]
     public async Task DeleteAsync_ByTheOwner_RemovesSubscriptionEndpointAndRow()
     {
         SetupRow(Owner, "token");

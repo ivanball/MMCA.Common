@@ -149,12 +149,12 @@ internal sealed partial class SnsNativePushSender(
 
     /// <summary>
     /// A failure that never produced a service response: a connect or DNS failure, a dropped
-    /// connection, or a timeout after the client's own retries (surfaced as an
-    /// <see cref="OperationCanceledException"/> the caller did not request). The AWS SDK lets these
+    /// connection, or a timeout after the client's own retries (surfaced as a <see cref="TimeoutException"/>
+    /// or as an <see cref="OperationCanceledException"/> the caller did not request). The AWS SDK lets these
     /// escape unwrapped, so they are handled like a service failure; the caller's own cancellation
-    /// is not one and keeps propagating. Same predicate as <c>S3FileStorageService</c>.
+    /// is never one: once it is requested, every exception keeps propagating. Same predicate as <c>S3FileStorageService</c>.
     /// </summary>
     private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException or IOException
-        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
+        !cancellationToken.IsCancellationRequested
+        && exception is HttpRequestException or IOException or TimeoutException or OperationCanceledException;
 }

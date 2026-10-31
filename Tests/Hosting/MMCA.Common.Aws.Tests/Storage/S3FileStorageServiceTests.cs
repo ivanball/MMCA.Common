@@ -120,6 +120,19 @@ public sealed class S3FileStorageServiceTests
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
     }
 
+    // L252: the SDK unwraps a timeout cancellation to its inner TimeoutException.
+    [Fact]
+    public async Task UploadAsync_SdkTimeout_IsTheUploadFailedResult()
+    {
+        _s3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("The operation has timed out"));
+        await using var content = new MemoryStream([1]);
+
+        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
+    }
+
     [Fact]
     public async Task UploadAsync_RejectsNullOptions()
     {
@@ -167,6 +180,21 @@ public sealed class S3FileStorageServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
+    }
+
+    // L252: once the caller has cancelled, a transport exception raised by the aborted call is the
+    // cancellation, not a storage failure, so it propagates.
+    [Fact]
+    public async Task DeleteAsync_ATransportFailureDuringTheCallersCancellation_Propagates()
+    {
+        using var cts = new CancellationTokenSource();
+        _s3.Setup(s => s.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback(cts.Cancel)
+            .ThrowsAsync(new IOException("connection aborted"));
+
+        var act = () => CreateSut().DeleteAsync("a.png", cts.Token);
+
+        await act.Should().ThrowAsync<IOException>();
     }
 
     [Fact]

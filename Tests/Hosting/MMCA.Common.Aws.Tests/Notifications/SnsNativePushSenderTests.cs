@@ -228,6 +228,33 @@ public sealed class SnsNativePushSenderTests
             "a transport failure is transient, so the registration is kept");
     }
 
+    // L252: the SDK unwraps a timeout cancellation to its inner TimeoutException.
+    [Fact]
+    public async Task SendToUsersAsync_AnSdkTimeoutOnOneEndpoint_DoesNotStopTheRest()
+    {
+        SetupUser("1", Row("a", "1", "slow"), Row("b", "1", "healthy"));
+        _sns.Setup(x => x.PublishAsync(It.Is<PublishRequest>(r => r.TargetArn == EndpointArn("slow")), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("The operation has timed out"));
+
+        await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        _published.Should().ContainSingle().Which.TargetArn.Should().Be(EndpointArn("healthy"));
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_ATransportFailureDuringTheCallersCancellation_Propagates()
+    {
+        SetupUser("1", Row("a", "1", "a"), Row("b", "1", "b"));
+        using var cts = new CancellationTokenSource();
+        _sns.Setup(x => x.PublishAsync(It.IsAny<PublishRequest>(), It.IsAny<CancellationToken>()))
+            .Callback(cts.Cancel)
+            .ThrowsAsync(new IOException("connection aborted"));
+
+        var act = () => CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<IOException>("a requested cancellation stops the send, whatever the aborted call threw");
+    }
+
     [Fact]
     public async Task SendToUsersAsync_TheCallersOwnCancellation_StillPropagates()
     {

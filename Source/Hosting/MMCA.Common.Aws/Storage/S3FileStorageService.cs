@@ -140,11 +140,11 @@ public sealed class S3FileStorageService(
 
     /// <summary>
     /// A failure that never produced a service response: a connect or DNS failure, a dropped
-    /// connection, or a timeout after the client's own retries (surfaced as an
-    /// <see cref="OperationCanceledException"/> the caller did not request). The caller's own
-    /// cancellation is not one and keeps propagating.
+    /// connection, or a timeout after the client's own retries (surfaced as a <see cref="TimeoutException"/>
+    /// or as an <see cref="OperationCanceledException"/> the caller did not request). The caller's own
+    /// cancellation is never one: once it is requested, every exception keeps propagating.
     /// </summary>
     private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException or IOException
-        || exception is OperationCanceledException && !cancellationToken.IsCancellationRequested;
+        !cancellationToken.IsCancellationRequested
+        && exception is HttpRequestException or IOException or TimeoutException or OperationCanceledException;
 }
