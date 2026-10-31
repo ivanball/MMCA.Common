@@ -223,9 +223,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         _persistenceSubscription = ApplicationState.RegisterOnPersisting(
             () =>
             {
+                // Within budget only: a wide grid of large DTOs at a large page size can outgrow the
+                // circuit-start message and leave the page reconnecting forever. Over budget nothing is
+                // persisted and the first interactive load fetches, as it does without a prerender.
                 if (_lastSuccessfulGridData is not null)
                 {
-                    ApplicationState.PersistAsJson(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
+                    ApplicationState.TryPersistAsJsonWithinBudget(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
                 }
 
                 return Task.CompletedTask;
