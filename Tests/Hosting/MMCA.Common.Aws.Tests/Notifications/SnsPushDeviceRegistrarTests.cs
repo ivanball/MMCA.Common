@@ -278,6 +278,30 @@ public sealed class SnsPushDeviceRegistrarTests
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.UpsertFailed");
     }
 
+    // L252: a transport failure the AWS SDK lets escape is the same UpsertFailed Result as a service
+    // failure, not an exception the endpoint turns into a 500.
+    [Fact]
+    public async Task UpsertAsync_TransportFailure_ReturnsAFailureResult()
+    {
+        _dynamoDb.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection reset"));
+
+        var result = await CreateSut().UpsertAsync(Owner, Request(), TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.UpsertFailed");
+    }
+
+    [Fact]
+    public async Task UpsertAsync_SdkTimeout_ReturnsAFailureResult()
+    {
+        _dynamoDb.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("The operation has timed out"));
+
+        var result = await CreateSut().UpsertAsync(Owner, Request(), TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.UpsertFailed");
+    }
+
     [Fact]
     public async Task DeleteAsync_ByTheOwner_RemovesSubscriptionEndpointAndRow()
     {
@@ -359,6 +383,19 @@ public sealed class SnsPushDeviceRegistrarTests
         SetupRow(Owner, "token");
         _sns.Setup(x => x.DeleteEndpointAsync(It.IsAny<DeleteEndpointRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AmazonSimpleNotificationServiceException("boom"));
+
+        var result = await CreateSut().DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.DeleteFailed");
+        _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TransportFailure_ReturnsAFailureResult()
+    {
+        SetupRow(Owner, "token");
+        _sns.Setup(x => x.DeleteEndpointAsync(It.IsAny<DeleteEndpointRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("The response ended prematurely"));
 
         var result = await CreateSut().DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 

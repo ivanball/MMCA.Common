@@ -116,15 +116,7 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
                 _states[routePath] = persisted;
             }
         }
-        catch (InvalidOperationException)
-        {
-            // Prerender / SSR — JS interop not yet available.
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit torn down between hydration calls — ignore.
-        }
-        catch (JSException)
+        catch (Exception ex) when (IsInteropUnavailable(ex))
         {
             // Defensive: never let storage failures break the calling page.
         }
@@ -152,17 +144,10 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
 
             await module.InvokeVoidAsync("sessionSet", SessionKeyPrefix + routePath, state).ConfigureAwait(false);
         }
-        catch (InvalidOperationException)
+        catch (Exception ex) when (IsInteropUnavailable(ex))
         {
-            // Prerender / SSR — JS interop not yet available.
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit torn down — ignore.
-        }
-        catch (JSException)
-        {
-            // Defensive: never let storage failures break the calling page.
+            // Defensive: never let storage failures break the calling page (this call is
+            // fire-and-forget from DataGridListPageBase, so an escape is an unobserved fault).
         }
     }
 
@@ -187,17 +172,10 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
 
             await module.InvokeVoidAsync("sessionRemoveByPrefix", SessionKeyPrefix).ConfigureAwait(false);
         }
-        catch (InvalidOperationException)
+        catch (Exception ex) when (IsInteropUnavailable(ex))
         {
-            // Prerender / SSR: JS interop not yet available.
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit torn down: nothing left to clear.
-        }
-        catch (JSException)
-        {
-            // Defensive: never let storage failures break sign-out.
+            // Defensive: never let storage failures break sign-out, which awaits this before it
+            // resets the auth state to anonymous.
         }
     }
 
@@ -219,4 +197,10 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
 
     /// <inheritdoc />
     public ValueTask DisposeAsync() => _module.DisposeAsync();
+
+    // Prerender (InvalidOperationException), a torn-down circuit (JSDisconnectedException), a
+    // browser-side failure (JSException) and an interop timeout or cancellation
+    // (TaskCanceledException). The same set PendingToastService swallows.
+    private static bool IsInteropUnavailable(Exception ex) =>
+        ex is InvalidOperationException or JSDisconnectedException or JSException or TaskCanceledException;
 }

@@ -49,6 +49,21 @@ public sealed class StaleToastSweeperTests : BunitTestBase
     }
 
     [Fact]
+    public void QueryStringRewriteOnTheSamePage_KeepsAToastThatWasAlreadyShowing()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/products");
+        var snackbar = Services.GetRequiredService<ISnackbar>();
+        RenderUnderTest<StaleToastSweeper>(_ => { });
+
+        snackbar.Add("Deleted", Severity.Success);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        navigation.NavigateTo("/products?sort=name", new NavigationOptions { ReplaceHistoryEntry = true });
+
+        snackbar.ShownSnackbars.Should().ContainSingle("a grid sort mirrored into the URL does not leave the page");
+    }
+
+    [Fact]
     public async Task AfterDisposal_NavigationLeavesToastsAlone()
     {
         var snackbar = Services.GetRequiredService<ISnackbar>();

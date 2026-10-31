@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="ConsentLabel" xml:space="preserve">
+    <value>Confirmo que acepto los t&#233;rminos.</value>
+  </data>
+  <data name="VisitLabel" xml:space="preserve">
+    <value>Visito el stand del patrocinador.</value>
+  </data>
+</root>

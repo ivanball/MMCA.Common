@@ -103,7 +103,9 @@ public abstract partial class CostTagConventionTestsBase
 
     // A container-app resource header, then up to three body lines before its tags: line (name and
     // location normally sit between them). A resource with no tags: line in that window still
-    // matches, with an empty tags group, so it is reported as untagged rather than skipped.
-    [GeneratedRegex(@"^resource (?<name>\w+) 'Microsoft\.App/containerApps@[^']+' = \{\r?\n(?:(?:[^\r\n]*\r?\n){0,3}?\s*(?<tags>tags:[^\r\n]*))?", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    // matches, with an empty tags group, so it is reported as untagged rather than skipped. The
+    // header body may be plain ('= {'), conditional ('= if (cond) {'), looped ('= [for x in xs: {')
+    // or both ('= [for x in xs: if (cond) {'), so an optional or per-item app is not skipped.
+    [GeneratedRegex(@"^resource (?<name>\w+) 'Microsoft\.App/containerApps@[^']+' = (?:\[for [^\r\n]*?:\s*)?(?:if\s*\([^\r\n]*\)\s*)?\{\r?\n(?:(?:[^\r\n]*\r?\n){0,3}?\s*(?<tags>tags:[^\r\n]*))?", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
     private static partial Regex ContainerAppDeclaration { get; }
 }

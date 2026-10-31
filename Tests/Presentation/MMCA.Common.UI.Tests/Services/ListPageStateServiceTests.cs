@@ -186,6 +186,55 @@ public class ListPageStateServiceTests
         sut.GetState("/my-orders").Should().BeNull("the in-memory half clears whatever the storage did");
     }
 
+    [Fact]
+    public async Task ClearAsync_WhenTheInteropCallTimesOut_IsSwallowed()
+    {
+        var interop = new BunitJSInterop();
+        interop.SetupModule(NavInteropModulePath)
+            .SetupVoid("sessionRemoveByPrefix", _ => true)
+            .SetException(new TaskCanceledException("interop timed out"));
+        var sut = new ListPageStateService(interop.JSRuntime);
+        sut.SaveState("/my-orders", new ListPageState { Page = 1 });
+
+        var act = async () => await sut.ClearAsync();
+
+        await act.Should().NotThrowAsync("sign-out awaits this before flipping the auth state to anonymous, so a timeout must not escape");
+        sut.GetState("/my-orders").Should().BeNull("the in-memory half clears whatever the storage did");
+    }
+
+    // L248: hydrate is awaited from a page's first render and persist is fire-and-forget from
+    // DataGridListPageBase, so an interop timeout must not escape either.
+    [Fact]
+    public async Task HydrateFromSessionAsync_WhenTheInteropCallTimesOut_IsSwallowed()
+    {
+        var interop = new BunitJSInterop();
+        interop.SetupModule(NavInteropModulePath)
+            .Setup<ListPageState?>("sessionGet", _ => true)
+            .SetException(new TaskCanceledException("interop timed out"));
+        var sut = new ListPageStateService(interop.JSRuntime);
+
+        var act = async () => await sut.HydrateFromSessionAsync("/products");
+
+        await act.Should().NotThrowAsync("a storage timeout must not break the page that hydrates");
+        sut.GetState("/products").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PersistToSessionAsync_WhenTheInteropCallTimesOut_IsSwallowed()
+    {
+        var interop = new BunitJSInterop();
+        interop.SetupModule(NavInteropModulePath)
+            .SetupVoid("sessionSet", _ => true)
+            .SetException(new TaskCanceledException("interop timed out"));
+        var sut = new ListPageStateService(interop.JSRuntime);
+        sut.SaveState("/products", new ListPageState { Page = 2 });
+
+        var act = async () => await sut.PersistToSessionAsync("/products");
+
+        await act.Should().NotThrowAsync("the grid fires this and forgets it, so a timeout would be an unobserved fault");
+        sut.GetState("/products")!.Page.Should().Be(2, "the in-memory state stands whatever the storage did");
+    }
+
     private static (ListPageStateService Sut, BunitJSModuleInterop Module) CreateWithSessionStorage()
     {
         var interop = new BunitJSInterop();
