@@ -3,13 +3,7 @@
   <data name="ConsentLabel" xml:space="preserve">
     <value>Confirmo que acepto los t&#233;rminos.</value>
   </data>
-  <data name="PublishLabel" xml:space="preserve">
-    <value>Publico mi perfil y visito la p&#225;gina del evento.</value>
-  </data>
-  <data name="LimitHint" xml:space="preserve">
-    <value>Pida al organizador que limite el aforo.</value>
-  </data>
-  <data name="TitleHint" xml:space="preserve">
-    <value>Yo titulo cada sesi&#243;n antes de publicarla.</value>
+  <data name="VisitLabel" xml:space="preserve">
+    <value>Visito el stand del patrocinador.</value>
   </data>
 </root>
