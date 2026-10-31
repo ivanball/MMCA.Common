@@ -478,6 +478,76 @@ public sealed class AuthenticationServiceBaseTests
             "BR-213 counts the registration against the caller's IP");
     }
 
+    [Theory]
+    [InlineData("es-MX", "es")]
+    [InlineData("es", "es")]
+    [InlineData("en-US", null)]
+    [InlineData("qps-Ploc", null)]
+    [InlineData("", null)]
+    public async Task RegisterAsync_StoresTheRequestLanguageOnANewAccount_UnlessItIsTheDefaultOrThePseudoLocale(
+        string requestCulture, string? expectedStored)
+    {
+        var (sut, mocks) = CreateSut();
+        TestAuthUser? persisted = null;
+        mocks.Repository
+            .Setup(x => x.AddAsync(It.IsAny<TestAuthUser>(), It.IsAny<CancellationToken>()))
+            .Callback<TestAuthUser, CancellationToken>((user, _) => persisted = user)
+            .Returns(Task.CompletedTask);
+
+        Result<AuthenticationResponse> result = await RegisterInCultureAsync(sut, requestCulture);
+
+        result.IsSuccess.Should().BeTrue();
+        persisted!.PreferredCulture.Should().Be(
+            expectedStored,
+            "the confirmation email is composed later, outside the request, in the stored culture");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_KeepsALanguageCreateUserAlreadySet()
+    {
+        var (sut, _) = CreateSut();
+        var user = new TestAuthUser { Id = 77, PreferredCulture = "es", PreferredTheme = "dark" };
+        sut.CreateUserResult = Result.Success(user);
+
+        Result<AuthenticationResponse> result = await RegisterInCultureAsync(sut, "es-MX");
+
+        result.IsSuccess.Should().BeTrue();
+        user.UpdatePreferencesCalls.Should().Be(0, "an app's own CreateUser choice wins");
+        user.PreferredTheme.Should().Be("dark");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenStoringTheLanguageFails_ReturnsTheFailureAndSavesNothing()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestAuthUser
+        {
+            Id = 77,
+            UpdatePreferencesResult = Result.Failure(Error.Validation("User.InvalidCulture", "Unsupported culture.")),
+        };
+        sut.CreateUserResult = Result.Success(user);
+
+        Result<AuthenticationResponse> result = await RegisterInCultureAsync(sut, "es-MX");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "User.InvalidCulture");
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static async Task<Result<AuthenticationResponse>> RegisterInCultureAsync(TestAuthenticationService sut, string culture)
+    {
+        var original = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = string.IsNullOrEmpty(culture) ? CultureInfo.InvariantCulture : new CultureInfo(culture);
+        try
+        {
+            return await sut.RegisterAsync(new RegisterRequest("new@example.com", "pw", "A", "B"), ipAddress: "10.0.0.1");
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
     // ── RefreshTokenAsync ──
     [Fact]
     public async Task RefreshTokenAsync_WhenRequestInvalid_ReturnsValidationFailure()
@@ -1053,11 +1123,33 @@ public sealed class AuthenticationServiceBaseTests
 /// Minimal <c>User</c> aggregate standing in for an app's Identity user. Public (not nested)
 /// because Moq must proxy <c>IRepository</c> closed over this type.
 /// </summary>
-public sealed class TestAuthUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
+public sealed class TestAuthUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser, IUserPreferences
 {
     public byte[] PasswordHash { get; set; } = [1, 2, 3];
 
     public byte[] PasswordSalt { get; set; } = [4, 5, 6];
+
+    public string? PreferredCulture { get; set; }
+
+    public string? PreferredTheme { get; set; }
+
+    public int UpdatePreferencesCalls { get; private set; }
+
+    /// <summary>The aggregate's invariant outcome for <see cref="UpdatePreferences"/>; success by default.</summary>
+    public Result UpdatePreferencesResult { get; set; } = Result.Success();
+
+    public Result UpdatePreferences(string? preferredCulture, string? preferredTheme)
+    {
+        UpdatePreferencesCalls++;
+        if (UpdatePreferencesResult.IsFailure)
+        {
+            return UpdatePreferencesResult;
+        }
+
+        PreferredCulture = preferredCulture;
+        PreferredTheme = preferredTheme;
+        return Result.Success();
+    }
 }
 
 /// <summary>Concrete subclass supplying the per-app hooks the shared workflow calls.</summary>
