@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Moq" />
     <!-- Proves the metrics cost knobs are authoritative: a MeterProvider built through the same
          configuration path exports into this reader, so a dropped instrument is asserted as absent

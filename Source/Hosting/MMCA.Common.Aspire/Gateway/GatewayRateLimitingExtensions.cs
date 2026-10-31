@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.RateLimiting;
 using MMCA.Common.Shared.Resilience;
 
 namespace MMCA.Common.Aspire.Gateway;
@@ -213,11 +214,15 @@ public static class GatewayRateLimitingExtensions
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
+    /// <param name="timeProvider">
+    /// Clock for the window's remaining-time hint; <see langword="null"/> (production) is the system clock.
+    /// </param>
     /// <returns>The partition this request counts against.</returns>
     /// <remarks>Internal (not private) so the partition-key selection is unit-testable.</remarks>
     internal static RateLimitPartition<string> ClientIpPartition(
         HttpContext httpContext,
-        GatewayRateLimitingSettings settings)
+        GatewayRateLimitingSettings settings,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
@@ -243,14 +248,18 @@ public static class GatewayRateLimitingExtensions
             return RateLimitPartition.GetNoLimiter(UnknownIpPartitionKey);
         }
 
-        return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = settings.PermitLimit,
-            Window = TimeSpan.FromSeconds(settings.WindowSeconds),
-            QueueLimit = 0,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            AutoReplenishment = true,
-        });
+        // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
+        // whole window, so the wrapper reports the time actually left in it. The partitioned limiter
+        // drives replenishment on its own timer either way (it never lets a partition auto-replenish).
+        return RateLimitPartition.Get(clientIp, _ => new RemainingWindowFixedWindowRateLimiter(
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = settings.PermitLimit,
+                Window = TimeSpan.FromSeconds(settings.WindowSeconds),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            },
+            timeProvider));
     }
 
     /// <summary>

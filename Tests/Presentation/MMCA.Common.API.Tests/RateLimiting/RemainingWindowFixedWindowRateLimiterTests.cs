@@ -1,7 +1,7 @@
 using System.Threading.RateLimiting;
 using AwesomeAssertions;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.API.RateLimiting;
+using MMCA.Common.RateLimiting;
 
 namespace MMCA.Common.API.Tests.RateLimiting;
 

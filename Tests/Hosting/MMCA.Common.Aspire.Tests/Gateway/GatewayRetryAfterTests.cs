@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Net;
+using System.Threading.RateLimiting;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Aspire.Gateway;
+using MMCA.Common.RateLimiting;
 
 namespace MMCA.Common.Aspire.Tests.Gateway;
 
@@ -57,6 +60,37 @@ public sealed class GatewayRetryAfterTests
 
         previousRan.Should().BeTrue();
         context.Response.Headers.RetryAfter.ToString().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task ClientIpPartition_AMidWindowRejection_RetryAfterIsTheTimeLeft_NotTheWindow()
+    {
+        // Store local test run 2 (X-18) saw Retry-After: 60 from this limiter mid-window: the framework
+        // fixed window always reports the whole window. The partition now builds the remaining-window
+        // limiter, so a rejection 18 seconds into a 30-second window says 12.
+        var settings = new GatewayRateLimitingSettings { PermitLimit = 1, WindowSeconds = 30 };
+        var time = new FakeTimeProvider();
+        var context = ContextFor();
+        var partition = GatewayRateLimitingExtensions.ClientIpPartition(context, settings, time);
+        await using var limiter = partition.Factory(partition.PartitionKey);
+        limiter.Should().BeOfType<RemainingWindowFixedWindowRateLimiter>();
+
+        using var first = limiter.AttemptAcquire();
+        time.Advance(TimeSpan.FromSeconds(18));
+        using var rejected = limiter.AttemptAcquire();
+
+        first.IsAcquired.Should().BeTrue();
+        rejected.IsAcquired.Should().BeFalse();
+        rejected.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter).Should().BeTrue();
+        retryAfter.Should().Be(TimeSpan.FromSeconds(12));
+
+        var services = new ServiceCollection();
+        services.AddGatewayRateLimiting(settings);
+        await using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<RateLimiterOptions>>().Value;
+        await options.OnRejected!(new OnRejectedContext { HttpContext = context, Lease = rejected }, CancellationToken.None);
+
+        context.Response.Headers.RetryAfter.ToString().Should().Be("12");
     }
 
     private static DefaultHttpContext ContextFor()

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.RateLimiting;
 using MMCA.Common.API.Startup;
+using MMCA.Common.RateLimiting;
 using Moq;
 using StackExchange.Redis;
 

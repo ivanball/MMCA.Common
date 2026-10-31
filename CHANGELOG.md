@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **Every in-memory fixed-window rate limiter now answers a 429 with `Retry-After` set to the seconds left in the current window, not the whole window** (Store Local Test Run 2, X-18, saw `Retry-After: 60` from the Gateway edge limiter mid-window). The 1.266.0 remaining-window limiter, until then wired only into `AddCommonRateLimiting`, is now one internal source file (`Source/Build/RateLimiting/RemainingWindowFixedWindowRateLimiter.cs`) compiled into MMCA.Common.API, MMCA.Common.Aspire and MMCA.Common.UI.Web, and backs the Gateway edge limiter (`AddGatewayRateLimiting`) and the Blazor host limiter (`AddUiRateLimiting`) too. MMCA.Common.Gateway, which references no MMCA package, carries an internal copy for its named route policies (`AddGatewayRoutePolicies`), pinned to the shared file by a parity test. No public API change.
+
 ## [1.266.0] - 2026-10-30
 
 Fixes from Store Local Test Run 2 (manual suite, 2026-10-30).

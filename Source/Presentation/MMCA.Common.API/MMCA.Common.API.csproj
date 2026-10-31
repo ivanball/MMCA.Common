@@ -37,6 +37,12 @@
     <InternalsVisibleTo Include="MMCA.Common.API.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The in-memory fixed window with a remaining-window Retry-After. One source file compiled as an
+         internal type into API, Aspire and UI.Web: Shared, the only project all three reference, does
+         not reference System.Threading.RateLimiting (an ASP.NET Core shared-framework assembly). -->
+    <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

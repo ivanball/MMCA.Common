@@ -1,35 +1,37 @@
 using System.Threading.RateLimiting;
 
-namespace MMCA.Common.API.RateLimiting;
+namespace MMCA.Common.Gateway.RateLimiting;
 
 /// <summary>
-/// The in-memory fixed-window limiter with an honest <see cref="MetadataName.RetryAfter"/> hint. The
-/// framework's <see cref="FixedWindowRateLimiter"/> stamps every rejection with the whole window length,
-/// so a 429 always said <c>Retry-After: 60</c> however much of the minute was left (Store local test
-/// run 2, X-18). This wraps it, tracks when the current window opened, and rewrites the hint to the time
-/// remaining until the next one, the figure <see cref="RedisFixedWindowRateLimiter"/> already reports.
+/// The route-policy fixed window with a <see cref="MetadataName.RetryAfter"/> hint equal to the time
+/// left in the current window, not the whole window the framework's <see cref="FixedWindowRateLimiter"/>
+/// reports. An internal copy of <c>MMCA.Common.RateLimiting.RemainingWindowFixedWindowRateLimiter</c>
+/// (the limiter the API, Aspire and UI.Web packages compile in), because this package deliberately
+/// references no MMCA package (see the project file). A parity test drives both through the same
+/// clock script, so the two cannot drift.
 /// </summary>
 /// <remarks>
-/// The owning <see cref="PartitionedRateLimiter{TResource}"/> drives replenishment by calling
-/// <see cref="TryReplenish"/> on its own timer (partition limiters never auto-replenish), and the inner
-/// limiter opens a new window on the first call at least one window after the last. This class applies
-/// the same rule to its own window start in the same call, so the two agree to within one timer tick.
+/// The owning <see cref="PartitionedRateLimiter{TResource}"/> (the rate-limiting middleware's endpoint
+/// limiter, for a named policy) drives replenishment by calling <see cref="TryReplenish"/> on its own
+/// timer, and the inner limiter opens a new window on the first call at least one window after the
+/// last. This class applies the same rule to its own window start in the same call, so the two agree
+/// to within one timer tick.
 /// </remarks>
-internal sealed class RemainingWindowFixedWindowRateLimiter : ReplenishingRateLimiter
+internal sealed class GatewayRemainingWindowLimiter : ReplenishingRateLimiter
 {
     private readonly FixedWindowRateLimiter _inner;
     private readonly TimeProvider _timeProvider;
     private long _windowStartTimestamp;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RemainingWindowFixedWindowRateLimiter"/> class.
+    /// Initializes a new instance of the <see cref="GatewayRemainingWindowLimiter"/> class.
     /// </summary>
     /// <param name="options">
     /// The fixed-window options. <see cref="FixedWindowRateLimiterOptions.AutoReplenishment"/> is
     /// forced off: the owning partitioned limiter replenishes, through <see cref="TryReplenish"/>.
     /// </param>
     /// <param name="timeProvider">Clock for the window start; tests substitute it.</param>
-    public RemainingWindowFixedWindowRateLimiter(FixedWindowRateLimiterOptions options, TimeProvider? timeProvider = null)
+    public GatewayRemainingWindowLimiter(FixedWindowRateLimiterOptions options, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -113,6 +115,35 @@ internal sealed class RemainingWindowFixedWindowRateLimiter : ReplenishingRateLi
         }
 
         lease.Dispose();
-        return RedisRateLimitLease.Rejected(TimeUntilNextWindow());
+        return new RejectedLease(TimeUntilNextWindow());
+    }
+
+    /// <summary>
+    /// The rejection handed back in place of the framework's: not acquired, carrying only the
+    /// remaining-window <see cref="MetadataName.RetryAfter"/> hint that
+    /// <see cref="GatewayRetryAfter.WithRetryAfterHeader"/> turns into the 429's <c>Retry-After</c> header.
+    /// </summary>
+    private sealed class RejectedLease(TimeSpan retryAfter) : RateLimitLease
+    {
+        private static readonly string[] RetryAfterMetadataNames = [MetadataName.RetryAfter.Name];
+
+        /// <inheritdoc />
+        public override bool IsAcquired => false;
+
+        /// <inheritdoc />
+        public override IEnumerable<string> MetadataNames => RetryAfterMetadataNames;
+
+        /// <inheritdoc />
+        public override bool TryGetMetadata(string metadataName, out object? metadata)
+        {
+            if (string.Equals(metadataName, MetadataName.RetryAfter.Name, StringComparison.Ordinal))
+            {
+                metadata = retryAfter;
+                return true;
+            }
+
+            metadata = null;
+            return false;
+        }
     }
 }
