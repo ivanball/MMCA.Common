@@ -60,13 +60,14 @@ public static partial class UsPostalRegions
         return CodesByName.TryGetValue(trimmed, out var code) ? code : null;
     }
 
-    /// <summary>Whether <paramref name="zipCode"/> is a 5-digit ZIP code or a ZIP+4 ("12345" or "12345-6789").</summary>
+    /// <summary>Whether <paramref name="zipCode"/> is a 5-digit ZIP code or a ZIP+4 ("12345" or "12345-6789"), in ASCII digits.</summary>
     /// <param name="zipCode">The ZIP code to check (surrounding spaces ignored).</param>
     /// <returns><see langword="true"/> when it is well formed.</returns>
     public static bool IsValidZipCode(string? zipCode) =>
         zipCode is not null && ZipCodePattern.IsMatch(zipCode.Trim());
 
-    [GeneratedRegex(@"^\d{5}(-\d{4})?$", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 100)]
+    // [0-9], not \d: .NET's \d matches every Unicode decimal digit (Arabic-Indic, full-width).
+    [GeneratedRegex(@"^[0-9]{5}(-[0-9]{4})?$", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 100)]
     private static partial Regex ZipCodePattern { get; }
 }
 

@@ -52,4 +52,13 @@ public sealed class UsPostalRegionsTests
     [InlineData(null, false)]
     public void IsValidZipCode_AcceptsFiveDigitsOrZipPlusFour(string? zip, bool expected) =>
         UsPostalRegions.IsValidZipCode(zip).Should().Be(expected);
+
+    // L251: .NET's \d matches any Unicode decimal digit, so Arabic-Indic (U+0660..U+0669) or
+    // full-width (U+FF10..U+FF19) digits passed as a ZIP. A ZIP code is ASCII digits only.
+    [Theory]
+    [InlineData("٣٠١٣٥")]
+    [InlineData("30135-١٢٣٤")]
+    [InlineData("３０１３５")]
+    public void IsValidZipCode_RejectsNonAsciiDigits(string zip) =>
+        UsPostalRegions.IsValidZipCode(zip).Should().BeFalse();
 }
