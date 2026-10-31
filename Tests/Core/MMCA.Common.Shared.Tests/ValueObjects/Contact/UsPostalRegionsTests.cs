@@ -56,9 +56,9 @@ public sealed class UsPostalRegionsTests
     // L251: .NET's \d matches any Unicode decimal digit, so Arabic-Indic (U+0660..U+0669) or
     // full-width (U+FF10..U+FF19) digits passed as a ZIP. A ZIP code is ASCII digits only.
     [Theory]
-    [InlineData("٣٠١٣٥")]
-    [InlineData("30135-١٢٣٤")]
-    [InlineData("３０１３５")]
+    [InlineData("\u0663\u0660\u0661\u0663\u0665")]
+    [InlineData("30135-\u0661\u0662\u0663\u0664")]
+    [InlineData("\uFF13\uFF10\uFF11\uFF13\uFF15")]
     public void IsValidZipCode_RejectsNonAsciiDigits(string zip) =>
         UsPostalRegions.IsValidZipCode(zip).Should().BeFalse();
 }
