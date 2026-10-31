@@ -1,8 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Layout.FocusOnInAppNavigate
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.Dispose() -> void
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.FocusOnInAppNavigate() -> void
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.RouteData.get -> Microsoft.AspNetCore.Components.RouteData!
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.RouteData.set -> void
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.Selector.get -> string?
-MMCA.Common.UI.Layout.FocusOnInAppNavigate.Selector.set -> void

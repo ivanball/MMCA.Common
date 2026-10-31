@@ -447,6 +447,13 @@ MMCA.Common.UI.Globalization.PseudoStringLocalizerFactory.PseudoStringLocalizerF
 MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions
 MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.extension(Microsoft.Extensions.Localization.IStringLocalizer!)
 MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.extension(Microsoft.Extensions.Localization.IStringLocalizer!).Plural(string! key, int count, params object![]! args) -> Microsoft.Extensions.Localization.LocalizedString!
+MMCA.Common.UI.Layout.FocusOnInAppNavigate
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.Dispose() -> void
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.FocusOnInAppNavigate() -> void
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.RouteData.get -> Microsoft.AspNetCore.Components.RouteData!
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.RouteData.set -> void
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.Selector.get -> string?
+MMCA.Common.UI.Layout.FocusOnInAppNavigate.Selector.set -> void
 MMCA.Common.UI.Layout.MainLayout
 MMCA.Common.UI.Layout.MainLayout.MainLayout() -> void
 MMCA.Common.UI.Layout.NavMenu
