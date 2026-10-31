@@ -1,1 +1,4 @@
 #nullable enable
+MMCA.Common.UI.Common.PrerenderStateBudget
+const MMCA.Common.UI.Common.PrerenderStateBudget.MaxJsonBytes = 14336 -> int
+static MMCA.Common.UI.Common.PrerenderStateBudget.TryPersistAsJsonWithinBudget<TValue>(this Microsoft.AspNetCore.Components.PersistentComponentState! state, string! key, TValue instance, int maxJsonBytes = 14336) -> bool

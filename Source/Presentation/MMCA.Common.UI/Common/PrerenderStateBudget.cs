@@ -13,9 +13,10 @@ namespace MMCA.Common.UI.Common;
 /// <remarks>
 /// Use this for any state whose size depends on content (rows, DTOs, lists); a small fixed-size value
 /// can go through <c>PersistAsJson</c> directly. Skipping is always safe: a component that finds nothing
-/// to restore fetches on its interactive pass, exactly as it does when it never prerendered.
+/// to restore fetches on its interactive pass, exactly as it does when it never prerendered. Public so a
+/// consumer page that persists its own content-sized state uses the same budget and serializes once.
 /// </remarks>
-internal static class PrerenderStateBudget
+public static class PrerenderStateBudget
 {
     /// <summary>
     /// The largest UTF-8 JSON payload one key may persist: 14 KB, under half of SignalR's 32 KB default.
@@ -25,7 +26,7 @@ internal static class PrerenderStateBudget
     /// 16/9 of a byte on the wire. 14 KB of JSON therefore lands near 25 KB, leaving room for the other
     /// components' state, the protector's envelope and the hub framing.
     /// </summary>
-    internal const int MaxJsonBytes = 14 * 1024;
+    public const int MaxJsonBytes = 14 * 1024;
 
     // The options PersistAsJson and TryTakeFromJson use, so bytes persisted here restore through
     // TryTakeFromJson unchanged.
@@ -41,7 +42,7 @@ internal static class PrerenderStateBudget
     /// <param name="instance">The value to persist.</param>
     /// <param name="maxJsonBytes">The budget in UTF-8 JSON bytes; defaults to <see cref="MaxJsonBytes"/>.</param>
     /// <returns><see langword="true"/> when the value was persisted; <see langword="false"/> when it was over budget.</returns>
-    internal static bool TryPersistAsJsonWithinBudget<TValue>(
+    public static bool TryPersistAsJsonWithinBudget<TValue>(
         this PersistentComponentState state,
         string key,
         TValue instance,
