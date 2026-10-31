@@ -199,6 +199,11 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
         {
             // Defensive: never let storage failures break sign-out.
         }
+        catch (TaskCanceledException)
+        {
+            // Interop timeout on a degraded circuit: sign-out awaits this before it resets the auth
+            // state to anonymous, so a timeout must not escape (PendingToastService does the same).
+        }
     }
 
     private async ValueTask<IJSObjectReference?> GetModuleAsync()

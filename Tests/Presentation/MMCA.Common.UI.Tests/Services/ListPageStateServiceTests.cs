@@ -186,6 +186,22 @@ public class ListPageStateServiceTests
         sut.GetState("/my-orders").Should().BeNull("the in-memory half clears whatever the storage did");
     }
 
+    [Fact]
+    public async Task ClearAsync_WhenTheInteropCallTimesOut_IsSwallowed()
+    {
+        var interop = new BunitJSInterop();
+        interop.SetupModule(NavInteropModulePath)
+            .SetupVoid("sessionRemoveByPrefix", _ => true)
+            .SetException(new TaskCanceledException("interop timed out"));
+        var sut = new ListPageStateService(interop.JSRuntime);
+        sut.SaveState("/my-orders", new ListPageState { Page = 1 });
+
+        var act = async () => await sut.ClearAsync();
+
+        await act.Should().NotThrowAsync("sign-out awaits this before flipping the auth state to anonymous, so a timeout must not escape");
+        sut.GetState("/my-orders").Should().BeNull("the in-memory half clears whatever the storage did");
+    }
+
     private static (ListPageStateService Sut, BunitJSModuleInterop Module) CreateWithSessionStorage()
     {
         var interop = new BunitJSInterop();
