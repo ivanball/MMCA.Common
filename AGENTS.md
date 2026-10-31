@@ -48,7 +48,7 @@ All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, 
 ```
 Source/
   Build/         MMCA.Common.LayerEnforcement.targets (compile-time layer guard), plus RateLimiting/:
-                 one internal limiter source file linked into API, Aspire and UI.Web
+                 one internal limiter source file linked into API, Aspire, UI.Web and Gateway
   Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}, cloud-neutral (+ AI, the
                  optional language-model boundary on Microsoft.Extensions.AI with no vendor SDK and
                  no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each)

@@ -27,9 +27,4 @@
          in MMCA.Common.Shared. The package itself still references no MMCA project. -->
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- Test-only: the remaining-window parity test pins the package's internal limiter copy
-         (GatewayRemainingWindowLimiter) to the one source file API, Aspire and UI.Web compile in. -->
-    <Compile Include="..\..\..\Source\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="Linked\RemainingWindowFixedWindowRateLimiter.cs" />
-  </ItemGroup>
 </Project>

@@ -14,12 +14,12 @@ namespace MMCA.Common.RateLimiting;
 /// <para>
 /// One source file, compiled as an internal type into each package that runs an in-memory fixed
 /// window: <c>MMCA.Common.API</c> (<c>AddCommonRateLimiting</c>), <c>MMCA.Common.Aspire</c> (the
-/// gateway edge limiter) and <c>MMCA.Common.UI.Web</c> (the Blazor host's edge limiter), each through
-/// a <c>Compile Include ... Link</c> in its project file. It cannot live in <c>MMCA.Common.Shared</c>,
-/// the only project all three reference: <c>System.Threading.RateLimiting</c> ships in the ASP.NET
-/// Core shared framework, which Shared (also loaded by Blazor WebAssembly) does not reference.
-/// <c>MMCA.Common.Gateway</c> references no MMCA package and carries a renamed copy
-/// (<c>GatewayRemainingWindowLimiter</c>), pinned to this one by a parity test.
+/// gateway edge limiter), <c>MMCA.Common.UI.Web</c> (the Blazor host's edge limiter) and
+/// <c>MMCA.Common.Gateway</c> (the named route policies), each through a <c>Compile Include ... Link</c>
+/// in its project file; a linked source file keeps the Gateway package free of any MMCA reference. It
+/// cannot live in <c>MMCA.Common.Shared</c>, the only project API, Aspire and UI.Web all reference:
+/// <c>System.Threading.RateLimiting</c> ships in the ASP.NET Core shared framework, which Shared (also
+/// loaded by Blazor WebAssembly) does not reference.
 /// </para>
 /// <para>
 /// The owning <see cref="PartitionedRateLimiter{TResource}"/> drives replenishment by calling

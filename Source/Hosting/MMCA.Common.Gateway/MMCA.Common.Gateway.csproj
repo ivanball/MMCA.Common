@@ -19,6 +19,12 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- A linked SOURCE file, not a reference: the in-memory fixed window with a remaining-window
+         Retry-After that API, Aspire and UI.Web compile in too. Yarp.ReverseProxy stays the only
+         runtime dependency. -->
+    <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

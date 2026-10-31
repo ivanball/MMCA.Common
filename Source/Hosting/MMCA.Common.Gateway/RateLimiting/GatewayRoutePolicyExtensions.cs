@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.RateLimiting;
 
 namespace MMCA.Common.Gateway.RateLimiting;
 
@@ -120,7 +121,7 @@ public static class GatewayRoutePolicyExtensions
         // flag off itself.
         return key is null
             ? RateLimitPartition.GetNoLimiter(GatewayRoutePolicySettings.GlobalPartitionKey)
-            : RateLimitPartition.Get(key, _ => new GatewayRemainingWindowLimiter(
+            : RateLimitPartition.Get(key, _ => new RemainingWindowFixedWindowRateLimiter(
                 new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = policy.PermitLimit,
