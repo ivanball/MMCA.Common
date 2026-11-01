@@ -77,6 +77,18 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "MessagePack"
         update-types: ["version-update:semver-major"]
+      # Android bindings held by NU1608: Firebase.Messaging 125.x and Biometric past 1.1.0.30 pull
+      # the newer AndroidX train past the .Ktx packages' upper bounds and fail the android restore
+      # (re-verified 2026-10-25 on MAUI 10.0.120). See Directory.Packages.props.
+      - dependency-name: "Xamarin.Firebase.Messaging"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Xamarin.AndroidX.Biometric"
+        versions: [">= 1.1.0.31"]
+      # StyleCop.Analyzers 1.3 is a new prerelease line (from 2026-10-12, ~150 builds in three
+      # weeks); its new rules would error under TreatWarningsAsErrors in all four repos. Taken by
+      # hand once the line settles (nuget-audit 2026-11-01).
+      - dependency-name: "StyleCop.Analyzers"
+        versions: [">= 1.3.0"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
