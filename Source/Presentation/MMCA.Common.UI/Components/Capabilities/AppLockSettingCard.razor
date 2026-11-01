@@ -1,0 +1,65 @@
+@using MMCA.Common.UI.Services.Capabilities.Auth
+@using MMCA.Common.UI.Services.Capabilities.DeviceStorage
+@inject IBiometricAuthenticator Biometrics
+@inject IDevicePreferences Preferences
+@inject IToastService Toast
+@inject Microsoft.Extensions.Localization.IStringLocalizer<AppLockSettingCard> L
+
+@* The opt-in switch for the app lock (ADR-042 Wave 4) that BiometricGate enforces. A head drops it
+   on its own device-settings page; the gate locks nothing until this card has stored
+   DevicePreferenceKeys.AppLockEnabled. Where the device has no fingerprint, face or screen lock, the
+   card says so instead of offering a switch that cannot work. *@
+
+<MudCard Elevation="1" Class="mb-4 detail-card">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6" HtmlTag="h2">@L["Heading"]</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_available)
+        {
+            <MudSwitch T="bool" @key="_switchKey" Value="_enabled" ValueChanged="OnToggledAsync"
+                       Color="Color.Primary" Label="@L["Switch"]" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Text.Help"]</MudText>
+        }
+        else if (_loaded)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Text.Unavailable"]</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private bool _loaded;
+    private bool _available;
+    private bool _enabled;
+
+    // The switch flips its own visual state on the click, before the biometric check answers, and a
+    // refused check leaves the bound value unchanged, so no parameter change would repaint it.
+    // Bumping the key recreates the switch from the real value (ADC A-43).
+    private int _switchKey;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        _available = await Biometrics.IsAvailableAsync();
+        _enabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
+        _loaded = true;
+    }
+
+    private async Task OnToggledAsync(bool enabled)
+    {
+        // Turning the lock ON requires proving the biometric works right now, otherwise a failed
+        // sensor would lock the owner out of their own session.
+        if (enabled && !await Biometrics.AuthenticateAsync(L["Prompt.Reason"].Value))
+        {
+            Toast.Warning(L["Snackbar.VerifyFailed"].Value);
+            _switchKey++;
+            return;
+        }
+
+        _enabled = enabled;
+        await Preferences.SetAsync(DevicePreferenceKeys.AppLockEnabled, enabled);
+    }
+}

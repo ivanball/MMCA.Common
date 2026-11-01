@@ -136,6 +136,36 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
     }
 
     /// <summary>
+    /// Builds the in-app route for a link the platform head received, from the link's ENCODED parts,
+    /// and applies <see cref="IsAppRelativeRoute"/> to the result. The link's scheme and host (the
+    /// public web host, or a custom scheme's fixed host) are dropped: the path is the route.
+    /// </summary>
+    /// <param name="encodedPath">The link's path, still percent-encoded.</param>
+    /// <param name="encodedQuery">The query without its leading <c>?</c>, still percent-encoded.</param>
+    /// <param name="encodedFragment">The fragment without its leading <c>#</c>, still percent-encoded.</param>
+    /// <param name="route">The route to publish, when the method answers <see langword="true"/>.</param>
+    /// <returns>Whether the parts make an app-relative route that is safe to publish.</returns>
+    /// <remarks>
+    /// The parts stay encoded so a <c>%3F</c> or <c>%23</c> in the path cannot turn into a query or
+    /// a fragment, and tokens in the query or fragment reach the page exactly as sent. The fragment
+    /// is kept: a guest-order or confirm-email token rides in it. Asking here, rather than letting
+    /// <see cref="Publish"/> throw, lets a native callback drop a hostile link silently (SEC-ADC-65).
+    /// </remarks>
+    public static bool TryComposeRoute(
+        string? encodedPath,
+        string? encodedQuery,
+        string? encodedFragment,
+        [NotNullWhen(true)] out string? route)
+    {
+        var candidate = encodedPath
+            + (string.IsNullOrEmpty(encodedQuery) ? string.Empty : "?" + encodedQuery)
+            + (string.IsNullOrEmpty(encodedFragment) ? string.Empty : "#" + encodedFragment);
+
+        route = IsAppRelativeRoute(candidate) ? candidate : null;
+        return route is not null;
+    }
+
+    /// <summary>
     /// Whether the value opens with an RFC 3986 scheme
     /// (<c>ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"</c>).
     /// </summary>

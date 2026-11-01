@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Heading" xml:space="preserve">
+    <value>App lock</value>
+  </data>
+  <data name="Switch" xml:space="preserve">
+    <value>Require a fingerprint, face or screen lock to open the app</value>
+  </data>
+  <data name="Text.Help" xml:space="preserve">
+    <value>When enabled, opening the app with a signed-in session asks for your fingerprint, face or screen lock first. It applies to this device only.</value>
+  </data>
+  <data name="Text.Unavailable" xml:space="preserve">
+    <value>This device has no fingerprint, face or screen lock set up, so the app lock is not available.</value>
+  </data>
+  <data name="Prompt.Reason" xml:space="preserve">
+    <value>Confirm it is you to turn on the app lock</value>
+  </data>
+  <data name="Snackbar.VerifyFailed" xml:space="preserve">
+    <value>The identity check did not complete, so the app lock stays off.</value>
+  </data>
+</root>
