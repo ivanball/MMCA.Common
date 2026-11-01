@@ -1164,6 +1164,60 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         grid.RowsPerPage.Should().Be(10, "MudDataGrid's own default is left untouched");
     }
 
+    // == LocationChanged: an echo of the saved state is not a navigation ==
+    private (MudDataGrid<WidgetRow> Grid, Func<int> Fetches) RenderCountingGrid()
+    {
+        var fetches = 0;
+        var grid = Render<MudDataGrid<WidgetRow>>(ps => ps
+            .Add(p => p.ServerData, (_, _) =>
+            {
+                Interlocked.Increment(ref fetches);
+                return Task.FromResult(new GridData<WidgetRow> { Items = [], TotalItems = 0 });
+            })).Instance;
+        return (grid, () => Volatile.Read(ref fetches));
+    }
+
+    [Fact]
+    public async Task LocationChanged_WhenTheUrlEchoesTheSavedState_DoesNotReloadTheGrid()
+    {
+        // The writer of a save suppresses its own echo, but a second live instance on the same route
+        // hears it unsuppressed. Reloading there saves and rewrites the URL, which the first instance
+        // then hears, and the two reload each other without end (MudBlazor 9.12 made the cycle stop
+        // terminating on its own). A URL carrying exactly the saved state is that echo: nothing moved.
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets");
+        var (grid, fetches) = RenderCountingGrid();
+        var cut = Render<GridBackedTestPage>(ps => ps.Add(p => p.Grid, grid));
+        var saved = new ListPageState { Page = 0, PageSize = 25, DenseGrid = true };
+        Services.GetRequiredService<ListPageStateService>().SaveState("/widgets", saved);
+        await cut.InvokeAsync(() => Task.CompletedTask);
+        var before = fetches();
+
+        navigation.NavigateTo(ListPageQueryStateService.BuildPath("/widgets", saved));
+        await cut.InvokeAsync(() => Task.CompletedTask);
+        await cut.InvokeAsync(() => Task.CompletedTask);
+
+        fetches().Should().Be(before, "a URL equal to the saved state is an echo of a save already applied, not a navigation");
+    }
+
+    [Fact]
+    public async Task LocationChanged_WhenTheUrlMovesOffTheSavedState_ReloadsTheGrid()
+    {
+        // The guard above must not swallow a real back/forward: there the URL carries an older state
+        // than the saved one, so the grid re-reads it.
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets");
+        var (grid, fetches) = RenderCountingGrid();
+        var cut = Render<GridBackedTestPage>(ps => ps.Add(p => p.Grid, grid));
+        Services.GetRequiredService<ListPageStateService>().SaveState("/widgets", new ListPageState { Page = 0, PageSize = 25 });
+        await cut.InvokeAsync(() => Task.CompletedTask);
+        var before = fetches();
+
+        navigation.NavigateTo(ListPageQueryStateService.BuildPath("/widgets", new ListPageState { Page = 0, PageSize = 50 }));
+
+        await cut.WaitForAssertionAsync(() => fetches().Should().BeGreaterThan(before, "a back/forward to a different state reloads the grid"));
+    }
+
     // == URL sort over the page's default column sort ==
     private MudDataGrid<WidgetRow> RenderGridSortedByNameAscending(List<GridState<WidgetRow>> seen) =>
         Render<MudDataGrid<WidgetRow>>(ps => ps

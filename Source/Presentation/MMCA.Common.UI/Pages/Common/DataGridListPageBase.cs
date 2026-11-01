@@ -302,6 +302,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return;
         }
 
+        // An echo of a save already applied is not a navigation. The writer suppresses its own echo,
+        // but a second live instance on the same route hears it unsuppressed: reloading there saves
+        // and rewrites the URL, the first instance hears that, and the two reload each other without
+        // end. A real back/forward moves the URL off the saved state, so it still reloads.
+        if (IsEchoOfSavedState(e.Location))
+        {
+            return;
+        }
+
         var urlState = QueryStateService.ReadCurrent();
         _savedPage = urlState.Page;
         _savedPageSize = urlState.PageSize;
@@ -1377,6 +1386,24 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private string? _ownRoutePath;
 
     private string GetRoutePath() => _ownRoutePath ?? new Uri(NavigationManager.Uri).AbsolutePath;
+
+    /// <summary>
+    /// True when <paramref name="location"/> carries exactly the query the last save for this route
+    /// wrote (<see cref="ListPageQueryStateService.BuildPath"/> of the stored state), so the grid
+    /// already shows it.
+    /// </summary>
+    private bool IsEchoOfSavedState(string location)
+    {
+        var routePath = GetRoutePath();
+        if (ListPageStateService.GetState(routePath) is not { } saved)
+        {
+            return false;
+        }
+
+        var current = new Uri(location, UriKind.Absolute);
+        var written = new Uri(current, ListPageQueryStateService.BuildPath(routePath, saved));
+        return string.Equals(current.Query, written.Query, StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// True while this list page's route is still the CURRENT location. Deferred grid-state
