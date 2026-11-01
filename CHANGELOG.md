@@ -6,6 +6,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Dependencies
+
+- NuGet audit 2026-11-01: `Grpc.AspNetCore`, `Grpc.AspNetCore.Server.Reflection`, `Grpc.Net.ClientFactory` and `Grpc.Tools` 2.84.0 -> 2.85.0, `Polly` and `Polly.Core` 8.8.1 -> 8.9.0, `MudBlazor` 9.11.0 -> 9.12.0, `AngleSharp` 1.8.6 -> 1.9.0, `Google.Apis.Auth` 1.77.0 -> 1.78.0, `StackExchange.Redis` 3.4.20 -> 3.4.29, `Scalar.AspNetCore` 2.18.3 -> 2.18.7, `Microsoft.Extensions.Caching.StackExchangeRedis` 10.0.13 -> 10.0.14, `Meziantou.Analyzer` 3.0.317 -> 3.0.318, and patch updates of `AWSSDK.DynamoDBv2` and `AWSSDK.S3`. Every lock file regenerated, the out-of-slnx projects included.
+- Dependabot now ignores `Xamarin.Firebase.Messaging` majors and `Xamarin.AndroidX.Biometric` past 1.1.0.30 (both fail the android restore with NU1608 against the AndroidX `.Ktx` bounds), and the `StyleCop.Analyzers` 1.3 prerelease line until it settles.
+
 ## [1.270.0] - 2026-10-31
 
 Two pieces the MAUI heads each wrote by hand move into the framework.

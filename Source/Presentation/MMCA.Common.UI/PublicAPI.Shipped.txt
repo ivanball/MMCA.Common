@@ -72,6 +72,7 @@ MMCA.Common.UI.Common.NavSection.Admin = 2 -> MMCA.Common.UI.Common.NavSection
 MMCA.Common.UI.Common.NavSection.General = 0 -> MMCA.Common.UI.Common.NavSection
 MMCA.Common.UI.Common.NavSection.User = 1 -> MMCA.Common.UI.Common.NavSection
 MMCA.Common.UI.Common.NotificationRoutePaths
+MMCA.Common.UI.Common.PrerenderStateBudget
 MMCA.Common.UI.Common.ResultUiExtensions
 MMCA.Common.UI.Common.RoutePaths
 MMCA.Common.UI.Common.Settings.ApiSettings
@@ -151,6 +152,8 @@ MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose() -> void
 MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!
 MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.set -> void
 MMCA.Common.UI.Components.Auth.UserSessionsTable.UserSessionsTable() -> void
+MMCA.Common.UI.Components.Capabilities.AppLockSettingCard
+MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.AppLockSettingCard() -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate
 MMCA.Common.UI.Components.Capabilities.BiometricGate.BiometricGate() -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose() -> void
@@ -1335,6 +1338,7 @@ MMCA.Common.UI._Imports
 MMCA.Common.UI._Imports.Execute() -> void
 MMCA.Common.UI._Imports._Imports() -> void
 abstract MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Title.get -> string!
+const MMCA.Common.UI.Common.PrerenderStateBudget.MaxJsonBytes = 14336 -> int
 const MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.ClientConfigPath = "client-config" -> string!
 const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
 const MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.OneSuffix = ".One" -> string!
@@ -1396,6 +1400,7 @@ override MMCA.Common.UI.Common.NavItem.GetHashCode() -> int
 override MMCA.Common.UI.Common.NavItem.ToString() -> string!
 override MMCA.Common.UI.Components.Auth.RedirectToLogin.OnInitialized() -> void
 override MMCA.Common.UI.Components.Auth.UserSessionsTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.BiometricGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.OnAfterRender(bool firstRender) -> void
 override MMCA.Common.UI.Components.Capabilities.OfflineBanner.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1464,6 +1469,7 @@ static MMCA.Common.UI.Common.ComponentLifetimeExtensions.LifetimeToken(this Syst
 static MMCA.Common.UI.Common.NavItem.operator !=(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NavItem.operator ==(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
+static MMCA.Common.UI.Common.PrerenderStateBudget.TryPersistAsJsonWithinBudget<TValue>(this Microsoft.AspNetCore.Components.PersistentComponentState! state, string! key, TValue instance, int maxJsonBytes = 14336) -> bool
 static MMCA.Common.UI.Common.ResultUiExtensions.HasErrorType(this MMCA.Common.Shared.Abstractions.Result! result, MMCA.Common.Shared.Abstractions.ErrorType errorType) -> bool
 static MMCA.Common.UI.Common.ResultUiExtensions.IsNotFound(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
 static MMCA.Common.UI.Common.ResultUiExtensions.IsUnauthorized(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
@@ -1520,6 +1526,7 @@ static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabil
 static MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.operator !=(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.operator ==(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.IsAppRelativeRoute(string? route) -> bool
+static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.TryComposeRoute(string? encodedPath, string? encodedQuery, string? encodedFragment, out string? route) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.operator !=(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? left, MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.operator ==(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? left, MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operator !=(MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? left, MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? right) -> bool
@@ -1595,6 +1602,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Auth.ChangePasswordCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.RedirectToLogin.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.UserSessionsTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.BiometricGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.ExternalLink.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
