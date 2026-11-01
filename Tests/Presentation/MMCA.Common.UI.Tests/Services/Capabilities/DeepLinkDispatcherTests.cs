@@ -277,4 +277,34 @@ public sealed class DeepLinkDispatcherTests
 
         act.Should().Throw<ArgumentException>();
     }
+
+    [Theory]
+    [InlineData("/orders/7", null, null, "/orders/7")]
+    [InlineData("/checkout/return", "order=7&payment=success", null, "/checkout/return?order=7&payment=success")]
+    [InlineData("/orders/guest/7", null, "token=a%2Bb", "/orders/guest/7#token=a%2Bb")]
+    [InlineData("/confirm-email", "userId=3", "code=x%3Dy", "/confirm-email?userId=3#code=x%3Dy")]
+    [InlineData("/catalog/a%3Fb", "", "", "/catalog/a%3Fb")]
+    public void TryComposeRoute_AppRelativeParts_KeepsQueryAndFragmentEncoded(
+        string path,
+        string? query,
+        string? fragment,
+        string expected)
+    {
+        DeepLinkDispatcher.TryComposeRoute(path, query, fragment, out var route).Should().BeTrue();
+
+        route.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("//attacker.example/p")]
+    [InlineData("orders/7")]
+    [InlineData("/\\attacker.example")]
+    public void TryComposeRoute_PathThatIsNotAppRelative_ReturnsFalse(string? path)
+    {
+        DeepLinkDispatcher.TryComposeRoute(path, "q=1", "f", out var route).Should().BeFalse();
+
+        route.Should().BeNull();
+    }
 }

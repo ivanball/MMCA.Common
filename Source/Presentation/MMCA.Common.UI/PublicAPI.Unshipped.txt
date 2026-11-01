@@ -2,3 +2,8 @@
 MMCA.Common.UI.Common.PrerenderStateBudget
 const MMCA.Common.UI.Common.PrerenderStateBudget.MaxJsonBytes = 14336 -> int
 static MMCA.Common.UI.Common.PrerenderStateBudget.TryPersistAsJsonWithinBudget<TValue>(this Microsoft.AspNetCore.Components.PersistentComponentState! state, string! key, TValue instance, int maxJsonBytes = 14336) -> bool
+static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.TryComposeRoute(string? encodedPath, string? encodedQuery, string? encodedFragment, out string? route) -> bool
+MMCA.Common.UI.Components.Capabilities.AppLockSettingCard
+MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.AppLockSettingCard() -> void
+override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.OnInitializedAsync() -> System.Threading.Tasks.Task!
+~override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

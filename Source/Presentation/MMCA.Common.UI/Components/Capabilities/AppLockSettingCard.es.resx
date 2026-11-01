@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Heading" xml:space="preserve">
+    <value>Bloqueo de la aplicación</value>
+  </data>
+  <data name="Switch" xml:space="preserve">
+    <value>Requerir huella, rostro o bloqueo de pantalla para abrir la aplicación</value>
+  </data>
+  <data name="Text.Help" xml:space="preserve">
+    <value>Al activarlo, abrir la aplicación con una sesión iniciada pedirá primero tu huella, rostro o bloqueo de pantalla. Solo se aplica a este dispositivo.</value>
+  </data>
+  <data name="Text.Unavailable" xml:space="preserve">
+    <value>Este dispositivo no tiene configurada una huella, un rostro ni un bloqueo de pantalla, así que el bloqueo de la aplicación no está disponible.</value>
+  </data>
+  <data name="Prompt.Reason" xml:space="preserve">
+    <value>Confirma que eres tú para activar el bloqueo</value>
+  </data>
+  <data name="Snackbar.VerifyFailed" xml:space="preserve">
+    <value>La verificación de identidad no se completó, así que el bloqueo sigue desactivado.</value>
+  </data>
+</root>

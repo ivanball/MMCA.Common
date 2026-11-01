@@ -6,6 +6,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`PlatformDeepLinks.TryPublish`** (MMCA.Common.UI.Maui, `MMCA.Common.UI.Maui.Capabilities.Navigation`): one call from a head's `MainActivity` (`OnCreate`, `OnNewIntent`, with the `Intent`) or `AppDelegate` (`OpenUrl`, `ContinueUserActivity`, with the `NSUrl`) turns the link into an in-app route and publishes it to `IDeepLinkDispatcher`. The route is the link's ENCODED path, query and fragment (the scheme and host are dropped), and a route that is not app-relative is dropped silently instead of thrown out of the platform callback (SEC-Common-88, SEC-ADC-65). It replaces the route code each head wrote by hand, which had diverged: one head kept the fragment and the encoding, the other decoded the path and dropped the fragment. Additive; a head that keeps its own code is unaffected.
+- **`DeepLinkDispatcher.TryComposeRoute`** (MMCA.Common.UI): the platform-neutral half of the above, which builds the route from encoded parts and applies `IsAppRelativeRoute`. Additive.
+- **`AppLockSettingCard`** (MMCA.Common.UI, `MMCA.Common.UI.Components.Capabilities`): the opt-in app-lock switch that `BiometricGate` enforces, for a head's device-settings page. Turning it on asks for the biometric first and stores `DevicePreferenceKeys.AppLockEnabled` only on success (the switch redraws from the real value after a refused check, ADC A-43); turning it off needs no check. Where the device has no fingerprint, face or screen lock, the card says so instead of showing a switch. English and Spanish strings ship with it. Additive.
+
 ## [1.269.0] - 2026-10-31
 
 The PrerenderStateBudget API plus the fixes from the 2026-10-31 bug hunt.
