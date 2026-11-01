@@ -6,6 +6,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.272.0] - 2026-11-01
+
+A list-page fix that MudBlazor 9.12.0 (taken in 1.271.0) exposed. Consumers on 1.270.0 should move straight to this release.
+
+### Fixed
+
+- **`DataGridListPageBase` no longer reloads on an echo of its own saved state** (MMCA.Common.UI). Each save rewrites the URL and suppresses only the writer's own `LocationChanged` echo, so a second live instance on the same route heard it as a back/forward navigation, reloaded, saved, and rewrote the URL for the first instance to hear: the two reloaded each other without end. With MudBlazor 9.12.0 the cycle no longer stops on its own (ADC's bUnit tests that render a list page twice spun to thousands of renders). A location whose query equals what the stored state for the route builds is now treated as already applied; a real back/forward moves the URL off the saved state and still reloads. No API change.
+
+### Dependencies
+
+- `Meziantou.Analyzer` 3.0.318 -> 3.0.320 (Dependabot #651); no new finding at error severity.
+
 ## [1.271.0] - 2026-11-01
 
 Dependency refresh from the 2026-11-01 NuGet audit. No API change.
