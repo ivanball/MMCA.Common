@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.270.0] - 2026-10-31
+
+Two pieces the MAUI heads each wrote by hand move into the framework.
+
 ### Added
 
 - **`PlatformDeepLinks.TryPublish`** (MMCA.Common.UI.Maui, `MMCA.Common.UI.Maui.Capabilities.Navigation`): one call from a head's `MainActivity` (`OnCreate`, `OnNewIntent`, with the `Intent`) or `AppDelegate` (`OpenUrl`, `ContinueUserActivity`, with the `NSUrl`) turns the link into an in-app route and publishes it to `IDeepLinkDispatcher`. The route is the link's ENCODED path, query and fragment (the scheme and host are dropped), and a route that is not app-relative is dropped silently instead of thrown out of the platform callback (SEC-Common-88, SEC-ADC-65). It replaces the route code each head wrote by hand, which had diverged: one head kept the fragment and the encoding, the other decoded the path and dropped the fragment. Additive; a head that keeps its own code is unaffected.
