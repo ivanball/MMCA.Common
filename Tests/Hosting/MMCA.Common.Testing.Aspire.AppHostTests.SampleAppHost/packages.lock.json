@@ -55,9 +55,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.317, )",
-        "resolved": "3.0.317",
-        "contentHash": "IC9fCjxniZol2dcdj+hiXjK01a8gBWQproGL/qWjBI7CgB5GeEOD5oGV0PwpQaSr7Aa/RPaM8Ddho3Y1OAZe1Q=="
+        "requested": "[3.0.318, )",
+        "resolved": "3.0.318",
+        "contentHash": "H3nJiK34glwVICWp6EnhQLgftwXvIIMwVFbafG5CXVlnFqXfNN5PToDdNmw7bFzEXfMHE6zwAT8Am89c9W8ThQ=="
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
@@ -1225,7 +1225,7 @@
       },
       "Grpc.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.84.0, )",
+        "requested": "[2.85.0, )",
         "resolved": "2.83.0",
         "contentHash": "PMoR+paO24EgBjBvfCqrmkurBH+RmfOIYThsUv6sGx6LUH0kxhzQkjtZ44mJxU0IwEw64dCzHhIjAM+CmORp3g==",
         "dependencies": {
@@ -1236,7 +1236,7 @@
       },
       "Grpc.Net.ClientFactory": {
         "type": "CentralTransitive",
-        "requested": "[2.84.0, )",
+        "requested": "[2.85.0, )",
         "resolved": "2.83.0",
         "contentHash": "j07orG5YnET3n5+TnczHCQsyWL3a4n/lJlIS88B3Zffylpp0RkcPzLv4ILAwKmOWOBvbBHiytPzAwJ8p7JomEQ==",
         "dependencies": {
@@ -1246,7 +1246,7 @@
       },
       "Grpc.Tools": {
         "type": "CentralTransitive",
-        "requested": "[2.84.0, )",
+        "requested": "[2.85.0, )",
         "resolved": "2.83.0",
         "contentHash": "vK2Go/83W0v2Nn7tTP9fGrX4IjmOa93s3M0SZeFimU1vIIr2wL9yNJlIyK21y85SGm3++JncB8IF751cjoLHuQ=="
       },
@@ -1350,7 +1350,7 @@
       },
       "Polly.Core": {
         "type": "CentralTransitive",
-        "requested": "[8.8.1, )",
+        "requested": "[8.9.0, )",
         "resolved": "8.7.0",
         "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
       },

@@ -4,9 +4,9 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.8.6, )",
-        "resolved": "1.8.6",
-        "contentHash": "tdvrWSsHz8iRcb8U2cbFtYF6/1Mvhbe5ZxN/VdhVeIfp5vOvbwz3Bn7OZknnm2QSyGvM9ZaZLNLvfanPzNa61Q=="
+        "requested": "[1.9.0, )",
+        "resolved": "1.9.0",
+        "contentHash": "NOKbXBsj4gaudXjAmdfSPxgUmKNbxP0k87ZRN56N0FW3u2z8AT7sRnTEOWjKoNrPI1vq4slV7Ld2nBCOvu/v8w=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -29,9 +29,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.317, )",
-        "resolved": "3.0.317",
-        "contentHash": "IC9fCjxniZol2dcdj+hiXjK01a8gBWQproGL/qWjBI7CgB5GeEOD5oGV0PwpQaSr7Aa/RPaM8Ddho3Y1OAZe1Q=="
+        "requested": "[3.0.318, )",
+        "resolved": "3.0.318",
+        "contentHash": "H3nJiK34glwVICWp6EnhQLgftwXvIIMwVFbafG5CXVlnFqXfNN5PToDdNmw7bFzEXfMHE6zwAT8Am89c9W8ThQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -62,9 +62,9 @@
       },
       "MudBlazor": {
         "type": "Direct",
-        "requested": "[9.11.0, )",
-        "resolved": "9.11.0",
-        "contentHash": "hboxF5cQuMYjB0w6+tScmNt0ACuoCu35TGPsCmCq8OeQgvtPtzQ1s9auAOrINj/J6I/ZyBB1rmUzrcMKj14RFA=="
+        "requested": "[9.12.0, )",
+        "resolved": "9.12.0",
+        "contentHash": "T6PQUCJe60UTSy3u1F8R2nuC06Cox6WEhon5GA2/AZNVI1WstlPSJZdGPyp6pHFpWdjPpla65piLpyJsbW+1rA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -226,8 +226,8 @@
           "MMCA.Common.Shared": "[1.0.0, )",
           "Microsoft.AspNetCore.SignalR.Client": "[10.0.14, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.11.0, )",
-          "Polly": "[8.8.1, )",
+          "MudBlazor": "[9.12.0, )",
+          "Polly": "[8.9.0, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
@@ -251,18 +251,18 @@
       },
       "Polly": {
         "type": "CentralTransitive",
-        "requested": "[8.8.1, )",
-        "resolved": "8.8.1",
-        "contentHash": "YpeoOqj82RfUtzQ3Tcn/zGnL/fdFmev1gEPSexYD3HgQZACo0b1avF8QU6f86KhUP+agXzCwKOKjo/8cqTjXvw==",
+        "requested": "[8.9.0, )",
+        "resolved": "8.9.0",
+        "contentHash": "k/gux3e2R/kmXXVBPmaPi/MWMEsCu6gvWfKwWYRiOtEbDljg91iP8zH5LGPpiTNyoGrmw3hrK8wY1s9rs9nluA==",
         "dependencies": {
-          "Polly.Core": "8.8.1"
+          "Polly.Core": "8.9.0"
         }
       },
       "Polly.Core": {
         "type": "CentralTransitive",
-        "requested": "[8.8.1, )",
-        "resolved": "8.8.1",
-        "contentHash": "yyzOT3XJRR7sEOxZH1Xpb6Oi5cDiGVuTOSVfIlcC23wFUdoyCPOujjKfIX5WdIX8l5TkRneOTyyW1Y1zNQKnUA=="
+        "requested": "[8.9.0, )",
+        "resolved": "8.9.0",
+        "contentHash": "Imm3q+XvH+8fiOdCkp+GggDQuxN3e4VznbRxODjjJxCurmAIfUEO4dKcPx8RCwocTkvP6Udw2DyXtC+45tu3jA=="
       },
       "QRCoder": {
         "type": "CentralTransitive",
