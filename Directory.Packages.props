@@ -226,6 +226,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
+    <!-- Deliberately the ASP.NET Core 2.3.x package on net10.0: it is what brings HttpContext and
+         StatusCodes (via Microsoft.AspNetCore.Http.Abstractions 2.3.x) into Common.UI, which
+         Pages/NotFound.razor needs for its 403 re-execution check. Common.UI is consumed by Blazor
+         WebAssembly clients, so <FrameworkReference Include="Microsoft.AspNetCore.App" /> cannot
+         replace it. Removing it means moving that check into a server-only project first. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.13" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
