@@ -304,4 +304,22 @@
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notification not found.</value>
   </data>
+  <data name="Authentication.InvalidSignInLink" xml:space="preserve">
+    <value>The sign-in link is invalid or has expired. Please request a new one.</value>
+  </data>
+  <data name="Authentication.SignInLinkSecondFactorRequired" xml:space="preserve">
+    <value>This account uses two-factor authentication. Sign in with your password and code instead.</value>
+  </data>
+  <data name="Authentication.SignInLinkNotSupported" xml:space="preserve">
+    <value>Sign-in links are not supported.</value>
+  </data>
+  <data name="Authentication.SignInLinkThrottled" xml:space="preserve">
+    <value>Too many sign-in link requests. Please try again later.</value>
+  </data>
+  <data name="Csv.Malformed" xml:space="preserve">
+    <value>The file is not valid CSV.</value>
+  </data>
+  <data name="Csv.Empty" xml:space="preserve">
+    <value>The file has no header row.</value>
+  </data>
 </root>

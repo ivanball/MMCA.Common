@@ -343,12 +343,6 @@
   <data name="Auth.Register.SignIn" xml:space="preserve">
     <value>Iniciar sesión</value>
   </data>
-  <data name="Auth.Register.ResetPassword" xml:space="preserve">
-    <value>Restablecer contraseña</value>
-  </data>
-  <data name="Auth.Register.EmailAlreadyRegistered" xml:space="preserve">
-    <value>Ya existe una cuenta registrada para {0}. Inicie sesión con ella o restablezca su contraseña si la olvidó.</value>
-  </data>
   <data name="Notif.List.Col.Title" xml:space="preserve">
     <value>Título</value>
   </data>
@@ -834,5 +828,59 @@
   </data>
   <data name="Http.Timeout" xml:space="preserve">
     <value>Se agotó el tiempo de espera antes de que el servidor respondiera.</value>
+  </data>
+  <data name="Auth.Login.ExistingAccount" xml:space="preserve">
+    <value>Ya tiene una cuenta con {0}. Inicie sesión o restablezca su contraseña.</value>
+  </data>
+  <data name="Auth.Login.ResetPassword" xml:space="preserve">
+    <value>Restablecer contraseña</value>
+  </data>
+  <data name="Auth.Login.EmailMeLink" xml:space="preserve">
+    <value>Enviarme un enlace de inicio de sesión</value>
+  </data>
+  <data name="Auth.Login.EmailMeLink.EnterEmail" xml:space="preserve">
+    <value>Escriba primero su correo electrónico y luego solicite el enlace.</value>
+  </data>
+  <data name="Auth.Login.SignInLinkSent" xml:space="preserve">
+    <value>Si existe una cuenta para {0}, le enviamos un enlace de inicio de sesión. Caduca pronto, así que úselo enseguida.</value>
+  </data>
+  <data name="Auth.SignInLink.PageTitle" xml:space="preserve">
+    <value>Iniciar sesión con un enlace</value>
+  </data>
+  <data name="Auth.SignInLink.Title" xml:space="preserve">
+    <value>Inicie sesión con su enlace</value>
+  </data>
+  <data name="Auth.SignInLink.Subtitle" xml:space="preserve">
+    <value>No necesita contraseña.</value>
+  </data>
+  <data name="Auth.SignInLink.Reading" xml:space="preserve">
+    <value>Leyendo su enlace...</value>
+  </data>
+  <data name="Auth.SignInLink.SigningInAs" xml:space="preserve">
+    <value>Va a iniciar sesión como {0}.</value>
+  </data>
+  <data name="Auth.SignInLink.Consent.Prefix" xml:space="preserve">
+    <value>Al continuar, acepta los</value>
+  </data>
+  <data name="Auth.SignInLink.Continue" xml:space="preserve">
+    <value>Continuar</value>
+  </data>
+  <data name="Auth.SignInLink.Incomplete" xml:space="preserve">
+    <value>Este enlace está incompleto. Escriba su correo electrónico para recibir uno nuevo.</value>
+  </data>
+  <data name="Auth.SignInLink.GenericError" xml:space="preserve">
+    <value>No pudimos iniciar su sesión con este enlace. Solicite uno nuevo a continuación.</value>
+  </data>
+  <data name="Auth.SignInLink.RequestNew" xml:space="preserve">
+    <value>Enviarme un enlace nuevo</value>
+  </data>
+  <data name="Auth.SignInLink.LinkSent" xml:space="preserve">
+    <value>Si esa dirección tiene una cuenta, le enviamos un enlace de inicio de sesión nuevo.</value>
+  </data>
+  <data name="Authentication.InvalidSignInLink" xml:space="preserve">
+    <value>Este enlace de inicio de sesión no es válido, ya se usó o caducó. Solicite uno nuevo a continuación.</value>
+  </data>
+  <data name="Authentication.SignInLinkSecondFactorRequired" xml:space="preserve">
+    <value>Esta cuenta usa autenticación en dos pasos. Inicie sesión con su contraseña y su código.</value>
   </data>
 </root>

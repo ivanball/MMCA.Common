@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Auth;
@@ -24,7 +26,9 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// handed a second successor. Both paths share one carve-out: a token rotated less than
 /// <see cref="RefreshSessionSettings.ReuseGraceSeconds"/> ago (default 10) is a rotation race between
 /// sibling requests, answered <c>409 Conflict</c> (<c>Auth.RefreshSuperseded</c>) with nothing revoked;
-/// past the grace it is a replay. An expired session is not a reuse signal and fails alone. A per-user cap (<see cref="RefreshSessionSettings.MaxActiveSessionsPerUser"/>)
+/// past the grace it is a replay, unless lost-response recovery is configured
+/// (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>, off by default) and the presented
+/// row's successor was never presented, in which case the successor is rotated in its place. An expired session is not a reuse signal and fails alone. A per-user cap (<see cref="RefreshSessionSettings.MaxActiveSessionsPerUser"/>)
 /// evicts the oldest live session on a new sign-in so one account cannot grow the table without bound.
 /// </para>
 /// <para>
@@ -39,11 +43,13 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// <param name="refreshSessions">The multi-device refresh-session store.</param>
 /// <param name="refreshSessionSettings">Refresh-session options, including the per-user cap.</param>
 /// <param name="timeProvider">The clock every session instant is stamped from.</param>
-public sealed class AuthSessionIssuer(
+/// <param name="logger">Logs each lost-response recovery (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>); optional.</param>
+public sealed partial class AuthSessionIssuer(
     ITokenService tokenService,
     IRefreshSessionStore refreshSessions,
     IOptions<RefreshSessionSettings> refreshSessionSettings,
-    TimeProvider timeProvider) : IAuthSessionIssuer
+    TimeProvider timeProvider,
+    ILogger<AuthSessionIssuer>? logger = null) : IAuthSessionIssuer
 {
     /// <summary>
     /// The token service handed to callers, wrapped so that a token minted while a session is being
@@ -336,6 +342,24 @@ public sealed class AuthSessionIssuer(
                 return Result.Failure<RefreshSession>(RefreshSupersededError());
             }
 
+            var (recovered, superseded) = await FindRecoverableSuccessorAsync(session, now, cancellationToken)
+                .ConfigureAwait(false);
+            if (recovered is not null)
+            {
+                // The client never received this rotation's response, so it still holds the old pair:
+                // rotate the never-presented successor in its place (the caller's normal rotation claim)
+                // instead of signing the user out everywhere.
+                LogLostResponseRecovered(session.Id, recovered.Id, now - session.RevokedAt.GetValueOrDefault());
+                return Result.Success(recovered);
+            }
+
+            if (superseded)
+            {
+                // A sibling request presenting this same stale token recovered it a moment ago: the
+                // same rotation race the grace covers, one hop further down the chain.
+                return Result.Failure<RefreshSession>(RefreshSupersededError());
+            }
+
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
                 .ConfigureAwait(false);
             await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -493,6 +517,50 @@ public sealed class AuthSessionIssuer(
             && session.RevokedAt is { } revokedAt
             && now - revokedAt < grace;
     }
+
+    /// <summary>
+    /// The successor a lost-response recovery may rotate in place of <paramref name="presented"/>, or
+    /// null when the presentation is reuse (BR-206). It qualifies only when recovery is configured
+    /// (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>), the presented row was
+    /// revoked as <c>Rotated</c> inside that window, and its successor belongs to the same user and is
+    /// still live: a successor that was ever presented would itself be revoked, and that is exactly the
+    /// two-holders signal that must keep revoking the family. The one exception is a successor rotated
+    /// within <see cref="RefreshSessionSettings.ReuseGraceSeconds"/>: a sibling request presenting the
+    /// same stale token just recovered it, which is a rotation race, reported as superseded.
+    /// </summary>
+    private async Task<(RefreshSession? Recovered, bool Superseded)> FindRecoverableSuccessorAsync(
+        RefreshSession presented,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var window = TimeSpan.FromMinutes(refreshSessionSettings.Value.LostResponseRecoveryMinutes);
+        if (window <= TimeSpan.Zero
+            || !string.Equals(presented.ReasonRevoked, RefreshSession.ReasonRotated, StringComparison.Ordinal)
+            || presented.ReplacedByTokenHash is not { } successorHash
+            || presented.RevokedAt is not { } revokedAt
+            || now - revokedAt > window)
+        {
+            return (null, false);
+        }
+
+        var successor = await refreshSessions.FindByTokenHashAsync(successorHash, cancellationToken).ConfigureAwait(false);
+        if (successor is null || !EqualityComparer<UserIdentifierType>.Default.Equals(successor.UserId, presented.UserId))
+        {
+            return (null, false);
+        }
+
+        return successor.IsActiveAt(now)
+            ? (successor, false)
+            : (null, IsWithinRotationGrace(successor, now));
+    }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Refresh recovered from a lost response: session {PresentedSessionId} was rotated {Elapsed} ago and its never-presented successor {SuccessorSessionId} is rotated in its place")]
+    private static partial void LogLostResponseRecovered(ILogger logger, Guid presentedSessionId, Guid successorSessionId, TimeSpan elapsed);
+
+    private void LogLostResponseRecovered(Guid presentedSessionId, Guid successorSessionId, TimeSpan elapsed) =>
+        LogLostResponseRecovered(logger ?? NullLogger<AuthSessionIssuer>.Instance, presentedSessionId, successorSessionId, elapsed);
 
     /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>
     private async Task RevokeLiveSessionsAsync(

@@ -6,9 +6,11 @@ using MMCA.Common.Application.Auth.Administration;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Application.Auth.Permissions;
+using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Auth.Administration;
+using MMCA.Common.Infrastructure.Auth.SignInLinks;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Auth.Permissions;
 
@@ -77,6 +79,30 @@ public static partial class DependencyInjection
 
             // The token service stamps expiries from the injected clock. AddServices registers it
             // too; TryAdd keeps this call self-sufficient without displacing a host's own clock.
+            services.TryAddSingleton(TimeProvider.System);
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the opt-in sign-in-link token service and its <c>Authentication:SignInLinks</c>
+        /// settings (ADR-116).
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// Registering it issues nothing on its own: links are sent and redeemed only once the app wires
+        /// the handler bases and a controller, AND <c>Authentication:SignInLinks:Enabled</c> is set.
+        /// </remarks>
+        public IServiceCollection AddSignInLinks(IConfiguration configuration)
+        {
+            services.AddOptions<SignInLinkSettings>()
+                .Bind(configuration.GetSection(SignInLinkSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // Scoped, matching the confirmation token service it shares a cache and a shape with.
+            services.TryAddScoped<ISignInLinkTokenService, SignInLinkTokenService>();
             services.TryAddSingleton(TimeProvider.System);
 
             return services;

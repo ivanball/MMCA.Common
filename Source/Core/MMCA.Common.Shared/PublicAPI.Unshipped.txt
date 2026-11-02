@@ -1,1 +1,47 @@
 ﻿#nullable enable
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.SendSignInLinkRequest() -> void
+~override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.ToString() -> string
+static MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest right) -> bool
+override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.GetHashCode() -> int
+~override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Equals(object obj) -> bool
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Equals(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Deconstruct(out string! Email) -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.RedeemSignInLinkRequest() -> void
+~override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.ToString() -> string
+static MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.operator ==(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest right) -> bool
+override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.GetHashCode() -> int
+~override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Equals(object obj) -> bool
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Equals(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Deconstruct(out string! Email, out string! Token, out bool AcceptedTerms) -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Token.get -> string!
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Token.init -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.AcceptedTerms.get -> bool
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.AcceptedTerms.init -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.RedeemSignInLinkRequest(string! Email, string! Token, bool AcceptedTerms = false) -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.SendSignInLinkRequest(string! Email) -> void
+const MMCA.Common.Shared.Serialization.CsvReader.EmptyCode = "Csv.Empty" -> string!
+const MMCA.Common.Shared.Serialization.CsvReader.MalformedCode = "Csv.Malformed" -> string!
+MMCA.Common.Shared.Serialization.CsvReader
+MMCA.Common.Shared.Serialization.CsvTable
+MMCA.Common.Shared.Serialization.CsvRow
+MMCA.Common.Shared.Serialization.CsvTable.CsvTable(System.Collections.Generic.IReadOnlyList<string!>! headers, System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>! rows) -> void
+MMCA.Common.Shared.Serialization.CsvTable.Headers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Serialization.CsvTable.Rows.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>!
+MMCA.Common.Shared.Serialization.CsvRow.CsvRow(int lineNumber, System.Collections.Generic.IReadOnlyList<string!>! fields) -> void
+MMCA.Common.Shared.Serialization.CsvRow.LineNumber.get -> int
+MMCA.Common.Shared.Serialization.CsvRow.Fields.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Serialization.CsvTable.FindColumn(params string![]! names) -> int?
+MMCA.Common.Shared.Serialization.CsvTable.FindColumnStartingWith(string! prefix) -> int?
+static MMCA.Common.Shared.Serialization.CsvReader.ReadTable(string! text) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Serialization.CsvTable!>!
+static MMCA.Common.Shared.Serialization.CsvReader.ReadTableAsync(System.IO.Stream! stream, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Serialization.CsvTable!>!>!
+static MMCA.Common.Shared.Serialization.CsvReader.ReadRecords(string! text) -> MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>!>!
+MMCA.Common.Shared.Serialization.CsvRow.this[int column].get -> string!
+MMCA.Common.Shared.Serialization.CsvRow.Get(int? column) -> string!

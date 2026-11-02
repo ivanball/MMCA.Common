@@ -94,4 +94,22 @@
   <data name="EmailConfirmation.Ignore" xml:space="preserve">
     <value>Si no creó una cuenta, puede ignorar este mensaje.</value>
   </data>
+  <data name="SignInLink.Subject" xml:space="preserve">
+    <value>Su enlace de inicio de sesión</value>
+  </data>
+  <data name="SignInLink.Intro" xml:space="preserve">
+    <value>Use el enlace siguiente para iniciar sesión. No necesita contraseña.</value>
+  </data>
+  <data name="SignInLink.LinkText" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="SignInLink.Expiry.One" xml:space="preserve">
+    <value>El enlace caduca en {0} minuto y solo se puede usar una vez.</value>
+  </data>
+  <data name="SignInLink.Expiry.Other" xml:space="preserve">
+    <value>El enlace caduca en {0} minutos y solo se puede usar una vez.</value>
+  </data>
+  <data name="SignInLink.Ignore" xml:space="preserve">
+    <value>Si no solicitó iniciar sesión, puede ignorar este mensaje: nadie puede iniciar sesión sin el enlace.</value>
+  </data>
 </root>

@@ -14,6 +14,15 @@ public sealed class LoginPage
     public ILocator LoginButton => _page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" });
     public ILocator ErrorAlert => _page.Locator(".mud-alert-text-error");
 
+    /// <summary>
+    /// The notice the page shows when registration sent the visitor here because the typed address
+    /// already has an account (the address arrives prefilled).
+    /// </summary>
+    public ILocator ExistingAccountNotice => _page.GetByTestId("login-existing-account");
+
+    /// <summary>The Reset password button inside <see cref="ExistingAccountNotice"/>.</summary>
+    public ILocator ResetPasswordButton => _page.GetByTestId("login-reset-password");
+
     // "Create Account" is a MudButton with Href — renders as <a>, not <button>
     public ILocator CreateAccountLink => _page.GetByRole(AriaRole.Link, new() { Name = "Create Account" });
 

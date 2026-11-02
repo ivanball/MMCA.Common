@@ -17,9 +17,22 @@ public sealed class StateManagementConventionTests : StateManagementConventionTe
     /// configures the shared <c>IStringLocalizer</c> exactly once (idempotent), and the localizer itself
     /// resolves against the ambient UI culture per call, so no user's state leaks to another. Keeping the
     /// static message API is deliberate (every consumer call site depends on it, ADR-027).
+    /// <para>
+    /// The three <c>SecureStoreTokenStorageService</c> statics (the refresh single-flight, the token
+    /// version and the session-ended signal) are process-wide on purpose: the class is registered only
+    /// by <c>AddCommonMauiTokenStorage()</c>, a MAUI head is one process with one signed-in user, and
+    /// the service is scoped while the <c>AuthDelegatingHandler</c> built by
+    /// <c>IHttpClientFactory</c> resolves its own instance, so per-instance state would split one
+    /// device's refresh in two. No Blazor Server host registers it, so no circuit can share it.
+    /// </para>
     /// </summary>
     protected override IReadOnlyList<string> AllowedStaticMembers =>
-        ["MMCA.Common.UI.Pages.Common.ErrorMessages._localizer"];
+    [
+        "MMCA.Common.UI.Pages.Common.ErrorMessages._localizer",
+        "MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService._hydrateInFlight",
+        "MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService._tokenVersion",
+        "MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService._processSessionEnded",
+    ];
 
     [Fact]
     public void SingletonScan_JudgesPathsBelowTheSourceRoot_AndCatchesAWrappedRegistration()

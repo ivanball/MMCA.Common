@@ -137,4 +137,26 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default)
         => Task.FromResult(Result.Failure<AuthenticationResponse>(
             Error.Failure("Auth.ExternalLoginNotSupported", "External login is not supported.")));
+
+    /// <summary>
+    /// Opens a session for an account whose owner has just proved control of its email address by
+    /// redeeming a single-use sign-in link (ADR-116). The caller has already spent the token; this
+    /// member applies the same account gates a password sign-in does and mints the token pair.
+    /// </summary>
+    /// <param name="userId">The account the redeemed link resolved to.</param>
+    /// <param name="ipAddress">Optional client IP recorded on the session.</param>
+    /// <param name="userAgent">Optional client user-agent recorded on the session.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing the authentication tokens, or an error.</returns>
+    /// <remarks>
+    /// The default rejects, so an implementation that has not adopted sign-in links keeps compiling
+    /// and never opens a session through this path.
+    /// </remarks>
+    Task<Result<AuthenticationResponse>> SignInVerifiedEmailOwnerAsync(
+        UserIdentifierType userId,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Failure<AuthenticationResponse>(
+            SignInLinks.SignInLinkErrors.NotSupported(nameof(SignInVerifiedEmailOwnerAsync))));
 }

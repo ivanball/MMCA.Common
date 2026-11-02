@@ -94,4 +94,22 @@
   <data name="EmailConfirmation.Ignore" xml:space="preserve">
     <value>If you did not create an account, you can ignore this message.</value>
   </data>
+  <data name="SignInLink.Subject" xml:space="preserve">
+    <value>Your sign-in link</value>
+  </data>
+  <data name="SignInLink.Intro" xml:space="preserve">
+    <value>Use the link below to sign in. No password needed.</value>
+  </data>
+  <data name="SignInLink.LinkText" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="SignInLink.Expiry.One" xml:space="preserve">
+    <value>The link expires in {0} minute and can be used once.</value>
+  </data>
+  <data name="SignInLink.Expiry.Other" xml:space="preserve">
+    <value>The link expires in {0} minutes and can be used once.</value>
+  </data>
+  <data name="SignInLink.Ignore" xml:space="preserve">
+    <value>If you did not ask to sign in, you can ignore this message: nobody can sign in without the link.</value>
+  </data>
 </root>

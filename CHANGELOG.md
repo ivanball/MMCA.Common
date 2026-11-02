@@ -6,6 +6,30 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+Fixes for the silent mobile sign-outs seen on ADC's 2026-10-17 conference day, opt-in sign-in links, a duplicate-email registration that goes straight to sign-in, and a CSV reader.
+
+**Breaking:** `MauiTokenStorageService` is removed (MMCA.Common.UI.Maui; `AddCommonMauiTokenStorage()` now registers `SecureStoreTokenStorageService`). In MMCA.Common.Testing.E2E, `RegisterPage.EmailAlreadyRegisteredAlert` is removed and `UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError` is renamed `Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled`. `AuthSessionIssuer`'s constructor gains an optional `ILogger` (source-compatible). See [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **Opt-in lost-response recovery for refresh rotation** (MMCA.Common.Application, BR-206). `RefreshSessions:LostResponseRecoveryMinutes` (default 0, off) lets a client that never received its rotated pair present the old refresh token again within the window: the never-presented successor is rotated instead of revoking every session the user holds. It applies only while the presented row was revoked as `Rotated` inside the window and its successor is still live and unused; a used or expired successor, or a presentation past the window, keeps the family revocation. A sibling that just recovered the same stale token answers 409 like any rotation race. A recovery logs a Warning through the new optional `ILogger` on `AuthSessionIssuer`.
+- **Sign-in links** (ADR-116, all opt-in, nothing changes until a host turns them on):
+  - `ISignInLinkTokenService` and `SignInLinkTokenService` (over `ICacheService`): hashed at rest, single use, one active token per address and purpose (`SignIn` 15 minutes, `Invite` 14 days), a per-address request throttle and an attempt cap. An invitation token carries an optional provisioning name. Registered by `AddSignInLinks(configuration)`, settings in `Authentication:SignInLinks` (`Enabled` defaults to false, `SignInUrl`, the two lifetimes, the throttle and the cap). `SignInLinkSettings.ComposeLink` builds the fragment-borne link an app's own invitation email uses.
+  - `SendSignInLinkHandlerBase`: always succeeds, so the response never says whether an address holds an account, and never creates an account.
+  - `RedeemSignInLinkHandlerBase` with `IRedeemSignInLinkCommand`: spends the token before any account lookup, confirms the address, creates an invited account only through the overridable `ProvisionUser` hook (the default refuses), then opens the session. `OnUserProvisionedAsync` and `OnEmailOwnershipProvedAsync` are the app's post-save hooks.
+  - `IAuthenticationService.SignInVerifiedEmailOwnerAsync` (a default member that rejects, so existing implementations keep compiling); `AuthenticationServiceBase` implements it with the app's sign-in gate and refuses an account with an enrolled second factor, so mailbox access alone never bypasses it.
+  - `SignInLinkControllerBase`: anonymous `POST sign-in-link` (always 202) and `POST sign-in-link/redeem`, both under the `auth-ip` limiter.
+  - UI: the `/auth/sign-in-link` page reads the address and token from the URI fragment and redeems only on a tap of Continue (a mail scanner that renders the page cannot spend the token), with a Terms and Privacy consent line when the host publishes a Terms URL. `ISignInLinkUIService` (implemented by `AuthUIService`). The sign-in page offers "Email me a sign-in link" when `SignIn:OfferSignInLink` is set (new `SignInSettings`, which also carries `SignInLinkLandingPath`). English and Spanish strings. `SignInLinkPageTestsBase` in MMCA.Common.Testing.UI for consumers to subclass.
+- **`CsvReader`** (MMCA.Common.Shared, `MMCA.Common.Shared.Serialization`): RFC 4180 reading into a `CsvTable` (quoted fields with commas, doubled quotes and line breaks; CRLF, LF and CR; a byte-order mark; blank lines skipped), header lookup by name or prefix ignoring case (`FindColumn`, `FindColumnStartingWith`), and malformed text reported as a `Csv.Malformed` validation failure naming the line.
+
+### Changed
+
+- **A registration refused because the address already has an account now goes straight to sign-in** (MMCA.Common.UI). The address is prefilled and carried in navigation history state, never the URL, and the sign-in page shows a notice with a Reset password button that opens Forgot password with the address still filled in. The inline alert on the register page and its strings (`Auth.Register.EmailAlreadyRegistered`, `Auth.Register.ResetPassword`) are retired. The 409 already told the caller the account exists, so this reveals nothing new.
+
+### Fixed
+
+- **A MAUI app whose session the server refused stops retrying the refresh and shows sign-in** (MMCA.Common.UI.Maui, MMCA.Common.UI). The MAUI token store re-sent a refresh the server could only refuse on every read and never cleared the dead pair, so the app looked signed in while every call failed (1,465 refresh 401s on ADC's conference day). `SecureStoreTokenStorageService` (MMCA.Common.UI, now unit tested in the slnx) implements `ISessionAwareTokenStorage`: a definitive refusal (400, 401, 403) of a held pair clears the store and raises `SessionEnded` once, so the shell signs out; a 409, 5xx or timeout keeps the pair; a sign-in that lands mid-refresh wins.
+
 ## [1.272.0] - 2026-11-01
 
 A list-page fix that MudBlazor 9.12.0 (taken in 1.271.0) exposed. Consumers on 1.270.0 should move straight to this release.

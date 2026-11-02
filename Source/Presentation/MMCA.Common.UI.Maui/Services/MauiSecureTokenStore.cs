@@ -14,8 +14,8 @@ namespace MMCA.Common.UI.Maui.Services;
 /// before it propagates, so the app can never be left holding a stale pair it believes is current:
 /// the outcome of any failed write is the clean signed-out state.
 /// <para>
-/// This is the raw half of the MAUI token pipeline. <see cref="MauiTokenStorageService"/> sits above
-/// it and adds the expiry check plus the single-flight refresh; both are registered together by
+/// This is the raw half of the MAUI token pipeline. <c>SecureStoreTokenStorageService</c> (MMCA.Common.UI) sits above
+/// it and adds the expiry check, the single-flight refresh and the end-of-session clear; both are registered together by
 /// <c>AddCommonMauiTokenStorage()</c>.
 /// </para>
 /// </summary>

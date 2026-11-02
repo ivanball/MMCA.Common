@@ -1,1 +1,12 @@
 #nullable enable
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.SignInLinkPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.SignInLinks.get -> Moq.Mock<MMCA.Common.UI.Services.Auth.ISignInLinkUIService!>!
+virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.Email.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.LandingPath.get -> string!
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithACompleteLink_ShowsTheAddressAndWaitsForContinue() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.Continue_RedeemsOnceAndLandsOnTheConfiguredPath() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithARefusedLink_ShowsTheRefusalAndOffersAFreshLink() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithAnIncompleteLink_DoesNotPostAndOffersAFreshLink() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.RequestingAFreshLink_SaysSoWithoutConfirmingTheAccountExists() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.RenderPage(string! fragment) -> Bunit.IRenderedComponent<MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink!>!

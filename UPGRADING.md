@@ -32,6 +32,29 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**`MauiTokenStorageService` is removed (breaking, MMCA.Common.UI.Maui).** `AddCommonMauiTokenStorage()`
+now registers `SecureStoreTokenStorageService` (MMCA.Common.UI, `MMCA.Common.UI.Services.Auth.Tokens`),
+which also ends a session the server refused instead of retrying it. A head that only calls
+`AddCommonMauiTokenStorage()` needs no change; one that named `MauiTokenStorageService` directly
+registers through that call instead.
+
+**Duplicate-email registration goes to sign-in (breaking for E2E subclasses, MMCA.Common.Testing.E2E).**
+
+| Removed or renamed | Replacement |
+|---|---|
+| `RegisterPage.EmailAlreadyRegisteredAlert` | `LoginPage.ExistingAccountNotice` (and `LoginPage.ResetPasswordButton`) |
+| `UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError` | `Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled` |
+| resource keys `Auth.Register.EmailAlreadyRegistered`, `Auth.Register.ResetPassword` | `Auth.Login.ExistingAccount`, `Auth.Login.ResetPassword` |
+
+A subclass that inherits the base facts needs no change. A test of your own that asserted the old
+`email-already-registered` alert on `/register` now asserts the `/login` URL and
+`login-existing-account` instead.
+
+**`AuthSessionIssuer` gains an optional `ILogger` constructor parameter.** Source-compatible: code
+that constructs it directly recompiles unchanged.
+
 ## [1.261.0] - 2026-10-25
 
 **A refresh token already swept by reuse detection fails alone (behaviour change, no code

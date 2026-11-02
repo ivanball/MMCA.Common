@@ -1,6 +1,7 @@
 using System.Globalization;
 using AwesomeAssertions;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
@@ -180,94 +181,24 @@ public sealed class RegisterFormTests : BunitTestBase
     }
 
     [Fact]
-    public void WhenTheEmailIsAlreadyRegistered_PointsTheUserAtSignInAndPasswordReset()
+    public void WhenTheEmailIsAlreadyRegistered_GoesToSignInWithTheAddressInHistoryState()
     {
         // The duplicate-address conflict is the one registration failure with a next step of its own,
-        // and it is recognised by its CODE, never by the server's wording.
-        RegistrationReturns(Result.Failure<AuthenticationResponse>(
-            Error.Conflict(AuthErrorCodes.EmailAlreadyExists, "An account with this email already exists.")));
+        // and it is recognised by its CODE, never by the server's wording. The visitor lands on
+        // sign-in with the address handed over in history state, never in the URL.
+        RegistrationReturns(DuplicateEmail());
+        var navigation = Services.GetRequiredService<BunitNavigationManager>();
         var cut = RenderUnderTest<Register>(_ => { });
         FillRequiredFields(cut);
 
         cut.ClickButtonByText("Create Account");
 
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
-
-        var alert = cut.Find("[data-testid='email-already-registered']");
-        alert.GetAttribute("role").Should().Be("alert", "the block only enters the DOM after a failed submit");
-        alert.ClassList.Should().Contain(
-            c => c.Contains("warning", StringComparison.Ordinal),
-            "an existing account is guidance, not an error to retry past");
-        alert.TextContent.Should().Contain("ada@example.com", "the user must see WHICH address is taken");
-        alert.TextContent.Should().Contain("is already registered");
-
-        var hrefs = alert.QuerySelectorAll("a").Select(a => a.GetAttribute("href")).ToList();
-        hrefs.Should().Contain("/login").And.Contain("/forgot-password");
-
-        cut.FindAll(".mud-alert").Should().ContainSingle(
-            "the generic error alert is replaced by this one, not shown beside it");
+        cut.WaitForAssertion(() => navigation.Uri.Should().EndWith("/login"));
+        navigation.Uri.Should().NotContain("ada@example.com", "the address must stay out of the URL");
+        navigation.HistoryEntryState.Should().Contain("ada@example.com");
         cut.Markup.Should().NotContain("An account with this email already exists.",
             "the server's generic wording gives the user nowhere to go");
     }
-
-    [Fact]
-    public void WhenTheEmailIsAlreadyRegistered_TheAlertNamesTheRejectedAddress()
-    {
-        RegistrationReturns(DuplicateEmail());
-        var cut = RenderUnderTest<Register>(_ => { });
-        FillRequiredFields(cut);
-
-        cut.ClickButtonByText("Create Account");
-
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='email-already-registered']").TextContent
-                .Should().Contain("ada@example.com is already registered"));
-    }
-
-    [Fact]
-    public void EditingTheEmailAfterADuplicateRejection_RemovesTheAlert()
-    {
-        RegistrationReturns(DuplicateEmail());
-        var cut = RenderUnderTest<Register>(_ => { });
-        FillRequiredFields(cut);
-        cut.ClickButtonByText("Create Account");
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
-
-        cut.Find("input[autocomplete='email']").Input("grace@example.com");
-
-        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
-            "an address the server never checked must not be reported as already registered");
-        cut.Markup.Should().NotContain("grace@example.com is already registered");
-    }
-
-    [Fact]
-    public void TypingTheRejectedAddressBack_ShowsNoAlertUntilTheNextSubmit()
-    {
-        RegistrationReturns(DuplicateEmail());
-        var cut = RenderUnderTest<Register>(_ => { });
-        FillRequiredFields(cut);
-        cut.ClickButtonByText("Create Account");
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
-        cut.Find("input[autocomplete='email']").Input("grace@example.com");
-
-        cut.Find("input[autocomplete='email']").Input("ada@example.com");
-
-        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
-            "an edit dismisses the rejection for good; only a new submit re-checks the address");
-
-        cut.ClickButtonByText("Create Account");
-
-        cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='email-already-registered']").TextContent
-                .Should().Contain("ada@example.com is already registered"));
-        _auth.Verify(
-            x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-    }
-
     [Fact]
     public void WhenTheFailureIsNotADuplicateEmail_ShowsOnlyTheGenericAlert()
     {
@@ -280,8 +211,6 @@ public sealed class RegisterFormTests : BunitTestBase
 
         cut.WaitForAssertion(() =>
             cut.Markup.Should().Contain("Registration is temporarily unavailable."));
-        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
-            "only the duplicate-address code earns the sign-in guidance");
         cut.FindAll(".mud-alert").Should().ContainSingle();
     }
 

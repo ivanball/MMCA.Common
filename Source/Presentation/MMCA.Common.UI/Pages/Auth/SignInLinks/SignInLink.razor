@@ -1,0 +1,99 @@
+@page "/auth/sign-in-link"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@attribute [StreamRendering(false)]
+
+<PageTitle>@L["Auth.SignInLink.PageTitle"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="auth-container">
+    <div class="d-flex flex-column align-center mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+        @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+        <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center">@L["Auth.SignInLink.Title"]</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">@L["Auth.SignInLink.Subtitle"]</MudText>
+    </div>
+
+    <MudCard Elevation="1">
+        @switch (_state)
+        {
+            case LinkState.Reading:
+                <MudCardContent Class="pa-6">
+                    <div class="d-flex align-center mmca-auth-status" role="status" data-testid="sign-in-link-reading">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                        <MudText Typo="Typo.body2">@L["Auth.SignInLink.Reading"]</MudText>
+                    </div>
+                </MudCardContent>
+                break;
+
+            case LinkState.Ready:
+                <MudCardContent Class="pa-6">
+                    <MudText Typo="Typo.body1" data-testid="sign-in-link-address">@L["Auth.SignInLink.SigningInAs", _email]</MudText>
+                    @if (RequiresTerms)
+                    {
+                        @* Continuing is the acceptance: redeeming an invitation can create the account, and
+                           the server records the Terms acceptance a registration would. *@
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-3" data-testid="sign-in-link-consent">
+                            @L["Auth.SignInLink.Consent.Prefix"]
+                            @LegalDocument(Legal.TermsUrl, L["Legal.TermsOfService"])
+                            @L["Auth.Register.AcceptTerms.And"]
+                            @LegalDocument(Legal.PrivacyUrl, L["Legal.PrivacyPolicy"])
+                        </MudText>
+                    }
+                </MudCardContent>
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Disabled="_isBusy" OnClick="RedeemAsync" Size="Size.Large"
+                               aria-busy="@(_isBusy ? "true" : "false")"
+                               data-testid="sign-in-link-continue">
+                        @if (_isBusy)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @L["Auth.SignInLink.Continue"]
+                    </MudButton>
+                </MudCardActions>
+                break;
+
+            default:
+                <MudCardContent Class="pa-6">
+                    @* Both alerts appear after an async call with no navigation: the refusal is an alert
+                       (the user cannot proceed without acting on it), the resend notice a polite status.
+                       WCAG 4.1.3. *@
+                    @if (_errorMessage is { Length: > 0 })
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert" data-testid="sign-in-link-error">@_errorMessage</MudAlert>
+                    }
+                    @if (_linkSent)
+                    {
+                        @* Worded as "if that address has an account": the endpoint answers 202 either way. *@
+                        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status" aria-live="polite" data-testid="sign-in-link-sent">@L["Auth.SignInLink.LinkSent"]</MudAlert>
+                    }
+                    <MudTextField @bind-Value="_email"
+                                  Label="@L["Auth.Field.Email"].Value"
+                                  InputType="InputType.Email"
+                                  Required="true"
+                                  RequiredError="@L["Auth.Confirm.EmailRequired"].Value"
+                                  Immediate="true"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                  autocomplete="email"
+                                  data-testid="sign-in-link-email" />
+                </MudCardContent>
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Disabled="_isBusy" OnClick="RequestNewLinkAsync" Size="Size.Large"
+                               aria-busy="@(_isBusy ? "true" : "false")"
+                               data-testid="sign-in-link-request">
+                        @L["Auth.SignInLink.RequestNew"]
+                    </MudButton>
+                    <MudDivider Class="my-1" />
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" Href="/login" Size="Size.Medium"
+                               data-testid="sign-in-link-go-to-login">
+                        @L["Auth.Reset.GoToLogin"]
+                    </MudButton>
+                </MudCardActions>
+                break;
+        }
+    </MudCard>
+</MudContainer>
