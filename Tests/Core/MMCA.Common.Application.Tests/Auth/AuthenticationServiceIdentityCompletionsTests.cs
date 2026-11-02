@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Auth.Sessions;
+using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -192,6 +193,53 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
 
         harness.CapturedClaims.Should().Contain(c => c.Type == AuthClaimTypes.SessionId);
         harness.CapturedClaims.Should().Contain(c => c.Type == AuthClaimTypes.MultiFactor);
+    }
+
+    // ── Sign-in links open a session only where a password sign-in would ──
+    [Fact]
+    public async Task SignInVerifiedEmailOwnerAsync_ForAnAccountWithNoSecondFactor_OpensASession()
+    {
+        var harness = new Harness(twoFactor: TwoFactorStub.Verifying(TwoFactorOutcome.NotEnrolled));
+
+        Result<AuthenticationResponse> result = await harness.Sut.SignInVerifiedEmailOwnerAsync(1);
+
+        result.IsSuccess.Should().BeTrue();
+        harness.CapturedClaims.Should().Contain(c => c.Type == AuthClaimTypes.SessionId);
+        harness.CapturedClaims.Should().NotContain(c => c.Type == AuthClaimTypes.MultiFactor);
+    }
+
+    [Fact]
+    public async Task SignInVerifiedEmailOwnerAsync_ForAnEnrolledAccount_IsRefused()
+    {
+        var harness = new Harness(twoFactor: TwoFactorStub.Requiring());
+
+        Result<AuthenticationResponse> result = await harness.Sut.SignInVerifiedEmailOwnerAsync(1);
+
+        result.Errors.Should().ContainSingle(
+            e => e.Code == SignInLinkErrors.SecondFactorRequiredCode,
+            "mailbox access alone must never bypass an enrolled second factor");
+        harness.Sessions.Sessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SignInVerifiedEmailOwnerAsync_IgnoresTheConfirmationGate()
+    {
+        // Redeeming the link IS the proof the confirmation gate asks for.
+        var harness = new Harness(requireConfirmedEmail: true, emailConfirmed: false);
+
+        Result<AuthenticationResponse> result = await harness.Sut.SignInVerifiedEmailOwnerAsync(1);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SignInVerifiedEmailOwnerAsync_ForAVanishedAccount_FailsWithTheGenericLinkError()
+    {
+        var harness = new Harness();
+
+        Result<AuthenticationResponse> result = await harness.Sut.SignInVerifiedEmailOwnerAsync(404);
+
+        result.Errors.Should().ContainSingle(e => e.Code == SignInLinkErrors.InvalidLinkCode);
     }
 
     // ── Refresh carries the step-up across a rotation ──

@@ -459,6 +459,49 @@ public abstract class AuthenticationServiceBase<TUser>(
         CancellationToken cancellationToken = default) =>
         sessionIssuer.RevokeSessionAsync(userId, sessionId, cancellationToken);
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Runs the gates a password sign-in runs once the credential is proved, in the same order: the
+    /// app gate (<see cref="ValidateLoginCandidateAsync"/>, a deactivated account say), then the
+    /// second factor. The email-confirmation gate is skipped on purpose: redeeming the link IS the
+    /// proof that gate asks for.
+    /// </para>
+    /// <para>
+    /// <b>An account with a second factor is refused, never signed in.</b> The link proves only that
+    /// the caller reads the mailbox, so honoring it would let mailbox access alone bypass the factor
+    /// the owner enrolled. The challenge runs with no code, which an enrolled account always fails.
+    /// </para>
+    /// </remarks>
+    public async Task<Result<AuthenticationResponse>> SignInVerifiedEmailOwnerAsync(
+        UserIdentifierType userId,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return Result.Failure<AuthenticationResponse>(
+                SignInLinks.SignInLinkErrors.InvalidLink(nameof(SignInVerifiedEmailOwnerAsync)));
+        }
+
+        var candidateResult = await ValidateLoginCandidateAsync(user, cancellationToken).ConfigureAwait(false);
+        if (candidateResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
+        }
+
+        var secondFactor = await ChallengeSecondFactorAsync(userId, code: null, cancellationToken).ConfigureAwait(false);
+        if (secondFactor.IsFailure || secondFactor.Value != TwoFactorOutcome.NotEnrolled)
+        {
+            return Result.Failure<AuthenticationResponse>(
+                SignInLinks.SignInLinkErrors.SecondFactorRequired(nameof(SignInVerifiedEmailOwnerAsync)));
+        }
+
+        return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
     /// by the login/registration flows and reusable by app-level flows (e.g. external login). The
