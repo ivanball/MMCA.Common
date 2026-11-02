@@ -10,6 +10,7 @@ using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Auth.Administration;
+using MMCA.Common.Infrastructure.Auth.SignInLinks;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Auth.Permissions;
 

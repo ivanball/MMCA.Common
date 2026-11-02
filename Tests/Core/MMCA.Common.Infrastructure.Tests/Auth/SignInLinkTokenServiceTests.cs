@@ -4,6 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
+using MMCA.Common.Infrastructure.Auth.SignInLinks;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;

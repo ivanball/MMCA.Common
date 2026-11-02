@@ -7,7 +7,7 @@ using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 
-namespace MMCA.Common.Infrastructure.Auth;
+namespace MMCA.Common.Infrastructure.Auth.SignInLinks;
 
 /// <summary>
 /// Implements the sign-in-link token lifecycle over <see cref="ICacheService"/>, on the design

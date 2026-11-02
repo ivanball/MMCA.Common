@@ -304,4 +304,22 @@
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notificación no encontrada.</value>
   </data>
+  <data name="Authentication.InvalidSignInLink" xml:space="preserve">
+    <value>El enlace de inicio de sesión no es válido o ha caducado. Solicite uno nuevo.</value>
+  </data>
+  <data name="Authentication.SignInLinkSecondFactorRequired" xml:space="preserve">
+    <value>Esta cuenta usa autenticación en dos pasos. Inicie sesión con su contraseña y su código.</value>
+  </data>
+  <data name="Authentication.SignInLinkNotSupported" xml:space="preserve">
+    <value>Los enlaces de inicio de sesión no están disponibles.</value>
+  </data>
+  <data name="Authentication.SignInLinkThrottled" xml:space="preserve">
+    <value>Demasiadas solicitudes de enlaces de inicio de sesión. Inténtelo de nuevo más tarde.</value>
+  </data>
+  <data name="Csv.Malformed" xml:space="preserve">
+    <value>El archivo no es un CSV válido.</value>
+  </data>
+  <data name="Csv.Empty" xml:space="preserve">
+    <value>El archivo no tiene una fila de encabezados.</value>
+  </data>
 </root>

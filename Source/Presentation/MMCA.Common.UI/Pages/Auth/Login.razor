@@ -19,6 +19,8 @@
 @inject ICultureApplier CultureApplier
 @inject ThemeService ThemeService
 @inject IExternalAuthBroker ExternalAuthBroker
+@inject IOptions<SignInSettings> SignInOptions
+@inject IServiceProvider Services
 @inject IStringLocalizer<SharedResource> L
 @attribute [AllowAnonymous]
 
@@ -39,6 +41,30 @@
         <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
             <LocalizedDataAnnotationsValidator />
             <MudCardContent Class="pa-6">
+                @if (_existingAccountEmail is not null)
+                {
+                    @* Registration sent the visitor here because the address already has an account,
+                       so the next steps are signing in, resetting the password, or a sign-in link. A
+                       status, not an alert: arriving here is the expected path, not a failure. *@
+                    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status"
+                              data-testid="login-existing-account">
+                        @L["Auth.Login.ExistingAccount", _existingAccountEmail]
+                        <div class="d-flex flex-wrap mt-2 mmca-auth-links">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="OpenPasswordReset" data-testid="login-reset-password">
+                                @L["Auth.Login.ResetPassword"]
+                            </MudButton>
+                        </div>
+                    </MudAlert>
+                }
+                @if (_signInLinkSentTo is not null)
+                {
+                    @* Worded as "if an account exists": the endpoint answers 202 either way. *@
+                    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status" aria-live="polite"
+                              data-testid="login-sign-in-link-sent">
+                        @L["Auth.Login.SignInLinkSent", _signInLinkSentTo]
+                    </MudAlert>
+                }
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     @* role="alert": the alert only enters the DOM after a failed submit, so nothing
@@ -77,6 +103,18 @@
                    colour alone (WCAG 2.1 AA / axe link-in-text-block), same rule as Register.razor. *@
                 <MudLink Href="/forgot-password" Typo="Typo.body2" Underline="Underline.Always"
                          Class="align-self-center">@L["Auth.Login.ForgotPassword"]</MudLink>
+                @if (SignInOptions.Value.OfferSignInLink)
+                {
+                    @* Opt-in (SignInSettings.OfferSignInLink, ADR-116): a one-time link to the typed
+                       address instead of a password. *@
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                               Disabled="@_isSendingLink" OnClick="SendSignInLinkAsync" Size="Size.Medium"
+                               StartIcon="@Icons.Material.Filled.MarkEmailRead"
+                               aria-busy="@(_isSendingLink ? "true" : "false")"
+                               data-testid="login-email-sign-in-link">
+                        @L["Auth.Login.EmailMeLink"]
+                    </MudButton>
+                }
                 <MudDivider Class="my-1" />
                 <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
                     @L["Auth.Login.NoAccount"]
@@ -184,6 +222,7 @@
         _hasExternalProviders = OAuthSettings.AppleEnabled || OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
         _errorMessage = ExternalSignInErrorMessage(Error);
+        ApplyHandedOverEmail();
     }
 
     private string BuildOAuthUrl(string provider, string? oauthState)

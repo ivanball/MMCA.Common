@@ -343,12 +343,6 @@
   <data name="Auth.Register.SignIn" xml:space="preserve">
     <value>Sign In</value>
   </data>
-  <data name="Auth.Register.ResetPassword" xml:space="preserve">
-    <value>Reset password</value>
-  </data>
-  <data name="Auth.Register.EmailAlreadyRegistered" xml:space="preserve">
-    <value>An account for {0} is already registered. Sign in with it instead, or reset your password if you have forgotten it.</value>
-  </data>
   <data name="Notif.List.Col.Title" xml:space="preserve">
     <value>Title</value>
   </data>
@@ -834,5 +828,59 @@
   </data>
   <data name="Http.Timeout" xml:space="preserve">
     <value>The request timed out before the server responded.</value>
+  </data>
+  <data name="Auth.Login.ExistingAccount" xml:space="preserve">
+    <value>You already have an account with {0}. Sign in, or reset your password.</value>
+  </data>
+  <data name="Auth.Login.ResetPassword" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Auth.Login.EmailMeLink" xml:space="preserve">
+    <value>Email me a sign-in link</value>
+  </data>
+  <data name="Auth.Login.EmailMeLink.EnterEmail" xml:space="preserve">
+    <value>Enter your email address first, then ask for the link.</value>
+  </data>
+  <data name="Auth.Login.SignInLinkSent" xml:space="preserve">
+    <value>If an account exists for {0}, a sign-in link is on its way. It expires soon, so use it right away.</value>
+  </data>
+  <data name="Auth.SignInLink.PageTitle" xml:space="preserve">
+    <value>Sign in with a link</value>
+  </data>
+  <data name="Auth.SignInLink.Title" xml:space="preserve">
+    <value>Sign in with your link</value>
+  </data>
+  <data name="Auth.SignInLink.Subtitle" xml:space="preserve">
+    <value>No password needed.</value>
+  </data>
+  <data name="Auth.SignInLink.Reading" xml:space="preserve">
+    <value>Reading your link...</value>
+  </data>
+  <data name="Auth.SignInLink.SigningInAs" xml:space="preserve">
+    <value>You are signing in as {0}.</value>
+  </data>
+  <data name="Auth.SignInLink.Consent.Prefix" xml:space="preserve">
+    <value>By continuing, you agree to the</value>
+  </data>
+  <data name="Auth.SignInLink.Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Auth.SignInLink.Incomplete" xml:space="preserve">
+    <value>This link is incomplete. Enter your email address to get a new one.</value>
+  </data>
+  <data name="Auth.SignInLink.GenericError" xml:space="preserve">
+    <value>We could not sign you in with this link. Request a new one below.</value>
+  </data>
+  <data name="Auth.SignInLink.RequestNew" xml:space="preserve">
+    <value>Email me a new link</value>
+  </data>
+  <data name="Auth.SignInLink.LinkSent" xml:space="preserve">
+    <value>If that address has an account, a new sign-in link is on its way.</value>
+  </data>
+  <data name="Authentication.InvalidSignInLink" xml:space="preserve">
+    <value>This sign-in link is invalid, already used or expired. Request a new one below.</value>
+  </data>
+  <data name="Authentication.SignInLinkSecondFactorRequired" xml:space="preserve">
+    <value>This account uses two-factor authentication. Sign in with your password and code instead.</value>
   </data>
 </root>

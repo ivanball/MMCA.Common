@@ -59,6 +59,11 @@ public static class DependencyInjection
             services.AddOptions<RegistrationSettings>()
                 .Bind(configuration.GetSection(RegistrationSettings.SectionName));
 
+            // Optional actions of the shared sign-in pages (sign-in links, ADR-116). Optional: an absent
+            // section offers nothing new.
+            services.AddOptions<SignInSettings>()
+                .Bind(configuration.GetSection(SignInSettings.SectionName));
+
             // Client-side staleness policy (§19). Both sections are optional: an absent section leaves
             // the compiled-in defaults, which is the behaviour a host gets without configuring anything.
             services.AddOptions<UiReadCacheOptions>()
@@ -172,6 +177,10 @@ public static class DependencyInjection
             // The /confirm-email page's client (ADR-116). A separate interface rather than new
             // IAuthUIService members, so a consumer's own IAuthUIService implementation keeps compiling.
             services.TryAddScoped<IEmailConfirmationUIService, EmailConfirmationUIService>();
+
+            // The sign-in-link client (ADR-116). The framework's AuthUIService implements it, so a
+            // redeemed link stores its tokens through the same path a password sign-in does.
+            services.TryAddScoped<ISignInLinkUIService, AuthUIService>();
 
             // The terms-acceptance client behind TermsAcceptanceGate. Registered for every host (the
             // confirmation-client precedent) and inert until a host renders the gate.

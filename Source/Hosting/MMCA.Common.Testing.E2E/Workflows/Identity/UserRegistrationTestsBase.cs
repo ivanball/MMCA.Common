@@ -67,7 +67,7 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
     }
 
     [Fact]
-    public async Task Register_WithDuplicateEmail_ShouldShowError()
+    public async Task Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled()
     {
         // Arrange — first register a user
         var (email, _) = await RegisterNewUserAsync().ConfigureAwait(false);
@@ -77,13 +77,20 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         await registerPage.GotoAsync().ConfigureAwait(false);
         await registerPage.RegisterAsync("Dup", "User", email, "TestPass123!").ConfigureAwait(false);
 
-        // Assert — the duplicate address is a WARNING alert naming the way out (sign in / reset the
-        // password), not the generic red error alert the other server-side failures use, and the
-        // user stays on /register.
-        await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
-        await Expect(registerPage.EmailAlreadyRegisteredAlert).ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
-        await Expect(registerPage.EmailAlreadyRegisteredAlert).ToContainTextAsync(email).ConfigureAwait(false);
-        await Expect(Page).ToHaveURLAsync(new Regex("/register$")).ConfigureAwait(false);
+        // Assert — the duplicate address lands on sign-in with the address typed in and a notice
+        // naming the way forward (sign in, or reset the password). The address travels in history
+        // state, so the URL carries none.
+        var loginPage = new LoginPage(Page);
+        await Expect(Page).ToHaveURLAsync(new Regex("/login$"), new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(loginPage.ExistingAccountNotice).ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(loginPage.ExistingAccountNotice).ToContainTextAsync(email).ConfigureAwait(false);
+        await Expect(loginPage.EmailField).ToHaveValueAsync(email).ConfigureAwait(false);
+
+        // Act — Reset password opens Forgot password with the address still filled in.
+        await loginPage.ResetPasswordButton.ClickAsync().ConfigureAwait(false);
+
+        await Expect(Page).ToHaveURLAsync(new Regex("/forgot-password$"), new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(new ForgotPasswordPage(Page).EmailField).ToHaveValueAsync(email).ConfigureAwait(false);
     }
 
     [Fact]

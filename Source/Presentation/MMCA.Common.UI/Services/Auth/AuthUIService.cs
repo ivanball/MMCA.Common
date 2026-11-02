@@ -48,7 +48,7 @@ public sealed class AuthUIService(
     AuthenticationStateProvider authStateProvider,
     IPushRegistrationService pushRegistration,
     IUiReadCache? readCache = null,
-    ILocalCacheStore? localCache = null) : IAuthUIService
+    ILocalCacheStore? localCache = null) : IAuthUIService, ISignInLinkUIService
 {
     /// <summary>
     /// Error code reported when the authentication succeeded but the tokens could not be persisted
@@ -221,6 +221,31 @@ public sealed class AuthUIService(
                 // malformed request or an outage, never a signal about whether the account exists.
                 return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
             },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result> RequestSignInLinkAsync(string email, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                // Anonymous endpoint that answers 202 for every well-formed address, like forgot-password.
+                using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+                using var response = await httpClient.PostAsJsonAsync(
+                    new Uri("auth/sign-in-link", UriKind.Relative), new SendSignInLinkRequest(email), cancellationToken);
+
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<AuthenticationResponse>> RedeemSignInLinkAsync(
+        string email,
+        string token,
+        bool acceptedTerms,
+        CancellationToken cancellationToken = default) =>
+        AuthenticateAsync(
+            "auth/sign-in-link/redeem",
+            new RedeemSignInLinkRequest(email, token, acceptedTerms),
             cancellationToken);
 
     /// <inheritdoc />

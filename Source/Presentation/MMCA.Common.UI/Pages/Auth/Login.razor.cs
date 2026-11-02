@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Pages.Auth;
 
@@ -21,6 +24,18 @@ public partial class Login : IDisposable
     /// disabled, because a flow started there would be refused at completion.
     /// </summary>
     private bool _externalSignInUnavailable;
+
+    /// <summary>
+    /// The address registration refused because it already holds an account, when the visitor was
+    /// sent here from there; drives the existing-account notice.
+    /// </summary>
+    private string? _existingAccountEmail;
+
+    /// <summary>The address the last sign-in link request went to, for the sent notice.</summary>
+    private string? _signInLinkSentTo;
+
+    private bool _isSendingLink;
+
     /// <summary>
     /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
     /// every refusal back here as <c>/login?error={code}</c>: <c>oauth_failed</c>,
@@ -48,6 +63,75 @@ public partial class Login : IDisposable
         _disposed = true;
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    /// <summary>
+    /// Prefills the address another auth page handed over in history state (never the URL). An
+    /// address registration refused as already registered also raises the existing-account notice.
+    /// </summary>
+    private void ApplyHandedOverEmail()
+    {
+        var email = AuthEmailPrefill.Read(Navigation, out var existingAccount);
+        if (email is null)
+        {
+            return;
+        }
+
+        _model.Email = email;
+        if (existingAccount)
+        {
+            _existingAccountEmail = email;
+        }
+    }
+
+    /// <summary>Opens Forgot password with the typed address already filled in.</summary>
+    private void OpenPasswordReset() =>
+        AuthEmailPrefill.NavigateWithEmail(Navigation, "/forgot-password", _model.Email ?? string.Empty);
+
+    /// <summary>
+    /// Asks for a sign-in link to the typed address (ADR-116). The endpoint answers 202 for every
+    /// well-formed address, so the notice says "if an account exists" and nothing more.
+    /// </summary>
+    private async Task SendSignInLinkAsync()
+    {
+        _errorMessage = null;
+        _signInLinkSentTo = null;
+
+        var email = _model.Email?.Trim();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            _errorMessage = L["Auth.Login.EmailMeLink.EnterEmail"].Value;
+            return;
+        }
+
+        // Resolved at the click rather than injected, so a host (or a component test) that never offers
+        // the button does not have to register the client at all.
+        if (Services.GetService<ISignInLinkUIService>() is not { } signInLinks)
+        {
+            _errorMessage = L["Auth.Login.GenericError"].Value;
+            return;
+        }
+
+        _isSendingLink = true;
+        try
+        {
+            var result = await signInLinks.RequestSignInLinkAsync(email, _cts.LifetimeToken());
+            if (result.IsSuccess)
+            {
+                _signInLinkSentTo = email;
+                return;
+            }
+
+            _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Login.GenericError"].Value;
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // Expected during component disposal or an InteractiveAuto render-mode transition.
+        }
+        finally
+        {
+            _isSendingLink = false;
+        }
     }
 
     /// <summary>

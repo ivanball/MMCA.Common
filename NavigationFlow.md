@@ -11,12 +11,13 @@
 | Route | Page | Auth | Notes |
 |-------|------|------|-------|
 | `/` | `Home` | Anonymous | Landing; consumer apps usually override. |
-| `/login` | `Auth/Login` | Anonymous | Accepts `?returnUrl=` (sanitized via `ReturnUrlProtector`). |
-| `/register` | `Auth/Register` | Anonymous | Client + server validation parity (EditForm). |
-| `/forgot-password` | `Auth/ForgotPassword` | Anonymous | Requests a reset email; always shows the same confirmation (anti-enumeration). |
+| `/login` | `Auth/Login` | Anonymous | Accepts `?returnUrl=` (sanitized via `ReturnUrlProtector`). Arriving from `/register` with an address that already has an account prefills it from history state and offers Reset password; offers "Email me a sign-in link" when `SignIn:OfferSignInLink` is set. |
+| `/register` | `Auth/Register` | Anonymous | Client + server validation parity (EditForm). An address that already has an account navigates to `/login` with the address in history state, never the URL. |
+| `/forgot-password` | `Auth/ForgotPassword` | Anonymous | Requests a reset email; always shows the same confirmation (anti-enumeration). Prefills an address handed over in history state. |
 | `/reset-password` | `Auth/ResetPassword` | Anonymous | Accepts `?email=` and `?token=` prefill; the token stays editable for manual entry. |
 | `/confirm-email` | `Auth/ConfirmEmail` | Anonymous | Email-confirmation landing (ADR-116). Reads `email` and `token` from the URL fragment (then `?email=` / `?token=`), redeems a complete link once on arrival, and falls back to manual entry plus a resend that answers the same way whether or not the address holds an account. |
 | `/auth/oauth-complete` | `Auth/OAuthComplete` | Anonymous | External-login callback landing. |
+| `/auth/sign-in-link` | `Auth/SignInLinks/SignInLink` | Anonymous | Sign-in-link landing (ADR-116). Reads `email` and `token` from the URL fragment only, redeems on a tap of Continue (never on arrival, so a mail scanner cannot spend the token), then lands on `SignIn:SignInLinkLandingPath`; an incomplete or refused link offers a fresh one. |
 | `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
 | `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |
 | `/notifications/inbox/{Id:int}` | `Notifications/NotificationInbox` | Authenticated | Typed deep link to one notification: highlights it and scrolls it into view. The `:int` constraint is the validation boundary (a malformed id renders `NotFound`); an id that is valid but absent from the loaded page degrades silently to the plain inbox. Route carries `[Authorize]`. |
@@ -67,6 +68,9 @@ flowchart TD
     D -->|forgot password| J[Request a reset: /forgot-password]
     J -->|always confirms, email sent only if the account exists| K[Set a new password: /reset-password]
     K -->|password reset| C
+    D -->|register with a taken address| C
+    D -->|email me a sign-in link| M[Sign-in link: /auth/sign-in-link]
+    M -->|Continue| E
     B -- yes --> F{Authorized for route?}
     F -- yes --> G[Render page in MainLayout]
     F -- no --> H[/forbidden — 403 in app shell/]

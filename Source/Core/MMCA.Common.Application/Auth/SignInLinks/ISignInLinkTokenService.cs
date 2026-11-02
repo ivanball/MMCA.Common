@@ -1,3 +1,4 @@
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.Auth.SignInLinks;
@@ -67,7 +68,7 @@ public enum SignInLinkPurpose
 /// <summary>The name an invitation creates the account with, when the address has no account yet.</summary>
 /// <param name="FirstName">The invitee's first name.</param>
 /// <param name="LastName">The invitee's last name.</param>
-public sealed record SignInLinkProfile(string FirstName, string LastName);
+public sealed record SignInLinkProfile([property: Pii] string FirstName, [property: Pii] string LastName);
 
 /// <summary>What a redeemed sign-in token grants.</summary>
 /// <param name="Purpose">Why the link was sent.</param>

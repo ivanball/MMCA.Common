@@ -43,8 +43,8 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         "MMCA.Common.API.Controllers.EmailConfirmationControllerBase`2.ConfirmEmailAsync",
         // Sign-in links (ADR-116): the caller is signing in, so requiring a token would be circular.
         // Both are throttled by the auth-ip policy, and send always answers 202 on a well-formed request.
-        "MMCA.Common.API.Controllers.SignInLinkControllerBase`2.SendSignInLinkAsync",
-        "MMCA.Common.API.Controllers.SignInLinkControllerBase`2.RedeemSignInLinkAsync",
+        "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.SendSignInLinkAsync",
+        "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.RedeemSignInLinkAsync",
         // The three OAuth challenge endpoints and the provider-callback completion run before any
         // local token exists, so they declare their anonymity rather than relying on the absence of
         // an attribute: the framework's fallback authorization policy would otherwise break login.
@@ -64,7 +64,7 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         "MMCA.Common.UI.Pages.Auth.Register",
         "MMCA.Common.UI.Pages.Auth.ResetPassword",
         // The sign-in-link landing (ADR-116) is followed from a mail client with no session.
-        "MMCA.Common.UI.Pages.Auth.SignInLink",
+        "MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink",
         // Landing and outcome pages: they render nothing that depends on the caller.
         "MMCA.Common.UI.Pages.Forbidden",
         "MMCA.Common.UI.Pages.Home",

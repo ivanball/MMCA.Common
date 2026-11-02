@@ -6,6 +6,7 @@
 @using MMCA.Common.Shared.ValueObjects.Contact
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Navigation
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Extensions.Options
 @using MMCA.Common.UI.Common.Settings
@@ -37,30 +38,7 @@
         <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
             <LocalizedDataAnnotationsValidator />
             <MudCardContent Class="pa-6">
-                @* _rejectedEmail is the address the server rejected, exactly as submitted, so the alert can
-                   only ever name an address the server checked, never the live field. Rule: a rejection
-                   stands only while the field still holds that address. The first time the field differs
-                   (an edit after the answer, or one made while the request was in flight) OnEmailEdited
-                   dismisses it for good, so typing the same address back shows nothing until the next
-                   submit re-checks it. *@
-                @if (_rejectedEmail is not null)
-                {
-                    @* The address already has an account, so the way forward is signing in rather than
-                       resubmitting the form: Severity.Warning plus the two routes out of the dead end.
-                       role="alert": the alert only enters the DOM after a failed submit, so nothing
-                       announces it unless it arrives as a live region. *@
-                    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" role="alert"
-                              data-testid="email-already-registered">
-                        @L["Auth.Register.EmailAlreadyRegistered", _rejectedEmail ?? string.Empty]
-                        @* Underline.Always: an in-text link must be distinguishable without relying on
-                           colour alone (WCAG 2.1 AA / axe link-in-text-block). *@
-                        <div class="d-flex flex-wrap mt-1 mmca-auth-links">
-                            <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
-                            <MudLink Href="/forgot-password" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.ResetPassword"]</MudLink>
-                        </div>
-                    </MudAlert>
-                }
-                else if (!string.IsNullOrWhiteSpace(_errorMessage))
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     @* role="alert": the alert only enters the DOM after a failed submit, so nothing
                        announces it unless it arrives as a live region. *@
@@ -80,7 +58,7 @@
                                       autocomplete="family-name" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.Email" @bind-Value:after="OnEmailEdited" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
+                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Adornment="Adornment.Start"
@@ -187,11 +165,7 @@
 @code {
     private readonly RegisterModel _model = new();
     private string? _errorMessage;
-    private string? _rejectedEmail; // The duplicate-email rule is documented at the alert markup.
     private bool _isLoading;
-
-    private void OnEmailEdited() =>
-        _rejectedEmail = string.Equals(_model.Email, _rejectedEmail, StringComparison.Ordinal) ? _rejectedEmail : null;
 
     private LegalSettings Legal => LegalOptions.Value;
 
@@ -222,7 +196,6 @@
         // EditForm + DataAnnotations before OnValidSubmit fires; this method only handles the call and
         // any server-side failure, surfaced in the form-level MudAlert.
         _errorMessage = null;
-        _rejectedEmail = null;
 
         // The disabled submit button is the primary guard; this covers a submit that arrives anyway
         // (Enter in a field while the button state is stale).
@@ -257,12 +230,13 @@
             if (result.IsFailure)
             {
                 // The duplicate-address conflict is the one failure with a next step of its own: the
-                // account exists, so the user is pointed at sign-in or password reset rather than at a
-                // red alert that invites a retry. Matched on the code, never on the wording.
+                // account exists, so the visitor goes straight to sign-in with the address filled in,
+                // where Reset password and the sign-in link are one tap away. The address travels in
+                // history state, never the URL. Matched on the code, never on the wording. The 409
+                // itself already tells the caller the account exists, so this reveals nothing new.
                 if (result.Errors.Any(e => string.Equals(e.Code, AuthErrorCodes.EmailAlreadyExists, StringComparison.Ordinal)))
                 {
-                    _rejectedEmail = submittedEmail;
-                    OnEmailEdited(); // An edit made while the request was in flight dismisses it at once.
+                    AuthEmailPrefill.NavigateWithEmail(Navigation, "/login", submittedEmail, existingAccount: true);
                     return;
                 }
 

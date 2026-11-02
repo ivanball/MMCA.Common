@@ -10,7 +10,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 
-namespace MMCA.Common.API.Controllers;
+namespace MMCA.Common.API.Controllers.SignInLinks;
 
 /// <summary>
 /// The anonymous sign-in-link endpoints (<c>POST sign-in-link</c>, <c>POST sign-in-link/redeem</c>,
