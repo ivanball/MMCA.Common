@@ -91,6 +91,7 @@ internal sealed class FakeGateway : IAsyncDisposable
     private void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/auth/login", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
+        endpoints.MapPost("/auth/sign-in-link/redeem", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
 
         endpoints.MapPost("/auth/refresh", async (HttpContext context) =>
         {

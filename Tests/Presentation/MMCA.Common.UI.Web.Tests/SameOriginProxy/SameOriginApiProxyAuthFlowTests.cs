@@ -53,6 +53,26 @@ public sealed class SameOriginApiProxyAuthFlowTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SignInLinkRedeem_IsTokenIssuingByDefault_SoTheBrowserLandsSignedIn()
+    {
+        // No AdditionalTokenIssuingPaths configured: the default list alone must cover the redeem, or
+        // a redeemed sign-in link authenticates the API and leaves the browser signed out (ADC #315).
+        using var host = await ProxyHost.StartAsync(_gateway);
+        using var client = host.GetTestClient();
+        using var request = ProxyHost.Request(HttpMethod.Post, "/api/auth/sign-in-link/redeem", csrf: true);
+        request.Content = JsonContent.Create(new RedeemSignInLinkRequest("ada@example.com", "link-token", AcceptedTerms: false));
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        body.Should().NotContain(_gateway.LoginAccessToken).And.NotContain(FakeGateway.LoginRefreshToken);
+        var cookies = ProxyHost.SetCookies(response);
+        cookies.Should().Contain(c => c.StartsWith($"{SessionCookieEndpoints.AccessTokenCookieName}={_gateway.LoginAccessToken}", StringComparison.Ordinal));
+        cookies.Should().Contain(c => c.StartsWith($"{SessionCookieEndpoints.RefreshTokenCookieName}={FakeGateway.LoginRefreshToken}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Refresh_IsAnsweredByTheProxy_FromTheRefreshCookie()
     {
         using var host = await ProxyHost.StartAsync(_gateway);
