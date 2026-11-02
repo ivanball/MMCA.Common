@@ -1,1 +1,9 @@
 #nullable enable
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.Dispose() -> void
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SecureStoreTokenStorageService(MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! store, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SessionEnded -> System.EventHandler?
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!

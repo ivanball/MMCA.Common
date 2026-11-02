@@ -87,7 +87,7 @@ public static class DependencyInjection
         /// Registers the MAUI token pipeline: <see cref="MauiSecureTokenStore"/> as the scoped
         /// <c>ISecureTokenStore</c> (the platform secure enclave holds both tokens, and every
         /// read/write is guarded so an OS-invalidated keystore entry degrades to one clean re-login
-        /// instead of an unhandled throw on launch) and <see cref="MauiTokenStorageService"/> as the
+        /// instead of an unhandled throw on launch) and <see cref="SecureStoreTokenStorageService"/> as the
         /// scoped <c>ITokenStorageService</c> on top of it, which checks expiry and refreshes
         /// proactively rather than handing callers a stale bearer.
         /// <para>
@@ -103,7 +103,7 @@ public static class DependencyInjection
         public IServiceCollection AddCommonMauiTokenStorage()
         {
             services.AddScoped<ISecureTokenStore, MauiSecureTokenStore>();
-            return services.AddScoped<ITokenStorageService, MauiTokenStorageService>();
+            return services.AddScoped<ITokenStorageService, SecureStoreTokenStorageService>();
         }
 
         /// <summary>
