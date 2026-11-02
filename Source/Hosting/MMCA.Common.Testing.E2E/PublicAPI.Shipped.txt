@@ -105,11 +105,13 @@ MMCA.Common.Testing.E2E.PageObjects.LoginPage
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.CreateAccountLink.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.EmailField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.ExistingAccountNotice.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.GotoAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginAsync(string! email, string! password) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginPage(Microsoft.Playwright.IPage! page) -> void
 MMCA.Common.Testing.E2E.PageObjects.LoginPage.PasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.ResetPasswordButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ProfilePage
 MMCA.Common.Testing.E2E.PageObjects.ProfilePage.AddressLine1Field.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ProfilePage.AddressLine2Field.get -> Microsoft.Playwright.ILocator!
@@ -136,7 +138,6 @@ MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AlreadyHaveAccountLink.get -> M
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.CityField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ConfirmPasswordField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.CountryField.get -> Microsoft.Playwright.ILocator!
-MMCA.Common.Testing.E2E.PageObjects.RegisterPage.EmailAlreadyRegisteredAlert.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.EmailField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.FirstNameField.get -> Microsoft.Playwright.ILocator!
@@ -227,7 +228,7 @@ MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.Login_WithValidCre
 MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.UserLoginTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
 MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase
 MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.RegisterPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithMismatchedPasswords_ShouldShowError() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithValidData_ShouldNavigateToHomePage() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.UserRegistrationTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void

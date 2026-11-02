@@ -124,6 +124,12 @@ MMCA.Common.UI.Common.Settings.RegistrationSettings
 MMCA.Common.UI.Common.Settings.RegistrationSettings.CollectAddress.get -> bool
 MMCA.Common.UI.Common.Settings.RegistrationSettings.CollectAddress.set -> void
 MMCA.Common.UI.Common.Settings.RegistrationSettings.RegistrationSettings() -> void
+MMCA.Common.UI.Common.Settings.SignInSettings
+MMCA.Common.UI.Common.Settings.SignInSettings.OfferSignInLink.get -> bool
+MMCA.Common.UI.Common.Settings.SignInSettings.OfferSignInLink.set -> void
+MMCA.Common.UI.Common.Settings.SignInSettings.SignInLinkLandingPath.get -> string!
+MMCA.Common.UI.Common.Settings.SignInSettings.SignInLinkLandingPath.set -> void
+MMCA.Common.UI.Common.Settings.SignInSettings.SignInSettings() -> void
 MMCA.Common.UI.Common.Settings.UIModuleConfiguration
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.get -> System.TimeSpan
@@ -621,6 +627,9 @@ MMCA.Common.UI.Pages.Auth.Sessions.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.Sessions.IsBusy.get -> bool
 MMCA.Common.UI.Pages.Auth.Sessions.IsLoading.get -> bool
 MMCA.Common.UI.Pages.Auth.Sessions.Sessions() -> void
+MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink
+MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.SignInLink() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.CancelLoading() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.CurrentPageState.get -> int
@@ -760,8 +769,10 @@ MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, 
 MMCA.Common.UI.Services.Auth.AuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LogoutAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.AuthUIService.RedeemSignInLinkAsync(string! email, string! token, bool acceptedTerms, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RequestSignInLinkAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.RevokeAllSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -789,6 +800,9 @@ MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ResendEmailConfirmation
 MMCA.Common.UI.Services.Auth.ISessionCookieSync
 MMCA.Common.UI.Services.Auth.ISessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.ISessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.ISignInLinkUIService
+MMCA.Common.UI.Services.Auth.ISignInLinkUIService.RedeemSignInLinkAsync(string! email, string! token, bool acceptedTerms, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.ISignInLinkUIService.RequestSignInLinkAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync
 MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.JsFetchSessionCookieSync(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
@@ -839,6 +853,14 @@ MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.SameOriginProxyTokenRefresher(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 MMCA.Common.UI.Services.Auth.Tokens.SameOriginProxyTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.Dispose() -> void
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SecureStoreTokenStorageService(MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! store, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SessionEnded -> System.EventHandler?
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition
 MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.AccessToken.get -> string?
 MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.IsUnavailable.get -> bool
@@ -1426,6 +1448,7 @@ override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnParametersSe
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RestoreFilters(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! filters) -> void
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SaveFilters(System.Collections.Generic.Dictionary<string!, string!>! filters) -> void
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Title.get -> string!
+override MMCA.Common.UI.Pages.Auth.ForgotPassword.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.Login.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.OAuthComplete.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1558,6 +1581,7 @@ static readonly MMCA.Common.UI.Common.Settings.LayoutSettings.SectionName -> str
 static readonly MMCA.Common.UI.Common.Settings.LegalSettings.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.RegistrationSettings.SectionName -> string!
+static readonly MMCA.Common.UI.Common.Settings.SignInSettings.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Components.Notifications.StaleToastSweeper.Grace -> System.TimeSpan
 static readonly MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.RetryPolicy -> Polly.Retry.AsyncRetryPolicy<System.Net.Http.HttpResponseMessage!>!

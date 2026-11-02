@@ -92,6 +92,15 @@ MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.RoleAdminListPage
 MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.Roles.get -> Moq.Mock<MMCA.Common.UI.Services.Administration.IRoleAdminUIService!>!
 MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SetupRoles(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>! roles) -> void
 MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.WhenTheFetchFails_RendersNoRoleRows() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.Continue_RedeemsOnceAndLandsOnTheConfiguredPath() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.RenderPage(string! fragment) -> Bunit.IRenderedComponent<MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink!>!
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.RequestingAFreshLink_SaysSoWithoutConfirmingTheAccountExists() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.SignInLinkPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.SignInLinks.get -> Moq.Mock<MMCA.Common.UI.Services.Auth.ISignInLinkUIService!>!
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithACompleteLink_ShowsTheAddressAndWaitsForContinue() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithARefusedLink_ShowsTheRefusalAndOffersAFreshLink() -> void
+MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.WithAnIncompleteLink_DoesNotPostAndOffersAFreshLink() -> void
 MMCA.Common.Testing.UI.StubTokenStorageService
 MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.get -> string?
 MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.set -> void
@@ -153,5 +162,7 @@ static readonly MMCA.Common.Testing.UI.HttpTestDoubles.BaseAddress -> System.Uri
 static readonly MMCA.Common.Testing.UI.UiHttpServiceHarness.DefaultBaseAddress -> System.Uri!
 virtual MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Email.get -> string!
 virtual MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleParameterName.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.Email.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.LandingPath.get -> string!
 ~override MMCA.Common.Testing.UI.MarkupSnapshotResult.Equals(object obj) -> bool
 ~override MMCA.Common.Testing.UI.MarkupSnapshotResult.ToString() -> string

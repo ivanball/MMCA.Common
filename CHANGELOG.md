@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.273.0] - 2026-11-01
+
 Fixes for the silent mobile sign-outs seen on ADC's 2026-10-17 conference day, opt-in sign-in links, a duplicate-email registration that goes straight to sign-in, and a CSV reader.
 
 **Breaking:** `MauiTokenStorageService` is removed (MMCA.Common.UI.Maui; `AddCommonMauiTokenStorage()` now registers `SecureStoreTokenStorageService`). In MMCA.Common.Testing.E2E, `RegisterPage.EmailAlreadyRegisteredAlert` is removed and `UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError` is renamed `Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled`. `AuthSessionIssuer`'s constructor gains an optional `ILogger` (source-compatible). See [UPGRADING.md](UPGRADING.md).
