@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **A redeemed sign-in link now signs the browser in behind the same-origin API proxy** (MMCA.Common.UI.Web). `SameOriginApiProxySettings.DefaultTokenIssuingPaths` includes `auth/sign-in-link/redeem`, so the proxy moves the redeem response's token pair into the HttpOnly session cookies, as it does for sign-in, registration and the OAuth exchange. Before, a host that offered sign-in links behind the proxy had to list the path in `SameOriginApiProxy:AdditionalTokenIssuingPaths`, or the redeem succeeded at the API and still landed the browser signed out (script may not seed the cookies in proxy mode). A host that already lists it keeps working (the proxy merges both lists into one set) and can drop the entry.
+
 ## [1.273.0] - 2026-11-01
 
 Fixes for the silent mobile sign-outs seen on ADC's 2026-10-17 conference day, opt-in sign-in links, a duplicate-email registration that goes straight to sign-in, and a CSV reader.
