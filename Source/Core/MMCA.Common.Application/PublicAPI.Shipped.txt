@@ -54,6 +54,7 @@ MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.Repository.get -> 
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeAllSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeSessionByIdAsync(int userId, System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeTokenAsync(int userId, string? refreshToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.SignInVerifiedEmailOwnerAsync(int userId, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.TokenService.get -> MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Auth.AuthenticationValidators
@@ -89,6 +90,7 @@ MMCA.Common.Application.Auth.IAuthenticationService.RegisterAsync(MMCA.Common.Sh
 MMCA.Common.Application.Auth.IAuthenticationService.RevokeAllSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.IAuthenticationService.RevokeSessionByIdAsync(int userId, System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.IAuthenticationService.RevokeTokenAsync(int userId, string? refreshToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.IAuthenticationService.SignInVerifiedEmailOwnerAsync(int userId, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.Application.Auth.ILoginProtectionService
 MMCA.Common.Application.Auth.ILoginProtectionService.CheckLockoutAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.ILoginProtectionService.CheckRegistrationRateLimitAsync(string? ipAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -160,6 +162,8 @@ MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.get -> string
 MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.get -> bool
 MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.LostResponseRecoveryMinutes.get -> int
+MMCA.Common.Application.Auth.RefreshSessionSettings.LostResponseRecoveryMinutes.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.get -> int
 MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.RefreshSessionSettings() -> void
@@ -168,7 +172,7 @@ MMCA.Common.Application.Auth.RefreshSessionSettings.RetentionDays.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.get -> int
 MMCA.Common.Application.Auth.RefreshSessionSettings.ReuseGraceSeconds.init -> void
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer
-MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer!>? logger = null) -> void
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.IssueAsync(int userId, System.Func<System.Guid, string!>! mintAccessToken, string? ipAddress, string? userAgent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.ListActiveAsync(int userId, System.Guid? currentSessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.MintForSession(System.Guid sessionId, string? multiFactorMethod, System.Func<string!>! mintAccessToken) -> string!
@@ -186,6 +190,49 @@ MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.RotateAsync(int userId,
 MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.SignOutAsync(int userId, string? refreshToken, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.SignOutEverywhereAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.TokenService.get -> MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService!
+MMCA.Common.Application.Auth.SignInLinks.ISignInLinkTokenService
+MMCA.Common.Application.Auth.SignInLinks.ISignInLinkTokenService.IssueAsync(string! email, MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose purpose, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? profile = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
+MMCA.Common.Application.Auth.SignInLinks.ISignInLinkTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant!>!>!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.<Clone>$() -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Deconstruct(out MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose Purpose, out MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? Profile) -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Equals(MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant? other) -> bool
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Profile.get -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile?
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Profile.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Purpose.get -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Purpose.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.SignInLinkGrant(MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose Purpose, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? Profile) -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.<Clone>$() -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.Deconstruct(out string! FirstName, out string! LastName) -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.Equals(MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? other) -> bool
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.FirstName.get -> string!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.FirstName.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.LastName.get -> string!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.LastName.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.SignInLinkProfile(string! FirstName, string! LastName) -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose.Invite = 1 -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose.SignIn = 0 -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.ComposeLink(string! email, string! token) -> string?
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.InviteLifetimeMinutes.get -> int
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.InviteLifetimeMinutes.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.LifetimeFor(MMCA.Common.Application.Auth.SignInLinks.SignInLinkPurpose purpose) -> System.TimeSpan
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.MaxRequestsPerEmail.get -> int
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.MaxRequestsPerEmail.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.MaxValidationAttempts.get -> int
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.MaxValidationAttempts.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.RequestWindowMinutes.get -> int
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.RequestWindowMinutes.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInLifetimeMinutes.get -> int
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInLifetimeMinutes.init -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInLinkSettings() -> void
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInUrl.get -> string!
+MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInUrl.init -> void
 MMCA.Common.Application.Auth.SoftDeletedUserCache
 MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator
 MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator.ChallengeAsync(int userId, string? code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome>!>!
@@ -241,12 +288,16 @@ MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator
 MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator.ForgotPasswordRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.LoginRequestValidator
 MMCA.Common.Application.Auth.Validation.LoginRequestValidator.LoginRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.RedeemSignInLinkRequestValidator
+MMCA.Common.Application.Auth.Validation.RedeemSignInLinkRequestValidator.RedeemSignInLinkRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.RefreshTokenRequestValidator
 MMCA.Common.Application.Auth.Validation.RefreshTokenRequestValidator.RefreshTokenRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator
 MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator.ResetPasswordRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.SendEmailConfirmationRequestValidator
 MMCA.Common.Application.Auth.Validation.SendEmailConfirmationRequestValidator.SendEmailConfirmationRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.SendSignInLinkRequestValidator
+MMCA.Common.Application.Auth.Validation.SendSignInLinkRequestValidator.SendSignInLinkRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.SetRolePermissionsRequestValidator
 MMCA.Common.Application.Auth.Validation.SetRolePermissionsRequestValidator.SetRolePermissionsRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator
@@ -1051,6 +1102,19 @@ MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TU
 MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.ResetPasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.IPasswordResetTokenService! tokenService, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider? timeProvider = null) -> void
 MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.SignInLinks.IRedeemSignInLinkCommand
+MMCA.Common.Application.Users.UseCases.SignInLinks.IRedeemSignInLinkCommand.IpAddress.get -> string?
+MMCA.Common.Application.Users.UseCases.SignInLinks.IRedeemSignInLinkCommand.UserAgent.get -> string?
+MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.RedeemSignInLinkHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SignInLinks.ISignInLinkTokenService! tokenService, MMCA.Common.Application.Auth.IAuthenticationService! authenticationService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.Settings.get -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings!
+MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.SendSignInLinkHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SignInLinks.ISignInLinkTokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Mail.IEmailSender! emailSender, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.Settings.get -> MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings!
+MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>
 MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.BeginTwoFactorEnrollmentHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse>!>!
@@ -1127,6 +1191,8 @@ abstract MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfi
 abstract MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.BuildSubjectSnapshotAsync(TUser! user, TQuery query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<object?>!
 abstract MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.HasExportPrivilege(string? currentUserRole) -> bool
 abstract MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
+abstract MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
+abstract MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
 abstract MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.ResolveAccountNameAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string?>!
 const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmedCode = "Authentication.EmailNotConfirmed" -> string!
 const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidTokenCode = "Authentication.InvalidConfirmationToken" -> string!
@@ -1137,6 +1203,10 @@ const MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.SectionName = "L
 const MMCA.Common.Application.Auth.PasswordResetSettings.SectionName = "PasswordReset" -> string!
 const MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.SectionName = "Authentication:PermissionGrants" -> string!
 const MMCA.Common.Application.Auth.RefreshSessionSettings.SectionName = "RefreshSessions" -> string!
+const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.InvalidLinkCode = "Authentication.InvalidSignInLink" -> string!
+const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.NotSupportedCode = "Authentication.SignInLinkNotSupported" -> string!
+const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.SecondFactorRequiredCode = "Authentication.SignInLinkSecondFactorRequired" -> string!
+const MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SectionName = "Authentication:SignInLinks" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissingCode = "Authentication.TwoFactorEnrollmentMissing" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalidCode = "Authentication.TwoFactorInvalid" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolledCode = "Authentication.TwoFactorNotEnrolled" -> string!
@@ -1152,6 +1222,12 @@ const MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectio
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.GetHashCode() -> int
 override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ToString() -> string!
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.Equals(object? obj) -> bool
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.GetHashCode() -> int
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.ToString() -> string!
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.Equals(object? obj) -> bool
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.GetHashCode() -> int
+override MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.ToString() -> string!
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.GetHashCode() -> int
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.ToString() -> string!
@@ -1234,6 +1310,13 @@ static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.EnsureAcceptsCur
 static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.Normalize(string? currentVersion, MMCA.Common.Shared.Legal.LegalAcceptanceDTO! standing) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
 static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.ResolveCurrentVersion(MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions? options) -> string?
 static MMCA.Common.Application.Auth.RefreshSessionRevocation.RevokeAllAsync(MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions, System.TimeProvider? timeProvider, int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.InvalidLink(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.NotSupported(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.SecondFactorRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.operator !=(MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant? left, MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant? right) -> bool
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant.operator ==(MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant? left, MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant? right) -> bool
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.operator !=(MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? left, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? right) -> bool
+static MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.operator ==(MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? left, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? right) -> bool
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.KeyFor(int userId) -> string!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> System.TimeSpan
@@ -1417,6 +1500,12 @@ virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHand
 virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeSubject() -> string!
 virtual MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesHandlerBase<TUser>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.OnEmailOwnershipProvedAsync(TUser! user, MMCA.Common.Application.Auth.SignInLinks.SignInLinkGrant! grant, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.OnUserProvisionedAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.ProvisionUser(MMCA.Common.Shared.ValueObjects.Contact.Email! email, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile! profile, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest request) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.ComposeBody(string! signInLink) -> string!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.ComposeSubject() -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandlerName.get -> string!

@@ -172,6 +172,17 @@ MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Deconstruct(out string
 MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Equals(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest other) -> bool
 MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest() -> void
 MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest(string! Code) -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.AcceptedTerms.get -> bool
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.AcceptedTerms.init -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Deconstruct(out string! Email, out string! Token, out bool AcceptedTerms) -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Equals(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.RedeemSignInLinkRequest() -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.RedeemSignInLinkRequest(string! Email, string! Token, bool AcceptedTerms = false) -> void
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Token.get -> string!
+MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Token.init -> void
 MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest
 MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.AccessToken.get -> string!
 MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.AccessToken.init -> void
@@ -216,6 +227,13 @@ MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Email.init -> void
 MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Equals(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest other) -> bool
 MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.SendEmailConfirmationRequest() -> void
 MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.SendEmailConfirmationRequest(string! Email) -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Deconstruct(out string! Email) -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Equals(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.SendSignInLinkRequest() -> void
+MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.SendSignInLinkRequest(string! Email) -> void
 MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest
 MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest!
 MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
@@ -546,6 +564,19 @@ MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UserDataExportSectionDTO() -
 MMCA.Common.Shared.Resilience.BrokerResilienceDefaults
 MMCA.Common.Shared.Resilience.HttpResilienceDefaults
 MMCA.Common.Shared.Resilience.RetryAfterHeader
+MMCA.Common.Shared.Serialization.CsvReader
+MMCA.Common.Shared.Serialization.CsvRow
+MMCA.Common.Shared.Serialization.CsvRow.CsvRow(int lineNumber, System.Collections.Generic.IReadOnlyList<string!>! fields) -> void
+MMCA.Common.Shared.Serialization.CsvRow.Fields.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Serialization.CsvRow.Get(int? column) -> string!
+MMCA.Common.Shared.Serialization.CsvRow.LineNumber.get -> int
+MMCA.Common.Shared.Serialization.CsvRow.this[int column].get -> string!
+MMCA.Common.Shared.Serialization.CsvTable
+MMCA.Common.Shared.Serialization.CsvTable.CsvTable(System.Collections.Generic.IReadOnlyList<string!>! headers, System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>! rows) -> void
+MMCA.Common.Shared.Serialization.CsvTable.FindColumn(params string![]! names) -> int?
+MMCA.Common.Shared.Serialization.CsvTable.FindColumnStartingWith(string! prefix) -> int?
+MMCA.Common.Shared.Serialization.CsvTable.Headers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Serialization.CsvTable.Rows.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>!
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.ResultJsonConverterFactory() -> void
 MMCA.Common.Shared.ValueObjects.Contact.Address
@@ -662,6 +693,8 @@ const MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationReque
 const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.BodyMaxLength = 2000 -> int
 const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.TitleMaxLength = 200 -> int
 const MMCA.Common.Shared.Privacy.PrivacyFeatures.DataExport = "Privacy.DataExport" -> string!
+const MMCA.Common.Shared.Serialization.CsvReader.EmptyCode = "Csv.Empty" -> string!
+const MMCA.Common.Shared.Serialization.CsvReader.MalformedCode = "Csv.Malformed" -> string!
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.GetHashCode() -> int
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.ToString() -> string!
@@ -690,10 +723,12 @@ override MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.GetHashCode() -> i
 override MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.LoginRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.RegisterRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.ToString() -> string!
@@ -879,6 +914,8 @@ static MMCA.Common.Shared.Auth.Requests.LoginRequest.operator !=(MMCA.Common.Sha
 static MMCA.Common.Shared.Auth.Requests.LoginRequest.operator ==(MMCA.Common.Shared.Auth.Requests.LoginRequest left, MMCA.Common.Shared.Auth.Requests.LoginRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.operator !=(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.operator ==(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.operator ==(MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest left, MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.operator ==(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest left, MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.RegisterRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RegisterRequest left, MMCA.Common.Shared.Auth.Requests.RegisterRequest right) -> bool
@@ -887,6 +924,8 @@ static MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.operator !=(MMCA.Co
 static MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest left, MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest left, MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? left, MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? left, MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? left, MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? right) -> bool
@@ -994,6 +1033,9 @@ static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.TotalRequestTimeout.
 static MMCA.Common.Shared.Resilience.RetryAfterHeader.ExceedsRetryBudget(System.Net.Http.HttpResponseMessage? response, System.TimeProvider! timeProvider) -> bool
 static MMCA.Common.Shared.Resilience.RetryAfterHeader.Format(System.TimeSpan retryAfter) -> string!
 static MMCA.Common.Shared.Resilience.RetryAfterHeader.TryGetDelay(System.Net.Http.HttpResponseMessage! response, System.TimeProvider! timeProvider, out System.TimeSpan delay) -> bool
+static MMCA.Common.Shared.Serialization.CsvReader.ReadRecords(string! text) -> MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Serialization.CsvRow!>!>!
+static MMCA.Common.Shared.Serialization.CsvReader.ReadTable(string! text) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Serialization.CsvTable!>!
+static MMCA.Common.Shared.Serialization.CsvReader.ReadTableAsync(System.IO.Stream! stream, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Serialization.CsvTable!>!>!
 static MMCA.Common.Shared.ValueObjects.Contact.Address.Create(string! addressLine1, string? addressLine2, string? city, string? state, string? zipCode, string? country) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Contact.Address!>!
 static MMCA.Common.Shared.ValueObjects.Contact.Address.operator !=(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Contact.Address.operator ==(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool
@@ -1084,6 +1126,8 @@ virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.Str
 ~override MMCA.Common.Shared.Auth.Requests.LoginRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Requests.RegisterRequest.Equals(object obj) -> bool
@@ -1092,6 +1136,8 @@ virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.Str
 ~override MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.SendSignInLinkRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.Equals(object obj) -> bool

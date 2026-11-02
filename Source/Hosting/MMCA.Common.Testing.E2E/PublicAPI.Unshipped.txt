@@ -1,6 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.E2E.PageObjects.LoginPage.ExistingAccountNotice.get -> Microsoft.Playwright.ILocator!
-MMCA.Common.Testing.E2E.PageObjects.LoginPage.ResetPasswordButton.get -> Microsoft.Playwright.ILocator!
-MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldGoToSignInWithTheAddressPrefilled() -> System.Threading.Tasks.Task!
-*REMOVED*MMCA.Common.Testing.E2E.PageObjects.RegisterPage.EmailAlreadyRegisteredAlert.get -> Microsoft.Playwright.ILocator!
-*REMOVED*MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError() -> System.Threading.Tasks.Task!
