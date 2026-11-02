@@ -1,1 +1,5 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.LostResponseRecoveryMinutes.get -> int
+MMCA.Common.Application.Auth.RefreshSessionSettings.LostResponseRecoveryMinutes.init -> void
+MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer!>? logger = null) -> void

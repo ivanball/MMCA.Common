@@ -97,4 +97,28 @@ public sealed class RefreshSessionSettings
     /// </summary>
     [Range(0, 300)]
     public int ReuseGraceSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// How long, in minutes, after a session was rotated a client that never received the rotation's
+    /// response can still recover its session by presenting the old token again. Defaults to <c>0</c>
+    /// (off): every rotated token that comes back past <see cref="ReuseGraceSeconds"/> is reuse.
+    /// <para>
+    /// The case it exists for is a mobile client whose refresh succeeded on the server while the
+    /// response was lost (the app was suspended mid-request, or the network dropped). The device still
+    /// holds the old pair, presents it on its next refresh minutes later, and BR-206 would revoke every
+    /// session the user holds. With a window set, that presentation is recovered instead when, and only
+    /// when, the presented row was revoked as <c>Rotated</c> inside the window AND its successor is
+    /// still live, which means nobody ever presented the successor: the successor is rotated in its
+    /// place through the normal rotation claim, so the client gets a fresh pair.
+    /// </para>
+    /// <para>
+    /// <b>It is a security trade-off.</b> A thief replaying a stolen token while the legitimate client
+    /// is idle inside the window is handed a session; the legitimate client's next refresh then presents
+    /// a successor that was rotated away, which is reuse, and the whole family (thief included) is
+    /// revoked. Detection is delayed by one refresh, never lost, and a successor that was already used
+    /// is never recovered.
+    /// </para>
+    /// </summary>
+    [Range(0, 1440)]
+    public int LostResponseRecoveryMinutes { get; init; }
 }
