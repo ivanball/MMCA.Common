@@ -22,7 +22,10 @@ namespace MMCA.Common.Shared.Serialization;
 /// </remarks>
 public static class CsvReader
 {
-    /// <summary>Code returned when the text is not well-formed CSV.</summary>
+    /// <summary>
+    /// Code returned when the text is not well-formed CSV. The error's <c>Target</c> holds the line
+    /// number the message names (invariant digits).
+    /// </summary>
     public const string MalformedCode = "Csv.Malformed";
 
     /// <summary>Code returned when the text holds no header row.</summary>
@@ -78,9 +81,15 @@ public static class CsvReader
         var parser = new Parser(text);
         string? error = parser.Run();
 
+        // The line also travels as the error's Target, so the edge localizer can name it in the
+        // translated message (the Csv.Malformed resource is parameterized on it).
         return error is null
             ? Result.Success<IReadOnlyList<CsvRow>>(parser.Records)
-            : Result.Failure<IReadOnlyList<CsvRow>>(Error.Validation(MalformedCode, error, nameof(ReadRecords)));
+            : Result.Failure<IReadOnlyList<CsvRow>>(Error.Validation(
+                MalformedCode,
+                error,
+                nameof(ReadRecords),
+                parser.ErrorLine.ToString(CultureInfo.InvariantCulture)));
     }
 
     /// <summary>One pass over the text; each member handles one token kind.</summary>
@@ -95,6 +104,9 @@ public static class CsvReader
         private bool _fieldHasContent;
 
         public List<CsvRow> Records { get; } = [];
+
+        /// <summary>Gets the line the malformed-text message names, once <see cref="Run"/> reports one.</summary>
+        public int ErrorLine { get; private set; }
 
         /// <summary>Parses the whole text.</summary>
         /// <returns>Null on success, otherwise the malformed-text message.</returns>
@@ -177,14 +189,21 @@ public static class CsvReader
                 }
             }
 
+            ErrorLine = openedOn;
             return string.Create(CultureInfo.InvariantCulture, $"A quoted field opened on line {openedOn} is never closed.");
         }
 
         // After a closing quote only a separator or the end of the record may follow.
-        private string? FollowsClosingQuote() =>
-            _position >= text.Length || text[_position] is Comma or '\r' or '\n'
-                ? null
-                : string.Create(CultureInfo.InvariantCulture, $"Unexpected text after a closing quote on line {_line}.");
+        private string? FollowsClosingQuote()
+        {
+            if (_position >= text.Length || text[_position] is Comma or '\r' or '\n')
+            {
+                return null;
+            }
+
+            ErrorLine = _line;
+            return string.Create(CultureInfo.InvariantCulture, $"Unexpected text after a closing quote on line {_line}.");
+        }
 
         // A CRLF pair inside a quoted field is one line break, counted on its LF.
         private void CountLineBreak(char c)

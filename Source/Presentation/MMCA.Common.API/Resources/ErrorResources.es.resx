@@ -317,7 +317,7 @@
     <value>Demasiadas solicitudes de enlaces de inicio de sesión. Inténtelo de nuevo más tarde.</value>
   </data>
   <data name="Csv.Malformed" xml:space="preserve">
-    <value>El archivo no es un CSV válido.</value>
+    <value>El archivo no es un CSV válido: revise la línea {0}.</value>
   </data>
   <data name="Csv.Empty" xml:space="preserve">
     <value>El archivo no tiene una fila de encabezados.</value>

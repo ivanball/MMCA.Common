@@ -23,7 +23,17 @@
 
         if (Dispatcher.TryConsumePending(out var pendingRoute) && pendingRoute is not null)
         {
-            Navigation.NavigateTo(pendingRoute);
+            try
+            {
+                Navigation.NavigateTo(pendingRoute);
+            }
+            catch (Exception ex)
+            {
+                // Same disposition as the live path below: a buffered route the navigation refuses
+                // must not escape into the renderer, where it raised the unhandled-error bar on MAUI
+                // and left every later deep link dead. The subscription above stays in place.
+                Logger.LogError(ex, "Deep-link navigation to {Route} failed.", pendingRoute);
+            }
         }
     }
 

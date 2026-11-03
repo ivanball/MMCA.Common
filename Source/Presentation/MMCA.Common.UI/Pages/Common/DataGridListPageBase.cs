@@ -683,6 +683,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         _restoredSortPending = false;
         if (FindSortableColumn(grid, _savedSortColumn) is not { PropertyName: { } field } column)
         {
+            // A column the grid does not render (a stale or hand-edited ?s=) is forgotten, so the
+            // no-SortDefinition fallback in ResolveSortParameters never sends it to the API (a 400).
+            _savedSortColumn = null;
+            _savedSortDescending = false;
             return false;
         }
 
@@ -1278,7 +1282,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             _restoredSortPending = false;
         }
 
-        if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
+        if (string.IsNullOrEmpty(sortColumn) && IsSavedSortColumnUsable())
         {
             sortColumn = _savedSortColumn;
             sortDirection = _savedSortDescending ? "desc" : "asc";
@@ -1286,6 +1290,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         return (sortColumn, sortDirection);
     }
+
+    /// <summary>
+    /// Whether the restored sort column may stand in when the grid has no SortDefinition: it must be
+    /// set and, once a grid is rendered, name one of its columns, so a stale or hand-edited
+    /// <c>?s=</c> never reaches the API. With no grid rendered yet (the mobile card view) the
+    /// restored column is used as before.
+    /// </summary>
+    private bool IsSavedSortColumnUsable() =>
+        !string.IsNullOrEmpty(_savedSortColumn)
+        && (GridRef is not { } grid || FindSortableColumn(grid, _savedSortColumn) is not null);
 
     /// <summary>
     /// Persists the list state for this route and mirrors it to the URL and sessionStorage.

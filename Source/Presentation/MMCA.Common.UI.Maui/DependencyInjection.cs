@@ -80,6 +80,11 @@ public static class DependencyInjection
             // round trip. Inert (IsAvailable == false) until the head configures
             // OAuth:MobileRedirectScheme and registers the platform callback.
             services.AddScoped<IExternalAuthBroker, MauiExternalAuthBroker>();
+
+            // The capabilities JS module the credential-link pages read the URL fragment through
+            // (sign-in link, confirm email, reset password). Without it they resolve null and report
+            // the link as incomplete on every MAUI head.
+            services.AddMauiCapabilitiesJsModule();
             return services;
         }
 

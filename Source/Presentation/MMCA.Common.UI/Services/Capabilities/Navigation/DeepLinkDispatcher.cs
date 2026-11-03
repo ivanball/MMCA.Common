@@ -150,6 +150,13 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
     /// a fragment, and tokens in the query or fragment reach the page exactly as sent. The fragment
     /// is kept: a guest-order or confirm-email token rides in it. Asking here, rather than letting
     /// <see cref="Publish"/> throw, lets a native callback drop a hostile link silently (SEC-ADC-65).
+    /// <para>
+    /// The path is also checked once percent-DECODED, because the router decodes it before matching:
+    /// an encoded control character (<c>%00</c> raised the unhandled-error bar on MAUI and left every
+    /// later deep link dead), an encoded backslash, an encoded slash that makes the path
+    /// protocol-relative (<c>/%2F...</c>) or a dot-dot segment (<c>..%2F</c>) is dropped. The route
+    /// that is published stays encoded.
+    /// </para>
     /// </remarks>
     public static bool TryComposeRoute(
         string? encodedPath,
@@ -161,8 +168,31 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
             + (string.IsNullOrEmpty(encodedQuery) ? string.Empty : "?" + encodedQuery)
             + (string.IsNullOrEmpty(encodedFragment) ? string.Empty : "#" + encodedFragment);
 
-        route = IsAppRelativeRoute(candidate) ? candidate : null;
+        route = encodedPath is not null && IsAppRelativeRoute(candidate) && IsSafeOnceDecoded(encodedPath)
+            ? candidate
+            : null;
         return route is not null;
+    }
+
+    /// <summary>
+    /// Whether the percent-decoded path still has a safe shape: no control character, no backslash,
+    /// no protocol-relative <c>//</c> opening and no <c>..</c> segment.
+    /// </summary>
+    private static bool IsSafeOnceDecoded(string encodedPath)
+    {
+        var decoded = Uri.UnescapeDataString(encodedPath);
+
+        if (decoded.Any(static character => character == '\\' || char.IsControl(character)))
+        {
+            return false;
+        }
+
+        if (decoded.StartsWith("//", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return !decoded.Split('/').Contains("..", StringComparer.Ordinal);
     }
 
     /// <summary>
