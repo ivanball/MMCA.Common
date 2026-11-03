@@ -178,7 +178,7 @@
          a hand-written provider that lists the secrets under one name prefix and reads the latest
          version of each through the synchronous client methods. gRPC over Google.Api.Gax.Grpc and
          Grpc.Net.Client; Apache-2.0. -->
-    <PackageVersion Include="Google.Cloud.SecretManager.V1" Version="2.8.0" />
+    <PackageVersion Include="Google.Cloud.SecretManager.V1" Version="3.0.0" />
     <!-- Cloud KMS encryption of the DataProtection key ring at rest
          (MMCA.Common.Gcp.AddGoogleCloudDataProtection, DataProtection:GcpKmsKeyName). The official
          Google.Cloud.AspNetCore.DataProtection.Kms is prerelease only (a stable package cannot
