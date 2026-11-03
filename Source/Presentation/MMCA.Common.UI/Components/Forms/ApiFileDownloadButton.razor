@@ -6,23 +6,26 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject IOptions<ApiSettings> ApiOptions
 @inject IToastService Toast
+@inject IJSRuntime JS
 @inject IStringLocalizer<ApiFileDownloadButton> L
 
 @* Downloads a file produced by an API endpoint (ADR-042). Browsers get a plain download link to
    the endpoint (the response's attachment disposition does the rest). Native heads cannot download
    through the WebView, so they fetch the bytes over the API client, stage a temp file, and open the
    share sheet, which is where "save to Files", "open in Calendar" and the rest live on both
-   platforms. Callers supply the endpoint, the file name, the MIME type and the labels; the button
-   itself knows nothing about what the payload is. *@
+   platforms. An endpoint that needs the caller's bearer token opts in with RequiresAuthentication:
+   the browser then fetches through the same API client and saves the bytes through file-download.js.
+   Callers supply the endpoint, the file name, the MIME type and the labels; the button itself knows
+   nothing about what the payload is. *@
 
-@if (ExternalLink.InterceptsLinks)
+@if (ExternalLink.InterceptsLinks || RequiresAuthentication)
 {
     <MudIconButton Icon="@Icon"
                    Size="@Size"
                    aria-label="@AccessibleLabel"
                    title="@AccessibleLabel"
                    Disabled="_isExporting"
-                   OnClick="ShareDownloadedFileAsync" />
+                   OnClick="DownloadThroughClientAsync" />
 }
 else
 {

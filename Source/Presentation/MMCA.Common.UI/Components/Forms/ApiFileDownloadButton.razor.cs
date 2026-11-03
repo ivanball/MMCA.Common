@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Components.Forms;
@@ -13,6 +15,9 @@ namespace MMCA.Common.UI.Components.Forms;
 /// </summary>
 public partial class ApiFileDownloadButton
 {
+    /// <summary>The browser save helper shipped with this package (the authenticated download path).</summary>
+    private const string SaveFileModulePath = "./_content/MMCA.Common.UI/file-download.js";
+
     /// <summary>Relative API path of the endpoint producing the file, e.g. <c>Sessions/42/ics</c>.</summary>
     [Parameter]
     [EditorRequired]
@@ -79,6 +84,30 @@ public partial class ApiFileDownloadButton
     [Parameter]
     public string HttpClientName { get; set; } = "APIClient";
 
+    /// <summary>
+    /// Whether the endpoint needs the caller's bearer token. Defaults to <see langword="false"/>: the
+    /// browser gets the plain download link, which streams a large file without loading it into
+    /// memory but carries cookies only, never an Authorization header. When <see langword="true"/>
+    /// the browser branch renders no link; a click fetches through the <see cref="HttpClientName"/>
+    /// client (the one the native branch uses, which attaches the token on every head, a Blazor
+    /// Server circuit included) and saves the bytes through the shipped <c>file-download.js</c>
+    /// module. The native branch is the same either way.
+    /// </summary>
+    [Parameter]
+    public bool RequiresAuthentication { get; set; }
+
+    /// <summary>
+    /// Optional temp sub-folder the native branch stages the file in, created on demand and purged of
+    /// every file before each write, so a sensitive export (a personal-data download, for example)
+    /// never outlives the next tap and a head can purge it wholesale at app start. The staged copy
+    /// still cannot be deleted after the share: Android's share request returns when the intent
+    /// launches. <see langword="null"/> (the default) stages straight in the temp directory, as
+    /// before. Reduced to a single folder name like <see cref="FileName"/>; a value with nothing usable
+    /// left is a failed download.
+    /// </summary>
+    [Parameter]
+    public string? StagingFolderName { get; set; }
+
     private bool _isExporting;
 
     private string AccessibleLabel => AriaLabel ?? L["Button.Download.Aria"].Value;
@@ -102,7 +131,10 @@ public partial class ApiFileDownloadButton
         }
     }
 
-    private async Task ShareDownloadedFileAsync()
+    // The click path of every head that does not use the plain link: a native head (stage the file
+    // and open the share sheet) and a browser with RequiresAuthentication (save through JS). Both
+    // fetch through the authenticated API client.
+    private async Task DownloadThroughClientAsync()
     {
         if (_isExporting || string.IsNullOrWhiteSpace(RelativeApiPath))
         {
@@ -112,44 +144,83 @@ public partial class ApiFileDownloadButton
         _isExporting = true;
         try
         {
-            // Sanitized BEFORE the fetch: a name that cannot be staged must not cost a download.
-            var safeName = ResolveStagedFileName(FileName);
-            if (safeName is null)
+            // Sanitized BEFORE the fetch: a name or folder that cannot be staged must not cost a download.
+            if (!TryResolveTarget(out var safeName, out var safeFolder))
             {
-                Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+                WarnDownloadFailed();
                 return;
             }
 
             using var client = HttpClientFactory.CreateClient(HttpClientName);
             var bytes = await client.GetByteArrayAsync(new Uri(RelativeApiPath, UriKind.Relative));
 
-            var filePath = await StageFileAsync(safeName, bytes);
-
-            if (!await Share.ShareFileAsync(ShareTitle, filePath, ContentType))
+            if (ExternalLink.InterceptsLinks)
             {
-                Toast.Warning(UnavailableMessage ?? L["Snackbar.ShareUnavailable"].Value);
+                await ShareStagedFileAsync(safeFolder, safeName, bytes);
+            }
+            else
+            {
+                await SaveInBrowserAsync(safeName, bytes);
             }
         }
         catch (HttpRequestException)
         {
-            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+            WarnDownloadFailed();
         }
         catch (OperationCanceledException)
         {
             // No token is passed to the download, so this is the HttpClient timeout, not a
             // disposal. Report it rather than swallowing it: the user tapped and got nothing.
-            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+            WarnDownloadFailed();
         }
         catch (Exception)
         {
-            // The staging write (IOException, UnauthorizedAccessException) and the share sheet
-            // itself run here too. This is an OnClick callback on the native heads, where an
-            // unhandled exception is fatal to the host, so nothing may escape.
-            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+            // The staging write (IOException, UnauthorizedAccessException), the share sheet and the
+            // browser's JS save run here too. This is an OnClick callback on the native heads, where
+            // an unhandled exception is fatal to the host, so nothing may escape.
+            WarnDownloadFailed();
         }
         finally
         {
             _isExporting = false;
+        }
+    }
+
+    private void WarnDownloadFailed() => Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+
+    /// <summary>
+    /// Resolves the sanitized file name and, on a native head that opted into a staging folder, the
+    /// sanitized folder name. False when either has nothing usable left.
+    /// </summary>
+    private bool TryResolveTarget([NotNullWhen(true)] out string? safeName, out string? safeFolder)
+    {
+        safeName = ResolveStagedFileName(FileName);
+        var stagesInFolder = ExternalLink.InterceptsLinks && StagingFolderName is not null;
+        safeFolder = stagesInFolder ? ResolveStagedFileName(StagingFolderName) : null;
+
+        return safeName is not null && (!stagesInFolder || safeFolder is not null);
+    }
+
+    private async Task ShareStagedFileAsync(string? safeFolder, string safeName, byte[] bytes)
+    {
+        var filePath = await StageFileAsync(safeFolder, safeName, bytes);
+
+        if (!await Share.ShareFileAsync(ShareTitle, filePath, ContentType))
+        {
+            Toast.Warning(UnavailableMessage ?? L["Snackbar.ShareUnavailable"].Value);
+        }
+    }
+
+    // The bytes are already in memory (the authenticated fetch), so they go to the browser as a
+    // stream and file-download.js saves them through a temporary object URL. The reference owns the
+    // stream and disposes it.
+    private async Task SaveInBrowserAsync(string safeName, byte[] bytes)
+    {
+        using var content = new DotNetStreamReference(new MemoryStream(bytes));
+        var module = await JS.InvokeAsync<IJSObjectReference>("import", SaveFileModulePath);
+        await using (module.ConfigureAwait(false))
+        {
+            await module.InvokeVoidAsync("saveFile", safeName, ContentType, content);
         }
     }
 
@@ -175,16 +246,32 @@ public partial class ApiFileDownloadButton
                 : safeName;
     }
 
-    /// <summary>Writes the payload into the temp directory under an already-sanitized name.</summary>
+    /// <summary>
+    /// Writes the payload into the temp directory, or into the already-sanitized
+    /// <paramref name="safeFolder"/> beneath it, under an already-sanitized name.
+    /// </summary>
     /// <remarks>
     /// The staged file is not deleted after the share: on Android the share intent returns as soon
     /// as it launches, so deleting here would race the receiving app reading it. The path is
     /// per-entity, so a stale copy from a previous tap is simply replaced; clearing it first keeps a
-    /// truncated or half-written leftover from being shared.
+    /// truncated or half-written leftover from being shared. A dedicated staging folder is emptied of
+    /// every file first, so no earlier export survives the next tap.
     /// </remarks>
-    private static async Task<string> StageFileAsync(string safeName, byte[] bytes)
+    private static async Task<string> StageFileAsync(string? safeFolder, string safeName, byte[] bytes)
     {
         var filePath = Path.Combine(Path.GetTempPath(), safeName);
+
+        if (safeFolder is not null)
+        {
+            var directory = Path.Combine(Path.GetTempPath(), safeFolder);
+            Directory.CreateDirectory(directory);
+            foreach (var stale in Directory.EnumerateFiles(directory))
+            {
+                File.Delete(stale);
+            }
+
+            filePath = Path.Combine(directory, safeName);
+        }
 
         if (File.Exists(filePath))
         {

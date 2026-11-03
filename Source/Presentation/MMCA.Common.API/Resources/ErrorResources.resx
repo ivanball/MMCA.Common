@@ -317,7 +317,7 @@
     <value>Too many sign-in link requests. Please try again later.</value>
   </data>
   <data name="Csv.Malformed" xml:space="preserve">
-    <value>The file is not valid CSV.</value>
+    <value>The file is not valid CSV: check line {0}.</value>
   </data>
   <data name="Csv.Empty" xml:space="preserve">
     <value>The file has no header row.</value>

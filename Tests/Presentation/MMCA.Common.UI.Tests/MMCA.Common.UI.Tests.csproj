@@ -31,6 +31,8 @@
          file uses no MAUI API (only MMCA.Common.UI abstractions), so it is compiled here as source to
          unit-test its conflict-retry path (MauiPushRegistrationServiceTests). -->
     <Compile Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\Capabilities\Notifications\MauiPushRegistrationService.cs" Link="Linked\MauiPushRegistrationService.cs" />
+    <!-- Same reason: the MAUI head's CapabilitiesJsModule registration (MauiCapabilitiesJsModuleRegistrationTests). -->
+    <Compile Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\Capabilities\Interop\MauiCapabilitiesJsModuleRegistration.cs" Link="Linked\MauiCapabilitiesJsModuleRegistration.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Embed the shipped CSS tokens so BrandColorTokenTests can assert app.css mirrors BrandColors.cs. -->

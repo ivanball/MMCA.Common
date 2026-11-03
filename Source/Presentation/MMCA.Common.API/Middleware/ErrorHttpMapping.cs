@@ -13,6 +13,9 @@ namespace MMCA.Common.API.Middleware;
 /// </summary>
 internal static class ErrorHttpMapping
 {
+    /// <summary>The placeholder a translated error message uses for the error's <see cref="Error.Target"/>.</summary>
+    private const string TargetPlaceholder = "{0}";
+
     /// <summary>
     /// Immutable mapping from domain error types to HTTP status codes. Uses <see cref="FrozenDictionary{TKey,TValue}"/>
     /// for optimal read performance since the mapping is fixed at startup.
@@ -63,9 +66,29 @@ internal static class ErrorHttpMapping
         [.. errors.Select(e => new
         {
             e.Code,
-            Message = localizer is null ? e.Message : localizer.Localize(e.Code, e.Message),
+            Message = localizer is null ? e.Message : LocalizeMessage(localizer, e),
             Type = e.Type.ToString(),
             e.Source,
             e.Target
         })];
+
+    /// <summary>
+    /// Localizes one error's message. A translated text may carry a <c>{0}</c> placeholder filled with
+    /// the error's <see cref="Error.Target"/>, so runtime detail survives translation (the CSV reader
+    /// puts the malformed line there for <c>Csv.Malformed</c>). A placeholder with no target to fill
+    /// it keeps the English message, which names the detail itself.
+    /// </summary>
+    private static string LocalizeMessage(IErrorLocalizer localizer, Error error)
+    {
+        var text = localizer.Localize(error.Code, error.Message);
+        if (string.Equals(text, error.Message, StringComparison.Ordinal)
+            || !text.Contains(TargetPlaceholder, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        return string.IsNullOrEmpty(error.Target)
+            ? error.Message
+            : text.Replace(TargetPlaceholder, error.Target, StringComparison.Ordinal);
+    }
 }

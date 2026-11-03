@@ -644,8 +644,8 @@
       },
       "RESPite": {
         "type": "Transitive",
-        "resolved": "3.4.29",
-        "contentHash": "LKL/mB4lRuiLy/ld2E6Sot7zYsgpKKi8K7AWwydy1pgDFgza/A/lJcYCm/b7f5IglgMzT7Y9VCDTcWLq00wx7w=="
+        "resolved": "3.4.31",
+        "contentHash": "iveGez1C2lMZRLwGZM2Ta9qDtUR1haO5YhCfqLPndcwWS39/ypwjNLmB+B9kxw1XvZnXATXvD+kGtfQdOnYXlg=="
       },
       "Serilog": {
         "type": "Transitive",
@@ -829,7 +829,7 @@
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
-          "StackExchange.Redis": "[3.4.29, )",
+          "StackExchange.Redis": "[3.4.31, )",
           "System.Security.Cryptography.Pkcs": "[10.0.14, )"
         }
       },
@@ -861,7 +861,7 @@
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
-          "StackExchange.Redis": "[3.4.29, )",
+          "StackExchange.Redis": "[3.4.31, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.14, )"
         }
@@ -1440,12 +1440,12 @@
       },
       "StackExchange.Redis": {
         "type": "CentralTransitive",
-        "requested": "[3.4.29, )",
-        "resolved": "3.4.29",
-        "contentHash": "a/tpPHvCbzSUvnjtNaFqDmF5bTsMraA2Ms7wpcM/gNo9SU/vBwlU6aGLAWH9NiGUGG0tElz+9Ec8PKEKZKvuvA==",
+        "requested": "[3.4.31, )",
+        "resolved": "3.4.31",
+        "contentHash": "LOw65ufYLNSXs7t7KSNH6NNvK4qBYCAZEU80OcVUG94Ixib6unKH4kovpHuOdzHcsi6JwkYIoRDkU1dPDq78Rw==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
-          "RESPite": "3.4.29",
+          "RESPite": "3.4.31",
           "System.IO.Hashing": "10.0.13"
         }
       },

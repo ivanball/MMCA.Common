@@ -200,10 +200,14 @@ MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.Icon.get -> string!
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.Icon.set -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RelativeApiPath.get -> string!
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RelativeApiPath.set -> void
+MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RequiresAuthentication.get -> bool
+MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RequiresAuthentication.set -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.ShareTitle.get -> string!
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.ShareTitle.set -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.Size.get -> MudBlazor.Size
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.Size.set -> void
+MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.StagingFolderName.get -> string?
+MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.StagingFolderName.set -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.UnavailableMessage.get -> string?
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.UnavailableMessage.set -> void
 MMCA.Common.UI.Components.Forms.DeleteConfirmation

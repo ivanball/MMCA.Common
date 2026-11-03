@@ -6,6 +6,23 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.275.0] - 2026-11-03
+
+Fixes for the framework defects found by ADC Local Test Run 15, plus authenticated file downloads on every head. No breaking changes.
+
+### Added
+
+- **Authenticated downloads in `ApiFileDownloadButton`** (MMCA.Common.UI). `RequiresAuthentication` (default `false`) makes the browser branch fetch through the same `HttpClientName` client the native branch uses, which attaches the bearer token on every head, a Blazor Server circuit included, and save the bytes through the shipped `_content/MMCA.Common.UI/file-download.js` module (an object URL over a `DotNetStreamReference`). Without it the browser keeps the plain link, which streams a large file without loading it into memory but carries no Authorization header, so an authenticated endpoint answered 401 on a Server circuit. `StagingFolderName` (default `null`) makes the native branch stage the file in a temp sub-folder emptied before each write, for sensitive exports such as a personal-data download. Existing callers behave exactly as before.
+
+### Fixed
+
+- **The credential-link pages work on MAUI** (MMCA.Common.UI.Maui). `AddMauiDeviceCapabilities` (called by `UseMauiDeviceCapabilities`) now registers the capabilities JS module the sign-in-link, confirm-email and reset-password pages read the URI fragment through; before, only the browser registration did, so every MAUI head reported a tapped link as "This link is incomplete."
+- **Deep links are checked once percent-decoded** (MMCA.Common.UI). `DeepLinkDispatcher.TryComposeRoute` drops a route whose decoded path holds a control character, a backslash, a protocol-relative `//` opening or a `..` segment; the published route stays encoded. `DeepLinkListener` also guards the cold-start dispatch, so a route the navigation refuses is logged instead of raising the unhandled-error bar and leaving later deep links dead.
+- **An unknown restored sort column is ignored** (MMCA.Common.UI). `DataGridListPageBase` forgets a `?s=` column the rendered grid does not have, so a stale or hand-edited URL no longer sends it to the API and fails the list with a 400.
+- **The malformed-CSV message keeps its line number in every language** (MMCA.Common.Shared, MMCA.Common.API). `CsvReader` puts the line in the `Csv.Malformed` error's `Target`, the translated resources carry a `{0}` placeholder, and the edge localizer fills it from `Target` (keeping the English message when there is no target).
+- **The change-password error summary refreshes with the form** (MMCA.Common.UI). `ChangePasswordCard` re-renders on the form's `ErrorsChanged`, so editing the current-password field clears "The current password is incorrect." from the summary.
+- Dependencies: StackExchange.Redis 3.4.31, Anthropic 13.4.0, AngleSharp 1.9.1, Google.Cloud.SecretManager.V1 3.0.0 (Dependabot #661, #662).
+
 ## [1.274.0] - 2026-11-02
 
 A redeemed sign-in link signs the browser in behind the same-origin API proxy without host configuration. No breaking changes.
