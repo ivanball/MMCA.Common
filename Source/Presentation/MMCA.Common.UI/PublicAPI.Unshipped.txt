@@ -1,5 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RequiresAuthentication.get -> bool
-MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.RequiresAuthentication.set -> void
-MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.StagingFolderName.get -> string?
-MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.StagingFolderName.set -> void

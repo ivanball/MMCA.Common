@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.275.0] - 2026-11-03
+
 Fixes for the framework defects found by ADC Local Test Run 15, plus authenticated file downloads on every head. No breaking changes.
 
 ### Added
