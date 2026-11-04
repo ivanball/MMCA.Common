@@ -6,6 +6,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Nav group descriptions** (MMCA.Common.UI). `IUIModule.NavGroups` (default empty) describes a nav group by its `NavItem.Group` key: `NavGroup(Key, Icon, Expanded, Order)` sets its icon, whether it starts expanded, and its position within the section. A description applies to every module's items with that key, so a module can place a group another module contributes, and the first registered description of a key wins. An undescribed group renders as before: the folder icon, collapsed, in first-appearance order.
+- **Nav item order** (MMCA.Common.UI). `NavItem.Order` (init-only, default `0`) orders an item within its group or within its section's ungrouped items. Both sorts are stable, so a host that sets neither renders exactly as before. It sits outside the positional parameters, so no constructor signature changed.
+- **Permission-guarded pages in every UI head** (MMCA.Common.UI). `[HasPagePermission(permission)]` gates a Blazor page on a `permission` claim, checked with `HasPermissionClaim` exactly as `NavItem.RequiredPermission` checks it, so a menu entry and its page agree. `AddUIShared` registers one `page-perm:` policy per permission declared in `MMCA.Common.UI` or a registered UI module's assembly, with no host call; the prefix keeps the API's `perm:` policy provider from intercepting it in a host that wires both. It reads the claim only (a UI head has no permission registry), so it suits a host whose tokens carry permission claims.
+
 ## [1.275.0] - 2026-11-03
 
 Fixes for the framework defects found by ADC Local Test Run 15, plus authenticated file downloads on every head. No breaking changes.

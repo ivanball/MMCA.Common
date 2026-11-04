@@ -17,4 +17,12 @@ namespace MMCA.Common.UI.Common;
 /// what makes a not-yet-translated entry legible instead of blank.
 /// </para>
 /// </summary>
-public record NavItem(string Title, string Href, string Icon, Type TitleResource, string? RequiredRole = null, string? RequiredClaim = null, string? RequiredPermission = null, NavSection Section = NavSection.General, string? Group = null);
+public record NavItem(string Title, string Href, string Icon, Type TitleResource, string? RequiredRole = null, string? RequiredClaim = null, string? RequiredPermission = null, NavSection Section = NavSection.General, string? Group = null)
+{
+    /// <summary>
+    /// The item's position within its group, or within its section's ungrouped items. Ties keep
+    /// registration order, so an app that sets no order renders exactly as before. Declared outside
+    /// the positional parameters so adding it changed no constructor signature.
+    /// </summary>
+    public int Order { get; init; }
+}

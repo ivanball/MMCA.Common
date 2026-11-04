@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Resilience;
+using MMCA.Common.UI.Authorization;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
@@ -96,6 +97,14 @@ public static class DependencyInjection
             });
             services.TryAddEnumerable(
                 ServiceDescriptor.Transient<IAuthorizationHandler, NotificationPageAuthorizationHandler>());
+
+            // Page permission guards ([HasPagePermission], ADR-020): one policy per permission a page
+            // declares, discovered from the registered UI modules when the options are first built,
+            // so a host adds a guarded page without a registration call of its own.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IConfigureOptions<AuthorizationOptions>, PagePermissionPolicyConfigurator>());
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IAuthorizationHandler, PagePermissionAuthorizationHandler>());
 
             // Resource-based localization for IStringLocalizer<T> across all UI hosts (ADR-027).
             services.AddLocalization();

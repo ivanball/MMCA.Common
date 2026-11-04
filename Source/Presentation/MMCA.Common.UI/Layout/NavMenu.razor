@@ -107,62 +107,37 @@
     <MudNavMenu Color="Color.Default">
         <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">@L["Nav.Home"]</MudNavLink>
 
-        @foreach (var group in _generalItems.GroupBy(i => i.Group))
-        {
-            if (group.Key is not null)
-            {
-                <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
-                    @foreach (var item in group)
-                    {
-                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
-                    }
-                </MudNavGroup>
-            }
-            else
-            {
-                @foreach (var item in group)
-                {
-                    <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
-                }
-            }
-        }
+        @SectionUnits(_generalUnits)
 
-        @if (_userItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
+        @if (_userUnits.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
             <div class="nav-section-label" role="heading" aria-level="2">@L["Nav.MyAccount"]</div>
-            @foreach (var group in _userItems.GroupBy(i => i.Group))
-            {
-                if (group.Key is not null)
-                {
-                    <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
-                        @foreach (var item in group)
-                        {
-                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
-                        }
-                    </MudNavGroup>
-                }
-                else
-                {
-                    @foreach (var item in group)
-                    {
-                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
-                    }
-                }
-            }
+            @SectionUnits(_userUnits)
         }
 
         @* Authentication is checked here as well as per item: NavItem.RequiredRole defaults to null,
            so a module that registers a Section.Admin item without one would otherwise disclose the
            admin feature's existence and URL to anonymous visitors. *@
-        @if (_adminItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
+        @if (_adminUnits.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
             <div class="nav-section-label" role="heading" aria-level="2">@L["Nav.Administration"]</div>
-            @foreach (var group in _adminItems.GroupBy(i => i.Group))
+            @SectionUnits(_adminUnits)
+        }
+    </MudNavMenu>
+</nav>
+
+@code {
+    // One section's units in order: each group, plus the section's ungrouped items as one unit, the
+    // way the former GroupBy arranged them. A group renders with its described icon and initial
+    // expansion (the folder icon, collapsed, when nobody describes it).
+    private RenderFragment SectionUnits(List<NavUnit> units) =>
+        @<text>
+            @foreach (var unit in units)
             {
-                if (group.Key is not null)
+                if (unit.Key is not null)
                 {
-                    <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
-                        @foreach (var item in group)
+                    <MudNavGroup Title="@DisplayGroup(unit)" Icon="@unit.Icon" Expanded="@unit.Expanded">
+                        @foreach (var item in unit.Items)
                         {
                             <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                         }
@@ -170,123 +145,11 @@
                 }
                 else
                 {
-                    @foreach (var item in group)
+                    @foreach (var item in unit.Items)
                     {
                         <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                     }
                 }
             }
-        }
-    </MudNavMenu>
-</nav>
-
-@code {
-    private ClaimsPrincipal? _user;
-    private List<Type> _appBarComponents = [];
-    private List<Type> _publicAppBarComponents = [];
-    private List<NavItem> _generalItems = [];
-    private List<NavItem> _userItems = [];
-    private List<NavItem> _adminItems = [];
-    private bool _showSessionsLink;
-    private bool _subscribed;
-
-    // ADR-027: Title and Group are resource keys resolved at render time against the item's
-    // TitleResource resx pair, so the menu follows the active culture; a key the resource type does
-    // not declare renders as the raw string.
-    private string Display(NavItem item)
-    {
-        var localized = LocalizerFactory.Create(item.TitleResource)[item.Title];
-        return localized.ResourceNotFound ? item.Title : localized.Value;
-    }
-
-    private string DisplayGroup(IGrouping<string?, NavItem> group)
-    {
-        if (group.Key is null)
-        {
-            return string.Empty;
-        }
-
-        var localized = LocalizerFactory.Create(group.First().TitleResource)[group.Key];
-        return localized.ResourceNotFound ? group.Key : localized.Value;
-    }
-
-    private async Task HandleLogoutAsync()
-    {
-        await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
-        _publicAppBarComponents = UIModules.SelectMany(m => m.PublicAppBarComponentTypes).ToList();
-        await RebuildFromAuthStateAsync(AuthStateProvider.GetAuthenticationStateAsync());
-
-        // The sections are computed from the user, so an in-circuit sign-out (a failed silent refresh
-        // raises AuthenticationStateChanged without a reload) must recompute them, or the admin and
-        // user sections stay visible to a signed-out visitor.
-        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        _subscribed = true;
-    }
-
-    // Event-handler signature; the rebuild task observes its own teardown race, so the explicit
-    // discard is safe and avoids the async-void crash-the-process mode (VSTHRD100).
-    private void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask) =>
-        _ = RefreshFromAuthStateAsync(authStateTask);
-
-    private async Task RefreshFromAuthStateAsync(Task<AuthenticationState> authStateTask)
-    {
-        try
-        {
-            await InvokeAsync(async () =>
-            {
-                await RebuildFromAuthStateAsync(authStateTask);
-                StateHasChanged();
-            });
-        }
-        catch (ObjectDisposedException)
-        {
-            // Renderer torn down between the auth-state event and the dispatch.
-        }
-    }
-
-    private async Task RebuildFromAuthStateAsync(Task<AuthenticationState> authStateTask)
-    {
-        var authState = await authStateTask;
-        _user = authState.User;
-
-        var sessionsRole = LayoutSettingsOptions.Value.SessionsNavRequiredRole;
-        _showSessionsLink = string.IsNullOrWhiteSpace(sessionsRole) || _user?.IsInRole(sessionsRole) == true;
-
-        var allItems = UIModules
-            .SelectMany(m => m.NavItems)
-            .Where(item => item.RequiredRole is null || _user?.IsInRole(item.RequiredRole) == true)
-            .Where(item => item.RequiredClaim is null || _user?.HasClaim(c => c.Type == item.RequiredClaim) == true)
-            .Where(item => item.RequiredPermission is null || _user.HasPermissionClaim(item.RequiredPermission))
-            .ToList();
-
-        _generalItems = allItems.Where(i => i.Section is NavSection.General).ToList();
-        _userItems = allItems.Where(i => i.Section is NavSection.User).ToList();
-        _adminItems = allItems.Where(i => i.Section is NavSection.Admin).ToList();
-    }
-
-    /// <summary>Unsubscribes from auth-state changes; safe to call more than once.</summary>
-    /// <param name="disposing">Whether managed state is being released.</param>
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposing || !_subscribed)
-        {
-            return;
-        }
-
-        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        _subscribed = false;
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+        </text>;
 }
