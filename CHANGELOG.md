@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.276.0] - 2026-11-04
+
+Nav group descriptions and item order for the shared menu, and permission-guarded Blazor pages in every UI head. No breaking changes.
+
 ### Added
 
 - **Nav group descriptions** (MMCA.Common.UI). `IUIModule.NavGroups` (default empty) describes a nav group by its `NavItem.Group` key: `NavGroup(Key, Icon, Expanded, Order)` sets its icon, whether it starts expanded, and its position within the section. A description applies to every module's items with that key, so a module can place a group another module contributes, and the first registered description of a key wins. An undescribed group renders as before: the folder icon, collapsed, in first-appearance order.

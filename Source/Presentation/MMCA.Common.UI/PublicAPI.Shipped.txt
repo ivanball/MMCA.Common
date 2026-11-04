@@ -1,4 +1,8 @@
 #nullable enable
+MMCA.Common.UI.Authorization.HasPagePermissionAttribute
+MMCA.Common.UI.Authorization.HasPagePermissionAttribute.HasPagePermissionAttribute(string! permission) -> void
+MMCA.Common.UI.Authorization.HasPagePermissionAttribute.Permission.get -> string!
+MMCA.Common.UI.Authorization.PagePermissionPolicy
 MMCA.Common.UI.Common.BreakpointConstants
 MMCA.Common.UI.Common.ComponentLifetimeExtensions
 MMCA.Common.UI.Common.Interfaces.IAppDialogService
@@ -31,6 +35,7 @@ MMCA.Common.UI.Common.Interfaces.IUIModule.Assembly.get -> System.Reflection.Ass
 MMCA.Common.UI.Common.Interfaces.IUIModule.ContentHeaderComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.FooterComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.LayoutComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
+MMCA.Common.UI.Common.Interfaces.IUIModule.NavGroups.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Common.NavGroup!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.NavItems.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Common.NavItem!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.NotFoundContentType.get -> System.Type?
 MMCA.Common.UI.Common.Interfaces.IUIModule.PublicAppBarComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
@@ -45,6 +50,19 @@ MMCA.Common.UI.Common.LatestLoadGuard.Begin() -> (System.Threading.CancellationT
 MMCA.Common.UI.Common.LatestLoadGuard.Dispose() -> void
 MMCA.Common.UI.Common.LatestLoadGuard.IsCurrent(int generation) -> bool
 MMCA.Common.UI.Common.LatestLoadGuard.LatestLoadGuard() -> void
+MMCA.Common.UI.Common.NavGroup
+MMCA.Common.UI.Common.NavGroup.<Clone>$() -> MMCA.Common.UI.Common.NavGroup!
+MMCA.Common.UI.Common.NavGroup.Deconstruct(out string! Key, out string? Icon, out bool Expanded, out int Order) -> void
+MMCA.Common.UI.Common.NavGroup.Equals(MMCA.Common.UI.Common.NavGroup? other) -> bool
+MMCA.Common.UI.Common.NavGroup.Expanded.get -> bool
+MMCA.Common.UI.Common.NavGroup.Expanded.init -> void
+MMCA.Common.UI.Common.NavGroup.Icon.get -> string?
+MMCA.Common.UI.Common.NavGroup.Icon.init -> void
+MMCA.Common.UI.Common.NavGroup.Key.get -> string!
+MMCA.Common.UI.Common.NavGroup.Key.init -> void
+MMCA.Common.UI.Common.NavGroup.NavGroup(string! Key, string? Icon = null, bool Expanded = false, int Order = 0) -> void
+MMCA.Common.UI.Common.NavGroup.Order.get -> int
+MMCA.Common.UI.Common.NavGroup.Order.init -> void
 MMCA.Common.UI.Common.NavItem
 MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out string? RequiredPermission, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
 MMCA.Common.UI.Common.NavItem.Group.get -> string?
@@ -55,6 +73,8 @@ MMCA.Common.UI.Common.NavItem.Icon.get -> string!
 MMCA.Common.UI.Common.NavItem.Icon.init -> void
 MMCA.Common.UI.Common.NavItem.NavItem(MMCA.Common.UI.Common.NavItem! original) -> void
 MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, string? RequiredPermission = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
+MMCA.Common.UI.Common.NavItem.Order.get -> int
+MMCA.Common.UI.Common.NavItem.Order.init -> void
 MMCA.Common.UI.Common.NavItem.RequiredClaim.get -> string?
 MMCA.Common.UI.Common.NavItem.RequiredClaim.init -> void
 MMCA.Common.UI.Common.NavItem.RequiredPermission.get -> string?
@@ -1364,6 +1384,7 @@ MMCA.Common.UI._Imports
 MMCA.Common.UI._Imports.Execute() -> void
 MMCA.Common.UI._Imports._Imports() -> void
 abstract MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Title.get -> string!
+const MMCA.Common.UI.Authorization.PagePermissionPolicy.Prefix = "page-perm:" -> string!
 const MMCA.Common.UI.Common.PrerenderStateBudget.MaxJsonBytes = 14336 -> int
 const MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.ClientConfigPath = "client-config" -> string!
 const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
@@ -1421,6 +1442,9 @@ const MMCA.Common.UI.Theme.BrandColors.PrimaryLight = "#42A5F5" -> string!
 const MMCA.Common.UI.Theme.BrandColors.Secondary = "#00796B" -> string!
 const MMCA.Common.UI.Theme.BrandColors.SecondaryDark = "#00695C" -> string!
 const MMCA.Common.UI.Theme.BrandColors.SecondaryLight = "#4DB6AC" -> string!
+override MMCA.Common.UI.Common.NavGroup.Equals(object? obj) -> bool
+override MMCA.Common.UI.Common.NavGroup.GetHashCode() -> int
+override MMCA.Common.UI.Common.NavGroup.ToString() -> string!
 override MMCA.Common.UI.Common.NavItem.Equals(object? obj) -> bool
 override MMCA.Common.UI.Common.NavItem.GetHashCode() -> int
 override MMCA.Common.UI.Common.NavItem.ToString() -> string!
@@ -1491,8 +1515,11 @@ override MMCA.Common.UI.Services.Preferences.UserPreferences.ToString() -> strin
 override MMCA.Common.UI.Theme.MmcaThemeProviders.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Theme.MmcaThemeProviders.OnInitialized() -> void
 override MMCA.Common.UI.Theme.ThemeToggle.OnInitialized() -> void
+static MMCA.Common.UI.Authorization.PagePermissionPolicy.NameFor(string! permission) -> string!
 static MMCA.Common.UI.Common.BreakpointConstants.IsMobileBreakpoint(MudBlazor.Breakpoint breakpoint) -> bool
 static MMCA.Common.UI.Common.ComponentLifetimeExtensions.LifetimeToken(this System.Threading.CancellationTokenSource? source) -> System.Threading.CancellationToken
+static MMCA.Common.UI.Common.NavGroup.operator !=(MMCA.Common.UI.Common.NavGroup? left, MMCA.Common.UI.Common.NavGroup? right) -> bool
+static MMCA.Common.UI.Common.NavGroup.operator ==(MMCA.Common.UI.Common.NavGroup? left, MMCA.Common.UI.Common.NavGroup? right) -> bool
 static MMCA.Common.UI.Common.NavItem.operator !=(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NavItem.operator ==(MMCA.Common.UI.Common.NavItem? left, MMCA.Common.UI.Common.NavItem? right) -> bool
 static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
