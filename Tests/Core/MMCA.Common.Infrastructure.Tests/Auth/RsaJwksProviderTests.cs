@@ -186,11 +186,12 @@ public sealed class RsaJwksProviderTests
     [Fact]
     public void Validate_WithAnAdditionalKeyMissingItsIdOrMaterial_Fails()
     {
+        using var rsa = RSA.Create(2048);
         var settings = new JwksSettings
         {
             AdditionalKeys =
             [
-                new JwksAdditionalKey { KeyId = string.Empty, RsaPublicKeyPem = "pem" },
+                new JwksAdditionalKey { KeyId = string.Empty, RsaPublicKeyPem = rsa.ExportSubjectPublicKeyInfoPem() },
                 new JwksAdditionalKey { KeyId = "no-material" },
             ],
         };
@@ -203,15 +204,50 @@ public sealed class RsaJwksProviderTests
     }
 
     [Fact]
-    public void Validate_WithDistinctAdditionalKeys_Passes()
+    public void Validate_WithAMalformedPem_FailsNamingTheKid()
     {
         var settings = new JwksSettings
         {
-            KeyId = "current",
-            AdditionalKeys = [new JwksAdditionalKey { KeyId = "previous", RsaPublicKeyPath = "/keys/previous.pem" }],
+            AdditionalKeys = [new JwksAdditionalKey { KeyId = "previous", RsaPublicKeyPem = "-----BEGIN PUBLIC KEY-----\nnot a key\n-----END PUBLIC KEY-----" }],
         };
 
-        Validate(settings).Should().BeEmpty();
+        Validate(settings).Should().ContainSingle()
+            .Which.ErrorMessage.Should().Contain("kid 'previous'").And.Contain("cannot be loaded");
+    }
+
+    [Fact]
+    public void Validate_WithAMissingKeyFile_FailsNamingTheKid()
+    {
+        var settings = new JwksSettings
+        {
+            AdditionalKeys = [new JwksAdditionalKey { KeyId = "previous", RsaPublicKeyPath = Path.Combine(Path.GetTempPath(), $"mmca-missing-{Guid.NewGuid():N}.pem") }],
+        };
+
+        Validate(settings).Should().ContainSingle()
+            .Which.ErrorMessage.Should().Contain("kid 'previous'").And.Contain("cannot be loaded");
+    }
+
+    [Fact]
+    public void Validate_WithDistinctLoadableAdditionalKeys_Passes()
+    {
+        using var rsa = RSA.Create(2048);
+        var path = Path.Combine(Path.GetTempPath(), $"mmca-jwks-valid-{Guid.NewGuid():N}.pem");
+        File.WriteAllText(path, rsa.ExportSubjectPublicKeyInfoPem());
+
+        try
+        {
+            var settings = new JwksSettings
+            {
+                KeyId = "current",
+                AdditionalKeys = [new JwksAdditionalKey { KeyId = "previous", RsaPublicKeyPath = path }],
+            };
+
+            Validate(settings).Should().BeEmpty();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

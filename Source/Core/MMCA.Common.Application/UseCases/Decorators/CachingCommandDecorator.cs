@@ -72,13 +72,14 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
                 // cleanup must outlive a caller that has already walked away.
                 await cacheService.RemoveByPrefixAsync(cachePrefix, CancellationToken.None)
                     .ConfigureAwait(false);
-
-                // A read that missed the cache before this command committed can still be running its
-                // handler against pre-write state and populate the entry after the eviction above.
-                // A second, delayed eviction removes that repopulated entry. Best-effort like the
-                // first one: ICacheService is a singleton, so the follow-up outlives the request scope
-                // safely, and anything it cannot evict expires on its own TTL.
-                InvalidationFollowUp = ReInvalidateAfterDelayAsync(cachePrefix);
+            }
+            catch (ArgumentException ex)
+            {
+                // The prefix breaks the RemoveByPrefixAsync contract (it must end at a ':'
+                // boundary): a bug in the command, not a transient fault, so it is logged at Error
+                // and not retried, since the delayed attempt would fail identically.
+                LogMisconfiguredCachePrefix(logger, cachePrefix, typeof(TCommand).Name, ex);
+                return result;
             }
 #pragma warning disable CA1031 // Do not catch general exception types: invalidation is best-effort and must never fail a committed command
             catch (Exception ex)
@@ -86,6 +87,14 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
             {
                 LogCacheInvalidationFailed(logger, cachePrefix, typeof(TCommand).Name, ex);
             }
+
+            // A read that missed the cache before this command committed can still be running its
+            // handler against pre-write state and populate the entry after the eviction above.
+            // A second, delayed eviction removes that repopulated entry. Scheduled even when the
+            // first eviction failed, so a transient failure gets its retry. Best-effort like the
+            // first one: ICacheService is a singleton, so the follow-up outlives the request scope
+            // safely, and anything it cannot evict expires on its own TTL.
+            InvalidationFollowUp = ReInvalidateAfterDelayAsync(cachePrefix);
         }
 
         return result;
@@ -114,6 +123,15 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
         Level = LogLevel.Warning,
         Message = "Cache invalidation failed for prefix '{CachePrefix}' after command '{CommandName}' committed; stale entries expire on their own TTL")]
     private static partial void LogCacheInvalidationFailed(
+        ILogger logger,
+        string cachePrefix,
+        string commandName,
+        Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Command '{CommandName}' declares cache prefix '{CachePrefix}', which the cache rejects (an invalidation prefix must end at a ':' boundary); nothing was invalidated, so its cached entries stay stale until their TTL. Fix the command's CachePrefix")]
+    private static partial void LogMisconfiguredCachePrefix(
         ILogger logger,
         string cachePrefix,
         string commandName,

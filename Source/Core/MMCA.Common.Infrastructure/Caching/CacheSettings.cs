@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MMCA.Common.Infrastructure.Caching;
 
 /// <summary>
@@ -37,8 +39,11 @@ public sealed class CacheSettings
     /// lifetime is the shorter of this value and the entry's own TTL.
     /// <see langword="null"/> (the default) keeps the built-in 30-second ceiling
     /// (<c>HybridCacheService.LocalCacheDefault</c>). Ignored by the single-level cache services,
-    /// which have no L1 of their own.
+    /// which have no L1 of their own. When set it must be at least one second (validated at
+    /// startup): it also bounds how long a prefix-invalidation generation token is reused, so zero
+    /// would turn every cache call into a Redis read.
     /// </summary>
+    [Range(typeof(TimeSpan), "00:00:01", "10675199.02:48:05.4775807", ParseLimitsInInvariantCulture = true)]
     public TimeSpan? LocalCacheDuration { get; init; }
 
     /// <summary>

@@ -57,8 +57,16 @@ public sealed class JwksSettings : IValidatableObject
     /// <summary>
     /// Gets the public keys published after the current one and accepted by every local validator,
     /// none of which is ever used to sign. Empty by default. Each <see cref="JwksAdditionalKey.KeyId"/>
-    /// must differ from <see cref="KeyId"/> and from every other entry.
+    /// must differ from <see cref="KeyId"/> and from every other entry, and every entry must load
+    /// (checked at startup).
     /// </summary>
+    /// <remarks>
+    /// Removing a key stops it validating on different schedules: in-process validators
+    /// (<c>AddCommonAuthentication</c>, the refresh flow in <c>TokenService</c>) build their key list
+    /// once, so the removal takes effect when the process restarts; forwarded validators
+    /// (<c>AddForwardedJwtBearer</c>) drop it when they next refresh the JWKS document, on the
+    /// JWT bearer handler's metadata refresh interval (the library default unless the host changes it).
+    /// </remarks>
     public IReadOnlyList<JwksAdditionalKey> AdditionalKeys { get; init; } = [];
 
     /// <summary>
@@ -96,6 +104,33 @@ public sealed class JwksSettings : IValidatableObject
                     $"{member} has no key material: set {nameof(JwksAdditionalKey.RsaPublicKeyPem)} or {nameof(JwksAdditionalKey.RsaPublicKeyPath)}.",
                     [nameof(AdditionalKeys)]);
             }
+            else if (LoadFailure(key) is { } failure)
+            {
+                // Parsed here so ValidateOnStart fails the host at startup, rather than sign-in,
+                // refresh and every authenticated request failing at first use of the key set.
+                yield return new ValidationResult(
+                    $"{member} (kid '{key.KeyId}') cannot be loaded: {failure}",
+                    [nameof(AdditionalKeys)]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Loads an additional key the way every validator will (resolve the PEM or read the path,
+    /// import it) and reports why that failed, or <see langword="null"/> when it loads.
+    /// </summary>
+    /// <param name="key">The additional key.</param>
+    /// <returns>The failure message, or <see langword="null"/>.</returns>
+    private static string? LoadFailure(JwksAdditionalKey key)
+    {
+        try
+        {
+            _ = key.CreateValidationKey();
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or CryptographicException or NotSupportedException or InvalidOperationException)
+        {
+            return ex.Message;
         }
     }
 

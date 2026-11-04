@@ -24,37 +24,46 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// <c>HybridCacheCrossInstanceInvalidationTests</c> pins the property this class provides instead.
 /// </para>
 /// <para>
-/// <b>Tokens, not counters.</b> A token is a fresh random value, not an <c>INCR</c> result, so a
-/// generation key that is lost (evicted, or a Redis restart without persistence) can never come back
-/// at a value an older entry was written under. Any fresh value invalidates, so concurrent
-/// invalidations need no atomicity: whichever write lands last wins and both invalidated.
+/// <b>Tokens, not counters.</b> An invalidation writes a fresh random value, not an <c>INCR</c>
+/// result, so concurrent invalidations need no atomicity (whichever write lands last wins and both
+/// invalidated) and a lost generation key can never come back at an older NON-baseline token. It
+/// can come back at the baseline, though: a boundary with no generation key reads as the empty
+/// token, so if an <c>hcg:</c> key is lost (evicted, a failover or restart without persistence),
+/// the entries written before that prefix's FIRST invalidation are addressed again until their own
+/// TTL. Keep generation keys out of eviction (a <c>volatile-*</c> policy evicts only keys with a
+/// TTL, and these have none) where that window matters.
 /// </para>
 /// <para>
-/// <b>Staleness bound.</b> With Redis, each process caches a token it read for at most the local
-/// cache duration (<c>Cache:LocalCacheDuration</c>, 30 seconds by default), the same bound the L1
-/// copies already carry. The invalidating process adopts its new token at once, and a token read
-/// that was already in flight cannot overwrite it. A generation key is written only when a prefix
-/// is invalidated and carries no TTL, so Redis holds one short string per distinct invalidated
-/// prefix; a boundary nobody invalidated costs a cached miss, never a write.
+/// <b>Staleness bound.</b> With Redis, a token is reused without a read for one local cache duration
+/// (<c>Cache:LocalCacheDuration</c>, 30 seconds by default). After that it is still served while ONE
+/// background read per boundary refreshes it, so no cache call waits on a known boundary; only a
+/// boundary this process has never seen (or forgot after <see cref="RetentionMultiplier"/> local
+/// durations) waits for its read. Another replica's invalidation is therefore seen within one local
+/// duration plus one refresh round trip. The invalidating process adopts its new token at once, and
+/// no read that began before the invalidation can overwrite it. A generation key is written only
+/// when a prefix is invalidated and carries no TTL, so Redis holds one short string per distinct
+/// invalidated prefix.
 /// </para>
 /// <para>
 /// <b>Without a multiplexer</b> the tokens live in this process only, which is exact for a
 /// single-process host and makes an invalidation reach no other replica; that is warned once.
 /// </para>
 /// <para>
-/// <b>Redis outage.</b> A token read that fails answers with the last token this process knew for
-/// the boundary (kept for <see cref="RetentionMultiplier"/> local durations past its expiry for
-/// exactly this), or, for a boundary it never saw or has long forgotten, a fresh random token that
-/// nothing was written under. Never the empty baseline: an L2 entry written before the prefix's
-/// first invalidation still sits under it. Either answer is remembered for one local duration, so
-/// an outage costs at most one failed round trip per boundary per local duration (concurrent reads
-/// of one boundary share that round trip), and an L1 hit keeps answering in between instead of
-/// every call waiting out the Redis timeout. The bound that results: in a full outage only L1 can
-/// answer, so a served value is never older than the local cache duration, as in steady state; in a
-/// partial outage (L2 reads succeed while generation reads fail) an invalidation made by ANOTHER
-/// replica is missed for up to the outage's length plus one local duration. An invalidation made by
-/// this process during the outage still takes effect here at once, since the new token is adopted
-/// locally before the Redis write is attempted.
+/// <b>Redis outage.</b> A failed token read never fails the cache call. It answers with the last
+/// token this process knew for the boundary, or, for a boundary it never saw, the empty baseline.
+/// The baseline is deliberate: the single-use records, counters and flags the authentication
+/// services keep in this cache (the login lockout flag and failure counters, registration
+/// throttles, idempotency records) sit under boundaries nobody invalidates, so the baseline keeps
+/// them in the keyspace every replica shares, and lockout and rate limits keep working on a cold or
+/// newly scaled-out replica. A random fallback would move them to a private keyspace and fail open
+/// for the outage's length. The cost, stated plainly: during a partial outage (L2 reads succeed
+/// while generation reads fail) a cold replica can address the pre-invalidation entries of a prefix
+/// that WAS invalidated, until their TTL. Either answer is remembered for one local duration, so an
+/// outage costs at most one failed round trip per boundary per local duration (concurrent reads of
+/// one boundary share it). In a full outage only L1 can answer, so a served value is never older
+/// than the local cache duration; in a partial outage another replica's invalidation is missed for
+/// up to the outage's length plus one local duration. An invalidation made by this process takes
+/// effect here at once even when its Redis write fails.
 /// </para>
 /// </remarks>
 internal sealed partial class CachePrefixGenerations
@@ -70,8 +79,9 @@ internal sealed partial class CachePrefixGenerations
     internal const char SuffixSeparator = '|';
 
     /// <summary>
-    /// How many local durations a remembered token is kept past its expiry, as the last-known
-    /// answer a failed read falls back to. Five minutes at the default local duration.
+    /// How many local durations a remembered token is kept past its expiry: served while a
+    /// background read refreshes it, and the last-known answer a failed read falls back to. Five
+    /// minutes at the default local duration.
     /// </summary>
     internal const int RetentionMultiplier = 10;
 
@@ -84,11 +94,13 @@ internal sealed partial class CachePrefixGenerations
     private readonly IConnectionMultiplexer? _redis;
     private readonly CacheKeyNamespace _keys;
     private readonly long _localDurationMs;
+    private readonly long _retentionMs;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Tokens this process knows, each reused without a Redis read until <see cref="RememberedToken.ExpiresAt"/>
-    /// and kept as the last-known fallback for <see cref="RetentionMultiplier"/> local durations after.
+    /// and served stale (while refreshing) or as the outage fallback for <see cref="RetentionMultiplier"/>
+    /// local durations after.
     /// </summary>
     private readonly ConcurrentDictionary<string, RememberedToken> _remembered = new(StringComparer.Ordinal);
 
@@ -98,7 +110,7 @@ internal sealed partial class CachePrefixGenerations
     /// <summary>The authoritative tokens when there is no Redis: only invalidated prefixes appear.</summary>
     private readonly ConcurrentDictionary<string, string> _processLocal = new(StringComparer.Ordinal);
 
-    /// <summary>Monotonic stamp on every remembered token, so an older read never overwrites a newer token.</summary>
+    /// <summary>Monotonic stamp on every remembered token, so an older read never overwrites a newer invalidation.</summary>
     private long _version;
 
     private int _insertsSinceSweep;
@@ -107,7 +119,7 @@ internal sealed partial class CachePrefixGenerations
     /// <summary>Initializes a new instance of the <see cref="CachePrefixGenerations"/> class.</summary>
     /// <param name="redis">The shared server, or <see langword="null"/> for process-local generations.</param>
     /// <param name="keys">The namespace applied to the generation keys, the same one the entries use.</param>
-    /// <param name="localDuration">How long a token read from Redis may be reused before it is re-read.</param>
+    /// <param name="localDuration">How long a token read from Redis may be reused before it is refreshed.</param>
     /// <param name="logger">Receives the warnings this class raises.</param>
     public CachePrefixGenerations(
         IConnectionMultiplexer? redis,
@@ -121,6 +133,7 @@ internal sealed partial class CachePrefixGenerations
         _redis = redis;
         _keys = keys;
         _localDurationMs = (long)Math.Max(0, localDuration.TotalMilliseconds);
+        _retentionMs = _localDurationMs * RetentionMultiplier;
         _logger = logger;
     }
 
@@ -132,6 +145,7 @@ internal sealed partial class CachePrefixGenerations
     /// <param name="key">The caller-supplied key.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The suffix to append, or an empty string.</returns>
+    /// <remarks>Never faults on a Redis failure; the only exception it raises is the caller's cancellation.</remarks>
     public async ValueTask<string> SuffixAsync(string key, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -150,31 +164,37 @@ internal sealed partial class CachePrefixGenerations
             return Compose(tokens);
         }
 
-        // Unknown or expired tokens are read concurrently: StackExchange.Redis pipelines them over
-        // one connection, so a key with several boundaries costs one round trip, not several.
-        // Deliberately one GET per key rather than an MGET, which a clustered server refuses when the
-        // keys hash to different slots.
+        // Taken BEFORE deciding which boundaries to read: an invalidation by this process that lands
+        // after this point carries a higher version, so a read started here can never overwrite it.
+        var snapshot = Interlocked.Read(ref _version);
         var now = Environment.TickCount64;
         List<(int Index, Task<string> Read)>? pending = null;
 
         for (var i = 0; i < boundaries.Count; i++)
         {
-            if (_remembered.TryGetValue(boundaries[i], out var remembered) && now < remembered.ExpiresAt)
+            if (_remembered.TryGetValue(boundaries[i], out var remembered) && now < remembered.ExpiresAt + _retentionMs)
             {
+                // Known: served at once. Expired but retained: still served, while ONE background
+                // read per boundary refreshes it, so an L1 hit never waits on Redis.
                 tokens[i] = remembered.Token;
+                if (now >= remembered.ExpiresAt)
+                {
+                    _ = ReadShared(boundaries[i], snapshot);
+                }
             }
             else
             {
-                (pending ??= []).Add((i, ReadShared(boundaries[i])));
+                (pending ??= []).Add((i, ReadShared(boundaries[i], snapshot)));
             }
         }
 
         if (pending is not null)
         {
-            // A shared read never faults on a Redis failure: it already resolved to its fallback.
+            // A shared read never faults: a failed read already resolved to its fallback. Only the
+            // caller's own cancellation ends this wait early.
             foreach (var (index, read) in pending)
             {
-                tokens[index] = await read.ConfigureAwait(false);
+                tokens[index] = await read.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -184,7 +204,7 @@ internal sealed partial class CachePrefixGenerations
     /// <summary>
     /// Replaces the token of <paramref name="prefix"/>, which ends every entry stored under a key
     /// that starts with it. This process adopts the new token at once; other processes adopt it
-    /// within the local cache duration.
+    /// within one local cache duration plus one refresh round trip.
     /// </summary>
     /// <param name="prefix">An invalidation boundary: empty, or ending in <c>:</c>.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -213,7 +233,7 @@ internal sealed partial class CachePrefixGenerations
 
         // Local first: even if the write below fails, this process stops serving the prefix, and the
         // new token is the last-known fallback should Redis stay unreachable.
-        Remember(prefix, token, readStartedAt: long.MaxValue);
+        Remember(prefix, token, snapshot: long.MaxValue, fromInvalidation: true);
         await _redis.GetDatabase().StringSetAsync(GenerationKey(prefix), token).ConfigureAwait(false);
     }
 
@@ -259,97 +279,120 @@ internal sealed partial class CachePrefixGenerations
 
     /// <summary>Joins the read already in flight for <paramref name="boundary"/>, or starts one.</summary>
     /// <param name="boundary">The invalidation boundary.</param>
-    /// <returns>The token the read resolved to.</returns>
+    /// <param name="snapshot">The version observed before the caller decided to read.</param>
+    /// <returns>The token the read resolved to; never faults.</returns>
     /// <remarks>
     /// The shared task is published BEFORE the read starts, so a read that completes synchronously
     /// can never remove its entry ahead of the insert and leave a finished task behind.
     /// </remarks>
-    private Task<string> ReadShared(string boundary)
+    private Task<string> ReadShared(string boundary, long snapshot)
     {
         var source = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var shared = _inFlight.GetOrAdd(boundary, source.Task);
 
-        return ReferenceEquals(shared, source.Task) ? ReadIntoAsync(boundary, source) : shared;
+        return ReferenceEquals(shared, source.Task) ? ReadIntoAsync(boundary, snapshot, source) : shared;
     }
 
-    /// <summary>Runs the read this caller owns, hands its result to every joined reader, then unpublishes it.</summary>
+    /// <summary>
+    /// Runs the read this caller owns and hands its result to every joined reader. The shared task
+    /// always completes, with the fallback token if anything unexpected escapes, so no joined reader
+    /// can wait forever; then the read is unpublished.
+    /// </summary>
     /// <param name="boundary">The invalidation boundary.</param>
+    /// <param name="snapshot">The version observed before the caller decided to read.</param>
     /// <param name="source">The shared task's source.</param>
     /// <returns>The token the read resolved to.</returns>
-    private async Task<string> ReadIntoAsync(string boundary, TaskCompletionSource<string> source)
+    private async Task<string> ReadIntoAsync(string boundary, long snapshot, TaskCompletionSource<string> source)
     {
+        string? token = null;
         try
         {
-            var token = await ReadAndRememberAsync(boundary).ConfigureAwait(false);
-            source.TrySetResult(token);
+            token = await ReadAndRememberAsync(boundary, snapshot).ConfigureAwait(false);
             return token;
-        }
-        catch (OperationCanceledException ex)
-        {
-            source.TrySetCanceled(ex.CancellationToken);
-            throw;
         }
         finally
         {
-            // Unpublished only after the token was remembered, so a reader arriving in between finds
-            // the fresh entry rather than starting a second round trip.
+            // Completed before it is unpublished, and only after the token was remembered, so a
+            // reader arriving in between finds the fresh entry rather than starting a second read.
+            source.TrySetResult(token ?? FallbackToken(boundary));
             _inFlight.TryRemove(new KeyValuePair<string, Task<string>>(boundary, source.Task));
         }
     }
 
     /// <summary>
-    /// Reads a boundary's token from Redis and remembers it; on a failure, falls back to the last
-    /// known token (or a fresh one) and remembers that for one local duration as the back-off.
+    /// Reads a boundary's token from Redis and remembers it; on any failure (including a cancellation
+    /// raised inside the Redis client, which is not the caller's) falls back to
+    /// <see cref="FallbackToken"/> and remembers that for one local duration as the back-off.
     /// </summary>
     /// <param name="boundary">The invalidation boundary.</param>
+    /// <param name="snapshot">The version observed before the caller decided to read.</param>
     /// <returns>The token in force for this process.</returns>
-    private async Task<string> ReadAndRememberAsync(string boundary)
+    private async Task<string> ReadAndRememberAsync(string boundary, long snapshot)
     {
-        var readStartedAt = Interlocked.Read(ref _version);
-
         string token;
         try
         {
             var stored = await _redis!.GetDatabase().StringGetAsync(GenerationKey(boundary)).ConfigureAwait(false);
             token = stored.IsNullOrEmpty ? string.Empty : stored.ToString();
         }
+        catch (OperationCanceledException ex)
+        {
+            token = ReadFailed(boundary, ex);
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            token = _remembered.TryGetValue(boundary, out var lastKnown) ? lastKnown.Token : NewToken();
-            LogGenerationReadFailed(_logger, boundary, _localDurationMs, ex);
+            token = ReadFailed(boundary, ex);
         }
 
-        return Remember(boundary, token, readStartedAt);
+        return Remember(boundary, token, snapshot, fromInvalidation: false);
+    }
+
+    /// <summary>Logs a failed read and answers with the fallback token.</summary>
+    /// <param name="boundary">The invalidation boundary.</param>
+    /// <param name="exception">The failure.</param>
+    /// <returns>The fallback token.</returns>
+    private string ReadFailed(string boundary, Exception exception)
+    {
+        LogGenerationReadFailed(_logger, boundary, _localDurationMs, exception);
+        return FallbackToken(boundary);
     }
 
     /// <summary>
+    /// The last token this process knew for the boundary, or the empty baseline for one it never
+    /// saw (see the class remarks for why the baseline and not a random token).
+    /// </summary>
+    /// <param name="boundary">The invalidation boundary.</param>
+    /// <returns>The fallback token.</returns>
+    private string FallbackToken(string boundary) =>
+        _remembered.TryGetValue(boundary, out var lastKnown) ? lastKnown.Token : string.Empty;
+
+    /// <summary>
     /// Remembers a token for one local duration, unless this process invalidated the prefix after
-    /// <paramref name="readStartedAt"/>, in which case that newer token wins. Sweeps entries that
-    /// expired more than <see cref="RetentionMultiplier"/> local durations ago now and then.
+    /// <paramref name="snapshot"/>, in which case that newer token stays in force. Sweeps entries
+    /// that expired more than <see cref="RetentionMultiplier"/> local durations ago now and then.
     /// </summary>
     /// <param name="prefix">The invalidation boundary.</param>
     /// <param name="token">Its token.</param>
-    /// <param name="readStartedAt">The version observed when the read began; <see cref="long.MaxValue"/> always stores.</param>
+    /// <param name="snapshot">The version observed before the read was decided.</param>
+    /// <param name="fromInvalidation">Whether this process is storing its own invalidation.</param>
     /// <returns>The token now in force for the boundary.</returns>
-    private string Remember(string prefix, string token, long readStartedAt)
+    private string Remember(string prefix, string token, long snapshot, bool fromInvalidation)
     {
         var now = Environment.TickCount64;
-        var fromInvalidation = readStartedAt == long.MaxValue;
         var candidate = new RememberedToken(token, now + _localDurationMs, Interlocked.Increment(ref _version), fromInvalidation);
 
-        // A read that began before this process invalidated the prefix must not put the old token
+        // A read decided before this process invalidated the prefix must not put the old token
         // back: the invalidating process adopts its own new token at once and keeps it.
         var inForce = _remembered.AddOrUpdate(
             prefix,
             candidate,
-            (_, existing) => !fromInvalidation && existing.FromInvalidation && existing.Version > readStartedAt ? existing : candidate);
+            (_, existing) => !fromInvalidation && existing.FromInvalidation && existing.Version > snapshot ? existing : candidate);
 
         if (Interlocked.Increment(ref _insertsSinceSweep) % SweepInterval == 0)
         {
-            var retentionMs = _localDurationMs * RetentionMultiplier;
             foreach (var entry in _remembered)
             {
-                if (now >= entry.Value.ExpiresAt + retentionMs)
+                if (now >= entry.Value.ExpiresAt + _retentionMs)
                     _remembered.TryRemove(entry);
             }
         }
@@ -357,13 +400,13 @@ internal sealed partial class CachePrefixGenerations
         return inForce.Token;
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache generation read failed for boundary '{Boundary}'; the last known token (or a fresh one) is used and the read is not retried for {BackOffMilliseconds} ms.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cache generation read failed for boundary '{Boundary}'; the last known token (or the empty baseline) is used and the read is not retried for {BackOffMilliseconds} ms.")]
     private static partial void LogGenerationReadFailed(ILogger logger, string boundary, long backOffMilliseconds, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix cache invalidation is process-local: no IConnectionMultiplexer is registered, so another replica keeps serving an invalidated prefix until its entries expire. Register a Redis client (AddRedisCaching) to invalidate across replicas.")]
     private static partial void LogProcessLocalInvalidation(ILogger logger);
 
-    /// <summary>A remembered token, the tick count it must be re-read after, and its version stamp.</summary>
+    /// <summary>A remembered token, the tick count it must be refreshed after, and its version stamp.</summary>
     /// <param name="Token">The token, empty when the prefix was never invalidated.</param>
     /// <param name="ExpiresAt">The <see cref="Environment.TickCount64"/> value it expires at.</param>
     /// <param name="Version">The monotonic stamp taken when it was stored.</param>

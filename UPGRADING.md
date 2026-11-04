@@ -55,6 +55,10 @@ mid-segment (`"product"`) appends the `:` (`"product:"`), which is also what its
 start with. A hand-written `ICacheService` (a test fake) is unaffected: the interface signature did
 not change.
 
+**Rolling deploy.** While replicas on the previous release (SCAN-based invalidation) and this release run side by side, neither sees the others invalidations: an old replica does not read generation tokens and a new replicas entries are not under the keys an old replica scans, so an entry can stay stale on an old replica until its TTL for the length of the rollout.
+
+**`Cache:LocalCacheDuration` must be at least one second when set.** A smaller value now fails options validation at startup.
+
 **`PermissionGrants:CacheSeconds` defaults to 30 (was 300).** A host that wants the old interval sets
 `Authentication:PermissionGrants:CacheSeconds` to `300`. Nothing else changes.
 

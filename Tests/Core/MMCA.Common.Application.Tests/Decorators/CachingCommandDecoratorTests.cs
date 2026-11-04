@@ -248,6 +248,74 @@ public sealed class CachingCommandDecoratorTests
         var followUp = async () => await sut.InvalidationFollowUp;
         await followUp.Should().NotThrowAsync("re-invalidation is best-effort, exactly like the first eviction");
     }
+
+    // ── A misconfigured prefix is a bug: logged at Error, never retried, command still succeeds ──
+    [Fact]
+    public async Task HandleAsync_WhenTheCacheRejectsThePrefix_LogsAnErrorAndSchedulesNoRetry()
+    {
+        var inner = new Mock<ICommandHandler<CacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<CachingCommandDecorator<CacheInvalidatingTestCommand, Result>>>();
+        logger.Setup(l => l.IsEnabled(It.IsAny<Microsoft.Extensions.Logging.LogLevel>())).Returns(true);
+        inner.Setup(x => x.HandleAsync(It.IsAny<CacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        cacheService.Setup(x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("A cache invalidation prefix must end at a ':' boundary."));
+
+        var sut = new CachingCommandDecorator<CacheInvalidatingTestCommand, Result>(inner.Object, cacheService.Object, logger.Object)
+        {
+            ReInvalidationDelay = TimeSpan.FromMilliseconds(10),
+        };
+
+        var result = await sut.HandleAsync(new CacheInvalidatingTestCommand());
+        await sut.InvalidationFollowUp;
+        await Task.Delay(TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        logger.Verify(
+            l => l.Log(
+                Microsoft.Extensions.Logging.LogLevel.Error,
+                It.IsAny<Microsoft.Extensions.Logging.EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state != null && state.ToString()!.Contains(nameof(CacheInvalidatingTestCommand), StringComparison.Ordinal)),
+                It.IsAny<ArgumentException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the delayed attempt would fail identically, so none is scheduled");
+    }
+
+    // ── A failed first eviction still gets the delayed retry ──
+    [Fact]
+    public async Task HandleAsync_WhenTheFirstEvictionFails_StillRunsTheDelayedReInvalidation()
+    {
+        var inner = new Mock<ICommandHandler<CacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<CacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        cacheService
+            .SetupSequence(x => x.RemoveByPrefixAsync("test-prefix:", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Redis write failed"))
+            .Returns(Task.CompletedTask);
+
+        var sut = new CachingCommandDecorator<CacheInvalidatingTestCommand, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<CacheInvalidatingTestCommand, Result>>.Instance)
+        {
+            ReInvalidationDelay = TimeSpan.FromMilliseconds(10),
+        };
+
+        var result = await sut.HandleAsync(new CacheInvalidatingTestCommand());
+        await sut.InvalidationFollowUp;
+
+        result.IsSuccess.Should().BeTrue();
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync("test-prefix:", CancellationToken.None),
+            Times.Exactly(2),
+            "a failed immediate eviction (a lost generation write) must not leave the prefix un-invalidated");
+    }
 }
 
 // ── Test types (must be public for Moq DynamicProxy) ──
