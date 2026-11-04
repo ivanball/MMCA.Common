@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.277.0] - 2026-11-04
+
 Enterprise-scale hardening: prefix cache invalidation without a Redis keyspace scan, a shorter permission-grant refresh, and JWKS signing-key rotation without a 401 wave.
 
 **Breaking:** the distributed-only cache service is removed: a host that registers a Redis `IDistributedCache` must also call `AddCommonHybridCache()` (or `AddCommonHybridCacheWhenRedisConfigured(configuration)`), or resolving `ICacheService` throws, naming the call. `ICacheService.RemoveByPrefixAsync` now requires a prefix that is empty or ends at a `:` boundary and throws `ArgumentException` otherwise, in every shipped store. `PermissionGrants:CacheSeconds` defaults to 30 instead of 300. `Cache:LocalCacheDuration`, when set, must be at least one second (startup validation). See [UPGRADING.md](UPGRADING.md).
