@@ -64,6 +64,29 @@ public sealed class PermissionGrantCacheTests : IDisposable
             "past three intervals without a successful rebuild, stored grants fail closed");
     }
 
+    // The grants are read by the token-minting service, so this interval is added on top of the
+    // access-token lifetime before a revoke reaches every service: keep the default short.
+    [Fact]
+    public void CacheSeconds_DefaultsToThirtySeconds() =>
+        new PermissionGrantSettings().CacheSeconds.Should().Be(30);
+
+    [Fact]
+    public async Task GetPermissions_WithTheDefaultInterval_ServesTheSnapshotForThreeIntervalsThenFailsClosed()
+    {
+        using var sut = new PermissionGrantCache(
+            _memoryCache,
+            _provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new PermissionGrantSettings()));
+
+        await sut.RefreshAsync(CancellationToken.None);
+
+        _clock.UtcNow += TimeSpan.FromSeconds(89);
+        sut.GetPermissions("manager").Should().Contain(SessionsRead);
+
+        _clock.UtcNow += TimeSpan.FromSeconds(2);
+        sut.GetPermissions("manager").Should().BeEmpty("three default intervals (90 seconds) without a rebuild fail closed");
+    }
+
     public void Dispose()
     {
         _memoryCache.Dispose();

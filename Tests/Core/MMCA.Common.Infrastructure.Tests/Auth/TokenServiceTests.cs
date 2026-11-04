@@ -512,6 +512,48 @@ public sealed class TokenServiceTests : IDisposable
         sut.GetPrincipalFromExpiredToken(token).Should().NotBeNull("the refresh flow is one of the validation paths");
     }
 
+    // ── Rotation: a token signed with the previous key, published as an additional JWKS key ──
+    [Fact]
+    public void GetPrincipalFromExpiredToken_Rs256_AcceptsATokenSignedWithAnAdditionalPublishedKey()
+    {
+        var (previousPrivate, previousPublic) = GenerateRsaKeyPair();
+        var (currentPrivate, currentPublic) = GenerateRsaKeyPair();
+
+        var before = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = previousPublic };
+        using var beforeRotation = new TokenService(CreateRsaSettings(previousPrivate, previousPublic), NoPermissions, TimeProvider.System, NullLogger<TokenService>.Instance, Options.Create(before));
+        var tokenFromBeforeRotation = beforeRotation.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
+
+        var after = new JwksSettings
+        {
+            Enabled = true,
+            KeyId = "identity-2026-11",
+            RsaPublicKeyPem = currentPublic,
+            AdditionalKeys = [new JwksAdditionalKey { KeyId = "identity-2026-07", RsaPublicKeyPem = previousPublic }],
+        };
+        using var afterRotation = new TokenService(CreateRsaSettings(currentPrivate, currentPublic), NoPermissions, TimeProvider.System, NullLogger<TokenService>.Instance, Options.Create(after));
+
+        afterRotation.GetPrincipalFromExpiredToken(tokenFromBeforeRotation).Should().NotBeNull(
+            "the refresh flow must accept a token the previous key signed while that key is still published");
+
+        var fresh = new JwtSecurityTokenHandler().ReadJwtToken(afterRotation.GenerateAccessToken(1, "user@test.com", "Member", "Test Member"));
+        fresh.Header.Kid.Should().Be("identity-2026-11", "signing stays on the current key");
+    }
+
+    [Fact]
+    public void GetPrincipalFromExpiredToken_Rs256_WithoutTheAdditionalKey_RejectsTheOldKeysToken()
+    {
+        var (previousPrivate, previousPublic) = GenerateRsaKeyPair();
+        var (currentPrivate, currentPublic) = GenerateRsaKeyPair();
+
+        using var beforeRotation = new TokenService(CreateRsaSettings(previousPrivate, previousPublic), NoPermissions, TimeProvider.System, NullLogger<TokenService>.Instance);
+        var tokenFromBeforeRotation = beforeRotation.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
+
+        using var afterRotation = new TokenService(CreateRsaSettings(currentPrivate, currentPublic), NoPermissions, TimeProvider.System, NullLogger<TokenService>.Instance, Options.Create(new JwksSettings { KeyId = "identity-2026-11" }));
+
+        afterRotation.GetPrincipalFromExpiredToken(tokenFromBeforeRotation).Should().BeNull(
+            "only a published key is trusted; a retired key that is no longer listed stops validating");
+    }
+
     // The in-process validator (AddCommonAuthentication) builds its RsaSecurityKey from the public
     // PEM alone, so it carries no key id. A token that now names one must still validate against it,
     // or every deployed API would start rejecting its own issuer's tokens.

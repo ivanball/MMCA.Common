@@ -42,11 +42,13 @@ public static class RedisCachingExtensions
         /// untagged reaches readiness.
         /// <para>
         /// A no-op when the connection string is absent or blank: Redis is optional per host, and the
-        /// in-memory cache fallback is the documented behavior for local runs and tests. The client is
-        /// registered alongside the cache on purpose: <c>DistributedCacheService</c> needs an
-        /// <c>IConnectionMultiplexer</c> for SCAN-based prefix eviction, and without it every
-        /// <c>ICacheInvalidating</c> command's prefix invalidation degrades to a silent no-op bounded
-        /// only by TTL.
+        /// in-memory cache fallback is the documented behavior for local runs and tests. Pair it with
+        /// <c>AddCommonHybridCacheWhenRedisConfigured</c> (MMCA.Common.Infrastructure), the cache
+        /// service over this distributed cache. The client is registered alongside the cache on
+        /// purpose: the two-level cache keeps its prefix-invalidation generation tokens on it (without
+        /// it an <c>ICacheInvalidating</c> command's invalidation reaches only the replica that ran
+        /// the command), and the Redis distributed lock, the distributed rate limiter and the
+        /// <c>redis</c> PING health check all resolve it.
         /// </para>
         /// </summary>
         /// <param name="connectionName">

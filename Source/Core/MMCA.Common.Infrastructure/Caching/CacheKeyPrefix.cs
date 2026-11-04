@@ -15,16 +15,15 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is deliberately applied inside <see cref="DistributedCacheService"/> rather than through
+/// This is deliberately applied inside <see cref="HybridCacheService"/> rather than through
 /// <c>RedisCacheOptions.InstanceName</c>. <c>InstanceName</c> is prepended by
-/// <c>IDistributedCache</c> below our abstraction, where prefix invalidation cannot see it: the
-/// SCAN in <see cref="DistributedCacheService.RemoveByPrefixAsync"/> matches raw Redis keys, so it
-/// would look for <c>product:*</c> while the stored keys were <c>svc:product:*</c> and evict
-/// nothing, silently. Applying the prefix here keeps get, set, remove and prefix eviction working
-/// from the same key shape.
+/// <c>IDistributedCache</c> below our abstraction, where the generation keys prefix invalidation
+/// writes directly to Redis (<see cref="CachePrefixGenerations"/>) would not carry it, so two
+/// applications on one server would share invalidation tokens while keeping separate entries.
+/// Applying the prefix here gives entries, generation keys and distributed locks one key shape.
 /// </para>
 /// <para>
-/// Only the distributed cache honors it. <see cref="MemoryCacheService"/> is per-process, so its
+/// Only the shared stores honor it. <see cref="MemoryCacheService"/> is per-process, so its
 /// keyspace is private by construction and a prefix would add nothing.
 /// </para>
 /// </remarks>

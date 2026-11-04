@@ -55,20 +55,21 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
-    public void AddCaching_WithRealDistributedCache_UsesDistributedCacheService()
+    public void AddCaching_WithRealDistributedCacheButNoHybridCache_ThrowsNamingTheCall()
     {
         var services = new ServiceCollection();
 
-        // Register a non-MemoryDistributedCache implementation.
+        // Register a non-MemoryDistributedCache implementation: Redis wired without the cache over it.
         var mockDistributedCache = new Mock<IDistributedCache>();
         services.AddSingleton(mockDistributedCache.Object);
 
         services.AddCaching();
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        ICacheService cacheService = provider.GetRequiredService<ICacheService>();
+        Action resolve = () => provider.GetRequiredService<ICacheService>();
 
-        cacheService.Should().BeOfType<DistributedCacheService>();
+        resolve.Should().Throw<InvalidOperationException>()
+            .WithMessage("*AddCommonHybridCache*", "an in-process fallback would silently make single-use records and counters per-replica");
     }
 
     [Fact]

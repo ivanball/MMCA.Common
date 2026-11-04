@@ -812,11 +812,11 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # DistributedCacheService is the one place where the STORAGE FORMAT matters, and a
-    # Mock<IDistributedCache> cannot express it: Redis keys are typed, so a counter written as a
-    # string and read back as a hash round-trips perfectly against a mock and answers WRONGTYPE
-    # against a server. This tier runs the shipped cache against a real Redis. Ubuntu runners ship a
-    # Docker daemon, so Testcontainers works with no extra setup.
+    # The two-level cache is where the STORAGE FORMAT and the CROSS-REPLICA view matter, and a fake
+    # L2 cannot express either: Redis keys are typed, so a mixed payload format round-trips against
+    # a fake and fails against a server, and a prefix invalidation only shows its reach when a second
+    # independent cache instance reads the same server. This tier runs the shipped cache against a
+    # real Redis. Ubuntu runners ship a Docker daemon, so Testcontainers works with no extra setup.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -846,10 +846,10 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like ui-e2e does.
-        # Floor = the exact [Fact] count in the project (5 DistributedCacheService + 10
-        # HybridCacheService, 2026-09-30): a tier that silently discovers fewer tests fails here.
-        # Adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release --minimum-expected-tests 15
+        # Floor = the exact [Fact] count in the project (11 HybridCacheService + 2 cross-instance
+        # invalidation + 1 rate limiter, 2026-11-04): a tier that silently discovers fewer tests
+        # fails here. Adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release --minimum-expected-tests 14
 
   postgresql-integration:
     name: PostgreSQL integration (Testcontainers)

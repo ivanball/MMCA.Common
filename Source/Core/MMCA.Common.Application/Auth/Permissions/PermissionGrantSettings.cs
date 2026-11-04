@@ -15,14 +15,23 @@ public sealed class PermissionGrantSettings
     /// How long a cached grant snapshot is served before it is reloaded, in seconds.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This is the bound on how stale another replica may be after an edit, since invalidation is
-    /// per process. Five minutes is the default because a grant is an administrative change, not a
-    /// per-request one; lowering it trades database reads for a shorter window. Each cached entry
-    /// lives three intervals, so the snapshot outlives the gap before the next reload and survives up
-    /// to two failed reloads; after that it stops answering and stored grants fail closed.
+    /// per process. The default is 30 seconds because the stored grants are read by the
+    /// token-minting Identity service: the permission claims it writes into an access token are then
+    /// trusted for the token's whole lifetime (15 minutes by default), so any lag here is added on top
+    /// of that lifetime before a revoke reaches every service. At 30 seconds the cost is one small
+    /// query per Identity replica every 30 seconds, with no broker on the authorization path.
+    /// Raising it trades a longer revoke window for fewer database reads.
+    /// </para>
+    /// <para>
+    /// Each cached entry lives three intervals, so the snapshot outlives the gap before the next
+    /// reload and survives up to two failed reloads; after that it stops answering and stored grants
+    /// fail closed.
+    /// </para>
     /// </remarks>
     [Range(5, 3600)]
-    public int CacheSeconds { get; init; } = 300;
+    public int CacheSeconds { get; init; } = 30;
 
     /// <summary>
     /// The logical data source that owns the grant table. Defaults to the engine's default source,

@@ -343,6 +343,47 @@ public sealed class WebApplicationBuilderExtensionsTests
         WebApplicationBuilderExtensions.CorsPolicyAllowAll
             .Should().Be("_allowAll");
 
+    // ── Signing-key rotation: the in-process validator accepts every published key ──
+    [Fact]
+    public async Task AddCommonAuthentication_Rs256_AcceptsATokenSignedWithAJwksAdditionalKey()
+    {
+        using var current = System.Security.Cryptography.RSA.Create(2048);
+        using var previous = System.Security.Cryptography.RSA.Create(2048);
+        using var unlisted = System.Security.Cryptography.RSA.Create(2048);
+
+        var services = new ServiceCollection();
+        services.AddCommonAuthentication(CreateValidJwtConfiguration(
+            new("Jwt:SigningAlgorithm", "RS256"),
+            new("Jwt:RsaPublicKeyPem", current.ExportSubjectPublicKeyInfoPem()),
+            new("Jwks:KeyId", "identity-2026-11"),
+            new("Jwks:AdditionalKeys:0:KeyId", "identity-2026-07"),
+            new("Jwks:AdditionalKeys:0:RsaPublicKeyPem", previous.ExportSubjectPublicKeyInfoPem())));
+
+        await using var provider = services.BuildServiceProvider();
+        var parameters = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+            .Get(JwtBearerDefaults.AuthenticationScheme).TokenValidationParameters;
+
+        var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
+
+        (await handler.ValidateTokenAsync(SignedToken(current, "identity-2026-11"), parameters)).IsValid.Should().BeTrue();
+        (await handler.ValidateTokenAsync(SignedToken(previous, "identity-2026-07"), parameters)).IsValid.Should().BeTrue(
+            "a token the previous key signed keeps validating while that key is published");
+        (await handler.ValidateTokenAsync(SignedToken(unlisted, "identity-2026-07"), parameters)).IsValid.Should().BeFalse(
+            "a key that is not published is never trusted, whatever kid the token claims");
+    }
+
+    private static string SignedToken(System.Security.Cryptography.RSA key, string keyId) =>
+        new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
+        {
+            Issuer = "https://test",
+            Audience = "testapi",
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            Subject = new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim("sub", "42")]),
+            SigningCredentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+                new Microsoft.IdentityModel.Tokens.RsaSecurityKey(key) { KeyId = keyId },
+                Microsoft.IdentityModel.Tokens.SecurityAlgorithms.RsaSha256),
+        });
+
     private static IConfiguration CreateValidJwtConfiguration(params KeyValuePair<string, string?>[] extra) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

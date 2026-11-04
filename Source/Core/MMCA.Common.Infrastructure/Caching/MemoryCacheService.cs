@@ -134,8 +134,24 @@ internal sealed class MemoryCacheService(IMemoryCache cache, IOptions<CacheSetti
     /// accumulated across the loop: distinct keys can map to the same stripe and to different stripes
     /// in a different relative order, so holding several at once would let two prefix removals block
     /// on each other's stripes and deadlock.
+    /// <para>
+    /// The prefix is checked against the same boundary contract <see cref="HybridCacheService"/>
+    /// enforces (empty, or ending in <c>:</c>), so a prefix that only this store could honor fails
+    /// here too rather than first in production on the two-level cache.
+    /// </para>
     /// </remarks>
-    public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    /// <exception cref="ArgumentException"><paramref name="prefix"/> is non-empty and does not end with <c>:</c>.</exception>
+    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        CachePrefixContract.EnsureBoundary(prefix);
+        return RemoveMatchingAsync(prefix, cancellationToken);
+    }
+
+    /// <summary>Removes every tracked key that starts with <paramref name="prefix"/>, one stripe at a time.</summary>
+    /// <param name="prefix">The validated prefix.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task RemoveMatchingAsync(string prefix, CancellationToken cancellationToken)
     {
         foreach (var key in _keys.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)))
         {

@@ -32,6 +32,36 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The
+distributed-only cache service is removed. `AddCaching` (and so `AddInfrastructure`) registers the
+in-process `MemoryCacheService`; when a non-memory `IDistributedCache` is registered and nothing
+replaced that registration, resolving `ICacheService` throws `InvalidOperationException` naming the
+call. The fix is one line next to `builder.AddRedisCaching()`:
+
+```csharp
+builder.AddRedisCaching();
+builder.Services.AddCommonHybridCacheWhenRedisConfigured(builder.Configuration);
+```
+
+MMCA.ADC and MMCA.Store already do this in every service host; MMCA.Helpdesk registers no Redis.
+
+**`ICacheService.RemoveByPrefixAsync` requires a `:` boundary (breaking, every shipped store).** The
+prefix must be empty (every entry) or end with `:`; anything else throws `ArgumentException`. Every
+`ICacheInvalidating.CachePrefix` the framework produces (`{typeof(TEntity).FullName}:`, tenant-scoped
+as `t:{tenantId}:{...}:`) already qualifies. A command of your own whose `CachePrefix` stops
+mid-segment (`"product"`) appends the `:` (`"product:"`), which is also what its query keys must
+start with. A hand-written `ICacheService` (a test fake) is unaffected: the interface signature did
+not change.
+
+**Rolling deploy.** While replicas on the previous release (SCAN-based invalidation) and this release run side by side, neither sees the others invalidations: an old replica does not read generation tokens and a new replicas entries are not under the keys an old replica scans, so an entry can stay stale on an old replica until its TTL for the length of the rollout.
+
+**`Cache:LocalCacheDuration` must be at least one second when set.** A smaller value now fails options validation at startup.
+
+**`PermissionGrants:CacheSeconds` defaults to 30 (was 300).** A host that wants the old interval sets
+`Authentication:PermissionGrants:CacheSeconds` to `300`. Nothing else changes.
+
 ## [1.273.0] - 2026-11-01
 
 **`MauiTokenStorageService` is removed (breaking, MMCA.Common.UI.Maui).** `AddCommonMauiTokenStorage()`

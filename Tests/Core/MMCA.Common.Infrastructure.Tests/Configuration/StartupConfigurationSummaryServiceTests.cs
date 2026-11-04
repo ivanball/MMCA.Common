@@ -49,11 +49,11 @@ public sealed class StartupConfigurationSummaryServiceTests
     }
 
     [Theory]
-    [InlineData(false, "cache distributed")]
+    [InlineData(false, "cache misconfigured")]
     [InlineData(true, "cache hybrid")]
     public async Task HostStart_WithARedisBackedCache_NeverResolvesTheConnectionMultiplexer(bool hybrid, string expectedCacheMode)
     {
-        // Both ICacheService factories resolve IConnectionMultiplexer. The summary must name the cache
+        // The two-level cache resolves IConnectionMultiplexer. The summary must name the cache
         // mode without constructing the cache, or every Redis-backed host would open its Redis
         // connection at startup instead of on first use.
         var multiplexerResolutions = 0;

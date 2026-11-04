@@ -91,16 +91,18 @@ internal sealed partial class StartupConfigurationSummaryService(
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
-    /// Names the cache tier by repeating the decision the <c>ICacheService</c> factories make, WITHOUT
-    /// resolving <c>ICacheService</c>: both factories resolve <c>IConnectionMultiplexer</c>, so
-    /// constructing the cache here would open a Redis-backed host's connection at startup instead of
-    /// on first use. <c>AddCommonHybridCache</c> registers <see cref="HybridCache"/> (checked by
-    /// registration, not by resolving it), and the <c>AddCaching</c> factory picks the distributed
-    /// cache when the resolved <see cref="IDistributedCache"/> is not the in-memory one. Resolving
-    /// <see cref="IDistributedCache"/> does not connect: the Redis implementation connects lazily.
+    /// Names the cache tier by repeating the decision the <c>ICacheService</c> registrations make,
+    /// WITHOUT resolving <c>ICacheService</c>: the two-level cache resolves
+    /// <c>IConnectionMultiplexer</c>, so constructing the cache here would open a Redis-backed host's
+    /// connection at startup instead of on first use. <c>AddCommonHybridCache</c> registers
+    /// <see cref="HybridCache"/> (checked by registration, not by resolving it). Without it, a
+    /// resolved <see cref="IDistributedCache"/> that is not the in-memory one means the host wired
+    /// Redis but not the cache over it, which the <c>AddCaching</c> factory refuses on first use; the
+    /// summary names that state up front. Resolving <see cref="IDistributedCache"/> does not connect:
+    /// the Redis implementation connects lazily.
     /// </summary>
     /// <param name="services">The root provider.</param>
-    /// <returns><c>hybrid</c>, <c>distributed</c>, or <c>memory</c>.</returns>
+    /// <returns><c>hybrid</c>, <c>memory</c>, or <c>misconfigured</c>.</returns>
     internal static string CacheMode(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -111,7 +113,7 @@ internal sealed partial class StartupConfigurationSummaryService(
         }
 
         return services.GetService<IDistributedCache>() is not null and not MemoryDistributedCache
-            ? "distributed"
+            ? "misconfigured"
             : "memory";
     }
 

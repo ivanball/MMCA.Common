@@ -75,7 +75,7 @@ public sealed class InfrastructureHealthChecksTests
     // The readiness contract, and the reason it is asserted rather than assumed: /health/ready
     // includes every check NOT tagged live or optional. If the Redis check were untagged it would
     // gate readiness, and a Redis blip would take EVERY replica out of rotation at once, converting
-    // a graceful degradation (DistributedCacheService falls back to MemoryCacheService) into a
+    // a graceful degradation (the two-level cache answers a Redis fault as a miss) into a
     // total outage. The database is the opposite case: untagged on purpose, because a host that
     // cannot reach its own database cannot serve correct responses.
     [Fact]

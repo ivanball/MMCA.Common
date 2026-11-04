@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Exercises DistributedCacheService against a REAL Redis via Testcontainers. NOT shipped and
-         deliberately NOT in MMCA.Common.slnx: it needs a Docker daemon and runs in its own CI job,
-         kept out of the fast solution-wide unit feedback loop (same posture as UI.E2E.Tests).
+    <!-- Exercises HybridCacheService (and the Redis rate limiter) against a REAL Redis via
+         Testcontainers. NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker
+         daemon and runs in its own CI job, kept out of the fast solution-wide unit feedback loop
+         (same posture as UI.E2E.Tests).
 
-         This tier exists because the mocked-IDistributedCache unit tests structurally cannot catch
-         the class of bug it covers: the storage FORMAT Redis actually sees. A Mock<IDistributedCache>
-         answers whatever it is told to, so a counter written as a Redis string and read back as a
-         Redis hash round-trips perfectly in a unit test and returns WRONGTYPE in production. -->
+         This tier exists because the fake-L2 unit tests structurally cannot catch the class of bug
+         it covers: what the server actually holds, and what a SECOND independent cache instance over
+         the same server learns from it. A fake answers whatever it is told to, so a mixed payload
+         format round-trips perfectly in a unit test and fails in production, and a prefix
+         invalidation looks complete when only one replica exists. -->
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>

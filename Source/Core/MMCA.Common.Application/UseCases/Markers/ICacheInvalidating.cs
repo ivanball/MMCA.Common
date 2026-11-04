@@ -8,8 +8,16 @@ namespace MMCA.Common.Application.UseCases.Markers;
 public interface ICacheInvalidating
 {
     /// <summary>
-    /// The cache key prefix to invalidate (e.g. "Catalog:Products").
+    /// The cache key prefix to invalidate, ending at a <c>:</c> boundary (e.g.
+    /// <c>"Catalog:Products:"</c>, or the framework's default <c>"{typeof(TEntity).FullName}:"</c>).
     /// All cache entries with keys starting with this prefix will be removed.
     /// </summary>
+    /// <remarks>
+    /// The contract is <see cref="Interfaces.ICacheService.RemoveByPrefixAsync"/>'s: a prefix that
+    /// does not end with <c>:</c> is rejected with an <see cref="ArgumentException"/>, which the
+    /// decorator logs at Error level as a misconfigured command (the committed command still
+    /// succeeds, and nothing is invalidated). An empty or whitespace value is the opt-out and
+    /// evicts nothing.
+    /// </remarks>
     string CachePrefix { get; }
 }

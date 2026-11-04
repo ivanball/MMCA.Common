@@ -146,7 +146,11 @@ public static partial class WebApplicationBuilderExtensions
                     var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
                         ?? throw new InvalidOperationException("JwtSettings section is not configured.");
 
-                    options.TokenValidationParameters = BuildValidationParameters(jwtSettings);
+                    // The Jwks section's additional keys are accepted too, so a token signed with the
+                    // previous key keeps validating in-process across a signing-key rotation.
+                    var jwksSettings = configuration.GetSection(JwksSettings.SectionName).Get<JwksSettings>();
+
+                    options.TokenValidationParameters = BuildValidationParameters(jwtSettings, jwksSettings);
 
                     // SignalR WebSocket connections cannot send HTTP headers: the JWT is passed as
                     // an "access_token" query-string parameter instead, extracted here for hub paths.
@@ -212,8 +216,13 @@ public static partial class WebApplicationBuilderExtensions
     /// <see cref="JwtSettings.RsaPublicKeyPem"/>; HS256 uses the Base64 HMAC secret. The validator pins
     /// <see cref="TokenValidationParameters.ValidAlgorithms"/> so an attacker cannot swap
     /// algorithms (e.g., signing an HS256 token with the RSA public key as the HMAC secret).
+    /// <para>
+    /// In RS256 mode every <see cref="JwksSettings.AdditionalKeys"/> entry is accepted alongside
+    /// the current key, the same set <c>/.well-known/jwks.json</c> publishes, so a signing-key
+    /// rotation does not reject the tokens the previous key signed. HS256 has no published keys.
+    /// </para>
     /// </summary>
-    internal static TokenValidationParameters BuildValidationParameters(JwtSettings jwtSettings)
+    internal static TokenValidationParameters BuildValidationParameters(JwtSettings jwtSettings, JwksSettings? jwksSettings = null)
     {
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
         {
@@ -236,6 +245,7 @@ public static partial class WebApplicationBuilderExtensions
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience,
                 IssuerSigningKey = new RsaSecurityKey(validationRsa),
+                IssuerSigningKeys = jwksSettings?.CreateAdditionalValidationKeys() ?? [],
                 ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
             };
         }

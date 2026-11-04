@@ -152,6 +152,34 @@ public sealed class MemoryCacheServiceTests : IDisposable
             .Should().NotThrowAsync();
     }
 
+    // The same boundary contract the two-level cache needs for its generation tokens, enforced here
+    // too so a mid-segment prefix fails in every backend rather than only in production.
+    [Theory]
+    [InlineData("product")]
+    [InlineData("product:1")]
+    [InlineData(" ")]
+    public async Task RemoveByPrefixAsync_WithAPrefixThatStopsMidSegment_Throws(string prefix)
+    {
+        await _sut.SetAsync("product:1", "A");
+
+        await FluentActions.Invoking(() => _sut.RemoveByPrefixAsync(prefix))
+            .Should().ThrowAsync<ArgumentException>().WithParameterName(nameof(prefix));
+
+        (await _sut.GetAsync<string>("product:1")).Should().Be("A", "a rejected prefix evicts nothing");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithTheEmptyPrefix_RemovesEverything()
+    {
+        await _sut.SetAsync("product:1", "A");
+        await _sut.SetAsync("plain", "B");
+
+        await _sut.RemoveByPrefixAsync(string.Empty);
+
+        (await _sut.GetAsync<string>("product:1")).Should().BeNull();
+        (await _sut.GetAsync<string>("plain")).Should().BeNull();
+    }
+
     // ── Overwriting a key must not lose its prefix-eviction tracking ──
     // IMemoryCache queues post-eviction callbacks to the thread pool, so overwriting a live key
     // fires the OLD entry's callback asynchronously. When that callback removed the key
