@@ -13,6 +13,14 @@ public interface IUIModule
     /// <summary>Navigation entries contributed by this module to the shared sidebar/menu.</summary>
     IReadOnlyList<NavItem> NavItems { get; }
 
+    /// <summary>
+    /// Descriptions of nav groups by key (icon, initially expanded, order within the section), which
+    /// apply to every module's items carrying that <see cref="NavItem.Group"/>; the first registered
+    /// description of a key wins. Empty (the default) leaves every group as before: folder icon,
+    /// collapsed, first-appearance order.
+    /// </summary>
+    IReadOnlyList<NavGroup> NavGroups => [];
+
     /// <summary>Assembly containing Razor pages, used by <c>AddAdditionalAssemblies</c> for route discovery.</summary>
     Assembly Assembly { get; }
 
