@@ -18,15 +18,16 @@ namespace MMCA.Common.Infrastructure.Redis.Tests;
 /// <para>
 /// The unit tier proves what this service ASKS for (key shape, entry options, flags) against a fake
 /// L2. What it structurally cannot prove is what a server ends up holding, and that is exactly the
-/// class of bug this design exists to prevent: <c>HybridCache</c> and <c>IDistributedCache</c> write
-/// different payload formats, so a shared key would answer a read with a value the reader cannot
-/// parse. Here the two formats genuinely coexist in one server and the assertion is that they never
-/// meet: an entry from the other format is a clean MISS, never an exception.
+/// class of bug this design exists to prevent: <c>HybridCache</c> and a plain <c>IDistributedCache</c>
+/// writer use different payload formats, so a shared key would answer a read with a value the reader
+/// cannot parse. Here the two formats genuinely coexist in one server and the assertion is that they
+/// never meet: an entry from the other format is a clean MISS, never an exception.
 /// </para>
 /// <para>
-/// It also covers prefix eviction end to end. <c>RemoveByPrefixAsync</c> runs a real SCAN over its
-/// own keyspace, and only a real server distinguishes "evicted every matching key" from "evicted the
-/// one the test happened to write".
+/// It also covers prefix invalidation end to end: <c>RemoveByPrefixAsync</c> writes one generation
+/// token to the server, and only a real server shows that every entry under the prefix stops being
+/// addressed while nothing is scanned. The cross-replica half lives in
+/// <see cref="HybridCacheCrossInstanceInvalidationTests"/>.
 /// </para>
 /// <para>
 /// These tests need a Docker daemon, so this project is outside <c>MMCA.Common.slnx</c> and runs in
@@ -93,38 +94,24 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
         await sut.SetAsync(key, "value", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         (await db.KeyExistsAsync($"hc:{key}")).Should().BeTrue("the server must hold the entry under the segmented key");
-        (await db.KeyExistsAsync(key)).Should().BeFalse("nothing may be written under the unsegmented shape DistributedCacheService owns");
+        (await db.KeyExistsAsync(key)).Should().BeFalse("nothing may be written under the bare key another IDistributedCache writer would use");
     }
 
     // ── The coexistence property the whole design rests on ──
     [Fact]
-    public async Task AnEntryWrittenByTheDistributedCache_IsASoftMissHereNeverAFault()
+    public async Task AnEntryWrittenByAnotherWriterAtTheBareKey_IsASoftMissHereNeverAFault()
     {
+        // Another IDistributedCache writer in the same server (a host's own use of it) writes its
+        // own payload format at the bare key. This is the read that WOULD have thrown if both
+        // formats shared one key.
         var key = $"coexist:{Guid.NewGuid():N}";
-        var distributed = CreateDistributed();
         var sut = CreateSut();
 
-        await distributed.SetAsync(key, "old-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await _distributedCache.SetStringAsync(key, "other-format", TestContext.Current.CancellationToken);
 
-        // This is the read that WOULD have thrown if both formats shared one key.
-        var read = await sut.GetAsync<string>(key, TestContext.Current.CancellationToken);
-
-        read.Should().BeNull("the old entry lives in a keyspace this service does not address");
-        (await distributed.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().Be(
-            "old-format",
-            "and the old cache keeps reading its own entry, which is what makes a rolling deploy safe");
-    }
-
-    [Fact]
-    public async Task AnEntryWrittenHere_IsASoftMissForTheDistributedCache()
-    {
-        var key = $"coexist:{Guid.NewGuid():N}";
-        var distributed = CreateDistributed();
-        var sut = CreateSut();
-
-        await sut.SetAsync(key, "new-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-
-        (await distributed.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().BeNull();
+        (await sut.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().BeNull(
+            "the other writer's entry lives in a keyspace this service does not address");
+        (await _distributedCache.GetStringAsync(key, TestContext.Current.CancellationToken)).Should().Be("other-format");
     }
 
     // ── Prefix eviction ──
@@ -133,21 +120,50 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
     {
         var prefix = $"catalog:{Guid.NewGuid():N}:";
         var sut = CreateSut();
-        var distributed = CreateDistributed();
 
         await sut.SetAsync($"{prefix}a", "one", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
         await sut.SetAsync($"{prefix}b", "two", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         var survivor = $"other:{Guid.NewGuid():N}";
         await sut.SetAsync(survivor, "keep", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-        await distributed.SetAsync(survivor, "keep-old", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await _distributedCache.SetStringAsync(survivor, "keep-other", TestContext.Current.CancellationToken);
 
         await sut.RemoveByPrefixAsync(prefix, TestContext.Current.CancellationToken);
 
         (await sut.GetAsync<string>($"{prefix}a", TestContext.Current.CancellationToken)).Should().BeNull();
         (await sut.GetAsync<string>($"{prefix}b", TestContext.Current.CancellationToken)).Should().BeNull();
         (await sut.GetAsync<string>(survivor, TestContext.Current.CancellationToken)).Should().Be("keep");
-        (await distributed.GetAsync<string>(survivor, TestContext.Current.CancellationToken)).Should().Be("keep-old");
+        (await _distributedCache.GetStringAsync(survivor, TestContext.Current.CancellationToken)).Should().Be("keep-other");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WritesOneGenerationKeyAndScansNothing()
+    {
+        // The point of the generation design: an invalidation is one write to one known key, so its
+        // cost does not grow with the keyspace. The entry itself is left to expire on its TTL.
+        var prefix = $"catalog:{Guid.NewGuid():N}:";
+        var sut = CreateSut();
+        var db = _multiplexer.GetDatabase();
+
+        await sut.SetAsync($"{prefix}a", "one", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await sut.RemoveByPrefixAsync(prefix, TestContext.Current.CancellationToken);
+
+        (await db.KeyExistsAsync($"hcg:{prefix}")).Should().BeTrue("the invalidation is recorded as the prefix's generation token");
+        (await db.KeyExistsAsync($"hc:{prefix}a")).Should().BeTrue("nothing is deleted: the orphaned entry expires on its own TTL");
+        (await sut.GetAsync<string>($"{prefix}a", TestContext.Current.CancellationToken)).Should().BeNull();
+
+        await sut.SetAsync($"{prefix}a", "two", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        (await sut.GetAsync<string>($"{prefix}a", TestContext.Current.CancellationToken)).Should().Be("two", "a write after the invalidation is addressed under the new generation");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_RejectsAPrefixThatStopsMidSegment()
+    {
+        var sut = CreateSut();
+
+        var act = () => sut.RemoveByPrefixAsync("catalog", TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -250,7 +266,7 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
 
     /// <summary>
     /// Builds the service exactly as <c>AddCommonHybridCache</c> does: its own two-level cache over
-    /// the shared Redis, with the multiplexer supplied so prefix eviction can SCAN. Each call gets an
+    /// the shared Redis, with the multiplexer supplied so prefix invalidation reaches the server. Each call gets an
     /// independent L1, which is what makes the cross-replica assertions meaningful.
     /// </summary>
     /// <returns>A service under test.</returns>
@@ -270,8 +286,4 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
             _multiplexer);
     }
 
-    /// <summary>The sibling cache service, writing its own format into the same server.</summary>
-    /// <returns>A cache in the unsegmented keyspace.</returns>
-    private DistributedCacheService CreateDistributed() =>
-        new(_distributedCache, NullLogger<DistributedCacheService>.Instance, _multiplexer);
 }

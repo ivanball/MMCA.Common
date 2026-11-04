@@ -32,6 +32,7 @@ public sealed partial class TokenService : ITokenService, IDisposable
     private readonly ILogger<TokenService> _logger;
     private readonly SigningCredentials _signingCredentials;
     private readonly SecurityKey _validationKey;
+    private readonly IReadOnlyList<SecurityKey> _additionalValidationKeys = [];
     private readonly string _validationAlgorithm;
 
     // Owned RSA instances kept alive for the service's lifetime. The RsaSecurityKey wrappers
@@ -89,6 +90,12 @@ public sealed partial class TokenService : ITokenService, IDisposable
             (_signingCredentials, _validationKey, _ownedSigningRsa, _ownedValidationRsa) =
                 BuildRsaCredentials(jwtSettings, jwksSettings?.Value.KeyId ?? new JwksSettings().KeyId);
             _validationAlgorithm = SecurityAlgorithms.RsaSha256;
+
+            // The previous (or staged next) keys published next to the current one. The refresh flow
+            // validates a token this service signed, possibly with the key in force before a
+            // rotation, so it accepts the same set the JWKS document publishes. Signing stays on the
+            // current key.
+            _additionalValidationKeys = jwksSettings?.Value.CreateAdditionalValidationKeys() ?? [];
         }
         else
         {
@@ -184,6 +191,7 @@ public sealed partial class TokenService : ITokenService, IDisposable
             ValidIssuer = _jwtSettings.Issuer,
             ValidAudience = _jwtSettings.Audience,
             IssuerSigningKey = _validationKey,
+            IssuerSigningKeys = _additionalValidationKeys,
             ValidAlgorithms = [_validationAlgorithm],
         };
 

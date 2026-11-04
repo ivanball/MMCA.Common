@@ -6,6 +6,24 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+Enterprise-scale hardening: prefix cache invalidation without a Redis keyspace scan, a shorter permission-grant refresh, and JWKS signing-key rotation without a 401 wave.
+
+**Breaking:** the distributed-only cache service is removed: a host that registers a Redis `IDistributedCache` must also call `AddCommonHybridCache()` (or `AddCommonHybridCacheWhenRedisConfigured(configuration)`), or resolving `ICacheService` throws, naming the call. `ICacheService.RemoveByPrefixAsync` now requires a prefix that is empty or ends at a `:` boundary and throws `ArgumentException` otherwise, in every shipped store. `PermissionGrants:CacheSeconds` defaults to 30 instead of 300. See [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **JWKS additional keys** (MMCA.Common.Infrastructure, MMCA.Common.API). `JwksSettings.AdditionalKeys` (a list of `JwksAdditionalKey`: `KeyId` plus `RsaPublicKeyPem` or `RsaPublicKeyPath`, the same PEM-or-path rules as the current key) publishes further public keys after the current one at `/.well-known/jwks.json`. Signing stays on the current key. Every local validator accepts the published set: `TokenService.GetPrincipalFromExpiredToken` (the refresh flow) and the in-process RS256 validator from `AddCommonAuthentication`; `AddForwardedJwtBearer` already reads the whole JWKS document. Stage the next key here before switching to it, and keep the previous key here until its tokens expire, and a rotation rejects no live token. A repeated `kid` (including the current `KeyId`) or an entry with no key material fails options validation at startup. The service-token HS256 path is unchanged.
+
+### Changed
+
+- **Prefix cache invalidation is one Redis write, not a keyspace scan** (MMCA.Common.Infrastructure). `HybridCacheService` folds a generation token per `:` boundary of each key into the key it stores (`A:B:C` carries the tokens of `""`, `A:` and `A:B:`), and `RemoveByPrefixAsync` replaces one token under `{prefix}hcg:{invalidation prefix}`. Every caching command's two invalidations (immediate and delayed) no longer walk every Redis primary with SCAN. Another replica stops serving an invalidated prefix within `Cache:LocalCacheDuration` (30 seconds by default), the bound its L1 already carried; the Redis tier now proves it with two independent cache instances over one server. `HybridCache.RemoveByTagAsync` was not used: in Microsoft.Extensions.Caching.Hybrid 10.11.0 each process reads a tag's invalidation time once and never refreshes it, so another replica never sees the invalidation. Without an `IConnectionMultiplexer` the tokens are process-local (warned once), where before prefix invalidation was a no-op.
+- **`PermissionGrants:CacheSeconds` defaults to 30** (MMCA.Common.Application). The stored grants are read by the token-minting Identity service, so the snapshot lag adds to the access-token lifetime before a revoke reaches every service. The cost is one small query per Identity replica every 30 seconds.
+- The startup configuration summary reports `cache misconfigured` (instead of `cache distributed`) for a host with a distributed cache and no two-level cache over it.
+
+### Removed
+
+- **`DistributedCacheService` and `RedisPrefixScanner`** (MMCA.Common.Infrastructure, internal types). `AddCaching` registers `MemoryCacheService` only; the shared-store cache is `AddCommonHybridCache`, which every first-party consumer already calls. `AddRedisCaching()` still registers the `IConnectionMultiplexer` (the generation tokens, the Redis distributed lock, the distributed rate limiter and the `redis` health check use it).
+
 ## [1.276.0] - 2026-11-04
 
 Nav group descriptions and item order for the shared menu, and permission-guarded Blazor pages in every UI head. No breaking changes.

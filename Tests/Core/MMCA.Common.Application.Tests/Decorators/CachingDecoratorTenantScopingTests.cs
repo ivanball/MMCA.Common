@@ -17,8 +17,8 @@ public sealed class CachingDecoratorTenantScopingTests
 {
     private const string BareKey = "test-cache-key";
     private const string AcmeKey = "t:acme:test-cache-key";
-    private const string BarePrefix = "test-prefix";
-    private const string AcmePrefix = "t:acme:test-prefix";
+    private const string BarePrefix = "test-prefix:";
+    private const string AcmePrefix = "t:acme:test-prefix:";
 
     // ── Query decorator ──
     [Fact]
@@ -145,7 +145,7 @@ public sealed class CachingDecoratorTenantScopingTests
 
         writtenKey.Should().NotBeNull();
         evictedPrefix.Should().NotBeNull();
-        writtenKey.Should().StartWith(evictedPrefix![..^"prefix".Length]);
+        writtenKey.Should().StartWith(evictedPrefix![..^"prefix:".Length]);
         writtenKey.Should().StartWith("t:acme:");
     }
 

@@ -20,8 +20,11 @@ public static partial class DependencyInjection
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers the cache service. Uses distributed cache (e.g. Redis registered by Aspire)
-        /// when available; otherwise falls back to in-memory cache.
+        /// Registers the in-process cache service (<see cref="MemoryCacheService"/>), the cache of a
+        /// host with no distributed L2. A host that registers one (Redis via <c>AddRedisCaching()</c>)
+        /// also calls <see cref="AddCommonHybridCache"/>, which replaces this registration with the
+        /// two-level cache; resolving <see cref="ICacheService"/> with a distributed cache registered
+        /// and no such call throws, naming the call.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddCaching(IConfiguration? configuration = null)
@@ -74,19 +77,18 @@ public static partial class DependencyInjection
 
             services.TryAddSingleton<ICacheService>(sp =>
             {
+                // A shared distributed cache is served by the two-level cache only
+                // (AddCommonHybridCache, which replaces this registration). Reaching this factory
+                // with one registered means the host wired Redis without that call; falling back to
+                // the in-process cache would silently make single-use records, counters and the
+                // lockout flag per-replica, so fail loudly and name the call instead.
                 var distributedCache = sp.GetService<IDistributedCache>();
                 if (distributedCache is not null and not MemoryDistributedCache)
                 {
-                    var multiplexer = sp.GetService<IConnectionMultiplexer>();
-                    var logger = sp.GetService<ILogger<DistributedCacheService>>()
-                        ?? NullLogger<DistributedCacheService>.Instance;
-                    var keyNamespace = CacheKeyNamespace.From(sp);
-                    return new DistributedCacheService(
-                        distributedCache,
-                        logger,
-                        multiplexer,
-                        keyNamespace,
-                        sp.GetService<IOptions<CacheSettings>>());
+                    throw new InvalidOperationException(
+                        $"A distributed cache ({distributedCache.GetType().Name}) is registered, but the cache service over it is not. " +
+                        "Call services.AddCommonHybridCache() (or AddCommonHybridCacheWhenRedisConfigured(configuration), " +
+                        "paired with AddRedisCaching()) so ICacheService uses the shared store.");
                 }
 
                 // In-process: the keyspace is private to this process, so no prefix is needed.
@@ -130,10 +132,9 @@ public static partial class DependencyInjection
         /// <returns>The service collection for chaining.</returns>
         /// <remarks>
         /// <para>
-        /// Opt-in, and intended for hosts that already register a distributed L2 (Redis). A
-        /// memory-only host gains nothing: <see cref="MemoryCacheService"/> is already in-process, and
-        /// the default registration stays byte-identical to today for every host that does not call
-        /// this.
+        /// Required for, and intended for, hosts that register a distributed L2 (Redis): it is the
+        /// only cache service over a shared store. A memory-only host gains nothing:
+        /// <see cref="MemoryCacheService"/> is already in-process.
         /// </para>
         /// <para>
         /// Order-independent with <c>AddInfrastructure</c> and
@@ -150,9 +151,10 @@ public static partial class DependencyInjection
         /// should not call it.
         /// </para>
         /// <para>
-        /// Cache keys are namespaced exactly as in <c>AddCaching</c> (the <c>Cache:KeyPrefix</c>
-        /// section), and the optional <see cref="IConnectionMultiplexer"/> is resolved the same way,
-        /// since prefix eviction still needs SCAN.
+        /// Cache keys are namespaced by the <c>Cache:KeyPrefix</c> section. The optional
+        /// <see cref="IConnectionMultiplexer"/> holds the generation tokens prefix invalidation
+        /// replaces, so an invalidation reaches every replica; without it the tokens, and therefore
+        /// the invalidation, stay in this process.
         /// </para>
         /// </remarks>
         public IServiceCollection AddCommonHybridCache(Action<HybridCacheOptions>? configure = null)
@@ -209,8 +211,8 @@ public static partial class DependencyInjection
         /// tier degrades to a plain in-memory cache, which is exactly what the
         /// <see cref="MemoryCacheService"/> fallback already provides. Pair it with
         /// <c>AddRedisCaching()</c> (MMCA.Common.Aspire), which registers the distributed cache and
-        /// the <see cref="IConnectionMultiplexer"/> the hybrid tier evicts through under the same
-        /// connection name. Order-independent with <c>AddInfrastructure</c>, as
+        /// the <see cref="IConnectionMultiplexer"/> the hybrid tier keeps its invalidation tokens on,
+        /// under the same connection name. Order-independent with <c>AddInfrastructure</c>, as
         /// <see cref="AddCommonHybridCache"/> is.
         /// </remarks>
         /// <param name="configuration">The host configuration holding the connection string.</param>

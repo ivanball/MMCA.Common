@@ -11,26 +11,25 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// <see cref="Microsoft.Extensions.Caching.Distributed.IDistributedCache"/> L2, with serialization,
 /// L1 promotion and stampede protection supplied by the platform.
 /// <para>
-/// Registered only by <c>AddCommonHybridCache</c>. A host that does not call it keeps
-/// <see cref="DistributedCacheService"/> or <see cref="MemoryCacheService"/> untouched.
+/// Registered by <c>AddCommonHybridCache</c>, the one cache a host with a distributed L2 runs. A host
+/// without one keeps <see cref="MemoryCacheService"/>.
 /// </para>
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Every key is written under a disjoint <c>hc:</c> keyspace</b> (<c>{prefix}hc:{key}</c>). This is
-/// the structural form of the lesson recorded on <see cref="DistributedCacheService.IncrementAsync"/>:
-/// two serialization formats must never share one key. <see cref="HybridCache"/> writes its own
-/// payload layout, which is not the UTF-8 JSON <see cref="DistributedCacheService"/> writes, so
-/// letting the two meet at one key would reproduce that failure at every key rather than at one
-/// counter. With the keyspaces separated, an entry written by the other service is simply invisible
-/// to this one (a clean miss) and vice versa, so two hosts can share one Redis without either being
-/// able to read a payload it cannot parse.
+/// <b>Every key is written under a disjoint <c>hc:</c> keyspace</b> (<c>{prefix}hc:{key}</c>), so an
+/// entry can never meet a value another writer put in the same server (a host's own
+/// <see cref="Microsoft.Extensions.Caching.Distributed.IDistributedCache"/> use, or the generation
+/// keys under <see cref="CachePrefixGenerations.KeyspaceSegment"/>) in a format it cannot parse.
 /// </para>
 /// <para>
-/// Replica L1 staleness after an invalidation is bounded by the local expiration (30 seconds by
-/// default, <c>Cache:LocalCacheDuration</c> to change it), not by the eviction: only the evicting
-/// process's L1 is cleared. That is the accepted cost of the L1 hit rate, and it is the same order
-/// as the delayed re-invalidation the caching command decorator already performs.
+/// <b>Prefix invalidation never walks the keyspace.</b> Each stored key folds in the generation
+/// tokens of the key's <c>:</c> boundaries (<see cref="CachePrefixGenerations"/>), and
+/// <see cref="RemoveByPrefixAsync"/> replaces one token. The cost of an invalidation is one Redis
+/// write, whatever the size of the keyspace. Another replica stops serving the invalidated prefix
+/// once its remembered token expires, within the local expiration (30 seconds by default,
+/// <c>Cache:LocalCacheDuration</c> to change it): the same bound its L1 copies carry, and the same
+/// order as the delayed re-invalidation the caching command decorator already performs.
 /// </para>
 /// <para>
 /// <b>The exception is a single-use record</b> (an OAuth exchange code, a password-reset or
@@ -42,19 +41,16 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// that reads a counter without incrementing it (the registration rate-limit check in
 /// <c>LoginProtectionService</c>) reads it through <see cref="GetFromSharedStoreAsync{T}"/> too, as do
 /// the reads whose correctness depends on seeing a removal at once (the login lockout flag and the
-/// soft-deleted-user marker).
+/// soft-deleted-user marker). Their keys still carry generation tokens, so invalidating a prefix
+/// that covers them converges across replicas within the local expiration like any other entry;
+/// nothing in the framework invalidates such a prefix.
 /// </para>
 /// </remarks>
-internal sealed partial class HybridCacheService(
-    HybridCache hybrid,
-    ILogger<HybridCacheService> logger,
-    IConnectionMultiplexer? connectionMultiplexer = null,
-    CacheKeyNamespace? keyNamespace = null,
-    IOptions<CacheSettings>? cacheSettings = null) : ICacheService
+internal sealed partial class HybridCacheService : ICacheService
 {
     /// <summary>
-    /// Segment separating this service's keyspace from the one <see cref="DistributedCacheService"/>
-    /// writes. Applied inside the configured namespace, so a key reads <c>{prefix}hc:{key}</c>.
+    /// Segment separating this service's entries from anything else in the same server. Applied
+    /// inside the configured namespace, so a key reads <c>{prefix}hc:{key}</c>.
     /// </summary>
     internal const string KeyspaceSegment = "hc:";
 
@@ -64,7 +60,7 @@ internal sealed partial class HybridCacheService(
     /// <summary>
     /// Default in-process (L1) lifetime, and the ceiling applied to every entry: a replica that never
     /// sees an invalidation still re-reads L2 within this window. Matches the default
-    /// <c>AddCommonHybridCache</c> configures.
+    /// <c>AddCommonHybridCache</c> configures, and bounds how long a generation token is remembered.
     /// </summary>
     internal static readonly TimeSpan LocalCacheDefault = TimeSpan.FromSeconds(30);
 
@@ -106,21 +102,54 @@ internal sealed partial class HybridCacheService(
         Flags = HybridCacheEntryFlags.DisableDistributedCacheWrite,
     };
 
+    private readonly HybridCache _hybrid;
+    private readonly ILogger<HybridCacheService> _logger;
+
     /// <summary>
     /// Namespace applied to every key so services sharing one cache instance cannot collide.
     /// Defaults to no prefix, which is correct for a host that owns its cache outright.
     /// </summary>
-    private readonly CacheKeyNamespace _keys = keyNamespace ?? CacheKeyNamespace.None;
+    private readonly CacheKeyNamespace _keys;
 
     /// <summary>
     /// Bound <c>Cache</c> section, or the framework defaults when a host builds this service without
     /// one (direct construction in tests). The defaults reproduce
     /// <see cref="CacheOptions.DefaultDuration"/> and <see cref="LocalCacheDefault"/> exactly.
     /// </summary>
-    private readonly CacheSettings _settings = cacheSettings?.Value ?? new CacheSettings();
+    private readonly CacheSettings _settings;
 
-    /// <summary>Set once (via <see cref="Interlocked"/>) after the missing-multiplexer no-op is logged, so the steady state warns once rather than on every command.</summary>
-    private int _noMultiplexerWarned;
+    /// <summary>The generation tokens folded into every stored key; see <see cref="CachePrefixGenerations"/>.</summary>
+    private readonly CachePrefixGenerations _generations;
+
+    /// <summary>Initializes a new instance of the <see cref="HybridCacheService"/> class.</summary>
+    /// <param name="hybrid">The two-level cache.</param>
+    /// <param name="logger">Receives the fail-soft warnings.</param>
+    /// <param name="connectionMultiplexer">
+    /// The shared Redis server the generation tokens live on, so a prefix invalidation reaches every
+    /// replica; <see langword="null"/> keeps the tokens in this process.
+    /// </param>
+    /// <param name="keyNamespace">Namespace applied to every key and generation key.</param>
+    /// <param name="cacheSettings">The bound <c>Cache</c> section.</param>
+    public HybridCacheService(
+        HybridCache hybrid,
+        ILogger<HybridCacheService> logger,
+        IConnectionMultiplexer? connectionMultiplexer = null,
+        CacheKeyNamespace? keyNamespace = null,
+        IOptions<CacheSettings>? cacheSettings = null)
+    {
+        ArgumentNullException.ThrowIfNull(hybrid);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _hybrid = hybrid;
+        _logger = logger;
+        _keys = keyNamespace ?? CacheKeyNamespace.None;
+        _settings = cacheSettings?.Value ?? new CacheSettings();
+        _generations = new CachePrefixGenerations(
+            connectionMultiplexer,
+            _keys,
+            _settings.LocalCacheDuration ?? LocalCacheDefault,
+            logger);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -133,11 +162,11 @@ internal sealed partial class HybridCacheService(
     /// </remarks>
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var fullKey = HybridKey(key);
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
 
         try
         {
-            return await hybrid.GetOrCreateAsync(
+            return await _hybrid.GetOrCreateAsync(
                 fullKey,
                 static _ => ValueTask.FromResult<T?>(default),
                 ReadOnlyOptions,
@@ -146,7 +175,7 @@ internal sealed partial class HybridCacheService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogReadFailed(logger, key, ex);
+            LogReadFailed(_logger, key, ex);
             await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
             return default;
         }
@@ -174,11 +203,11 @@ internal sealed partial class HybridCacheService(
     /// </remarks>
     public async Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var fullKey = HybridKey(key);
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
 
         try
         {
-            var value = await hybrid.GetOrCreateAsync<T?>(
+            var value = await _hybrid.GetOrCreateAsync<T?>(
                 fullKey,
                 static _ => throw CacheMiss(),
                 PresenceProbeOptions,
@@ -193,7 +222,7 @@ internal sealed partial class HybridCacheService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogReadFailed(logger, key, ex);
+            LogReadFailed(_logger, key, ex);
             await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
             return (false, default);
         }
@@ -216,11 +245,11 @@ internal sealed partial class HybridCacheService(
     /// </remarks>
     public async Task<T?> GetFromSharedStoreAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var fullKey = HybridKey(key);
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
 
         try
         {
-            return await hybrid.GetOrCreateAsync(
+            return await _hybrid.GetOrCreateAsync(
                 fullKey,
                 static _ => ValueTask.FromResult<T?>(default),
                 SharedStoreReadOptions,
@@ -229,7 +258,7 @@ internal sealed partial class HybridCacheService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogReadFailed(logger, key, ex);
+            LogReadFailed(_logger, key, ex);
             await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
             return default;
         }
@@ -238,17 +267,20 @@ internal sealed partial class HybridCacheService(
     /// <inheritdoc />
     /// <remarks>
     /// The absolute expiration is the caller's, or <see cref="CacheSettings.DefaultDuration"/> when
-    /// omitted (the same default <see cref="DistributedCacheService"/> applies). The L1 copy is
-    /// capped at the shorter of that TTL and <see cref="CacheSettings.LocalCacheDuration"/>
-    /// (<see cref="LocalCacheDefault"/> when unset), so a long-lived entry does not sit in another
-    /// replica's memory for its whole TTL after an invalidation this process cannot see.
+    /// omitted. The L1 copy is capped at the shorter of that TTL and
+    /// <see cref="CacheSettings.LocalCacheDuration"/> (<see cref="LocalCacheDefault"/> when unset),
+    /// so a long-lived entry does not sit in another replica's memory for its whole TTL after an
+    /// invalidation this process cannot see.
     /// </remarks>
-    public Task SetAsync<T>(
+    public async Task SetAsync<T>(
         string key,
         T value,
         TimeSpan? expiration = null,
-        CancellationToken cancellationToken = default) =>
-        hybrid.SetAsync(HybridKey(key), value, WriteOptions(expiration), tags: null, cancellationToken).AsTask();
+        CancellationToken cancellationToken = default)
+    {
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
+        await _hybrid.SetAsync(fullKey, value, WriteOptions(expiration), tags: null, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -257,56 +289,39 @@ internal sealed partial class HybridCacheService(
     /// value until they expire, up to <c>Cache:LocalCacheDuration</c> (30 seconds by default); a read
     /// that must see the removal everywhere goes through <see cref="GetFromSharedStoreAsync{T}"/>.
     /// </remarks>
-    public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
-        hybrid.RemoveAsync(HybridKey(key), cancellationToken).AsTask();
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// <para>
-    /// Runs the shared <see cref="RedisPrefixScanner"/> over this service's own
-    /// <c>{prefix}hc:{key}</c> keyspace, which is the one keyspace this service writes and therefore
-    /// the one it evicts.
-    /// </para>
-    /// <para>
-    /// Matched keys are deleted through <see cref="HybridCache.RemoveAsync(string, CancellationToken)"/>
-    /// rather than by raw key: a raw delete would clear L2 and leave this process's own L1 copy
-    /// serving the value it just invalidated. Other replicas' L1 copies of the matched keys are not
-    /// reached and persist until they expire, up to <c>Cache:LocalCacheDuration</c> (30 seconds by
-    /// default).
-    /// </para>
-    /// <para>
-    /// Without an <see cref="IConnectionMultiplexer"/> prefix eviction cannot run at all and is
-    /// warned once, exactly as in <see cref="DistributedCacheService.RemoveByPrefixAsync"/>.
-    /// </para>
-    /// </remarks>
-    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        if (connectionMultiplexer is null)
-        {
-            // No multiplexer: prefix eviction cannot run, so cached entries expire on TTL alone. Warn
-            // once so this dead invalidation is visible without flooding the log on every mutating
-            // command.
-            if (Interlocked.Exchange(ref _noMultiplexerWarned, 1) == 0)
-                LogPrefixEvictionNoMultiplexer(logger);
-            return Task.CompletedTask;
-        }
-
-        return RedisPrefixScanner.RemoveMatchingAsync(
-            connectionMultiplexer,
-            $"{HybridKey(prefix)}*",
-            key => hybrid.RemoveAsync(key.ToString(), cancellationToken).AsTask(),
-            () => LogPrefixEvictionNoServer(logger, prefix),
-            (server, ex) => LogPrefixEvictionServerFailed(logger, server, prefix, ex),
-            cancellationToken);
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
+        await _hybrid.RemoveAsync(fullKey, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// A read-modify-write, like <see cref="DistributedCacheService.IncrementAsync"/> and with the
-    /// same honest limitation: concurrent increments can undercount. It is not routed through
-    /// <see cref="GetAsync{T}"/> and <see cref="SetAsync{T}"/> because both legs must bypass L1
-    /// (<see cref="HybridCacheEntryFlags.DisableLocalCacheRead"/> and
+    /// Replaces the generation token of <paramref name="prefix"/> (one Redis write), so every entry
+    /// stored under a key that starts with it stops being addressed, here at once and on every other
+    /// replica within <c>Cache:LocalCacheDuration</c>. Nothing is scanned or deleted: the orphaned
+    /// entries expire on their own TTL. See <see cref="CachePrefixGenerations"/> for why this is a
+    /// generation token rather than <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/>.
+    /// </para>
+    /// <para>
+    /// Without an <see cref="IConnectionMultiplexer"/> the token lives in this process, so the
+    /// invalidation reaches this process only; that is warned once.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="prefix"/> is non-empty and does not end with <c>:</c>.</exception>
+    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        CachePrefixContract.EnsureBoundary(prefix);
+        return _generations.InvalidateAsync(prefix, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// A read-modify-write with the honest limitation the interface documents: concurrent increments
+    /// can undercount. It is not routed through <see cref="GetAsync{T}"/> and <see cref="SetAsync{T}"/>
+    /// because both legs must bypass L1 (<see cref="HybridCacheEntryFlags.DisableLocalCacheRead"/> and
     /// <see cref="HybridCacheEntryFlags.DisableLocalCacheWrite"/>), which those members deliberately
     /// do not.
     /// </para>
@@ -326,9 +341,9 @@ internal sealed partial class HybridCacheService(
     /// </remarks>
     public async Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        var fullKey = HybridKey(key);
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
 
-        var current = await hybrid.GetOrCreateAsync(
+        var current = await _hybrid.GetOrCreateAsync(
             fullKey,
             static _ => ValueTask.FromResult<long?>(null),
             SharedStoreReadOptions,
@@ -337,7 +352,7 @@ internal sealed partial class HybridCacheService(
 
         var next = current + 1;
 
-        await hybrid.SetAsync(
+        await _hybrid.SetAsync(
             fullKey,
             next,
             WriteOptions(expiration, HybridCacheEntryFlags.DisableLocalCacheRead | HybridCacheEntryFlags.DisableLocalCacheWrite),
@@ -356,7 +371,7 @@ internal sealed partial class HybridCacheService(
     /// is cached unconditionally, and stampede protection is process-local, so several replicas can
     /// still each run the factory once.
     /// </remarks>
-    public Task<T> GetOrCreateAsync<T>(
+    public async Task<T> GetOrCreateAsync<T>(
         string key,
         Func<CancellationToken, Task<T>> factory,
         TimeSpan? expiration = null,
@@ -364,15 +379,17 @@ internal sealed partial class HybridCacheService(
     {
         ArgumentNullException.ThrowIfNull(factory);
 
+        var fullKey = await HybridKeyAsync(key, cancellationToken).ConfigureAwait(false);
+
         // The factory is passed as state rather than captured, so the delegate stays static and no
         // closure is allocated per call.
-        return hybrid.GetOrCreateAsync(
-            HybridKey(key),
+        return await _hybrid.GetOrCreateAsync(
+            fullKey,
             factory,
             static async (state, ct) => await state(ct).ConfigureAwait(false),
             WriteOptions(expiration),
             tags: null,
-            cancellationToken).AsTask();
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -387,10 +404,18 @@ internal sealed partial class HybridCacheService(
         return miss;
     }
 
-    /// <summary>Qualifies a caller-supplied key into this service's disjoint keyspace.</summary>
-    /// <param name="key">The caller-supplied key or prefix.</param>
-    /// <returns>The fully qualified key, <c>{prefix}hc:{key}</c>.</returns>
-    private string HybridKey(string key) => _keys.Qualify(string.Concat(KeyspaceSegment, key));
+    /// <summary>
+    /// Qualifies a caller-supplied key into this service's disjoint keyspace, with the generation
+    /// tokens of its boundaries folded in.
+    /// </summary>
+    /// <param name="key">The caller-supplied key.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The fully qualified key, <c>{prefix}hc:{key}</c> plus any generation suffix.</returns>
+    private async ValueTask<string> HybridKeyAsync(string key, CancellationToken cancellationToken)
+    {
+        var suffix = await _generations.SuffixAsync(key, cancellationToken).ConfigureAwait(false);
+        return _keys.Qualify(string.Concat(KeyspaceSegment, key, suffix));
+    }
 
     /// <summary>
     /// Builds the entry options for a write: the caller's TTL (or the configured default), with the
@@ -424,11 +449,11 @@ internal sealed partial class HybridCacheService(
     {
         try
         {
-            await hybrid.RemoveAsync(fullKey, cancellationToken).ConfigureAwait(false);
+            await _hybrid.RemoveAsync(fullKey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogSelfHealFailed(logger, fullKey, ex);
+            LogSelfHealFailed(_logger, fullKey, ex);
         }
     }
 
@@ -437,13 +462,4 @@ internal sealed partial class HybridCacheService(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Two-level cache could not drop the unreadable entry '{CacheKey}'; it stays unreadable until its TTL expires.")]
     private static partial void LogSelfHealFailed(ILogger logger, string cacheKey, Exception exception);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation is a no-op: no IConnectionMultiplexer is registered, so cached entries are bounded only by their TTL. Register a Redis client (AddRedisClient) to enable prefix eviction.")]
-    private static partial void LogPrefixEvictionNoMultiplexer(ILogger logger);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation skipped for prefix '{Prefix}': the connection multiplexer reports no non-replica servers.")]
-    private static partial void LogPrefixEvictionNoServer(ILogger logger, string prefix);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation failed on server '{Server}' for prefix '{Prefix}'; the remaining servers are still processed, so entries on this one are bounded only by their TTL.")]
-    private static partial void LogPrefixEvictionServerFailed(ILogger logger, string server, string prefix, Exception exception);
 }

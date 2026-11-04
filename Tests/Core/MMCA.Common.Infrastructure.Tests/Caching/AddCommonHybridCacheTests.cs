@@ -78,7 +78,7 @@ public sealed class AddCommonHybridCacheTests
 
     // ── The untouched default path ──
     [Fact]
-    public void WithoutAddCommonHybridCache_ADistributedHostKeepsTheDistributedCacheService()
+    public void WithoutAddCommonHybridCache_ADistributedHostFailsOnFirstResolutionNamingTheCall()
     {
         var services = new ServiceCollection();
         services.AddSingleton(new Mock<IDistributedCache>().Object);
@@ -86,7 +86,8 @@ public sealed class AddCommonHybridCacheTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
 
-        provider.GetRequiredService<ICacheService>().Should().BeOfType<DistributedCacheService>();
+        Action resolve = () => provider.GetRequiredService<ICacheService>();
+        resolve.Should().Throw<InvalidOperationException>().WithMessage("*AddCommonHybridCache*");
     }
 
     [Fact]

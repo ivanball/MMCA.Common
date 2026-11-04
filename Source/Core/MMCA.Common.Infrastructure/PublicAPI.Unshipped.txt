@@ -1,1 +1,14 @@
 #nullable enable
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.CreateValidationKey() -> Microsoft.IdentityModel.Tokens.RsaSecurityKey!
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.JwksAdditionalKey() -> void
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.KeyId.get -> string!
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.KeyId.init -> void
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.RsaPublicKeyPath.get -> string?
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.RsaPublicKeyPath.init -> void
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.RsaPublicKeyPem.get -> string?
+MMCA.Common.Infrastructure.Auth.JwksAdditionalKey.RsaPublicKeyPem.init -> void
+MMCA.Common.Infrastructure.Auth.JwksSettings.AdditionalKeys.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Auth.JwksAdditionalKey!>!
+MMCA.Common.Infrastructure.Auth.JwksSettings.AdditionalKeys.init -> void
+MMCA.Common.Infrastructure.Auth.JwksSettings.CreateAdditionalValidationKeys() -> System.Collections.Generic.IReadOnlyList<Microsoft.IdentityModel.Tokens.RsaSecurityKey!>!
+MMCA.Common.Infrastructure.Auth.JwksSettings.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!

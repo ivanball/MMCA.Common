@@ -89,18 +89,35 @@ public interface ICacheService
     Task RemoveAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>Removes all cache entries whose keys start with the given prefix.</summary>
-    /// <param name="prefix">The key prefix to match.</param>
+    /// <param name="prefix">
+    /// The key prefix to match. It must end at a <c>:</c> boundary (for example
+    /// <c>"MMCA.Sample.Event:"</c>, the shape every <c>ICacheInvalidating.CachePrefix</c> takes), or be
+    /// empty to remove every entry. A prefix that stops mid-segment (<c>"MMCA.Sample.Ev"</c>) is
+    /// rejected.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    /// The boundary rule is what lets the two-level store invalidate without enumerating the
+    /// keyspace: it keeps one generation token per <c>:</c> boundary and folds the tokens into every
+    /// stored key, so invalidating a prefix is one write that a mid-segment prefix could not express.
+    /// The shipped stores all enforce it, so behavior does not depend on the backend.
+    /// </para>
+    /// <para>
+    /// Callers that must not clear the whole cache guard against an empty prefix themselves, as the
+    /// caching command decorator does.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="prefix"/> is non-empty and does not end with <c>:</c>.</exception>
     Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Increments a counter and returns its new value, setting <paramref name="expiration"/>
     /// when the counter is created. Used by rate-limit and brute-force counters (ADR-029). Not
-    /// atomic in any shipped implementation: the default member, <c>DistributedCacheService</c> and
-    /// <c>HybridCacheService</c> are all a read-modify-write of <see cref="GetAsync{T}"/> +
-    /// <see cref="SetAsync{T}"/>, so concurrent requests can overwrite each other's increments and
-    /// undercount.
+    /// atomic in any shipped implementation: the default member and <c>HybridCacheService</c> are
+    /// both a read-modify-write of a get and a set, so concurrent requests can overwrite each other's
+    /// increments and undercount.
     /// </summary>
     /// <param name="key">The counter key.</param>
     /// <param name="expiration">Time-to-live applied when the counter is first created.</param>
@@ -111,7 +128,7 @@ public interface ICacheService
     /// implementations with no native counter primitive (and keeping this a non-breaking addition).
     /// No shipped implementation overrides it with Redis <c>INCR</c>: the distributed cache stores
     /// entries as Redis hashes, so an <c>INCR</c> string at the same key would fail the next read
-    /// with <c>WRONGTYPE</c> (see <c>DistributedCacheService.IncrementAsync</c>).
+    /// with <c>WRONGTYPE</c>.
     /// </remarks>
     async Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
     {

@@ -65,10 +65,10 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.14" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="3.4.31" />
-    <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
+    <!-- Two-level cache (L1 in-process + L2 distributed) behind AddCommonHybridCache
          (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
-         never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
-         one key is the WRONGTYPE production failure this framework already paid for once.
+         never cross-read an entry another writer put in the same server: two serialization formats
+         sharing one key is the WRONGTYPE production failure this framework already paid for once.
          Kept on the same dotnet/extensions train as Http.Resilience, ServiceDiscovery and
          TimeProvider.Testing, so it moves with them rather than ahead of them: a Caching.Hybrid
          release floors Microsoft.Extensions.Caching.Abstractions/Memory (and through them

@@ -85,13 +85,16 @@ public sealed class HybridCacheServiceTests
         (await reader.GetAsync<string>("shared", TestContext.Current.CancellationToken)).Should().Be("written-elsewhere");
     }
 
-    // ── Disjoint from the DistributedCacheService keyspace ──
+    // ── Disjoint from any other IDistributedCache writer's keyspace ──
     [Fact]
-    public async Task GetAsync_WithADistributedCacheEntryAtTheSameLogicalKey_IsACleanMiss()
+    public async Task GetAsync_WithAnotherWritersEntryAtTheSameLogicalKey_IsACleanMiss()
     {
         var l2 = new RecordingDistributedCache();
-        var other = new DistributedCacheService(l2, NullLogger<DistributedCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
-        await other.SetAsync("shared", "other-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await l2.SetAsync(
+            $"{Prefix}shared",
+            System.Text.Encoding.UTF8.GetBytes("\"other-format\""),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) },
+            TestContext.Current.CancellationToken);
 
         var sut = new HybridCacheService(BuildHybridCache(l2), NullLogger<HybridCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
 
@@ -435,16 +438,93 @@ public sealed class HybridCacheServiceTests
             sut.GetOrCreateAsync<string>("k", factory: null!, cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    // ── Prefix eviction without a multiplexer ──
+    // ── Prefix invalidation (process-local generations: no multiplexer) ──
     [Fact]
-    public async Task RemoveByPrefixAsync_WithoutAMultiplexer_IsANoOpRatherThanAFailure()
+    public async Task RemoveByPrefixAsync_WithoutAMultiplexer_EndsTheEntryForThisProcessWithoutDeletingIt()
     {
         var (sut, l2, _) = CreateSut();
         await sut.SetAsync("catalog:1", "value", cancellationToken: TestContext.Current.CancellationToken);
+        (await sut.GetAsync<string>("catalog:1", TestContext.Current.CancellationToken)).Should().Be("value");
 
         await sut.RemoveByPrefixAsync("catalog:", TestContext.Current.CancellationToken);
 
-        l2.Keys.Should().ContainSingle("prefix eviction needs SCAN; without a multiplexer the entry is bounded by its TTL");
+        (await sut.GetAsync<string>("catalog:1", TestContext.Current.CancellationToken)).Should().BeNull(
+            "the prefix's generation changed, so the old entry is no longer addressed");
+        l2.Keys.Should().ContainSingle("nothing is scanned or deleted; the orphaned entry expires on its TTL");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_AfterInvalidation_NewWritesAreServedAgain()
+    {
+        var (sut, l2, _) = CreateSut();
+        await sut.SetAsync("catalog:1", "old", cancellationToken: TestContext.Current.CancellationToken);
+        await sut.RemoveByPrefixAsync("catalog:", TestContext.Current.CancellationToken);
+
+        await sut.SetAsync("catalog:1", "new", cancellationToken: TestContext.Current.CancellationToken);
+
+        (await sut.GetAsync<string>("catalog:1", TestContext.Current.CancellationToken)).Should().Be("new");
+        l2.Keys.Should().HaveCount(2).And.Contain(k => k.StartsWith($"{Prefix}hc:catalog:1|", StringComparison.Ordinal),
+            "the new entry is stored under the key with the prefix's token folded in");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_LeavesKeysOutsideThePrefixAndSiblingSegmentsAlone()
+    {
+        var (sut, _, _) = CreateSut();
+        await sut.SetAsync("catalog:1:detail", "one", cancellationToken: TestContext.Current.CancellationToken);
+        await sut.SetAsync("catalog:2:detail", "two", cancellationToken: TestContext.Current.CancellationToken);
+        await sut.SetAsync("orders:1", "three", cancellationToken: TestContext.Current.CancellationToken);
+
+        await sut.RemoveByPrefixAsync("catalog:1:", TestContext.Current.CancellationToken);
+
+        (await sut.GetAsync<string>("catalog:1:detail", TestContext.Current.CancellationToken)).Should().BeNull();
+        (await sut.GetAsync<string>("catalog:2:detail", TestContext.Current.CancellationToken)).Should().Be("two");
+        (await sut.GetAsync<string>("orders:1", TestContext.Current.CancellationToken)).Should().Be("three");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithAnOuterPrefix_EndsEveryNestedKey()
+    {
+        var (sut, _, _) = CreateSut();
+        await sut.SetAsync("catalog:1:detail", "one", cancellationToken: TestContext.Current.CancellationToken);
+
+        await sut.RemoveByPrefixAsync("catalog:", TestContext.Current.CancellationToken);
+
+        (await sut.GetAsync<string>("catalog:1:detail", TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithTheEmptyPrefix_EndsEveryEntry()
+    {
+        var (sut, _, _) = CreateSut();
+        await sut.SetAsync("catalog:1", "one", cancellationToken: TestContext.Current.CancellationToken);
+        await sut.SetAsync("plain", "two", cancellationToken: TestContext.Current.CancellationToken);
+
+        await sut.RemoveByPrefixAsync(string.Empty, TestContext.Current.CancellationToken);
+
+        (await sut.GetAsync<string>("catalog:1", TestContext.Current.CancellationToken)).Should().BeNull();
+        (await sut.GetAsync<string>("plain", TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("catalog")]
+    [InlineData("catalog:1")]
+    [InlineData(" ")]
+    public async Task RemoveByPrefixAsync_WithAPrefixThatStopsMidSegment_Throws(string prefix)
+    {
+        var (sut, _, _) = CreateSut();
+
+        var act = () => sut.RemoveByPrefixAsync(prefix, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>().WithParameterName(nameof(prefix));
+    }
+
+    [Fact]
+    public void Boundaries_AreTheRootAndEveryColonTerminatedPrefix()
+    {
+        CachePrefixGenerations.Boundaries("A:B:C").Should().Equal(string.Empty, "A:", "A:B:");
+        CachePrefixGenerations.Boundaries("plain").Should().Equal(string.Empty);
+        CachePrefixGenerations.Boundaries("t:acme:X.Event:").Should().Equal(string.Empty, "t:", "t:acme:", "t:acme:X.Event:");
     }
 
     /// <summary>Builds the service over a real HybridCache with the recording L2 behind it.</summary>

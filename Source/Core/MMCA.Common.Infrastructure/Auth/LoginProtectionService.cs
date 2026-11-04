@@ -77,8 +77,8 @@ public sealed partial class LoginProtectionService(
     /// <inheritdoc />
     public async Task IncrementFailedAttemptsAsync(string email, CancellationToken cancellationToken = default)
     {
-        // NOT atomic on the distributed cache today: DistributedCacheService.IncrementAsync is a
-        // read-modify-write, because the Redis INCR it used to issue wrote a plain string key while
+        // NOT atomic on the distributed cache today: ICacheService.IncrementAsync is a
+        // read-modify-write in every shipped store, because the Redis INCR it used to issue wrote a plain string key while
         // IDistributedCache reads entries back as hashes, and the mismatch made the counter
         // unreadable (WRONGTYPE). Readability was the right thing to buy first, but the cost is the
         // known one: parallel attempts can overwrite each other's increments, so a burst of

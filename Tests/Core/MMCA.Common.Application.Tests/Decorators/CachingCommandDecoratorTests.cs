@@ -31,7 +31,7 @@ public sealed class CachingCommandDecoratorTests
 
         result.IsSuccess.Should().BeTrue();
         cacheService.Verify(
-            x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()),
+            x => x.RemoveByPrefixAsync("test-prefix:", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -99,7 +99,7 @@ public sealed class CachingCommandDecoratorTests
         // The command committed; a best-effort invalidation failure must not turn it into a failure.
         result.IsSuccess.Should().BeTrue();
         cacheService.Verify(
-            x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()),
+            x => x.RemoveByPrefixAsync("test-prefix:", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -124,7 +124,7 @@ public sealed class CachingCommandDecoratorTests
 
         result.IsSuccess.Should().BeTrue();
         cacheService.Verify(
-            x => x.RemoveByPrefixAsync("test-prefix", CancellationToken.None),
+            x => x.RemoveByPrefixAsync("test-prefix:", CancellationToken.None),
             Times.Once);
     }
 
@@ -218,7 +218,7 @@ public sealed class CachingCommandDecoratorTests
         // A query that missed the cache before the command committed can re-populate the entry with
         // pre-write state right after the first eviction, so a second one has to follow.
         cacheService.Verify(
-            x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()),
+            x => x.RemoveByPrefixAsync("test-prefix:", It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
@@ -230,7 +230,7 @@ public sealed class CachingCommandDecoratorTests
         inner.Setup(x => x.HandleAsync(It.IsAny<CacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         cacheService
-            .SetupSequence(x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()))
+            .SetupSequence(x => x.RemoveByPrefixAsync("test-prefix:", It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask)
             .ThrowsAsync(new InvalidOperationException("cache went away"));
 
@@ -255,7 +255,7 @@ public sealed record PlainTestCommand;
 
 public sealed record CacheInvalidatingTestCommand : ICacheInvalidating
 {
-    public string CachePrefix => "test-prefix";
+    public string CachePrefix => "test-prefix:";
 }
 
 public sealed record OptedOutCacheInvalidatingTestCommand : ICacheInvalidating
