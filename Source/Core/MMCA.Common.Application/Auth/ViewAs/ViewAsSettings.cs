@@ -9,8 +9,9 @@ namespace MMCA.Common.Application.Auth.ViewAs;
 /// <remarks>
 /// <para>
 /// <b>Off by default.</b> While <see cref="Enabled"/> is false the grant and end endpoints answer
-/// 404, the guard middleware is not added, the grant table is not in any model (so a host that never
-/// opts in sees no migration), and the sign-in history shows no view-as rows.
+/// 404, the guard middleware (always in the pipeline) refuses any view-as token with 401, the grant
+/// table is not in any model (so a host that never opts in sees no migration), and the sign-in
+/// history shows no view-as rows.
 /// </para>
 /// <para>
 /// A host that enables it must also register an <see cref="IViewAsSubjectResolver"/> (the account
