@@ -129,6 +129,15 @@ public static class ClaimsPrincipalExtensions
         principal?.FindFirst(AuthClaimTypes.MultiFactor) is not null;
 
     /// <summary>
+    /// Returns <see langword="true"/> when the principal comes from a view-as token
+    /// (<see cref="AuthClaimTypes.ViewAsActor"/> is present), which makes the request read-only.
+    /// </summary>
+    /// <param name="principal">The principal to inspect; <see langword="null"/> yields <see langword="false"/>.</param>
+    /// <returns><see langword="true"/> when the principal carries the view-as actor claim.</returns>
+    public static bool IsViewAs(this ClaimsPrincipal? principal) =>
+        principal?.FindFirst(AuthClaimTypes.ViewAsActor) is not null;
+
+    /// <summary>
     /// Returns the method that satisfied the second-factor challenge (the value of the
     /// <see cref="AuthClaimTypes.MultiFactor"/> claim), or <see langword="null"/> when the principal
     /// carries no such claim.

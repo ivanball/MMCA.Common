@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>.ViewAsCommandDecorator(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUser) -> void

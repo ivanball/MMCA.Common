@@ -82,12 +82,13 @@ Strict layered flow: `API/Grpc -> Infrastructure -> Application -> Domain -> Sha
 Decorators are applied by Scrutor in reverse registration order (last registered = outermost). Execution order (ADR-014):
 
 ```
-Commands: FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
+Commands: ViewAs -> FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
 Queries:  FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Handler
 ```
 
 The positions are deliberate; keep them when adding or moving a decorator:
 
+- **ViewAs** (commands only): refuses every command while the caller holds a view-as token, so support access stays read-only (ADR-137).
 - **FeatureGate**: every flag constant declares `[FeatureFlag(Permanent|Temporary, RemoveBy, Owner)]` on a static `*Features` class; `FeatureFlagLifecycleTestsBase` fails the build on an undeclared flag or a temporary one past `RemoveBy` (ADR-031).
 - **Authorization** sits outside Caching so a denied query never reads or populates the cache. Command and query checks share `AuthorizationGate` so they cannot drift (ADR-020).
 - **Logging** logs an exception as a Warning outcome line WITHOUT the exception object and rethrows; the handling boundary owns the single Error row with the stack.

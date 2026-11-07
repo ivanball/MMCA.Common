@@ -48,6 +48,7 @@ public abstract class DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, 
     /// <summary>The expected command decorator nesting, outermost first (ADR-014).</summary>
     protected virtual IReadOnlyList<string> ExpectedCommandDecorators =>
     [
+        "ViewAsCommandDecorator",
         "FeatureGateCommandDecorator",
         "AuthorizationCommandDecorator",
         "LoggingCommandDecorator",

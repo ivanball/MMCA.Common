@@ -1,1 +1,4 @@
 ﻿#nullable enable
+const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsActor = "act_sub" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsGrant = "vag" -> string!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.IsViewAs(this System.Security.Claims.ClaimsPrincipal? principal) -> bool

@@ -137,7 +137,8 @@ public static partial class DependencyInjection
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // cache invalidation
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // logging
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(AuthorizationCommandDecorator<,>));   // permission check
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(FeatureGateCommandDecorator<,>));     // outermost — feature flag check
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(FeatureGateCommandDecorator<,>));     // feature flag check
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(ViewAsCommandDecorator<,>));          // outermost: a view-as caller is read-only (ADR-137)
 
             // ── Query decorators ────────────────────────────────────────
             services.TryDecorate(typeof(IQueryHandler<,>), typeof(TimeoutQueryDecorator<,>));             // innermost: per-query execution budget
