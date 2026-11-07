@@ -34,6 +34,27 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**Read-only view-as in a multi-service host: set `ViewAs:HostsGrantStore` per service.** A single
+host changes nothing (`HostsGrantStore` defaults to `true`). A host that runs its modules as separate
+services behind a gateway (Identity plus others) and turns view-as on configures each service:
+
+| Service | `ViewAs:Enabled` | `ViewAs:HostsGrantStore` | Migrations project |
+|---|---|---|---|
+| Identity (holds the `ViewAsGrants` table) | `true` | `true` (the default; leave it out) | `DesignTimeDbContextOptions.EnableViewAsGrants = true` and the `AddViewAsGrants` migration, as in 1.278.0 |
+| Every other service that serves the web UI's API calls | `true` | `false` | nothing; `EnableViewAsGrants` stays `false`, so no grant table and no migration |
+
+`ViewAs:DataSourceName` matters only on the Identity service. A service left with `ViewAs:Enabled`
+false keeps refusing every view-as token with 401, so a call to it ends the view; turn it on wherever
+the viewed user's pages call.
+
+**All services must share one distributed cache** (the same Redis, or another shared `ICacheService`
+backend). The Identity service's `POST auth/view-as/end` writes a grant-ended marker to it, and the
+other services read that marker from the shared store; with a process-local cache per service an
+ended view would stay usable on the other services until the token expires (at most 15 minutes).
+The check fails closed: a service whose cache read fails, or that registers no `ICacheService`,
+refuses view-as requests. Nothing else changes: no endpoint, proxy setting or cross-service call is
+added, and the `IViewAsSubjectResolver` and `users:view-as` grant stay on the Identity service only.
+
 ## [1.278.0] - 2026-11-07
 
 **`INativePushSender.BroadcastAsync` is removed (breaking, MMCA.Common.Application and the push

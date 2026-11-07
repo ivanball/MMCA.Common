@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`ViewAs:HostsGrantStore`** (`ViewAsSettings.HostsGrantStore`, MMCA.Common.Application; default `true`). Whether this host holds the view-as grant store. Only a host with `ViewAs:Enabled` AND `ViewAs:HostsGrantStore` maps the `ViewAsGrants` table, serves the grant and end endpoints, and checks a view-as request against the grant row; the EF grant store stays registered on every host but is inert without both. A single host is unchanged.
+
+### Fixed
+
+- **Read-only view-as works in a multi-service host** (MMCA.Common.API, MMCA.Common.Infrastructure; ADR-137). `ViewAsGuardMiddleware` checked every view-as request against the local database, but only the Identity database holds `ViewAsGrants`, so the first call to any other service answered 401, the same-origin proxy deleted the overlay cookie on that 401, and the view ended on the first page load; enabling view-as on such a service mapped the grant table into its own database and failed EF Migrate on a pending model change. A service with `ViewAs:Enabled` true and `ViewAs:HostsGrantStore` false now maps no grant table, answers 404 on the grant and end endpoints, keeps the read-only method rule (403), refuses an expired or malformed token, and refuses a token whose grant was ended, read from a "view-as grant ended" marker in the shared `ICacheService` (from the shared store, never a replica's local copy). `AuthControllerBase.EndViewAsAsync` writes that marker after a successful end, living for the token's remaining life plus the host's JWT bearer clock skew (the 5-minute library default when none is set). The marker check fails closed: a service that cannot read the cache, or has none, refuses view-as requests. No new cross-service call.
+
 ## [1.278.0] - 2026-11-07
 
 Peer-repo wave: native push failure isolation, sign-in history, read-only view-as support access, the opt-in MCP endpoint (MMCA.Common.Mcp, the 27th package), a tenant-scope fitness rule, tenant-targeted feature flags and an in-app diagnostics log.
