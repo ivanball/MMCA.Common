@@ -13,7 +13,7 @@ namespace MMCA.Common.Aws.Tests.Notifications;
 
 /// <summary>
 /// The SNS push registration: a no-op unless <c>NativePush:Enabled</c> is true and the
-/// <c>NativePush:Sns</c> section names the table, the topic and at least one platform application;
+/// <c>NativePush:Sns</c> section names the table and at least one platform application;
 /// once complete it swaps both inert core defaults, and the core startup tripwire is satisfied.
 /// </summary>
 public sealed class AddAmazonSnsPushTests
@@ -22,7 +22,6 @@ public sealed class AddAmazonSnsPushTests
     {
         ["NativePush:Enabled"] = "true",
         ["NativePush:Sns:FcmPlatformApplicationArn"] = "arn:aws:sns:eu-west-1:000000000000:app/GCM/fcm",
-        ["NativePush:Sns:BroadcastTopicArn"] = "arn:aws:sns:eu-west-1:000000000000:broadcast",
         ["NativePush:Sns:InstallationsTable"] = "installations",
         ["NativePush:Sns:Region"] = "eu-west-1",
     };
@@ -42,8 +41,7 @@ public sealed class AddAmazonSnsPushTests
     [InlineData("NativePush:Enabled", "false")]
     [InlineData("NativePush:Enabled", "not-a-bool")]
     [InlineData("NativePush:Sns:InstallationsTable", null)]
-    [InlineData("NativePush:Sns:BroadcastTopicArn", null)]
-    [InlineData("NativePush:Sns:BroadcastTopicArn", " ")]
+    [InlineData("NativePush:Sns:InstallationsTable", " ")]
     [InlineData("NativePush:Sns:FcmPlatformApplicationArn", null)]
     public void AddAmazonSnsPush_DisabledOrIncomplete_IsANoOp(string key, string? value)
     {

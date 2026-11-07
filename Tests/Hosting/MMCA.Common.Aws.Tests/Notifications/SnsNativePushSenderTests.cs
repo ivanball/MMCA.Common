@@ -16,12 +16,11 @@ namespace MMCA.Common.Aws.Tests.Notifications;
 /// The SNS native push sender (ADR-044) against mocked clients: user-targeted sends resolve each
 /// user's endpoints through the registry's <c>UserId</c> index and publish once per endpoint in SNS's
 /// per-platform JSON structure; an endpoint SNS reports disabled is removed with its row and the rest
-/// still receive (best-effort); a broadcast is one publish to the topic.
+/// still receive (best-effort).
 /// </summary>
 public sealed class SnsNativePushSenderTests
 {
     private const string Table = "installations";
-    private const string TopicArn = "arn:aws:sns:us-east-1:000000000000:broadcast";
 
     private readonly Mock<IAmazonDynamoDB> _dynamoDb = new();
     private readonly Mock<IAmazonSimpleNotificationService> _sns = new();
@@ -43,13 +42,11 @@ public sealed class SnsNativePushSenderTests
         var options = Options.Create(new SnsNativePushSettings
         {
             InstallationsTable = Table,
-            BroadcastTopicArn = TopicArn,
             FcmPlatformApplicationArn = "arn:aws:sns:us-east-1:000000000000:app/GCM/fcm",
         });
         return new SnsNativePushSender(
             new SnsInstallationRegistry(_dynamoDb.Object, _sns.Object, options),
             _sns.Object,
-            options,
             NullLogger<SnsNativePushSender>.Instance);
     }
 
@@ -62,7 +59,6 @@ public sealed class SnsNativePushSenderTests
         ["Platform"] = new() { S = "fcmv1" },
         ["PushChannel"] = new() { S = $"token-{installationId}" },
         ["EndpointArn"] = new() { S = EndpointArn(endpoint) },
-        ["SubscriptionArn"] = new() { S = $"{TopicArn}:sub-{endpoint}" },
     };
 
     private void SetupUser(string userId, params Dictionary<string, AttributeValue>[] rows) =>
@@ -124,8 +120,6 @@ public sealed class SnsNativePushSenderTests
         await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
         _published.Should().ContainSingle().Which.TargetArn.Should().Be(EndpointArn("healthy"));
-        _sns.Verify(x => x.UnsubscribeAsync(
-            It.Is<UnsubscribeRequest>(r => r.SubscriptionArn == $"{TopicArn}:sub-disabled"), It.IsAny<CancellationToken>()), Times.Once);
         _sns.Verify(x => x.DeleteEndpointAsync(
             It.Is<DeleteEndpointRequest>(r => r.EndpointArn == EndpointArn("disabled")), It.IsAny<CancellationToken>()), Times.Once);
         _dynamoDb.Verify(x => x.DeleteItemAsync(
@@ -283,20 +277,5 @@ public sealed class SnsNativePushSenderTests
         _dynamoDb.Verify(x => x.QueryAsync(
             It.Is<QueryRequest>(r => r.ExclusiveStartKey != null && r.ExclusiveStartKey["InstallationId"].S == "a"),
             It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task BroadcastAsync_PublishesOnceToTheTopic()
-    {
-        var metadata = new Dictionary<string, string> { ["route"] = "/news" };
-
-        await CreateSut().BroadcastAsync("Hello", "World", metadata, TestContext.Current.CancellationToken);
-
-        _published.Should().ContainSingle();
-        _published[0].TopicArn.Should().Be(TopicArn);
-        _published[0].TargetArn.Should().BeNull();
-        _published[0].MessageStructure.Should().Be("json");
-        _published[0].Message.Should().Be(SnsPushMessage.Build("Hello", "World", metadata));
-        _dynamoDb.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

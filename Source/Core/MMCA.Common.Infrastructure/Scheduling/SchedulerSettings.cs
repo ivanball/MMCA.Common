@@ -68,8 +68,9 @@ public sealed class ScheduledJobOverrideSettings
     /// <summary>
     /// Gets the five-field UTC cron expression that replaces the job's compiled-in
     /// <see cref="Application.Interfaces.IScheduledJob.CronExpression"/>. Null or blank leaves the
-    /// code default in force. A change here is picked up on the next scheduler cycle: the runner
-    /// rewrites the stored expression and recomputes the next occurrence from the current instant.
+    /// code default in force. A change here applies when the host restarts: the runner reads these
+    /// settings once at construction, and its first scheduler cycle after the restart rewrites the
+    /// stored expression and recomputes the next occurrence from the current instant.
     /// </summary>
     public string? Cron { get; init; }
 }

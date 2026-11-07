@@ -14,7 +14,7 @@ namespace MMCA.Common.Gcp.Tests.Notifications;
 
 /// <summary>
 /// The FCM push registration: a no-op unless <c>NativePush:Enabled</c> is true and the
-/// <c>NativePush:Fcm</c> section names the project, the collection and the topic; once complete it
+/// <c>NativePush:Fcm</c> section names the project and the collection; once complete it
 /// swaps both inert core defaults (and satisfies the core startup tripwire), and registering it twice
 /// is harmless.
 /// </summary>
@@ -25,7 +25,6 @@ public sealed class AddFirebaseCloudMessagingPushTests
         ["NativePush:Enabled"] = "true",
         ["NativePush:Fcm:ProjectId"] = "demo-project",
         ["NativePush:Fcm:InstallationsCollection"] = "pushInstallations",
-        ["NativePush:Fcm:BroadcastTopic"] = "broadcast",
     };
 
     private static IConfiguration ConfigurationWith(Dictionary<string, string?> settings) =>
@@ -58,8 +57,7 @@ public sealed class AddFirebaseCloudMessagingPushTests
     [InlineData("NativePush:Fcm:ProjectId", null)]
     [InlineData("NativePush:Fcm:ProjectId", " ")]
     [InlineData("NativePush:Fcm:InstallationsCollection", null)]
-    [InlineData("NativePush:Fcm:BroadcastTopic", null)]
-    [InlineData("NativePush:Fcm:BroadcastTopic", "")]
+    [InlineData("NativePush:Fcm:InstallationsCollection", "")]
     public void AddFirebaseCloudMessagingPush_DisabledOrIncomplete_IsANoOp(string key, string? value)
     {
         var settings = Complete();
@@ -94,7 +92,6 @@ public sealed class AddFirebaseCloudMessagingPushTests
         var bound = provider.GetRequiredService<IOptions<FcmNativePushSettings>>().Value;
         bound.ProjectId.Should().Be("demo-project");
         bound.InstallationsCollection.Should().Be("pushInstallations");
-        bound.BroadcastTopic.Should().Be("broadcast");
     }
 
     [Fact]
@@ -127,34 +124,6 @@ public sealed class AddFirebaseCloudMessagingPushTests
         using var scope = provider.CreateScope();
         scope.ServiceProvider.GetRequiredService<INativePushSender>().Should().BeOfType<FcmNativePushSender>();
         scope.ServiceProvider.GetRequiredService<IPushDeviceRegistrar>().Should().BeOfType<FcmPushDeviceRegistrar>();
-    }
-
-    [Theory]
-    [InlineData("broad cast")]
-    [InlineData("news/today")]
-    [InlineData("/topics/")]
-    public void AddFirebaseCloudMessagingPush_AnInvalidTopicName_ThrowsNamingTheKey(string topic)
-    {
-        var settings = Complete();
-        settings["NativePush:Fcm:BroadcastTopic"] = topic;
-
-        var act = () => new ServiceCollection().AddFirebaseCloudMessagingPush(ConfigurationWith(settings));
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*NativePush:Fcm:BroadcastTopic*");
-    }
-
-    [Theory]
-    [InlineData("broadcast")]
-    [InlineData("/topics/all-users_v2.~%")]
-    public void AddFirebaseCloudMessagingPush_AValidTopicName_Registers(string topic)
-    {
-        var settings = Complete();
-        settings["NativePush:Fcm:BroadcastTopic"] = topic;
-        var services = new ServiceCollection();
-
-        services.AddFirebaseCloudMessagingPush(ConfigurationWith(settings));
-
-        services.Should().Contain(d => d.ServiceType == typeof(INativePushSender));
     }
 
     [Fact]

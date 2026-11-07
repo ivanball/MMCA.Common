@@ -6,7 +6,7 @@ namespace MMCA.Common.Aws.Notifications;
 /// SNS mobile push settings, bound from <c>NativePush:Sns</c> (ADR-044). The shared
 /// <c>NativePush:Enabled</c> key is the gate, read by the registration, so one switch means the same
 /// thing whichever cloud delivers the push. Every resource named here is provisioned outside the
-/// application (platform applications with their FCM / APNs credentials, the topic, the table), so
+/// application (platform applications with their FCM / APNs credentials, the table), so
 /// the pipeline ships inert and is switched on by configuration alone.
 /// </summary>
 internal sealed class SnsNativePushSettings
@@ -22,9 +22,6 @@ internal sealed class SnsNativePushSettings
 
     /// <summary>The ARN of the SNS platform application for APNs (iOS) devices, production or sandbox.</summary>
     public string? ApnsPlatformApplicationArn { get; init; }
-
-    /// <summary>The SNS topic every registered endpoint subscribes to, the target of a broadcast.</summary>
-    public string? BroadcastTopicArn { get; init; }
 
     /// <summary>The DynamoDB table holding one item per device installation.</summary>
     public string? InstallationsTable { get; init; }
@@ -48,12 +45,11 @@ internal sealed class SnsNativePushSettings
     public string? SecretAccessKey { get; init; }
 
     /// <summary>
-    /// Whether the section names everything a send and a registration need: the table, the topic and
-    /// at least one platform application.
+    /// Whether the section names everything a send and a registration need: the table and at least
+    /// one platform application.
     /// </summary>
     internal bool IsComplete =>
         !string.IsNullOrWhiteSpace(InstallationsTable)
-        && !string.IsNullOrWhiteSpace(BroadcastTopicArn)
         && (!string.IsNullOrWhiteSpace(FcmPlatformApplicationArn) || !string.IsNullOrWhiteSpace(ApnsPlatformApplicationArn));
 
     /// <summary>The platform application for a normalized platform value, or <see langword="null"/> when not configured.</summary>

@@ -139,6 +139,46 @@ jobs:
         if: github.repository_owner == 'ivanball'
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
 
+  # One GitHub release per tag, its notes taken from that version's CHANGELOG.md section (the feed
+  # PackageReleaseNotes in Directory.Build.props points at). A separate job so the OIDC publish job
+  # keeps contents: read; this job alone can write releases, and it holds no id-token or packages
+  # permission. It runs only after `publish` succeeded, so a release never announces a version that
+  # did not reach the registries. A re-run on a tag whose release already exists skips.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the GitHub release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Create the GitHub release from CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+          VERSION="${TAG#v}"
+          # The lines after the "## [VERSION]" heading, up to the next "## [" heading.
+          awk -v heading="## [$VERSION]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
+            echo "::error::CHANGELOG.md has no section for $VERSION; stamp it before tagging."
+            exit 1
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+
   # MMCA.Common.UI.Maui (the one MAUI-TFM package; the full id list lives in FACTS.md) cannot
   # build on ubuntu (its four TFMs need the MAUI workloads), so it packs on windows, versioned
   # from the same tag so the lockstep release stays whole. Same SBOM hard gate as the main job,
