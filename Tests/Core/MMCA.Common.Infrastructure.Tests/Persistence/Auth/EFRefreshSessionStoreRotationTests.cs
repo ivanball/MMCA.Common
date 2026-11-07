@@ -1,6 +1,9 @@
+using System.Data.Common;
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -108,6 +111,135 @@ public sealed class EFRefreshSessionStoreRotationTests
         rows.Should().HaveCount(2).And.OnlyContain(r => r.SignInId == seeded.Id);
     }
 
+    // T13 review: the history is aggregated IN the database. A sign-in rotated 120 times plus legacy
+    // rows must cost two statements and one materialized entity per sign-in, never one per row.
+    [Fact]
+    public async Task GetRecentSignInsAsync_FoldsA120RowChainInTheDatabase_MaterializingOneHeadPerSignIn()
+    {
+        await using var harness = await RotationHarness.CreateAsync();
+        var chain = RotationChain(OwnerId, "owner", Now, rows: 120);
+        var legacyRotated = Legacy(OwnerId, "legacy-rotated", Now.AddDays(-3));
+        legacyRotated.Revoke(Now.AddDays(-2), RefreshSession.ReasonRotated, RefreshSession.HashToken("legacy-live"));
+        var legacyLive = Legacy(OwnerId, "legacy-live", Now.AddDays(-2));
+        await harness.SeedAllAsync([.. chain, legacyRotated, legacyLive, .. RotationChain(7, "other", Now, rows: 3)]);
+
+        var counter = new QueryCounter();
+        Participant reader = harness.NewParticipant(counter);
+        counter.Reset();
+
+        var signIns = await reader.Store.GetRecentSignInsAsync(OwnerId, 50, CancellationToken.None);
+
+        signIns.Select(s => s.SignInId).Should().Equal(chain[0].Id, legacyLive.Id);
+        signIns[0].StartedAt.Should().Be(chain[0].CreatedAt);
+        signIns[0].Head.Id.Should().Be(chain[^1].Id, "the head is the chain's newest row");
+        signIns[1].Head.Id.Should().Be(legacyLive.Id, "a rotated legacy row is represented by its successor");
+        counter.Materialized.Should().Be(2, "one head per sign-in, not 120 chain rows");
+        counter.Commands.Should().HaveCount(3, "one grouped statement, one head lookup, one legacy read");
+        reader.Context.ChangeTracker.Entries().Should().BeEmpty("a history read is untracked");
+    }
+
+    [Fact]
+    public async Task GetRecentSignInsAsync_KeepsOnlyTheNewestSignIns()
+    {
+        await using var harness = await RotationHarness.CreateAsync();
+        List<RefreshSession> rows = [];
+        for (var i = 0; i < 5; i++)
+        {
+            rows.AddRange(RotationChain(OwnerId, string.Create(CultureInfo.InvariantCulture, $"chain-{i}"), Now.AddHours(i), rows: 2));
+        }
+
+        await harness.SeedAllAsync(rows);
+        var counter = new QueryCounter();
+        Participant reader = harness.NewParticipant(counter);
+        counter.Reset();
+
+        var signIns = await reader.Store.GetRecentSignInsAsync(OwnerId, 3, CancellationToken.None);
+
+        signIns.Select(s => s.StartedAt).Should().Equal(Now.AddHours(4), Now.AddHours(3), Now.AddHours(2));
+        counter.Materialized.Should().Be(3, "the cap is applied in the database, before materialization");
+    }
+
+    [Fact]
+    public void SignInQueries_TranslateToGroupedAndBoundedStatements()
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        using var context = RefreshSessionCleanupServiceTests.SessionCleanupTestContext.Create(connection);
+        var sessions = context.Set<RefreshSession>().AsNoTracking();
+
+        var chains = StoreUnderTest.SignInChainsQuery(sessions, OwnerId, 50).ToQueryString();
+        var heads = StoreUnderTest.SignInHeadsQuery(sessions, OwnerId, [Guid.NewGuid(), Guid.NewGuid()], [Now, Now.AddMinutes(1)]).ToQueryString();
+        var legacy = StoreUnderTest.LegacySignInsQuery(sessions, OwnerId, 50).ToQueryString();
+        TestContext.Current.TestOutputHelper?.WriteLine(chains);
+        TestContext.Current.TestOutputHelper?.WriteLine(heads);
+        TestContext.Current.TestOutputHelper?.WriteLine(legacy);
+
+        chains.Should().Contain("GROUP BY").And.Contain("MIN(").And.Contain("MAX(").And.Contain("LIMIT");
+        chains.Should().NotContain("\"Id\"", "the grouped statement returns scalars, never whole rows");
+        heads.Should().Contain("IN (").And.NotContain("GROUP BY");
+        legacy.Should().Contain("IS NULL").And.Contain("LIMIT");
+    }
+
+    /// <summary>A sign-in of <paramref name="rows"/> sessions, each rotated into the next one minute later.</summary>
+    private static List<RefreshSession> RotationChain(UserIdentifierType userId, string tokenPrefix, DateTime start, int rows)
+    {
+        List<RefreshSession> chain = [RefreshSession.Create(userId, $"{tokenPrefix}-0", start, start.AddDays(7)).Value!];
+        for (var i = 1; i < rows; i++)
+        {
+            var createdAt = start.AddMinutes(i);
+            var token = string.Create(CultureInfo.InvariantCulture, $"{tokenPrefix}-{i}");
+            var successor = chain[^1].CreateSuccessor(token, createdAt, createdAt.AddDays(7)).Value!;
+            chain[^1].Revoke(createdAt, RefreshSession.ReasonRotated, successor.TokenHash);
+            chain.Add(successor);
+        }
+
+        return chain;
+    }
+
+    private static RefreshSession Legacy(UserIdentifierType userId, string token, DateTime createdAt) =>
+        new()
+        {
+            UserId = userId,
+            TokenHash = RefreshSession.HashToken(token),
+            CreatedAt = createdAt,
+            ExpiresAt = createdAt.AddDays(7),
+        };
+
+    /// <summary>Counts the entities EF materializes and the commands it sends.</summary>
+    private sealed class QueryCounter : DbCommandInterceptor, IMaterializationInterceptor
+    {
+        public int Materialized { get; private set; }
+
+        public List<string> Commands { get; } = [];
+
+        /// <summary>Forgets what context creation (EnsureCreated) did, so only the call under test counts.</summary>
+        public void Reset()
+        {
+            Materialized = 0;
+            Commands.Clear();
+        }
+
+        public object InitializedInstance(MaterializationInterceptionData materializationData, object entity)
+        {
+            if (entity is RefreshSession)
+            {
+                Materialized++;
+            }
+
+            return entity;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
     private static RefreshSession NewSession(string token) =>
         RefreshSession.Create(OwnerId, token, Now, Now.AddDays(7)).Value!;
 
@@ -131,10 +263,10 @@ public sealed class EFRefreshSessionStoreRotationTests
             return new RotationHarness(connection);
         }
 
-        public Participant NewParticipant()
+        public Participant NewParticipant(params IInterceptor[] interceptors)
         {
             ApplicationDbContext context =
-                RefreshSessionCleanupServiceTests.SessionCleanupTestContext.Create(_connection);
+                RefreshSessionCleanupServiceTests.SessionCleanupTestContext.Create(_connection, interceptors);
             _contexts.Add(context);
 
             var dbContextFactory = new Mock<IDbContextFactory>();
@@ -168,6 +300,14 @@ public sealed class EFRefreshSessionStoreRotationTests
             await seeder.Context.SaveChangesAsync(CancellationToken.None);
             seeder.Context.ChangeTracker.Clear();
             return session;
+        }
+
+        public async Task SeedAllAsync(IEnumerable<RefreshSession> sessions)
+        {
+            Participant seeder = NewParticipant();
+            seeder.Context.AddRange(sessions);
+            await seeder.Context.SaveChangesAsync(CancellationToken.None);
+            seeder.Context.ChangeTracker.Clear();
         }
 
         public Task<RefreshSession[]> ReadAllAsync()

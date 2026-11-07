@@ -133,7 +133,10 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
 
             var index = entity.GetIndexes()
                 .Single(i => i.GetDatabaseName() == RefreshSessionModelBuilderExtensions.SignInIndexName);
-            index.Properties.Select(p => p.Name).Should().Equal(nameof(RefreshSession.UserId), nameof(RefreshSession.SignInId));
+            index.Properties.Select(p => p.Name).Should().Equal(
+                nameof(RefreshSession.UserId),
+                nameof(RefreshSession.SignInId),
+                nameof(RefreshSession.CreatedAt));
         }
     }
 

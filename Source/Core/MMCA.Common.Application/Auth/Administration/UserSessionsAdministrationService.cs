@@ -48,17 +48,21 @@ public sealed class UserSessionsAdministrationService(
 
     /// <inheritdoc />
     /// <remarks>
-    /// The same fold the account holder's own history uses (<see cref="SignInHistory"/>), over every
-    /// retained row, with no current sign-in: an administrator is never on the viewed user's device.
+    /// The same store-aggregated read the account holder's own history uses (<see cref="SignInHistory"/>),
+    /// with no current sign-in: an administrator is never on the viewed user's device.
     /// </remarks>
     public async Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        var sessions = await refreshSessions.GetAllByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        var signIns = await SignInHistory.ReadAsync(
+            refreshSessions,
+            userId,
+            timeProvider.GetUtcNow().UtcDateTime,
+            currentSessionId: null,
+            cancellationToken).ConfigureAwait(false);
 
-        return Result.Success(SignInHistory.Summarize(sessions.Where(s => s.UserId == userId), now, currentSessionId: null));
+        return Result.Success(signIns);
     }
 
     /// <inheritdoc />

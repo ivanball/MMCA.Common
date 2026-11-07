@@ -24,7 +24,7 @@ public static class RefreshSessionModelBuilderExtensions
     /// <summary>The per-user index backing the family revocation and the session cap.</summary>
     public const string UserIndexName = "IX_RefreshSessions_UserId";
 
-    /// <summary>The per-user, per-sign-in index backing the sign-in history.</summary>
+    /// <summary>The <c>(UserId, SignInId, CreatedAt)</c> index backing the sign-in history.</summary>
     public const string SignInIndexName = "IX_RefreshSessions_UserId_SignInId";
 
     /// <summary>
@@ -73,12 +73,15 @@ public static class RefreshSessionModelBuilderExtensions
             entity.HasIndex(e => new { e.UserId, e.RevokedAt })
                   .HasDatabaseName(UserIndexName);
 
-            // Sign-in history path: a user's rows grouped by the sign-in they belong to. SignInId is a
-            // nullable Guid left to each engine's own Guid mapping (uniqueidentifier, uuid, TEXT), and
-            // the index declares no filter or INCLUDE list, so one configuration serves every
-            // relational engine. Rows written before the column existed hold null.
+            // Sign-in history path: a user's rows grouped by the sign-in they belong to. CreatedAt is the
+            // trailing key so the history's MIN/MAX per sign-in and the lookup of each sign-in's newest
+            // row are answered from the index alone, never by visiting every row of a long rotation
+            // chain. SignInId is a nullable Guid left to each engine's own Guid mapping
+            // (uniqueidentifier, uuid, TEXT), and the index declares no filter or INCLUDE list, so one
+            // configuration serves every relational engine. Rows written before the column existed
+            // hold null.
             entity.Property(e => e.SignInId);
-            entity.HasIndex(e => new { e.UserId, e.SignInId })
+            entity.HasIndex(e => new { e.UserId, e.SignInId, e.CreatedAt })
                   .HasDatabaseName(SignInIndexName);
         });
 

@@ -226,24 +226,20 @@ public sealed partial class AuthSessionIssuer(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Reads every retained row the user holds (<see cref="IRefreshSessionStore.GetAllByUserAsync"/>,
-    /// bounded by <see cref="RefreshSessionSettings.RetentionDays"/>) and folds the rotation chains in
-    /// memory by <see cref="RefreshSession.SignInId"/> (<see cref="SignInHistory"/>), so the history is
-    /// one query and needs no new store member.
+    /// The store aggregates the rotation chains (<see cref="IRefreshSessionStore.GetRecentSignInsAsync"/>),
+    /// so the read is bounded by the 50-sign-in cap, never by how many times each sign-in rotated; the
+    /// caller's own sign-in is found from the heads, or by one primary-key lookup (<see cref="SignInHistory"/>).
     /// </remarks>
-    public async Task<IReadOnlyList<SignInSummaryResponse>> ListSignInsAsync(
+    public Task<IReadOnlyList<SignInSummaryResponse>> ListSignInsAsync(
         UserIdentifierType userId,
         Guid? currentSessionId,
-        CancellationToken cancellationToken)
-    {
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        var sessions = await refreshSessions.GetAllByUserAsync(userId, cancellationToken).ConfigureAwait(false);
-
-        return SignInHistory.Summarize(
-            sessions.Where(s => EqualityComparer<UserIdentifierType>.Default.Equals(s.UserId, userId)),
-            now,
-            currentSessionId);
-    }
+        CancellationToken cancellationToken) =>
+        SignInHistory.ReadAsync(
+            refreshSessions,
+            userId,
+            timeProvider.GetUtcNow().UtcDateTime,
+            currentSessionId,
+            cancellationToken);
 
     /// <inheritdoc />
     /// <remarks>

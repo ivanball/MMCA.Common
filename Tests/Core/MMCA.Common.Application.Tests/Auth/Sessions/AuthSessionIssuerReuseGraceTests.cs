@@ -292,6 +292,12 @@ public sealed class AuthSessionIssuerReuseGraceTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyList<RefreshSessionSignIn>> GetRecentSignInsAsync(
+            UserIdentifierType userId,
+            int maxSignIns,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
             DateTime now,
             CancellationToken cancellationToken = default) =>

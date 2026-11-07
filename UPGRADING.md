@@ -38,7 +38,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 migration.** `ApplyRefreshSessionConfiguration` (and so `ApplicationDbContext` with
 `RefreshSessions:Enabled`) maps a nullable `SignInId` (`uniqueidentifier NULL` on SQL Server, `uuid`
 on PostgreSQL, `TEXT` on SQLite; Cosmos DB never maps the table) and a non-unique index
-`IX_RefreshSessions_UserId_SignInId` over `(UserId, SignInId)`.
+`IX_RefreshSessions_UserId_SignInId` over `(UserId, SignInId, CreatedAt)`, which answers the history's
+per-sign-in aggregate from the index.
 
 The fix:
 
@@ -54,7 +55,8 @@ The fix:
 
 A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionIssuer`,
 `IAuthenticationService` or `IUserSessionsAdministrationService` (a test fake) implements the new
-`GetSignInsAsync` / `ListSignInsAsync` member; a Moq mock of `IAuthUIService` behind the signed-in
+`GetSignInsAsync` / `ListSignInsAsync` member, and a hand-written `IRefreshSessionStore` implements
+`GetRecentSignInsAsync` (aggregate in the store, bounded by `maxSignIns`, never by row count); a Moq mock of `IAuthUIService` behind the signed-in
 devices page sets up `GetSignInsAsync`, which that page now calls.
 
 ## [1.277.0] - 2026-11-04

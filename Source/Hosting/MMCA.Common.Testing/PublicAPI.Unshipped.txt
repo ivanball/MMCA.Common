@@ -1,1 +1,2 @@
 #nullable enable
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetRecentSignInsAsync(int userId, int maxSignIns, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Auth.RefreshSessionSignIn!>!>!
