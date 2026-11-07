@@ -52,6 +52,22 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// </summary>
     public string? ScopeKey { get; private set; }
 
+    /// <summary>
+    /// Gets the number of Android native push sends the provider accepted, in the unit the provider
+    /// reports (ADR-044). Null when nothing was attempted on Android, or for a row written before
+    /// the native outcome was recorded.
+    /// </summary>
+    public int? AndroidSent { get; private set; }
+
+    /// <summary>Gets the number of Android native push sends that failed; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AndroidFailed { get; private set; }
+
+    /// <summary>Gets the number of Apple native push sends the provider accepted; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AppleSent { get; private set; }
+
+    /// <summary>Gets the number of Apple native push sends that failed; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AppleFailed { get; private set; }
+
     /// <summary>EF Core parameterless constructor.</summary>
     private PushNotification()
     {
@@ -142,4 +158,21 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// Marks the notification as failed.
     /// </summary>
     public void MarkAsFailed() => Status = PushNotificationStatus.Failed;
+
+    /// <summary>
+    /// Records the native (OS-level) push outcome per platform (ADR-044). A null pair means that
+    /// platform was not attempted. The overall <see cref="Status"/> is the SignalR leg's and is left
+    /// as it is.
+    /// </summary>
+    /// <param name="androidSent">Android sends accepted, or null when Android was not attempted.</param>
+    /// <param name="androidFailed">Android sends failed, or null when Android was not attempted.</param>
+    /// <param name="appleSent">Apple sends accepted, or null when Apple was not attempted.</param>
+    /// <param name="appleFailed">Apple sends failed, or null when Apple was not attempted.</param>
+    public void RecordNativePushOutcome(int? androidSent, int? androidFailed, int? appleSent, int? appleFailed)
+    {
+        AndroidSent = androidSent;
+        AndroidFailed = androidFailed;
+        AppleSent = appleSent;
+        AppleFailed = appleFailed;
+    }
 }

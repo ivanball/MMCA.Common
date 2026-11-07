@@ -6,6 +6,7 @@ using Amazon.SimpleNotificationService.Model;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Aws.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 using Moq;
@@ -52,11 +53,11 @@ public sealed class SnsNativePushSenderTests
 
     private static string EndpointArn(string name) => $"arn:aws:sns:us-east-1:000000000000:endpoint/GCM/fcm/{name}";
 
-    private static Dictionary<string, AttributeValue> Row(string installationId, string userId, string endpoint) => new()
+    private static Dictionary<string, AttributeValue> Row(string installationId, string userId, string endpoint, string platform = "fcmv1") => new()
     {
         ["InstallationId"] = new() { S = installationId },
         ["UserId"] = new() { S = userId },
-        ["Platform"] = new() { S = "fcmv1" },
+        ["Platform"] = new() { S = platform },
         ["PushChannel"] = new() { S = $"token-{installationId}" },
         ["EndpointArn"] = new() { S = EndpointArn(endpoint) },
     };
@@ -197,6 +198,43 @@ public sealed class SnsNativePushSenderTests
         await CreateSut().SendToUsersAsync([1, 2], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
         _published.Should().ContainSingle().Which.TargetArn.Should().Be(EndpointArn("c"));
+    }
+
+    // ADR-044 outcome: SNS counts per endpoint, and the platform comes from the endpoint's platform
+    // application (the installation's normalized platform: fcmv1 is Android, apns is Apple).
+    [Fact]
+    public async Task SendToUsersAsync_ReportsPerEndpointCounts_ByTheEndpointsPlatform_AndTheFirstFailure()
+    {
+        SetupUser("1", Row("a", "1", "android-ok", "fcmv1"), Row("b", "1", "iphone-ok", "apns"));
+        SetupUser("2", Row("c", "2", "iphone-throttled", "apns"), Row("d", "2", "android-disabled", "fcmv1"));
+        var throttled = new AmazonSimpleNotificationServiceException("Rate exceeded");
+        _sns.Setup(x => x.PublishAsync(It.Is<PublishRequest>(r => r.TargetArn == EndpointArn("iphone-throttled")), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(throttled);
+        _sns.Setup(x => x.PublishAsync(It.Is<PublishRequest>(r => r.TargetArn == EndpointArn("android-disabled")), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new EndpointDisabledException("Endpoint is disabled"));
+
+        var outcome = await CreateSut().SendToUsersAsync([1, 2], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Unit.Should().Be(NativePushDeliveryUnit.Endpoint);
+        outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 1, Failed: 1));
+        outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 1, Failed: 1));
+        outcome.FirstFailure.Should().BeSameAs(throttled);
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_AFailedLookup_IsReportedAsAFailure_WithoutAPlatformCount()
+    {
+        var lookupFailure = new AmazonDynamoDBException("boom");
+        _dynamoDb.Setup(x => x.QueryAsync(
+                It.Is<QueryRequest>(r => r.ExpressionAttributeValues[":user"].S == "1"), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(lookupFailure);
+        SetupUser("2", Row("c", "2", "c"));
+
+        var outcome = await CreateSut().SendToUsersAsync([1, 2], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 1, Failed: 0));
+        outcome.Apple.Should().BeNull();
+        outcome.FirstFailure.Should().BeSameAs(lookupFailure, "the user's devices were not reached, so the send is not clean");
     }
 
     // L252: the AWS SDK lets transport failures escape unwrapped (HttpRequestException, IOException,

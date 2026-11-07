@@ -12,6 +12,6 @@ namespace MMCA.Common.Infrastructure.Notifications.Push;
 public sealed class NullNativePushSender : INativePushSender
 {
     /// <inheritdoc />
-    public Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+    public Task<NativePushOutcome> SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(NativePushOutcome.None);
 }

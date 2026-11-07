@@ -49,6 +49,22 @@ public sealed class PushNotificationConfigurationTests : IDisposable
                 i => i.Properties.Any(p => p.Name == nameof(PushNotification.ScopeKey)),
                 "the table holds one row per send, so an index would cost writes without buying a read");
 
+    // ── Native push outcome columns (ADR-044) ──
+    // Four nullable ints: null is "not attempted, or written before the outcome was recorded".
+    [Theory]
+    [InlineData(nameof(PushNotification.AndroidSent))]
+    [InlineData(nameof(PushNotification.AndroidFailed))]
+    [InlineData(nameof(PushNotification.AppleSent))]
+    [InlineData(nameof(PushNotification.AppleFailed))]
+    public void NativePushCountColumn_IsANullableInt(string propertyName)
+    {
+        var property = _dbContext.Model.FindEntityType(typeof(PushNotification))!.FindProperty(propertyName);
+
+        property.Should().NotBeNull();
+        property!.ClrType.Should().Be<int?>();
+        property.IsNullable.Should().BeTrue("a row written before the outcome was recorded has no counts");
+    }
+
     private Microsoft.EntityFrameworkCore.Metadata.IProperty ScopeKeyProperty()
         => _dbContext.Model.FindEntityType(typeof(PushNotification))!
             .FindProperty(nameof(PushNotification.ScopeKey))!;

@@ -96,6 +96,35 @@ public sealed class NotificationListTests : BunitTestBase
         });
     }
 
+    // Spec B assertion 4: the organizer sees whether phones were reached, per platform, with a text
+    // status (never color alone), and an older row with no recorded outcome shows "-".
+    [Fact]
+    public void PhoneDelivery_RendersPerPlatformCountsWithATextStatus_AndADashForAnOlderRow()
+    {
+        var reached = Sent(1, "Reached") with { AndroidSent = 8, AndroidFailed = 0, AppleSent = 0, AppleFailed = 8 };
+        var partly = Sent(2, "Partly") with { AndroidSent = 5, AndroidFailed = 3 };
+        var older = Sent(3, "Older");
+        _service
+            .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(History(reached, partly, older));
+
+        RenderMudProviders();
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
+
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(3));
+        cut.FindAll("thead th").Select(th => th.TextContent.Trim()).Should().Contain("Phone delivery");
+
+        var rows = cut.FindAll("tbody tr");
+        var reachedCell = PhoneCell(rows[0]);
+        reachedCell.Should().Contain("Android 8 of 8").And.Contain("delivered");
+        reachedCell.Should().Contain("iPhone 0 of 8").And.Contain("failed");
+        PhoneCell(rows[1]).Should().Contain("Android 5 of 8").And.Contain("partly failed").And.NotContain("iPhone");
+        PhoneCell(rows[2]).Trim().Should().Be("-");
+
+        static string PhoneCell(AngleSharp.Dom.IElement row) =>
+            row.QuerySelector("td[data-label='Phone delivery']")!.TextContent;
+    }
+
     [Fact]
     public void WhenTheHistoryLoadFails_RaisesOneToastAndShowsTheErrorWithRetry_NotTheEmptyState()
     {

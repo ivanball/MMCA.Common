@@ -1,1 +1,43 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Notifications.INativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.INativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome!>!
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit.Batch = 1 -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit.Endpoint = 2 -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit.Message = 3 -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit.None = 0 -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.<Clone>$() -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome!
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Android.get -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts?
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Android.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Apple.get -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts?
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Apple.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Equals(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome? other) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.FirstFailure.get -> System.Exception?
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.FirstFailure.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.HasFailures.get -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.NativePushOutcome() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Unit.get -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Unit.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Attempted.get -> int
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Deconstruct(out int Sent, out int Failed) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Equals(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts other) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Failed.get -> int
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Failed.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.NativePushPlatformCounts() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.NativePushPlatformCounts(int Sent, int Failed) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Sent.get -> int
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Sent.init -> void
+override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.Equals(object? obj) -> bool
+override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.GetHashCode() -> int
+override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.ToString() -> string!
+override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.GetHashCode() -> int
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.From(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushDeliveryUnit unit, int androidSent, int androidFailed, int appleSent, int appleFailed, System.Exception? firstFailure) -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome!
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.None.get -> MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome!
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.operator !=(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome? left, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome? right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome.operator ==(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome? left, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome? right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.operator !=(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts left, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.operator ==(MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts left, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts right) -> bool
+~override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.Equals(object obj) -> bool
+~override MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushPlatformCounts.ToString() -> string

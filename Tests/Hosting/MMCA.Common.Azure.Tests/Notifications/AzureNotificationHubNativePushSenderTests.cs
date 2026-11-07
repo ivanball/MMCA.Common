@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Azure.Notifications;
 using Moq;
 
@@ -8,9 +9,8 @@ namespace MMCA.Common.Azure.Tests.Notifications;
 
 /// <summary>
 /// The Azure Notification Hubs native push sender (ADR-044): every 20-tag chunk is sent on both
-/// platforms, a failing send does not stop the later chunks or the other platform, and the
-/// failures are rethrown once the loop ends (one as itself, several as an aggregate) so the
-/// caller's best-effort catch still sees them.
+/// platforms, a failing send does not stop the later chunks or the other platform, and the outcome
+/// counts batches per platform and carries the first failure instead of throwing it.
 /// </summary>
 public sealed class AzureNotificationHubNativePushSenderTests
 {
@@ -36,19 +36,29 @@ public sealed class AzureNotificationHubNativePushSenderTests
     // 25 users span two OR-chunks at the hub's 20-tag cap.
     private static IEnumerable<UserIdentifierType> TwoChunksOfUsers() => Enumerable.Range(1, 25);
 
+    // 45 users span three OR-chunks.
+    private static IEnumerable<UserIdentifierType> ThreeChunksOfUsers() => Enumerable.Range(1, 45);
+
     [Fact]
     public async Task SendToUsersAsync_SendsEveryChunkOnBothPlatforms()
     {
         var sut = CreateSut((_, _) => null);
 
-        await sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+        var outcome = await sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
         _sends.Select(s => s.Platform).Should().Equal("fcmv1", "apns", "fcmv1", "apns");
         _sends.Select(s => s.TagExpression).Distinct().Should().HaveCount(2);
+        outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
+        outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
+        outcome.Unit.Should().Be(NativePushDeliveryUnit.Batch);
+        outcome.HasFailures.Should().BeFalse();
+        outcome.FirstFailure.Should().BeNull();
     }
 
+    // Spec B assertion 1: the hub reports per batch only, so the outcome counts batches per platform,
+    // and a failing batch is counted and returned instead of thrown.
     [Fact]
-    public async Task SendToUsersAsync_AnApnsFailure_DoesNotStopTheLaterChunks_AndIsRethrownAsItself()
+    public async Task SendToUsersAsync_OneFailingAppleBatchOutOfThree_ReportsAndroidThreeOfThree_AppleTwoSentOneFailed_AndDoesNotThrow()
     {
         string? firstChunk = null;
         var sut = CreateSut((notification, tagExpression) =>
@@ -59,22 +69,39 @@ public sealed class AzureNotificationHubNativePushSenderTests
                 : null;
         });
 
-        var act = () => sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+        var outcome = await sut.SendToUsersAsync(ThreeChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowExactlyAsync<InvalidOperationException>().WithMessage("APNs rejected the send");
-        _sends.Select(s => s.Platform).Should().Equal(["fcmv1", "apns", "fcmv1", "apns"], "the second chunk still sends on both platforms");
+        outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 3, Failed: 0));
+        outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 1));
+        outcome.FirstFailure.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be("APNs rejected the send");
+        outcome.HasFailures.Should().BeTrue();
+        _sends.Should().HaveCount(6, "every chunk still sends on both platforms after the failure");
     }
 
     [Fact]
-    public async Task SendToUsersAsync_SeveralFailures_AreRethrownTogetherAsAnAggregate()
+    public async Task SendToUsersAsync_SeveralFailures_AreCountedPerPlatform_AndTheFirstIsReturned()
     {
         var sut = CreateSut((notification, _) => notification is AppleNotification ? new InvalidOperationException("APNs down") : null);
 
-        var act = () => sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+        var outcome = await sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
-        var thrown = await act.Should().ThrowExactlyAsync<AggregateException>();
-        thrown.Which.InnerExceptions.Should().HaveCount(2).And.AllBeOfType<InvalidOperationException>();
+        outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
+        outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 0, Failed: 2));
+        outcome.FirstFailure.Should().BeOfType<InvalidOperationException>();
         _sends.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_NoUsers_AttemptsNothing()
+    {
+        var sut = CreateSut((_, _) => null);
+
+        var outcome = await sut.SendToUsersAsync([], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Android.Should().BeNull();
+        outcome.Apple.Should().BeNull();
+        outcome.HasFailures.Should().BeFalse();
+        _sends.Should().BeEmpty();
     }
 
     [Fact]

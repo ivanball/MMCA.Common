@@ -1,1 +1,9 @@
 ﻿#nullable enable
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AndroidFailed.get -> int?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AndroidFailed.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AndroidSent.get -> int?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AndroidSent.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleFailed.get -> int?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleFailed.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleSent.get -> int?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleSent.init -> void

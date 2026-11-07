@@ -6,6 +6,16 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking:** `INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` instead of `Task` (MMCA.Common.Application; ADR-044), and so do `NullNativePushSender` (MMCA.Common.Infrastructure), `AzureNotificationHubNativePushSender` (MMCA.Common.Azure) and the internal SNS (MMCA.Common.Aws) and FCM (MMCA.Common.Gcp) senders. A sender reports a failed send in the outcome instead of throwing: `AzureNotificationHubNativePushSender` no longer rethrows its collected failures (one as itself, several as an `AggregateException`) after the loop. A class of your own that implements `INativePushSender` changes its return type; a caller that awaited the old `Task` keeps compiling. See [UPGRADING.md](UPGRADING.md).
+
+**A host that maps `PushNotification` needs one migration** on its Notification database (four nullable int columns); see [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **`NativePushOutcome`** (MMCA.Common.Application, namespace `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`). Per platform, `Android` and `Apple` (`NativePushPlatformCounts?`: `Sent`, `Failed`, `Attempted`; null when that platform was not attempted), the `Unit` the provider counts in (`NativePushDeliveryUnit`: `Batch` for Azure Notification Hubs, one per 20-user chunk per platform, since the hub reports per send only; `Endpoint` for SNS, by the endpoint's platform application; `Message` for FCM), the `FirstFailure` (an `Exception`), `HasFailures`, `None` (nothing attempted, what `NullNativePushSender` returns) and `From(...)`. The FCM sender reports no per-platform counts, because an FCM installation records platform `fcmv1` on Android and iOS alike; it still returns the first failure. SNS counts a disabled or missing endpoint as failed.
+- **The native push outcome is recorded on each notification** (MMCA.Common.Domain, Application, Infrastructure, Shared). `PushNotification.AndroidSent`, `AndroidFailed`, `AppleSent` and `AppleFailed` (nullable int columns; null means not attempted, or a row written before this release), set by `PushNotification.RecordNativePushOutcome` from `SendPushNotificationHandler`, and carried on `PushNotificationDTO`. When any native send failed, the handler still logs the Warning "Push notification {NotificationId} native (OS-level) delivery failed; inbox and SignalR legs unaffected" WITH the first failure as its exception, so an alert on that exception row keeps firing. The overall `Status` stays the SignalR leg's, and the inbox and SignalR legs are unchanged.
+- **A "Phone delivery" column on the notification history page** (MMCA.Common.UI, `NotificationList`). Per platform attempted, "Android 8 of 8" or "iPhone 0 of 8" with a status chip whose text says delivered, partly failed or failed (never color alone); "-" for a row with no recorded outcome. English and Spanish.
+
 ## [1.279.0] - 2026-11-07
 
 View-as works in multi-service hosts (ViewAs:HostsGrantStore, a shared-cache ended marker).

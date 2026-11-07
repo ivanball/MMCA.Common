@@ -34,6 +34,49 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**`INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` (breaking, MMCA.Common.Application
+and the push adapters; ADR-044).** The framework's own senders (`NullNativePushSender`,
+`AzureNotificationHubNativePushSender` and the internal SNS and FCM senders) move with it, so a host
+that only calls an adapter registration changes nothing in code.
+
+| Before | After |
+|---|---|
+| `Task SendToUsersAsync(userIds, title, body, metadata, cancellationToken)` | `Task<NativePushOutcome> SendToUsersAsync(userIds, title, body, metadata, cancellationToken)` |
+| a failed send is thrown | a failed send is counted and returned in `NativePushOutcome.FirstFailure`; only the caller's own cancellation propagates |
+
+The mechanical fix for a class of your own that implements `INativePushSender`:
+
+```csharp
+// Before
+public async Task SendToUsersAsync(IEnumerable<int> userIds, string title, string body,
+    Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+{
+    await SendAsync(...);
+}
+
+// After: change the return type and return an outcome. NativePushOutcome.None when you count
+// nothing; NativePushOutcome.From(unit, androidSent, androidFailed, appleSent, appleFailed,
+// firstFailure) when you do. Catch a failed send and pass it as firstFailure instead of throwing.
+public async Task<NativePushOutcome> SendToUsersAsync(IEnumerable<int> userIds, string title, string body,
+    Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+{
+    await SendAsync(...);
+    return NativePushOutcome.None;
+}
+```
+
+A test that mocks the interface returns an outcome too
+(`.ReturnsAsync(NativePushOutcome.None)`); a loose Moq mock otherwise returns null.
+
+**One migration on the Notification database** of every host that maps `PushNotification` (the
+`Notification` data source, or the default database when the host configures none): four nullable
+`int` columns on `Notification.PushNotification`, `AndroidSent`, `AndroidFailed`, `AppleSent` and
+`AppleFailed`, with no default and no backfill (null reads as "not recorded", shown as "-").
+
+```bash
+dotnet ef migrations add AddPushNotificationNativeOutcome -- --datasource Notification
+```
+
 ## [1.279.0] - 2026-11-07
 
 **Read-only view-as in a multi-service host: set `ViewAs:HostsGrantStore` per service.** A single

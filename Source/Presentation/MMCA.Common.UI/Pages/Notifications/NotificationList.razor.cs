@@ -58,6 +58,46 @@ public partial class NotificationList : IDisposable
         return localized.ResourceNotFound ? status : localized.Value;
     }
 
+    /// <summary>
+    /// The phone delivery lines of one notification (ADR-044): one per platform the native leg
+    /// attempted, as "Android 8 of 8" plus a text status. Empty for a row written before the outcome
+    /// was recorded, or when no native adapter is configured; the cell then shows "-".
+    /// </summary>
+    private List<PhoneDeliveryLine> PhoneDeliveryLines(PushNotificationDTO notification)
+    {
+        List<PhoneDeliveryLine> lines = [];
+        AddPhoneDeliveryLine(lines, "Notif.Phone.Android", notification.AndroidSent, notification.AndroidFailed);
+        AddPhoneDeliveryLine(lines, "Notif.Phone.Apple", notification.AppleSent, notification.AppleFailed);
+        return lines;
+    }
+
+    private void AddPhoneDeliveryLine(List<PhoneDeliveryLine> lines, string platformKey, int? sent, int? failed)
+    {
+        if (sent is null && failed is null)
+        {
+            return;
+        }
+
+        int delivered = sent ?? 0;
+        int attempted = delivered + (failed ?? 0);
+        var text = L["Notif.Phone.Count", L[platformKey].Value, delivered, attempted].Value;
+        if (attempted == delivered)
+        {
+            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.Delivered"].Value, Color.Success, Icons.Material.Filled.CheckCircle));
+        }
+        else if (delivered > 0)
+        {
+            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.PartlyFailed"].Value, Color.Warning, Icons.Material.Filled.Warning));
+        }
+        else
+        {
+            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.Failed"].Value, Color.Error, Icons.Material.Filled.Error));
+        }
+    }
+
+    /// <summary>One platform's phone delivery: the count text, plus a status that never relies on color alone.</summary>
+    private sealed record PhoneDeliveryLine(string Text, string Status, Color Color, string Icon);
+
     protected override async Task OnInitializedAsync()
     {
         var user = AuthenticationState is null ? null : (await AuthenticationState).User;

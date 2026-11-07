@@ -17,6 +17,11 @@ namespace MMCA.Common.Gcp.Notifications;
 /// token) is pruned from the registry, so a dead device stops costing a send every time; the
 /// document is deleted only while it still holds that token.
 /// </para>
+/// <para>
+/// The outcome carries the first failure but no per-platform counts: an installation records
+/// platform <c>fcmv1</c> on Android and iOS alike, so this sender cannot tell which phones a token
+/// reached. A dead token counts as a failure, since its device was not reached.
+/// </para>
 /// </summary>
 /// <param name="registry">The installation registry.</param>
 /// <param name="messaging">The FCM client.</param>
@@ -27,22 +32,12 @@ internal sealed partial class FcmNativePushSender(
     ILogger<FcmNativePushSender> logger) : INativePushSender
 {
     /// <inheritdoc />
-    public async Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+    public async Task<NativePushOutcome> SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userIds);
 
-        List<FcmInstallation> installations = [];
-        foreach (var batch in userIds.Select(FcmInstallation.UserKey).Distinct(StringComparer.Ordinal).Chunk(FirestoreInstallationRegistry.MaxUsersPerQuery))
-        {
-            try
-            {
-                installations.AddRange(await registry.QueryByUsersAsync(batch, cancellationToken).ConfigureAwait(false));
-            }
-            catch (RpcException ex)
-            {
-                LogInstallationLookupFailed(logger, ex, batch.Length);
-            }
-        }
+        var firstFailure = new FirstFailure();
+        var installations = await LookupAsync(userIds, firstFailure, cancellationToken).ConfigureAwait(false);
 
         // One message per token: two installation ids holding the same token are one device.
         var byToken = installations
@@ -61,6 +56,7 @@ internal sealed partial class FcmNativePushSender(
             catch (FirebaseException ex)
             {
                 LogChunkFailed(logger, ex, messages.Count);
+                firstFailure.Offer(ex);
                 continue;
             }
 
@@ -73,16 +69,42 @@ internal sealed partial class FcmNativePushSender(
                 }
                 else if (outcome.IsStaleToken)
                 {
+                    firstFailure.Offer(outcome.Exception);
                     await PruneAsync(chunk[i], cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
+                    firstFailure.Offer(outcome.Exception);
                     LogSendFailed(logger, outcome.Exception, outcome.ErrorCode?.ToString() ?? "none", chunk[i].First().InstallationId);
                 }
             }
         }
 
         LogNativePushSent(logger, title, delivered);
+
+        // No per-platform counts: an installation registers platform fcmv1 on Android and iOS alike
+        // (FcmPushDeviceRegistrar), so a token does not say which phone it belongs to.
+        return new NativePushOutcome { Unit = NativePushDeliveryUnit.Message, FirstFailure = firstFailure.Value };
+    }
+
+    /// <summary>Resolves the users' installations, 30 users per query; a failed query skips those users.</summary>
+    private async Task<List<FcmInstallation>> LookupAsync(IEnumerable<UserIdentifierType> userIds, FirstFailure firstFailure, CancellationToken cancellationToken)
+    {
+        List<FcmInstallation> installations = [];
+        foreach (var batch in userIds.Select(FcmInstallation.UserKey).Distinct(StringComparer.Ordinal).Chunk(FirestoreInstallationRegistry.MaxUsersPerQuery))
+        {
+            try
+            {
+                installations.AddRange(await registry.QueryByUsersAsync(batch, cancellationToken).ConfigureAwait(false));
+            }
+            catch (RpcException ex)
+            {
+                LogInstallationLookupFailed(logger, ex, batch.Length);
+                firstFailure.Offer(ex);
+            }
+        }
+
+        return installations;
     }
 
     private async Task PruneAsync(IGrouping<string, FcmInstallation> installations, CancellationToken cancellationToken)
@@ -118,4 +140,12 @@ internal sealed partial class FcmNativePushSender(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Removing the installation {InstallationId} with a dead FCM token failed")]
     private static partial void LogStaleTokenPruneFailed(ILogger logger, Exception exception, string installationId);
+
+    /// <summary>The first failure of one send, kept as the outcome's <see cref="NativePushOutcome.FirstFailure"/>.</summary>
+    private sealed class FirstFailure
+    {
+        public Exception? Value { get; private set; }
+
+        public void Offer(Exception? failure) => Value ??= failure;
+    }
 }

@@ -52,6 +52,14 @@ internal sealed class PushNotificationConfiguration
         builder.Property(p => p.ScopeKey)
             .HasMaxLength(PushNotification.ScopeKeyMaxLength);
 
+        // The native push outcome (ADR-044): four nullable ints, null when that platform was not
+        // attempted or for a row written before the outcome was recorded. One mapping serves every
+        // engine, since a host on PostgreSQL or SQLite applies this configuration to its own model.
+        builder.Property(p => p.AndroidSent);
+        builder.Property(p => p.AndroidFailed);
+        builder.Property(p => p.AppleSent);
+        builder.Property(p => p.AppleFailed);
+
         // Filtered unique index: at most one notification per deduplication key, while the many
         // sends that carry no key (NULL) coexist freely. This is what makes a retried send safe,
         // the database arbitrates the race that a check-then-act lookup in the handler cannot.

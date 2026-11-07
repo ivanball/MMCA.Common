@@ -136,14 +136,44 @@ public sealed partial class SendPushNotificationHandler(
         // Third channel (ADR-044): OS-level push through the native sender, reaching devices the
         // SignalR hub cannot (app backgrounded or killed). Best-effort by design — the SignalR leg
         // above already decided the audit status, and the default NullNativePushSender keeps this
-        // a no-op until a notification hub is configured.
+        // a no-op until a notification hub is configured. The per-platform outcome is recorded on
+        // the row (null counts = not attempted), and any failure logs the Warning WITH the exception:
+        // the production native-push alert reads that exception row, so both must stay.
+        await SendNativeAsync(notification, recipientIds, command.Request, cancellationToken).ConfigureAwait(false);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(dtoMapper.MapToDTO(notification));
+    }
+
+    /// <summary>
+    /// The native (OS-level) leg: sends, records the per-platform outcome on the row, and logs the
+    /// Warning with the first failure. Never throws for a delivery failure.
+    /// </summary>
+    private async Task SendNativeAsync(
+        PushNotification notification,
+        IReadOnlyList<UserIdentifierType> recipientIds,
+        SendPushNotificationRequest request,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            await nativePushSender.SendToUsersAsync(
+            NativePushOutcome outcome = await nativePushSender.SendToUsersAsync(
                 recipientIds,
-                command.Request.Title,
-                command.Request.Body,
+                request.Title,
+                request.Body,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            notification.RecordNativePushOutcome(
+                outcome.Android?.Sent,
+                outcome.Android?.Failed,
+                outcome.Apple?.Sent,
+                outcome.Apple?.Failed);
+
+            if (outcome.FirstFailure is { } failure)
+            {
+                LogNativePushFailed(logger, notification.Id, failure);
+            }
         }
 #pragma warning disable CA1031 // Do not catch general exception types — native delivery is best-effort
         catch (Exception ex)
@@ -151,10 +181,6 @@ public sealed partial class SendPushNotificationHandler(
         {
             LogNativePushFailed(logger, notification.Id, ex);
         }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return Result.Success(dtoMapper.MapToDTO(notification));
     }
 
     /// <summary>

@@ -952,4 +952,25 @@
   <data name="Auth.SignIns.ViewedBySupport" xml:space="preserve">
     <value>Viewed by support</value>
   </data>
+  <data name="Notif.List.Col.Phone" xml:space="preserve">
+    <value>Phone delivery</value>
+  </data>
+  <data name="Notif.Phone.Android" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="Notif.Phone.Apple" xml:space="preserve">
+    <value>iPhone</value>
+  </data>
+  <data name="Notif.Phone.Count" xml:space="preserve">
+    <value>{0} {1} of {2}</value>
+  </data>
+  <data name="Notif.Phone.Delivered" xml:space="preserve">
+    <value>delivered</value>
+  </data>
+  <data name="Notif.Phone.PartlyFailed" xml:space="preserve">
+    <value>partly failed</value>
+  </data>
+  <data name="Notif.Phone.Failed" xml:space="preserve">
+    <value>failed</value>
+  </data>
 </root>
