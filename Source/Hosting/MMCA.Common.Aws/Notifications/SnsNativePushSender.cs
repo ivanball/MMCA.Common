@@ -99,7 +99,7 @@ internal sealed partial class SnsNativePushSender(
         LogStaleEndpointRemoved(logger, endpoint.Key);
         try
         {
-            await registry.RemoveEndpointAsync(endpoint.Key, endpoint.First().SubscriptionArn, cancellationToken).ConfigureAwait(false);
+            await registry.RemoveEndpointAsync(endpoint.Key, cancellationToken).ConfigureAwait(false);
             foreach (var installation in endpoint)
             {
                 await registry.DeleteIfEndpointAsync(installation.InstallationId, endpoint.Key, cancellationToken).ConfigureAwait(false);

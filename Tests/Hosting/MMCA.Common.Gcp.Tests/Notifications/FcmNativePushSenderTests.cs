@@ -18,8 +18,6 @@ namespace MMCA.Common.Gcp.Tests.Notifications;
 /// </summary>
 public sealed class FcmNativePushSenderTests
 {
-    private const string Topic = "broadcast";
-
     private readonly FakeFcmInstallationRegistry _registry = new();
     private readonly FakeFcmMessagingClient _messaging = new();
 
@@ -160,6 +158,6 @@ public sealed class FcmNativePushSenderTests
 
     [Fact]
     public void WireJson_IsTheHttpV1MessageObject() =>
-        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForTopic(Topic, "t", "b", null)))
-            .RootElement.GetProperty("topic").GetString().Should().Be(Topic);
+        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForToken("token-1", "t", "b", null)))
+            .RootElement.GetProperty("token").GetString().Should().Be("token-1");
 }

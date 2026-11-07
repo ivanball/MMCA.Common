@@ -5,8 +5,8 @@ namespace MMCA.Common.Aws.Notifications;
 
 /// <summary>
 /// Builds the SNS mobile push message: a <c>MessageStructure=json</c> body with one entry per
-/// protocol, so a single publish reaches an FCM endpoint, an APNs endpoint (production or sandbox)
-/// and, through the broadcast topic, every subscribed endpoint at once. The platform payloads are the
+/// protocol, so the same message body serves an FCM endpoint and an APNs endpoint (production or
+/// sandbox) alike. The platform payloads are the
 /// core <see cref="NativePushPayloads"/>, the same bytes the Notification Hubs adapter sends.
 /// </summary>
 internal static class SnsPushMessage

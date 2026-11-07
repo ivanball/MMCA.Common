@@ -15,7 +15,7 @@ namespace MMCA.Common.Aws.Notifications;
 /// without a lock.
 /// </summary>
 /// <param name="dynamoDb">The DynamoDB client.</param>
-/// <param name="sns">The SNS client, for removing an installation's endpoint and subscription.</param>
+/// <param name="sns">The SNS client, for removing an installation's endpoint.</param>
 /// <param name="options">The push settings (the table name).</param>
 internal sealed class SnsInstallationRegistry(
     IAmazonDynamoDB dynamoDb,
@@ -24,7 +24,7 @@ internal sealed class SnsInstallationRegistry(
 {
     /// <summary>
     /// The global secondary index user-targeted sends query: partition key <c>UserId</c> (string),
-    /// projecting at least <c>EndpointArn</c> and <c>SubscriptionArn</c> (ALL is simplest).
+    /// projecting at least <c>EndpointArn</c> (ALL is simplest).
     /// </summary>
     internal const string UserIdIndexName = "UserId-index";
 
@@ -40,7 +40,6 @@ internal sealed class SnsInstallationRegistry(
     private const string PlatformAttribute = "Platform";
     private const string PushChannelAttribute = "PushChannel";
     private const string EndpointArnAttribute = "EndpointArn";
-    private const string SubscriptionArnAttribute = "SubscriptionArn";
 
     private string Table => options.Value.InstallationsTable!;
 
@@ -82,10 +81,6 @@ internal sealed class SnsInstallationRegistry(
             [PushChannelAttribute] = new() { S = installation.PushChannel },
             [EndpointArnAttribute] = new() { S = installation.EndpointArn },
         };
-        if (!string.IsNullOrEmpty(installation.SubscriptionArn))
-        {
-            item[SubscriptionArnAttribute] = new() { S = installation.SubscriptionArn };
-        }
 
         try
         {
@@ -173,30 +168,12 @@ internal sealed class SnsInstallationRegistry(
     internal Task DeleteIfEndpointAsync(string installationId, string endpointArn, CancellationToken cancellationToken) =>
         DeleteWhenAsync(installationId, $"{EndpointArnAttribute} = :endpoint", ":endpoint", endpointArn, cancellationToken);
 
-    /// <summary>
-    /// Removes an endpoint from SNS: its broadcast subscription first (an already-removed one is the
-    /// desired state), then the endpoint itself (idempotent on the SNS side).
-    /// </summary>
+    /// <summary>Removes an endpoint from SNS (idempotent on the SNS side).</summary>
     /// <param name="endpointArn">The endpoint.</param>
-    /// <param name="subscriptionArn">Its topic subscription, if any.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    internal async Task RemoveEndpointAsync(string endpointArn, string? subscriptionArn, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrEmpty(subscriptionArn))
-        {
-            try
-            {
-                await sns.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = subscriptionArn }, cancellationToken).ConfigureAwait(false);
-            }
-            catch (NotFoundException)
-            {
-                // Already gone: the desired state.
-            }
-        }
-
-        await sns.DeleteEndpointAsync(new DeleteEndpointRequest { EndpointArn = endpointArn }, cancellationToken).ConfigureAwait(false);
-    }
+    internal Task RemoveEndpointAsync(string endpointArn, CancellationToken cancellationToken) =>
+        sns.DeleteEndpointAsync(new DeleteEndpointRequest { EndpointArn = endpointArn }, cancellationToken);
 
     private async Task DeleteWhenAsync(string installationId, string condition, string placeholder, string value, CancellationToken cancellationToken)
     {
@@ -240,8 +217,7 @@ internal sealed class SnsInstallationRegistry(
             userId,
             StringOf(item, PlatformAttribute) ?? string.Empty,
             StringOf(item, PushChannelAttribute) ?? string.Empty,
-            endpointArn,
-            StringOf(item, SubscriptionArnAttribute));
+            endpointArn);
     }
 
     private static string? StringOf(Dictionary<string, AttributeValue> item, string name) =>

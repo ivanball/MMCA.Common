@@ -161,8 +161,8 @@
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
     <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.2" />
-    <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints, the broadcast topic
-         and per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
+    <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
+         per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.22" />
@@ -191,7 +191,7 @@
          transitively, so the direct reference moves nothing in the graph; Apache-2.0. -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.78.0" />
     <!-- Firebase Cloud Messaging native push (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): the
-         HTTP v1 send (SendEachAsync) and the broadcast topic subscriptions, over Application Default
+         HTTP v1 send (SendEachAsync), over Application Default
          Credentials. Google-authored on the same Google.Apis.Auth line as the Cloud clients; Apache-2.0. -->
     <PackageVersion Include="FirebaseAdmin" Version="3.7.0" />
     <!-- The FCM installation registry (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): one Firestore

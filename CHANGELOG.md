@@ -6,15 +6,17 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
-**Breaking:** `INativePushSender.BroadcastAsync` is removed from the interface and from every implementation (`NullNativePushSender`, `AzureNotificationHubNativePushSender`, and the internal SNS and FCM senders). A class of your own that implements `INativePushSender` deletes its `BroadcastAsync`; a caller of it has no replacement. See [UPGRADING.md](UPGRADING.md).
+**Breaking:** `INativePushSender.BroadcastAsync` is removed from the interface and from every implementation (`NullNativePushSender`, `AzureNotificationHubNativePushSender`, and the internal SNS and FCM senders). A class of your own that implements `INativePushSender` deletes its `BroadcastAsync`; a caller of it has no replacement. The broadcast topics go with it: the `NativePush:Sns:BroadcastTopicArn` and `NativePush:Fcm:BroadcastTopic` settings are removed, and the SNS and FCM registrars no longer subscribe devices to a topic. Delete both keys from configuration; the topics themselves can be deleted. See [UPGRADING.md](UPGRADING.md).
 
 ### Fixed
 
 - **One failing Azure Notification Hubs send no longer stops the rest of a native push** (MMCA.Common.Azure). `AzureNotificationHubNativePushSender.SendToUsersAsync` attempts every 20-tag chunk on both platforms (FCM v1 and APNs), so an APNs rejection no longer skips the later chunks and the FCM sends after it. The failures are rethrown once every send has been attempted (the single exception as itself, several as an `AggregateException`), so the send handler still logs its "native (OS-level) delivery failed" warning. The caller's own cancellation still stops the loop at once.
+- **The soft-deleted user marker lasts 20 minutes** (MMCA.Common.Application). `SoftDeletedUserCache.MarkerDuration` was 15 minutes, the default access-token lifetime, but a token keeps validating for the JWT bearer clock skew past its expiry (the 5-minute library default; the framework sets no `ClockSkew`), so on a host without the validator query a deleted user's token could be accepted for up to 5 minutes after the marker expired.
 
 ### Removed
 
 - **`INativePushSender.BroadcastAsync`** (MMCA.Common.Application, MMCA.Common.Infrastructure, MMCA.Common.Azure, MMCA.Common.Aws, MMCA.Common.Gcp). No first-party host called it. User-targeted sends (`SendToUsersAsync`) are unchanged.
+- **The broadcast topics of the SNS and FCM push adapters** (MMCA.Common.Aws, MMCA.Common.Gcp). The `NativePush:Sns:BroadcastTopicArn` and `NativePush:Fcm:BroadcastTopic` settings are gone, so neither is required any more for the adapter to register, and a malformed FCM topic name no longer fails startup. The SNS registrar no longer subscribes an endpoint to a topic or writes a `SubscriptionArn` attribute (an existing one is ignored), and the identity no longer needs `sns:Subscribe`, `sns:Unsubscribe` or `sns:Publish` on a topic. The FCM registrar no longer subscribes or unsubscribes registration tokens, so a device registration is the Firestore document alone.
 
 ## [1.277.0] - 2026-11-04
 

@@ -51,11 +51,11 @@ public sealed class CloudAdapterTripwireTests
             .And.Contain("MMCA.Common.Azure").And.Contain("AddAzureNotificationHubsPush(configuration)")
             .And.Contain("NativePush:ConnectionString").And.Contain("NativePush:HubName")
             .And.Contain("MMCA.Common.Aws").And.Contain("AddAmazonSnsPush(configuration)")
-            .And.Contain("NativePush:Sns:InstallationsTable").And.Contain("NativePush:Sns:BroadcastTopicArn")
+            .And.Contain("NativePush:Sns:InstallationsTable")
             .And.Contain("NativePush:Sns:FcmPlatformApplicationArn").And.Contain("NativePush:Sns:ApnsPlatformApplicationArn")
             .And.Contain("MMCA.Common.Gcp").And.Contain("AddFirebaseCloudMessagingPush(configuration)")
             .And.Contain("NativePush:Fcm:ProjectId").And.Contain("NativePush:Fcm:InstallationsCollection")
-            .And.Contain("NativePush:Fcm:BroadcastTopic");
+            .And.NotContain("BroadcastTopic");
     }
 
     [Fact]

@@ -32,7 +32,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
     private readonly string _name = $"mmca-{Guid.NewGuid():N}";
     private AmazonSimpleNotificationServiceClient _sns = null!;
     private AmazonDynamoDBClient _dynamoDb = null!;
-    private string _topicArn = null!;
     private string _fcmApplicationArn = null!;
     private readonly ConcurrentQueue<Published> _published = new();
     private ServiceProvider _host = null!;
@@ -70,7 +69,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
             },
             ct);
 
-        _topicArn = (await _sns.CreateTopicAsync(new CreateTopicRequest { Name = _name }, ct)).TopicArn;
         _fcmApplicationArn = (await _sns.CreatePlatformApplicationAsync(
             new CreatePlatformApplicationRequest
             {
@@ -82,7 +80,7 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
 
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmazonSimpleNotificationService>(new RecordingSnsClient(LocalStackFixture.Credentials, localStack.SnsConfig(), _published));
-        services.AddAmazonSnsPush(LocalStackFixture.ConfigurationWith(localStack.NativePushSettings(_name, _topicArn, _fcmApplicationArn)));
+        services.AddAmazonSnsPush(LocalStackFixture.ConfigurationWith(localStack.NativePushSettings(_name, _fcmApplicationArn)));
         _host = services.BuildServiceProvider();
     }
 
@@ -91,13 +89,12 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         await _host.DisposeAsync();
         await _dynamoDb.DeleteTableAsync(new DeleteTableRequest { TableName = _name });
         await _sns.DeletePlatformApplicationAsync(new DeletePlatformApplicationRequest { PlatformApplicationArn = _fcmApplicationArn });
-        await _sns.DeleteTopicAsync(new DeleteTopicRequest { TopicArn = _topicArn });
         _sns.Dispose();
         _dynamoDb.Dispose();
     }
 
     [Fact]
-    public async Task Upsert_NewInstallation_CreatesAnEnabledEndpoint_SubscribedToTheTopic_AndAnOwnedRow()
+    public async Task Upsert_NewInstallation_CreatesAnEnabledEndpoint_AndAnOwnedRow()
     {
         var ct = TestContext.Current.CancellationToken;
 
@@ -113,8 +110,7 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         var endpoint = await _sns.GetEndpointAttributesAsync(new GetEndpointAttributesRequest { EndpointArn = row["EndpointArn"].S }, ct);
         endpoint.Attributes["Token"].Should().Be("token-a");
         endpoint.Attributes["Enabled"].Should().Be("true");
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().ContainSingle().Which.Should().Be(row["EndpointArn"].S);
-        row["SubscriptionArn"].S.Should().StartWith(_topicArn);
+        row.Should().NotContainKey("SubscriptionArn");
     }
 
     [Fact]
@@ -135,7 +131,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         (await _sns.GetEndpointAttributesAsync(new GetEndpointAttributesRequest { EndpointArn = after["EndpointArn"].S }, ct))
             .Attributes["Token"].Should().Be("token-a");
         (await PlatformEndpointsAsync(ct)).Should().ContainSingle("a refused registration leaves no endpoint behind");
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().ContainSingle();
     }
 
     [Fact]
@@ -171,7 +166,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
 
         (await RowAsync("device-1", ct)).Should().BeNull();
         (await PlatformEndpointsAsync(ct)).Should().NotContain(endpointArn);
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().BeEmpty();
     }
 
     [Fact]
@@ -252,12 +246,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         var response = await _sns.ListEndpointsByPlatformApplicationAsync(
             new ListEndpointsByPlatformApplicationRequest { PlatformApplicationArn = _fcmApplicationArn }, ct);
         return [.. (response.Endpoints ?? []).Select(e => e.EndpointArn)];
-    }
-
-    private async Task<List<string>> TopicSubscriptionEndpointsAsync(CancellationToken ct)
-    {
-        var response = await _sns.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = _topicArn }, ct);
-        return [.. (response.Subscriptions ?? []).Select(s => s.Endpoint)];
     }
 
     /// <summary>

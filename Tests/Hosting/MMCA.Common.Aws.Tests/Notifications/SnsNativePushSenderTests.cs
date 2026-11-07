@@ -21,7 +21,6 @@ namespace MMCA.Common.Aws.Tests.Notifications;
 public sealed class SnsNativePushSenderTests
 {
     private const string Table = "installations";
-    private const string TopicArn = "arn:aws:sns:us-east-1:000000000000:broadcast";
 
     private readonly Mock<IAmazonDynamoDB> _dynamoDb = new();
     private readonly Mock<IAmazonSimpleNotificationService> _sns = new();
@@ -43,7 +42,6 @@ public sealed class SnsNativePushSenderTests
         var options = Options.Create(new SnsNativePushSettings
         {
             InstallationsTable = Table,
-            BroadcastTopicArn = TopicArn,
             FcmPlatformApplicationArn = "arn:aws:sns:us-east-1:000000000000:app/GCM/fcm",
         });
         return new SnsNativePushSender(
@@ -61,7 +59,6 @@ public sealed class SnsNativePushSenderTests
         ["Platform"] = new() { S = "fcmv1" },
         ["PushChannel"] = new() { S = $"token-{installationId}" },
         ["EndpointArn"] = new() { S = EndpointArn(endpoint) },
-        ["SubscriptionArn"] = new() { S = $"{TopicArn}:sub-{endpoint}" },
     };
 
     private void SetupUser(string userId, params Dictionary<string, AttributeValue>[] rows) =>
@@ -123,8 +120,6 @@ public sealed class SnsNativePushSenderTests
         await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
         _published.Should().ContainSingle().Which.TargetArn.Should().Be(EndpointArn("healthy"));
-        _sns.Verify(x => x.UnsubscribeAsync(
-            It.Is<UnsubscribeRequest>(r => r.SubscriptionArn == $"{TopicArn}:sub-disabled"), It.IsAny<CancellationToken>()), Times.Once);
         _sns.Verify(x => x.DeleteEndpointAsync(
             It.Is<DeleteEndpointRequest>(r => r.EndpointArn == EndpointArn("disabled")), It.IsAny<CancellationToken>()), Times.Once);
         _dynamoDb.Verify(x => x.DeleteItemAsync(

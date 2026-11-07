@@ -48,6 +48,20 @@ The mechanical fix: a class of your own that implements `INativePushSender` (a t
 deletes its `BroadcastAsync` method, and a call to it is removed or replaced by `SendToUsersAsync`
 over the intended recipients. MMCA.ADC, MMCA.Store and MMCA.Helpdesk do not call it.
 
+**The broadcast topic settings are removed (breaking for configuration, MMCA.Common.Aws and
+MMCA.Common.Gcp).** With no broadcast, the push adapters no longer subscribe devices to a topic.
+
+| Removed configuration key | Action |
+|---|---|
+| `NativePush:Sns:BroadcastTopicArn` | delete the key; the SNS topic and its subscriptions can be deleted |
+| `NativePush:Fcm:BroadcastTopic` | delete the key; tokens left subscribed to the FCM topic receive nothing from it |
+
+A leftover key is ignored, so nothing fails if it stays, but it no longer counts toward a complete
+section: the SNS adapter now needs only `InstallationsTable` and a platform application, and the FCM
+adapter only `ProjectId` and `InstallationsCollection`. The SNS identity can drop `sns:Subscribe`,
+`sns:Unsubscribe` and `sns:Publish` on the topic. Existing DynamoDB rows keep a `SubscriptionArn`
+attribute the adapter now ignores; no migration is needed.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The

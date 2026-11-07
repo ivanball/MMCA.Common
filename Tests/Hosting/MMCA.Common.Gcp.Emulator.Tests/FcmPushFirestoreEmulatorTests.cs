@@ -44,7 +44,6 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
             ["NativePush:Enabled"] = "true",
             ["NativePush:Fcm:ProjectId"] = FirestoreEmulatorFixture.ProjectId,
             ["NativePush:Fcm:InstallationsCollection"] = _collection,
-            ["NativePush:Fcm:BroadcastTopic"] = "broadcast",
         }).Build());
         _host = services.BuildServiceProvider();
         return ValueTask.CompletedTask;
@@ -78,11 +77,10 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
         document.GetValue<string>("Platform").Should().Be("fcmv1");
         document.GetValue<string>("PushChannel").Should().Be("token-a");
         document.GetValue<Timestamp>("UpdatedAt").ToDateTime().Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(5));
-        _messaging.Subscribed.Should().Equal("token-a");
     }
 
     [Fact]
-    public async Task Upsert_SameUserWithANewToken_UpdatesTheTokenAndMovesTheSubscription()
+    public async Task Upsert_SameUserWithANewToken_UpdatesTheToken()
     {
         var ct = TestContext.Current.CancellationToken;
         (await Registrar.UpsertAsync(Owner, Request("device-1", "token-a"), ct)).IsSuccess.Should().BeTrue();
@@ -91,8 +89,6 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
 
         result.IsSuccess.Should().BeTrue();
         (await DocumentAsync("device-1", ct)).GetValue<string>("PushChannel").Should().Be("token-rotated");
-        _messaging.Subscribed.Should().Equal("token-a", "token-rotated");
-        _messaging.Unsubscribed.Should().Equal("token-a");
     }
 
     [Fact]
@@ -110,7 +106,6 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
         after.GetValue<string>("UserId").Should().Be("41");
         after.GetValue<string>("PushChannel").Should().Be("token-a");
         after.UpdateTime.Should().Be(before.UpdateTime, "a refused claim writes nothing");
-        _messaging.Subscribed.Should().Equal("token-a");
     }
 
     [Fact]
@@ -125,7 +120,6 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
         var document = await DocumentAsync("device-1", ct);
         document.GetValue<string>("UserId").Should().Be("77");
         document.GetValue<string>("PushChannel").Should().Be("shared-token");
-        _messaging.Unsubscribed.Should().BeEmpty("the token did not change");
     }
 
     [Fact]
@@ -154,12 +148,10 @@ public sealed class FcmPushFirestoreEmulatorTests(FirestoreEmulatorFixture emula
         (await Registrar.DeleteAsync(Owner, "no-such-device", ct)).IsSuccess.Should().BeTrue();
 
         (await DocumentAsync("device-1", ct)).Exists.Should().BeTrue();
-        _messaging.Unsubscribed.Should().BeEmpty();
 
         (await Registrar.DeleteAsync(Owner, "device-1", ct)).IsSuccess.Should().BeTrue();
 
         (await DocumentAsync("device-1", ct)).Exists.Should().BeFalse();
-        _messaging.Unsubscribed.Should().Equal("token-a");
     }
 
     [Fact]

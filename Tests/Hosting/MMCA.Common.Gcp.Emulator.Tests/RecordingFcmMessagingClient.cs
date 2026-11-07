@@ -7,7 +7,7 @@ namespace MMCA.Common.Gcp.Emulator.Tests;
 /// <summary>
 /// FCM has no emulator, so this tier registers a recording <see cref="IFcmMessagingClient"/> before
 /// <c>AddFirebaseCloudMessagingPush</c> (which then uses it as is): every send succeeds unless
-/// <see cref="DeadTokens"/> names its token, and the topic calls are recorded. Tokens are read from
+/// <see cref="DeadTokens"/> names its token. Tokens are read from
 /// the message's wire JSON (Newtonsoft, FirebaseAdmin's own serializer).
 /// </summary>
 internal sealed class RecordingFcmMessagingClient : IFcmMessagingClient
@@ -20,10 +20,6 @@ internal sealed class RecordingFcmMessagingClient : IFcmMessagingClient
     public ConcurrentQueue<string> SentTokens { get; } = new();
 
     public HashSet<string> DeadTokens { get; } = new(StringComparer.Ordinal);
-
-    public ConcurrentQueue<string> Subscribed { get; } = new();
-
-    public ConcurrentQueue<string> Unsubscribed { get; } = new();
 
     public Task<IReadOnlyList<FcmSendOutcome>> SendEachAsync(IReadOnlyList<Message> messages, CancellationToken cancellationToken)
     {
@@ -41,17 +37,4 @@ internal sealed class RecordingFcmMessagingClient : IFcmMessagingClient
         return Task.FromResult<IReadOnlyList<FcmSendOutcome>>(outcomes);
     }
 
-    public Task SendAsync(Message message, CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public Task<string?> SubscribeToTopicAsync(string token, string topic, CancellationToken cancellationToken)
-    {
-        Subscribed.Enqueue(token);
-        return Task.FromResult<string?>(null);
-    }
-
-    public Task<string?> UnsubscribeFromTopicAsync(string token, string topic, CancellationToken cancellationToken)
-    {
-        Unsubscribed.Enqueue(token);
-        return Task.FromResult<string?>(null);
-    }
 }
