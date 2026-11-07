@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.279.0] - 2026-11-07
+
 **Read-only view-as in a multi-service host: set `ViewAs:HostsGrantStore` per service.** A single
 host changes nothing (`HostsGrantStore` defaults to `true`). A host that runs its modules as separate
 services behind a gateway (Identity plus others) and turns view-as on configures each service:

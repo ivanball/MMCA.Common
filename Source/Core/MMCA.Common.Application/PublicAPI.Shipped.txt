@@ -344,6 +344,8 @@ MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.DataSourceName.get -> string!
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.DataSourceName.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.Enabled.get -> bool
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.HostsGrantStore.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.HostsGrantStore.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.RetentionDays.get -> int
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.RetentionDays.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.ViewAsSettings() -> void
