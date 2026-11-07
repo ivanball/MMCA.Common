@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Shared.Auth;
 
@@ -19,8 +20,10 @@ namespace MMCA.Common.API.Middleware;
 /// account, not ended, not expired) and refuses it with 401 otherwise, so ending a view takes effect
 /// on the next request rather than at token expiry.</item>
 /// </list>
-/// A request without <c>act_sub</c> passes untouched and pays nothing. Added to the pipeline only
-/// while <c>ViewAs:Enabled</c> is true; the command decorator is the second layer either way.
+/// A request without <c>act_sub</c> passes untouched and pays one claim lookup. Always in the
+/// pipeline: while <c>ViewAs:Enabled</c> is false every view-as request is refused 401, so a token
+/// minted before view-as was switched off cannot reach a write that bypasses commands. The command
+/// decorator is the second layer either way.
 /// </summary>
 /// <remarks>
 /// <b>The grant check fails CLOSED</b>, unlike <see cref="SoftDeletedUserMiddleware"/>: a store error
@@ -49,6 +52,15 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
         if (!user.IsViewAs())
         {
             await next(context).ConfigureAwait(false);
+            return;
+        }
+
+        // View-as switched off (or never configured on this host): a still-valid view-as token minted
+        // while it was on is honored for nothing, so no write path can see it.
+        if (context.RequestServices?.GetService<IOptions<ViewAsSettings>>()?.Value.Enabled != true)
+        {
+            LogViewAsDisabled(logger);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
         }
 
@@ -103,6 +115,9 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "View-as request refused: {Method} is not allowed under a read-only view-as token")]
     private static partial void LogWriteRefused(ILogger logger, string method);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "View-as request refused: view-as is disabled on this host")]
+    private static partial void LogViewAsDisabled(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "View-as request refused: the token carries no usable grant, staff or subject claim")]
     private static partial void LogMalformedToken(ILogger logger);

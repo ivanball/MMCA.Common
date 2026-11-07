@@ -59,8 +59,8 @@ public static class MiddlewarePipelineStepNames
     public const string SoftDeletedUserFilter = "SoftDeletedUserFilter";
 
     /// <summary>
-    /// Read-only view-as guard (<c>ViewAsGuardMiddleware</c>, ADR-137); applies the middleware only
-    /// while <c>ViewAs:Enabled</c> is true.
+    /// Read-only view-as guard (<c>ViewAsGuardMiddleware</c>, ADR-137). Always present; with
+    /// <c>ViewAs:Enabled</c> false it refuses every view-as token.
     /// </summary>
     public const string ViewAsGuard = "ViewAsGuard";
 

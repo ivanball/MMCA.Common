@@ -66,7 +66,13 @@ internal sealed class FakeGateway : IAsyncDisposable
     public string RotatedAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "rotated-user");
 
     /// <summary>The token <c>POST users/{id}/view-as</c> answers with (T20).</summary>
-    public string ViewAsAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "viewed-user");
+    public string ViewAsAccessToken { get; } = Jwt.CreateViewAs(DateTime.UtcNow.AddMinutes(15), "viewed-user");
+
+    /// <summary>
+    /// An ordinary (not view-as) token that <c>POST reports/{id}/view-as</c>, an unrelated endpoint
+    /// that happens to end in <c>view-as</c>, answers with.
+    /// </summary>
+    public string UnrelatedAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "report-user");
 
     public static async Task<FakeGateway> StartAsync()
     {
@@ -128,6 +134,12 @@ internal sealed class FakeGateway : IAsyncDisposable
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path == "/auth/revoke")
             {
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
+            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/reports", StringComparison.Ordinal))
+            {
+                await context.Response.WriteAsJsonAsync(new { accessToken = UnrelatedAccessToken, title = "Quarterly view-as report" });
                 return;
             }
 
@@ -267,6 +279,14 @@ internal static class ProxyHost
 internal static class Jwt
 {
     private static readonly SymmetricSecurityKey Key = new(Encoding.UTF8.GetBytes("proxy-tests-signing-key-long-enough-for-hs256"));
+
+    /// <summary>A token shaped like a view-as token: it carries <c>act_sub</c> and <c>vag</c>.</summary>
+    public static string CreateViewAs(DateTime expires, string subject) =>
+        new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+            claims: [new Claim("sub", subject), new Claim(ClaimTypes.Role, "Member"), new Claim("act_sub", "1"), new Claim("vag", Guid.NewGuid().ToString())],
+            notBefore: expires.AddHours(-1),
+            expires: expires,
+            signingCredentials: new SigningCredentials(Key, SecurityAlgorithms.HmacSha256)));
 
     public static string Create(DateTime expires, string subject = "user-42") =>
         new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(

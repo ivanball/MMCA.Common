@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using MMCA.Common.API.SessionCookies;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Services.Auth;
 using Yarp.ReverseProxy.Forwarder;
 
@@ -172,12 +173,12 @@ internal sealed class SameOriginProxyTransformer(
 
         var accessToken = ReadString(json, "accessToken");
         var claimsOnly = SessionClaimsToken.Create(accessToken);
-        if (json is null || accessToken is null || claimsOnly is null)
+        if (json is null || accessToken is null || claimsOnly is null || !TryReadViewAsExpiry(accessToken, out var expiresAt))
         {
             return null;
         }
 
-        ViewAsOverlayCookie.Write(httpContext, accessToken, new JwtSecurityTokenHandler().ReadJwtToken(accessToken).ValidTo, overlay.SameSite);
+        ViewAsOverlayCookie.Write(httpContext, accessToken, expiresAt, overlay.SameSite);
         json["accessToken"] = claimsOnly;
         return JsonSerializer.SerializeToUtf8Bytes(json);
     }
@@ -227,6 +228,32 @@ internal sealed class SameOriginProxyTransformer(
         json["accessToken"] = SessionClaimsToken.Create(accessToken) ?? string.Empty;
         json["refreshToken"] = string.Empty;
         return JsonSerializer.SerializeToUtf8Bytes(json);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="accessToken"/> is a view-as token: a readable JWT carrying both
+    /// <c>act_sub</c> and <c>vag</c>. Any other token in a <c>.../view-as</c> response is not one the
+    /// proxy minted the overlay for, so the response passes through and no cookie is written.
+    /// </summary>
+    private static bool TryReadViewAsExpiry(string accessToken, out DateTime expiresAt)
+    {
+        expiresAt = default;
+        try
+        {
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(accessToken);
+            if (!jwt.Claims.Any(c => c.Type == AuthClaimTypes.ViewAsActor && !string.IsNullOrWhiteSpace(c.Value))
+                || !jwt.Claims.Any(c => c.Type == AuthClaimTypes.ViewAsGrant && !string.IsNullOrWhiteSpace(c.Value)))
+            {
+                return false;
+            }
+
+            expiresAt = jwt.ValidTo;
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException)
+        {
+            return false;
+        }
     }
 
     private static string? ReadString(JsonObject? json, string name) =>

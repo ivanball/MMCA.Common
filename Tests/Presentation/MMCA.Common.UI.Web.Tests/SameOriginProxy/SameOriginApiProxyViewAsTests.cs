@@ -46,6 +46,39 @@ public sealed class SameOriginApiProxyViewAsTests : IAsyncLifetime
         json.RootElement.GetProperty("accessToken").GetString().Should().NotBeNullOrEmpty("the browser still gets the claims-only copy");
     }
 
+    // Review fix: only a 2xx answer whose token parses AND carries act_sub and vag writes the overlay.
+    [Fact]
+    public async Task AnUnrelatedViewAsPath_WhoseTokenIsNotAViewAsToken_PassesThroughUntouched_AndWritesNoCookie()
+    {
+        var admin = Jwt.Create(DateTime.UtcNow.AddMinutes(10), "admin");
+        using var host = await ProxyHost.StartAsync(_gateway);
+        using var client = host.GetTestClient();
+        using var request = ProxyHost.Request(HttpMethod.Post, "/api/reports/9/view-as", admin, "refresh-1", csrf: true);
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        ProxyHost.SetCookies(response).Should().NotContain(c => c.StartsWith(ViewAsOverlayCookie.Name, StringComparison.Ordinal));
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        json.RootElement.GetProperty("accessToken").GetString().Should().Be(_gateway.UnrelatedAccessToken, "the body is passed through as the upstream sent it");
+        json.RootElement.GetProperty("title").GetString().Should().Be("Quarterly view-as report");
+    }
+
+    [Fact]
+    public async Task ARefusedGrant_WritesNoCookie()
+    {
+        var admin = Jwt.Create(DateTime.UtcNow.AddMinutes(10), "admin");
+        _gateway.RejectedTokens[admin] = true;
+        using var host = await ProxyHost.StartAsync(_gateway);
+        using var client = host.GetTestClient();
+        using var request = ProxyHost.Request(HttpMethod.Post, "/api/Admin/Users/7/view-as", admin, "refresh-1", csrf: true);
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ProxyHost.SetCookies(response).Should().NotContain(c => c.StartsWith(ViewAsOverlayCookie.Name, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task WithALiveOverlay_TheOverlayTokenReplacesTheSessionBearer()
     {

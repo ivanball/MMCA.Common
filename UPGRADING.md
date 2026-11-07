@@ -88,8 +88,9 @@ A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionI
 devices page sets up `GetSignInsAsync`, which that page now calls.
 
 **Read-only view-as (ADR-137) is off by default; a host that turns it on needs one more migration
-and four wiring steps.** With `ViewAs:Enabled` false (the default) nothing changes: no table, no
-middleware, and the grant and end endpoints answer 404. To enable it:
+and four wiring steps.** With `ViewAs:Enabled` false (the default) there is no table, the grant and
+end endpoints answer 404, and the always-present `ViewAsGuard` step refuses any view-as token (an
+ordinary request pays one claim lookup). To enable it:
 
 1. **Configuration.** `"ViewAs": { "Enabled": true }` on the Identity host (`RetentionDays` defaults
    to 90, `DataSourceName` to `Default`; point it at the source `RefreshSessions:DataSourceName`

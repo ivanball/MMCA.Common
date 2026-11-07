@@ -139,6 +139,60 @@ public sealed class ViewAsGuardMiddlewareTests
         viewAs.VerifyNoOtherCalls();
     }
 
+    // Review fix: with ViewAs disabled a still-valid view-as token must not reach a write that bypasses
+    // commands (password, preferences, devices, legal acceptance), nor any read.
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("PUT")]
+    [InlineData("GET")]
+    public async Task ViewAsDisabled_AStillValidViewAsToken_IsRefused_AndNeverReachesTheEndpoint(string method)
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext(method, ViewAsPrincipal(grant.Id));
+
+        await InvokeAsync(context, enabled: false);
+
+        context.Response.StatusCode.Should().BeOneOf(StatusCodes.Status401Unauthorized, StatusCodes.Status403Forbidden);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ViewAsDisabled_EvenTheEndViewAsAction_IsRefused()
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext("POST", ViewAsPrincipal(grant.Id), endViewAsEndpoint: true);
+
+        await InvokeAsync(context, enabled: false);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ViewAsServiceNotRegistered_AViewAsToken_IsRefused401()
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext("GET", ViewAsPrincipal(grant.Id));
+        var services = new ServiceCollection();
+        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = true }));
+        await using var provider = services.BuildServiceProvider();
+        context.RequestServices = provider;
+
+        await new ViewAsGuardMiddleware(_ =>
+        {
+            _reachedEndpoint = true;
+            return Task.CompletedTask;
+        }).InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TheDefaultPipeline_AlwaysIncludesTheGuard() =>
+        MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.CreateDefault().StepNames
+            .Should().Contain(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ViewAsGuard);
+
     [Fact]
     public async Task ViewAsTokenWithoutAGrantClaim_IsRefused401()
     {
@@ -187,10 +241,11 @@ public sealed class ViewAsGuardMiddlewareTests
         Options.Create(new ViewAsSettings { Enabled = true }),
         _clock);
 
-    private async Task InvokeAsync(HttpContext context, IViewAsService? viewAs = null)
+    private async Task InvokeAsync(HttpContext context, IViewAsService? viewAs = null, bool enabled = true)
     {
         var services = new ServiceCollection();
         services.AddSingleton(viewAs ?? CreateService());
+        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = enabled }));
         await using var provider = services.BuildServiceProvider();
         context.RequestServices = provider;
 
