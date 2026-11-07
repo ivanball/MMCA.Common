@@ -339,6 +339,10 @@ MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIds_Shoul
 MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase
 MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.OverridesAndInterfaceImplementations_ShouldNotThrow_NotSupportedOrNotImplemented() -> void
 MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.SubstitutabilityTestsBase() -> void
+MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase
+MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase.EntitiesWithTenantId_ShouldImplement_ITenantEntity() -> void
+MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase.ModuleEntities_ShouldBeTenantScoped_OrDeclaredGlobal() -> void
+MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase.TenantScopeConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.CodeBehinds_StayWithinTheLineCap() -> void
 MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.RazorFiles_KeepInlineCodeBlocksSmall() -> void
@@ -421,6 +425,7 @@ abstract MMCA.Common.Testing.Architecture.SpecificationConventionTestsBase.Map.g
 abstract MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageNamespace = "MMCA.Common.AI" -> string!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix = "MMCA.Common.AI." -> string!
@@ -489,6 +494,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.DtosAreImmutable(MMCA.
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EfConfigurationsAreSealedWithConfigurationSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EntitiesResideInDomainLayer(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EntitiesWithPiiImplementAnonymizable(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.EntitiesWithTenantIdImplementTenantMarker(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EntityPropertySettersAreNonPublic(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesAreUnique(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesUseAnAllowedPrefix(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Func<string!, bool>! isCodeAllowed, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
@@ -521,6 +527,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApplicationsAreI
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApplicationsDoNotReachOtherInfrastructures(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleDomainsAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleDomainsDoNotReachOtherInfrastructures(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleEntitiesAreTenantScopedOrDeclaredGlobal(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! globalEntityTypes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInfrastructuresAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInternalLayersAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -654,6 +661,7 @@ virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.MinimumResourceF
 virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.UnaccentedWords.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.AllowedStaticMembers.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.SubstitutabilityTestsBase.ExcludedMembers.get -> System.Collections.Generic.IReadOnlySet<string!>!
+virtual MMCA.Common.Testing.Architecture.TenantScopeConventionTestsBase.GlobalEntityTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.ExcludedPathFragments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.MaxCodeBehindLines.get -> int
 virtual MMCA.Common.Testing.Architecture.UIArchitectureConventionTestsBase.MaxInlineCodeLines.get -> int

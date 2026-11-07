@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.278.0] - 2026-11-07
+
 **`INativePushSender.BroadcastAsync` is removed (breaking, MMCA.Common.Application and the push
 adapters).** The interface keeps `SendToUsersAsync` only, and the method is gone from
 `NullNativePushSender` (MMCA.Common.Infrastructure), `AzureNotificationHubNativePushSender`
