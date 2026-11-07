@@ -173,11 +173,29 @@ MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.get -> Microsoft.AspN
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.set -> void
 MMCA.Common.UI.Components.Auth.RedirectToLogin
 MMCA.Common.UI.Components.Auth.RedirectToLogin.RedirectToLogin() -> void
+MMCA.Common.UI.Components.Auth.SignInHistoryTable
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.Dispose() -> void
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignInHistoryTable() -> void
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignIns.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignIns.set -> void
 MMCA.Common.UI.Components.Auth.UserSessionsTable
 MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose() -> void
 MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!
 MMCA.Common.UI.Components.Auth.UserSessionsTable.Sessions.set -> void
 MMCA.Common.UI.Components.Auth.UserSessionsTable.UserSessionsTable() -> void
+MMCA.Common.UI.Components.Auth.ViewAsBanner
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ApiPathPrefix.get -> string?
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ApiPathPrefix.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsBanner.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ViewAsBanner() -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton
+MMCA.Common.UI.Components.Auth.ViewAsButton.ApiPathPrefix.get -> string?
+MMCA.Common.UI.Components.Auth.ViewAsButton.ApiPathPrefix.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.UserId.get -> int
+MMCA.Common.UI.Components.Auth.ViewAsButton.UserId.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.UsersRoute.get -> string?
+MMCA.Common.UI.Components.Auth.ViewAsButton.UsersRoute.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.ViewAsButton() -> void
 MMCA.Common.UI.Components.Capabilities.AppLockSettingCard
 MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.AppLockSettingCard() -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate
@@ -204,6 +222,10 @@ MMCA.Common.UI.Components.Capabilities.OfflineBanner.OfflineBanner() -> void
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.Dispose() -> void
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.PushRegistrationListener() -> void
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.InAppDiagnosticsLog() -> void
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.ShareTitle.get -> string?
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.ShareTitle.set -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.ApiFileDownloadButton() -> void
 MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.AriaLabel.get -> string?
@@ -751,6 +773,7 @@ MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService.UnlockAsync(in
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
@@ -760,6 +783,7 @@ MMCA.Common.UI.Services.Administration.RoleAdminService.SetStoredPermissionsAsyn
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.LockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRoleAsync(int userId, string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -791,6 +815,7 @@ MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpCl
 MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LogoutAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.AuthUIService.RedeemSignInLinkAsync(string! email, string! token, bool acceptedTerms, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
@@ -810,6 +835,7 @@ MMCA.Common.UI.Services.Auth.IAuthUIService
 MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.LogoutAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
@@ -1072,6 +1098,7 @@ MMCA.Common.UI.Services.Capabilities.Interop.IScreenshotService.IsSupported.get 
 MMCA.Common.UI.Services.Capabilities.Interop.IShareService
 MMCA.Common.UI.Services.Capabilities.Interop.IShareService.ShareFileAsync(string! title, string! filePath, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Interop.IShareService.ShareLinkAsync(string! title, System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Interop.IShareService.ShareTextAsync(string! title, string! text, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Interop.NullClipboardService
 MMCA.Common.UI.Services.Capabilities.Interop.NullClipboardService.NullClipboardService() -> void
 MMCA.Common.UI.Services.Capabilities.Interop.NullClipboardService.SetTextAsync(string! text, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
@@ -1205,6 +1232,42 @@ MMCA.Common.UI.Services.Culture.ViewerTimeZone.IsResolved.get -> bool
 MMCA.Common.UI.Services.Culture.ViewerTimeZone.ToViewerTime(System.DateTime instant) -> System.DateTime
 MMCA.Common.UI.Services.Culture.ViewerTimeZone.ViewerTimeZone(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 MMCA.Common.UI.Services.Culture.ViewerTimeZone.Zone.get -> System.TimeZoneInfo!
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddInAppDiagnostics(System.Action<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.Capacity.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.Capacity.set -> void
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.InAppDiagnosticsOptions() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.MinimumLevel.get -> Microsoft.Extensions.Logging.LogLevel
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.MinimumLevel.set -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Add(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry! entry) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Capacity.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Clear() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Count.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.InAppLogBuffer(Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>! options) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Snapshot() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Services.Diagnostics.InAppLogEntry!>!
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.ToText() -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.<Clone>$() -> MMCA.Common.UI.Services.Diagnostics.InAppLogEntry!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Category.get -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Category.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Deconstruct(out System.DateTimeOffset Timestamp, out Microsoft.Extensions.Logging.LogLevel Level, out string! Category, out string! Message, out string? Exception) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Equals(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? other) -> bool
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Exception.get -> string?
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Exception.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.InAppLogEntry(System.DateTimeOffset Timestamp, Microsoft.Extensions.Logging.LogLevel Level, string! Category, string! Message, string? Exception) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Level.get -> Microsoft.Extensions.Logging.LogLevel
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Level.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Message.get -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Message.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Timestamp.get -> System.DateTimeOffset
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Timestamp.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.CreateLogger(string! categoryName) -> Microsoft.Extensions.Logging.ILogger!
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.Dispose() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.InAppLoggerProvider(MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer! buffer, Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>! options, System.TimeProvider! timeProvider) -> void
 MMCA.Common.UI.Services.IFormFactor
 MMCA.Common.UI.Services.IFormFactor.GetFormFactor() -> string!
 MMCA.Common.UI.Services.IFormFactor.GetPlatform() -> string!
@@ -1400,6 +1463,7 @@ const MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.StorageKey = "auth.
 const MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders.CsrfHeaderName = "X-CSRF" -> string!
 const MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders.CsrfHeaderValue = "1" -> string!
 const MMCA.Common.UI.Services.Capabilities.DeviceStorage.DevicePreferenceKeys.AppLockEnabled = "applock.enabled" -> string!
+const MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.DefaultCapacity = 500 -> int
 const MMCA.Common.UI.Theme.BrandColors.ChromeBackground = "#1A2035" -> string!
 const MMCA.Common.UI.Theme.BrandColors.ChromeText = "#FFFFFF" -> string!
 const MMCA.Common.UI.Theme.BrandColors.ChromeTextMuted = "#FFFFFFB3" -> string!
@@ -1449,12 +1513,17 @@ override MMCA.Common.UI.Common.NavItem.Equals(object? obj) -> bool
 override MMCA.Common.UI.Common.NavItem.GetHashCode() -> int
 override MMCA.Common.UI.Common.NavItem.ToString() -> string!
 override MMCA.Common.UI.Components.Auth.RedirectToLogin.OnInitialized() -> void
+override MMCA.Common.UI.Components.Auth.SignInHistoryTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.UserSessionsTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.ViewAsBanner.OnAfterRender(bool firstRender) -> void
+override MMCA.Common.UI.Components.Auth.ViewAsBanner.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.ViewAsButton.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.BiometricGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.OnAfterRender(bool firstRender) -> void
 override MMCA.Common.UI.Components.Capabilities.OfflineBanner.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.OnInitialized() -> void
 override MMCA.Common.UI.Components.Forms.ErrorSummary.OnParametersSet() -> void
 override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1503,6 +1572,9 @@ override MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationReq
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.GetHashCode() -> int
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.ToString() -> string!
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.GetHashCode() -> int
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.ToString() -> string!
 override MMCA.Common.UI.Services.ListPageState.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.ListPageState.GetHashCode() -> int
 override MMCA.Common.UI.Services.ListPageState.ToString() -> string!
@@ -1540,6 +1612,7 @@ static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultTimeout.g
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Net.Http.HttpClient! client, System.TimeSpan retryDelay, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.IO.Stream!>!
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Uri! baseAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IO.Stream!>!
 static MMCA.Common.UI.Common.Settings.UIModuleConfiguration.IsModuleEnabled(Microsoft.Extensions.Configuration.IConfiguration! configuration, string! moduleName) -> bool
+static MMCA.Common.UI.Components.Auth.ViewAsBanner.Remaining(System.Security.Claims.ClaimsPrincipal? user, System.DateTimeOffset now) -> System.TimeSpan?
 static MMCA.Common.UI.DependencyInjection.AddClientAuthSessionCookieSync(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddRoleAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -1587,6 +1660,9 @@ static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operat
 static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operator ==(MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? left, MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? right) -> bool
 static MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap.SetBrowserCultureAsync(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap.SetBrowserCultureAsync(Microsoft.JSInterop.IJSRuntime! jsRuntime, bool allowPseudoLocale) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Services.Diagnostics.DependencyInjection.AddInAppDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator !=(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
+static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator ==(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
 static MMCA.Common.UI.Services.ListPageQueryStateService.BuildPath(string! basePath, MMCA.Common.UI.Services.ListPageState! state) -> string!
 static MMCA.Common.UI.Services.ListPageQueryStateService.ParseQueryString(string? queryString) -> MMCA.Common.UI.Services.ListPageState!
 static MMCA.Common.UI.Services.ListPageState.operator !=(MMCA.Common.UI.Services.ListPageState? left, MMCA.Common.UI.Services.ListPageState? right) -> bool
@@ -1622,6 +1698,7 @@ virtual MMCA.Common.UI.Common.NavItem.EqualityContract.get -> System.Type!
 virtual MMCA.Common.UI.Common.NavItem.Equals(MMCA.Common.UI.Common.NavItem? other) -> bool
 virtual MMCA.Common.UI.Common.NavItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Components.Auth.SignInHistoryTable.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose(bool disposing) -> void
@@ -1656,13 +1733,17 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 ~override MMCA.Common.UI.Components.Auth.ChangePasswordCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.RedirectToLogin.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Auth.SignInHistoryTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.UserSessionsTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Auth.ViewAsBanner.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Auth.ViewAsButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.BiometricGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.ExternalLink.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.OfflineBanner.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.DeleteConfirmation.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -51,6 +51,7 @@ MMCA.Common.Domain.Auth.PermissionGrant.Role.get -> string!
 MMCA.Common.Domain.Auth.PermissionGrant.Role.init -> void
 MMCA.Common.Domain.Auth.RefreshSession
 MMCA.Common.Domain.Auth.RefreshSession.Anonymize() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.RefreshSession.CreateSuccessor(string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.get -> System.DateTime
@@ -65,11 +66,29 @@ MMCA.Common.Domain.Auth.RefreshSession.RefreshSession() -> void
 MMCA.Common.Domain.Auth.RefreshSession.ReplacedByTokenHash.get -> string?
 MMCA.Common.Domain.Auth.RefreshSession.Revoke(System.DateTime revokedAt, string! reason, string? replacedByTokenHash = null) -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.RefreshSession.RevokedAt.get -> System.DateTime?
+MMCA.Common.Domain.Auth.RefreshSession.SignInId.get -> System.Guid?
 MMCA.Common.Domain.Auth.RefreshSession.TokenHash.get -> string!
 MMCA.Common.Domain.Auth.RefreshSession.TokenHash.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.UserAgent.get -> string?
 MMCA.Common.Domain.Auth.RefreshSession.UserId.get -> int
 MMCA.Common.Domain.Auth.RefreshSession.UserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant
+MMCA.Common.Domain.Auth.ViewAsGrant.End(System.DateTime now) -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.EndedAt.get -> System.DateTime?
+MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.Id.get -> System.Guid
+MMCA.Common.Domain.Auth.ViewAsGrant.Id.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.IsActiveAt(System.DateTime now) -> bool
+MMCA.Common.Domain.Auth.ViewAsGrant.Reason.get -> string!
+MMCA.Common.Domain.Auth.ViewAsGrant.Reason.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.get -> int
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.get -> int
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.ViewAsGrant() -> void
 MMCA.Common.Domain.ClassReference
 MMCA.Common.Domain.ClassReference.ClassReference() -> void
 MMCA.Common.Domain.DomainEvents.BaseDomainEvent
@@ -238,6 +257,8 @@ const MMCA.Common.Domain.Auth.RefreshSession.ReasonSessionCap = "SessionCapExcee
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonSignedOut = "SignedOut" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.TokenHashLength = 64 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.UserAgentMaxLength = 512 -> int
+const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMaxLength = 500 -> int
+const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMinLength = 10 -> int
 const MMCA.Common.Domain.Invariants.CommonInvariants.DarkTheme = "dark" -> string!
 const MMCA.Common.Domain.Invariants.CommonInvariants.LightTheme = "light" -> string!
 const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKeyMaxLength = 128 -> int
@@ -283,6 +304,7 @@ override sealed MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.
 static MMCA.Common.Domain.Auth.PermissionGrant.Create(string! role, string! permission, System.DateTime grantedAt, string? grantedBy = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.PermissionGrant!>!
 static MMCA.Common.Domain.Auth.RefreshSession.Create(int userId, string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 static MMCA.Common.Domain.Auth.RefreshSession.HashToken(string! refreshToken) -> string!
+static MMCA.Common.Domain.Auth.ViewAsGrant.Create(int staffUserId, int targetUserId, string? reason, System.DateTime grantedAt, System.TimeSpan lifetime) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.ViewAsGrant!>!
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator ==(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? left, MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? right) -> bool
@@ -336,6 +358,7 @@ static MMCA.Common.Domain.Specifications.SpecificationExtensions.Not<TEntity, TI
 static MMCA.Common.Domain.Specifications.SpecificationExtensions.Or<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>!
 static readonly MMCA.Common.Domain.AssemblyReference.Assembly -> System.Reflection.Assembly!
 static readonly MMCA.Common.Domain.AssemblyReference.AssemblyName -> string!
+static readonly MMCA.Common.Domain.Auth.ViewAsGrant.MaxLifetime -> System.TimeSpan
 static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.BodyMaxLength -> int
 static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.TitleMaxLength -> int
 virtual MMCA.Common.Domain.DomainEvents.BaseDomainEvent.EqualityContract.get -> System.Type!

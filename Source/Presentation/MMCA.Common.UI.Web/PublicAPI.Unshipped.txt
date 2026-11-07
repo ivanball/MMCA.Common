@@ -1,3 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.ViewAsEndPath.get -> string!
-MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.ViewAsEndPath.set -> void

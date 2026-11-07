@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.278.0] - 2026-11-07
+
+Peer-repo wave: native push failure isolation, sign-in history, read-only view-as support access, the opt-in MCP endpoint (MMCA.Common.Mcp, the 27th package), a tenant-scope fitness rule, tenant-targeted feature flags and an in-app diagnostics log.
+
 **Breaking:** `INativePushSender.BroadcastAsync` is removed from the interface and from every implementation (`NullNativePushSender`, `AzureNotificationHubNativePushSender`, and the internal SNS and FCM senders). A class of your own that implements `INativePushSender` deletes its `BroadcastAsync`; a caller of it has no replacement. The broadcast topics go with it: the `NativePush:Sns:BroadcastTopicArn` and `NativePush:Fcm:BroadcastTopic` settings are removed, and the SNS and FCM registrars no longer subscribe devices to a topic. Delete both keys from configuration; the topics themselves can be deleted. See [UPGRADING.md](UPGRADING.md).
 
 **Every host that maps `RefreshSessions` needs one migration** (a nullable `SignInId` column and one index); see [UPGRADING.md](UPGRADING.md). **A host that enables `ViewAs` needs one more** (the `ViewAsGrants` table).

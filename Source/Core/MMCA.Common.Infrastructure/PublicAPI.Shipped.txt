@@ -91,6 +91,7 @@ MMCA.Common.Infrastructure.Auth.TokenService.AccessTokenLifetime.get -> System.T
 MMCA.Common.Infrastructure.Auth.TokenService.Dispose() -> void
 MMCA.Common.Infrastructure.Auth.TokenService.GenerateAccessToken(int userId, string! email, string! role, string! fullName, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null) -> string!
 MMCA.Common.Infrastructure.Auth.TokenService.GenerateRefreshToken() -> string!
+MMCA.Common.Infrastructure.Auth.TokenService.GenerateShortLivedAccessToken(int userId, string! email, string! role, string! fullName, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims, System.TimeSpan lifetime) -> string!
 MMCA.Common.Infrastructure.Auth.TokenService.GetPrincipalFromExpiredToken(string! token) -> System.Security.Claims.ClaimsPrincipal?
 MMCA.Common.Infrastructure.Auth.TokenService.RefreshTokenLifetime.get -> System.TimeSpan
 MMCA.Common.Infrastructure.Auth.TokenService.TokenService(Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Auth.JwtSettings!>! jwtOptions, MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry! permissionRegistry, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Auth.TokenService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Auth.JwksSettings!>? jwksSettings = null) -> void
@@ -263,7 +264,6 @@ MMCA.Common.Infrastructure.Notifications.NotificationHub.LeaveChannelAsync(strin
 MMCA.Common.Infrastructure.Notifications.NotificationHub.NotificationHub(Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings!>! settings, MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IChannelJoinAuthorizer? joinAuthorizer = null) -> void
 MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender
-MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.NullNativePushSender() -> void
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.NullPushDeviceRegistrar
@@ -328,6 +328,7 @@ MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtension
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService.RefreshSessionCleanupService(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! options, System.TimeProvider! timeProvider) -> void
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions
+MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.extension<TOwner>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!)
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.extension<TOwner>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!).OwnsAddress(System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Contact.Address?>!>! navigationExpression, string! columnPrefix = "Address", bool required = false) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
@@ -503,6 +504,8 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOpti
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableScheduler.set -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableStoredPermissionGrants.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableStoredPermissionGrants.set -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.set -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.BeginTransaction() -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.CommitTransaction() -> void
@@ -925,9 +928,13 @@ const MMCA.Common.Infrastructure.Notifications.NotificationHub.ReceiveChannelEve
 const MMCA.Common.Infrastructure.Notifications.NotificationHub.ReceiveNotificationMethod = "ReceiveNotification" -> string!
 const MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.RolePermissionIndexName = "IX_PermissionGrants_Role_Permission" -> string!
 const MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.TableName = "PermissionGrants" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.SignInIndexName = "IX_RefreshSessions_UserId_SignInId" -> string!
 const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.TableName = "RefreshSessions" -> string!
 const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.TokenHashIndexName = "IX_RefreshSessions_TokenHash" -> string!
 const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.UserIndexName = "IX_RefreshSessions_UserId" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.GrantedAtIndexName = "IX_ViewAsGrants_GrantedAt" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.TableName = "ViewAsGrants" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.TargetIndexName = "IX_ViewAsGrants_TargetUserId_GrantedAt" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.ConventionSource = "Convention" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.DeleteBehaviorSourceAnnotation = "MMCA:DeleteBehaviorSource" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.ExplicitSource = "Explicit" -> string!
@@ -1008,6 +1015,7 @@ static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApn
 static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
 static MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.ApplyPermissionGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
 static MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.ApplyRefreshSessionConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+static MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.ApplyViewAsGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
 static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsAddress<TOwner>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>! builder, System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Contact.Address?>!>! navigationExpression, string! columnPrefix = "Address", bool required = false) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
 static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsMoney<TOwner>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>! builder, System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Financial.Money?>!>! navigationExpression, string! amountColumnName, string! currencyColumnName, bool required = true) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
 static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfiguration<TEntity, TIdentifierType>.ApplyEngineConventions(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine) -> void

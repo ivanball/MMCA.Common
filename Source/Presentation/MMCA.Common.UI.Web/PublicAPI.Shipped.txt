@@ -67,6 +67,8 @@ MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.RevokePath.set -> 
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.SameOriginApiProxySettings() -> void
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.SessionCookieSameSite.get -> Microsoft.AspNetCore.Http.SameSiteMode
 MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.SessionCookieSameSite.set -> void
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.ViewAsEndPath.get -> string!
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.ViewAsEndPath.set -> void
 MMCA.Common.UI.Web.Security.BlazorCspSettings
 MMCA.Common.UI.Web.Security.BlazorCspSettings.BlazorCspSettings() -> void
 MMCA.Common.UI.Web.Security.BlazorCspSettings.FrameSources.get -> System.Collections.Generic.IList<string!>!

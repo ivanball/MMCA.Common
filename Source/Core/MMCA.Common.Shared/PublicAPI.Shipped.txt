@@ -248,6 +248,13 @@ MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Equals(MMCA.Common.Shared.A
 MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Roles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Roles.init -> void
 MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.SetUserRolesRequest(System.Collections.Generic.IReadOnlyList<string!>! Roles) -> void
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.StartViewAsRequest!
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Deconstruct(out string? Reason) -> void
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Equals(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Reason.get -> string?
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Reason.init -> void
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.StartViewAsRequest(string? Reason) -> void
 MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest
 MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Code.get -> string!
 MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Code.init -> void
@@ -303,6 +310,33 @@ MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Role.init -> void
 MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.RolePermissionsResponse(string! Role, System.Collections.Generic.IReadOnlyList<string!>! RegisteredPermissions, System.Collections.Generic.IReadOnlyList<string!>! StoredPermissions) -> void
 MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.StoredPermissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.StoredPermissions.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInEndReasons
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn = 0 -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.ViewAs = 1 -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndedAt.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Equals(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IpAddress.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IpAddress.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IsCurrent.get -> bool
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IsCurrent.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Kind.get -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Kind.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.get -> System.Guid
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.UserAgent.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.UserAgent.init -> void
 MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse
 MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!
 MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! RecoveryCodes) -> void
@@ -328,6 +362,19 @@ MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Equals(MMCA.Common.Sha
 MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Theme.get -> string?
 MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Theme.init -> void
 MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.UserPreferencesResponse(string? Culture, string? Theme) -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessToken.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessTokenExpiry.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessTokenExpiry.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Deconstruct(out string! AccessToken, out System.DateTime AccessTokenExpiry, out System.Guid GrantId, out int TargetUserId) -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Equals(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GrantId.get -> System.Guid
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GrantId.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.TargetUserId.get -> int
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.TargetUserId.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.ViewAsGrantResponse(string! AccessToken, System.DateTime AccessTokenExpiry, System.Guid GrantId, int TargetUserId) -> void
 MMCA.Common.Shared.Auth.RoleValue
 MMCA.Common.Shared.Auth.RoleValue.RoleValue(string! value) -> void
 MMCA.Common.Shared.Auth.RoleValue.Value.get -> string!
@@ -653,12 +700,21 @@ const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodTotp = "otp" -> st
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Permission = "permission" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.SessionId = "sid" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsActor = "act_sub" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsGrant = "vag" -> string!
 const MMCA.Common.Shared.Auth.AuthErrorCodes.EmailAlreadyExists = "Auth.EmailAlreadyExists" -> string!
 const MMCA.Common.Shared.Auth.AuthErrorCodes.TermsNotAccepted = "Auth.TermsNotAccepted" -> string!
 const MMCA.Common.Shared.Auth.PasswordComplexity.MaximumLength = 128 -> int
 const MMCA.Common.Shared.Auth.PasswordComplexity.MinimumLength = 8 -> int
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageRoles = "roles:manage" -> string!
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageUsers = "users:manage" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ViewAsUsers = "users:view-as" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.AccountDeleted = "AccountDeleted" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.Expired = "Expired" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.ReuseDetected = "ReuseDetected" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.SessionCapExceeded = "SessionCapExceeded" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.SignedOut = "SignedOut" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.ViewAsEnded = "ViewAsEnded" -> string!
 const MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.DefaultWidth = 256 -> int
 const MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.RemoveByFormat = "yyyy-MM-dd" -> string!
 const MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.FeatureClassSuffix = "Features" -> string!
@@ -735,6 +791,9 @@ override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.ToString() -
 override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.ToString() -> string!
 override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Equals(object? obj) -> bool
@@ -746,6 +805,9 @@ override MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.ToStrin
 override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.ToString() -> string!
 override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.ToString() -> string!
@@ -753,6 +815,9 @@ override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.GetHashCode() 
 override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.ToString() -> string!
 override MMCA.Common.Shared.Auth.RoleValue.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.RoleValue.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.RoleValue.ToString() -> string!
@@ -897,6 +962,7 @@ static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetUserId(this System.S
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.IsViewAs(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
 static MMCA.Common.Shared.Auth.PasswordComplexity.Digit.get -> System.Text.RegularExpressions.Regex!
 static MMCA.Common.Shared.Auth.PasswordComplexity.Evaluate(string? password) -> bool
 static MMCA.Common.Shared.Auth.PasswordComplexity.Lowercase.get -> System.Text.RegularExpressions.Regex!
@@ -930,6 +996,8 @@ static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator !=(MM
 static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? left, MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? left, MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? left, MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.operator !=(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? left, MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.operator ==(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? left, MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.operator !=(MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest left, MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.operator ==(MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest left, MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest right) -> bool
 static MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.operator !=(MMCA.Common.Shared.Auth.Responses.AuthenticationResponse left, MMCA.Common.Shared.Auth.Responses.AuthenticationResponse right) -> bool
@@ -940,12 +1008,16 @@ static MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.operator 
 static MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.operator !=(MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? left, MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.operator ==(MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? left, MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator !=(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator !=(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? left, MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? left, MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator !=(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool
 static MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.operator !=(MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.operator ==(MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.operator !=(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.operator ==(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? right) -> bool
 static MMCA.Common.Shared.Auth.RoleValue.BuildLookup<TRole>(params TRole![]! roles) -> System.Collections.Frozen.FrozenDictionary<string!, TRole!>!
 static MMCA.Common.Shared.Auth.RoleValue.Validate(string! role, System.Collections.Generic.IReadOnlySet<string!>! knownRoles, string! source) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.AuthenticationRequest.operator !=(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
