@@ -130,9 +130,10 @@ public abstract class ApplicationDbContext(
     private bool _permissionGrantTableEnabled;
 
     /// <summary>
-    /// Whether the <c>ViewAsGrants</c> table belongs in THIS context's model (ADR-137): the refresh
-    /// sessions' two conditions, <c>ViewAs:Enabled</c> AND this context targeting the source named by
-    /// <c>ViewAs:DataSourceName</c>, so a host that never opts in sees no migration.
+    /// Whether the <c>ViewAsGrants</c> table belongs in THIS context's model (ADR-137):
+    /// <c>ViewAs:Enabled</c> AND <c>ViewAs:HostsGrantStore</c> AND this context targeting the source
+    /// named by <c>ViewAs:DataSourceName</c>, so a host that never opts in, and a service that does
+    /// not hold the grant store, sees no migration.
     /// </summary>
     private bool _viewAsGrantTableEnabled;
 
@@ -454,8 +455,8 @@ public abstract class ApplicationDbContext(
         // called, on that setting's data source only).
         ConfigurePermissionGrants(modelBuilder);
 
-        // Configure the view-as grant table (used when ViewAs:Enabled, on that setting's data source
-        // only).
+        // Configure the view-as grant table (used when ViewAs:Enabled and ViewAs:HostsGrantStore, on
+        // that setting's data source only).
         if (_viewAsGrantTableEnabled)
         {
             modelBuilder.ApplyViewAsGrantConfiguration();
@@ -944,14 +945,17 @@ public abstract class ApplicationDbContext(
 
     /// <summary>
     /// Whether this context instance carries the <c>ViewAsGrants</c> table: <c>ViewAs:Enabled</c> AND
-    /// this instance targets the source <c>ViewAs:DataSourceName</c> names. <c>GetService</c>, for the
-    /// reason <see cref="ResolvePermissionGrantGate"/> gives.
+    /// <c>ViewAs:HostsGrantStore</c> (a multi-service host's other services check a shared-cache marker
+    /// instead, so their models stay unchanged) AND this instance targets the source
+    /// <c>ViewAs:DataSourceName</c> names. <c>GetService</c>, for the reason
+    /// <see cref="ResolvePermissionGrantGate"/> gives.
     /// </summary>
     /// <returns>Whether the table belongs in this model.</returns>
     private bool ResolveViewAsGrantGate()
     {
         var settings = serviceProvider.GetService<IOptions<ViewAsSettings>>()?.Value;
         return settings?.Enabled == true
+            && settings.HostsGrantStore
             && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
     }
 

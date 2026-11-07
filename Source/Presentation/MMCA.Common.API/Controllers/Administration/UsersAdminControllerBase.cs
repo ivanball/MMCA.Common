@@ -124,7 +124,8 @@ public abstract class UsersAdminControllerBase<TUserDto>(
     /// account, a deleted account, and an account that itself holds <c>users:view-as</c>.
     /// </summary>
     /// <remarks>
-    /// 404 while <c>ViewAs:Enabled</c> is false, so a host that has not opted in serves nothing here.
+    /// 404 while <c>ViewAs:Enabled</c> is false, so a host that has not opted in serves nothing here,
+    /// and on a service that does not hold the grant store (<c>ViewAs:HostsGrantStore</c> false).
     /// On a web host with the same-origin API proxy the proxy moves the token into its overlay cookie;
     /// the admin's own session is untouched.
     /// </remarks>
@@ -152,7 +153,7 @@ public abstract class UsersAdminControllerBase<TUserDto>(
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(viewAs);
 
-        if (!settings.Value.Enabled)
+        if (!settings.Value.Enabled || !settings.Value.HostsGrantStore)
         {
             return NotFound();
         }

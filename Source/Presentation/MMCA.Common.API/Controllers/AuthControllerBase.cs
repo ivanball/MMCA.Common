@@ -242,9 +242,12 @@ public abstract class AuthControllerBase(
     /// token may make.
     /// </summary>
     /// <remarks>
-    /// 404 while <c>ViewAs:Enabled</c> is false, and 400 (<c>ViewAs.NotViewing</c>) for a caller whose
-    /// token is not a view-as token. On a web host with the same-origin API proxy the proxy also
-    /// deletes its overlay cookie, which returns the browser to the staff user's own session.
+    /// 404 while <c>ViewAs:Enabled</c> is false or this host does not hold the grant store
+    /// (<c>ViewAs:HostsGrantStore</c>), and 400 (<c>ViewAs.NotViewing</c>) for a caller whose token is
+    /// not a view-as token. On success it also writes the grant-ended marker to the shared cache, so
+    /// the other services of a multi-service host refuse the token on their next request too. On a web
+    /// host with the same-origin API proxy the proxy also deletes its overlay cookie, which returns the
+    /// browser to the staff user's own session.
     /// </remarks>
     /// <param name="settings">The view-as settings, resolved per action.</param>
     /// <param name="viewAs">The view-as service, resolved per action.</param>
@@ -266,7 +269,7 @@ public abstract class AuthControllerBase(
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(viewAs);
 
-        if (!settings.Value.Enabled)
+        if (!settings.Value.Enabled || !settings.Value.HostsGrantStore)
         {
             return NotFound();
         }
@@ -278,8 +281,16 @@ public abstract class AuthControllerBase(
         }
 
         var result = await viewAs.EndAsync(grantId, staffUserId, cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure)
+        {
+            return HandleFailure(result.Errors);
+        }
 
-        return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
+        // The services of a multi-service host that do not hold the grant store read this marker
+        // from the shared cache instead of the grant row.
+        await ViewAsEndedMarker.WriteAsync(HttpContext?.RequestServices, User, grantId, cancellationToken).ConfigureAwait(false);
+
+        return NoContent();
     }
 
     /// <summary>

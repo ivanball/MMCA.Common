@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Middleware;
@@ -18,7 +19,10 @@ namespace MMCA.Common.API.Middleware;
 /// refresh, password and preference changes, device registration);</item>
 /// <item>checks that the token's grant is still live (exists, names this staff user and this
 /// account, not ended, not expired) and refuses it with 401 otherwise, so ending a view takes effect
-/// on the next request rather than at token expiry.</item>
+/// on the next request rather than at token expiry. On a host with <c>ViewAs:HostsGrantStore</c>
+/// (the default) that is a read of the grant row; on a service of a multi-service host that does not
+/// hold the store, it is the token's own expiry plus the shared cache's grant-ended marker
+/// (<see cref="ViewAsEndedMarker"/>), which the store host's end endpoint writes.</item>
 /// </list>
 /// A request without <c>act_sub</c> passes untouched and pays one claim lookup. Always in the
 /// pipeline: while <c>ViewAs:Enabled</c> is false every view-as request is refused 401, so a token
@@ -57,7 +61,8 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
 
         // View-as switched off (or never configured on this host): a still-valid view-as token minted
         // while it was on is honored for nothing, so no write path can see it.
-        if (context.RequestServices?.GetService<IOptions<ViewAsSettings>>()?.Value.Enabled != true)
+        var settings = context.RequestServices?.GetService<IOptions<ViewAsSettings>>()?.Value;
+        if (settings is null || !settings.Enabled)
         {
             LogViewAsDisabled(logger);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -71,14 +76,29 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
             return;
         }
 
-        var viewAs = context.RequestServices?.GetService<IViewAsService>();
-        if (viewAs is null || !await IsGrantLiveAsync(user, viewAs, logger, context.RequestAborted).ConfigureAwait(false))
+        if (!await IsGrantLiveOnThisHostAsync(context, settings.HostsGrantStore, logger).ConfigureAwait(false))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
         }
 
         await next(context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The grant check: a read of the grant row on the host that holds the store, the token's expiry and
+    /// the shared-cache marker on a service that does not.
+    /// </summary>
+    private static async Task<bool> IsGrantLiveOnThisHostAsync(HttpContext context, bool hostsGrantStore, ILogger logger)
+    {
+        if (!hostsGrantStore)
+        {
+            return await IsGrantLiveWithoutTheStoreAsync(context, context.User, logger).ConfigureAwait(false);
+        }
+
+        var viewAs = context.RequestServices.GetService<IViewAsService>();
+        return viewAs is not null
+            && await IsGrantLiveAsync(context.User, viewAs, logger, context.RequestAborted).ConfigureAwait(false);
     }
 
     private static bool IsSafeMethod(string method) =>
@@ -112,6 +132,85 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
             return false;
         }
     }
+
+    /// <summary>
+    /// The check on a service that does not hold the grant store (a multi-service host's non-Identity
+    /// services): the token must carry its grant, staff and subject claims, must not be past its own
+    /// expiry (the grant's expiry, which the store host would check), and the shared cache must hold no
+    /// grant-ended marker for it (<see cref="ViewAsEndedMarker"/>).
+    /// </summary>
+    /// <remarks>
+    /// <b>Fails CLOSED when the cache cannot be read</b> (an exception, or no cache registered), unlike
+    /// <see cref="SoftDeletedUserMiddleware"/>, which fails open on the same outage. Here the marker is
+    /// the ONLY evidence that a view was ended, so an unreadable cache would quietly turn every ended
+    /// view back on for this service; and the exposure is the opposite way round: refusing costs one
+    /// staff user's support session, while failing open there would cost every user's every request.
+    /// The marker is read from the shared store, never a replica's local copy, so an End handled by
+    /// the store host is seen here on the next request.
+    /// </remarks>
+    private static async Task<bool> IsGrantLiveWithoutTheStoreAsync(HttpContext context, ClaimsPrincipal user, ILogger logger)
+    {
+        if (!TryReadTokenWithoutTheStore(user, out var grantId, out var expiresAt))
+        {
+            LogMalformedToken(logger);
+            return false;
+        }
+
+        var now = (context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow();
+        if (expiresAt <= now)
+        {
+            LogExpiredToken(logger, grantId);
+            return false;
+        }
+
+        var cache = context.RequestServices.GetService<ICacheService>();
+        if (cache is null)
+        {
+            LogNoSharedCache(logger, grantId);
+            return false;
+        }
+
+        try
+        {
+            var ended = await cache
+                .GetFromSharedStoreAsync<bool?>(ViewAsEndedMarker.KeyFor(grantId), context.RequestAborted)
+                .ConfigureAwait(false);
+            if (ended is true)
+            {
+                LogGrantEnded(logger, grantId);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogGrantLookupFailed(logger, grantId, ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Reads what a service without the grant store can check: the grant id and the token's expiry,
+    /// with the staff and subject claims required to be present and well formed as on the store host.
+    /// </summary>
+    private static bool TryReadTokenWithoutTheStore(ClaimsPrincipal user, out Guid grantId, out DateTimeOffset expiresAt)
+    {
+        expiresAt = default;
+        return Guid.TryParse(user.FindFirst(AuthClaimTypes.ViewAsGrant)?.Value, out grantId)
+            && UserIdentifierType.TryParse(user.FindFirst(AuthClaimTypes.ViewAsActor)?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
+            && user.GetUserId() is not null
+            && ViewAsEndedMarker.TryGetTokenExpiry(user, out expiresAt);
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "View-as request refused: the token of grant {GrantId} has expired")]
+    private static partial void LogExpiredToken(ILogger logger, Guid grantId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "View-as grant {GrantId} could not be checked: this host holds no grant store and registers no ICacheService; the request is refused (fail closed)")]
+    private static partial void LogNoSharedCache(ILogger logger, Guid grantId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "View-as request refused: grant {GrantId} was ended")]
+    private static partial void LogGrantEnded(ILogger logger, Guid grantId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "View-as request refused: {Method} is not allowed under a read-only view-as token")]
     private static partial void LogWriteRefused(ILogger logger, string method);
