@@ -2,3 +2,5 @@
 MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.get -> int
 MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.init -> void
 const MMCA.Common.API.Startup.WebApplicationBuilderExtensions.RateLimitPolicyMcp = "mcp" -> string!
+const MMCA.Common.API.FeatureManagement.CurrentUserTargetingContextAccessor.TenantGroupPrefix = "tenant:" -> string!
+static MMCA.Common.API.FeatureManagement.CurrentUserTargetingContextAccessor.TenantGroup(string! tenantId) -> string!

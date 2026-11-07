@@ -1,8 +1,11 @@
 ﻿using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.FeatureManagement;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Auth;
+using Moq;
 
 namespace MMCA.Common.API.Tests.FeatureManagement;
 
@@ -87,9 +90,67 @@ public sealed class CurrentUserTargetingContextAccessorTests
         context.Groups.Should().BeEmpty();
     }
 
-    private static CurrentUserTargetingContextAccessor CreateAccessor(ClaimsPrincipal user)
+    // ADR-073: a resolved tenant joins the caller's own groups, so an audience can name one tenant
+    // without losing the role groups an existing rollout already targets.
+    [Fact]
+    public async Task GetContextAsync_WithResolvedTenant_AddsTheTenantGroupBesideTheRoles()
     {
-        var httpContext = new DefaultHttpContext { User = user };
+        var sut = CreateAccessor(
+            new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(AuthClaimTypes.Subject, "42"), new Claim(ClaimTypes.Role, "Manager")],
+                authenticationType: "TestAuth")),
+            tenantId: "acme");
+
+        var context = await sut.GetContextAsync();
+
+        context.UserId.Should().Be("42");
+        context.Groups.Should().BeEquivalentTo("Manager", "tenant:acme");
+    }
+
+    // A tenant resolved from a header on an anonymous call still targets by tenant.
+    [Fact]
+    public async Task GetContextAsync_ForAnonymousRequestWithResolvedTenant_CarriesOnlyTheTenantGroup()
+    {
+        var sut = CreateAccessor(new ClaimsPrincipal(new ClaimsIdentity()), tenantId: "acme");
+
+        var context = await sut.GetContextAsync();
+
+        context.UserId.Should().BeNull();
+        context.Groups.Should().BeEquivalentTo("tenant:acme");
+    }
+
+    // A host without tenancy (no ITenantContext in the request services, or none resolved) gets
+    // exactly the groups it had before tenant targeting existed.
+    [Fact]
+    public async Task GetContextAsync_WithUnresolvedTenant_AddsNoTenantGroup()
+    {
+        var sut = CreateAccessor(
+            new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(AuthClaimTypes.Subject, "42"), new Claim(ClaimTypes.Role, "Manager")],
+                authenticationType: "TestAuth")),
+            tenantId: null);
+
+        var context = await sut.GetContextAsync();
+
+        context.Groups.Should().BeEquivalentTo("Manager");
+    }
+
+    [Fact]
+    public void TenantGroup_PrefixesTheTenantId() =>
+        CurrentUserTargetingContextAccessor.TenantGroup("acme").Should().Be("tenant:acme");
+
+    private static CurrentUserTargetingContextAccessor CreateAccessor(ClaimsPrincipal user, string? tenantId = null)
+    {
+        var services = new ServiceCollection();
+        if (tenantId is not null)
+        {
+            var tenantContext = new Mock<ITenantContext>();
+            tenantContext.SetupGet(x => x.TenantId).Returns(tenantId);
+            tenantContext.SetupGet(x => x.IsResolved).Returns(true);
+            services.AddSingleton(tenantContext.Object);
+        }
+
+        var httpContext = new DefaultHttpContext { User = user, RequestServices = services.BuildServiceProvider() };
         return new CurrentUserTargetingContextAccessor(new HttpContextAccessor { HttpContext = httpContext });
     }
 }
