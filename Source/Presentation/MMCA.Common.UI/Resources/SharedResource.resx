@@ -652,6 +652,51 @@
   <data name="Auth.Sessions.TableLabel" xml:space="preserve">
     <value>Signed-in devices</value>
   </data>
+  <data name="Auth.SignIns.Title" xml:space="preserve">
+    <value>Sign-in history</value>
+  </data>
+  <data name="Auth.SignIns.Description" xml:space="preserve">
+    <value>Recent sign-ins to your account, newest first, and how each one ended. If you do not recognize one, change your password.</value>
+  </data>
+  <data name="Auth.SignIns.TableLabel" xml:space="preserve">
+    <value>Sign-in history</value>
+  </data>
+  <data name="Auth.SignIns.Loading" xml:space="preserve">
+    <value>Loading sign-in history</value>
+  </data>
+  <data name="Auth.SignIns.Empty" xml:space="preserve">
+    <value>No sign-ins recorded.</value>
+  </data>
+  <data name="Auth.SignIns.Current" xml:space="preserve">
+    <value>This sign-in</value>
+  </data>
+  <data name="Auth.SignIns.Column.LastActive" xml:space="preserve">
+    <value>Last active</value>
+  </data>
+  <data name="Auth.SignIns.Column.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Auth.SignIns.Status.Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Auth.SignIns.Status.SignedOut" xml:space="preserve">
+    <value>Signed out</value>
+  </data>
+  <data name="Auth.SignIns.Status.ReuseDetected" xml:space="preserve">
+    <value>Ended: suspicious token reuse</value>
+  </data>
+  <data name="Auth.SignIns.Status.SessionCapExceeded" xml:space="preserve">
+    <value>Ended: too many devices</value>
+  </data>
+  <data name="Auth.SignIns.Status.AccountDeleted" xml:space="preserve">
+    <value>Ended: account deleted</value>
+  </data>
+  <data name="Auth.SignIns.Status.Expired" xml:space="preserve">
+    <value>Expired</value>
+  </data>
+  <data name="Auth.SignIns.Status.Ended" xml:space="preserve">
+    <value>Ended</value>
+  </data>
   <data name="Notif.List.TableLabel" xml:space="preserve">
     <value>Notification history</value>
   </data>

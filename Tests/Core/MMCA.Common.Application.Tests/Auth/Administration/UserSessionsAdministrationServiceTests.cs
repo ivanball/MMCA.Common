@@ -149,4 +149,31 @@ public sealed class UserSessionsAdministrationServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.Should().BeEmpty();
     }
+
+    // Spec A assertion 4 (admin service half): the history is the routed user's alone, ended
+    // sign-ins included, and no row is ever the administrator's own.
+    [Fact]
+    public async Task GetSignInsAsync_ReturnsOnlyTheRoutedUsersSignIns_EndedOnesIncluded_NoneMarkedCurrent()
+    {
+        ArrangeMixedSessions();
+
+        var result = await CreateSut().GetSignInsAsync(UserA, Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Should().HaveCount(4, "user A's two live, one revoked and one expired sign-ins; never user B's");
+        result.Value!.Should().NotContain(s => s.IpAddress == "192.0.2.3");
+        result.Value!.Should().OnlyContain(s => !s.IsCurrent);
+        result.Value!.Select(s => s.SignInId).Should().Contain([_newerLive.Id, _olderLive.Id]);
+    }
+
+    [Fact]
+    public async Task GetSignInsAsync_ForAUserWithNoSessions_SucceedsWithAnEmptyList()
+    {
+        ArrangeMixedSessions();
+
+        var result = await CreateSut().GetSignInsAsync(UserWithNoSessions, Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Should().BeEmpty();
+    }
 }

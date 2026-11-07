@@ -37,6 +37,8 @@ public sealed class SessionsAppDeviceLabelTests : BunitTestBase
                 new(Guid.NewGuid(), CreatedAt, ExpiresAt, "203.0.113.7", ChromeOnWindows, IsCurrent: true),
                 new(Guid.NewGuid(), CreatedAt, ExpiresAt, "198.51.100.4", AtlDevConOnAndroid, IsCurrent: false),
             ]));
+        _auth.Setup(a => a.GetSignInsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<SignInSummaryResponse>>([]));
     }
 
     [Fact]

@@ -99,6 +99,23 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the user's sign-in history: one row per sign-in however often its refresh token rotated,
+    /// ended sign-ins included with how they ended, newest first, capped at the newest 50, over what
+    /// the session store retains (<c>RefreshSessions:RetentionDays</c>, 30 by default).
+    /// </summary>
+    /// <param name="userId">The user whose sign-ins to list.</param>
+    /// <param name="currentSessionId">
+    /// The session the calling access token was minted for (its <c>sid</c> claim), used only to set
+    /// <see cref="SignInSummaryResponse.IsCurrent"/>; <see langword="null"/> marks no row.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The sign-ins, newest first.</returns>
+    Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Signs one named device out: revokes the user's session with this identifier.
     /// </summary>
     /// <remarks>

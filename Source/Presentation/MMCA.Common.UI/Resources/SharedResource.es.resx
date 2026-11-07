@@ -652,6 +652,51 @@
   <data name="Auth.Sessions.TableLabel" xml:space="preserve">
     <value>Dispositivos con la sesión iniciada</value>
   </data>
+  <data name="Auth.SignIns.Title" xml:space="preserve">
+    <value>Historial de inicios de sesión</value>
+  </data>
+  <data name="Auth.SignIns.Description" xml:space="preserve">
+    <value>Inicios de sesión recientes en tu cuenta, del más reciente al más antiguo, y cómo terminó cada uno. Si no reconoces alguno, cambia tu contraseña.</value>
+  </data>
+  <data name="Auth.SignIns.TableLabel" xml:space="preserve">
+    <value>Historial de inicios de sesión</value>
+  </data>
+  <data name="Auth.SignIns.Loading" xml:space="preserve">
+    <value>Cargando el historial de inicios de sesión</value>
+  </data>
+  <data name="Auth.SignIns.Empty" xml:space="preserve">
+    <value>No hay inicios de sesión registrados.</value>
+  </data>
+  <data name="Auth.SignIns.Current" xml:space="preserve">
+    <value>Este inicio de sesión</value>
+  </data>
+  <data name="Auth.SignIns.Column.LastActive" xml:space="preserve">
+    <value>Última actividad</value>
+  </data>
+  <data name="Auth.SignIns.Column.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Auth.SignIns.Status.Active" xml:space="preserve">
+    <value>Activa</value>
+  </data>
+  <data name="Auth.SignIns.Status.SignedOut" xml:space="preserve">
+    <value>Sesión cerrada</value>
+  </data>
+  <data name="Auth.SignIns.Status.ReuseDetected" xml:space="preserve">
+    <value>Finalizada: reutilización sospechosa del token</value>
+  </data>
+  <data name="Auth.SignIns.Status.SessionCapExceeded" xml:space="preserve">
+    <value>Finalizada: demasiados dispositivos</value>
+  </data>
+  <data name="Auth.SignIns.Status.AccountDeleted" xml:space="preserve">
+    <value>Finalizada: cuenta eliminada</value>
+  </data>
+  <data name="Auth.SignIns.Status.Expired" xml:space="preserve">
+    <value>Caducada</value>
+  </data>
+  <data name="Auth.SignIns.Status.Ended" xml:space="preserve">
+    <value>Finalizada</value>
+  </data>
   <data name="Notif.List.TableLabel" xml:space="preserve">
     <value>Historial de notificaciones</value>
   </data>

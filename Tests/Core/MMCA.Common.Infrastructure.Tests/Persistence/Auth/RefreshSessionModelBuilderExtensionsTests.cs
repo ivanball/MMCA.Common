@@ -49,7 +49,8 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
             nameof(RefreshSession.ReplacedByTokenHash),
             nameof(RefreshSession.ReasonRevoked),
             nameof(RefreshSession.IpAddress),
-            nameof(RefreshSession.UserAgent));
+            nameof(RefreshSession.UserAgent),
+            nameof(RefreshSession.SignInId));
     }
 
     [Fact]
@@ -86,10 +87,54 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
 
         var index = context.Model.FindEntityType(typeof(RefreshSession))!
             .GetIndexes()
-            .Single(i => i.Properties.Count == 2);
+            .Single(i => i.GetDatabaseName() == RefreshSessionModelBuilderExtensions.UserIndexName);
 
         index.Properties.Select(p => p.Name).Should().Equal(nameof(RefreshSession.UserId), nameof(RefreshSession.RevokedAt));
-        index.GetDatabaseName().Should().Be(RefreshSessionModelBuilderExtensions.UserIndexName);
+    }
+
+    // T13 sign-in history: the nullable SignInId column and its (UserId, SignInId) index, asserted on
+    // every relational engine the configuration serves. Cosmos DB never maps the table (its context
+    // overrides OnModelCreating, see ApplicationDbContext.ConfigureRefreshSessions).
+    [Fact]
+    public void ApplyRefreshSessionConfiguration_MapsSignInIdAsANullableColumn_OnSqlServer() =>
+        AssertSignInMapping(new RefreshSessionOnlyContext(), "uniqueidentifier");
+
+    [Fact]
+    public void ApplyRefreshSessionConfiguration_MapsSignInIdAsANullableColumn_OnPostgreSql() =>
+        AssertSignInMapping(new PostgreSqlContext(), "uuid");
+
+    [Fact]
+    public void ApplyRefreshSessionConfiguration_MapsSignInIdAsANullableColumn_OnSqlite() =>
+        AssertSignInMapping(new SqliteContext(), "TEXT");
+
+    [Fact]
+    public void ApplyRefreshSessionConfiguration_SignInIndexDeclaresNoEngineSpecificFilterOrInclude()
+    {
+        using var context = new PostgreSqlContext();
+
+        var index = context.Model.FindEntityType(typeof(RefreshSession))!
+            .GetIndexes()
+            .Single(i => i.GetDatabaseName() == RefreshSessionModelBuilderExtensions.SignInIndexName);
+
+        index.GetFilter().Should().BeNull();
+        index.IsUnique.Should().BeFalse("every row of one sign-in shares its SignInId");
+        index.GetAnnotations().Should().NotContain(a => a.Name.Contains("Include", StringComparison.Ordinal));
+    }
+
+    private static void AssertSignInMapping(DbContext context, string expectedStoreType)
+    {
+        using (context)
+        {
+            var entity = context.Model.FindEntityType(typeof(RefreshSession))!;
+            var signInId = entity.FindProperty(nameof(RefreshSession.SignInId))!;
+
+            signInId.IsNullable.Should().BeTrue("rows written before the column existed hold null; no data rewrite");
+            signInId.GetColumnType().Should().Be(expectedStoreType);
+
+            var index = entity.GetIndexes()
+                .Single(i => i.GetDatabaseName() == RefreshSessionModelBuilderExtensions.SignInIndexName);
+            index.Properties.Select(p => p.Name).Should().Equal(nameof(RefreshSession.UserId), nameof(RefreshSession.SignInId));
+        }
     }
 
     [Fact]
@@ -122,4 +167,23 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
     private sealed class RefreshSessionOnlyContext() : SessionOnlyContextBase("dbo");
 
     private sealed class CustomSchemaContext() : SessionOnlyContextBase(CustomSchema);
+
+    private sealed class PostgreSqlContext : DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+            optionsBuilder.UseNpgsql("Host=localhost;Database=model-only;Username=app");
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.ApplyRefreshSessionConfiguration();
+    }
+
+    private sealed class SqliteContext : DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+            optionsBuilder.UseSqlite("Data Source=:memory:");
+
+        // SQLite has no schemas; the engine context passes none.
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.ApplyRefreshSessionConfiguration(schema: null);
+    }
 }

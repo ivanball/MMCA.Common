@@ -32,6 +32,31 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Sign-in history adds one column to `RefreshSessions`, so the database that holds it needs a
+migration.** `ApplyRefreshSessionConfiguration` (and so `ApplicationDbContext` with
+`RefreshSessions:Enabled`) maps a nullable `SignInId` (`uniqueidentifier NULL` on SQL Server, `uuid`
+on PostgreSQL, `TEXT` on SQLite; Cosmos DB never maps the table) and a non-unique index
+`IX_RefreshSessions_UserId_SignInId` over `(UserId, SignInId)`.
+
+The fix:
+
+1. **Generate one migration for the Identity database** (the source `RefreshSessions:DataSourceName`
+   names), for example `dotnet ef migrations add AddRefreshSessionSignInId -- --datasource <Name>`.
+   It holds exactly one `AddColumn<Guid>` (`SignInId`, nullable) and one `CreateIndex`
+   (`IX_RefreshSessions_UserId_SignInId`). Anything else in the diff is unrelated model drift:
+   investigate it before committing.
+2. **Deploy it as usual.** The change is expand-only, with no data rewrite: rows written before it
+   hold null and each one that was not rotated away shows as its own sign-in until the retention
+   sweep (`RefreshSessions:RetentionDays`) removes it, and a successor minted from such a row opens a
+   new sign-in. An older instance in a rolling deploy ignores the column.
+
+A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionIssuer`,
+`IAuthenticationService` or `IUserSessionsAdministrationService` (a test fake) implements the new
+`GetSignInsAsync` / `ListSignInsAsync` member; a Moq mock of `IAuthUIService` behind the signed-in
+devices page sets up `GetSignInsAsync`, which that page now calls.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The

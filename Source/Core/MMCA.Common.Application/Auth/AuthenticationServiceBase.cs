@@ -448,6 +448,18 @@ public abstract class AuthenticationServiceBase<TUser>(
     }
 
     /// <inheritdoc />
+    /// <remarks>No user lookup is involved, so a history is one query (see <see cref="IAuthSessionIssuer.ListSignInsAsync"/>).</remarks>
+    public async Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var signIns = await sessionIssuer.ListSignInsAsync(userId, currentSessionId, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(signIns);
+    }
+
+    /// <inheritdoc />
     /// <remarks>
     /// Ownership is checked by the issuer's store query, so another account's session id and an id
     /// that never existed produce the same <c>NotFound</c> (see

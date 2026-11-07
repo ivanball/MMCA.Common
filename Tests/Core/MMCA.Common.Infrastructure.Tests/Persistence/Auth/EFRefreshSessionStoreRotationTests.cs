@@ -90,6 +90,24 @@ public sealed class EFRefreshSessionStoreRotationTests
         rotated.RevokedAt.Should().Be(Now);
     }
 
+    // T13: the successor's SignInId is an ordinary column, persisted by the insert the claim stages,
+    // so a rotation chain read back from the database still groups into one sign-in.
+    [Fact]
+    public async Task TryRotateAsync_PersistsTheSuccessorsSignIn_SoTheChainReadsBackAsOneSignIn()
+    {
+        await using var harness = await RotationHarness.CreateAsync();
+        RefreshSession seeded = await harness.SeedAsync("presented");
+        Participant writer = harness.NewParticipant();
+
+        RefreshSession presented = (await writer.Store.FindByTokenHashAsync(seeded.TokenHash, CancellationToken.None))!;
+        RefreshSession successor = presented.CreateSuccessor("successor", Now.AddMinutes(15), Now.AddDays(7)).Value!;
+
+        (await writer.Store.TryRotateAsync(presented, successor, Now.AddMinutes(15), CancellationToken.None)).Should().BeTrue();
+
+        RefreshSession[] rows = await harness.ReadAllAsync();
+        rows.Should().HaveCount(2).And.OnlyContain(r => r.SignInId == seeded.Id);
+    }
+
     private static RefreshSession NewSession(string token) =>
         RefreshSession.Create(OwnerId, token, Now, Now.AddDays(7)).Value!;
 

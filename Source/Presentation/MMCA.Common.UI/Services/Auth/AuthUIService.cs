@@ -281,6 +281,20 @@ public sealed class AuthUIService(
             cancellationToken);
 
     /// <inheritdoc />
+    public Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.GetAsync(
+                    new Uri("auth/my-sign-ins", UriKind.Relative), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<IReadOnlyList<SignInSummaryResponse>>(
+                    response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
     public Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         HttpResultExecutor.ExecuteAsync(
             async () =>

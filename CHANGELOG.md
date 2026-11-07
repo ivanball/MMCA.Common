@@ -6,6 +6,13 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Every host that maps `RefreshSessions` needs one migration** (a nullable `SignInId` column and one index); see [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **Sign-in history** (MMCA.Common.Domain, Application, Infrastructure, Shared, API, UI). `RefreshSession.SignInId` groups a rotation chain into one sign-in: `RefreshSession.Create` opens a sign-in (its own `Id`), and `CreateSuccessor` carries it to the successor on rotation. `GET auth/my-sign-ins` (`AuthControllerBase.GetMySignInsAsync`) returns the caller's history and `GET {userId}/sign-ins` on `UsersAdminControllerBase` (`users:manage`) an account's, both as `SignInSummaryResponse` (start, last activity, device, `EndedAt`, `EndReason` from `SignInEndReasons`, `IsCurrent`, and a `Kind` extension point), newest first, capped at 50, over what `RefreshSessions:RetentionDays` keeps. New members: `IAuthSessionIssuer.ListSignInsAsync`, `IAuthenticationService.GetSignInsAsync`, `IUserSessionsAdministrationService.GetSignInsAsync`, `IAuthUIService.GetSignInsAsync`, `IUserAdminUIService<TUserDto>.GetSignInsAsync`, and the `SignInHistoryTable` component, shown on the signed-in devices page (`/profile/sessions`).
+- **Security log events** (MMCA.Common.Application, MMCA.Common.Infrastructure). A Warning when refresh-token reuse revokes an account's live sessions (user id and revoked count), and a Warning when a login lockout first trips (a 12-character prefix of the key's SHA-256 and the lockout seconds, logged once per lockout, never the email). Neither logs an IP address or user agent.
+
 ## [1.277.0] - 2026-11-04
 
 Enterprise-scale hardening: prefix cache invalidation without a Redis keyspace scan, a shorter permission-grant refresh, and JWKS signing-key rotation without a 401 wave.

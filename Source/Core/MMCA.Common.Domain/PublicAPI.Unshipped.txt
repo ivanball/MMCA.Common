@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Domain.Auth.RefreshSession.CreateSuccessor(string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
+MMCA.Common.Domain.Auth.RefreshSession.SignInId.get -> System.Guid?

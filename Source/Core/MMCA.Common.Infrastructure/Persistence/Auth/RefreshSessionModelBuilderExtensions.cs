@@ -24,6 +24,9 @@ public static class RefreshSessionModelBuilderExtensions
     /// <summary>The per-user index backing the family revocation and the session cap.</summary>
     public const string UserIndexName = "IX_RefreshSessions_UserId";
 
+    /// <summary>The per-user, per-sign-in index backing the sign-in history.</summary>
+    public const string SignInIndexName = "IX_RefreshSessions_UserId_SignInId";
+
     /// <summary>
     /// Configures <see cref="RefreshSession"/> on the given model. Call it from the Identity
     /// database's context (after <c>base.OnModelCreating(modelBuilder)</c>).
@@ -69,6 +72,14 @@ public static class RefreshSessionModelBuilderExtensions
             // detection and on sign-out-everywhere. Without it each of those scans the table.
             entity.HasIndex(e => new { e.UserId, e.RevokedAt })
                   .HasDatabaseName(UserIndexName);
+
+            // Sign-in history path: a user's rows grouped by the sign-in they belong to. SignInId is a
+            // nullable Guid left to each engine's own Guid mapping (uniqueidentifier, uuid, TEXT), and
+            // the index declares no filter or INCLUDE list, so one configuration serves every
+            // relational engine. Rows written before the column existed hold null.
+            entity.Property(e => e.SignInId);
+            entity.HasIndex(e => new { e.UserId, e.SignInId })
+                  .HasDatabaseName(SignInIndexName);
         });
 
         return modelBuilder;

@@ -107,3 +107,20 @@ else
         @L["Auth.Sessions.RevokeAll.Hint"]
     </MudText>
 }
+
+@* Sign-in history: every sign-in, ended ones included, below the live devices list. Loaded on its
+   own, so a failed history read never hides the device list (or the other way round). *@
+<MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-8 mb-2">@L["Auth.SignIns.Title"]</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@L["Auth.SignIns.Description"]</MudText>
+@if (_signInsResult is null)
+{
+    <PageLoadingState Label="@L["Auth.SignIns.Loading"]" />
+}
+else if (_signInsResult.IsFailure)
+{
+    <ErrorSummary Result="_signInsResult" Localizer="L" />
+}
+else
+{
+    <SignInHistoryTable SignIns="_signIns" />
+}
