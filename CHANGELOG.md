@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.279.0] - 2026-11-07
+
+View-as works in multi-service hosts (ViewAs:HostsGrantStore, a shared-cache ended marker).
+
 ### Added
 
 - **`ViewAs:HostsGrantStore`** (`ViewAsSettings.HostsGrantStore`, MMCA.Common.Application; default `true`). Whether this host holds the view-as grant store. Only a host with `ViewAs:Enabled` AND `ViewAs:HostsGrantStore` maps the `ViewAsGrants` table, serves the grant and end endpoints, and checks a view-as request against the grant row; the EF grant store stays registered on every host but is inert without both. A single host is unchanged.
