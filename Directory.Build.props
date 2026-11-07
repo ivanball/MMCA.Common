@@ -60,9 +60,9 @@
     <PackageProjectUrl>https://ivanball.github.io/platform.html</PackageProjectUrl>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>modular-monolith;clean-architecture;ddd;cqrs;microservices;dotnet;aspnetcore;aspire;efcore;blazor;outbox;result-pattern</PackageTags>
-    <!-- The release notes live in one place (the GitHub releases feed, generated from the tag) rather
-         than being restated per package: every package ships in lockstep off a single tag (count in
-         FACTS.md). -->
+    <!-- The release notes live in one place (the GitHub releases feed) rather than being restated per
+         package: every package ships in lockstep off a single tag (count in FACTS.md), and release.yml
+         creates one GitHub release per tag, its notes taken from that version's CHANGELOG.md section. -->
     <PackageReleaseNotes>https://github.com/ivanball/MMCA.Common/releases</PackageReleaseNotes>
     <!-- GitHub Packages has no symbol server, so a standalone .snupkg cannot be consumed.
          Embed the PDB into the shipped DLL instead (with repo + untracked-source info), so the
