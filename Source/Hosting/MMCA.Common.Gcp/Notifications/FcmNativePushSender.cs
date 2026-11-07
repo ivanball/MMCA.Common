@@ -1,7 +1,6 @@
 using FirebaseAdmin;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 
 namespace MMCA.Common.Gcp.Notifications;
@@ -10,24 +9,21 @@ namespace MMCA.Common.Gcp.Notifications;
 /// Firebase Cloud Messaging implementation of <see cref="INativePushSender"/> (ADR-044). A
 /// user-targeted send resolves the users' registration tokens through the Firestore registry and
 /// sends one message per distinct token with <c>SendEachAsync</c>, in chunks of FirebaseAdmin's
-/// per-call maximum; a broadcast is one message to the topic every token subscribes to. Both carry
-/// the <see cref="FcmPushMessage"/> payload, so an Android and an iOS device each receive their own
-/// platform's block.
+/// per-call maximum. Each message carries the <see cref="FcmPushMessage"/> payload, so an Android
+/// and an iOS device each receive their own platform's block.
 /// <para>
 /// Best-effort, like the channel itself: a failing token, chunk or user lookup is logged and the
 /// rest still receive. A token FCM reports dead (unregistered, or rejected as not a registration
 /// token) is pruned from the registry, so a dead device stops costing a send every time; the
-/// document is deleted only while it still holds that token. A broadcast failure propagates.
+/// document is deleted only while it still holds that token.
 /// </para>
 /// </summary>
 /// <param name="registry">The installation registry.</param>
 /// <param name="messaging">The FCM client.</param>
-/// <param name="options">The push settings.</param>
 /// <param name="logger">The logger.</param>
 internal sealed partial class FcmNativePushSender(
     IFcmInstallationRegistry registry,
     IFcmMessagingClient messaging,
-    IOptions<FcmNativePushSettings> options,
     ILogger<FcmNativePushSender> logger) : INativePushSender
 {
     /// <inheritdoc />
@@ -89,14 +85,6 @@ internal sealed partial class FcmNativePushSender(
         LogNativePushSent(logger, title, delivered);
     }
 
-    /// <inheritdoc />
-    public async Task BroadcastAsync(string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
-    {
-        await messaging.SendAsync(FcmPushMessage.ForTopic(options.Value.BroadcastTopic!, title, body, metadata), cancellationToken).ConfigureAwait(false);
-
-        LogNativePushBroadcast(logger, title);
-    }
-
     private async Task PruneAsync(IGrouping<string, FcmInstallation> installations, CancellationToken cancellationToken)
     {
         foreach (var installation in installations)
@@ -115,9 +103,6 @@ internal sealed partial class FcmNativePushSender(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Native push \"{Title}\" sent to {TokenCount} FCM registration tokens")]
     private static partial void LogNativePushSent(ILogger logger, string title, int tokenCount);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Native push \"{Title}\" sent to the FCM broadcast topic")]
-    private static partial void LogNativePushBroadcast(ILogger logger, string title);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Looking up the push installations of {UserCount} users failed; those users are skipped")]
     private static partial void LogInstallationLookupFailed(ILogger logger, Exception exception, int userCount);

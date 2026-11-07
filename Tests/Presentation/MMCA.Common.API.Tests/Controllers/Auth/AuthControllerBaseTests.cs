@@ -276,6 +276,55 @@ public sealed class AuthControllerBaseTests
             Times.Once);
     }
 
+    // ── GetMySignInsAsync ──
+    [Fact]
+    public async Task GetMySignInsAsync_WhenUserIdNull_ReturnsUnauthorized()
+    {
+        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
+        TestAuthController sut = CreateController();
+
+        ActionResult<IReadOnlyList<SignInSummaryResponse>> result =
+            await sut.GetMySignInsAsync(CancellationToken.None);
+
+        result.Result.Should().BeOfType<UnauthorizedResult>();
+        _authServiceMock.VerifyNoOtherCalls();
+    }
+
+    // Spec A assertion 4 (endpoint half): the endpoint takes no user id from the request, so the
+    // only history it can read is the caller's own.
+    [Fact]
+    public async Task GetMySignInsAsync_AsksOnlyForTheCallersOwnHistory_AndPassesTheSidThrough()
+    {
+        const int userId = 42;
+        var sessionId = Guid.NewGuid();
+        IReadOnlyList<SignInSummaryResponse> signIns =
+            [new SignInSummaryResponse(sessionId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, "203.0.113.7", "Firefox", null, null, true)];
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _authServiceMock
+            .Setup(x => x.GetSignInsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(signIns));
+        TestAuthController sut = CreateController();
+        sut.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D"))],
+            authenticationType: "Test"));
+
+        ActionResult<IReadOnlyList<SignInSummaryResponse>> result =
+            await sut.GetMySignInsAsync(CancellationToken.None);
+
+        result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(signIns);
+        _authServiceMock.Verify(x => x.GetSignInsAsync(userId, sessionId, It.IsAny<CancellationToken>()), Times.Once);
+        _authServiceMock.Verify(
+            x => x.GetSignInsAsync(It.Is<UserIdentifierType>(id => id != userId), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "another user's sign-ins are never read from my-sign-ins");
+    }
+
+    [Fact]
+    public void GetMySignInsAsync_TakesNoUserIdFromTheRequest() =>
+        typeof(AuthControllerBase).GetMethod(nameof(AuthControllerBase.GetMySignInsAsync))!
+            .GetParameters()
+            .Should().OnlyContain(p => p.ParameterType == typeof(CancellationToken));
+
     // ── RevokeSessionAsync ──
     [Fact]
     public async Task RevokeSessionAsync_WhenUserIdNull_ReturnsUnauthorized()
@@ -326,6 +375,7 @@ public sealed class AuthControllerBaseTests
     // ── Route + authorization contract ──
     [Theory]
     [InlineData(nameof(AuthControllerBase.GetMySessionsAsync), "my-sessions")]
+    [InlineData(nameof(AuthControllerBase.GetMySignInsAsync), "my-sign-ins")]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync), "revoke/{sessionId:guid}")]
     public void SessionActions_CarryTheirDocumentedRoute(string actionName, string expectedTemplate)
     {
@@ -336,6 +386,7 @@ public sealed class AuthControllerBaseTests
 
     [Theory]
     [InlineData(nameof(AuthControllerBase.GetMySessionsAsync))]
+    [InlineData(nameof(AuthControllerBase.GetMySignInsAsync))]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync))]
     public void SessionActions_RequireAuthentication(string actionName)
     {

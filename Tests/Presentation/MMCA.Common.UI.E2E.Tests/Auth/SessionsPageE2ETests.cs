@@ -25,7 +25,10 @@ public sealed class SessionsPageE2ETests : GalleryAxeTestBase
 
         // The populated table, its current-device marker, and a live per-device sign-out button:
         // the three surfaces the scan exists to cover.
-        await Expect(Page.GetByText("Chrome on Windows")).ToBeVisibleAsync();
+        // Scoped to the devices table: the sign-in history table below it lists the same device.
+        var devices = Page.GetByRole(AriaRole.Region, new() { Name = "Signed-in devices" });
+        await Expect(devices.GetByText("Chrome on Windows")).ToBeVisibleAsync();
+        await Expect(Page.GetByRole(AriaRole.Region, new() { Name = "Sign-in history" })).ToBeVisibleAsync();
         // Exact: the revoke-all hint below the table also contains the words "this device".
         await Expect(Page.GetByText("This device", new() { Exact = true })).ToBeVisibleAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of Safari on iOS" })).ToBeVisibleAsync();

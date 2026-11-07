@@ -31,6 +31,56 @@ public sealed class RefreshSessionTests
     }
 
     [Fact]
+    public void Create_OpensItsOwnSignIn()
+    {
+        var session = RefreshSession.Create(7, "plaintext-token", Now, Now.AddDays(7)).Value!;
+
+        session.SignInId.Should().Be(session.Id);
+    }
+
+    [Fact]
+    public void CreateSuccessor_KeepsTheSignIn_WithANewRowAndToken()
+    {
+        var first = RefreshSession.Create(7, "first-token", Now, Now.AddDays(7), "203.0.113.7", "Firefox").Value!;
+
+        var successor = first.CreateSuccessor("second-token", Now.AddMinutes(15), Now.AddDays(7).AddMinutes(15), "198.51.100.4", "Edge").Value!;
+
+        successor.SignInId.Should().Be(first.Id);
+        successor.Id.Should().NotBe(first.Id);
+        successor.UserId.Should().Be(7);
+        successor.TokenHash.Should().Be(RefreshSession.HashToken("second-token"));
+        successor.CreatedAt.Should().Be(Now.AddMinutes(15));
+        successor.IpAddress.Should().Be("198.51.100.4");
+        successor.UserAgent.Should().Be("Edge");
+        first.IsRevoked.Should().BeFalse("minting a successor does not revoke; the store's rotation claim does");
+    }
+
+    [Fact]
+    public void CreateSuccessor_OfALegacyRowWithNoSignIn_OpensANewSignIn()
+    {
+        var legacy = new RefreshSession
+        {
+            UserId = 7,
+            TokenHash = RefreshSession.HashToken("legacy-token"),
+            CreatedAt = Now,
+            ExpiresAt = Now.AddDays(7),
+        };
+
+        var successor = legacy.CreateSuccessor("next-token", Now.AddMinutes(15), Now.AddDays(7)).Value!;
+
+        legacy.SignInId.Should().BeNull();
+        successor.SignInId.Should().Be(successor.Id);
+    }
+
+    [Fact]
+    public void CreateSuccessor_WithAnInvalidToken_Fails()
+    {
+        var first = RefreshSession.Create(7, "first-token", Now, Now.AddDays(7)).Value!;
+
+        first.CreateSuccessor(" ", Now, Now.AddDays(7)).IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
     public void Create_WithoutAToken_Fails()
     {
         Result<RefreshSession> result = RefreshSession.Create(7, "   ", Now, Now.AddDays(7));

@@ -57,5 +57,10 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // out of every authorization read forever, with a missed filter failing OPEN. It carries no
         // audit or erasure obligation either: its whole content is a role name and a permission name.
         "MMCA.Common.Infrastructure.Persistence.Auth.EFPermissionGrantStore",
+
+        // View-as grant retention (ADR-137). A grant row is framework bookkeeping like a refresh
+        // session (no IsDeleted, no audit stamps); erasing it past ViewAs:RetentionDays IS the
+        // retention requirement, and the sweep is its only delete.
+        "MMCA.Common.Infrastructure.Persistence.Auth.EFViewAsGrantStore",
     ];
 }

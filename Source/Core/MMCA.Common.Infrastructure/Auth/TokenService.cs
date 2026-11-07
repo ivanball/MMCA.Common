@@ -110,7 +110,30 @@ public sealed partial class TokenService : ITokenService, IDisposable
         string email,
         string role,
         string fullName,
-        IEnumerable<Claim>? additionalClaims = null)
+        IEnumerable<Claim>? additionalClaims = null) =>
+        Mint(userId, email, role, fullName, additionalClaims, TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpirationMinutes));
+
+    /// <inheritdoc />
+    /// <remarks>Honors <paramref name="lifetime"/> exactly; the caller decides the cap.</remarks>
+    public string GenerateShortLivedAccessToken(
+        UserIdentifierType userId,
+        string email,
+        string role,
+        string fullName,
+        IEnumerable<Claim>? additionalClaims,
+        TimeSpan lifetime)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetime, TimeSpan.Zero);
+        return Mint(userId, email, role, fullName, additionalClaims, lifetime);
+    }
+
+    private string Mint(
+        UserIdentifierType userId,
+        string email,
+        string role,
+        string fullName,
+        IEnumerable<Claim>? additionalClaims,
+        TimeSpan lifetime)
     {
         var now = _timeProvider.GetUtcNow();
 
@@ -152,7 +175,7 @@ public sealed partial class TokenService : ITokenService, IDisposable
             audience: _jwtSettings.Audience,
             claims: claims,
             notBefore: now.UtcDateTime,
-            expires: now.UtcDateTime.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
+            expires: now.UtcDateTime.Add(lifetime),
             signingCredentials: _signingCredentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

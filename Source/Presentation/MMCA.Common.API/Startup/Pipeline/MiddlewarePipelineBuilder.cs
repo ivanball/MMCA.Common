@@ -124,6 +124,15 @@ public sealed class MiddlewarePipelineBuilder
                 static app => app.UseMiddleware<SoftDeletedUserMiddleware>()),
 
             new MiddlewarePipelineStep(
+                MiddlewarePipelineStepNames.ViewAsGuard,
+                // Read-only view-as (ADR-137): after authentication, so act_sub is on the principal, and
+                // after routing, so the end-view-as action's metadata is readable. Always added, enabled
+                // or not: with ViewAs:Enabled false it refuses every view-as token, so one minted
+                // before the switch was turned off cannot reach a write. An ordinary request pays one
+                // claim lookup.
+                static app => app.UseMiddleware<ViewAsGuardMiddleware>()),
+
+            new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.Authorization,
                 static app => app.UseAuthorization()),
 

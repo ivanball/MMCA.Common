@@ -87,15 +87,13 @@ public sealed class LocalStackFixture : IAsyncLifetime
 
     /// <summary>The <c>NativePush</c> keys enabling SNS mobile push against LocalStack.</summary>
     /// <param name="table">The installations table.</param>
-    /// <param name="topicArn">The broadcast topic.</param>
     /// <param name="fcmApplicationArn">The FCM platform application.</param>
     /// <param name="apnsApplicationArn">The APNs platform application, if any.</param>
     /// <returns>The configuration keys.</returns>
-    public Dictionary<string, string?> NativePushSettings(string table, string topicArn, string fcmApplicationArn, string? apnsApplicationArn = null) => new()
+    public Dictionary<string, string?> NativePushSettings(string table, string fcmApplicationArn, string? apnsApplicationArn = null) => new()
     {
         ["NativePush:Enabled"] = "true",
         ["NativePush:Sns:InstallationsTable"] = table,
-        ["NativePush:Sns:BroadcastTopicArn"] = topicArn,
         ["NativePush:Sns:FcmPlatformApplicationArn"] = fcmApplicationArn,
         ["NativePush:Sns:ApnsPlatformApplicationArn"] = apnsApplicationArn,
         ["NativePush:Sns:Region"] = Region,
@@ -104,7 +102,7 @@ public sealed class LocalStackFixture : IAsyncLifetime
         ["NativePush:Sns:SecretAccessKey"] = DummyKey,
     };
 
-    /// <summary>An SNS client on LocalStack, for arranging platform applications and topics and asserting endpoints.</summary>
+    /// <summary>An SNS client on LocalStack, for arranging platform applications and asserting endpoints.</summary>
     /// <returns>The client; the caller disposes it.</returns>
     public AmazonSimpleNotificationServiceClient CreateSnsClient() => new(Credentials, SnsConfig());
 

@@ -25,7 +25,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <b>Tracked reads.</b> Every read that returns <see cref="RefreshSession"/> entities is tracked on
 /// purpose: the caller revokes by mutating the instances this returns, and a no-tracking query would
 /// take those revocations and silently drop them at save time. The one entity exception is
-/// <see cref="FindByIdUntrackedAsync"/>, a read-only re-read for the rotation loser. The scalar
+/// <see cref="FindByIdUntrackedAsync"/>, a read-only re-read for the rotation loser, and
+/// <see cref="GetRecentSignInsAsync"/>, a read-only sign-in history page. The scalar
 /// projections (<see cref="GetUserIdsWithLiveSessionsAsync"/>, <see cref="CountLiveSessionsByUserAsync"/>)
 /// return no entities, so nothing is tracked there either.
 /// </para>
@@ -82,6 +83,135 @@ internal sealed class EFRefreshSessionStore(
             .ThenBy(s => s.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// At most three statements, each bounded by <paramref name="maxSignIns"/> and none by the user's
+    /// row count: <see cref="SignInChainsQuery"/> groups the user's rows by <c>SignInId</c> inside the
+    /// database (MIN and MAX of <c>CreatedAt</c>, newest groups only), <see cref="SignInHeadsQuery"/>
+    /// loads only the row at each group's MAX, and <see cref="LegacySignInsQuery"/> reads the capped
+    /// un-rotated rows that predate the column. The <c>(UserId, SignInId, CreatedAt)</c> index covers
+    /// the first two. All are untracked: a history read never revokes.
+    /// </remarks>
+    public async Task<IReadOnlyList<RefreshSessionSignIn>> GetRecentSignInsAsync(
+        UserIdentifierType userId,
+        int maxSignIns,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxSignIns);
+
+        var sessions = Sessions.AsNoTracking();
+
+        var chains = await SignInChainsQuery(sessions, userId, maxSignIns)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        List<RefreshSessionSignIn> signIns = [];
+        if (chains.Count > 0)
+        {
+            var heads = await SignInHeadsQuery(
+                    sessions,
+                    userId,
+                    [.. chains.Select(c => c.SignInId)],
+                    [.. chains.Select(c => c.LastActiveAt).Distinct()])
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var chain in chains)
+            {
+                // The IN lists can pair one chain's id with another chain's instant, and two rows of one
+                // chain can share its newest instant, so the head is matched exactly here with the key
+                // as the tie-break: one head per sign-in.
+                var head = heads
+                    .Where(h => h.SignInId == chain.SignInId && h.CreatedAt == chain.LastActiveAt)
+                    .MaxBy(h => h.Id);
+                if (head is not null)
+                {
+                    signIns.Add(new RefreshSessionSignIn(chain.SignInId.GetValueOrDefault(), chain.StartedAt, head));
+                }
+            }
+        }
+
+        var legacy = await LegacySignInsQuery(sessions, userId, maxSignIns)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return
+        [
+            .. signIns
+                .Concat(legacy.Select(row => new RefreshSessionSignIn(row.Id, row.CreatedAt, row)))
+                .OrderByDescending(s => s.StartedAt)
+                .ThenByDescending(s => s.SignInId)
+                .Take(maxSignIns),
+        ];
+    }
+
+    /// <summary>
+    /// The newest <paramref name="maxSignIns"/> sign-ins of one user, newest first by start, as scalars
+    /// only: each <c>SignInId</c> with the MIN and MAX of its rows' <c>CreatedAt</c>, grouped, ordered
+    /// and limited in the database. No entity is materialized.
+    /// </summary>
+    /// <param name="sessions">The session set to query.</param>
+    /// <param name="userId">The user whose sign-ins to read.</param>
+    /// <param name="maxSignIns">The most sign-ins to return.</param>
+    /// <returns>The query; not yet executed.</returns>
+    internal static IQueryable<SignInChainRow> SignInChainsQuery(
+        IQueryable<RefreshSession> sessions,
+        UserIdentifierType userId,
+        int maxSignIns) =>
+        sessions
+            .Where(s => s.UserId == userId && s.SignInId != null)
+            .GroupBy(s => s.SignInId)
+            .OrderByDescending(g => g.Min(s => s.CreatedAt))
+            .ThenByDescending(g => g.Key)
+            .Take(maxSignIns)
+            .Select(g => new SignInChainRow
+            {
+                SignInId = g.Key,
+                StartedAt = g.Min(s => s.CreatedAt),
+                LastActiveAt = g.Max(s => s.CreatedAt),
+            });
+
+    /// <summary>
+    /// The newest row of each listed sign-in: rows of the user whose <c>SignInId</c> is one of
+    /// <paramref name="signInIds"/> and whose <c>CreatedAt</c> is one of their newest instants. A seek
+    /// per sign-in on the <c>(UserId, SignInId, CreatedAt)</c> index; it materializes one row per
+    /// sign-in, plus only the rare row that shares another listed sign-in's newest instant.
+    /// </summary>
+    /// <param name="sessions">The session set to query.</param>
+    /// <param name="userId">The user whose rows to read.</param>
+    /// <param name="signInIds">The sign-ins whose heads to load.</param>
+    /// <param name="lastActiveAts">Those sign-ins' newest issue instants.</param>
+    /// <returns>The query; not yet executed.</returns>
+    internal static IQueryable<RefreshSession> SignInHeadsQuery(
+        IQueryable<RefreshSession> sessions,
+        UserIdentifierType userId,
+        IReadOnlyCollection<Guid?> signInIds,
+        IReadOnlyCollection<DateTime> lastActiveAts) =>
+        sessions.Where(s => s.UserId == userId
+            && signInIds.Contains(s.SignInId)
+            && lastActiveAts.Contains(s.CreatedAt));
+
+    /// <summary>
+    /// The user's newest <paramref name="maxSignIns"/> rows written before <c>SignInId</c> existed that
+    /// were not rotated away: each one is its own sign-in (a rotated one is represented by its
+    /// successor). The predicate leads with <c>(UserId, SignInId IS NULL)</c>, the same index.
+    /// </summary>
+    /// <param name="sessions">The session set to query.</param>
+    /// <param name="userId">The user whose legacy rows to read.</param>
+    /// <param name="maxSignIns">The most rows to return.</param>
+    /// <returns>The query; not yet executed.</returns>
+    internal static IQueryable<RefreshSession> LegacySignInsQuery(
+        IQueryable<RefreshSession> sessions,
+        UserIdentifierType userId,
+        int maxSignIns) =>
+        sessions
+            .Where(s => s.UserId == userId
+                && s.SignInId == null
+                && (s.ReasonRevoked == null || s.ReasonRevoked != RefreshSession.ReasonRotated))
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenByDescending(s => s.Id)
+            .Take(maxSignIns);
 
     /// <inheritdoc />
     /// <remarks>
@@ -225,4 +355,17 @@ internal sealed class EFRefreshSessionStore(
             : new DataSourceKey(
                 dataSourceResolver.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName).Engine,
                 settings.Value.DataSourceName);
+
+    /// <summary>One row of <see cref="SignInChainsQuery"/>: a sign-in and the span of its rows.</summary>
+    internal sealed class SignInChainRow
+    {
+        /// <summary>Gets the sign-in's identifier (never null here; nullable because the column is).</summary>
+        public Guid? SignInId { get; init; }
+
+        /// <summary>Gets the issue instant of the sign-in's earliest retained session.</summary>
+        public DateTime StartedAt { get; init; }
+
+        /// <summary>Gets the issue instant of the sign-in's newest session.</summary>
+        public DateTime LastActiveAt { get; init; }
+    }
 }

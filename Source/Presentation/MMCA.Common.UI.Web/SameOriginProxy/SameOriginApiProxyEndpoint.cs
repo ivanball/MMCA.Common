@@ -37,6 +37,9 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     private const string SecFetchSiteHeaderName = "Sec-Fetch-Site";
     private const string WebSocketProtocol = "websocket";
 
+    // The last path segment of the view-as grant action (UsersAdminControllerBase, ADR-137).
+    private const string ViewAsGrantSegment = "view-as";
+
     // HTTP/1.1 upstream, and nothing here needs HTTP/2: an HTTP/1.1 WebSocket upgrade forwards as a
     // plain upgrade, and an HTTP/2 one (an extended CONNECT from the browser) is turned by YARP into an
     // HTTP/1.1 GET upgrade to the gateway, which this version cap is what permits.
@@ -93,11 +96,10 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             return;
         }
 
-        string? bearer = null;
-
-        // A sign-in is anonymous by definition, so a stale session must not block it.
-        if (mode != ProxyResponseMode.TokenIssuing && HasSessionCookie(context.Request))
+        var overlay = ResolveOverlay(context.Request, mode.Value, out var bearer);
+        if (!overlay.ForwardsOverlayBearer && mode != ProxyResponseMode.TokenIssuing && HasSessionCookie(context.Request))
         {
+            // A sign-in is anonymous by definition, so a stale session must not block it.
             var outcome = await refresher.ValidateOrRefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
             if (outcome.Session is not { } session)
             {
@@ -108,7 +110,7 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             bearer = session.AccessToken;
         }
 
-        var first = CreateTransformer(bearer, mode.Value, captureUnauthorized: bearer is not null && IsReplayable(context));
+        var first = CreateTransformer(bearer, mode.Value, CapturesUnauthorized(context, bearer, overlay), overlay);
         await ForwardAsync(context, first).ConfigureAwait(false);
 
         if (first.UnauthorizedCaptured)
@@ -229,6 +231,11 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method) || HttpMethods.IsOptions(context.Request.Method))
         && !IsUpgrade(context);
 
+    // A session bearer on a replayable request earns one refresh-and-replay on a 401; a view-as bearer
+    // refused upstream is never refreshed or replayed (the transformer drops the overlay instead).
+    private static bool CapturesUnauthorized(HttpContext context, string? bearer, ViewAsOverlayTreatment overlay) =>
+        !overlay.ForwardsOverlayBearer && bearer is not null && IsReplayable(context);
+
     private static string Normalize(string path) => path.Trim('/');
 
     private static Task WriteErrorAsync(HttpContext context, int statusCode, string error)
@@ -320,8 +327,20 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             return ProxyResponseMode.TokenIssuing;
         }
 
-        return string.Equals(relativePath, Normalize(_settings.RevokePath), StringComparison.OrdinalIgnoreCase)
-            ? ProxyResponseMode.Revoke
+        if (string.Equals(relativePath, Normalize(_settings.RevokePath), StringComparison.OrdinalIgnoreCase))
+        {
+            return ProxyResponseMode.Revoke;
+        }
+
+        if (string.Equals(relativePath, Normalize(_settings.ViewAsEndPath), StringComparison.OrdinalIgnoreCase))
+        {
+            return ProxyResponseMode.ViewAsEnd;
+        }
+
+        // A view-as grant (users/{id}/view-as under whatever route the host gives its admin
+        // controller): its response carries a token, which must never reach script.
+        return relativePath.EndsWith("/" + ViewAsGrantSegment, StringComparison.OrdinalIgnoreCase)
+            ? ProxyResponseMode.ViewAsGrant
             : ProxyResponseMode.Forward;
     }
 
@@ -373,8 +392,32 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             ? remaining.Value ?? string.Empty
             : context.Request.Path.Value ?? string.Empty;
 
-    private SameOriginProxyTransformer CreateTransformer(string? bearer, ProxyResponseMode mode, bool captureUnauthorized) =>
-        new(_settings.PathPrefix, bearer, mode, captureUnauthorized, cookieStore);
+    /// <summary>
+    /// What this request does with the view-as overlay cookie (ADR-137). A live overlay's token
+    /// replaces the session bearer for everything except a sign-in (anonymous) and a sign-out (which
+    /// signs the staff user's own session out); it is never refreshed and never replayed. An expired
+    /// overlay is deleted and the session takes over.
+    /// </summary>
+    /// <param name="request">The browser's request.</param>
+    /// <param name="mode">The request's response treatment.</param>
+    /// <param name="overlayBearer">The overlay's token when it is forwarded, else <see langword="null"/>.</param>
+    /// <returns>The overlay treatment for the transformer.</returns>
+    private ViewAsOverlayTreatment ResolveOverlay(HttpRequest request, ProxyResponseMode mode, out string? overlayBearer)
+    {
+        var present = ViewAsOverlayCookie.IsPresent(request);
+        var live = present && ViewAsOverlayCookie.TryRead(request, TimeProvider.System.GetUtcNow(), out var token, out _) ? token : null;
+        var forwards = live is not null && mode is not (ProxyResponseMode.TokenIssuing or ProxyResponseMode.Revoke);
+
+        overlayBearer = forwards ? live : null;
+        return new ViewAsOverlayTreatment(
+            OverlayPresent: present,
+            ForwardsOverlayBearer: forwards,
+            DeleteOverlay: present && live is null,
+            SameSite: _settings.SessionCookieSameSite);
+    }
+
+    private SameOriginProxyTransformer CreateTransformer(string? bearer, ProxyResponseMode mode, bool captureUnauthorized, ViewAsOverlayTreatment overlay = default) =>
+        new(_settings.PathPrefix, bearer, mode, captureUnauthorized, cookieStore, overlay);
 
     private async Task ForwardAsync(HttpContext context, SameOriginProxyTransformer transformer)
     {
@@ -395,6 +438,23 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     /// </summary>
     private async Task RefreshLocallyAsync(HttpContext context)
     {
+        // Under a live view-as overlay the browser is viewing as someone else: answer with the
+        // overlay's claims and expiry, rotating nothing. The overlay itself is never renewed; once it
+        // expires this falls through to the staff user's own session.
+        if (ViewAsOverlayCookie.TryRead(context.Request, TimeProvider.System.GetUtcNow(), out var viewAsToken, out var viewAsExpiry))
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            await context.Response.WriteAsJsonAsync(
+                new
+                {
+                    AccessToken = SessionClaimsToken.Create(viewAsToken) ?? string.Empty,
+                    RefreshToken = string.Empty,
+                    AccessTokenExpiry = viewAsExpiry,
+                },
+                context.RequestAborted).ConfigureAwait(false);
+            return;
+        }
+
         var outcome = await refresher.RefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
         if (outcome.Session is not { } refreshed)
         {

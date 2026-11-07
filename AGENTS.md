@@ -52,7 +52,8 @@ Source/
   Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}, cloud-neutral (+ AI, the
                  optional language-model boundary on Microsoft.Extensions.AI with no vendor SDK and
                  no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each)
-  Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx)
+  Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx; + Mcp, the opt-in
+                 MCP endpoint and the only reference to the MCP SDK)
   Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.Aspire,Testing.E2E,
                  Testing.UI,Testing.Architecture,AI.Testing} (+ Azure, Aws, Gcp and Testing.Azure,
                  the cloud vendor adapters)
@@ -82,12 +83,13 @@ Strict layered flow: `API/Grpc -> Infrastructure -> Application -> Domain -> Sha
 Decorators are applied by Scrutor in reverse registration order (last registered = outermost). Execution order (ADR-014):
 
 ```
-Commands: FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
+Commands: ViewAs -> FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
 Queries:  FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Handler
 ```
 
 The positions are deliberate; keep them when adding or moving a decorator:
 
+- **ViewAs** (commands only): refuses every command while the caller holds a view-as token, so support access stays read-only (ADR-137).
 - **FeatureGate**: every flag constant declares `[FeatureFlag(Permanent|Temporary, RemoveBy, Owner)]` on a static `*Features` class; `FeatureFlagLifecycleTestsBase` fails the build on an undeclared flag or a temporary one past `RemoveBy` (ADR-031).
 - **Authorization** sits outside Caching so a denied query never reads or populates the cache. Command and query checks share `AuthorizationGate` so they cannot drift (ADR-020).
 - **Logging** logs an exception as a Warning outcome line WITHOUT the exception object and rethrows; the handling boundary owns the single Error row with the stack.

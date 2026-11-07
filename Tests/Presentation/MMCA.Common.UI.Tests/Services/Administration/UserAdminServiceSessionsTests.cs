@@ -1,6 +1,7 @@
 using System.Net;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Tests.Infrastructure;
@@ -84,6 +85,35 @@ public sealed class UserAdminServiceSessionsTests : IDisposable
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Should().BeEmpty();
+    }
+
+    // T13: the admin sign-in history, same client shape as the sessions read.
+    [Fact]
+    public async Task GetSignInsAsync_GetsTheUsersSignInsEndpoint_AndMapsTheCamelCasePayload()
+    {
+        const string body = """[ { "signInId": "22222222-2222-2222-2222-222222222222", "startedAt": "2026-08-01T09:00:00Z", "lastActiveAt": "2026-08-02T11:00:00Z", "ipAddress": "203.0.113.7", "userAgent": "Firefox", "endedAt": "2026-08-02T11:05:00Z", "endReason": "ReuseDetected", "isCurrent": false, "kind": "SignIn" } ]""";
+        var sut = CreateSut(HttpStatusCode.OK, body);
+
+        var result = await sut.GetSignInsAsync(42, Ct);
+
+        _handler.LastRequest.Method.Should().Be(HttpMethod.Get);
+        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/Admin/Users/42/sign-ins");
+        _handler.LastRequest.Authorization!.Parameter.Should().Be(StoredAccessToken);
+        var signIn = result.Value!.Should().ContainSingle().Subject;
+        signIn.StartedAt.Should().Be(new DateTime(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc));
+        signIn.LastActiveAt.Should().Be(new DateTime(2026, 8, 2, 11, 0, 0, DateTimeKind.Utc));
+        signIn.EndReason.Should().Be(SignInEndReasons.ReuseDetected);
+        signIn.Kind.Should().Be(SignInHistoryEntryKind.SignIn);
+    }
+
+    [Fact]
+    public async Task GetSignInsAsync_When403_ReportsTheApisForbiddenFailure()
+    {
+        var sut = CreateSut(HttpStatusCode.Forbidden, ForbiddenBody);
+
+        var result = await sut.GetSignInsAsync(42, Ct);
+
+        result.Errors.Should().ContainSingle().Subject.Type.Should().Be(ErrorType.Forbidden);
     }
 
     [Fact]

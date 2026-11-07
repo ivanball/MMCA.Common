@@ -190,6 +190,13 @@ public static class DesignTimeDbContextHelper
             {
                 DataSourceName = physical.Key.Name,
             }));
+        // Same two-part gate for the view-as grant table (ADR-137), for the same collapse reason.
+        services.AddSingleton<IOptions<Application.Auth.ViewAs.ViewAsSettings>>(
+            Options.Create(new Application.Auth.ViewAs.ViewAsSettings
+            {
+                Enabled = designOptions.EnableViewAsGrants,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

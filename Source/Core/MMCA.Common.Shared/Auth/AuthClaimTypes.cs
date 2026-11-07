@@ -66,4 +66,21 @@ public static class AuthClaimTypes
 
     /// <summary>Value of <see cref="MultiFactor"/> when a single-use recovery code satisfied the challenge.</summary>
     public const string MultiFactorMethodRecoveryCode = "recovery";
+
+    /// <summary>
+    /// The claim naming the staff user behind a view-as token (ADR-137): the token's <c>sub</c> is the
+    /// user being viewed, and this claim's value is the id of the staff user who is viewing.
+    /// <para>
+    /// <b>Presence makes the request read-only.</b> Every command is refused and every non-safe HTTP
+    /// method is rejected while it is present, so nothing can be written in the viewed user's name.
+    /// Readers ask whether it is there (<see cref="ClaimsPrincipalExtensions.IsViewAs"/>).
+    /// </para>
+    /// </summary>
+    public const string ViewAsActor = "act_sub";
+
+    /// <summary>
+    /// The id of the view-as grant a view-as token was minted for (ADR-137). Checked on every
+    /// view-as request, so ending the grant ends the token before it expires.
+    /// </summary>
+    public const string ViewAsGrant = "vag";
 }

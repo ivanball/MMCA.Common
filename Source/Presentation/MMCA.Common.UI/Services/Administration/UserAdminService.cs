@@ -74,6 +74,27 @@ public sealed class UserAdminService<TUserDto>(
     }
 
     /// <inheritdoc />
+    public Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{userId}/sign-ins");
+
+        return HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await RetryPolicy.ExecuteAsync(
+                    _ => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
+                    cancellationToken);
+
+                return await ProblemDetailsResultReader.ReadAsync<IReadOnlyList<SignInSummaryResponse>>(
+                    response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<Result> LockAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>
         PostLockChangeAsync(userId, "lock", cancellationToken);
 

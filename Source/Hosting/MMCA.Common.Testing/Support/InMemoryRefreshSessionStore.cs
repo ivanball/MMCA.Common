@@ -103,6 +103,45 @@ public sealed class InMemoryRefreshSessionStore : IRefreshSessionStore
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The same answer the EF store computes in SQL, folded over the in-memory list: one entry per
+    /// <see cref="RefreshSession.SignInId"/> (its earliest issue instant and its newest row), plus each
+    /// un-rotated row that has none, newest first and capped.
+    /// </remarks>
+    public Task<IReadOnlyList<RefreshSessionSignIn>> GetRecentSignInsAsync(
+        UserIdentifierType userId,
+        int maxSignIns,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxSignIns);
+
+        var own = _sessions.Where(s => EqualityComparer<UserIdentifierType>.Default.Equals(s.UserId, userId)).ToList();
+
+        var chains = own
+            .Where(s => s.SignInId is not null)
+            .GroupBy(s => s.SignInId.GetValueOrDefault())
+            .Select(g => new RefreshSessionSignIn(
+                g.Key,
+                g.Min(s => s.CreatedAt),
+                g.MaxBy(s => (s.CreatedAt, s.Id))!));
+
+        var legacy = own
+            .Where(s => s.SignInId is null
+                && !string.Equals(s.ReasonRevoked, RefreshSession.ReasonRotated, StringComparison.Ordinal))
+            .Select(s => new RefreshSessionSignIn(s.Id, s.CreatedAt, s));
+
+        IReadOnlyList<RefreshSessionSignIn> signIns =
+        [
+            .. chains.Concat(legacy)
+                .OrderByDescending(s => s.StartedAt)
+                .ThenByDescending(s => s.SignInId)
+                .Take(maxSignIns),
+        ];
+
+        return Task.FromResult(signIns);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<UserIdentifierType>> GetUserIdsWithLiveSessionsAsync(
         DateTime now,
         CancellationToken cancellationToken = default)

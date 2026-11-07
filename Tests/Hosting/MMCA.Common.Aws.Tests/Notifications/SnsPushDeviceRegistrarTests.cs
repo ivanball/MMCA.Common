@@ -15,20 +15,17 @@ namespace MMCA.Common.Aws.Tests.Notifications;
 /// <summary>
 /// The SNS device registrar (ADR-044) against mocked SNS and DynamoDB clients. The registry row is the
 /// ownership store, so the tests pin the same contract the Notification Hubs registrar honours: a new
-/// installation gets an endpoint, a topic subscription and a row; another user's installation is a
+/// installation gets an endpoint and a row; another user's installation is a
 /// conflict unless the caller presents its push channel (the device changing hands); a refused write
 /// leaves nothing behind; and a delete is owner-scoped with no existence oracle.
 /// </summary>
 public sealed class SnsPushDeviceRegistrarTests
 {
     private const string Table = "installations";
-    private const string TopicArn = "arn:aws:sns:us-east-1:000000000000:broadcast";
     private const string FcmAppArn = "arn:aws:sns:us-east-1:000000000000:app/GCM/fcm";
     private const string InstallationId = "3f0c2f9c1e8b4b6c9d3a5e7f0a1b2c3d";
     private const string ExistingEndpointArn = "arn:aws:sns:us-east-1:000000000000:endpoint/GCM/fcm/existing";
-    private const string ExistingSubscriptionArn = "arn:aws:sns:us-east-1:000000000000:broadcast:existing-sub";
     private const string NewEndpointArn = "arn:aws:sns:us-east-1:000000000000:endpoint/GCM/fcm/new";
-    private const string NewSubscriptionArn = "arn:aws:sns:us-east-1:000000000000:broadcast:new-sub";
     private const UserIdentifierType Owner = 42;
     private const UserIdentifierType Stranger = 99;
 
@@ -39,8 +36,6 @@ public sealed class SnsPushDeviceRegistrarTests
     {
         _sns.Setup(x => x.CreatePlatformEndpointAsync(It.IsAny<CreatePlatformEndpointRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreatePlatformEndpointResponse { EndpointArn = NewEndpointArn });
-        _sns.Setup(x => x.SubscribeAsync(It.IsAny<SubscribeRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SubscribeResponse { SubscriptionArn = NewSubscriptionArn });
         _sns.Setup(x => x.SetEndpointAttributesAsync(It.IsAny<SetEndpointAttributesRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SetEndpointAttributesResponse());
         _dynamoDb.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<CancellationToken>()))
@@ -57,7 +52,6 @@ public sealed class SnsPushDeviceRegistrarTests
     private static SnsNativePushSettings Settings(string? apnsArn = null) => new()
     {
         InstallationsTable = Table,
-        BroadcastTopicArn = TopicArn,
         FcmPlatformApplicationArn = FcmAppArn,
         ApnsPlatformApplicationArn = apnsArn,
     };
@@ -94,7 +88,6 @@ public sealed class SnsPushDeviceRegistrarTests
                     ["Platform"] = new() { S = "fcmv1" },
                     ["PushChannel"] = new() { S = pushChannel },
                     ["EndpointArn"] = new() { S = ExistingEndpointArn },
-                    ["SubscriptionArn"] = new() { S = ExistingSubscriptionArn },
                 },
             });
 
@@ -113,7 +106,7 @@ public sealed class SnsPushDeviceRegistrarTests
             "attribute_not_exists(InstallationId) OR UserId = :me OR PushChannel = :channel");
 
     [Fact]
-    public async Task UpsertAsync_NewInstallation_CreatesEndpointSubscriptionAndRow()
+    public async Task UpsertAsync_NewInstallation_CreatesEndpointAndRow_WithNoTopicSubscription()
     {
         var result = await CreateSut().UpsertAsync(Owner, Request(), TestContext.Current.CancellationToken);
 
@@ -121,9 +114,7 @@ public sealed class SnsPushDeviceRegistrarTests
         _sns.Verify(x => x.CreatePlatformEndpointAsync(
             It.Is<CreatePlatformEndpointRequest>(r => r.PlatformApplicationArn == FcmAppArn && r.Token == "token-new"),
             It.IsAny<CancellationToken>()), Times.Once);
-        _sns.Verify(x => x.SubscribeAsync(
-            It.Is<SubscribeRequest>(r => r.TopicArn == TopicArn && r.Protocol == "application" && r.Endpoint == NewEndpointArn),
-            It.IsAny<CancellationToken>()), Times.Once);
+        _sns.Verify(x => x.SubscribeAsync(It.IsAny<SubscribeRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         _dynamoDb.Verify(x => x.PutItemAsync(
             It.Is<PutItemRequest>(r =>
                 r.TableName == Table
@@ -135,7 +126,7 @@ public sealed class SnsPushDeviceRegistrarTests
                 && r.Item["Platform"].S == "fcmv1"
                 && r.Item["PushChannel"].S == "token-new"
                 && r.Item["EndpointArn"].S == NewEndpointArn
-                && r.Item["SubscriptionArn"].S == NewSubscriptionArn),
+                && !r.Item.ContainsKey("SubscriptionArn")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -158,8 +149,7 @@ public sealed class SnsPushDeviceRegistrarTests
         _dynamoDb.Verify(x => x.PutItemAsync(
             It.Is<PutItemRequest>(r =>
                 r.Item["PushChannel"].S == "token-rotated"
-                && r.Item["EndpointArn"].S == ExistingEndpointArn
-                && r.Item["SubscriptionArn"].S == ExistingSubscriptionArn),
+                && r.Item["EndpointArn"].S == ExistingEndpointArn),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -175,7 +165,7 @@ public sealed class SnsPushDeviceRegistrarTests
         result.IsSuccess.Should().BeTrue();
         _sns.Verify(x => x.CreatePlatformEndpointAsync(It.IsAny<CreatePlatformEndpointRequest>(), It.IsAny<CancellationToken>()), Times.Once);
         _dynamoDb.Verify(x => x.PutItemAsync(
-            It.Is<PutItemRequest>(r => r.Item["EndpointArn"].S == NewEndpointArn && r.Item["SubscriptionArn"].S == NewSubscriptionArn),
+            It.Is<PutItemRequest>(r => r.Item["EndpointArn"].S == NewEndpointArn),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -205,8 +195,6 @@ public sealed class SnsPushDeviceRegistrarTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.InstallationConflict");
-        _sns.Verify(x => x.UnsubscribeAsync(
-            It.Is<UnsubscribeRequest>(r => r.SubscriptionArn == NewSubscriptionArn), It.IsAny<CancellationToken>()), Times.Once);
         _sns.Verify(x => x.DeleteEndpointAsync(
             It.Is<DeleteEndpointRequest>(r => r.EndpointArn == NewEndpointArn), It.IsAny<CancellationToken>()), Times.Once);
         _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -303,15 +291,13 @@ public sealed class SnsPushDeviceRegistrarTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ByTheOwner_RemovesSubscriptionEndpointAndRow()
+    public async Task DeleteAsync_ByTheOwner_RemovesEndpointAndRow()
     {
         SetupRow(Owner, "token");
 
         var result = await CreateSut().DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _sns.Verify(x => x.UnsubscribeAsync(
-            It.Is<UnsubscribeRequest>(r => r.SubscriptionArn == ExistingSubscriptionArn), It.IsAny<CancellationToken>()), Times.Once);
         _sns.Verify(x => x.DeleteEndpointAsync(
             It.Is<DeleteEndpointRequest>(r => r.EndpointArn == ExistingEndpointArn), It.IsAny<CancellationToken>()), Times.Once);
         _dynamoDb.Verify(x => x.DeleteItemAsync(
@@ -324,7 +310,7 @@ public sealed class SnsPushDeviceRegistrarTests
     }
 
     // M260: a second installation id of the same user (an app reinstall) still holds the endpoint,
-    // so deleting the first row must leave the endpoint and its subscription alone.
+    // so deleting the first row must leave the endpoint alone.
     [Fact]
     public async Task DeleteAsync_WhenAnotherRowOfTheOwnerSharesTheEndpoint_DeletesOnlyTheRow()
     {
@@ -352,7 +338,6 @@ public sealed class SnsPushDeviceRegistrarTests
         ["Platform"] = new() { S = "fcmv1" },
         ["PushChannel"] = new() { S = "token" },
         ["EndpointArn"] = new() { S = ExistingEndpointArn },
-        ["SubscriptionArn"] = new() { S = ExistingSubscriptionArn },
     };
 
     [Fact]

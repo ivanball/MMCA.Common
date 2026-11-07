@@ -1,1 +1,24 @@
 #nullable enable
+MMCA.Common.Domain.Auth.RefreshSession.CreateSuccessor(string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
+MMCA.Common.Domain.Auth.RefreshSession.SignInId.get -> System.Guid?
+const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMaxLength = 500 -> int
+MMCA.Common.Domain.Auth.ViewAsGrant
+MMCA.Common.Domain.Auth.ViewAsGrant.ViewAsGrant() -> void
+const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMinLength = 10 -> int
+static readonly MMCA.Common.Domain.Auth.ViewAsGrant.MaxLifetime -> System.TimeSpan
+MMCA.Common.Domain.Auth.ViewAsGrant.Id.get -> System.Guid
+MMCA.Common.Domain.Auth.ViewAsGrant.Id.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.get -> int
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.get -> int
+MMCA.Common.Domain.Auth.ViewAsGrant.Reason.get -> string!
+MMCA.Common.Domain.Auth.ViewAsGrant.Reason.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.EndedAt.get -> System.DateTime?
+static MMCA.Common.Domain.Auth.ViewAsGrant.Create(int staffUserId, int targetUserId, string? reason, System.DateTime grantedAt, System.TimeSpan lifetime) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.ViewAsGrant!>!
+MMCA.Common.Domain.Auth.ViewAsGrant.IsActiveAt(System.DateTime now) -> bool
+MMCA.Common.Domain.Auth.ViewAsGrant.End(System.DateTime now) -> void

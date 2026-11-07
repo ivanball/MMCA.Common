@@ -5,7 +5,6 @@ using AwesomeAssertions;
 using FirebaseAdmin.Messaging;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Gcp.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 
@@ -15,27 +14,15 @@ namespace MMCA.Common.Gcp.Tests.Notifications;
 /// The FCM native push sender (ADR-044) against a scripted registry and a recording FCM client:
 /// user-targeted sends resolve the users' tokens and send one message per token, at most 500 per
 /// <c>SendEachAsync</c> call; a dead token is pruned while the others still receive; the message
-/// carries the same notification, data and APNs fields as the core payload builders; a broadcast is
-/// one message to the topic.
+/// carries the same notification, data and APNs fields as the core payload builders.
 /// </summary>
 public sealed class FcmNativePushSenderTests
 {
-    private const string Topic = "broadcast";
-
     private readonly FakeFcmInstallationRegistry _registry = new();
     private readonly FakeFcmMessagingClient _messaging = new();
 
     private FcmNativePushSender CreateSut() =>
-        new(
-            _registry,
-            _messaging,
-            Options.Create(new FcmNativePushSettings
-            {
-                ProjectId = "demo-project",
-                InstallationsCollection = "pushInstallations",
-                BroadcastTopic = Topic,
-            }),
-            NullLogger<FcmNativePushSender>.Instance);
+        new(_registry, _messaging, NullLogger<FcmNativePushSender>.Instance);
 
     private void AddInstallation(string id, string userId, string? token = null) =>
         _registry.Installations[id] = new FcmInstallation(id, userId, "fcmv1", token ?? $"token-{id}");
@@ -170,34 +157,7 @@ public sealed class FcmNativePushSenderTests
     }
 
     [Fact]
-    public async Task BroadcastAsync_SendsOneMessageToTheTopic()
-    {
-        var metadata = new Dictionary<string, string> { ["route"] = "/announcements" };
-
-        await CreateSut().BroadcastAsync("Hello", "World", metadata, TestContext.Current.CancellationToken);
-
-        var sent = _messaging.Sent.Should().ContainSingle().Subject;
-        sent.Topic.Should().Be(Topic);
-        var wire = FakeFcmMessagingClient.Wire(sent);
-        wire.TryGetProperty("token", out _).Should().BeFalse();
-        wire.GetProperty("notification").GetProperty("title").GetString().Should().Be("Hello");
-        wire.GetProperty("data").GetProperty("route").GetString().Should().Be("/announcements");
-        _messaging.SendEachCalls.Should().BeEmpty();
-        _registry.Queries.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task BroadcastAsync_AFailurePropagates()
-    {
-        _messaging.SendException = new InvalidOperationException("boom");
-
-        var act = () => CreateSut().BroadcastAsync("Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    [Fact]
     public void WireJson_IsTheHttpV1MessageObject() =>
-        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForTopic(Topic, "t", "b", null)))
-            .RootElement.GetProperty("topic").GetString().Should().Be(Topic);
+        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForToken("token-1", "t", "b", null)))
+            .RootElement.GetProperty("token").GetString().Should().Be("token-1");
 }

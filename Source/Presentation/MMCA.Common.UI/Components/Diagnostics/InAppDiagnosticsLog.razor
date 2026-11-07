@@ -1,0 +1,138 @@
+@using MMCA.Common.UI.Common.Interfaces
+@using MMCA.Common.UI.Services.Capabilities.Interop
+@using MMCA.Common.UI.Services.Diagnostics
+
+@inject InAppLogBuffer Buffer
+@inject IShareService Share
+@inject IClipboardService Clipboard
+@inject IToastService Toast
+@inject IStringLocalizer<InAppDiagnosticsLog> L
+
+@* The in-app diagnostics log (AddInAppDiagnostics). Shows the in-memory buffer, newest last, and
+   lets the user copy it or hand it to the native share sheet. The log is read when the component
+   renders and on Refresh, never pushed live: a live view would re-render on every log line,
+   including the ones its own rendering writes. *@
+
+<div class="mmca-diagnostics-log">
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mb-2">
+        <MudText Typo="Typo.h6" Class="mr-auto">@L["Title"]</MudText>
+        <MudButton Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="Refresh"
+                   data-testid="diagnostics-refresh">@L["Button.Refresh"]</MudButton>
+        <MudButton Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                   Disabled="@(_entries.Count == 0 || _isBusy)"
+                   OnClick="CopyAsync"
+                   data-testid="diagnostics-copy">@L["Button.Copy"]</MudButton>
+        <MudButton Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.Share"
+                   Disabled="@(_entries.Count == 0 || _isBusy)"
+                   OnClick="ShareAsync"
+                   data-testid="diagnostics-share">@L["Button.Share"]</MudButton>
+        <MudButton Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.DeleteSweep"
+                   Disabled="@(_entries.Count == 0)"
+                   OnClick="Clear"
+                   data-testid="diagnostics-clear">@L["Button.Clear"]</MudButton>
+    </MudStack>
+
+    @if (_entries.Count == 0)
+    {
+        <MudText Typo="Typo.body2" data-testid="diagnostics-empty">@L["Empty"]</MudText>
+    }
+    else
+    {
+        <ol class="mmca-diagnostics-log__entries" aria-label="@L["List.Aria"]" data-testid="diagnostics-entries">
+            @foreach (var entry in _entries)
+            {
+                <li class="@LevelClass(entry.Level)">@entry.ToString()</li>
+            }
+        </ol>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Title handed to the share sheet. Defaults to the localized "Diagnostics log".
+    /// </summary>
+    [Parameter]
+    public string? ShareTitle { get; set; }
+
+    private IReadOnlyList<InAppLogEntry> _entries = [];
+    private bool _isBusy;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => Refresh();
+
+    private static string LevelClass(Microsoft.Extensions.Logging.LogLevel level) => level switch
+    {
+        Microsoft.Extensions.Logging.LogLevel.Critical or Microsoft.Extensions.Logging.LogLevel.Error => "mmca-diagnostics-log__entry mud-error-text",
+        Microsoft.Extensions.Logging.LogLevel.Warning => "mmca-diagnostics-log__entry mud-warning-text",
+        _ => "mmca-diagnostics-log__entry",
+    };
+
+    private void Refresh() => _entries = Buffer.Snapshot();
+
+    private void Clear()
+    {
+        Buffer.Clear();
+        Refresh();
+    }
+
+    private async Task CopyAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CopyTextAsync(Buffer.ToText());
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ShareAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            var text = Buffer.ToText();
+            var title = string.IsNullOrWhiteSpace(ShareTitle) ? L["Title"].Value : ShareTitle;
+            if (await Share.ShareTextAsync(title, text))
+            {
+                return;
+            }
+
+            // No share surface (browsers, the null default): copy the log instead.
+            await CopyTextAsync(text);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task CopyTextAsync(string text)
+    {
+        if (await Clipboard.SetTextAsync(text))
+        {
+            Toast.Success(L["Snackbar.Copied"].Value);
+        }
+        else
+        {
+            Toast.Warning(L["Snackbar.CopyFailed"].Value);
+        }
+    }
+}

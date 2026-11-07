@@ -90,6 +90,15 @@ public sealed class SameOriginApiProxySettings
     public string RevokePath { get; set; } = "auth/revoke";
 
     /// <summary>
+    /// Gets or sets the end-view-as endpoint relative to the gateway root (default
+    /// <c>auth/view-as/end</c>, ADR-137). A browser POST to it is forwarded with the view-as overlay's
+    /// bearer and then deletes the overlay cookie, whatever the upstream answered. A POST to any path
+    /// whose last segment is <c>view-as</c> is treated as a view-as grant: its token goes into the
+    /// overlay cookie and never reaches script.
+    /// </summary>
+    public string ViewAsEndPath { get; set; } = "auth/view-as/end";
+
+    /// <summary>
     /// Gets or sets the <c>SameSite</c> attribute of the session cookies while the proxy is enabled.
     /// Defaults to <see cref="SameSiteMode.Strict"/>; <see cref="SameSiteMode.Lax"/> is the only other
     /// accepted value, for a host that would rather keep server-rendered pages signed in when a

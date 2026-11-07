@@ -30,26 +30,11 @@ internal static class FcmPushMessage
 
         // FirebaseAdmin 3.6+ marks Message.Token obsolete in favour of Firebase installation ids (FIDs).
         // Kept deliberately: this adapter registers FCM registration tokens (the token-only decision
-        // for iOS and Android alike), the FCM HTTP v1 API still accepts a token target, and the topic
-        // APIs the broadcast depends on (SubscribeToTopicAsync / UnsubscribeFromTopicAsync) take only
-        // registration tokens. Exit: when the topic APIs accept FIDs, move registration and send to
-        // FIDs together and drop this suppression.
+        // for iOS and Android alike) and the FCM HTTP v1 API still accepts a token target. Exit: move
+        // registration and send to FIDs together and drop this suppression.
 #pragma warning disable CS0618 // Type or member is obsolete
         message.Token = token;
 #pragma warning restore CS0618 // Type or member is obsolete
-        return message;
-    }
-
-    /// <summary>Builds the message for a topic (the broadcast).</summary>
-    /// <param name="topic">The FCM topic.</param>
-    /// <param name="title">The notification title.</param>
-    /// <param name="body">The notification body text.</param>
-    /// <param name="metadata">Optional key-value metadata carried in both platform payloads.</param>
-    /// <returns>The message.</returns>
-    internal static Message ForTopic(string topic, string title, string body, IReadOnlyDictionary<string, string>? metadata)
-    {
-        var message = Build(title, body, metadata);
-        message.Topic = topic;
         return message;
     }
 

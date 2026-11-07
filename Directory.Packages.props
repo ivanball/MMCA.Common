@@ -116,6 +116,11 @@
          the vendor SDK is pinned here like Anthropic is, not floated by the adapter's own floor. -->
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
     <PackageVersion Include="OpenAI" Version="2.14.0" />
+    <!-- MCP (MMCA.Common.Mcp): the official Model Context Protocol C# SDK, server half over ASP.NET
+         Core. Referenced by MMCA.Common.Mcp alone, so no core package carries it (ADR-134). Pinned
+         EXACTLY: the SDK moved 1.x to 2.x within a year and its filter and transport surface changed
+         between minors, so a bump is a deliberate re-read of the filter API, never a float. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation
@@ -161,8 +166,8 @@
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
     <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.2" />
-    <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints, the broadcast topic
-         and per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
+    <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
+         per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.22" />
@@ -191,7 +196,7 @@
          transitively, so the direct reference moves nothing in the graph; Apache-2.0. -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.78.0" />
     <!-- Firebase Cloud Messaging native push (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): the
-         HTTP v1 send (SendEachAsync) and the broadcast topic subscriptions, over Application Default
+         HTTP v1 send (SendEachAsync), over Application Default
          Credentials. Google-authored on the same Google.Apis.Auth line as the Cloud clients; Apache-2.0. -->
     <PackageVersion Include="FirebaseAdmin" Version="3.7.0" />
     <!-- The FCM installation registry (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): one Firestore

@@ -52,6 +52,7 @@ public abstract class MiddlewarePipelineOrderTestsBase
         MiddlewarePipelineStepNames.TenantResolution,
         MiddlewarePipelineStepNames.RateLimiting,
         MiddlewarePipelineStepNames.SoftDeletedUserFilter,
+        MiddlewarePipelineStepNames.ViewAsGuard,
         MiddlewarePipelineStepNames.Authorization,
         MiddlewarePipelineStepNames.OutputCache,
         MiddlewarePipelineStepNames.JwksEndpoint,

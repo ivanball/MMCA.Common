@@ -34,43 +34,12 @@ internal sealed class FirebaseMessagingClient(string projectId) : IFcmMessagingC
     }
 
     /// <inheritdoc />
-    public async Task SendAsync(Message message, CancellationToken cancellationToken)
-    {
-        var messaging = await GetMessagingAsync(cancellationToken).ConfigureAwait(false);
-        await messaging.SendAsync(message, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    public async Task<string?> SubscribeToTopicAsync(string token, string topic, CancellationToken cancellationToken)
-    {
-        var messaging = await GetMessagingAsync(cancellationToken).ConfigureAwait(false);
-        return FirstError(await messaging.SubscribeToTopicAsync([token], topic, cancellationToken).ConfigureAwait(false));
-    }
-
-    /// <inheritdoc />
-    public async Task<string?> UnsubscribeFromTopicAsync(string token, string topic, CancellationToken cancellationToken)
-    {
-        var messaging = await GetMessagingAsync(cancellationToken).ConfigureAwait(false);
-        return FirstError(await messaging.UnsubscribeFromTopicAsync([token], topic, cancellationToken).ConfigureAwait(false));
-    }
-
-    /// <inheritdoc />
     public void Dispose()
     {
         _app?.Delete();
         _app = null;
         _messaging = null;
         _gate.Dispose();
-    }
-
-    private static string? FirstError(TopicManagementResponse response)
-    {
-        if (response.FailureCount == 0)
-        {
-            return null;
-        }
-
-        return response.Errors.Count > 0 ? response.Errors[0].Reason : "unknown-error";
     }
 
     private async Task<FirebaseMessaging> GetMessagingAsync(CancellationToken cancellationToken)

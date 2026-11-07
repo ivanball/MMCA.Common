@@ -26,6 +26,7 @@ public sealed class MiddlewarePipelineBuilderTests
         MiddlewarePipelineStepNames.TenantResolution,
         MiddlewarePipelineStepNames.RateLimiting,
         MiddlewarePipelineStepNames.SoftDeletedUserFilter,
+        MiddlewarePipelineStepNames.ViewAsGuard,
         MiddlewarePipelineStepNames.Authorization,
         MiddlewarePipelineStepNames.OutputCache,
         MiddlewarePipelineStepNames.JwksEndpoint,

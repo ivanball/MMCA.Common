@@ -19,8 +19,8 @@ namespace MMCA.Common.Aws.LocalStack.Tests;
 /// would, against LocalStack's SNS platform endpoints and DynamoDB: the ownership rules the unit tier
 /// can only assert as request shapes (the conditional write that refuses another device's id, the
 /// handover on a matching push channel, the owner-scoped delete) run against the real condition
-/// evaluator and the real index, and a user-targeted send and a broadcast are publishes SNS accepts and
-/// delivers to the endpoint. LocalStack records every platform-endpoint delivery instead of calling FCM,
+/// evaluator and the real index, and a user-targeted send is a publish SNS accepts and delivers to the
+/// endpoint. LocalStack records every platform-endpoint delivery instead of calling FCM,
 /// which is what lets the delivery be read back.
 /// </summary>
 public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyncLifetime
@@ -32,7 +32,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
     private readonly string _name = $"mmca-{Guid.NewGuid():N}";
     private AmazonSimpleNotificationServiceClient _sns = null!;
     private AmazonDynamoDBClient _dynamoDb = null!;
-    private string _topicArn = null!;
     private string _fcmApplicationArn = null!;
     private readonly ConcurrentQueue<Published> _published = new();
     private ServiceProvider _host = null!;
@@ -70,7 +69,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
             },
             ct);
 
-        _topicArn = (await _sns.CreateTopicAsync(new CreateTopicRequest { Name = _name }, ct)).TopicArn;
         _fcmApplicationArn = (await _sns.CreatePlatformApplicationAsync(
             new CreatePlatformApplicationRequest
             {
@@ -82,7 +80,7 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
 
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmazonSimpleNotificationService>(new RecordingSnsClient(LocalStackFixture.Credentials, localStack.SnsConfig(), _published));
-        services.AddAmazonSnsPush(LocalStackFixture.ConfigurationWith(localStack.NativePushSettings(_name, _topicArn, _fcmApplicationArn)));
+        services.AddAmazonSnsPush(LocalStackFixture.ConfigurationWith(localStack.NativePushSettings(_name, _fcmApplicationArn)));
         _host = services.BuildServiceProvider();
     }
 
@@ -91,13 +89,12 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         await _host.DisposeAsync();
         await _dynamoDb.DeleteTableAsync(new DeleteTableRequest { TableName = _name });
         await _sns.DeletePlatformApplicationAsync(new DeletePlatformApplicationRequest { PlatformApplicationArn = _fcmApplicationArn });
-        await _sns.DeleteTopicAsync(new DeleteTopicRequest { TopicArn = _topicArn });
         _sns.Dispose();
         _dynamoDb.Dispose();
     }
 
     [Fact]
-    public async Task Upsert_NewInstallation_CreatesAnEnabledEndpoint_SubscribedToTheTopic_AndAnOwnedRow()
+    public async Task Upsert_NewInstallation_CreatesAnEnabledEndpoint_AndAnOwnedRow()
     {
         var ct = TestContext.Current.CancellationToken;
 
@@ -113,8 +110,7 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         var endpoint = await _sns.GetEndpointAttributesAsync(new GetEndpointAttributesRequest { EndpointArn = row["EndpointArn"].S }, ct);
         endpoint.Attributes["Token"].Should().Be("token-a");
         endpoint.Attributes["Enabled"].Should().Be("true");
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().ContainSingle().Which.Should().Be(row["EndpointArn"].S);
-        row["SubscriptionArn"].S.Should().StartWith(_topicArn);
+        row.Should().NotContainKey("SubscriptionArn");
     }
 
     [Fact]
@@ -135,7 +131,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         (await _sns.GetEndpointAttributesAsync(new GetEndpointAttributesRequest { EndpointArn = after["EndpointArn"].S }, ct))
             .Attributes["Token"].Should().Be("token-a");
         (await PlatformEndpointsAsync(ct)).Should().ContainSingle("a refused registration leaves no endpoint behind");
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().ContainSingle();
     }
 
     [Fact]
@@ -171,7 +166,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
 
         (await RowAsync("device-1", ct)).Should().BeNull();
         (await PlatformEndpointsAsync(ct)).Should().NotContain(endpointArn);
-        (await TopicSubscriptionEndpointsAsync(ct)).Should().BeEmpty();
     }
 
     [Fact]
@@ -200,31 +194,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         }
 
         deliveries.Should().NotContainKey(other, "a user-targeted send reaches only that user's devices");
-    }
-
-    [Fact]
-    public async Task Broadcast_PublishesToTheTopic_AndReachesEverySubscribedEndpoint()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        (await Registrar.UpsertAsync(Owner, Request("phone", "token-phone"), ct)).IsSuccess.Should().BeTrue();
-        (await Registrar.UpsertAsync(Stranger, Request("other", "token-other"), ct)).IsSuccess.Should().BeTrue();
-        var phone = (await RowAsync("phone", ct))!["EndpointArn"].S;
-        var other = (await RowAsync("other", ct))!["EndpointArn"].S;
-
-        await Sender.BroadcastAsync("Hello", "Everyone", cancellationToken: ct);
-
-        var publish = _published.Should().ContainSingle().Subject;
-        publish.TopicArn.Should().Be(_topicArn);
-        publish.MessageId.Should().NotBeNullOrEmpty();
-
-        var deliveries = await DeliveriesAsync(ct);
-        foreach (var endpointArn in new[] { phone, other })
-        {
-            var delivery = deliveries.Should().ContainKey(endpointArn).WhoseValue.Should().ContainSingle().Subject;
-            using var fcm = FcmEntryOf(delivery);
-            fcm.RootElement.GetProperty("fcmV1Message").GetProperty("message").GetProperty("notification")
-                .GetProperty("body").GetString().Should().Be("Everyone");
-        }
     }
 
     /// <summary>
@@ -277,12 +246,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         var response = await _sns.ListEndpointsByPlatformApplicationAsync(
             new ListEndpointsByPlatformApplicationRequest { PlatformApplicationArn = _fcmApplicationArn }, ct);
         return [.. (response.Endpoints ?? []).Select(e => e.EndpointArn)];
-    }
-
-    private async Task<List<string>> TopicSubscriptionEndpointsAsync(CancellationToken ct)
-    {
-        var response = await _sns.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = _topicArn }, ct);
-        return [.. (response.Subscriptions ?? []).Select(s => s.Endpoint)];
     }
 
     /// <summary>

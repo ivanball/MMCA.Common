@@ -233,6 +233,7 @@ public sealed class ApplicationPipelineCompositionTests
         var outermost = scope.ServiceProvider.GetRequiredService<ICommandHandler<PipelinePingCommand, Result>>();
 
         UnwrapChain(outermost, typeof(ICommandHandler<PipelinePingCommand, Result>)).Should().Equal(
+            "ViewAsCommandDecorator",
             "FeatureGateCommandDecorator",
             "AuthorizationCommandDecorator",
             "LoggingCommandDecorator",

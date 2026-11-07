@@ -116,6 +116,20 @@ public interface IAuthSessionIssuer
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists the user's sign-in history: one row per sign-in (a rotation chain, however many times it
+    /// rotated), live and ended alike, newest first and capped at the newest 50, each with how it
+    /// ended. Covers what the store retains (<see cref="RefreshSessionSettings.RetentionDays"/>).
+    /// </summary>
+    /// <param name="userId">The user whose sign-ins to list.</param>
+    /// <param name="currentSessionId">The caller's own session id, which flags its sign-in, or null.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The sign-ins, newest first.</returns>
+    Task<IReadOnlyList<SignInSummaryResponse>> ListSignInsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Revokes one of the user's sessions by id. Another account's session id and an id that never
     /// existed both answer <c>Auth.SessionNotFound</c>; an already-revoked session writes nothing and
     /// answers the not-found failure <c>Auth.SessionAlreadyRevoked</c>, so the client can say the

@@ -138,11 +138,10 @@ public static class AwsServiceCollectionExtensions
         /// Reads the shared gate <c>NativePush:Enabled</c> and the <c>NativePush:Sns</c> section:
         /// <c>FcmPlatformApplicationArn</c> and/or <c>ApnsPlatformApplicationArn</c> (the SNS platform
         /// applications holding the FCM v1 service account and the APNs key; a registration for a
-        /// platform without one fails validation), <c>BroadcastTopicArn</c> (every endpoint subscribes
-        /// to it; a broadcast is one publish there), <c>InstallationsTable</c>, <c>Region</c>,
+        /// platform without one fails validation), <c>InstallationsTable</c>, <c>Region</c>,
         /// <c>ServiceUrl</c> (one endpoint override for SNS and DynamoDB, e.g. LocalStack) and
         /// <c>AccessKeyId</c> + <c>SecretAccessKey</c> (else the AWS default credential chain). When the
-        /// gate is off, or the section lacks the table, the topic or both platform applications, the
+        /// gate is off, or the section lacks the table or both platform applications, the
         /// call is a no-op, so hosts register it unconditionally and deployments switch the channel on
         /// by configuration alone.
         /// </para>
@@ -151,8 +150,7 @@ public static class AwsServiceCollectionExtensions
         /// <c>InstallationId</c> (string) and a global secondary index named <c>UserId-index</c> with
         /// the partition key <c>UserId</c> (string) projecting all attributes. The identity needs
         /// <c>sns:CreatePlatformEndpoint</c> on the platform applications, <c>sns:SetEndpointAttributes</c>,
-        /// <c>sns:DeleteEndpoint</c> and <c>sns:Publish</c> on their endpoints, <c>sns:Subscribe</c>,
-        /// <c>sns:Unsubscribe</c> and <c>sns:Publish</c> on the topic, and <c>dynamodb:GetItem</c>,
+        /// <c>sns:DeleteEndpoint</c> and <c>sns:Publish</c> on their endpoints, and <c>dynamodb:GetItem</c>,
         /// <c>PutItem</c>, <c>DeleteItem</c> and <c>Query</c> on the table and its index. An
         /// <see cref="IAmazonSimpleNotificationService"/> or <see cref="IAmazonDynamoDB"/> the host
         /// registered first is used as is.

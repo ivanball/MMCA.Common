@@ -43,13 +43,21 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// <param name="refreshSessions">The multi-device refresh-session store.</param>
 /// <param name="refreshSessionSettings">Refresh-session options, including the per-user cap.</param>
 /// <param name="timeProvider">The clock every session instant is stamped from.</param>
-/// <param name="logger">Logs each lost-response recovery (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>); optional.</param>
+/// <param name="logger">
+/// Logs each lost-response recovery (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>)
+/// and each reuse-detection family revocation (BR-206); optional.
+/// </param>
+/// <param name="viewAsGrants">
+/// The view-as grant store (ADR-137), read so the account holder's own sign-in history shows each
+/// time support viewed the account; optional, and an empty read while view-as is disabled.
+/// </param>
 public sealed partial class AuthSessionIssuer(
     ITokenService tokenService,
     IRefreshSessionStore refreshSessions,
     IOptions<RefreshSessionSettings> refreshSessionSettings,
     TimeProvider timeProvider,
-    ILogger<AuthSessionIssuer>? logger = null) : IAuthSessionIssuer
+    ILogger<AuthSessionIssuer>? logger = null,
+    ViewAs.IViewAsGrantStore? viewAsGrants = null) : IAuthSessionIssuer
 {
     /// <summary>
     /// The token service handed to callers, wrapped so that a token minted while a session is being
@@ -223,6 +231,24 @@ public sealed partial class AuthSessionIssuer(
 
     /// <inheritdoc />
     /// <remarks>
+    /// The store aggregates the rotation chains (<see cref="IRefreshSessionStore.GetRecentSignInsAsync"/>),
+    /// so the read is bounded by the 50-sign-in cap, never by how many times each sign-in rotated; the
+    /// caller's own sign-in is found from the heads, or by one primary-key lookup (<see cref="SignInHistory"/>).
+    /// </remarks>
+    public Task<IReadOnlyList<SignInSummaryResponse>> ListSignInsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId,
+        CancellationToken cancellationToken) =>
+        SignInHistory.ReadAsync(
+            refreshSessions,
+            userId,
+            timeProvider.GetUtcNow().UtcDateTime,
+            currentSessionId,
+            cancellationToken,
+            viewAsGrants);
+
+    /// <inheritdoc />
+    /// <remarks>
     /// The ownership check is the store query itself (<see cref="IRefreshSessionStore.FindByIdAsync"/>
     /// is scoped to the user), so another account's session id and an id that never existed produce
     /// the same <c>NotFound</c> and neither confirms the other user's session exists.
@@ -360,9 +386,7 @@ public sealed partial class AuthSessionIssuer(
                 return Result.Failure<RefreshSession>(RefreshSupersededError());
             }
 
-            await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
-                .ConfigureAwait(false);
-            await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await RevokeFamilyOnReuseAsync(userId, now, cancellationToken).ConfigureAwait(false);
 
             return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
         }
@@ -426,9 +450,10 @@ public sealed partial class AuthSessionIssuer(
         string? userAgent,
         CancellationToken cancellationToken)
     {
+        // The successor continues the presented session's sign-in (SignInId), which is what lets the
+        // sign-in history fold a rotation chain into one row.
         var refreshToken = tokenService.GenerateRefreshToken();
-        var successorResult = RefreshSession.Create(
-            userId,
+        var successorResult = session.CreateSuccessor(
             refreshToken,
             now,
             now.Add(RefreshTokenLifetime),
@@ -469,9 +494,7 @@ public sealed partial class AuthSessionIssuer(
             // Rotated longer ago than the grace, or unreadable: that is indistinguishable from a
             // replay, and it gets the replay answer: the whole live family
             // goes (BR-206).
-            await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
-                .ConfigureAwait(false);
-            await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await RevokeFamilyOnReuseAsync(userId, now, cancellationToken).ConfigureAwait(false);
 
             return Result.Failure<IssuedSession>(InvalidRefreshTokenError());
         }
@@ -562,18 +585,47 @@ public sealed partial class AuthSessionIssuer(
     private void LogLostResponseRecovered(Guid presentedSessionId, Guid successorSessionId, TimeSpan elapsed) =>
         LogLostResponseRecovered(logger ?? NullLogger<AuthSessionIssuer>.Instance, presentedSessionId, successorSessionId, elapsed);
 
+    // The user id and the count only: never the client IP or user agent, which are personal data
+    // (RefreshSession [Pii]) and would put a device fingerprint into every log sink.
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Refresh token reuse detected for user {UserId}; {RevokedCount} live sessions revoked")]
+    private static partial void LogRefreshTokenReuseDetected(ILogger logger, UserIdentifierType userId, int revokedCount);
+
+    /// <summary>
+    /// The BR-206 answer to a replayed refresh token: revokes every live session the user holds as
+    /// <see cref="RefreshSession.ReasonReuseDetected"/>, saves, and logs one Warning so an operator
+    /// sees the event (it was silent before). Both reuse paths (the lookup that lands on a rotated
+    /// row, and the loser of a rotation claim) end here, so each event logs exactly once.
+    /// </summary>
+    private async Task RevokeFamilyOnReuseAsync(UserIdentifierType userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var revoked = await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
+            .ConfigureAwait(false);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        LogRefreshTokenReuseDetected(logger ?? NullLogger<AuthSessionIssuer>.Instance, userId, revoked);
+    }
+
     /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>
-    private async Task RevokeLiveSessionsAsync(
+    /// <returns>How many sessions were revoked.</returns>
+    private async Task<int> RevokeLiveSessionsAsync(
         UserIdentifierType userId,
         string reason,
         DateTime now,
         CancellationToken cancellationToken)
     {
         var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        var revoked = 0;
         foreach (var session in sessions)
         {
-            session.Revoke(now, reason);
+            if (session.Revoke(now, reason).IsSuccess)
+            {
+                revoked++;
+            }
         }
+
+        return revoked;
     }
 
     /// <summary>

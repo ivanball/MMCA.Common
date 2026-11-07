@@ -62,6 +62,28 @@ public interface IRefreshSessionStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the user's newest <paramref name="maxSignIns"/> sign-ins, newest first by
+    /// <see cref="RefreshSessionSignIn.StartedAt"/>, aggregated in the store: one entry per
+    /// <see cref="RefreshSession.SignInId"/> with its earliest issue instant and only its newest row,
+    /// so a sign-in that rotated a thousand times costs one row, not a thousand. A row with no
+    /// <see cref="RefreshSession.SignInId"/> (written before the column existed) is its own sign-in
+    /// unless it was rotated away, in which case its successor stands for it and it is left out.
+    /// <para>
+    /// The returned heads are for reading only (the shipped EF store reads them untracked), so a
+    /// mutation on one is never persisted. An implementation must bound what it reads by
+    /// <paramref name="maxSignIns"/>, never by the user's total row count.
+    /// </para>
+    /// </summary>
+    /// <param name="userId">The user whose sign-ins to aggregate.</param>
+    /// <param name="maxSignIns">The most sign-ins to return; must be positive.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>At most <paramref name="maxSignIns"/> sign-ins, newest first.</returns>
+    Task<IReadOnlyList<RefreshSessionSignIn>> GetRecentSignInsAsync(
+        UserIdentifierType userId,
+        int maxSignIns,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the distinct users holding at least one LIVE session at <paramref name="now"/>: not
     /// revoked and <c>ExpiresAt</c> strictly after <paramref name="now"/>
     /// (<see cref="RefreshSession.IsActiveAt"/>). One query, evaluated in the store.

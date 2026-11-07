@@ -48,6 +48,14 @@ public static partial class WebApplicationBuilderExtensions
     /// </summary>
     public const string RateLimitPolicyAuthIp = "auth-ip";
 
+    /// <summary>
+    /// Named rate-limit policy for the MCP endpoint (<c>MMCA.Common.Mcp</c>'s <c>MapCommonMcp</c>
+    /// applies it). Partitioned by user id, else client IP, so an anonymous caller of a public tool is
+    /// metered too, unlike under the global limiter. Permit count:
+    /// <see cref="RateLimitingSettings.McpPermitLimit"/>.
+    /// </summary>
+    public const string RateLimitPolicyMcp = "mcp";
+
     /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
     /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
     /// <remarks>
@@ -210,6 +218,34 @@ public static partial class WebApplicationBuilderExtensions
             queueLimit: settings.QueueLimit,
             settings,
             allowDistributed: true);
+    }
+
+    /// <summary>
+    /// Partition selector for <see cref="RateLimitPolicyMcp"/>: one bucket per authenticated user
+    /// (subject claim, then name), else per client IP, else no limiter.
+    /// </summary>
+    /// <remarks>
+    /// An unattributable caller (null IP: the in-process TestServer, the integration tier) is not
+    /// limited, the same fail-open choice as <see cref="AuthIpRateLimitPartition(HttpContext, RateLimitingSettings)"/>,
+    /// rather than collapsing every such caller into one shared bucket. Internal so the key selection
+    /// is unit-testable via <c>InternalsVisibleTo</c>.
+    /// </remarks>
+    internal static RateLimitPartition<string> McpRateLimitPartition(HttpContext httpContext, RateLimitingSettings settings)
+    {
+        var partitionKey = httpContext.User?.FindUserIdValue()
+            ?? httpContext.User?.Identity?.Name
+            ?? httpContext.Connection.RemoteIpAddress?.ToString();
+
+        return partitionKey is null
+            ? RateLimitPartition.GetNoLimiter("__unknown-mcp-caller")
+            : CreateLimitedPartition(
+                httpContext,
+                partitionKey,
+                redisScope: "mcp",
+                permitLimit: settings.McpPermitLimit,
+                queueLimit: 0,
+                settings,
+                allowDistributed: true);
     }
 
     /// <summary>
@@ -408,7 +444,8 @@ public static partial class WebApplicationBuilderExtensions
 
         /// <summary>
         /// Registers rate limiting from an already-built <see cref="RateLimitingSettings"/>. The
-        /// policy names ("FixedPolicy", "UserPolicy", <see cref="RateLimitPolicyAuthIp"/>), the
+        /// policy names ("FixedPolicy", "UserPolicy", <see cref="RateLimitPolicyAuthIp"/>,
+        /// <see cref="RateLimitPolicyMcp"/>), the
         /// bypass list and every partition key are identical whatever the settings say; only the
         /// permit counts, the algorithm and the counter's location change.
         /// </summary>
@@ -442,6 +479,10 @@ public static partial class WebApplicationBuilderExtensions
                     allowDistributed: false));
 
                 options.AddPolicy("UserPolicy", httpContext => UserPolicyRateLimitPartition(httpContext, settings));
+
+                // The MCP endpoint's policy, registered here beside "UserPolicy" so a host that maps
+                // MapCommonMcp needs no second rate-limiting call. Inert until an endpoint names it.
+                options.AddPolicy(RateLimitPolicyMcp, httpContext => McpRateLimitPartition(httpContext, settings));
 
                 // Per-IP anonymous authentication throttle. Client IP is taken from
                 // Connection.RemoteIpAddress, which the shared pipeline has already resolved from

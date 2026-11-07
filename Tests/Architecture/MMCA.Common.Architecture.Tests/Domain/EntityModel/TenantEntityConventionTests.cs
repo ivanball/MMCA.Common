@@ -20,25 +20,23 @@ namespace MMCA.Common.Architecture.Tests.Domain.EntityModel;
 public sealed class TenantEntityConventionTests
 {
     private const string BaseEntityFullNamePrefix = "MMCA.Common.Domain.Entities.BaseEntity`";
-    private const string TenantIdPropertyName = "TenantId";
 
     [Fact]
     public void FrameworkEntities_AreDiscovered_GateIsNotVacuous() =>
         FrameworkEntities().Should().NotBeEmpty(
             "the tenancy gate must scan at least one framework entity, or it passes while checking nothing");
 
+    /// <summary>
+    /// Runs the same rule consumers inherit through <see cref="TenantScopeConventionTestsBase"/>. Common
+    /// has no modules, so the base's second rule (module entities scoped or declared global) does not
+    /// apply here and the framework calls the shared rule directly.
+    /// </summary>
     [Fact]
     public void EntitiesWithTenantId_ShouldImplement_ITenantEntity()
     {
-        var offenders = FrameworkEntities()
-            .Where(static t => t.GetProperty(TenantIdPropertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is not null
-                && !typeof(ITenantEntity).IsAssignableFrom(t))
-            .Select(static t => t.FullName)
-            .ToList();
+        var act = () => ArchitectureRules.EntitiesWithTenantIdImplementTenantMarker(new CommonArchitectureMap());
 
-        offenders.Should().BeEmpty(
-            "an entity carrying a TenantId must implement ITenantEntity so the Tenant query filter and the "
-            + "tenant save interceptor apply to it; offenders: " + string.Join(", ", offenders));
+        act.Should().NotThrow("every framework entity carrying a TenantId must implement ITenantEntity");
     }
 
     /// <summary>The concrete framework entities of the Domain and Infrastructure layers.</summary>

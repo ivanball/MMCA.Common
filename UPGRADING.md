@@ -32,6 +32,89 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**`INativePushSender.BroadcastAsync` is removed (breaking, MMCA.Common.Application and the push
+adapters).** The interface keeps `SendToUsersAsync` only, and the method is gone from
+`NullNativePushSender` (MMCA.Common.Infrastructure), `AzureNotificationHubNativePushSender`
+(MMCA.Common.Azure) and the internal SNS (MMCA.Common.Aws) and FCM (MMCA.Common.Gcp) senders.
+
+| Removed | Replacement |
+|---|---|
+| `INativePushSender.BroadcastAsync(title, body, metadata, cancellationToken)` | none; send to the target users with `SendToUsersAsync` |
+| `NullNativePushSender.BroadcastAsync`, `AzureNotificationHubNativePushSender.BroadcastAsync` | none |
+
+The mechanical fix: a class of your own that implements `INativePushSender` (a test fake included)
+deletes its `BroadcastAsync` method, and a call to it is removed or replaced by `SendToUsersAsync`
+over the intended recipients. MMCA.ADC, MMCA.Store and MMCA.Helpdesk do not call it.
+
+**The broadcast topic settings are removed (breaking for configuration, MMCA.Common.Aws and
+MMCA.Common.Gcp).** With no broadcast, the push adapters no longer subscribe devices to a topic.
+
+| Removed configuration key | Action |
+|---|---|
+| `NativePush:Sns:BroadcastTopicArn` | delete the key; the SNS topic and its subscriptions can be deleted |
+| `NativePush:Fcm:BroadcastTopic` | delete the key; tokens left subscribed to the FCM topic receive nothing from it |
+
+A leftover key is ignored, so nothing fails if it stays, but it no longer counts toward a complete
+section: the SNS adapter now needs only `InstallationsTable` and a platform application, and the FCM
+adapter only `ProjectId` and `InstallationsCollection`. The SNS identity can drop `sns:Subscribe`,
+`sns:Unsubscribe` and `sns:Publish` on the topic. Existing DynamoDB rows keep a `SubscriptionArn`
+attribute the adapter now ignores; no migration is needed.
+
+**Sign-in history adds one column to `RefreshSessions`, so the database that holds it needs a
+migration.** `ApplyRefreshSessionConfiguration` (and so `ApplicationDbContext` with
+`RefreshSessions:Enabled`) maps a nullable `SignInId` (`uniqueidentifier NULL` on SQL Server, `uuid`
+on PostgreSQL, `TEXT` on SQLite; Cosmos DB never maps the table) and a non-unique index
+`IX_RefreshSessions_UserId_SignInId` over `(UserId, SignInId, CreatedAt)`, which answers the history's
+per-sign-in aggregate from the index.
+
+The fix:
+
+1. **Generate one migration for the Identity database** (the source `RefreshSessions:DataSourceName`
+   names), for example `dotnet ef migrations add AddRefreshSessionSignInId -- --datasource <Name>`.
+   It holds exactly one `AddColumn<Guid>` (`SignInId`, nullable) and one `CreateIndex`
+   (`IX_RefreshSessions_UserId_SignInId`). Anything else in the diff is unrelated model drift:
+   investigate it before committing.
+2. **Deploy it as usual.** The change is expand-only, with no data rewrite: rows written before it
+   hold null and each one that was not rotated away shows as its own sign-in until the retention
+   sweep (`RefreshSessions:RetentionDays`) removes it, and a successor minted from such a row opens a
+   new sign-in. An older instance in a rolling deploy ignores the column.
+
+A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionIssuer`,
+`IAuthenticationService` or `IUserSessionsAdministrationService` (a test fake) implements the new
+`GetSignInsAsync` / `ListSignInsAsync` member, and a hand-written `IRefreshSessionStore` implements
+`GetRecentSignInsAsync` (aggregate in the store, bounded by `maxSignIns`, never by row count); a Moq mock of `IAuthUIService` behind the signed-in
+devices page sets up `GetSignInsAsync`, which that page now calls.
+
+**Read-only view-as (ADR-137) is off by default; a host that turns it on needs one more migration
+and four wiring steps.** With `ViewAs:Enabled` false (the default) there is no table, the grant and
+end endpoints answer 404, and the always-present `ViewAsGuard` step refuses any view-as token (an
+ordinary request pays one claim lookup). To enable it:
+
+1. **Configuration.** `"ViewAs": { "Enabled": true }` on the Identity host (`RetentionDays` defaults
+   to 90, `DataSourceName` to `Default`; point it at the source `RefreshSessions:DataSourceName`
+   names).
+2. **Migration.** With `ViewAs:Enabled` true the Identity context maps `ViewAsGrants` (`Id` Guid key,
+   `StaffUserId`, `TargetUserId`, `Reason` nvarchar(500), `GrantedAt`, `ExpiresAt`, `EndedAt` NULL,
+   indexes `IX_ViewAsGrants_TargetUserId_GrantedAt` and `IX_ViewAsGrants_GrantedAt`). Set
+   `DesignTimeDbContextOptions.EnableViewAsGrants = true` in that database's migrations project and
+   run `dotnet ef migrations add AddViewAsGrants -- --datasource <Name>`; the diff is one
+   `CreateTable` and two `CreateIndex`. Expand-only.
+3. **Code.** Register an `IViewAsSubjectResolver` over the app's `User` (email, role, display name,
+   soft-deleted flag; read deleted rows too), and grant `AdministrationPermissions.ViewAsUsers`
+   (`users:view-as`) to the staff role that also holds `users:manage`. An account holding
+   `users:view-as` can never be viewed.
+4. **Web UI.** Place `<ViewAsButton UserId="..." />` on the admin user page (set `UsersRoute` when the
+   admin controller is not routed at `Admin/Users`). `MainLayout` already renders `ViewAsBanner`. The
+   button and the banner need the same-origin API proxy (`AddCommonSameOriginApiProxy`); nothing in the
+   proxy configuration changes (`SameOriginApiProxy:ViewAsEndPath` defaults to `auth/view-as/end`).
+   MAUI does not offer view-as.
+
+Also: `AuthSessionIssuer` and `UserSessionsAdministrationService` take an optional trailing
+`IViewAsGrantStore` (code that constructs them by hand still compiles), and `MiddlewarePipelineStepNames`
+gains `ViewAsGuard` after `SoftDeletedUserFilter`.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The

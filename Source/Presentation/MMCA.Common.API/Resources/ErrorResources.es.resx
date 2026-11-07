@@ -145,6 +145,9 @@
   <data name="Auth.TooManyAttempts" xml:space="preserve">
     <value>Demasiados intentos de inicio de sesión fallidos. Vuelva a intentarlo más tarde.</value>
   </data>
+  <data name="Auth.ViewAsReadOnly" xml:space="preserve">
+    <value>Ver la aplicación como otro usuario es de solo lectura.</value>
+  </data>
   <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
     <value>Demasiadas solicitudes de confirmación. Vuelva a intentarlo más tarde.</value>
   </data>
@@ -321,5 +324,29 @@
   </data>
   <data name="Csv.Empty" xml:space="preserve">
     <value>El archivo no tiene una fila de encabezados.</value>
+  </data>
+  <data name="ViewAs.Self" xml:space="preserve">
+    <value>No puede ver la aplicación como usted mismo.</value>
+  </data>
+  <data name="ViewAs.ReasonInvalid" xml:space="preserve">
+    <value>Se requiere un motivo de 10 a 500 caracteres.</value>
+  </data>
+  <data name="ViewAs.NotConfigured" xml:space="preserve">
+    <value>Ver como otro usuario no está configurado en este servidor.</value>
+  </data>
+  <data name="ViewAs.TargetNotFound" xml:space="preserve">
+    <value>No existe esa cuenta.</value>
+  </data>
+  <data name="ViewAs.TargetDeleted" xml:space="preserve">
+    <value>No se puede ver una cuenta eliminada.</value>
+  </data>
+  <data name="ViewAs.TargetIsStaff" xml:space="preserve">
+    <value>No se puede ver una cuenta que a su vez puede ver a otros.</value>
+  </data>
+  <data name="ViewAs.GrantNotFound" xml:space="preserve">
+    <value>No existe esa sesión de vista.</value>
+  </data>
+  <data name="ViewAs.NotViewing" xml:space="preserve">
+    <value>No está viendo como otro usuario.</value>
   </data>
 </root>

@@ -11,7 +11,7 @@ namespace MMCA.Common.Aws.Notifications;
 
 /// <summary>
 /// SNS mobile push implementation of <see cref="IPushDeviceRegistrar"/> (ADR-044). Each installation is
-/// one SNS platform endpoint (subscribed to the broadcast topic) plus one row in the DynamoDB
+/// one SNS platform endpoint plus one row in the DynamoDB
 /// registry, which is where ownership lives: the same handover and owner-scoped delete rules as the
 /// Notification Hubs registrar, enforced by conditional writes.
 /// <para>
@@ -93,8 +93,7 @@ internal sealed class SnsPushDeviceRegistrar(
             }
 
             // Endpoint first, row last: a failure part-way leaves the row, so the client's retry finds
-            // it and finishes the job, rather than an endpoint still subscribed to broadcasts with no
-            // row left to find it by. The row delete is conditional on the owner, so a row handed over
+            // it and finishes the job, rather than an endpoint with no row left to find it by. The row delete is conditional on the owner, so a row handed over
             // in the meantime survives. The endpoint goes only when no other row of this user still
             // points at it (two installation ids holding one device token share an endpoint).
             var ownerRows = await registry.QueryByUserAsync(owner, cancellationToken).ConfigureAwait(false);
@@ -103,7 +102,7 @@ internal sealed class SnsPushDeviceRegistrar(
                 && string.Equals(row.EndpointArn, existing.EndpointArn, StringComparison.Ordinal));
             if (!endpointShared)
             {
-                await registry.RemoveEndpointAsync(existing.EndpointArn, existing.SubscriptionArn, cancellationToken).ConfigureAwait(false);
+                await registry.RemoveEndpointAsync(existing.EndpointArn, cancellationToken).ConfigureAwait(false);
             }
 
             await registry.DeleteOwnedAsync(installationId, owner, cancellationToken).ConfigureAwait(false);
@@ -150,43 +149,27 @@ internal sealed class SnsPushDeviceRegistrar(
 
         var (endpointArn, createdEndpoint) = await EnsureEndpointAsync(existing, platform, applicationArn, request.PushChannel, cancellationToken).ConfigureAwait(false);
 
-        var subscriptionArn = existing is not null && string.Equals(existing.EndpointArn, endpointArn, StringComparison.Ordinal)
-            ? existing.SubscriptionArn
-            : null;
-        var createdSubscription = string.IsNullOrEmpty(subscriptionArn);
-        if (createdSubscription)
-        {
-            subscriptionArn = (await sns.SubscribeAsync(
-                new SubscribeRequest
-                {
-                    TopicArn = options.Value.BroadcastTopicArn,
-                    Protocol = "application",
-                    Endpoint = endpointArn,
-                    ReturnSubscriptionArn = true,
-                },
-                cancellationToken).ConfigureAwait(false)).SubscriptionArn;
-        }
-
-        var installation = new SnsInstallation(request.InstallationId, owner, platform, request.PushChannel, endpointArn, subscriptionArn);
+        var installation = new SnsInstallation(request.InstallationId, owner, platform, request.PushChannel, endpointArn);
         if (!await registry.TryPutAsync(installation, cancellationToken).ConfigureAwait(false))
         {
             // Another device claimed the id between the read and the write. Undo what this request
-            // created so no endpoint is left subscribed to broadcasts without a row to account for it.
+            // created so no endpoint is left without a row to account for it.
             // Known edge: CreatePlatformEndpoint returns an existing endpoint for a token already
             // registered under a different installation id, which this removes too; that row's next
             // send then finds the endpoint gone and drops it, and its device re-registers on start.
-            await RemoveUnaccountedAsync(
-                createdEndpoint ? endpointArn : null,
-                createdSubscription ? subscriptionArn : null,
-                cancellationToken).ConfigureAwait(false);
+            if (createdEndpoint)
+            {
+                await RemoveUnaccountedAsync(endpointArn, cancellationToken).ConfigureAwait(false);
+            }
+
             return InstallationConflict();
         }
 
         if (existing is not null && !string.Equals(existing.EndpointArn, endpointArn, StringComparison.Ordinal))
         {
             // The row moved to a new endpoint (the old one was gone, or the platform changed): the old
-            // endpoint no longer has a row, so it must not keep receiving broadcasts.
-            await RemoveUnaccountedAsync(existing.EndpointArn, existing.SubscriptionArn, cancellationToken).ConfigureAwait(false);
+            // endpoint no longer has a row, so it goes.
+            await RemoveUnaccountedAsync(existing.EndpointArn, cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();
@@ -241,19 +224,12 @@ internal sealed class SnsPushDeviceRegistrar(
         }
     }
 
-    /// <summary>Best-effort removal of an endpoint and subscription no row accounts for.</summary>
-    private async Task RemoveUnaccountedAsync(string? endpointArn, string? subscriptionArn, CancellationToken cancellationToken)
+    /// <summary>Best-effort removal of an endpoint no row accounts for.</summary>
+    private async Task RemoveUnaccountedAsync(string endpointArn, CancellationToken cancellationToken)
     {
         try
         {
-            if (endpointArn is not null)
-            {
-                await registry.RemoveEndpointAsync(endpointArn, subscriptionArn, cancellationToken).ConfigureAwait(false);
-            }
-            else if (!string.IsNullOrEmpty(subscriptionArn))
-            {
-                await sns.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = subscriptionArn }, cancellationToken).ConfigureAwait(false);
-            }
+            await registry.RemoveEndpointAsync(endpointArn, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {

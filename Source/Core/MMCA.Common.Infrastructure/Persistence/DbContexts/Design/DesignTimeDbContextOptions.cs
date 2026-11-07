@@ -87,6 +87,18 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableStoredPermissionGrants { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the view-as grant table
+    /// (<c>ViewAsGrants</c>, ADR-137), mirroring <c>ViewAs:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the Identity database's migrations project (like <see cref="EnableRefreshSessions"/>)
+    /// when the host enables view-as; the flag must match <c>ViewAs:Enabled</c>, or the scaffolded
+    /// migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableViewAsGrants { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>

@@ -97,6 +97,15 @@ public sealed class RefreshSession : IAnonymizable
     public string? ReasonRevoked { get; private set; }
 
     /// <summary>
+    /// Gets the sign-in this session belongs to: the <see cref="Id"/> of the session that opened it,
+    /// carried unchanged to every successor on rotation (<see cref="CreateSuccessor"/>). It is what
+    /// groups a rotation chain into one sign-in without walking <see cref="ReplacedByTokenHash"/>
+    /// links. Null only on a row written before the column existed; such rows age out with the
+    /// retention sweep, and a successor minted from one opens a fresh sign-in.
+    /// </summary>
+    public Guid? SignInId { get; private set; }
+
+    /// <summary>
     /// Gets the client IP recorded at issue time, when the caller supplied one. Informational: it
     /// identifies a session in a "your devices" list and gives an audit trail for a revocation. It is
     /// never part of a validation decision, so a mobile client changing networks is not signed out.
@@ -120,7 +129,9 @@ public sealed class RefreshSession : IAnonymizable
 
     /// <summary>
     /// Creates a session for a freshly issued refresh token, hashing the token on the way in so the
-    /// plaintext never reaches a property.
+    /// plaintext never reaches a property. The session opens a new sign-in (its
+    /// <see cref="SignInId"/> is its own <see cref="Id"/>); a rotation uses
+    /// <see cref="CreateSuccessor"/> instead, which keeps the sign-in.
     /// </summary>
     /// <param name="userId">The user the token authenticates.</param>
     /// <param name="refreshToken">The plaintext refresh token handed to the client.</param>
@@ -153,7 +164,7 @@ public sealed class RefreshSession : IAnonymizable
                 nameof(Create)));
         }
 
-        return Result.Success(new RefreshSession
+        var session = new RefreshSession
         {
             UserId = userId,
             TokenHash = HashToken(refreshToken),
@@ -161,7 +172,39 @@ public sealed class RefreshSession : IAnonymizable
             ExpiresAt = expiresAt,
             IpAddress = Truncate(ipAddress, IpAddressMaxLength),
             UserAgent = Truncate(userAgent, UserAgentMaxLength),
-        });
+        };
+        session.SignInId = session.Id;
+
+        return Result.Success(session);
+    }
+
+    /// <summary>
+    /// Creates the session that replaces this one on rotation: same user, same sign-in
+    /// (<see cref="SignInId"/>), new token. Linking the two (<see cref="Revoke"/> with the successor's
+    /// hash) stays the store's rotation claim; this only mints the row.
+    /// </summary>
+    /// <param name="refreshToken">The plaintext successor refresh token handed to the client.</param>
+    /// <param name="createdAt">The UTC issue instant.</param>
+    /// <param name="expiresAt">The UTC expiry instant; must be after <paramref name="createdAt"/>.</param>
+    /// <param name="ipAddress">Optional client IP; truncated to <see cref="IpAddressMaxLength"/>.</param>
+    /// <param name="userAgent">Optional client user-agent; truncated to <see cref="UserAgentMaxLength"/>.</param>
+    /// <returns>The successor session, or a validation failure.</returns>
+    public Result<RefreshSession> CreateSuccessor(
+        string refreshToken,
+        DateTime createdAt,
+        DateTime expiresAt,
+        string? ipAddress = null,
+        string? userAgent = null)
+    {
+        var successor = Create(UserId, refreshToken, createdAt, expiresAt, ipAddress, userAgent);
+        if (successor.TryGetValue(out var session) && SignInId is { } signInId)
+        {
+            // A row written before SignInId existed has none to pass on, so its successor keeps the
+            // sign-in it opened in Create: from here on the chain is grouped like any other.
+            session.SignInId = signInId;
+        }
+
+        return successor;
     }
 
     /// <summary>

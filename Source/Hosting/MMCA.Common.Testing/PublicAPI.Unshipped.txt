@@ -1,1 +1,11 @@
 #nullable enable
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetRecentSignInsAsync(int userId, int maxSignIns, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Auth.RefreshSessionSignIn!>!>!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.InMemoryViewAsGrantStore() -> void
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.Grants.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.ViewAsGrant!>!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.Seed(MMCA.Common.Domain.Auth.ViewAsGrant! grant) -> void
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.AddAsync(MMCA.Common.Domain.Auth.ViewAsGrant! grant, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.FindAsync(System.Guid grantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.ViewAsGrant?>!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.EndAsync(System.Guid grantId, int staffUserId, System.DateTime endedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.GetRecentForTargetAsync(int targetUserId, int maxCount, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.ViewAsGrant!>!>!
+MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.DeleteIssuedBeforeAsync(System.DateTime cutoff, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!

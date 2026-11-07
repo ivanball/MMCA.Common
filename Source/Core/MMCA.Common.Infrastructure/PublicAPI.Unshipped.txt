@@ -1,1 +1,11 @@
 #nullable enable
+*REMOVED*MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.SignInIndexName = "IX_RefreshSessions_UserId_SignInId" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.TargetIndexName = "IX_ViewAsGrants_TargetUserId_GrantedAt" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.GrantedAtIndexName = "IX_ViewAsGrants_GrantedAt" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.TableName = "ViewAsGrants" -> string!
+MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions
+MMCA.Common.Infrastructure.Auth.TokenService.GenerateShortLivedAccessToken(int userId, string! email, string! role, string! fullName, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims, System.TimeSpan lifetime) -> string!
+static MMCA.Common.Infrastructure.Persistence.Auth.ViewAsGrantModelBuilderExtensions.ApplyViewAsGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.set -> void

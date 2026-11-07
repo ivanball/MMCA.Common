@@ -1,0 +1,12 @@
+@* Read-only view-as banner (ADR-137). Renders nothing unless the signed-in principal is a view-as
+   token, so every host can place it unconditionally. role="status": the view is the staff user's own
+   choice, so it is announced politely rather than as an error (WCAG 4.1.3). *@
+
+@if (_viewAs)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mmca-view-as-banner mb-2" role="status">
+        <span>@L["Auth.ViewAs.Banner", _viewedName, FormatRemaining()]</span>
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small" Class="ml-2"
+                   Disabled="_ending" OnClick="EndAsync">@L["Auth.ViewAs.End"]</MudButton>
+    </MudAlert>
+}

@@ -74,6 +74,16 @@ public static class SessionCookieEndpoints
                     return Results.StatusCode(StatusCodes.Status403Forbidden);
                 }
 
+                // A live view-as overlay (ADR-137, written only on a claims-only proxy host) is what the
+                // browser is viewing as. It is answered without touching the staff user's session, and
+                // never refreshed: an expired one falls through to the session below.
+                if (ViewAsOverlayCookie.TryRead(httpContext.Request, TimeProvider.System.GetUtcNow(), out var viewAsToken, out var viewAsExpiry))
+                {
+                    return Results.Json(new SessionTokenResponse(
+                        settings.Value.ClaimsOnlyBrowserTokens ? SessionClaimsToken.Create(viewAsToken) ?? string.Empty : viewAsToken,
+                        viewAsExpiry));
+                }
+
                 var result = await refresher.GetOrRefreshAsync(httpContext, cancellationToken).ConfigureAwait(false);
                 if (result is null)
                 {

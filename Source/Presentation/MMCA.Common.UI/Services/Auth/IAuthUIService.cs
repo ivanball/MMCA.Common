@@ -75,6 +75,15 @@ public interface IAuthUIService
     Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the caller's sign-in history via <c>auth/my-sign-ins</c>: one row per sign-in however
+    /// often it refreshed, ended ones included with how they ended, newest first, at most 50. The
+    /// caller's own sign-in carries <see cref="SignInSummaryResponse.IsCurrent"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The sign-ins, or the API's own refusal.</returns>
+    Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Signs one device out via <c>auth/revoke/{sessionId}</c>. Another account's session id (or a
     /// nonexistent one) answers 404, which arrives as an <see cref="ErrorType.NotFound"/> failure;
     /// revoking an already-revoked session answers the same 404.

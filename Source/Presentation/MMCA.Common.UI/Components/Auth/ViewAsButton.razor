@@ -1,0 +1,30 @@
+@* "View as" for an administrator's user page (ADR-137). Renders nothing unless the signed-in
+   principal holds users:view-as and is not itself viewing as someone. The reason is required by
+   the grant endpoint (10 to 500 characters) and becomes the audit record of the access. *@
+
+@if (_canViewAs)
+{
+    @if (!_open)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Outlined.Visibility"
+                   Class="mmca-view-as-button" OnClick="Open">@L["Auth.ViewAs.Button"]</MudButton>
+    }
+    else
+    {
+        <MudPaper Class="pa-3 mmca-view-as-form" Elevation="1">
+            <MudText Typo="Typo.body2" Class="mb-2">@L["Auth.ViewAs.Explanation"]</MudText>
+            <MudTextField T="string" @bind-Value="_reason" Label="@L["Auth.ViewAs.Reason"]"
+                          Lines="2" MaxLength="500" Counter="500" Immediate="true" Required="true" />
+            @if (_error is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-2" role="alert">@_error</MudText>
+            }
+
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" Disabled="_starting || !ReasonIsValid"
+                           OnClick="StartAsync">@L["Auth.ViewAs.Start"]</MudButton>
+                <MudButton Variant="Variant.Text" Disabled="_starting" OnClick="Cancel">@L["Common.Button.Cancel"]</MudButton>
+            </div>
+        </MudPaper>
+    }
+}

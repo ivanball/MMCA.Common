@@ -158,6 +158,25 @@ public sealed class RateLimitPartitionTests
         first.Should().NotBe(second);
     }
 
+    // ── MCP endpoint policy (RateLimitPolicyMcp): user id, else client IP, else no limiter ──
+    [Fact]
+    public void McpRateLimitPartition_ForAuthenticatedUser_PartitionsByUserId() =>
+        WebApplicationBuilderExtensions.McpRateLimitPartition(
+                Ctx(path: "/mcp", authenticated: true, name: "Alice Smith", userId: "42", ip: "198.51.100.4"),
+                new RateLimitingSettings())
+            .PartitionKey.Should().Be("42");
+
+    // Unlike the global limiter, an anonymous caller of a public tool is metered, per client IP.
+    [Fact]
+    public void McpRateLimitPartition_ForAnonymousCaller_PartitionsByIp() =>
+        WebApplicationBuilderExtensions.McpRateLimitPartition(Ctx(path: "/mcp", ip: "203.0.113.9"), new RateLimitingSettings())
+            .PartitionKey.Should().Be("203.0.113.9");
+
+    [Fact]
+    public void McpRateLimitPartition_WhenCallerUnattributable_UsesNoLimiterPartition() =>
+        WebApplicationBuilderExtensions.McpRateLimitPartition(Ctx(path: "/mcp"), new RateLimitingSettings())
+            .PartitionKey.Should().Be("__unknown-mcp-caller");
+
     private static DefaultHttpContext Ctx(
         string path = "/api/events",
         string? contentType = null,

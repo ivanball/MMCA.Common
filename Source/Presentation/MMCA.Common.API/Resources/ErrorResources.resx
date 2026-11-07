@@ -145,6 +145,9 @@
   <data name="Auth.TooManyAttempts" xml:space="preserve">
     <value>Too many failed login attempts. Please try again later.</value>
   </data>
+  <data name="Auth.ViewAsReadOnly" xml:space="preserve">
+    <value>Viewing as another user is read-only.</value>
+  </data>
   <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
     <value>Too many confirmation requests. Please try again later.</value>
   </data>
@@ -321,5 +324,29 @@
   </data>
   <data name="Csv.Empty" xml:space="preserve">
     <value>The file has no header row.</value>
+  </data>
+  <data name="ViewAs.Self" xml:space="preserve">
+    <value>You cannot view the app as yourself.</value>
+  </data>
+  <data name="ViewAs.ReasonInvalid" xml:space="preserve">
+    <value>A reason of 10 to 500 characters is required.</value>
+  </data>
+  <data name="ViewAs.NotConfigured" xml:space="preserve">
+    <value>Viewing as another user is not configured on this host.</value>
+  </data>
+  <data name="ViewAs.TargetNotFound" xml:space="preserve">
+    <value>No such account.</value>
+  </data>
+  <data name="ViewAs.TargetDeleted" xml:space="preserve">
+    <value>A deleted account cannot be viewed.</value>
+  </data>
+  <data name="ViewAs.TargetIsStaff" xml:space="preserve">
+    <value>An account that can itself view others cannot be viewed.</value>
+  </data>
+  <data name="ViewAs.GrantNotFound" xml:space="preserve">
+    <value>No such view-as session.</value>
+  </data>
+  <data name="ViewAs.NotViewing" xml:space="preserve">
+    <value>You are not viewing as another user.</value>
   </data>
 </root>

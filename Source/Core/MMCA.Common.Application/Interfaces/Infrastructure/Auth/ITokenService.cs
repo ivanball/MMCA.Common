@@ -21,6 +21,33 @@ public interface ITokenService
         string fullName,
         IEnumerable<Claim>? additionalClaims = null);
 
+    /// <summary>
+    /// Generates a signed JWT access token that expires after <paramref name="lifetime"/> instead of
+    /// the configured access-token lifetime. Used for the read-only view-as token (ADR-137), which
+    /// must never outlive its 15-minute grant.
+    /// </summary>
+    /// <remarks>
+    /// The default ignores <paramref name="lifetime"/> and mints with the configured lifetime, so a
+    /// hand-written token service keeps compiling; the framework's <c>TokenService</c> honors it. The
+    /// view-as guard checks the grant's own expiry on every request either way, so a longer-lived
+    /// token is still refused once its grant expires.
+    /// </remarks>
+    /// <param name="userId">The user's identifier.</param>
+    /// <param name="email">The user's email address.</param>
+    /// <param name="role">The user's role, as the host names it.</param>
+    /// <param name="fullName">The user's full display name.</param>
+    /// <param name="additionalClaims">Additional claims to include in the token.</param>
+    /// <param name="lifetime">How long the token is valid for.</param>
+    /// <returns>The signed JWT token string.</returns>
+    string GenerateShortLivedAccessToken(
+        UserIdentifierType userId,
+        string email,
+        string role,
+        string fullName,
+        IEnumerable<Claim>? additionalClaims,
+        TimeSpan lifetime) =>
+        GenerateAccessToken(userId, email, role, fullName, additionalClaims);
+
     /// <summary>Generates a cryptographically random refresh token.</summary>
     /// <returns>A base64-encoded refresh token string.</returns>
     string GenerateRefreshToken();

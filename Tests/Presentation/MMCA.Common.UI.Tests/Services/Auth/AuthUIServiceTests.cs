@@ -762,6 +762,24 @@ public sealed class AuthUIServiceTests : IDisposable
         sessions[1].IsCurrent.Should().BeFalse();
     }
 
+    // T13: the caller's own sign-in history.
+    [Fact]
+    public async Task GetSignInsAsync_GetsMySignInsWithTheBearerTokenAndReadsTheCamelCaseList()
+    {
+        const string body = """[ { "signInId": "11111111-1111-1111-1111-111111111111", "startedAt": "2026-08-01T09:30:00Z", "lastActiveAt": "2026-08-01T12:00:00Z", "ipAddress": null, "userAgent": null, "endedAt": null, "endReason": null, "isCurrent": true, "kind": "SignIn" } ]""";
+        var sut = CreateSut(HttpStatusCode.OK, body);
+
+        var result = await sut.GetSignInsAsync(Ct);
+
+        _handler.LastRequest.Method.Should().Be(HttpMethod.Get);
+        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/my-sign-ins");
+        _handler.LastRequest.Authorization!.Parameter.Should().Be(StoredAccessToken);
+        var signIn = result.Value!.Should().ContainSingle().Subject;
+        signIn.SignInId.Should().Be(new Guid(0x11111111, 0x1111, 0x1111, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11));
+        signIn.IsCurrent.Should().BeTrue();
+        signIn.EndedAt.Should().BeNull();
+    }
+
     [Fact]
     public async Task GetSessionsAsync_WithNoLiveSessions_SucceedsWithAnEmptyList()
     {

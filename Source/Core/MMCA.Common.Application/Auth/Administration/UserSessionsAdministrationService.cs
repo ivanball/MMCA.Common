@@ -1,3 +1,4 @@
+using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Responses;
 
@@ -9,9 +10,14 @@ namespace MMCA.Common.Application.Auth.Administration;
 /// </summary>
 /// <param name="refreshSessions">The refresh session store.</param>
 /// <param name="timeProvider">The clock that decides which sessions are still live.</param>
+/// <param name="viewAsGrants">
+/// The view-as grant store (ADR-137), read so the history shows each time support viewed the
+/// account; optional, and an empty read while view-as is disabled.
+/// </param>
 public sealed class UserSessionsAdministrationService(
     IRefreshSessionStore refreshSessions,
-    TimeProvider timeProvider) : IUserSessionsAdministrationService
+    TimeProvider timeProvider,
+    ViewAs.IViewAsGrantStore? viewAsGrants = null) : IUserSessionsAdministrationService
 {
     /// <inheritdoc />
     /// <remarks>
@@ -43,6 +49,26 @@ public sealed class UserSessionsAdministrationService(
         ];
 
         return Result.Success(live);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The same store-aggregated read the account holder's own history uses (<see cref="SignInHistory"/>),
+    /// with no current sign-in: an administrator is never on the viewed user's device.
+    /// </remarks>
+    public async Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var signIns = await SignInHistory.ReadAsync(
+            refreshSessions,
+            userId,
+            timeProvider.GetUtcNow().UtcDateTime,
+            currentSessionId: null,
+            cancellationToken,
+            viewAsGrants).ConfigureAwait(false);
+
+        return Result.Success(signIns);
     }
 
     /// <inheritdoc />

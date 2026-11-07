@@ -74,6 +74,35 @@ internal sealed class NoOpAuthUIService : IAuthUIService
         return Task.FromResult(Result.Success(sessions));
     }
 
+    // Canned history so the axe scan reaches the populated sign-in table: one live sign-in (the
+    // current one) and one that ended, so both the "active" and the ended-reason cells render.
+    public Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<SignInSummaryResponse> signIns =
+        [
+            new(
+                SignInId: CurrentDeviceSessionId,
+                StartedAt: new DateTime(2026, 1, 2, 9, 0, 0, DateTimeKind.Utc),
+                LastActiveAt: new DateTime(2026, 1, 3, 14, 15, 0, DateTimeKind.Utc),
+                IpAddress: "203.0.113.7",
+                UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                EndedAt: null,
+                EndReason: null,
+                IsCurrent: true),
+            new(
+                SignInId: OtherDeviceSessionId,
+                StartedAt: new DateTime(2025, 12, 20, 18, 30, 0, DateTimeKind.Utc),
+                LastActiveAt: new DateTime(2025, 12, 21, 8, 0, 0, DateTimeKind.Utc),
+                IpAddress: null,
+                UserAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Mobile/15E148 Safari/604.1",
+                EndedAt: new DateTime(2025, 12, 21, 8, 5, 0, DateTimeKind.Utc),
+                EndReason: SignInEndReasons.SignedOut,
+                IsCurrent: false),
+        ];
+
+        return Task.FromResult(Result.Success(signIns));
+    }
+
     public Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result.Failure(Unavailable));
 
