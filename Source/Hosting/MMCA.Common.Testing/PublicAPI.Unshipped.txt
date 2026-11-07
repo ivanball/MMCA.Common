@@ -1,3 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.ForgetUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
-MMCA.Common.Testing.Support.InMemoryViewAsGrantStore.ListAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, System.DateTime now, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.ViewAsGrant!>! Items, int TotalCount)>!

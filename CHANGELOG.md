@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.280.0] - 2026-11-07
+
+Support access log for view-as grants, and per-platform phone delivery recorded on each push notification.
+
 **Breaking:** `INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` instead of `Task` (MMCA.Common.Application; ADR-044), and so do `NullNativePushSender` (MMCA.Common.Infrastructure), `AzureNotificationHubNativePushSender` (MMCA.Common.Azure) and the internal SNS (MMCA.Common.Aws) and FCM (MMCA.Common.Gcp) senders. A sender reports a failed send in the outcome instead of throwing: `AzureNotificationHubNativePushSender` no longer rethrows its collected failures (one as itself, several as an `AggregateException`) after the loop. A class of your own that implements `INativePushSender` changes its return type; a caller that awaited the old `Task` keeps compiling. See [UPGRADING.md](UPGRADING.md).
 
 **A host that maps `PushNotification` needs one migration** on its Notification database (five nullable columns: four int counts and a short unit string); see [UPGRADING.md](UPGRADING.md).

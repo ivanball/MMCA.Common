@@ -473,6 +473,7 @@ MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInje
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddClientAuthSessionCookieSync() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonUiFacades() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddRoleAdministrationUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddSupportAccessLogUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUIModule<TModule>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUIShared(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUserAdministrationUI<TUserDto>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -552,6 +553,18 @@ MMCA.Common.UI.Pages.Administration.RoleAdminList.Localizer.set -> void
 MMCA.Common.UI.Pages.Administration.RoleAdminList.RoleAdminList() -> void
 MMCA.Common.UI.Pages.Administration.RoleAdminListResources
 MMCA.Common.UI.Pages.Administration.RoleAdminListResources.RoleAdminListResources() -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose() -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.PageSize.get -> int
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.PageSize.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.SupportAccessLog() -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLogResources
+MMCA.Common.UI.Pages.Administration.SupportAccessLogResources.SupportAccessLogResources() -> void
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.AssignableRoles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.AssignableRoles.set -> void
@@ -774,6 +787,8 @@ MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.IViewAsGrantsUIService
+MMCA.Common.UI.Services.Administration.IViewAsGrantsUIService.GetPageAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
@@ -789,6 +804,9 @@ MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRoleAsync(i
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.UnlockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.UserAdminService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService.GetPageAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService.ViewAsGrantsService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Api.AuthenticatedServiceBase
 MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.AuthenticatedServiceBase(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.CreateAuthenticatedClientAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpClient!>!
@@ -1539,6 +1557,8 @@ override MMCA.Common.UI.Layout.MainLayout.OnInitialized() -> void
 override MMCA.Common.UI.Layout.NavMenu.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Administration.RoleAdminEdit.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Administration.RoleAdminList.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Administration.SupportAccessLog.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Administration.SupportAccessLog.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.GridRef.get -> MudBlazor.MudDataGrid<TUser>?
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnParametersSet() -> void
@@ -1616,6 +1636,7 @@ static MMCA.Common.UI.Components.Auth.ViewAsBanner.Remaining(System.Security.Cla
 static MMCA.Common.UI.DependencyInjection.AddClientAuthSessionCookieSync(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddRoleAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.DependencyInjection.AddSupportAccessLogUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddUIModule<TModule>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddUIShared(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddUserAdministrationUI<TUserDto>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -1706,6 +1727,7 @@ virtual MMCA.Common.UI.Components.Notifications.NotificationBell.Dispose(bool di
 virtual MMCA.Common.UI.Layout.NavMenu.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Administration.RoleAdminList.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Login.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Register.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
@@ -1775,6 +1797,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Layout.ReconnectModal.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Administration.RoleAdminEdit.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Administration.RoleAdminList.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Administration.SupportAccessLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.Login.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

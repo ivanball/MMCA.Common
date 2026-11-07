@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.280.0] - 2026-11-07
+
 **`INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` (breaking, MMCA.Common.Application
 and the push adapters; ADR-044).** The framework's own senders (`NullNativePushSender`,
 `AzureNotificationHubNativePushSender` and the internal SNS and FCM senders) move with it, so a host
