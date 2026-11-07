@@ -34,7 +34,7 @@ internal enum ProxyResponseMode
 }
 
 /// <summary>What one forwarded request does with the view-as overlay cookie (ADR-137).</summary>
-internal readonly record struct ViewAsOverlayTreatment(bool ForwardsOverlayBearer, bool DeleteOverlay, Microsoft.AspNetCore.Http.SameSiteMode SameSite);
+internal readonly record struct ViewAsOverlayTreatment(bool OverlayPresent, bool ForwardsOverlayBearer, bool DeleteOverlay, Microsoft.AspNetCore.Http.SameSiteMode SameSite);
 
 /// <summary>
 /// One request's YARP transform. Starts from <see cref="HttpTransformer.Default"/> (X-Forwarded-*
@@ -130,10 +130,11 @@ internal sealed class SameOriginProxyTransformer(
     /// refused its bearer (an ended or expired grant): a view-as token is never refreshed or replayed.
     /// </summary>
     private bool ShouldDeleteOverlay(HttpResponseMessage? proxyResponse) =>
-        overlay.DeleteOverlay
-        || mode is ProxyResponseMode.ViewAsEnd or ProxyResponseMode.Revoke
-        || mode == ProxyResponseMode.TokenIssuing && proxyResponse is { IsSuccessStatusCode: true }
-        || overlay.ForwardsOverlayBearer && proxyResponse?.StatusCode == HttpStatusCode.Unauthorized;
+        overlay.OverlayPresent
+        && (overlay.DeleteOverlay
+            || mode is ProxyResponseMode.ViewAsEnd or ProxyResponseMode.Revoke
+            || mode == ProxyResponseMode.TokenIssuing && proxyResponse is { IsSuccessStatusCode: true }
+            || overlay.ForwardsOverlayBearer && proxyResponse?.StatusCode == HttpStatusCode.Unauthorized);
 
     /// <summary>
     /// Moves a view-as grant response's token into the overlay cookie and sends the browser the same

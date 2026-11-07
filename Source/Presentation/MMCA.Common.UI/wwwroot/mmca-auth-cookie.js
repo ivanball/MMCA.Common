@@ -101,3 +101,40 @@ window.mmcaAuthHandoff = {
         return data && data.handoff ? data.handoff : null;
     }
 };
+
+// Read-only view-as (ADR-137), web hosts with the same-origin API proxy only. Both calls go from the
+// browser through the proxy, which keeps the view-as token in its HttpOnly overlay cookie: the page
+// never sees it. Both send the proxy's fixed CSRF header and reload the app on the session they leave.
+window.mmcaViewAs = {
+    // Starts a view; returns the HTTP status (0 when the request failed) and reloads on success.
+    start: async function (url, reason) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF': '1' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ reason: reason })
+            });
+            if (response.ok) {
+                window.location.assign('/');
+            }
+            return response.status;
+        } catch (e) {
+            console.warn('mmcaViewAs.start failed', e);
+            return 0;
+        }
+    },
+    // Ends the view; the proxy deletes the overlay whatever the API answered, so this always reloads.
+    end: async function (url) {
+        try {
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF': '1' },
+                credentials: 'same-origin'
+            });
+        } catch (e) {
+            console.warn('mmcaViewAs.end failed', e);
+        }
+        window.location.assign('/');
+    }
+};

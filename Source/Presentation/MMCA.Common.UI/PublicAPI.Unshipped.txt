@@ -61,3 +61,22 @@ static MMCA.Common.UI.Services.Diagnostics.DependencyInjection.AddInAppDiagnosti
 static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator !=(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
 static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator ==(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
 ~override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Components.Auth.ViewAsBanner
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ViewAsBanner() -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton
+MMCA.Common.UI.Components.Auth.ViewAsButton.ViewAsButton() -> void
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ApiPathPrefix.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.UserId.get -> int
+MMCA.Common.UI.Components.Auth.ViewAsButton.UserId.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.ApiPathPrefix.set -> void
+MMCA.Common.UI.Components.Auth.ViewAsButton.UsersRoute.set -> void
+static MMCA.Common.UI.Components.Auth.ViewAsBanner.Remaining(System.Security.Claims.ClaimsPrincipal? user, System.DateTimeOffset now) -> System.TimeSpan?
+MMCA.Common.UI.Components.Auth.ViewAsBanner.DisposeAsync() -> System.Threading.Tasks.ValueTask
+override MMCA.Common.UI.Components.Auth.ViewAsButton.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.ViewAsBanner.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.ViewAsBanner.OnAfterRender(bool firstRender) -> void
+~override MMCA.Common.UI.Components.Auth.ViewAsBanner.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Auth.ViewAsButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Components.Auth.ViewAsBanner.ApiPathPrefix.get -> string?
+MMCA.Common.UI.Components.Auth.ViewAsButton.ApiPathPrefix.get -> string?
+MMCA.Common.UI.Components.Auth.ViewAsButton.UsersRoute.get -> string?

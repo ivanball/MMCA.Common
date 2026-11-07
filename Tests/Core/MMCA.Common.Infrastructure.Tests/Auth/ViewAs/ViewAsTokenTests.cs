@@ -14,7 +14,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using Moq;
 
-namespace MMCA.Common.Infrastructure.Tests.Auth;
+namespace MMCA.Common.Infrastructure.Tests.Auth.ViewAs;
 
 /// <summary>
 /// Spec B assertion 2 (T20, ADR-137): the view-as token is minted by the real <see cref="TokenService"/>

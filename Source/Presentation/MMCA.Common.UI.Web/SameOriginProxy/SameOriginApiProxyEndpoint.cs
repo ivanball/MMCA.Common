@@ -410,6 +410,7 @@ internal sealed partial class SameOriginApiProxyEndpoint(
 
         overlayBearer = forwards ? live : null;
         return new ViewAsOverlayTreatment(
+            OverlayPresent: present,
             ForwardsOverlayBearer: forwards,
             DeleteOverlay: present && live is null,
             SameSite: _settings.SessionCookieSameSite);

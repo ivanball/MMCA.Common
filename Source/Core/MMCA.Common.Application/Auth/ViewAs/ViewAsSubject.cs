@@ -1,3 +1,5 @@
+using MMCA.Common.Domain.Attributes;
+
 namespace MMCA.Common.Application.Auth.ViewAs;
 
 /// <summary>
@@ -12,7 +14,7 @@ namespace MMCA.Common.Application.Auth.ViewAs;
 /// <param name="IsDeleted">Whether the account is soft-deleted; a deleted account is never viewed.</param>
 public sealed record ViewAsSubject(
     UserIdentifierType UserId,
-    string Email,
+    [property: Pii] string Email,
     string Role,
-    string FullName,
+    [property: Pii] string FullName,
     bool IsDeleted);

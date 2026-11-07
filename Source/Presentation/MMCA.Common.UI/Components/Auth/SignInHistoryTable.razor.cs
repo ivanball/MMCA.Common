@@ -67,7 +67,11 @@ public partial class SignInHistoryTable : IDisposable
         _disposed = true;
     }
 
-    private string DescribeDevice(SignInSummaryResponse signIn) => UserAgentSummary.Describe(signIn.UserAgent, L);
+    // A view-as row (ADR-137) has no device of the account holder's: it says who looked, not where.
+    private string DescribeDevice(SignInSummaryResponse signIn) =>
+        signIn.Kind == SignInHistoryEntryKind.ViewAs
+            ? L["Auth.SignIns.ViewedBySupport"].Value
+            : UserAgentSummary.Describe(signIn.UserAgent, L);
 
     private string DescribeIpAddress(SignInSummaryResponse signIn) =>
         string.IsNullOrWhiteSpace(signIn.IpAddress) ? L["Auth.Sessions.IpUnknown"].Value : signIn.IpAddress;
@@ -80,6 +84,7 @@ public partial class SignInHistoryTable : IDisposable
         SignInEndReasons.SessionCapExceeded => L["Auth.SignIns.Status.SessionCapExceeded"].Value,
         SignInEndReasons.AccountDeleted => L["Auth.SignIns.Status.AccountDeleted"].Value,
         SignInEndReasons.Expired => L["Auth.SignIns.Status.Expired"].Value,
+        SignInEndReasons.ViewAsEnded => L["Auth.SignIns.Status.Ended"].Value,
         _ => L["Auth.SignIns.Status.Ended"].Value,
     };
 

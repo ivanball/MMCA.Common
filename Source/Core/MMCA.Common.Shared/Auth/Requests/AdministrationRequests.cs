@@ -21,3 +21,12 @@ public sealed record SetUserRolesRequest(IReadOnlyList<string> Roles);
 /// </remarks>
 /// <param name="Permissions">The complete set of stored permissions the role should grant afterwards.</param>
 public sealed record SetRolePermissionsRequest(IReadOnlyList<string> Permissions);
+
+/// <summary>
+/// Request payload for starting a read-only view-as session on another account (ADR-137).
+/// </summary>
+/// <param name="Reason">
+/// Why the staff user needs to see the account, in free text (10 to 500 characters). Stored on the
+/// grant row, which is the audit record of the access.
+/// </param>
+public sealed record StartViewAsRequest(string? Reason);

@@ -87,6 +87,33 @@ A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionI
 `GetRecentSignInsAsync` (aggregate in the store, bounded by `maxSignIns`, never by row count); a Moq mock of `IAuthUIService` behind the signed-in
 devices page sets up `GetSignInsAsync`, which that page now calls.
 
+**Read-only view-as (ADR-137) is off by default; a host that turns it on needs one more migration
+and four wiring steps.** With `ViewAs:Enabled` false (the default) nothing changes: no table, no
+middleware, and the grant and end endpoints answer 404. To enable it:
+
+1. **Configuration.** `"ViewAs": { "Enabled": true }` on the Identity host (`RetentionDays` defaults
+   to 90, `DataSourceName` to `Default`; point it at the source `RefreshSessions:DataSourceName`
+   names).
+2. **Migration.** With `ViewAs:Enabled` true the Identity context maps `ViewAsGrants` (`Id` Guid key,
+   `StaffUserId`, `TargetUserId`, `Reason` nvarchar(500), `GrantedAt`, `ExpiresAt`, `EndedAt` NULL,
+   indexes `IX_ViewAsGrants_TargetUserId_GrantedAt` and `IX_ViewAsGrants_GrantedAt`). Set
+   `DesignTimeDbContextOptions.EnableViewAsGrants = true` in that database's migrations project and
+   run `dotnet ef migrations add AddViewAsGrants -- --datasource <Name>`; the diff is one
+   `CreateTable` and two `CreateIndex`. Expand-only.
+3. **Code.** Register an `IViewAsSubjectResolver` over the app's `User` (email, role, display name,
+   soft-deleted flag; read deleted rows too), and grant `AdministrationPermissions.ViewAsUsers`
+   (`users:view-as`) to the staff role that also holds `users:manage`. An account holding
+   `users:view-as` can never be viewed.
+4. **Web UI.** Place `<ViewAsButton UserId="..." />` on the admin user page (set `UsersRoute` when the
+   admin controller is not routed at `Admin/Users`). `MainLayout` already renders `ViewAsBanner`. The
+   button and the banner need the same-origin API proxy (`AddCommonSameOriginApiProxy`); nothing in the
+   proxy configuration changes (`SameOriginApiProxy:ViewAsEndPath` defaults to `auth/view-as/end`).
+   MAUI does not offer view-as.
+
+Also: `AuthSessionIssuer` and `UserSessionsAdministrationService` take an optional trailing
+`IViewAsGrantStore` (code that constructs them by hand still compiles), and `MiddlewarePipelineStepNames`
+gains `ViewAsGuard` after `SoftDeletedUserFilter`.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The
