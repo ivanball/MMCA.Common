@@ -71,6 +71,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.AI.Anthropic` | The Anthropic provider for `MMCA.Common.AI`: one `IAiProviderFactory` over the official Anthropic .NET SDK, selected by `Ai:Provider=Anthropic` |
 | `MMCA.Common.AI.OpenAI` | The OpenAI provider for `MMCA.Common.AI`: one `IAiProviderFactory` over the official OpenAI .NET SDK (Microsoft.Extensions.AI.OpenAI), selected by `Ai:Provider=OpenAI`, pointable at any OpenAI-compatible endpoint |
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping, JWKS endpoint |
+| `MMCA.Common.Mcp` | Opt-in Model Context Protocol endpoint over a host's read-only tools (the official MCP C# SDK, stateless streamable HTTP): per-tool enable, `perm:` permission and per-minute limit, the `mcp` rate-limit policy, and a startup refusal of hidden text in any tool, parameter or server description. Off unless `Mcp:Enabled` is true; the only package that references the MCP SDK |
 | `MMCA.Common.Grpc` | gRPC server defaults, Result to RpcException mapping, JWT-forwarding client interceptor, typed gRPC clients behind an Anti-Corruption Layer adapter |
 | `MMCA.Common.UI` | Blazor shared components, auth state, MudBlazor theme |
 | `MMCA.Common.UI.Web` | Blazor Web (Server + WASM) UI host helpers built on `MMCA.Common.UI` |

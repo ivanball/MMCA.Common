@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.get -> int
+MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.init -> void
+const MMCA.Common.API.Startup.WebApplicationBuilderExtensions.RateLimitPolicyMcp = "mcp" -> string!

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Mcp</PackageId>
+    <Description>MMCA framework: an opt-in Model Context Protocol endpoint over a host's read-only tools. Wraps the official MCP C# SDK (stateless streamable HTTP) with per-tool enable, permission and rate limit, and refuses startup on hidden text in a tool description; off unless Mcp:Enabled is true</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The only project that references the MCP SDK (ADR-134: a third-party protocol SDK stays out
+         of the core packages). It references MMCA.Common.API for the "perm:" permission policy and
+         the "mcp" rate-limit policy, so a tool's permission is checked by exactly the handler an
+         HTTP endpoint's [HasPermission] is checked by. -->
+    <ProjectReference Include="..\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MMCA.Common.Mcp.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
