@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Infrastructure.Persistence.Auth;
 
@@ -106,6 +108,58 @@ internal sealed class EFViewAsGrantStore(
         Enabled
             ? await Grants.Where(g => g.GrantedAt < cutoff).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false)
             : 0;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Two statements, a count and the page, both ordered on <c>GrantedAt</c> (the
+    /// <c>IX_ViewAsGrants_GrantedAt</c> index the retention sweep already uses) with the id as the
+    /// tie-break, so equal instants cannot repeat or skip a row across pages. The email needles are
+    /// folded by <see cref="ViewAsGrant.NormalizeDisplay"/>, the form the snapshots are stored in, so
+    /// the match does not depend on the database collation.
+    /// </remarks>
+    public async Task<(IReadOnlyList<ViewAsGrant> Items, int TotalCount)> ListAsync(
+        ViewAsGrantListRequest request,
+        DateTime now,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!Enabled)
+        {
+            return ([], 0);
+        }
+
+        var filtered = ViewAsGrantLogQuery.Filter(Grants.AsNoTracking(), request, now);
+        var (skip, take) = PagingMath.Clamp(request.PageNumber, request.PageSize, ViewAsGrantListRequest.MaxPageSize);
+
+        var total = await filtered.CountAsync(cancellationToken).ConfigureAwait(false);
+        var items = await filtered
+            .OrderByDescending(g => g.GrantedAt)
+            .ThenByDescending(g => g.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, total);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> ForgetUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)
+    {
+        if (!Enabled)
+        {
+            return 0;
+        }
+
+        // Tracked on purpose: the erasure's own unit-of-work save persists the blanking, so it
+        // commits (or rolls back) with the rest of the erasure.
+        var grants = await Grants
+            .Where(g => g.StaffUserId == userId && g.StaffDisplay != null || g.TargetUserId == userId && g.TargetDisplay != null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return grants.Count(g => g.ForgetDisplayOf(userId));
+    }
 
     private void RequireEnabled()
     {

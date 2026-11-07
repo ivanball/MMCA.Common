@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
@@ -12,7 +13,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <summary>
 /// The shared account-erasure workflow: owner-or-privileged-role authorization, soft-delete the
 /// account, irreversibly anonymize its personal data in place (ADR-005), revoke and anonymize its
-/// refresh sessions when the host registered a session store, persist, write the shared
+/// refresh sessions when the host registered a session store, blank its email on the support access
+/// log's view-as grants when the subclass forwards the grant store (ADR-137), persist, write the shared
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
 /// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
@@ -71,12 +73,20 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// A subclass forwards the store it injects; one that forwards nothing leaves the rows as they are.
 /// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
+/// <param name="viewAsGrants">
+/// The view-as grant store, or <see langword="null"/> on a host that forwards none (ADR-137). When
+/// present, the erased account's email snapshot is blanked on every support access log row that names
+/// it, as the staff user or as the viewed account, in the same unit of work as the erasure; the rows
+/// themselves stay until <c>ViewAs:RetentionDays</c> sweeps them. A subclass forwards the store it
+/// injects; one that forwards nothing leaves the snapshots as they are.
+/// </param>
 public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ICacheService cacheService,
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
-    TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result>
+    TimeProvider? timeProvider = null,
+    IViewAsGrantStore? viewAsGrants = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IErasableUser
     where TCommand : IUserOwnedRequest
 {
@@ -155,6 +165,15 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         await RefreshSessionRevocation
             .RevokeAndAnonymizeAllAsync(refreshSessions, timeProvider, command.UserId, cancellationToken)
             .ConfigureAwait(false);
+
+        // The support access log names the account by email (ADR-137): blank that snapshot on every
+        // grant naming it, as staff or as the viewed account. The store returns tracked rows on the
+        // same context factory, so this commits with the erasure in the save below; the grant rows
+        // themselves (ids, reason, times) stay until ViewAs:RetentionDays sweeps them.
+        if (viewAsGrants is not null)
+        {
+            await viewAsGrants.ForgetUserAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

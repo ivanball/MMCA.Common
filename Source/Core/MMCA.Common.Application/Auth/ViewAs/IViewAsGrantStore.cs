@@ -1,4 +1,5 @@
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Application.Auth.ViewAs;
 
@@ -47,4 +48,30 @@ public interface IViewAsGrantStore
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>How many rows were deleted.</returns>
     Task<int> DeleteIssuedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns one page of every grant (the support access log), newest first, narrowed by the
+    /// request's filters, with the total the filters match. The status filter is evaluated at
+    /// <paramref name="now"/>; the email filters compare case-insensitively against the display
+    /// snapshots; the page size is clamped to <see cref="ViewAsGrantListRequest.MaxPageSize"/>.
+    /// </summary>
+    /// <param name="request">The filters and the page.</param>
+    /// <param name="now">The UTC instant the live / ended / expired status is derived at.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The page's grants and the number of grants the filters match.</returns>
+    Task<(IReadOnlyList<ViewAsGrant> Items, int TotalCount)> ListAsync(
+        ViewAsGrantListRequest request,
+        DateTime now,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The account-erasure step: blanks the display snapshot of <paramref name="userId"/> on every
+    /// grant naming that account, as staff or as the viewed account
+    /// (<see cref="ViewAsGrant.ForgetDisplayOf"/>). <b>Nothing is saved here</b>: the rows are tracked,
+    /// so the erasure's own unit-of-work save persists them with the rest of the erasure.
+    /// </summary>
+    /// <param name="userId">The account being erased.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>How many grants had a snapshot blanked.</returns>
+    Task<int> ForgetUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default);
 }

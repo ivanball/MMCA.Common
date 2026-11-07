@@ -78,6 +78,34 @@ default and no backfill (null reads as "not recorded", shown as "-").
 dotnet ef migrations add AddPushNotificationNativeOutcome -- --datasource Notification
 ```
 
+**Support access log: one migration on the grant-store database, a controller to subclass, and
+the erasure store to forward.** A host that does not enable `ViewAs` changes nothing.
+
+1. **Migration (the service that holds the grant store only).** `ViewAsGrants` gains two nullable
+   columns, `StaffDisplay` and `TargetDisplay`, each a string of at most 256 characters
+   (`nvarchar(256) NULL` on SQL Server). In the migrations project that already sets
+   `DesignTimeDbContextOptions.EnableViewAsGrants = true`, add a migration (for example
+   `AddViewAsGrantDisplays`) and apply it. Existing rows keep both columns `NULL` and show
+   "Email not on record" in the log until they age out. A service with `ViewAs:HostsGrantStore` false maps
+   no grant table and needs no migration.
+2. **Controller.** Subclass `ViewAsGrantsAdminControllerBase` with the route the UI client calls,
+   on the service that holds the grant store:
+
+   ```csharp
+   [ApiController]
+   [Route("Admin/ViewAsGrants")]
+   [ApiVersion("1.0")]
+   public sealed class AdminViewAsGrantsController : ViewAsGrantsAdminControllerBase;
+   ```
+
+   It requires `users:manage`, so whoever can manage users can read the log.
+3. **Erasure.** A `DeleteUserHandlerBase` subclass injects `IViewAsGrantStore? viewAsGrants = null`
+   and forwards it as the base constructor's new trailing argument (name it when the subclass skips
+   `timeProvider`: `viewAsGrants: viewAsGrants`). Without it the erased account's email stays on its
+   grants until the retention sweep.
+4. **UI (optional).** Call `services.AddSupportAccessLogUI()` after `AddUIShared`, add a page that
+   renders `<SupportAccessLog />` behind your `users:manage` gate, and a navigation entry for it.
+
 ## [1.279.0] - 2026-11-07
 
 **Read-only view-as in a multi-service host: set `ViewAs:HostsGrantStore` per service.** A single

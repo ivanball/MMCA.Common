@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.DeleteUser;
@@ -361,6 +362,46 @@ public sealed class DeleteUserHandlerBaseTests
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // Spec A assertion 3 (erasure half): erasing either party blanks that party's display snapshot on
+    // every grant naming it, in the same unit of work as the rest of the erasure.
+    [Fact]
+    public async Task HandleAsync_BlanksTheErasedUsersViewAsDisplays_AsStaffAndAsViewed_BeforeTheSave()
+    {
+        var grants = new InMemoryViewAsGrantStore();
+        var asViewed = SeedGrant(grants, staffUserId: 7, targetUserId: 1, "staff@example.com", "erased@example.com");
+        var asStaff = SeedGrant(grants, staffUserId: 1, targetUserId: 8, "erased@example.com", "other@example.com");
+        var unrelated = SeedGrant(grants, staffUserId: 7, targetUserId: 9, "staff@example.com", "third@example.com");
+        var (sut, mocks) = CreateSut(viewAsGrants: grants);
+        ArrangeUser(mocks, new TestHidingDeleteUser { Id = 1 });
+        (string? Target, string? Staff)? atSave = null;
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => atSave = (asViewed.TargetDisplay, asStaff.StaffDisplay));
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        atSave.Should().Be(((string?)null, (string?)null), "the blanking commits with the erasure in the same save");
+        asViewed.StaffDisplay.Should().Be("staff@example.com", "the other party keeps its snapshot");
+        asStaff.TargetDisplay.Should().Be("other@example.com");
+        unrelated.StaffDisplay.Should().Be("staff@example.com");
+        unrelated.TargetDisplay.Should().Be("third@example.com");
+        grants.Grants.Should().HaveCount(3, "the access stays on record; only the email goes");
+    }
+
+    private static ViewAsGrant SeedGrant(
+        InMemoryViewAsGrantStore store,
+        UserIdentifierType staffUserId,
+        UserIdentifierType targetUserId,
+        string staffDisplay,
+        string targetDisplay)
+    {
+        var grant = ViewAsGrant.Create(staffUserId, targetUserId, "Ticket 4411: schedule missing", SessionNow.UtcDateTime.AddDays(-1), TimeSpan.FromMinutes(15), staffDisplay, targetDisplay).Value!;
+        store.Seed(grant);
+        return grant;
+    }
+
     private static RefreshSession SeedSession(
         InMemoryRefreshSessionStore store,
         UserIdentifierType userId,
@@ -392,7 +433,8 @@ public sealed class DeleteUserHandlerBaseTests
 
     private static (TestDeleteUserHandler Sut, HandlerMocks Mocks) CreateSut(
         IRefreshSessionStore? refreshSessions = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IViewAsGrantStore? viewAsGrants = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>>();
@@ -403,7 +445,7 @@ public sealed class DeleteUserHandlerBaseTests
         unitOfWork.Setup(x => x.GetRepository<TestHidingDeleteUser, UserIdentifierType>()).Returns(repository.Object);
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object, refreshSessions, timeProvider);
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object, refreshSessions, timeProvider, viewAsGrants);
         return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
@@ -414,8 +456,9 @@ public sealed class TestDeleteUserHandler(
     ICacheService cacheService,
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
-    TimeProvider? timeProvider = null)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger, refreshSessions, timeProvider)
+    TimeProvider? timeProvider = null,
+    IViewAsGrantStore? viewAsGrants = null)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger, refreshSessions, timeProvider, viewAsGrants)
 {
     public int TailInvocations { get; private set; }
 

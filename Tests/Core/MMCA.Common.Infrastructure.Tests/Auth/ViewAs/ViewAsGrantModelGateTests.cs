@@ -15,6 +15,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.ViewAs;
@@ -92,6 +93,10 @@ public sealed class ViewAsGrantModelGateTests
         (await sut.EndAsync(Guid.NewGuid(), 1, DateTime.UtcNow)).Should().BeFalse();
         (await sut.GetRecentForTargetAsync(2, 10)).Should().BeEmpty();
         (await sut.DeleteIssuedBeforeAsync(DateTime.UtcNow)).Should().Be(0);
+        var page = await sut.ListAsync(new ViewAsGrantListRequest(), DateTime.UtcNow);
+        page.Items.Should().BeEmpty("the support access log reads as empty on a service without the store");
+        page.TotalCount.Should().Be(0);
+        (await sut.ForgetUserAsync(2)).Should().Be(0, "erasure on a service without the store has nothing to blank");
         factory.VerifyNoOtherCalls();
     }
 
