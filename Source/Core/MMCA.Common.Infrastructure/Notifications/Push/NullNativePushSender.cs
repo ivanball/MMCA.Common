@@ -14,8 +14,4 @@ public sealed class NullNativePushSender : INativePushSender
     /// <inheritdoc />
     public Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
-
-    /// <inheritdoc />
-    public Task BroadcastAsync(string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
 }

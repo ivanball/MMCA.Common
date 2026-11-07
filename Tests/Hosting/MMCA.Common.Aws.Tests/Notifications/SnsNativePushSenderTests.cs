@@ -16,7 +16,7 @@ namespace MMCA.Common.Aws.Tests.Notifications;
 /// The SNS native push sender (ADR-044) against mocked clients: user-targeted sends resolve each
 /// user's endpoints through the registry's <c>UserId</c> index and publish once per endpoint in SNS's
 /// per-platform JSON structure; an endpoint SNS reports disabled is removed with its row and the rest
-/// still receive (best-effort); a broadcast is one publish to the topic.
+/// still receive (best-effort).
 /// </summary>
 public sealed class SnsNativePushSenderTests
 {
@@ -49,7 +49,6 @@ public sealed class SnsNativePushSenderTests
         return new SnsNativePushSender(
             new SnsInstallationRegistry(_dynamoDb.Object, _sns.Object, options),
             _sns.Object,
-            options,
             NullLogger<SnsNativePushSender>.Instance);
     }
 
@@ -283,20 +282,5 @@ public sealed class SnsNativePushSenderTests
         _dynamoDb.Verify(x => x.QueryAsync(
             It.Is<QueryRequest>(r => r.ExclusiveStartKey != null && r.ExclusiveStartKey["InstallationId"].S == "a"),
             It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task BroadcastAsync_PublishesOnceToTheTopic()
-    {
-        var metadata = new Dictionary<string, string> { ["route"] = "/news" };
-
-        await CreateSut().BroadcastAsync("Hello", "World", metadata, TestContext.Current.CancellationToken);
-
-        _published.Should().ContainSingle();
-        _published[0].TopicArn.Should().Be(TopicArn);
-        _published[0].TargetArn.Should().BeNull();
-        _published[0].MessageStructure.Should().Be("json");
-        _published[0].Message.Should().Be(SnsPushMessage.Build("Hello", "World", metadata));
-        _dynamoDb.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

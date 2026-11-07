@@ -32,6 +32,22 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**`INativePushSender.BroadcastAsync` is removed (breaking, MMCA.Common.Application and the push
+adapters).** The interface keeps `SendToUsersAsync` only, and the method is gone from
+`NullNativePushSender` (MMCA.Common.Infrastructure), `AzureNotificationHubNativePushSender`
+(MMCA.Common.Azure) and the internal SNS (MMCA.Common.Aws) and FCM (MMCA.Common.Gcp) senders.
+
+| Removed | Replacement |
+|---|---|
+| `INativePushSender.BroadcastAsync(title, body, metadata, cancellationToken)` | none; send to the target users with `SendToUsersAsync` |
+| `NullNativePushSender.BroadcastAsync`, `AzureNotificationHubNativePushSender.BroadcastAsync` | none |
+
+The mechanical fix: a class of your own that implements `INativePushSender` (a test fake included)
+deletes its `BroadcastAsync` method, and a call to it is removed or replaced by `SendToUsersAsync`
+over the intended recipients. MMCA.ADC, MMCA.Store and MMCA.Helpdesk do not call it.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The

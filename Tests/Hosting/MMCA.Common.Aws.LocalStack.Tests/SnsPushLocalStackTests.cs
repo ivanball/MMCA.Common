@@ -19,8 +19,8 @@ namespace MMCA.Common.Aws.LocalStack.Tests;
 /// would, against LocalStack's SNS platform endpoints and DynamoDB: the ownership rules the unit tier
 /// can only assert as request shapes (the conditional write that refuses another device's id, the
 /// handover on a matching push channel, the owner-scoped delete) run against the real condition
-/// evaluator and the real index, and a user-targeted send and a broadcast are publishes SNS accepts and
-/// delivers to the endpoint. LocalStack records every platform-endpoint delivery instead of calling FCM,
+/// evaluator and the real index, and a user-targeted send is a publish SNS accepts and delivers to the
+/// endpoint. LocalStack records every platform-endpoint delivery instead of calling FCM,
 /// which is what lets the delivery be read back.
 /// </summary>
 public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyncLifetime
@@ -200,31 +200,6 @@ public sealed class SnsPushLocalStackTests(LocalStackFixture localStack) : IAsyn
         }
 
         deliveries.Should().NotContainKey(other, "a user-targeted send reaches only that user's devices");
-    }
-
-    [Fact]
-    public async Task Broadcast_PublishesToTheTopic_AndReachesEverySubscribedEndpoint()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        (await Registrar.UpsertAsync(Owner, Request("phone", "token-phone"), ct)).IsSuccess.Should().BeTrue();
-        (await Registrar.UpsertAsync(Stranger, Request("other", "token-other"), ct)).IsSuccess.Should().BeTrue();
-        var phone = (await RowAsync("phone", ct))!["EndpointArn"].S;
-        var other = (await RowAsync("other", ct))!["EndpointArn"].S;
-
-        await Sender.BroadcastAsync("Hello", "Everyone", cancellationToken: ct);
-
-        var publish = _published.Should().ContainSingle().Subject;
-        publish.TopicArn.Should().Be(_topicArn);
-        publish.MessageId.Should().NotBeNullOrEmpty();
-
-        var deliveries = await DeliveriesAsync(ct);
-        foreach (var endpointArn in new[] { phone, other })
-        {
-            var delivery = deliveries.Should().ContainKey(endpointArn).WhoseValue.Should().ContainSingle().Subject;
-            using var fcm = FcmEntryOf(delivery);
-            fcm.RootElement.GetProperty("fcmV1Message").GetProperty("message").GetProperty("notification")
-                .GetProperty("body").GetString().Should().Be("Everyone");
-        }
     }
 
     /// <summary>

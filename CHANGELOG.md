@@ -6,6 +6,16 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking:** `INativePushSender.BroadcastAsync` is removed from the interface and from every implementation (`NullNativePushSender`, `AzureNotificationHubNativePushSender`, and the internal SNS and FCM senders). A class of your own that implements `INativePushSender` deletes its `BroadcastAsync`; a caller of it has no replacement. See [UPGRADING.md](UPGRADING.md).
+
+### Fixed
+
+- **One failing Azure Notification Hubs send no longer stops the rest of a native push** (MMCA.Common.Azure). `AzureNotificationHubNativePushSender.SendToUsersAsync` attempts every 20-tag chunk on both platforms (FCM v1 and APNs), so an APNs rejection no longer skips the later chunks and the FCM sends after it. The failures are rethrown once every send has been attempted (the single exception as itself, several as an `AggregateException`), so the send handler still logs its "native (OS-level) delivery failed" warning. The caller's own cancellation still stops the loop at once.
+
+### Removed
+
+- **`INativePushSender.BroadcastAsync`** (MMCA.Common.Application, MMCA.Common.Infrastructure, MMCA.Common.Azure, MMCA.Common.Aws, MMCA.Common.Gcp). No first-party host called it. User-targeted sends (`SendToUsersAsync`) are unchanged.
+
 ## [1.277.0] - 2026-11-04
 
 Enterprise-scale hardening: prefix cache invalidation without a Redis keyspace scan, a shorter permission-grant refresh, and JWKS signing-key rotation without a 401 wave.
