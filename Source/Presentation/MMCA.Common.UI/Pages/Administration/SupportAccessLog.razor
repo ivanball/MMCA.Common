@@ -1,0 +1,117 @@
+@using MMCA.Common.Shared.Auth.Responses
+
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title" />
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
+
+@* role="search" names the filter row as a landmark; each field carries its own visible label. *@
+<MudPaper Elevation="0" Class="mb-4" role="search" aria-label="@T("Aria.Filters")">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="6" md="3">
+            <div data-testid="filter-staff">
+                <MudTextField T="string" @bind-Value="_staffFilter" Label="@T("Filter.Staff")"
+                              Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <div data-testid="filter-viewed">
+                <MudTextField T="string" @bind-Value="_viewedFilter" Label="@T("Filter.Viewed")"
+                              Immediate="true" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <div data-testid="filter-from">
+                <MudTextField T="DateTime?" @bind-Value="_fromFilter" Label="@T("Filter.From")" InputType="InputType.Date"
+                              Format="yyyy-MM-dd" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <div data-testid="filter-to">
+                <MudTextField T="DateTime?" @bind-Value="_toFilter" Label="@T("Filter.To")" InputType="InputType.Date"
+                              Format="yyyy-MM-dd" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="4" md="2">
+            <div data-testid="filter-status">
+                <MudSelect T="ViewAsGrantStatus?" @bind-Value="_statusFilter" Label="@T("Filter.Status")"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" ToStringFunc="StatusFilterText">
+                    <MudSelectItem T="ViewAsGrantStatus?" Value="@((ViewAsGrantStatus?)null)">@T("Filter.AnyStatus")</MudSelectItem>
+                    @foreach (var status in Enum.GetValues<ViewAsGrantStatus>())
+                    {
+                        <MudSelectItem T="ViewAsGrantStatus?" Value="@((ViewAsGrantStatus?)status)">@StatusText(status)</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        </MudItem>
+    </MudGrid>
+    <MudStack Row="true" Spacing="2" Class="mt-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterList"
+                   OnClick="ApplyFiltersAsync" data-testid="apply-filters">
+            @T("Action.Apply")
+        </MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearFiltersAsync" data-testid="clear-filters">
+            @T("Action.Clear")
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@* The load failure is rendered inline rather than as a snackbar: an empty log and a failed load
+   look identical once a toast expires, and this one has a retry. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@T("Loading")" />
+}
+else if (_loadResult is { IsFailure: true })
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="@(() => LoadPageAsync())">
+        @T("Action.Retry")
+    </MudButton>
+}
+else if (_grants.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.ManageSearch" Message="@T("Empty.NoGrants")" />
+}
+else
+{
+    @* Breakpoint="Breakpoint.Sm" stacks each row into a card on a phone, with each cell's DataLabel as
+       its heading. role="region" is the W3C pattern for a labelled table container: MudTable splats
+       unmatched attributes onto its wrapper div, and a bare div may not carry aria-label. *@
+    <MudTable Items="_grants" T="ViewAsGrantSummaryResponse" Hover="true" Elevation="1" Dense="true"
+              Breakpoint="Breakpoint.Sm" Class="mb-4"
+              role="region" aria-label="@T("Aria.Table")">
+        <HeaderContent>
+            <MudTh>@T("Column.Staff")</MudTh>
+            <MudTh>@T("Column.Viewed")</MudTh>
+            <MudTh>@T("Column.Reason")</MudTh>
+            <MudTh>@T("Column.Started")</MudTh>
+            <MudTh>@T("Column.Ended")</MudTh>
+            <MudTh>@T("Column.Status")</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@T("Column.Staff")" data-testid="grant-staff">@Display(context.StaffDisplay)</MudTd>
+            <MudTd DataLabel="@T("Column.Viewed")" data-testid="grant-viewed">@Display(context.TargetDisplay)</MudTd>
+            @* The reason is the justification an auditor reads, so it is shown in full and wraps. *@
+            <MudTd DataLabel="@T("Column.Reason")" data-testid="grant-reason">@context.Reason</MudTd>
+            <MudTd DataLabel="@T("Column.Started")">@ViewerTime.Format(context.GrantedAt)</MudTd>
+            <MudTd DataLabel="@T("Column.Ended")">@ViewerTime.Format(context.EndedAt ?? context.ExpiresAt)</MudTd>
+            @* The chip carries the status as text, so the colour is never the only signal. *@
+            <MudTd DataLabel="@T("Column.Status")" data-testid="grant-status">
+                <MudChip T="string" Color="@StatusColor(context.Status)" Size="Size.Small" Variant="Variant.Outlined">@StatusText(context.Status)</MudChip>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    @* Paged on the server: the whole retained log is reachable, not only the newest page. *@
+    <MudPagination Class="mt-4"
+                   Count="@_totalPages"
+                   Selected="@_currentPage"
+                   SelectedChanged="OnPageChangedAsync"
+                   ShowFirstButton="true"
+                   ShowLastButton="true" />
+}

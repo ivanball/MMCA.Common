@@ -13,6 +13,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
+using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Middleware;
@@ -499,5 +500,12 @@ public sealed class ViewAsGuardMiddlewareTests
 
         public Task<int> DeleteIssuedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default) =>
             Task.FromResult(Items.RemoveAll(g => g.GrantedAt < cutoff));
+
+        // The guard never reads the support access log or erases an account.
+        public Task<(IReadOnlyList<ViewAsGrant> Items, int TotalCount)> ListAsync(ViewAsGrantListRequest request, DateTime now, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<int> ForgetUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

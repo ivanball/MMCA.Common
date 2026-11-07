@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.Auth.Responses;
+
 namespace MMCA.Common.Shared.Auth.Requests;
 
 /// <summary>
@@ -30,3 +32,37 @@ public sealed record SetRolePermissionsRequest(IReadOnlyList<string> Permissions
 /// grant row, which is the audit record of the access.
 /// </param>
 public sealed record StartViewAsRequest(string? Reason);
+
+/// <summary>
+/// One page of the support access log (ADR-137), with its filters. Every filter is optional and they
+/// combine with AND; the rows come newest first.
+/// </summary>
+public sealed record ViewAsGrantListRequest
+{
+    /// <summary>The page size used when the caller names none.</summary>
+    public const int DefaultPageSize = 20;
+
+    /// <summary>The largest page size served; a larger request is clamped to it.</summary>
+    public const int MaxPageSize = 100;
+
+    /// <summary>Gets text the staff user's email must contain (case-insensitive), or <see langword="null"/>.</summary>
+    public string? Staff { get; init; }
+
+    /// <summary>Gets text the viewed account's email must contain (case-insensitive), or <see langword="null"/>.</summary>
+    public string? Viewed { get; init; }
+
+    /// <summary>Gets the earliest grant instant included (UTC, inclusive), or <see langword="null"/>.</summary>
+    public DateTime? From { get; init; }
+
+    /// <summary>Gets the instant grants must precede (UTC, exclusive), or <see langword="null"/>.</summary>
+    public DateTime? To { get; init; }
+
+    /// <summary>Gets the status grants must have at the time of the read, or <see langword="null"/> for any.</summary>
+    public ViewAsGrantStatus? Status { get; init; }
+
+    /// <summary>Gets the 1-based page number. Values below 1 read page 1.</summary>
+    public int PageNumber { get; init; } = 1;
+
+    /// <summary>Gets the page size, clamped into 1 to <see cref="MaxPageSize"/>.</summary>
+    public int PageSize { get; init; } = DefaultPageSize;
+}

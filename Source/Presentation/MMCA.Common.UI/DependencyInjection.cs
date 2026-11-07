@@ -330,6 +330,24 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// The UI opt-in of the support access log (ADR-137): registers the HTTP client for the app's
+        /// <c>Admin/ViewAsGrants</c> endpoint, which is what
+        /// <c>MMCA.Common.UI.Pages.Administration.SupportAccessLog</c> reads through. Call it once per
+        /// app, after <c>AddUIShared</c>.
+        /// <para>
+        /// Nothing else in the framework calls this: an app that serves no support access log
+        /// registers nothing and the component is simply never rendered.
+        /// </para>
+        /// </summary>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddSupportAccessLogUI()
+        {
+            services.TryAddScoped<IViewAsGrantsUIService, ViewAsGrantsService>();
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers one UI module: the Scrutor scan that picks up every
         /// <see cref="IEntityService{TEntityDTO, TIdentifierType}"/> implementation in
         /// <typeparamref name="TModule"/>'s assembly, plus the module descriptor itself (nav items,

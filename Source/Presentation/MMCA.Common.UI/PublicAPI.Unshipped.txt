@@ -1,1 +1,24 @@
 #nullable enable
+~override MMCA.Common.UI.Pages.Administration.SupportAccessLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddSupportAccessLogUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Pages.Administration.SupportAccessLog
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose() -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.PageSize.get -> int
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.PageSize.set -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLog.SupportAccessLog() -> void
+MMCA.Common.UI.Pages.Administration.SupportAccessLogResources
+MMCA.Common.UI.Pages.Administration.SupportAccessLogResources.SupportAccessLogResources() -> void
+MMCA.Common.UI.Services.Administration.IViewAsGrantsUIService
+MMCA.Common.UI.Services.Administration.IViewAsGrantsUIService.GetPageAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService.GetPageAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.ViewAsGrantsService.ViewAsGrantsService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+override MMCA.Common.UI.Pages.Administration.SupportAccessLog.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Administration.SupportAccessLog.OnInitializedAsync() -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.DependencyInjection.AddSupportAccessLogUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+virtual MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose(bool disposing) -> void

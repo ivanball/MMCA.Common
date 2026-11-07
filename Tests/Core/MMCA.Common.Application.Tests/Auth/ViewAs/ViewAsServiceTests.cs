@@ -123,6 +123,43 @@ public sealed class ViewAsServiceTests
         minted.Claims.Should().Contain(c => c.Type == AuthClaimTypes.ViewAsGrant && c.Value == grant.Id.ToString());
     }
 
+    // Spec A assertion 3 (snapshot half): a new grant stores StaffDisplay (the caller's email claim,
+    // under either claim type the JWT handler may produce) and TargetDisplay (the email
+    // IViewAsSubjectResolver read for the token).
+    [Theory]
+    [InlineData(ClaimTypes.Email)]
+    [InlineData("email")]
+    public async Task StartAsync_StoresStaffDisplayFromTheCallersEmailClaim_AndTargetDisplay(string emailClaimType)
+    {
+        var result = await CreateSut(Caller(StaffUserId, emailClaimType, "Staff@Example.com")).StartAsync(StaffUserId, TargetUserId, Reason);
+
+        result.IsSuccess.Should().BeTrue();
+        var grant = _grants.Grants.Should().ContainSingle().Subject;
+        grant.StaffDisplay.Should().Be("staff@example.com", "the snapshot is folded to the stored email case");
+        grant.TargetDisplay.Should().Be("target@example.com");
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenTheCallerIsNotTheStaffUser_RecordsNoStaffDisplay_ButStillTheTarget()
+    {
+        var result = await CreateSut(Caller(99, ClaimTypes.Email, "someone-else@example.com")).StartAsync(StaffUserId, TargetUserId, Reason);
+
+        result.IsSuccess.Should().BeTrue();
+        var grant = _grants.Grants.Should().ContainSingle().Subject;
+        grant.StaffDisplay.Should().BeNull("another principal's email must never be recorded as the staff user's");
+        grant.TargetDisplay.Should().Be("target@example.com");
+    }
+
+    private static ICurrentUserService Caller(UserIdentifierType userId, string emailClaimType, string email)
+    {
+        var caller = new Mock<ICurrentUserService>();
+        caller.Setup(c => c.UserId).Returns(userId);
+        caller.Setup(c => c.User).Returns(new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.Subject, userId.ToString(System.Globalization.CultureInfo.InvariantCulture)), new Claim(emailClaimType, email)],
+            "Bearer")));
+        return caller.Object;
+    }
+
     [Fact]
     public async Task StartAsync_ShortensTheGrantToAShorterConfiguredAccessTokenLifetime()
     {
@@ -173,13 +210,14 @@ public sealed class ViewAsServiceTests
         _grants.Grants.Single().EndedAt.Should().BeNull();
     }
 
-    private ViewAsService CreateSut() => new(
+    private ViewAsService CreateSut(ICurrentUserService? caller = null) => new(
         _grants,
         _tokens,
         _permissions,
         Options.Create(new ViewAsSettings { Enabled = true }),
         _clock,
-        _subjects.Object);
+        _subjects.Object,
+        caller);
 
     /// <summary>Records each mint instead of signing, so the claim set and lifetime are inspectable.</summary>
     private sealed class RecordingTokenService : ITokenService

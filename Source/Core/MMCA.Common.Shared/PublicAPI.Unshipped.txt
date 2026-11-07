@@ -1,1 +1,60 @@
 ﻿#nullable enable
+const MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.DefaultPageSize = 20 -> int
+const MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.MaxPageSize = 100 -> int
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest!
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Equals(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.From.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.From.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.PageNumber.get -> int
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.PageNumber.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.PageSize.get -> int
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.PageSize.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Staff.get -> string?
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Staff.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Status.get -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus?
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Status.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.To.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.To.init -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.ViewAsGrantListRequest() -> void
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Viewed.get -> string?
+MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Viewed.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus.Ended = 1 -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus.Expired = 2 -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus.Live = 0 -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Deconstruct(out System.Guid Id, out int StaffUserId, out string? StaffDisplay, out int TargetUserId, out string? TargetDisplay, out string! Reason, out System.DateTime GrantedAt, out System.DateTime ExpiresAt, out System.DateTime? EndedAt, out MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus Status) -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.EndedAt.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.EndedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Equals(MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ExpiresAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ExpiresAt.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.GrantedAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.GrantedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Id.get -> System.Guid
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Id.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Reason.get -> string!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Reason.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.StaffDisplay.get -> string?
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.StaffDisplay.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.StaffUserId.get -> int
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.StaffUserId.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Status.get -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Status.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.TargetDisplay.get -> string?
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.TargetDisplay.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.TargetUserId.get -> int
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.TargetUserId.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ViewAsGrantSummaryResponse(System.Guid Id, int StaffUserId, string? StaffDisplay, int TargetUserId, string? TargetDisplay, string! Reason, System.DateTime GrantedAt, System.DateTime ExpiresAt, System.DateTime? EndedAt, MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus Status) -> void
+override MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest? left, MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest? left, MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.operator !=(MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? right) -> bool

@@ -1,1 +1,8 @@
 #nullable enable
+const MMCA.Common.Domain.Auth.ViewAsGrant.DisplayMaxLength = 256 -> int
+MMCA.Common.Domain.Auth.ViewAsGrant.ForgetDisplayOf(int userId) -> bool
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffDisplay.get -> string?
+MMCA.Common.Domain.Auth.ViewAsGrant.StatusAt(System.DateTime now) -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetDisplay.get -> string?
+static MMCA.Common.Domain.Auth.ViewAsGrant.Create(int staffUserId, int targetUserId, string? reason, System.DateTime grantedAt, System.TimeSpan lifetime, string? staffDisplay, string? targetDisplay) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.ViewAsGrant!>!
+static MMCA.Common.Domain.Auth.ViewAsGrant.NormalizeDisplay(string? value) -> string?

@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.API.Controllers.Administration.ViewAsGrantsAdminControllerBase
+MMCA.Common.API.Controllers.Administration.ViewAsGrantsAdminControllerBase.ViewAsGrantsAdminControllerBase() -> void
+virtual MMCA.Common.API.Controllers.Administration.ViewAsGrantsAdminControllerBase.ListAsync(MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest! request, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.ViewAs.ViewAsSettings!>! settings, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore! grants, System.TimeProvider! timeProvider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse!>!>!>!

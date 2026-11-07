@@ -39,6 +39,11 @@ public static class ViewAsGrantModelBuilderExtensions
             entity.Property(e => e.Reason).IsRequired().HasMaxLength(ViewAsGrant.ReasonMaxLength);
             entity.Property(e => e.EndedAt);
 
+            // The support access log's display snapshots (emails at grant time). Nullable: a row
+            // written before the snapshot has none, and erasure blanks the erased account's.
+            entity.Property(e => e.StaffDisplay).HasMaxLength(ViewAsGrant.DisplayMaxLength);
+            entity.Property(e => e.TargetDisplay).HasMaxLength(ViewAsGrant.DisplayMaxLength);
+
             // History path: the viewed account's grants, newest first.
             entity.HasIndex(e => new { e.TargetUserId, e.GrantedAt })
                   .HasDatabaseName(TargetIndexName);

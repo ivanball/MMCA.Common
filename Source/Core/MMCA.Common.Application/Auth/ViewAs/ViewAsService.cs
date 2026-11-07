@@ -32,13 +32,19 @@ namespace MMCA.Common.Application.Auth.ViewAs;
 /// <param name="settings">The view-as settings (retention).</param>
 /// <param name="timeProvider">The clock grants are stamped from.</param>
 /// <param name="subjects">The consumer's account reader; without one every grant is refused.</param>
+/// <param name="currentUser">
+/// The caller, read for the staff user's email claim the grant row snapshots as
+/// <see cref="ViewAsGrant.StaffDisplay"/>; without one (or when the caller is not the staff user) no
+/// staff snapshot is recorded.
+/// </param>
 public sealed class ViewAsService(
     IViewAsGrantStore grants,
     ITokenService tokenService,
     IPermissionRegistry permissions,
     IOptions<ViewAsSettings> settings,
     TimeProvider timeProvider,
-    IViewAsSubjectResolver? subjects = null) : IViewAsService
+    IViewAsSubjectResolver? subjects = null,
+    ICurrentUserService? currentUser = null) : IViewAsService
 {
     /// <summary>
     /// The grant's lifetime: min(15 minutes, the configured access-token lifetime), so a view never
@@ -65,10 +71,10 @@ public sealed class ViewAsService(
         var lifetime = Lifetime;
 
         // Self and the reason are checked before any lookup.
-        var created = ViewAsGrant.Create(staffUserId, targetUserId, reason, now, lifetime);
-        if (!created.TryGetValue(out var grant))
+        var validated = ViewAsGrant.Create(staffUserId, targetUserId, reason, now, lifetime);
+        if (validated.IsFailure)
         {
-            return Result.Failure<ViewAsGrantResponse>(created.Errors);
+            return Result.Failure<ViewAsGrantResponse>(validated.Errors);
         }
 
         if (subjects is null)
@@ -84,6 +90,11 @@ public sealed class ViewAsService(
         {
             return Result.Failure<ViewAsGrantResponse>(refusal);
         }
+
+        // The row is built again, now with the support access log's snapshot (the inputs already
+        // validated above, so this cannot fail): the viewed account's email is the one just read to
+        // mint the token (no extra lookup), the staff user's is the caller's own email claim.
+        var grant = ViewAsGrant.Create(staffUserId, targetUserId, reason, now, lifetime, StaffEmail(staffUserId), subject!.Email).Value!;
 
         await grants.DeleteIssuedBeforeAsync(now.AddDays(-settings.Value.RetentionDays), cancellationToken).ConfigureAwait(false);
         await grants.AddAsync(grant, cancellationToken).ConfigureAwait(false);
@@ -128,6 +139,24 @@ public sealed class ViewAsService(
             && grant.StaffUserId == staffUserId
             && grant.TargetUserId == targetUserId
             && grant.IsActiveAt(timeProvider.GetUtcNow().UtcDateTime);
+    }
+
+    /// <summary>
+    /// The staff user's email claim, read from the caller only when the caller IS the staff user, so
+    /// another principal's address is never recorded as the viewer's. Both claim types the JWT handler
+    /// may produce are read: the mapped <see cref="ClaimTypes.Email"/> and the raw <c>email</c>.
+    /// </summary>
+    /// <param name="staffUserId">The staff user the grant is for.</param>
+    /// <returns>The email, or <see langword="null"/>.</returns>
+    private string? StaffEmail(UserIdentifierType staffUserId)
+    {
+        if (currentUser is null || currentUser.UserId != staffUserId)
+        {
+            return null;
+        }
+
+        var user = currentUser.User;
+        return user?.FindFirst(ClaimTypes.Email)?.Value ?? user?.FindFirst("email")?.Value;
     }
 
     /// <summary>The refusal for a resolved account, or <see langword="null"/> when it may be viewed.</summary>
