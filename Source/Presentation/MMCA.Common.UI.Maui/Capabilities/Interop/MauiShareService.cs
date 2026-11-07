@@ -48,4 +48,27 @@ public sealed class MauiShareService : IShareService
             return false;
         }
     }
+
+    /// <inheritdoc />
+    public async Task<bool> ShareTextAsync(string title, string text, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        try
+        {
+            // Text, not a file: the diagnostics log is never written to disk to be shared.
+            await Share.Default.RequestAsync(new ShareTextRequest
+            {
+                Title = title,
+                Text = text,
+            }).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Same contract as ShareLinkAsync: any platform failure reports false so the caller
+            // falls back to the clipboard.
+            return false;
+        }
+    }
 }

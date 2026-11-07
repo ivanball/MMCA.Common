@@ -15,4 +15,12 @@ public interface IShareService
     /// browser implementations report <see langword="false"/> (no local file access).
     /// </summary>
     Task<bool> ShareFileAsync(string title, string filePath, string contentType, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Shares plain text (for example the in-app diagnostics log). Returns whether a share UI was
+    /// presented. The default reports <see langword="false"/> (unavailable) so callers fall back to
+    /// <see cref="IClipboardService"/>; the MAUI implementation opens the native share sheet.
+    /// </summary>
+    Task<bool> ShareTextAsync(string title, string text, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
 }
