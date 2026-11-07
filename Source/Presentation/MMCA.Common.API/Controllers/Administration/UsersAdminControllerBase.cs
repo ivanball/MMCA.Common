@@ -10,7 +10,7 @@ namespace MMCA.Common.API.Controllers.Administration;
 
 /// <summary>
 /// Base controller for the opt-in user-administration endpoints: read one account, list its live
-/// sessions, lock and unlock, and replace its roles. The roster itself is the app's generic paged
+/// sessions and its sign-in history, lock and unlock, and replace its roles. The roster itself is the app's generic paged
 /// entity endpoint, not an action here.
 /// </summary>
 /// <remarks>
@@ -85,6 +85,30 @@ public abstract class UsersAdminControllerBase<TUserDto>(
         ArgumentNullException.ThrowIfNull(sessions);
 
         var result = await sessions.GetSessionsAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Returns the account's sign-in history: one row per sign-in, ended ones included with how they
+    /// ended, newest first, capped at the newest 50. View only.
+    /// </summary>
+    /// <param name="userId">The account whose sign-ins to read.</param>
+    /// <param name="sessions">The framework's session administration service, resolved per action.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The sign-ins, or a Problem Details failure.</returns>
+    [HttpGet("{userId}/sign-ins")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        [FromServices] IUserSessionsAdministrationService sessions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+
+        var result = await sessions.GetSignInsAsync(userId, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }

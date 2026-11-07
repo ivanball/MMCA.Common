@@ -1,1 +1,13 @@
 #nullable enable
+MMCA.Common.UI.Components.Auth.SignInHistoryTable
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.Dispose() -> void
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignIns.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignIns.set -> void
+MMCA.Common.UI.Components.Auth.SignInHistoryTable.SignInHistoryTable() -> void
+override MMCA.Common.UI.Components.Auth.SignInHistoryTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Components.Auth.SignInHistoryTable.Dispose(bool disposing) -> void
+~override MMCA.Common.UI.Components.Auth.SignInHistoryTable.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!

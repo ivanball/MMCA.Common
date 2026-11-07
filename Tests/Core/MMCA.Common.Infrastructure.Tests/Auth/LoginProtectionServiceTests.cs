@@ -153,6 +153,41 @@ public sealed class LoginProtectionServiceTests
         cache.Ttls[AttemptsKey].Should().Be(TimeSpan.FromMinutes(15));
     }
 
+    // ── Lockout log event (T13) ──
+    // Spec A assertion 3: one Warning when the threshold is first crossed, none on the attempts
+    // after it (a stuffing run cannot flood the log), and the email never appears in it.
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_LogsTheLockoutWarningOnceWhenTheThresholdIsCrossed_AndNeverTheEmail()
+    {
+        var logger = CreateRecordingLogger(out var logged);
+        var sut = new LoginProtectionService(
+            new FakeCacheService(),
+            Options.Create(new LoginProtectionSettings { MaxFailedAttempts = 3, MaxLockoutSeconds = 300 }),
+            logger);
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            await sut.IncrementFailedAttemptsAsync(TestEmail);
+        }
+
+        logged.Should().BeEmpty("below the threshold nothing is logged");
+
+        for (var attempt = 3; attempt <= 8; attempt++)
+        {
+            await sut.IncrementFailedAttemptsAsync(TestEmail);
+        }
+
+        var warning = logged.Should().ContainSingle("only the attempt that first crosses MaxFailedAttempts logs").Subject;
+        warning.Level.Should().Be(LogLevel.Warning);
+        warning.Message.Should().Contain("lockout tripped");
+        warning.Message.Should().Contain("1s", "the lockout seconds of the tripping attempt are logged");
+        warning.Message.Should().NotContain(TestEmail).And.NotContain("user@").And.NotContain("example.com");
+        warning.Message.Should().NotContain(
+            EmailIdentity.KeySegment(TestEmail),
+            "the full digest of a guessable address is as good as the address; only a truncated prefix is logged");
+        warning.Message.Should().Contain(EmailIdentity.KeySegment(TestEmail)[..12]);
+    }
+
     // ── Reset ──
     [Fact]
     public async Task ResetFailedAttemptsAsync_RemovesAttemptCounterAndLockout()
@@ -407,7 +442,13 @@ public sealed class LoginProtectionServiceTests
     private static string HashedIp(string ip) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip)));
 
-    private static LoginProtectionService CreateOutageSut(out List<(LogLevel Level, string Message)> logged)
+    private static LoginProtectionService CreateOutageSut(out List<(LogLevel Level, string Message)> logged) =>
+        new(
+            new ThrowingCacheService(new InvalidOperationException("It was not possible to connect to the redis server(s).")),
+            Options.Create(new LoginProtectionSettings()),
+            CreateRecordingLogger(out logged));
+
+    private static ILogger<LoginProtectionService> CreateRecordingLogger(out List<(LogLevel Level, string Message)> logged)
     {
         var sink = new List<(LogLevel Level, string Message)>();
         logged = sink;
@@ -428,11 +469,9 @@ public sealed class LoginProtectionServiceTests
                     (string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!));
             }));
 
-        return new LoginProtectionService(
-            new ThrowingCacheService(new InvalidOperationException("It was not possible to connect to the redis server(s).")),
-            Options.Create(new LoginProtectionSettings()),
-            logger.Object);
+        return logger.Object;
     }
+
     private static (LoginProtectionService Sut, FakeCacheService Cache) CreateSut(
         int maxFailedAttempts = 5,
         int maxLockoutSeconds = 300,

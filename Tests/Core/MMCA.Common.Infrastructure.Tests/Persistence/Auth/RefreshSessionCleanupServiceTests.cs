@@ -421,10 +421,13 @@ public sealed class RefreshSessionCleanupServiceTests
         {
         }
 
-        public static SessionCleanupTestContext Create(SqliteConnection connection)
+        public static SessionCleanupTestContext Create(
+            SqliteConnection connection,
+            params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
         {
             var options = new DbContextOptionsBuilder<SessionCleanupTestContext>()
                 .UseSqlite(connection)
+                .AddInterceptors(interceptors)
                 .Options;
 
             var context = new SessionCleanupTestContext(options, BuildContextServices());

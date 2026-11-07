@@ -201,6 +201,38 @@ public abstract class AuthControllerBase(
     }
 
     /// <summary>
+    /// Lists the caller's sign-in history: one row per sign-in (however often its refresh token
+    /// rotated), ended sign-ins included with how they ended, newest first, capped at the newest 50,
+    /// with the caller's own sign-in flagged <c>IsCurrent</c>.
+    /// </summary>
+    /// <remarks>
+    /// The action takes no user id: the history read is always the authenticated caller's own, so
+    /// another account's sign-ins cannot be requested here. An administrator reads another account's
+    /// history through the user-administration endpoints, which require <c>users:manage</c>.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The caller's sign-ins.</returns>
+    [HttpGet("my-sign-ins")]
+    [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<SignInSummaryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public virtual async Task<ActionResult<IReadOnlyList<SignInSummaryResponse>>> GetMySignInsAsync(
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var result = await AuthenticationService
+            .GetSignInsAsync(userId.Value, User.FindSessionId(), cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.IsFailure
+            ? HandleFailure(result.Errors)
+            : Ok(result.Value);
+    }
+
+    /// <summary>
     /// Signs one device out: revokes the caller's session with this identifier.
     /// </summary>
     /// <remarks>

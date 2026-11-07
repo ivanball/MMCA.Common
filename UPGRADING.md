@@ -62,6 +62,31 @@ adapter only `ProjectId` and `InstallationsCollection`. The SNS identity can dro
 `sns:Unsubscribe` and `sns:Publish` on the topic. Existing DynamoDB rows keep a `SubscriptionArn`
 attribute the adapter now ignores; no migration is needed.
 
+**Sign-in history adds one column to `RefreshSessions`, so the database that holds it needs a
+migration.** `ApplyRefreshSessionConfiguration` (and so `ApplicationDbContext` with
+`RefreshSessions:Enabled`) maps a nullable `SignInId` (`uniqueidentifier NULL` on SQL Server, `uuid`
+on PostgreSQL, `TEXT` on SQLite; Cosmos DB never maps the table) and a non-unique index
+`IX_RefreshSessions_UserId_SignInId` over `(UserId, SignInId, CreatedAt)`, which answers the history's
+per-sign-in aggregate from the index.
+
+The fix:
+
+1. **Generate one migration for the Identity database** (the source `RefreshSessions:DataSourceName`
+   names), for example `dotnet ef migrations add AddRefreshSessionSignInId -- --datasource <Name>`.
+   It holds exactly one `AddColumn<Guid>` (`SignInId`, nullable) and one `CreateIndex`
+   (`IX_RefreshSessions_UserId_SignInId`). Anything else in the diff is unrelated model drift:
+   investigate it before committing.
+2. **Deploy it as usual.** The change is expand-only, with no data rewrite: rows written before it
+   hold null and each one that was not rotated away shows as its own sign-in until the retention
+   sweep (`RefreshSessions:RetentionDays`) removes it, and a successor minted from such a row opens a
+   new sign-in. An older instance in a rolling deploy ignores the column.
+
+A hand-written `IAuthUIService`, `IUserAdminUIService<TUserDto>`, `IAuthSessionIssuer`,
+`IAuthenticationService` or `IUserSessionsAdministrationService` (a test fake) implements the new
+`GetSignInsAsync` / `ListSignInsAsync` member, and a hand-written `IRefreshSessionStore` implements
+`GetRecentSignInsAsync` (aggregate in the store, bounded by `maxSignIns`, never by row count); a Moq mock of `IAuthUIService` behind the signed-in
+devices page sets up `GetSignInsAsync`, which that page now calls.
+
 ## [1.277.0] - 2026-11-04
 
 **A Redis-backed host must call `AddCommonHybridCache` (breaking, MMCA.Common.Infrastructure).** The

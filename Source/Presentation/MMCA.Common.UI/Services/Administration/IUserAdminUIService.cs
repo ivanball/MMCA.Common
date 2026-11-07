@@ -32,4 +32,15 @@ public interface IUserAdminUIService<TUserDto> : IUserAdminActionsUIService
     Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the account's sign-in history (one row per sign-in, ended ones included, newest first,
+    /// at most 50) from <c>GET Admin/Users/{userId}/sign-ins</c>. View only.
+    /// </summary>
+    /// <param name="userId">The account whose sign-ins to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The sign-ins, or the API's own refusal.</returns>
+    Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default);
 }

@@ -44,6 +44,11 @@ public partial class Sessions : IDisposable
     /// <summary>The last load attempt's outcome; a failure is rendered inline with a retry.</summary>
     private Result? _loadResult;
 
+    private IReadOnlyList<SignInSummaryResponse> _signIns = [];
+
+    /// <summary>The sign-in history read's outcome; null while it is in flight.</summary>
+    private Result? _signInsResult;
+
     private Guid? _revokingSessionId;
     private bool _disposed;
 
@@ -61,7 +66,7 @@ public partial class Sessions : IDisposable
     /// <summary>True while the account-wide sign-out is in flight.</summary>
     private bool IsRevokingAll { get; set; }
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
         _breadcrumbs =
@@ -70,7 +75,8 @@ public partial class Sessions : IDisposable
             new(L["Auth.Sessions.Title"].Value, href: null, disabled: true),
         ];
 
-        return LoadSessionsAsync();
+        await LoadSessionsAsync();
+        await LoadSignInsAsync();
     }
 
     /// <inheritdoc />
@@ -111,6 +117,24 @@ public partial class Sessions : IDisposable
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Reads the sign-in history. A failure is shown in place of the table and empties it, so a stale
+    /// history is never left on screen.
+    /// </summary>
+    private async Task LoadSignInsAsync()
+    {
+        try
+        {
+            var result = await AuthService.GetSignInsAsync(_cts.LifetimeToken());
+            _signIns = result.TryGetValue(out var signIns) ? signIns : [];
+            _signInsResult = result;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during component disposal.
         }
     }
 
@@ -166,7 +190,9 @@ public partial class Sessions : IDisposable
                 return;
             }
 
+            // The revoked device's sign-in has just ended, so the history changes too.
             await LoadSessionsAsync();
+            await LoadSignInsAsync();
         }
         catch (OperationCanceledException)
         {

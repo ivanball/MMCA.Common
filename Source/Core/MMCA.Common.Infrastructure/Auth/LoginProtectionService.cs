@@ -32,6 +32,9 @@ public sealed partial class LoginProtectionService(
     IOptions<LoginProtectionSettings> settings,
     ILogger<LoginProtectionService>? logger = null) : ILoginProtectionService
 {
+    /// <summary>How many hex characters of the key's hash a lockout log line carries (48 bits).</summary>
+    private const int LogKeyHashLength = 12;
+
     private readonly LoginProtectionSettings _settings = settings.Value;
     private readonly ILogger _logger = logger ?? NullLogger<LoginProtectionService>.Instance;
 
@@ -103,6 +106,13 @@ public sealed partial class LoginProtectionService(
                 // MaxLockoutSeconds (range caps at 3600), so deep excess always lands on the cap.
                 var lockoutSeconds = Math.Min(1 << Math.Min(excessAttempts, 30), _settings.MaxLockoutSeconds);
                 await cacheService.SetAsync(LockoutKey(email), true, TimeSpan.FromSeconds(lockoutSeconds), cancellationToken).ConfigureAwait(false);
+
+                // Only the attempt that first reaches the threshold logs, so a credential-stuffing run
+                // that keeps guessing past it cannot flood the log (one line per locked account).
+                if (newCount == _settings.MaxFailedAttempts)
+                {
+                    LogLockoutTripped(_logger, LogKeyHash(email), lockoutSeconds);
+                }
             }
         }
         catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
@@ -198,7 +208,19 @@ public sealed partial class LoginProtectionService(
     private static bool IsCacheOutage(Exception exception, CancellationToken cancellationToken) =>
         exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested;
 
+    /// <summary>
+    /// The protection key as it may appear in a log: the first <see cref="LogKeyHashLength"/> hex
+    /// characters of the key's SHA-256 segment (<c>EmailIdentity.KeySegment</c>). Enough to correlate
+    /// repeated lockouts of one account, never the address: a full unsalted digest of a guessable
+    /// address is reversible by trying candidates, a 48-bit prefix matches too many to name one.
+    /// </summary>
+    private static string LogKeyHash(string email) => EmailIdentity.KeySegment(email)[..LogKeyHashLength];
+
     // The operation name is logged, never the key: the keys carry the email address or client IP.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection could not reach the cache during {Operation}; failing open, so this call applies no lockout and no registration limit.")]
     private static partial void LogCacheUnavailable(ILogger logger, string operation, Exception exception);
+
+    // A truncated hash of the protection key, never the key or the address it is derived from.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection lockout tripped for key {KeyHash}; locked out for {LockoutSeconds}s")]
+    private static partial void LogLockoutTripped(ILogger logger, string keyHash, int lockoutSeconds);
 }

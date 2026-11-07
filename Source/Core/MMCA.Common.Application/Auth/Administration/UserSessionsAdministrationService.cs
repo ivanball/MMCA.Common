@@ -1,3 +1,4 @@
+using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Responses;
 
@@ -43,6 +44,25 @@ public sealed class UserSessionsAdministrationService(
         ];
 
         return Result.Success(live);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The same store-aggregated read the account holder's own history uses (<see cref="SignInHistory"/>),
+    /// with no current sign-in: an administrator is never on the viewed user's device.
+    /// </remarks>
+    public async Task<Result<IReadOnlyList<SignInSummaryResponse>>> GetSignInsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var signIns = await SignInHistory.ReadAsync(
+            refreshSessions,
+            userId,
+            timeProvider.GetUtcNow().UtcDateTime,
+            currentSessionId: null,
+            cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(signIns);
     }
 
     /// <inheritdoc />

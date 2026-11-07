@@ -64,6 +64,11 @@ public sealed class SessionsTests : BunitTestBase
             .ReturnsAsync(Result.Success());
         _auth.Setup(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
+
+        // The sign-in history below the device list (T13) is empty by default, so it adds no table
+        // and no row to the device-list assertions; the history tests arrange their own.
+        _auth.Setup(a => a.GetSignInsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<SignInSummaryResponse>>([]));
     }
 
     private static RefreshSessionSummaryResponse CurrentDevice() =>
@@ -244,6 +249,50 @@ public sealed class SessionsTests : BunitTestBase
         // A failed read must not leave rows a user could act on.
         cut.WaitForAssertion(() => cut.FindAll("table").Should().BeEmpty());
         cut.Markup.Should().Contain("Your devices could not be loaded.");
+    }
+
+    // ==================== Sign-in history (T13) ====================
+    [Fact]
+    public void WhenTheHistoryLoads_ItRendersBelowTheDeviceList()
+    {
+        _auth.Setup(a => a.GetSignInsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<SignInSummaryResponse>>(
+            [
+                new(CurrentSessionId, CreatedAt, CreatedAt.AddHours(2), "203.0.113.7", ChromeOnWindows, null, null, IsCurrent: true),
+                new(OtherSessionId, CreatedAt.AddDays(-2), CreatedAt.AddDays(-1), null, FirefoxOnMac, CreatedAt.AddDays(-1), SignInEndReasons.SignedOut, IsCurrent: false),
+            ]));
+
+        var cut = RenderSessions();
+
+        cut.WaitForAssertion(() => cut.FindAll(".mmca-sign-in-status").Should().HaveCount(2));
+        cut.FindAll("h2").Should().Contain(h => h.TextContent.Contains("Sign-in history", StringComparison.Ordinal));
+        cut.FindAll("table").Should().HaveCount(2, "the device list and the history are separate tables");
+        cut.Markup.Should().Contain("Signed out");
+    }
+
+    [Fact]
+    public void WhenTheHistoryFailsToLoad_TheDeviceListStillRenders()
+    {
+        _auth.Setup(a => a.GetSignInsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<IReadOnlyList<SignInSummaryResponse>>(
+                Error.Failure("Auth.SignIns.LoadFailed", "Your sign-in history could not be loaded.")));
+
+        var cut = RenderSessions();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Your sign-in history could not be loaded."));
+        cut.FindAll("tbody tr").Should().HaveCount(2, "a failed history read never hides the live devices");
+    }
+
+    [Fact]
+    public void AfterARowsRevoke_TheHistoryIsReadAgain()
+    {
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(OtherDeviceButtonSelector).Click();
+
+        cut.WaitForAssertion(() =>
+            _auth.Verify(a => a.GetSignInsAsync(It.IsAny<CancellationToken>()), Times.Exactly(2)));
     }
 
     // ==================== Per-device revoke ====================

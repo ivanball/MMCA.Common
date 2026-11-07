@@ -1,2 +1,3 @@
 #nullable enable
 *REMOVED*MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+const MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions.SignInIndexName = "IX_RefreshSessions_UserId_SignInId" -> string!

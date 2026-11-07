@@ -2,3 +2,39 @@
 const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsActor = "act_sub" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.ViewAsGrant = "vag" -> string!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.IsViewAs(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+MMCA.Common.Shared.Auth.Responses.SignInEndReasons
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn = 0 -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndedAt.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Equals(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IpAddress.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IpAddress.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IsCurrent.get -> bool
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.IsCurrent.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Kind.get -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Kind.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.get -> System.Guid
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.UserAgent.get -> string?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.UserAgent.init -> void
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.AccountDeleted = "AccountDeleted" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.Expired = "Expired" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.ReuseDetected = "ReuseDetected" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.SessionCapExceeded = "SessionCapExceeded" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.SignedOut = "SignedOut" -> string!
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator !=(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
