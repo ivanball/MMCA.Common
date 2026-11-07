@@ -11,12 +11,17 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 /// </summary>
 public interface INativePushSender
 {
-    /// <summary>Sends a native push to every registered installation of the given users.</summary>
+    /// <summary>
+    /// Sends a native push to every registered installation of the given users and reports, per
+    /// platform, how many sends succeeded and failed. A failing send is counted and the rest still
+    /// go out: an implementation returns the failure in <see cref="NativePushOutcome.FirstFailure"/>
+    /// instead of throwing. Only the caller's own cancellation propagates.
+    /// </summary>
     /// <param name="userIds">The target user identifiers (resolved to installations via user tags).</param>
     /// <param name="title">The notification title.</param>
     /// <param name="body">The notification body text.</param>
     /// <param name="metadata">Optional key-value metadata (e.g., deep-link route) carried in the platform payload.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default);
+    /// <returns>The per-platform outcome; <see cref="NativePushOutcome.None"/> when nothing was attempted.</returns>
+    Task<NativePushOutcome> SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default);
 }

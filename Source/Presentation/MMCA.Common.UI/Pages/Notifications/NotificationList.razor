@@ -70,6 +70,7 @@ else if (_canManage == true)
                 <MudTh>@L["Notif.List.Col.Title"]</MudTh>
                 <MudTh>@L["Notif.List.Col.Recipients"]</MudTh>
                 <MudTh>@L["Notif.List.Col.Status"]</MudTh>
+                <MudTh>@L["Notif.List.Col.Phone"]</MudTh>
                 <MudTh>@L["Notif.List.Col.Sent"]</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -89,6 +90,25 @@ else if (_canManage == true)
                     else
                     {
                         <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["Notif.List.Col.Phone"]">
+                    @* The native (OS-level) leg per platform (ADR-044), status first with the unit explicit
+                       ("Android: delivered (1 of 1 batch)"). The chip TEXT carries the status, so color and
+                       icon are never the only cue. "-" for a row with no recorded outcome. *@
+                    @{ var phoneLines = PhoneDeliveryLines(context); }
+                    @if (phoneLines.Count == 0)
+                    {
+                        <span>-</span>
+                    }
+                    else
+                    {
+                        @foreach (var line in phoneLines)
+                        {
+                            <div>
+                                <MudChip T="string" Color="@line.Color" Icon="@line.Icon" Size="Size.Small" Variant="Variant.Outlined">@line.Text</MudChip>
+                            </div>
+                        }
                     }
                 </MudTd>
                 <MudTd DataLabel="@L["Notif.List.Col.Sent"]">@ViewerTime.Format(context.CreatedOn)</MudTd>

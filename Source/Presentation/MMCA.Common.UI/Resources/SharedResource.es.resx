@@ -952,4 +952,52 @@
   <data name="Auth.SignIns.ViewedBySupport" xml:space="preserve">
     <value>Consultada por soporte</value>
   </data>
+  <data name="Notif.List.Col.Phone" xml:space="preserve">
+    <value>Entrega en el teléfono</value>
+  </data>
+  <data name="Notif.Phone.Android" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="Notif.Phone.Apple" xml:space="preserve">
+    <value>iPhone</value>
+  </data>
+  <data name="Notif.Phone.Delivered" xml:space="preserve">
+    <value>entregada</value>
+  </data>
+  <data name="Notif.Phone.PartlyFailed" xml:space="preserve">
+    <value>fallo parcial</value>
+  </data>
+  <data name="Notif.Phone.Failed" xml:space="preserve">
+    <value>fallida</value>
+  </data>
+  <data name="Notif.Phone.Line" xml:space="preserve">
+    <value>{0}: {1} ({2} de {3} {4})</value>
+  </data>
+  <data name="Notif.Phone.LineNoUnit" xml:space="preserve">
+    <value>{0}: {1} ({2} de {3})</value>
+  </data>
+  <data name="Notif.Phone.StatusOnly" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Notif.Phone.AllPhones" xml:space="preserve">
+    <value>Teléfonos</value>
+  </data>
+  <data name="Notif.Phone.Unit.Batch.One" xml:space="preserve">
+    <value>lote</value>
+  </data>
+  <data name="Notif.Phone.Unit.Batch.Other" xml:space="preserve">
+    <value>lotes</value>
+  </data>
+  <data name="Notif.Phone.Unit.Endpoint.One" xml:space="preserve">
+    <value>dispositivo</value>
+  </data>
+  <data name="Notif.Phone.Unit.Endpoint.Other" xml:space="preserve">
+    <value>dispositivos</value>
+  </data>
+  <data name="Notif.Phone.Unit.Message.One" xml:space="preserve">
+    <value>mensaje</value>
+  </data>
+  <data name="Notif.Phone.Unit.Message.Other" xml:space="preserve">
+    <value>mensajes</value>
+  </data>
 </root>

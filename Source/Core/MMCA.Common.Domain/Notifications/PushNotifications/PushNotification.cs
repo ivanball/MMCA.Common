@@ -21,6 +21,9 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// <summary>Maximum allowed length for the scope key.</summary>
     public const int ScopeKeyMaxLength = 128;
 
+    /// <summary>Maximum allowed length for the native delivery unit name.</summary>
+    public const int NativeDeliveryUnitMaxLength = 20;
+
     /// <summary>Gets the notification title.</summary>
     public string Title { get; private set; }
 
@@ -51,6 +54,29 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// a read that supplies none still sees everything. Null for every send that carries no scope.
     /// </summary>
     public string? ScopeKey { get; private set; }
+
+    /// <summary>
+    /// Gets the number of Android native push sends the provider accepted, in the unit the provider
+    /// reports (ADR-044). Null when nothing was attempted on Android, or for a row written before
+    /// the native outcome was recorded.
+    /// </summary>
+    public int? AndroidSent { get; private set; }
+
+    /// <summary>Gets the number of Android native push sends that failed; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AndroidFailed { get; private set; }
+
+    /// <summary>Gets the number of Apple native push sends the provider accepted; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AppleSent { get; private set; }
+
+    /// <summary>Gets the number of Apple native push sends that failed; null as for <see cref="AndroidSent"/>.</summary>
+    public int? AppleFailed { get; private set; }
+
+    /// <summary>
+    /// Gets the unit the native push counts are in (for example <c>Batch</c>, <c>Endpoint</c> or
+    /// <c>Message</c>, the provider's delivery unit). Null for a row written before the unit was
+    /// recorded, or when the native leg recorded nothing.
+    /// </summary>
+    public string? NativeDeliveryUnit { get; private set; }
 
     /// <summary>EF Core parameterless constructor.</summary>
     private PushNotification()
@@ -142,4 +168,26 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// Marks the notification as failed.
     /// </summary>
     public void MarkAsFailed() => Status = PushNotificationStatus.Failed;
+
+    /// <summary>
+    /// Records the native (OS-level) push outcome per platform (ADR-044). A null pair means that
+    /// platform was not attempted. The overall <see cref="Status"/> is the SignalR leg's and is left
+    /// as it is.
+    /// </summary>
+    /// <param name="deliveryUnit">
+    /// The unit the counts are in (the provider's delivery unit name, at most
+    /// <see cref="NativeDeliveryUnitMaxLength"/> characters), or null when nothing was recorded.
+    /// </param>
+    /// <param name="androidSent">Android sends accepted, or null when Android was not attempted.</param>
+    /// <param name="androidFailed">Android sends failed, or null when Android was not attempted.</param>
+    /// <param name="appleSent">Apple sends accepted, or null when Apple was not attempted.</param>
+    /// <param name="appleFailed">Apple sends failed, or null when Apple was not attempted.</param>
+    public void RecordNativePushOutcome(string? deliveryUnit, int? androidSent, int? androidFailed, int? appleSent, int? appleFailed)
+    {
+        NativeDeliveryUnit = string.IsNullOrWhiteSpace(deliveryUnit) ? null : deliveryUnit;
+        AndroidSent = androidSent;
+        AndroidFailed = androidFailed;
+        AppleSent = appleSent;
+        AppleFailed = appleFailed;
+    }
 }

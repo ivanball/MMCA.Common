@@ -77,6 +77,7 @@ MMCA.Common.Domain.Auth.ViewAsGrant.End(System.DateTime now) -> void
 MMCA.Common.Domain.Auth.ViewAsGrant.EndedAt.get -> System.DateTime?
 MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.ViewAsGrant.ExpiresAt.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.ForgetDisplayOf(int userId) -> bool
 MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.ViewAsGrant.GrantedAt.init -> void
 MMCA.Common.Domain.Auth.ViewAsGrant.Id.get -> System.Guid
@@ -84,8 +85,11 @@ MMCA.Common.Domain.Auth.ViewAsGrant.Id.init -> void
 MMCA.Common.Domain.Auth.ViewAsGrant.IsActiveAt(System.DateTime now) -> bool
 MMCA.Common.Domain.Auth.ViewAsGrant.Reason.get -> string!
 MMCA.Common.Domain.Auth.ViewAsGrant.Reason.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.StaffDisplay.get -> string?
 MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.get -> int
 MMCA.Common.Domain.Auth.ViewAsGrant.StaffUserId.init -> void
+MMCA.Common.Domain.Auth.ViewAsGrant.StatusAt(System.DateTime now) -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantStatus
+MMCA.Common.Domain.Auth.ViewAsGrant.TargetDisplay.get -> string?
 MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.get -> int
 MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.init -> void
 MMCA.Common.Domain.Auth.ViewAsGrant.ViewAsGrant() -> void
@@ -184,11 +188,17 @@ MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotification
 MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Title.init -> void
 MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AndroidFailed.get -> int?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AndroidSent.get -> int?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AppleFailed.get -> int?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AppleSent.get -> int?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Body.get -> string!
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKey.get -> string?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.MarkAsFailed() -> void
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.MarkAsSent() -> void
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.NativeDeliveryUnit.get -> string?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.RecipientCount.get -> int
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.RecordNativePushOutcome(string? deliveryUnit, int? androidSent, int? androidFailed, int? appleSent, int? appleFailed) -> void
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.ScopeKey.get -> string?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.SentByUserId.get -> int
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Status.get -> MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
@@ -257,11 +267,13 @@ const MMCA.Common.Domain.Auth.RefreshSession.ReasonSessionCap = "SessionCapExcee
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonSignedOut = "SignedOut" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.TokenHashLength = 64 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.UserAgentMaxLength = 512 -> int
+const MMCA.Common.Domain.Auth.ViewAsGrant.DisplayMaxLength = 256 -> int
 const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMaxLength = 500 -> int
 const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMinLength = 10 -> int
 const MMCA.Common.Domain.Invariants.CommonInvariants.DarkTheme = "dark" -> string!
 const MMCA.Common.Domain.Invariants.CommonInvariants.LightTheme = "light" -> string!
 const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKeyMaxLength = 128 -> int
+const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.NativeDeliveryUnitMaxLength = 20 -> int
 const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.ScopeKeyMaxLength = 128 -> int
 const MMCA.Common.Domain.Privacy.PiiRedactor.RedactedToken = "[REDACTED]" -> string!
 override MMCA.Common.Domain.DomainEvents.BaseDomainEvent.Equals(object? obj) -> bool
@@ -305,6 +317,8 @@ static MMCA.Common.Domain.Auth.PermissionGrant.Create(string! role, string! perm
 static MMCA.Common.Domain.Auth.RefreshSession.Create(int userId, string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 static MMCA.Common.Domain.Auth.RefreshSession.HashToken(string! refreshToken) -> string!
 static MMCA.Common.Domain.Auth.ViewAsGrant.Create(int staffUserId, int targetUserId, string? reason, System.DateTime grantedAt, System.TimeSpan lifetime) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.ViewAsGrant!>!
+static MMCA.Common.Domain.Auth.ViewAsGrant.Create(int staffUserId, int targetUserId, string? reason, System.DateTime grantedAt, System.TimeSpan lifetime, string? staffDisplay, string? targetDisplay) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.ViewAsGrant!>!
+static MMCA.Common.Domain.Auth.ViewAsGrant.NormalizeDisplay(string? value) -> string?
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator ==(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? left, MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? right) -> bool

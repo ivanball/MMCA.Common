@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Registro de acceso de soporte</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Cada vista de solo lectura de otra cuenta por parte del personal: quién vio a quién, por qué, cuándo y cómo terminó. Las filas se conservan durante el periodo de retención configurado.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Cargando accesos de soporte</value>
+  </data>
+  <data name="Action.Retry" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+  <data name="Action.Apply" xml:space="preserve">
+    <value>Aplicar filtros</value>
+  </data>
+  <data name="Action.Clear" xml:space="preserve">
+    <value>Borrar filtros</value>
+  </data>
+  <data name="Empty.NoGrants" xml:space="preserve">
+    <value>Ningún acceso de soporte coincide con estos filtros.</value>
+  </data>
+  <data name="Aria.Table" xml:space="preserve">
+    <value>Accesos de soporte, del más reciente al más antiguo</value>
+  </data>
+  <data name="Aria.Filters" xml:space="preserve">
+    <value>Filtrar accesos de soporte</value>
+  </data>
+  <data name="Column.Staff" xml:space="preserve">
+    <value>Miembro del personal</value>
+  </data>
+  <data name="Column.Viewed" xml:space="preserve">
+    <value>Cuenta vista</value>
+  </data>
+  <data name="Column.Reason" xml:space="preserve">
+    <value>Motivo</value>
+  </data>
+  <data name="Column.Started" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="Column.Ended" xml:space="preserve">
+    <value>Fin o caducidad</value>
+  </data>
+  <data name="Column.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Status.Live" xml:space="preserve">
+    <value>Activo</value>
+  </data>
+  <data name="Status.Ended" xml:space="preserve">
+    <value>Finalizado</value>
+  </data>
+  <data name="Status.Expired" xml:space="preserve">
+    <value>Caducado</value>
+  </data>
+  <data name="Display.NotOnRecord" xml:space="preserve">
+    <value>Correo no registrado</value>
+  </data>
+  <data name="Filter.Staff" xml:space="preserve">
+    <value>Correo del miembro del personal</value>
+  </data>
+  <data name="Filter.Viewed" xml:space="preserve">
+    <value>Correo de la cuenta vista</value>
+  </data>
+  <data name="Filter.From" xml:space="preserve">
+    <value>Desde</value>
+  </data>
+  <data name="Filter.To" xml:space="preserve">
+    <value>Hasta</value>
+  </data>
+  <data name="Filter.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Filter.AnyStatus" xml:space="preserve">
+    <value>Cualquier estado</value>
+  </data>
+</root>

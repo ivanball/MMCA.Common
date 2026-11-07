@@ -34,6 +34,80 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.280.0] - 2026-11-07
+
+**`INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` (breaking, MMCA.Common.Application
+and the push adapters; ADR-044).** The framework's own senders (`NullNativePushSender`,
+`AzureNotificationHubNativePushSender` and the internal SNS and FCM senders) move with it, so a host
+that only calls an adapter registration changes nothing in code.
+
+| Before | After |
+|---|---|
+| `Task SendToUsersAsync(userIds, title, body, metadata, cancellationToken)` | `Task<NativePushOutcome> SendToUsersAsync(userIds, title, body, metadata, cancellationToken)` |
+| a failed send is thrown | a failed send is counted and returned in `NativePushOutcome.FirstFailure`; only the caller's own cancellation propagates |
+
+The mechanical fix for a class of your own that implements `INativePushSender`:
+
+```csharp
+// Before
+public async Task SendToUsersAsync(IEnumerable<int> userIds, string title, string body,
+    Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+{
+    await SendAsync(...);
+}
+
+// After: change the return type and return an outcome. NativePushOutcome.None when you count
+// nothing; NativePushOutcome.From(unit, androidSent, androidFailed, appleSent, appleFailed,
+// firstFailure) when you do. Catch a failed send and pass it as firstFailure instead of throwing.
+public async Task<NativePushOutcome> SendToUsersAsync(IEnumerable<int> userIds, string title, string body,
+    Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+{
+    await SendAsync(...);
+    return NativePushOutcome.None;
+}
+```
+
+A test that mocks the interface returns an outcome too
+(`.ReturnsAsync(NativePushOutcome.None)`); a loose Moq mock otherwise returns null.
+
+**One migration on the Notification database** of every host that maps `PushNotification` (the
+`Notification` data source, or the default database when the host configures none): five nullable
+columns on `Notification.PushNotification`: four `int` columns, `AndroidSent`, `AndroidFailed`,
+`AppleSent` and `AppleFailed`, and `NativeDeliveryUnit` (a string of at most 20 characters), with no
+default and no backfill (null reads as "not recorded", shown as "-").
+
+```bash
+dotnet ef migrations add AddPushNotificationNativeOutcome -- --datasource Notification
+```
+
+**Support access log: one migration on the grant-store database, a controller to subclass, and
+the erasure store to forward.** A host that does not enable `ViewAs` changes nothing.
+
+1. **Migration (the service that holds the grant store only).** `ViewAsGrants` gains two nullable
+   columns, `StaffDisplay` and `TargetDisplay`, each a string of at most 256 characters
+   (`nvarchar(256) NULL` on SQL Server). In the migrations project that already sets
+   `DesignTimeDbContextOptions.EnableViewAsGrants = true`, add a migration (for example
+   `AddViewAsGrantDisplays`) and apply it. Existing rows keep both columns `NULL` and show
+   "Email not on record" in the log until they age out. A service with `ViewAs:HostsGrantStore` false maps
+   no grant table and needs no migration.
+2. **Controller.** Subclass `ViewAsGrantsAdminControllerBase` with the route the UI client calls,
+   on the service that holds the grant store:
+
+   ```csharp
+   [ApiController]
+   [Route("Admin/ViewAsGrants")]
+   [ApiVersion("1.0")]
+   public sealed class AdminViewAsGrantsController : ViewAsGrantsAdminControllerBase;
+   ```
+
+   It requires `users:manage`, so whoever can manage users can read the log.
+3. **Erasure.** A `DeleteUserHandlerBase` subclass injects `IViewAsGrantStore? viewAsGrants = null`
+   and forwards it as the base constructor's new trailing argument (name it when the subclass skips
+   `timeProvider`: `viewAsGrants: viewAsGrants`). Without it the erased account's email stays on its
+   grants until the retention sweep.
+4. **UI (optional).** Call `services.AddSupportAccessLogUI()` after `AddUIShared`, add a page that
+   renders `<SupportAccessLog />` behind your `users:manage` gate, and a navigation entry for it.
+
 ## [1.279.0] - 2026-11-07
 
 **Read-only view-as in a multi-service host: set `ViewAs:HostsGrantStore` per service.** A single

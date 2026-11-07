@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using FirebaseAdmin.Messaging;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Gcp.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 
@@ -121,6 +122,37 @@ public sealed class FcmNativePushSenderTests
 
         await act.Should().NotThrowAsync();
         _messaging.SendEachCalls.Should().BeEmpty();
+    }
+
+    // ADR-044 outcome: an FCM installation records platform "fcmv1" on Android and iOS alike (the
+    // registrar accepts nothing else), so the sender cannot tell which phones a token belongs to and
+    // reports no per-platform counts rather than guess. A failed send still surfaces as the first failure.
+    [Fact]
+    public async Task SendToUsersAsync_ReportsNoPlatformCounts_ButReturnsTheFirstFailure()
+    {
+        AddInstallation("a", "1");
+        AddInstallation("b", "1");
+        var quota = new InvalidOperationException("Quota exceeded");
+        _messaging.OutcomeFor = token => token == "token-a"
+            ? new FcmSendOutcome(false, MessagingErrorCode.QuotaExceeded, quota)
+            : FcmSendOutcome.Success;
+
+        var outcome = await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Unit.Should().Be(NativePushDeliveryUnit.Message);
+        outcome.Android.Should().BeNull();
+        outcome.Apple.Should().BeNull();
+        outcome.FirstFailure.Should().BeSameAs(quota);
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_AllDelivered_ReportsNoFailure()
+    {
+        AddInstallation("a", "1");
+
+        var outcome = await CreateSut().SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.HasFailures.Should().BeFalse();
     }
 
     [Fact]

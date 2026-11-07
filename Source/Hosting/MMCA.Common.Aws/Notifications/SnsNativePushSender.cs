@@ -3,6 +3,7 @@ using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Shared.Notifications.PushNotifications;
 
 namespace MMCA.Common.Aws.Notifications;
 
@@ -22,6 +23,12 @@ namespace MMCA.Common.Aws.Notifications;
 /// <see cref="SnsInstallation.EndpointArn"/> and the device is published to once. A stale endpoint
 /// removes every row of its group, as the FCM adapter's per-token grouping does.
 /// </para>
+/// <para>
+/// The outcome counts endpoints (<see cref="NativePushDeliveryUnit.Endpoint"/>), on the platform of
+/// the endpoint's platform application: <c>fcmv1</c> is Android, <c>apns</c> is Apple. A disabled
+/// or missing endpoint counts as failed (its device was not reached; a bad APNs credential shows up
+/// this way), and a failed user lookup is returned as a failure without a platform count.
+/// </para>
 /// </summary>
 /// <param name="registry">The installation registry.</param>
 /// <param name="sns">The SNS client.</param>
@@ -32,12 +39,12 @@ internal sealed partial class SnsNativePushSender(
     ILogger<SnsNativePushSender> logger) : INativePushSender
 {
     /// <inheritdoc />
-    public async Task SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
+    public async Task<NativePushOutcome> SendToUsersAsync(IEnumerable<UserIdentifierType> userIds, string title, string body, Dictionary<string, string>? metadata = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userIds);
 
         var message = SnsPushMessage.Build(title, body, metadata);
-        var delivered = 0;
+        var tally = new EndpointTally();
 
         foreach (var userKey in userIds.Select(SnsInstallationRegistry.UserKey).Distinct(StringComparer.Ordinal))
         {
@@ -49,22 +56,29 @@ internal sealed partial class SnsNativePushSender(
             catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
             {
                 LogInstallationLookupFailed(logger, ex, userKey);
+
+                // The user's devices are unknown, so no platform is counted; the failure still is.
+                tally.Fail(ex);
                 continue;
             }
 
             foreach (var endpoint in installations.GroupBy(i => i.EndpointArn, StringComparer.Ordinal))
             {
-                if (await TryPublishAsync(endpoint, message, cancellationToken).ConfigureAwait(false))
-                {
-                    delivered++;
-                }
+                var failure = await TryPublishAsync(endpoint, message, cancellationToken).ConfigureAwait(false);
+
+                // The platform is the endpoint's platform application: every row of the group
+                // registered the same token, so it registered on the same platform.
+                tally.Count(endpoint.First().Platform, failure);
             }
         }
 
-        LogNativePushSent(logger, title, delivered);
+        LogNativePushSent(logger, title, tally.Delivered);
+        return tally.ToOutcome();
     }
 
-    private async Task<bool> TryPublishAsync(IGrouping<string, SnsInstallation> endpoint, string message, CancellationToken cancellationToken)
+    /// <summary>Publishes to one endpoint.</summary>
+    /// <returns>Null on success, otherwise the failure (a stale endpoint is removed and still counts as a failure).</returns>
+    private async Task<Exception?> TryPublishAsync(IGrouping<string, SnsInstallation> endpoint, string message, CancellationToken cancellationToken)
     {
         try
         {
@@ -76,17 +90,17 @@ internal sealed partial class SnsNativePushSender(
                     MessageStructure = SnsPushMessage.Structure,
                 },
                 cancellationToken).ConfigureAwait(false);
-            return true;
+            return null;
         }
         catch (Exception ex) when (ex is EndpointDisabledException or NotFoundException)
         {
             await RemoveStaleAsync(endpoint, cancellationToken).ConfigureAwait(false);
-            return false;
+            return ex;
         }
         catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
         {
             LogPublishFailed(logger, ex, endpoint.Key);
-            return false;
+            return ex;
         }
     }
 
@@ -136,4 +150,55 @@ internal sealed partial class SnsNativePushSender(
     private static bool IsTransportFailure(Exception exception, CancellationToken cancellationToken) =>
         !cancellationToken.IsCancellationRequested
         && exception is HttpRequestException or IOException or TimeoutException or OperationCanceledException;
+
+    /// <summary>
+    /// The per-platform endpoint counts of one send. An endpoint on a platform this adapter does not
+    /// register (neither <c>fcmv1</c> nor <c>apns</c>) is not counted; its failure still is.
+    /// </summary>
+    private sealed class EndpointTally
+    {
+        private int _androidSent;
+        private int _androidFailed;
+        private int _appleSent;
+        private int _appleFailed;
+        private Exception? _firstFailure;
+
+        public int Delivered => _androidSent + _appleSent;
+
+        public void Fail(Exception failure) => _firstFailure ??= failure;
+
+        public void Count(string platform, Exception? failure)
+        {
+            if (failure is not null)
+            {
+                Fail(failure);
+            }
+
+            if (string.Equals(platform, DeviceInstallationRequest.FcmV1Platform, StringComparison.Ordinal))
+            {
+                if (failure is null)
+                {
+                    _androidSent++;
+                }
+                else
+                {
+                    _androidFailed++;
+                }
+            }
+            else if (string.Equals(platform, DeviceInstallationRequest.ApnsPlatform, StringComparison.Ordinal))
+            {
+                if (failure is null)
+                {
+                    _appleSent++;
+                }
+                else
+                {
+                    _appleFailed++;
+                }
+            }
+        }
+
+        public NativePushOutcome ToOutcome() =>
+            NativePushOutcome.From(NativePushDeliveryUnit.Endpoint, _androidSent, _androidFailed, _appleSent, _appleFailed, _firstFailure);
+    }
 }

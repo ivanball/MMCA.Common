@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
@@ -137,16 +137,108 @@ public class SendPushNotificationHandlerTests
             Times.Once);
     }
 
+    // Spec B assertion 3 (second half): a native sender that throws (a custom sender that has not
+    // moved to the outcome contract, say) still cannot fail the inbox or the SignalR leg, and the
+    // alert's Warning still carries the exception.
     [Fact]
-    public async Task HandleAsync_WhenNativeSendFails_IsNonFatalAndStatusStaysSent()
+    public async Task HandleAsync_WhenTheNativeSenderThrows_InboxAndSignalRLegsAreUnaffected()
     {
-        var (sut, _) = CreateSut(nativeSendThrows: true);
+        var (sut, mocks) = CreateSut(nativeSendThrows: true);
 
-        SendPushNotificationCommand command = CreateCommand();
-        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Sent));
+        mocks.UserNotificationRepo.Verify(
+            x => x.AddAsync(It.IsAny<UserNotification>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(3));
+        mocks.PushNotificationSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        result.Value.AndroidSent.Should().BeNull();
+        result.Value.AppleSent.Should().BeNull();
+        mocks.Log.Should().ContainSingle(e => e.Level == LogLevel.Warning)
+            .Which.Exception.Should().BeOfType<InvalidOperationException>();
+    }
+
+    // Spec B assertion 2: the four counts are stored, and the Warning the production alert reads
+    // (AppExceptions, message "native (OS-level) delivery failed") is logged WITH the exception.
+    [Fact]
+    public async Task HandleAsync_WhenANativeSendFailed_StoresTheFourCounts_AndLogsTheWarningWithTheException()
+    {
+        var apnsFailure = new InvalidOperationException("APNs rejected the send");
+        var (sut, mocks) = CreateSut(nativeOutcome: NativePushOutcome.From(
+            NativePushDeliveryUnit.Batch, androidSent: 3, androidFailed: 0, appleSent: 2, appleFailed: 1, apnsFailure));
+        PushNotification? added = null;
+        mocks.NotificationRepo
+            .Setup(x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<PushNotification, CancellationToken>((notification, _) => added = notification);
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        added.Should().NotBeNull();
+        (added!.AndroidSent, added.AndroidFailed, added.AppleSent, added.AppleFailed).Should().Be((3, 0, 2, 1));
+        (result.Value!.AndroidSent, result.Value.AndroidFailed, result.Value.AppleSent, result.Value.AppleFailed).Should().Be((3, 0, 2, 1));
+        added.NativeDeliveryUnit.Should().Be("Batch");
+        result.Value.NativeDeliveryUnit.Should().Be("Batch");
+        result.Value.Status.Should().Be(nameof(PushNotificationStatus.Sent), "the native outcome never changes the overall status");
+        var warning = mocks.Log.Should().ContainSingle(e => e.Level == LogLevel.Warning).Subject;
+        warning.Message.Should().Contain("native (OS-level) delivery failed");
+        warning.Exception.Should().BeSameAs(apnsFailure);
+    }
+
+    // Spec B assertion 3 (first half): an all-success send logs no Warning.
+    [Fact]
+    public async Task HandleAsync_WhenEveryNativeSendSucceeded_StoresTheCounts_AndLogsNoWarning()
+    {
+        var (sut, mocks) = CreateSut(nativeOutcome: NativePushOutcome.From(
+            NativePushDeliveryUnit.Batch, androidSent: 1, androidFailed: 0, appleSent: 1, appleFailed: 0, firstFailure: null));
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        (result.Value!.AndroidSent, result.Value.AndroidFailed, result.Value.AppleSent, result.Value.AppleFailed).Should().Be((1, 0, 1, 0));
+        mocks.Log.Should().NotContain(e => e.Level >= LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNoNativeAdapterIsConfigured_LeavesTheCountsNull()
+    {
+        var (sut, mocks) = CreateSut(nativeOutcome: NativePushOutcome.None);
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
+
+        // Null means not attempted.
+        new[] { result.Value!.AndroidSent, result.Value.AndroidFailed, result.Value.AppleSent, result.Value.AppleFailed }
+            .Should().AllSatisfy(count => count.Should().BeNull());
+        result.Value.NativeDeliveryUnit.Should().BeNull();
+        mocks.Log.Should().NotContain(e => e.Level >= LogLevel.Warning);
+    }
+
+    // FCM reports no per-platform counts. A failure is still recorded (the unit, no counts), so the
+    // list can say "Phones: failed"; a full success has nothing to record and stays "-".
+    [Theory]
+    [InlineData(true, "Message")]
+    [InlineData(false, null)]
+    public async Task HandleAsync_WithAnOutcomeWithoutPlatformCounts_RecordsTheUnitOnlyWhenItFailed(bool failed, string? expectedUnit)
+    {
+        var (sut, _) = CreateSut(nativeOutcome: new NativePushOutcome
+        {
+            Unit = NativePushDeliveryUnit.Message,
+            FirstFailure = failed ? new InvalidOperationException("Quota exceeded") : null,
+        });
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
+
+        result.Value!.NativeDeliveryUnit.Should().Be(expectedUnit);
+        result.Value.AndroidSent.Should().BeNull();
+        result.Value.AppleSent.Should().BeNull();
     }
 
     // -- HandleAsync: deduplication (gap 12) --
@@ -398,7 +490,27 @@ public class SendPushNotificationHandlerTests
         Mock<IReadRepository<PushNotification, PushNotificationIdentifierType>> ReadRepo,
         Mock<INotificationRecipientProvider> RecipientProvider,
         Mock<IPushNotificationSender> PushNotificationSender,
-        Mock<INativePushSender> NativePushSender);
+        Mock<INativePushSender> NativePushSender,
+        Mock<IRepository<UserNotification, UserNotificationIdentifierType>> UserNotificationRepo,
+        List<LogEntry> Log);
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
+
+    private sealed class CapturingLogger(List<LogEntry> sink) : ILogger<SendPushNotificationHandler>
+    {
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            sink.Add(new LogEntry(logLevel, formatter(state, exception), exception));
+    }
 
     /// <summary>
     /// Replaces the canned dedup lookup with one that evaluates the handler's predicate against an
@@ -475,6 +587,7 @@ public class SendPushNotificationHandlerTests
         int recipientCount = 3,
         bool sendThrows = false,
         bool nativeSendThrows = false,
+        NativePushOutcome? nativeOutcome = null,
         PushNotification? existingByDedupKey = null,
         bool saveThrows = false,
         PushNotification? dedupWinnerOnRequery = null)
@@ -537,6 +650,13 @@ public class SendPushNotificationHandlerTests
         }
 
         var nativePushSender = new Mock<INativePushSender>();
+        nativePushSender.Setup(x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(nativeOutcome ?? NativePushOutcome.None);
         if (nativeSendThrows)
         {
             nativePushSender.Setup(x => x.SendToUsersAsync(
@@ -549,6 +669,7 @@ public class SendPushNotificationHandlerTests
         }
 
         var dtoMapper = new PushNotificationDTOMapper();
+        List<LogEntry> log = [];
 
         var sut = new SendPushNotificationHandler(
             unitOfWork.Object,
@@ -556,7 +677,7 @@ public class SendPushNotificationHandlerTests
             pushNotificationSender.Object,
             nativePushSender.Object,
             dtoMapper,
-            NullLogger<SendPushNotificationHandler>.Instance);
+            new CapturingLogger(log));
 
         var mocks = new HandlerMocks(
             unitOfWork,
@@ -564,7 +685,9 @@ public class SendPushNotificationHandlerTests
             readRepo,
             recipientProvider,
             pushNotificationSender,
-            nativePushSender);
+            nativePushSender,
+            userNotificationRepo,
+            log);
 
         return (sut, mocks);
     }

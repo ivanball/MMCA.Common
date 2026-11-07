@@ -96,6 +96,39 @@ public sealed class NotificationListTests : BunitTestBase
         });
     }
 
+    // Spec B assertion 4 (with the stored unit): the organizer sees whether phones were reached, per
+    // platform, status first and the unit explicit, as text (never color alone). An FCM failure has
+    // no per-platform counts and reads "Phones: failed"; an older row with no recorded outcome shows "-".
+    [Fact]
+    public void PhoneDelivery_RendersStatusFirstWithTheUnit_PhonesFailedWithoutCounts_AndADashForAnOlderRow()
+    {
+        var azure = Sent(1, "Azure") with { NativeDeliveryUnit = "Batch", AndroidSent = 1, AndroidFailed = 0, AppleSent = 2, AppleFailed = 1 };
+        var sns = Sent(2, "Sns") with { NativeDeliveryUnit = "Endpoint", AndroidSent = 5, AndroidFailed = 0, AppleSent = 0, AppleFailed = 1 };
+        var fcm = Sent(3, "Fcm") with { NativeDeliveryUnit = "Message" };
+        var older = Sent(4, "Older");
+        _service
+            .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(History(azure, sns, fcm, older));
+
+        RenderMudProviders();
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
+
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(4));
+        cut.FindAll("thead th").Select(th => th.TextContent.Trim()).Should().Contain("Phone delivery");
+
+        var rows = cut.FindAll("tbody tr");
+        PhoneLines(rows[0]).Should().Equal("Android: delivered (1 of 1 batch)", "iPhone: partly failed (2 of 3 batches)");
+        PhoneLines(rows[1]).Should().Equal("Android: delivered (5 of 5 devices)", "iPhone: failed (0 of 1 device)");
+        PhoneLines(rows[2]).Should().Equal("Phones: failed");
+        PhoneCell(rows[3]).TextContent.Trim().Should().Be("-");
+
+        static AngleSharp.Dom.IElement PhoneCell(AngleSharp.Dom.IElement row) =>
+            row.QuerySelector("td[data-label='Phone delivery']")!;
+
+        static List<string> PhoneLines(AngleSharp.Dom.IElement row) =>
+            [.. PhoneCell(row).QuerySelectorAll(".mud-chip").Select(chip => chip.TextContent.Trim())];
+    }
+
     [Fact]
     public void WhenTheHistoryLoadFails_RaisesOneToastAndShowsTheErrorWithRetry_NotTheEmptyState()
     {

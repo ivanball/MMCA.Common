@@ -265,7 +265,7 @@ MMCA.Common.Infrastructure.Notifications.NotificationHub.NotificationHub(Microso
 MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender
 MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.NullNativePushSender() -> void
-MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Notifications.Push.NullNativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Interfaces.Infrastructure.Notifications.NativePushOutcome!>!
 MMCA.Common.Infrastructure.Notifications.Push.NullPushDeviceRegistrar
 MMCA.Common.Infrastructure.Notifications.Push.NullPushDeviceRegistrar.DeleteAsync(int userId, string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Infrastructure.Notifications.Push.NullPushDeviceRegistrar.NullPushDeviceRegistrar() -> void

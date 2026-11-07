@@ -1,5 +1,7 @@
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Testing.Support;
 
@@ -58,4 +60,32 @@ public sealed class InMemoryViewAsGrantStore : IViewAsGrantStore
     /// <inheritdoc />
     public Task<int> DeleteIssuedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default) =>
         Task.FromResult(_grants.RemoveAll(g => g.GrantedAt < cutoff));
+
+    /// <inheritdoc />
+    /// <remarks>The same filters as the EF store (<see cref="ViewAsGrantLogQuery"/>), ordering and clamp.</remarks>
+    public Task<(IReadOnlyList<ViewAsGrant> Items, int TotalCount)> ListAsync(
+        ViewAsGrantListRequest request,
+        DateTime now,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var filtered = ViewAsGrantLogQuery.Filter(_grants.AsQueryable(), request, now).ToList();
+        var (skip, take) = PagingMath.Clamp(request.PageNumber, request.PageSize, ViewAsGrantListRequest.MaxPageSize);
+        IReadOnlyList<ViewAsGrant> page =
+        [
+            .. filtered
+                .OrderByDescending(g => g.GrantedAt)
+                .ThenByDescending(g => g.Id)
+                .Skip(skip)
+                .Take(take),
+        ];
+
+        return Task.FromResult((page, filtered.Count));
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Mutates the held instances, as the EF store mutates tracked rows.</remarks>
+    public Task<int> ForgetUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_grants.Count(g => g.ForgetDisplayOf(userId)));
 }
