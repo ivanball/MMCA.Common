@@ -145,6 +145,9 @@
   <data name="Auth.TooManyAttempts" xml:space="preserve">
     <value>Demasiados intentos de inicio de sesión fallidos. Vuelva a intentarlo más tarde.</value>
   </data>
+  <data name="Auth.ViewAsReadOnly" xml:space="preserve">
+    <value>Ver la aplicación como otro usuario es de solo lectura.</value>
+  </data>
   <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
     <value>Demasiadas solicitudes de confirmación. Vuelva a intentarlo más tarde.</value>
   </data>

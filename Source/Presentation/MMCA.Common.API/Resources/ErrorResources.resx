@@ -145,6 +145,9 @@
   <data name="Auth.TooManyAttempts" xml:space="preserve">
     <value>Too many failed login attempts. Please try again later.</value>
   </data>
+  <data name="Auth.ViewAsReadOnly" xml:space="preserve">
+    <value>Viewing as another user is read-only.</value>
+  </data>
   <data name="Authentication.ConfirmationThrottled" xml:space="preserve">
     <value>Too many confirmation requests. Please try again later.</value>
   </data>
