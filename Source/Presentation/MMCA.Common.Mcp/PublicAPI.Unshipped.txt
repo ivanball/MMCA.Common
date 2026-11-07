@@ -1,0 +1,28 @@
+#nullable enable
+MMCA.Common.Mcp.CommonMcpOptions
+MMCA.Common.Mcp.CommonMcpOptions.CommonMcpOptions() -> void
+MMCA.Common.Mcp.CommonMcpOptions.ToolAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
+MMCA.Common.Mcp.CommonMcpOptions.ToolTypes.get -> System.Collections.Generic.IList<System.Type!>!
+MMCA.Common.Mcp.McpHostingExtensions
+MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
+MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonMcp(string! pattern = "/mcp") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.Extensions.Hosting.IHostApplicationBuilder!)
+MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.Extensions.Hosting.IHostApplicationBuilder!).AddCommonMcpServer(System.Action<MMCA.Common.Mcp.CommonMcpOptions!>! configure) -> Microsoft.Extensions.Hosting.IHostApplicationBuilder!
+MMCA.Common.Mcp.McpSettings
+MMCA.Common.Mcp.McpSettings.Enabled.get -> bool
+MMCA.Common.Mcp.McpSettings.Enabled.set -> void
+MMCA.Common.Mcp.McpSettings.McpSettings() -> void
+MMCA.Common.Mcp.McpSettings.Tools.get -> System.Collections.Generic.IDictionary<string!, MMCA.Common.Mcp.McpToolSettings!>!
+MMCA.Common.Mcp.McpToolPermissionAttribute
+MMCA.Common.Mcp.McpToolPermissionAttribute.McpToolPermissionAttribute(string! permission) -> void
+MMCA.Common.Mcp.McpToolPermissionAttribute.Permission.get -> string!
+MMCA.Common.Mcp.McpToolSettings
+MMCA.Common.Mcp.McpToolSettings.Enabled.get -> bool
+MMCA.Common.Mcp.McpToolSettings.Enabled.set -> void
+MMCA.Common.Mcp.McpToolSettings.McpToolSettings() -> void
+MMCA.Common.Mcp.McpToolSettings.PermitsPerMinute.get -> int?
+MMCA.Common.Mcp.McpToolSettings.PermitsPerMinute.set -> void
+const MMCA.Common.Mcp.McpHostingExtensions.DefaultPath = "/mcp" -> string!
+const MMCA.Common.Mcp.McpSettings.SectionName = "Mcp" -> string!
+static MMCA.Common.Mcp.McpHostingExtensions.AddCommonMcpServer(this Microsoft.Extensions.Hosting.IHostApplicationBuilder! builder, System.Action<MMCA.Common.Mcp.CommonMcpOptions!>! configure) -> Microsoft.Extensions.Hosting.IHostApplicationBuilder!
+static MMCA.Common.Mcp.McpHostingExtensions.MapCommonMcp(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern = "/mcp") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!

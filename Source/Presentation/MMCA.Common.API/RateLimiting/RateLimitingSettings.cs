@@ -47,6 +47,14 @@ public sealed class RateLimitingSettings
     public int AuthIpPermitLimit { get; init; } = 30;
 
     /// <summary>
+    /// Requests per minute for the <c>mcp</c> policy on the MCP endpoint, per user (subject claim,
+    /// then name) or, for an anonymous caller, per client IP. One tool call is one request, and a
+    /// client also lists tools, so it sits above <see cref="PerUserPermitLimit"/>.
+    /// </summary>
+    [Range(1, 1_000_000)]
+    public int McpPermitLimit { get; init; } = 60;
+
+    /// <summary>
     /// The limiting algorithm for the in-memory partitions. Defaults to
     /// <see cref="RateLimitAlgorithm.FixedWindow"/>, which is what the framework has always used.
     /// </summary>

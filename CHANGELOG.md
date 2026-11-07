@@ -6,6 +6,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **MMCA.Common.Mcp, an opt-in MCP endpoint** (new package, the 27th; ADR-138). `builder.AddCommonMcpServer(options => options.ToolAssemblies.Add(typeof(MyTools).Assembly))` registers the official MCP C# SDK server (ModelContextProtocol.AspNetCore 2.4.0, stateless streamable HTTP) over the `[McpServerToolType]` classes named, and `app.MapCommonMcp()` maps `/mcp`. Both do nothing unless `Mcp:Enabled` is true, so a disabled host answers 404 there. Per tool: `Mcp:Tools:<name>:Enabled` (default true) removes a tool from `tools/list` and refuses a call to it; `Mcp:Tools:<name>:PermitsPerMinute` limits one caller (user id, else client IP) per instance, and the call after the limit returns an error result; `[McpToolPermission("area:capability")]` checks the caller against the same `perm:` policy as `[HasPermission]`, hiding the tool from `tools/list` and refusing the call for a caller without it. A tool without the attribute is public and needs no token; a permissioned tool needs a bearer token. Refusals are tool error results (`Mcp.ToolUnavailable`, `Mcp.Forbidden`, `Mcp.RateLimited`), and a filtered `tools/list` is marked private to the caller. `MapCommonMcp` refuses to start when any tool name, title, description or input/output schema string, or the server instructions, title or description, contains a Unicode format character (category Cf), a tag character (U+E0000 to U+E007F) or an HTML comment (R023). No write tools, resources or prompts are offered.
+- **The `mcp` rate-limit policy** (MMCA.Common.API). `AddCommonRateLimiting` registers `WebApplicationBuilderExtensions.RateLimitPolicyMcp` beside `UserPolicy`: per user id, else per client IP (an anonymous caller is metered, unlike under the global limiter), `RateLimiting:McpPermitLimit` requests per minute (default 60). `MapCommonMcp` applies it.
+
 ## [1.277.0] - 2026-11-04
 
 Enterprise-scale hardening: prefix cache invalidation without a Redis keyspace scan, a shorter permission-grant refresh, and JWKS signing-key rotation without a 401 wave.

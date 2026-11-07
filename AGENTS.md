@@ -52,7 +52,8 @@ Source/
   Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}, cloud-neutral (+ AI, the
                  optional language-model boundary on Microsoft.Extensions.AI with no vendor SDK and
                  no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each)
-  Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx)
+  Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx; + Mcp, the opt-in
+                 MCP endpoint and the only reference to the MCP SDK)
   Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.Aspire,Testing.E2E,
                  Testing.UI,Testing.Architecture,AI.Testing} (+ Azure, Aws, Gcp and Testing.Azure,
                  the cloud vendor adapters)

@@ -116,6 +116,11 @@
          the vendor SDK is pinned here like Anthropic is, not floated by the adapter's own floor. -->
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
     <PackageVersion Include="OpenAI" Version="2.14.0" />
+    <!-- MCP (MMCA.Common.Mcp): the official Model Context Protocol C# SDK, server half over ASP.NET
+         Core. Referenced by MMCA.Common.Mcp alone, so no core package carries it (ADR-134). Pinned
+         EXACTLY: the SDK moved 1.x to 2.x within a year and its filter and transport surface changed
+         between minors, so a bump is a deliberate re-read of the filter API, never a float. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation
