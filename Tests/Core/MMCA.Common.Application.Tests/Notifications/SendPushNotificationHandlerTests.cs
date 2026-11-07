@@ -185,6 +185,8 @@ public class SendPushNotificationHandlerTests
         added.Should().NotBeNull();
         (added!.AndroidSent, added.AndroidFailed, added.AppleSent, added.AppleFailed).Should().Be((3, 0, 2, 1));
         (result.Value!.AndroidSent, result.Value.AndroidFailed, result.Value.AppleSent, result.Value.AppleFailed).Should().Be((3, 0, 2, 1));
+        added.NativeDeliveryUnit.Should().Be("Batch");
+        result.Value.NativeDeliveryUnit.Should().Be("Batch");
         result.Value.Status.Should().Be(nameof(PushNotificationStatus.Sent), "the native outcome never changes the overall status");
         var warning = mocks.Log.Should().ContainSingle(e => e.Level == LogLevel.Warning).Subject;
         warning.Message.Should().Contain("native (OS-level) delivery failed");
@@ -215,7 +217,28 @@ public class SendPushNotificationHandlerTests
         // Null means not attempted.
         new[] { result.Value!.AndroidSent, result.Value.AndroidFailed, result.Value.AppleSent, result.Value.AppleFailed }
             .Should().AllSatisfy(count => count.Should().BeNull());
+        result.Value.NativeDeliveryUnit.Should().BeNull();
         mocks.Log.Should().NotContain(e => e.Level >= LogLevel.Warning);
+    }
+
+    // FCM reports no per-platform counts. A failure is still recorded (the unit, no counts), so the
+    // list can say "Phones: failed"; a full success has nothing to record and stays "-".
+    [Theory]
+    [InlineData(true, "Message")]
+    [InlineData(false, null)]
+    public async Task HandleAsync_WithAnOutcomeWithoutPlatformCounts_RecordsTheUnitOnlyWhenItFailed(bool failed, string? expectedUnit)
+    {
+        var (sut, _) = CreateSut(nativeOutcome: new NativePushOutcome
+        {
+            Unit = NativePushDeliveryUnit.Message,
+            FirstFailure = failed ? new InvalidOperationException("Quota exceeded") : null,
+        });
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(CreateCommand());
+
+        result.Value!.NativeDeliveryUnit.Should().Be(expectedUnit);
+        result.Value.AndroidSent.Should().BeNull();
+        result.Value.AppleSent.Should().BeNull();
     }
 
     // -- HandleAsync: deduplication (gap 12) --

@@ -3,4 +3,6 @@ MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AndroidFaile
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AndroidSent.get -> int?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AppleFailed.get -> int?
 MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.AppleSent.get -> int?
-MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.RecordNativePushOutcome(int? androidSent, int? androidFailed, int? appleSent, int? appleFailed) -> void
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.NativeDeliveryUnit.get -> string?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.RecordNativePushOutcome(string? deliveryUnit, int? androidSent, int? androidFailed, int? appleSent, int? appleFailed) -> void
+const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.NativeDeliveryUnitMaxLength = 20 -> int

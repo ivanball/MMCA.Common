@@ -164,7 +164,13 @@ public sealed partial class SendPushNotificationHandler(
                 request.Body,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
+            // An outcome with no per-platform counts and no failure (nothing attempted, or an FCM
+            // send that fully succeeded) has nothing to show, so the row stays "not recorded"; a
+            // recorded unit without counts therefore always means a failure the sender could not
+            // attribute to a platform.
+            var recordsSomething = outcome.Android is not null || outcome.Apple is not null || outcome.HasFailures;
             notification.RecordNativePushOutcome(
+                recordsSomething && outcome.Unit != NativePushDeliveryUnit.None ? outcome.Unit.ToString() : null,
                 outcome.Android?.Sent,
                 outcome.Android?.Failed,
                 outcome.Apple?.Sent,

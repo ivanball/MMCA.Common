@@ -65,6 +65,17 @@ public sealed class PushNotificationConfigurationTests : IDisposable
         property.IsNullable.Should().BeTrue("a row written before the outcome was recorded has no counts");
     }
 
+    [Fact]
+    public void NativeDeliveryUnit_IsANullableBoundedString()
+    {
+        var property = _dbContext.Model.FindEntityType(typeof(PushNotification))!.FindProperty(nameof(PushNotification.NativeDeliveryUnit));
+
+        property.Should().NotBeNull();
+        property!.ClrType.Should().Be<string>();
+        property.IsNullable.Should().BeTrue("a row with no recorded outcome has no unit");
+        property.GetMaxLength().Should().Be(PushNotification.NativeDeliveryUnitMaxLength).And.Be(20);
+    }
+
     private Microsoft.EntityFrameworkCore.Metadata.IProperty ScopeKeyProperty()
         => _dbContext.Model.FindEntityType(typeof(PushNotification))!
             .FindProperty(nameof(PushNotification.ScopeKey))!;

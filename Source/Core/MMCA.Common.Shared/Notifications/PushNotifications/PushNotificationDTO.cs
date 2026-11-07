@@ -40,6 +40,12 @@ public record class PushNotificationDTO : IBaseDTO<PushNotificationIdentifierTyp
     /// <summary>Gets or inits the Apple native push sends that failed; null when not attempted or not recorded.</summary>
     public int? AppleFailed { get; init; }
 
+    /// <summary>
+    /// Gets or inits the unit the native push counts are in (<c>Batch</c>, <c>Endpoint</c> or
+    /// <c>Message</c>); null when nothing was recorded.
+    /// </summary>
+    public string? NativeDeliveryUnit { get; init; }
+
     /// <summary>Gets or inits the creation timestamp.</summary>
     public DateTime CreatedOn { get; init; }
 }

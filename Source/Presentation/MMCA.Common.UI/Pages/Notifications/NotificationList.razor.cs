@@ -59,19 +59,26 @@ public partial class NotificationList : IDisposable
     }
 
     /// <summary>
-    /// The phone delivery lines of one notification (ADR-044): one per platform the native leg
-    /// attempted, as "Android 8 of 8" plus a text status. Empty for a row written before the outcome
-    /// was recorded, or when no native adapter is configured; the cell then shows "-".
+    /// The phone delivery lines of one notification (ADR-044), status first and the unit explicit:
+    /// "Android: delivered (1 of 1 batch)", one per platform the native leg counted. A recorded unit
+    /// with no per-platform counts is a failure the sender could not attribute to a platform (FCM),
+    /// shown as "Phones: failed". Empty for a row with no recorded outcome; the cell then shows "-".
     /// </summary>
     private List<PhoneDeliveryLine> PhoneDeliveryLines(PushNotificationDTO notification)
     {
         List<PhoneDeliveryLine> lines = [];
-        AddPhoneDeliveryLine(lines, "Notif.Phone.Android", notification.AndroidSent, notification.AndroidFailed);
-        AddPhoneDeliveryLine(lines, "Notif.Phone.Apple", notification.AppleSent, notification.AppleFailed);
+        AddPhoneDeliveryLine(lines, "Notif.Phone.Android", notification.AndroidSent, notification.AndroidFailed, notification.NativeDeliveryUnit);
+        AddPhoneDeliveryLine(lines, "Notif.Phone.Apple", notification.AppleSent, notification.AppleFailed, notification.NativeDeliveryUnit);
+        if (lines.Count == 0 && notification.NativeDeliveryUnit is not null)
+        {
+            var text = L["Notif.Phone.StatusOnly", L["Notif.Phone.AllPhones"].Value, L["Notif.Phone.Failed"].Value].Value;
+            lines.Add(new PhoneDeliveryLine(text, Color.Error, Icons.Material.Filled.Error));
+        }
+
         return lines;
     }
 
-    private void AddPhoneDeliveryLine(List<PhoneDeliveryLine> lines, string platformKey, int? sent, int? failed)
+    private void AddPhoneDeliveryLine(List<PhoneDeliveryLine> lines, string platformKey, int? sent, int? failed, string? unit)
     {
         if (sent is null && failed is null)
         {
@@ -80,23 +87,31 @@ public partial class NotificationList : IDisposable
 
         int delivered = sent ?? 0;
         int attempted = delivered + (failed ?? 0);
-        var text = L["Notif.Phone.Count", L[platformKey].Value, delivered, attempted].Value;
-        if (attempted == delivered)
-        {
-            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.Delivered"].Value, Color.Success, Icons.Material.Filled.CheckCircle));
-        }
-        else if (delivered > 0)
-        {
-            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.PartlyFailed"].Value, Color.Warning, Icons.Material.Filled.Warning));
-        }
-        else
-        {
-            lines.Add(new PhoneDeliveryLine(text, L["Notif.Phone.Failed"].Value, Color.Error, Icons.Material.Filled.Error));
-        }
+        var (statusKey, color, icon) = PhoneDeliveryStatus(delivered, attempted);
+
+        // The unit word agrees with the attempted count: "1 of 1 batch", "2 of 3 batches". An
+        // unknown unit name drops the word rather than show a raw key.
+        var unitWord = L[$"Notif.Phone.Unit.{unit}.{(attempted == 1 ? "One" : "Other")}"];
+        var text = unitWord.ResourceNotFound
+            ? L["Notif.Phone.LineNoUnit", L[platformKey].Value, L[statusKey].Value, delivered, attempted].Value
+            : L["Notif.Phone.Line", L[platformKey].Value, L[statusKey].Value, delivered, attempted, unitWord.Value].Value;
+        lines.Add(new PhoneDeliveryLine(text, color, icon));
     }
 
-    /// <summary>One platform's phone delivery: the count text, plus a status that never relies on color alone.</summary>
-    private sealed record PhoneDeliveryLine(string Text, string Status, Color Color, string Icon);
+    private static (string StatusKey, Color Color, string Icon) PhoneDeliveryStatus(int delivered, int attempted)
+    {
+        if (attempted == delivered)
+        {
+            return ("Notif.Phone.Delivered", Color.Success, Icons.Material.Filled.CheckCircle);
+        }
+
+        return delivered > 0
+            ? ("Notif.Phone.PartlyFailed", Color.Warning, Icons.Material.Filled.Warning)
+            : ("Notif.Phone.Failed", Color.Error, Icons.Material.Filled.Error);
+    }
+
+    /// <summary>One phone delivery line: the text carries the status, so color and icon are never the only cue.</summary>
+    private sealed record PhoneDeliveryLine(string Text, Color Color, string Icon);
 
     protected override async Task OnInitializedAsync()
     {

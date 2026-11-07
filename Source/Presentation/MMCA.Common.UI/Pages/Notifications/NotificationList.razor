@@ -93,9 +93,9 @@ else if (_canManage == true)
                     }
                 </MudTd>
                 <MudTd DataLabel="@L["Notif.List.Col.Phone"]">
-                    @* The native (OS-level) leg per platform (ADR-044): "Android 8 of 8" plus a status chip
-                       whose TEXT says delivered / partly failed / failed, so color is never the only cue.
-                       "-" for a row written before the outcome was recorded, or with no native adapter. *@
+                    @* The native (OS-level) leg per platform (ADR-044), status first with the unit explicit
+                       ("Android: delivered (1 of 1 batch)"). The chip TEXT carries the status, so color and
+                       icon are never the only cue. "-" for a row with no recorded outcome. *@
                     @{ var phoneLines = PhoneDeliveryLines(context); }
                     @if (phoneLines.Count == 0)
                     {
@@ -105,9 +105,8 @@ else if (_canManage == true)
                     {
                         @foreach (var line in phoneLines)
                         {
-                            <div class="d-flex align-center flex-wrap gap-1">
-                                <span>@line.Text</span>
-                                <MudChip T="string" Color="@line.Color" Icon="@line.Icon" Size="Size.Small" Variant="Variant.Outlined">@line.Status</MudChip>
+                            <div>
+                                <MudChip T="string" Color="@line.Color" Icon="@line.Icon" Size="Size.Small" Variant="Variant.Outlined">@line.Text</MudChip>
                             </div>
                         }
                     }

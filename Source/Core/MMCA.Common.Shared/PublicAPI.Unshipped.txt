@@ -7,3 +7,5 @@ MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleFail
 MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleFailed.init -> void
 MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleSent.get -> int?
 MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.AppleSent.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.NativeDeliveryUnit.get -> string?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.NativeDeliveryUnit.init -> void

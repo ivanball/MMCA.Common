@@ -69,9 +69,10 @@ A test that mocks the interface returns an outcome too
 (`.ReturnsAsync(NativePushOutcome.None)`); a loose Moq mock otherwise returns null.
 
 **One migration on the Notification database** of every host that maps `PushNotification` (the
-`Notification` data source, or the default database when the host configures none): four nullable
-`int` columns on `Notification.PushNotification`, `AndroidSent`, `AndroidFailed`, `AppleSent` and
-`AppleFailed`, with no default and no backfill (null reads as "not recorded", shown as "-").
+`Notification` data source, or the default database when the host configures none): five nullable
+columns on `Notification.PushNotification`: four `int` columns, `AndroidSent`, `AndroidFailed`,
+`AppleSent` and `AppleFailed`, and `NativeDeliveryUnit` (a string of at most 20 characters), with no
+default and no backfill (null reads as "not recorded", shown as "-").
 
 ```bash
 dotnet ef migrations add AddPushNotificationNativeOutcome -- --datasource Notification
