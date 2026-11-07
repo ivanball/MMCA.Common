@@ -11,3 +11,53 @@ MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetSignInsA
 MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetSignInsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.GetSignInsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!>!>!>!
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.InAppDiagnosticsLog() -> void
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.ShareTitle.get -> string?
+MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.ShareTitle.set -> void
+MMCA.Common.UI.Services.Capabilities.Interop.IShareService.ShareTextAsync(string! title, string! text, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.Services.Diagnostics.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddInAppDiagnostics(System.Action<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.Capacity.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.Capacity.set -> void
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.InAppDiagnosticsOptions() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.MinimumLevel.get -> Microsoft.Extensions.Logging.LogLevel
+MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.MinimumLevel.set -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Add(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry! entry) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Capacity.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Clear() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Count.get -> int
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.InAppLogBuffer(Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>! options) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.Snapshot() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Services.Diagnostics.InAppLogEntry!>!
+MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer.ToText() -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.<Clone>$() -> MMCA.Common.UI.Services.Diagnostics.InAppLogEntry!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Category.get -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Category.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Deconstruct(out System.DateTimeOffset Timestamp, out Microsoft.Extensions.Logging.LogLevel Level, out string! Category, out string! Message, out string? Exception) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Equals(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? other) -> bool
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Exception.get -> string?
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Exception.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.InAppLogEntry(System.DateTimeOffset Timestamp, Microsoft.Extensions.Logging.LogLevel Level, string! Category, string! Message, string? Exception) -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Level.get -> Microsoft.Extensions.Logging.LogLevel
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Level.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Message.get -> string!
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Message.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Timestamp.get -> System.DateTimeOffset
+MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Timestamp.init -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.CreateLogger(string! categoryName) -> Microsoft.Extensions.Logging.ILogger!
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.Dispose() -> void
+MMCA.Common.UI.Services.Diagnostics.InAppLoggerProvider.InAppLoggerProvider(MMCA.Common.UI.Services.Diagnostics.InAppLogBuffer! buffer, Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>! options, System.TimeProvider! timeProvider) -> void
+const MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions.DefaultCapacity = 500 -> int
+override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.OnInitialized() -> void
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.GetHashCode() -> int
+override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.ToString() -> string!
+static MMCA.Common.UI.Services.Diagnostics.DependencyInjection.AddInAppDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator !=(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
+static MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.operator ==(MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? left, MMCA.Common.UI.Services.Diagnostics.InAppLogEntry? right) -> bool
+~override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

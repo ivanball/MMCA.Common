@@ -1,0 +1,16 @@
+/* Log lines keep their own wrapping and alignment: monospace, whitespace preserved (the exception
+   sits on its own indented line), long tokens broken so a narrow phone never scrolls sideways. */
+.mmca-diagnostics-log__entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+}
+
+.mmca-diagnostics-log__entry {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
