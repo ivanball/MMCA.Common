@@ -19,4 +19,10 @@ public static class AdministrationPermissions
 
     /// <summary>Lists roles and edits the stored permission grants attached to them.</summary>
     public const string ManageRoles = "roles:manage";
+
+    /// <summary>
+    /// Views the app read-only as another account for at most 15 minutes (ADR-137). An account that
+    /// holds it can never be viewed itself, so staff cannot view each other.
+    /// </summary>
+    public const string ViewAsUsers = "users:view-as";
 }

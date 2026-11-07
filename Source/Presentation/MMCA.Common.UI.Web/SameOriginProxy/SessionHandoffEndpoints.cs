@@ -28,6 +28,13 @@ internal static class SessionHandoffEndpoints
                     return Results.Json(new { error = "csrf_header_required" }, statusCode: StatusCodes.Status403Forbidden);
                 }
 
+                // A live view-as overlay (ADR-137) is what the page is viewing as, so the circuit holds
+                // that token; it is never refreshed, and an expired one falls through to the session.
+                if (ViewAsOverlayCookie.TryRead(httpContext.Request, TimeProvider.System.GetUtcNow(), out var viewAsToken, out _))
+                {
+                    return Results.Json(new HandoffBody(protector.ProtectAccessToken(viewAsToken)));
+                }
+
                 var session = await refresher.GetOrRefreshAsync(httpContext, cancellationToken).ConfigureAwait(false);
                 return session is null
                     ? Results.Json(new { error = "no_session" }, statusCode: StatusCodes.Status401Unauthorized)

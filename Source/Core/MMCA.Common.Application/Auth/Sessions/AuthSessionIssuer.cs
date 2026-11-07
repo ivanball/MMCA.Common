@@ -47,12 +47,17 @@ namespace MMCA.Common.Application.Auth.Sessions;
 /// Logs each lost-response recovery (<see cref="RefreshSessionSettings.LostResponseRecoveryMinutes"/>)
 /// and each reuse-detection family revocation (BR-206); optional.
 /// </param>
+/// <param name="viewAsGrants">
+/// The view-as grant store (ADR-137), read so the account holder's own sign-in history shows each
+/// time support viewed the account; optional, and an empty read while view-as is disabled.
+/// </param>
 public sealed partial class AuthSessionIssuer(
     ITokenService tokenService,
     IRefreshSessionStore refreshSessions,
     IOptions<RefreshSessionSettings> refreshSessionSettings,
     TimeProvider timeProvider,
-    ILogger<AuthSessionIssuer>? logger = null) : IAuthSessionIssuer
+    ILogger<AuthSessionIssuer>? logger = null,
+    ViewAs.IViewAsGrantStore? viewAsGrants = null) : IAuthSessionIssuer
 {
     /// <summary>
     /// The token service handed to callers, wrapped so that a token minted while a session is being
@@ -239,7 +244,8 @@ public sealed partial class AuthSessionIssuer(
             userId,
             timeProvider.GetUtcNow().UtcDateTime,
             currentSessionId,
-            cancellationToken);
+            cancellationToken,
+            viewAsGrants);
 
     /// <inheritdoc />
     /// <remarks>

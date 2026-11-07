@@ -1,3 +1,4 @@
+using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Auth.Responses;
 
@@ -27,19 +28,78 @@ internal static class SignInHistory
     /// <param name="now">The UTC instant that decides which sign-ins have expired.</param>
     /// <param name="currentSessionId">The caller's own session id (its <c>sid</c>), or null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="viewAsGrants">
+    /// The view-as grant store, when the host registered one: each grant on the account becomes a
+    /// <see cref="SignInHistoryEntryKind.ViewAs"/> row ("Viewed by support") in the same newest-first,
+    /// capped list.
+    /// </param>
     /// <returns>At most <see cref="MaxEntries"/> sign-ins, newest first.</returns>
     internal static async Task<IReadOnlyList<SignInSummaryResponse>> ReadAsync(
         IRefreshSessionStore store,
         UserIdentifierType userId,
         DateTime now,
         Guid? currentSessionId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IViewAsGrantStore? viewAsGrants = null)
     {
         var signIns = await store.GetRecentSignInsAsync(userId, MaxEntries, cancellationToken).ConfigureAwait(false);
         var currentSignInId = await ResolveCurrentSignInAsync(store, userId, signIns, currentSessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        return Summarize(signIns, now, currentSignInId);
+        var history = Summarize(signIns, now, currentSignInId);
+        if (viewAsGrants is null)
+        {
+            return history;
+        }
+
+        var grants = await viewAsGrants.GetRecentForTargetAsync(userId, MaxEntries, cancellationToken).ConfigureAwait(false);
+        return Merge(history, grants, now);
+    }
+
+    /// <summary>
+    /// Folds view-as grants into a shaped history: pure, no I/O. A grant row spans the grant (issued
+    /// to ended or expired), carries no device or address (the staff user's are not the account
+    /// holder's business, and the account holder's were never involved), and is never current.
+    /// </summary>
+    /// <param name="history">The shaped sign-ins.</param>
+    /// <param name="grants">The account's view-as grants.</param>
+    /// <param name="now">The UTC instant that decides which grants have expired.</param>
+    /// <returns>At most <see cref="MaxEntries"/> rows, newest first.</returns>
+    internal static IReadOnlyList<SignInSummaryResponse> Merge(
+        IReadOnlyList<SignInSummaryResponse> history,
+        IEnumerable<ViewAsGrant> grants,
+        DateTime now) =>
+    [
+        .. history
+            .Concat(grants.Select(grant => SummarizeViewAs(grant, now)))
+            .OrderByDescending(s => s.StartedAt)
+            .ThenByDescending(s => s.SignInId)
+            .Take(MaxEntries),
+    ];
+
+    private static SignInSummaryResponse SummarizeViewAs(ViewAsGrant grant, DateTime now)
+    {
+        DateTime? endedAt = null;
+        string? endReason = null;
+        if (grant.EndedAt is { } ended)
+        {
+            (endedAt, endReason) = (ended, SignInEndReasons.ViewAsEnded);
+        }
+        else if (grant.ExpiresAt <= now)
+        {
+            (endedAt, endReason) = (grant.ExpiresAt, SignInEndReasons.Expired);
+        }
+
+        return new SignInSummaryResponse(
+            grant.Id,
+            grant.GrantedAt,
+            LastActiveAt: endedAt ?? now,
+            IpAddress: null,
+            UserAgent: null,
+            endedAt,
+            endReason,
+            IsCurrent: false,
+            SignInHistoryEntryKind.ViewAs);
     }
 
     /// <summary>Shapes store aggregates into responses: pure, no I/O.</summary>

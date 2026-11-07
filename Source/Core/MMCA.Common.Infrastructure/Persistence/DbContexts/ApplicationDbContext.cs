@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.Permissions;
+using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -127,6 +128,13 @@ public abstract class ApplicationDbContext(
     /// </para>
     /// </summary>
     private bool _permissionGrantTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>ViewAsGrants</c> table belongs in THIS context's model (ADR-137): the refresh
+    /// sessions' two conditions, <c>ViewAs:Enabled</c> AND this context targeting the source named by
+    /// <c>ViewAs:DataSourceName</c>, so a host that never opts in sees no migration.
+    /// </summary>
+    private bool _viewAsGrantTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -342,6 +350,9 @@ public abstract class ApplicationDbContext(
         // rather than a configuration flag: see the field's remarks.
         _permissionGrantTableEnabled = ResolvePermissionGrantGate();
 
+        // Same two-condition shape as the refresh sessions: see the field's remarks.
+        _viewAsGrantTableEnabled = ResolveViewAsGrantGate();
+
         ConfigureSensitiveDataLogging(optionsBuilder);
 
         // Key EF's model cache by (context type, physical source name): the same context class is
@@ -442,6 +453,13 @@ public abstract class ApplicationDbContext(
         // Configure the stored permission-grant table (used when AddStoredPermissionGrants was
         // called, on that setting's data source only).
         ConfigurePermissionGrants(modelBuilder);
+
+        // Configure the view-as grant table (used when ViewAs:Enabled, on that setting's data source
+        // only).
+        if (_viewAsGrantTableEnabled)
+        {
+            modelBuilder.ApplyViewAsGrantConfiguration();
+        }
     }
 
     /// <summary>
@@ -923,6 +941,19 @@ public abstract class ApplicationDbContext(
             physicalDataSource.Key.Name,
             serviceProvider.GetService<IOptions<PermissionGrantSettings>>()?.Value.DataSourceName,
             StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether this context instance carries the <c>ViewAsGrants</c> table: <c>ViewAs:Enabled</c> AND
+    /// this instance targets the source <c>ViewAs:DataSourceName</c> names. <c>GetService</c>, for the
+    /// reason <see cref="ResolvePermissionGrantGate"/> gives.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveViewAsGrantGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<ViewAsSettings>>()?.Value;
+        return settings?.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// Configures the <see cref="Domain.Auth.PermissionGrant"/> entity (the stored half of the

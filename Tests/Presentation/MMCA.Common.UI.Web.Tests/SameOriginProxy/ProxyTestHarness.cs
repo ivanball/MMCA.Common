@@ -65,6 +65,9 @@ internal sealed class FakeGateway : IAsyncDisposable
 
     public string RotatedAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "rotated-user");
 
+    /// <summary>The token <c>POST users/{id}/view-as</c> answers with (T20).</summary>
+    public string ViewAsAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "viewed-user");
+
     public static async Task<FakeGateway> StartAsync()
     {
         var gateway = new FakeGateway();
@@ -123,6 +126,18 @@ internal sealed class FakeGateway : IAsyncDisposable
             }
 
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path == "/auth/revoke")
+            {
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
+            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.Value!.EndsWith("/view-as", StringComparison.Ordinal))
+            {
+                await context.Response.WriteAsJsonAsync(new ViewAsGrantResponse(ViewAsAccessToken, DateTime.UtcNow.AddMinutes(15), Guid.NewGuid(), 7));
+                return;
+            }
+
+            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path == "/auth/view-as/end")
             {
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;
@@ -210,13 +225,18 @@ internal static class ProxyHost
             .StartAndReturnAsync();
     }
 
-    public static HttpRequestMessage Request(HttpMethod method, string path, string? accessToken = null, string? refreshToken = null, bool csrf = false)
+    public static HttpRequestMessage Request(HttpMethod method, string path, string? accessToken = null, string? refreshToken = null, bool csrf = false, string? viewAsToken = null)
     {
         var request = new HttpRequestMessage(method, path);
         var cookies = new List<string> { "theme=dark" };
         if (accessToken is not null)
         {
             cookies.Add($"{SessionCookieEndpoints.AccessTokenCookieName}={accessToken}");
+        }
+
+        if (viewAsToken is not null)
+        {
+            cookies.Add($"{ViewAsOverlayCookie.Name}={viewAsToken}");
         }
 
         if (refreshToken is not null)

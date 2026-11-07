@@ -179,6 +179,17 @@ public static partial class DependencyInjection
             // store (UsersAdminControllerBase resolves it per action). Scoped for the same reason.
             services.TryAddScoped<Application.Auth.Administration.IUserSessionsAdministrationService, Application.Auth.Administration.UserSessionsAdministrationService>();
 
+            // Read-only view-as support access (ADR-137). Bound and registered on every host so the
+            // controller actions can answer 404 and the sign-in history can read through the store;
+            // with ViewAs:Enabled false (the default) the table is in no model and the store answers
+            // as if no grant existed. The account reader (IViewAsSubjectResolver) is the consumer's.
+            services.AddOptions<Application.Auth.ViewAs.ViewAsSettings>()
+                .Bind(configuration.GetSection(Application.Auth.ViewAs.ViewAsSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddScoped<Application.Auth.ViewAs.IViewAsGrantStore, Persistence.Auth.EFViewAsGrantStore>();
+            services.TryAddScoped<Application.Auth.ViewAs.IViewAsService, Application.Auth.ViewAs.ViewAsService>();
+
             // Retention sweep, gated on the same flag that maps the table. Registering it
             // unconditionally would start a periodic sweep (every CleanupIntervalHours, default 6) in
             // every service of a modular host, all but

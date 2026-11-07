@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Idempotency;
+using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
@@ -230,6 +234,52 @@ public abstract class AuthControllerBase(
         return result.IsFailure
             ? HandleFailure(result.Errors)
             : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Ends the caller's read-only view-as session (ADR-137): its grant is marked ended, so the same
+    /// token is refused on the next request instead of at its expiry. The one non-safe call a view-as
+    /// token may make.
+    /// </summary>
+    /// <remarks>
+    /// 404 while <c>ViewAs:Enabled</c> is false, and 400 (<c>ViewAs.NotViewing</c>) for a caller whose
+    /// token is not a view-as token. On a web host with the same-origin API proxy the proxy also
+    /// deletes its overlay cookie, which returns the browser to the staff user's own session.
+    /// </remarks>
+    /// <param name="settings">The view-as settings, resolved per action.</param>
+    /// <param name="viewAs">The view-as service, resolved per action.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content, or a Problem Details failure.</returns>
+    [HttpPost("view-as/end")]
+    [ViewAsEndEndpoint]
+    [NonIdempotent("Ending a grant must reach the store on every call. Replaying a cached 204 would report a view as ended when the grant was never touched.")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult> EndViewAsAsync(
+        [FromServices] IOptions<ViewAsSettings> settings,
+        [FromServices] IViewAsService viewAs,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(viewAs);
+
+        if (!settings.Value.Enabled)
+        {
+            return NotFound();
+        }
+
+        if (!Guid.TryParse(User.FindFirst(AuthClaimTypes.ViewAsGrant)?.Value, out var grantId)
+            || !UserIdentifierType.TryParse(User.FindFirst(AuthClaimTypes.ViewAsActor)?.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var staffUserId))
+        {
+            return HandleFailure([Error.Validation("ViewAs.NotViewing", "The caller is not viewing as another user.")]);
+        }
+
+        var result = await viewAs.EndAsync(grantId, staffUserId, cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
     /// <summary>

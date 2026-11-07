@@ -58,6 +58,12 @@ public static class MiddlewarePipelineStepNames
     /// <summary>Rejects requests from soft-deleted users (<c>SoftDeletedUserMiddleware</c>).</summary>
     public const string SoftDeletedUserFilter = "SoftDeletedUserFilter";
 
+    /// <summary>
+    /// Read-only view-as guard (<c>ViewAsGuardMiddleware</c>, ADR-137); applies the middleware only
+    /// while <c>ViewAs:Enabled</c> is true.
+    /// </summary>
+    public const string ViewAsGuard = "ViewAsGuard";
+
     /// <summary>Authorization (<c>UseAuthorization</c>).</summary>
     public const string Authorization = "Authorization";
 

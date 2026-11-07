@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Authorization;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Auth.Administration;
+using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
@@ -109,6 +113,58 @@ public abstract class UsersAdminControllerBase<TUserDto>(
         ArgumentNullException.ThrowIfNull(sessions);
 
         var result = await sessions.GetSignInsAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Starts a read-only, 15-minute view of the app as this account (ADR-137) and returns its token.
+    /// Requires <see cref="AdministrationPermissions.ViewAsUsers"/> on top of the class's
+    /// <see cref="AdministrationPermissions.ManageUsers"/>, and a reason. Refused for the caller's own
+    /// account, a deleted account, and an account that itself holds <c>users:view-as</c>.
+    /// </summary>
+    /// <remarks>
+    /// 404 while <c>ViewAs:Enabled</c> is false, so a host that has not opted in serves nothing here.
+    /// On a web host with the same-origin API proxy the proxy moves the token into its overlay cookie;
+    /// the admin's own session is untouched.
+    /// </remarks>
+    /// <param name="userId">The account to view.</param>
+    /// <param name="request">The reason for the access.</param>
+    /// <param name="settings">The view-as settings, resolved per action.</param>
+    /// <param name="viewAs">The view-as service, resolved per action.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The view-as token, or a Problem Details failure.</returns>
+    [HttpPost("{userId}/view-as")]
+    [HasPermission(AdministrationPermissions.ViewAsUsers)]
+    [NonIdempotent("Each call issues a new grant row, which is the audit record of the access. A replayed response would hand back a token for a grant the caller may already have ended.")]
+    [ProducesResponseType(typeof(ViewAsGrantResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult<ViewAsGrantResponse>> StartViewAsAsync(
+        UserIdentifierType userId,
+        [FromBody] StartViewAsRequest request,
+        [FromServices] IOptions<ViewAsSettings> settings,
+        [FromServices] IViewAsService viewAs,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(viewAs);
+
+        if (!settings.Value.Enabled)
+        {
+            return NotFound();
+        }
+
+        if (User.GetUserId() is not { } staffUserId)
+        {
+            return Unauthorized();
+        }
+
+        var result = await viewAs
+            .StartAsync(staffUserId, userId, request?.Reason, cancellationToken)
+            .ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }

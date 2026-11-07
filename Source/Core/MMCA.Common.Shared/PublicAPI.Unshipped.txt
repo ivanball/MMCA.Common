@@ -38,3 +38,36 @@ override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.GetHashCode() -
 override MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.ToString() -> string!
 static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator !=(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse? right) -> bool
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ViewAsUsers = "users:view-as" -> string!
+const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.ViewAsEnded = "ViewAsEnded" -> string!
+MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.ViewAs = 1 -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessTokenExpiry.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.TargetUserId.get -> int
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GrantId.get -> System.Guid
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.operator !=(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? right) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessTokenExpiry.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GrantId.init -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.AccessToken.init -> void
+static MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.operator ==(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? right) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.TargetUserId.init -> void
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Equals(object? obj) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Equals(MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse!
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.Deconstruct(out string! AccessToken, out System.DateTime AccessTokenExpiry, out System.Guid GrantId, out int TargetUserId) -> void
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Reason.get -> string?
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Reason.init -> void
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.ToString() -> string!
+static MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.operator !=(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? left, MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.operator ==(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? left, MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? right) -> bool
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Equals(object? obj) -> bool
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Equals(MMCA.Common.Shared.Auth.Requests.StartViewAsRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.StartViewAsRequest!
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.Deconstruct(out string? Reason) -> void
+MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse.ViewAsGrantResponse(string! AccessToken, System.DateTime AccessTokenExpiry, System.Guid GrantId, int TargetUserId) -> void
+MMCA.Common.Shared.Auth.Requests.StartViewAsRequest.StartViewAsRequest(string? Reason) -> void

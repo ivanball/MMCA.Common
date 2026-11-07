@@ -26,3 +26,54 @@ override MMCA.Common.Application.Auth.RefreshSessionSignIn.GetHashCode() -> int
 override MMCA.Common.Application.Auth.RefreshSessionSignIn.ToString() -> string!
 static MMCA.Common.Application.Auth.RefreshSessionSignIn.operator !=(MMCA.Common.Application.Auth.RefreshSessionSignIn? left, MMCA.Common.Application.Auth.RefreshSessionSignIn? right) -> bool
 static MMCA.Common.Application.Auth.RefreshSessionSignIn.operator ==(MMCA.Common.Application.Auth.RefreshSessionSignIn? left, MMCA.Common.Application.Auth.RefreshSessionSignIn? right) -> bool
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore
+MMCA.Common.Application.Auth.ViewAs.IViewAsSubjectResolver
+MMCA.Common.Application.Auth.ViewAs.IViewAsService
+const MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.SectionName = "ViewAs" -> string!
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.ViewAsSettings() -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsService
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.UserId.get -> int
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Email.get -> string!
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Role.get -> string!
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.UserId.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Email.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Role.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsDeleted.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsDeleted.init -> void
+override MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.ToString() -> string!
+static MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.operator !=(MMCA.Common.Application.Auth.ViewAs.ViewAsSubject? left, MMCA.Common.Application.Auth.ViewAs.ViewAsSubject? right) -> bool
+static MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.operator ==(MMCA.Common.Application.Auth.ViewAs.ViewAsSubject? left, MMCA.Common.Application.Auth.ViewAs.ViewAsSubject? right) -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.FullName.get -> string!
+override MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.GetHashCode() -> int
+override MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Equals(object? obj) -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.FullName.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Equals(MMCA.Common.Application.Auth.ViewAs.ViewAsSubject? other) -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.<Clone>$() -> MMCA.Common.Application.Auth.ViewAs.ViewAsSubject!
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Deconstruct(out int UserId, out string! Email, out string! Role, out string! FullName, out bool IsDeleted) -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.ViewAsSubject(int UserId, string! Email, string! Role, string! FullName, bool IsDeleted) -> void
+MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.UserSessionsAdministrationService(MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.RetentionDays.get -> int
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.RetentionDays.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.DataSourceName.get -> string!
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsService.ViewAsService(MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore! grants, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry! permissions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.ViewAs.ViewAsSettings!>! settings, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.ViewAs.IViewAsSubjectResolver? subjects = null) -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsService.StartAsync(int staffUserId, int targetUserId, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse!>!>!
+MMCA.Common.Application.Auth.ViewAs.ViewAsService.EndAsync(System.Guid grantId, int staffUserId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.ViewAs.ViewAsService.IsGrantActiveAsync(System.Guid grantId, int staffUserId, int targetUserId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsSubjectResolver.FindAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Auth.ViewAs.ViewAsSubject?>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsService.StartAsync(int staffUserId, int targetUserId, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.ViewAsGrantResponse!>!>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsService.IsGrantActiveAsync(System.Guid grantId, int staffUserId, int targetUserId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsService.EndAsync(System.Guid grantId, int staffUserId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore.EndAsync(System.Guid grantId, int staffUserId, System.DateTime endedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore.GetRecentForTargetAsync(int targetUserId, int maxCount, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.ViewAsGrant!>!>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore.AddAsync(MMCA.Common.Domain.Auth.ViewAsGrant! grant, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore.FindAsync(System.Guid grantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.ViewAsGrant?>!
+MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore.DeleteIssuedBeforeAsync(System.DateTime cutoff, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer!>? logger = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
+*REMOVED*MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.AuthSessionIssuer(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer!>? logger = null) -> void
+*REMOVED*MMCA.Common.Application.Auth.Administration.UserSessionsAdministrationService.UserSessionsAdministrationService(MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService.GenerateShortLivedAccessToken(int userId, string! email, string! role, string! fullName, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims, System.TimeSpan lifetime) -> string!

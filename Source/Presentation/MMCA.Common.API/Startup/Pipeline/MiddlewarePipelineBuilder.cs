@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Startup.Endpoints;
+using MMCA.Common.Application.Auth.ViewAs;
 
 namespace MMCA.Common.API.Startup.Pipeline;
 
@@ -122,6 +125,19 @@ public sealed class MiddlewarePipelineBuilder
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.SoftDeletedUserFilter,
                 static app => app.UseMiddleware<SoftDeletedUserMiddleware>()),
+
+            new MiddlewarePipelineStep(
+                MiddlewarePipelineStepNames.ViewAsGuard,
+                // Read-only view-as (ADR-137): after authentication, so act_sub is on the principal, and
+                // after routing, so the end-view-as action's metadata is readable. Added only while
+                // ViewAs:Enabled is true; a host that never opts in runs no extra middleware.
+                static app =>
+                {
+                    if (app.Services.GetService<IOptions<ViewAsSettings>>()?.Value.Enabled == true)
+                    {
+                        app.UseMiddleware<ViewAsGuardMiddleware>();
+                    }
+                }),
 
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.Authorization,

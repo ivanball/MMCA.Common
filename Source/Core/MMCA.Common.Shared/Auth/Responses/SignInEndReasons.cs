@@ -21,4 +21,7 @@ public static class SignInEndReasons
 
     /// <summary>The sign-in reached its refresh-token expiry without being revoked.</summary>
     public const string Expired = "Expired";
+
+    /// <summary>A view-as grant (<see cref="SignInHistoryEntryKind.ViewAs"/>) was ended by the staff user before it expired.</summary>
+    public const string ViewAsEnded = "ViewAsEnded";
 }

@@ -45,7 +45,7 @@ internal sealed class SameOriginApiProxySettingsValidator : IValidateOptions<Sam
         }
 
         failures.AddRange(
-            new[] { options.RefreshPath, options.RevokePath }
+            new[] { options.RefreshPath, options.RevokePath, options.ViewAsEndPath }
                 .Concat(options.AdditionalTokenIssuingPaths)
                 .Where(path => !IsValidRelativePath(path))
                 .Select(path => $"{section}: the endpoint path '{path}' must be a non-empty relative path such as 'auth/login'."));

@@ -10,9 +10,14 @@ namespace MMCA.Common.Application.Auth.Administration;
 /// </summary>
 /// <param name="refreshSessions">The refresh session store.</param>
 /// <param name="timeProvider">The clock that decides which sessions are still live.</param>
+/// <param name="viewAsGrants">
+/// The view-as grant store (ADR-137), read so the history shows each time support viewed the
+/// account; optional, and an empty read while view-as is disabled.
+/// </param>
 public sealed class UserSessionsAdministrationService(
     IRefreshSessionStore refreshSessions,
-    TimeProvider timeProvider) : IUserSessionsAdministrationService
+    TimeProvider timeProvider,
+    ViewAs.IViewAsGrantStore? viewAsGrants = null) : IUserSessionsAdministrationService
 {
     /// <inheritdoc />
     /// <remarks>
@@ -60,7 +65,8 @@ public sealed class UserSessionsAdministrationService(
             userId,
             timeProvider.GetUtcNow().UtcDateTime,
             currentSessionId: null,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            viewAsGrants).ConfigureAwait(false);
 
         return Result.Success(signIns);
     }
