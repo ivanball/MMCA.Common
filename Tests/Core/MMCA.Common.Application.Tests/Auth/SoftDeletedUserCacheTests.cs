@@ -12,6 +12,11 @@ namespace MMCA.Common.Application.Tests.Auth;
 /// </summary>
 public sealed class SoftDeletedUserCacheTests
 {
+    // JwtSettings.AccessTokenExpirationMinutes defaults to 15, and the framework sets no JWT bearer
+    // ClockSkew, so the library default (TokenValidationParameters.DefaultClockSkew, 5 minutes) applies.
+    private static readonly TimeSpan DefaultAccessTokenLifetime = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan DefaultJwtClockSkew = TimeSpan.FromMinutes(5);
+
     // ── Key shape ──
     [Fact]
     public void KeyFor_ReturnsTheExpectedKeyShape() =>
@@ -39,14 +44,14 @@ public sealed class SoftDeletedUserCacheTests
 
     // ── Marker duration ──
     [Fact]
-    public void MarkerDuration_OutlivesTheDefaultAccessTokenLifetime() =>
+    public void MarkerDuration_OutlivesTheDefaultAccessTokenLifetimePlusTheDefaultClockSkew() =>
         SoftDeletedUserCache.MarkerDuration.Should().BeGreaterThanOrEqualTo(
-            TimeSpan.FromMinutes(15),
-            "a host without the validator query relies on the marker for the whole life of an already-issued access token");
+            DefaultAccessTokenLifetime + DefaultJwtClockSkew,
+            "a host without the validator query relies on the marker until an already-issued access token stops validating, which is its expiry plus the clock skew");
 
     // ── Write helper ──
     [Fact]
-    public async Task MarkDeletedAsync_WritesTheTrueMarkerUnderTheKeyForFifteenMinutes()
+    public async Task MarkDeletedAsync_WritesTheTrueMarkerUnderTheKeyForTwentyMinutes()
     {
         var cache = new Mock<ICacheService>();
 
@@ -56,7 +61,7 @@ public sealed class SoftDeletedUserCacheTests
             c => c.SetAsync(
                 "user:deleted:7",
                 true,
-                TimeSpan.FromMinutes(15),
+                TimeSpan.FromMinutes(20),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
