@@ -19,6 +19,17 @@ namespace MMCA.Common.Application.Auth.ViewAs;
 /// <c>ViewAsGrants</c> migration on the Identity database, and disclose staff access in its privacy
 /// notice.
 /// </para>
+/// <para>
+/// <b>Multi-service hosts.</b> Only the Identity database holds the grant table, so only the Identity
+/// service keeps <see cref="HostsGrantStore"/> (the default); every other service sets <c>Enabled</c>
+/// true and <c>HostsGrantStore</c> false. Such a service maps no grant table and serves no grant or end
+/// endpoint (404). Its guard keeps the read-only rule, refuses an expired or malformed token, and
+/// refuses a token whose grant was ended, which it learns from a marker the Identity service's end
+/// endpoint writes to the shared <c>ICacheService</c> (living for the token's remaining life plus the
+/// JWT clock skew). Every service therefore needs the same distributed cache, and a service that cannot
+/// read it refuses view-as requests (fail closed). A service with <c>Enabled</c> false keeps refusing
+/// every view-as token.
+/// </para>
 /// </remarks>
 public sealed class ViewAsSettings
 {
@@ -27,6 +38,15 @@ public sealed class ViewAsSettings
 
     /// <summary>Gets a value indicating whether view-as is available on this host. Defaults to <see langword="false"/>.</summary>
     public bool Enabled { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether this host holds the grant store: maps the <c>ViewAsGrants</c>
+    /// table, serves the grant and end endpoints, and checks each view-as request against the grant
+    /// row. Defaults to <see langword="true"/>, which is right for a single host. In a multi-service
+    /// host only the Identity service keeps it; every other service sets it to
+    /// <see langword="false"/> and checks the shared cache's grant-ended marker instead.
+    /// </summary>
+    public bool HostsGrantStore { get; init; } = true;
 
     /// <summary>
     /// Gets how long a grant row is kept after it was issued, in days. The rows are the audit record

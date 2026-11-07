@@ -181,8 +181,9 @@ public static partial class DependencyInjection
 
             // Read-only view-as support access (ADR-137). Bound and registered on every host so the
             // controller actions can answer 404 and the sign-in history can read through the store;
-            // with ViewAs:Enabled false (the default) the table is in no model and the store answers
-            // as if no grant existed. The account reader (IViewAsSubjectResolver) is the consumer's.
+            // with ViewAs:Enabled false (the default), or ViewAs:HostsGrantStore false (a multi-service
+            // host's services other than Identity), the table is in no model and the store answers as
+            // if no grant existed. The account reader (IViewAsSubjectResolver) is the consumer's.
             services.AddOptions<Application.Auth.ViewAs.ViewAsSettings>()
                 .Bind(configuration.GetSection(Application.Auth.ViewAs.ViewAsSettings.SectionName))
                 .ValidateDataAnnotations()

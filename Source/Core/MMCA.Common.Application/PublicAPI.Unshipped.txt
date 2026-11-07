@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.HostsGrantStore.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.HostsGrantStore.init -> void

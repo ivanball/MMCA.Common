@@ -88,12 +88,14 @@ public sealed class DesignTimeDbContextOptions
 
     /// <summary>
     /// Gets or sets a value indicating whether the design-time model maps the view-as grant table
-    /// (<c>ViewAsGrants</c>, ADR-137), mirroring <c>ViewAs:Enabled</c> at runtime. Defaults to
-    /// <see langword="false"/>.
+    /// (<c>ViewAsGrants</c>, ADR-137), mirroring <c>ViewAs:Enabled</c> AND <c>ViewAs:HostsGrantStore</c>
+    /// at runtime. Defaults to <see langword="false"/>.
     /// </summary>
     /// <remarks>
     /// Set it in the Identity database's migrations project (like <see cref="EnableRefreshSessions"/>)
-    /// when the host enables view-as; the flag must match <c>ViewAs:Enabled</c>, or the scaffolded
+    /// when the host enables view-as, and only there: in a multi-service host the other services run
+    /// with <c>ViewAs:HostsGrantStore</c> false and map no grant table, so their migrations projects
+    /// leave it off. The flag must match what the service's runtime model maps, or the scaffolded
     /// migrations and the running model disagree.
     /// </remarks>
     public bool EnableViewAsGrants { get; set; }

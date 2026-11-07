@@ -16,9 +16,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// first, falling back to the source named by <c>ViewAs:DataSourceName</c>.
 /// </para>
 /// <para>
-/// <b>Inert while disabled.</b> With <c>ViewAs:Enabled</c> false the table is in no model, so every
-/// read answers as if no grant existed instead of querying a table that is not there. That is what lets
-/// the sign-in history read through this store on every host.
+/// <b>Inert while disabled.</b> With <c>ViewAs:Enabled</c> false, or on a service that does not hold
+/// the grant store (<c>ViewAs:HostsGrantStore</c> false), the table is in no model, so every read
+/// answers as if no grant existed instead of querying a table that is not there. That is what lets
+/// the sign-in history read through this store, and the controller actions bind the view-as service,
+/// on every host.
 /// </para>
 /// </summary>
 /// <param name="dbContextFactory">Resolves and saves through the Identity context.</param>
@@ -31,7 +33,8 @@ internal sealed class EFViewAsGrantStore(
     IDataSourceResolver dataSourceResolver,
     IOptions<ViewAsSettings> settings) : IViewAsGrantStore
 {
-    private bool Enabled => settings.Value.Enabled;
+    /// <summary>The model gate's two settings: the table is mapped only when both hold.</summary>
+    private bool Enabled => settings.Value.Enabled && settings.Value.HostsGrantStore;
 
     private ApplicationDbContext Context => dbContextFactory.GetDbContext(ResolveDataSourceKey());
 
@@ -108,7 +111,7 @@ internal sealed class EFViewAsGrantStore(
     {
         if (!Enabled)
         {
-            throw new InvalidOperationException("View-as grants cannot be written while ViewAs:Enabled is false: the table is not mapped.");
+            throw new InvalidOperationException("View-as grants cannot be written while ViewAs:Enabled or ViewAs:HostsGrantStore is false: the table is not mapped.");
         }
     }
 

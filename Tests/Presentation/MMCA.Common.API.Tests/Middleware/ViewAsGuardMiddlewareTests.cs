@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Auth;
@@ -205,12 +206,170 @@ public sealed class ViewAsGuardMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
+    // ── Multi-service host: a service that does not hold the grant store (HostsGrantStore false) ──
+    // It maps no ViewAsGrants table, so it cannot read the grant row; it checks the shared cache's
+    // grant-ended marker, which the store host's end endpoint writes.
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("HEAD")]
+    [InlineData("OPTIONS")]
+    public async Task NonStoreHost_SafeMethod_WithALiveGrant_PassesThrough_WithoutAnyGrantLookup(string method)
+    {
+        var viewAs = new Mock<IViewAsService>(MockBehavior.Strict);
+        var context = CreateContext(method, ViewAsPrincipal(Guid.NewGuid()));
+
+        await InvokeNonStoreAsync(context, new SharedCache(), viewAs.Object);
+
+        _reachedEndpoint.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        viewAs.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_AfterTheEndedMarkerIsWritten_TheSameTokenIsRefused401()
+    {
+        var grantId = Guid.NewGuid();
+        var cache = new SharedCache();
+
+        var before = CreateContext("GET", ViewAsPrincipal(grantId));
+        await InvokeNonStoreAsync(before, cache);
+        _reachedEndpoint.Should().BeTrue("no marker exists before End");
+
+        // The store host's end endpoint writes the marker through this helper.
+        var storeHostServices = new ServiceCollection()
+            .AddSingleton<ICacheService>(cache)
+            .AddSingleton<TimeProvider>(_clock)
+            .BuildServiceProvider();
+        await using (storeHostServices)
+        {
+            await ViewAsEndedMarker.WriteAsync(storeHostServices, ViewAsPrincipal(grantId), grantId, CancellationToken.None);
+        }
+
+        _reachedEndpoint = false;
+        var after = CreateContext("GET", ViewAsPrincipal(grantId));
+        await InvokeNonStoreAsync(after, cache);
+
+        after.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    // Fails CLOSED on a cache outage, unlike SoftDeletedUserMiddleware.
+    [Fact]
+    public async Task NonStoreHost_CacheReadFailure_FailsClosed401()
+    {
+        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
+
+        await InvokeNonStoreAsync(context, new SharedCache { ReadFault = new InvalidOperationException("cache unavailable") });
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_NoCacheRegistered_IsRefused401()
+    {
+        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
+
+        await InvokeNonStoreAsync(context, cache: null);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("PUT")]
+    [InlineData("PATCH")]
+    [InlineData("DELETE")]
+    public async Task NonStoreHost_NonSafeMethod_Returns403_AndNeverReachesTheEndpoint(string method)
+    {
+        var context = CreateContext(method, ViewAsPrincipal(Guid.NewGuid()));
+
+        await InvokeNonStoreAsync(context, new SharedCache());
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_ExpiredToken_IsRefused401()
+    {
+        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
+        _clock.Advance(TimeSpan.FromMinutes(16));
+
+        await InvokeNonStoreAsync(context, new SharedCache());
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_TokenWithoutAGrantClaim_IsRefused401()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(AuthClaimTypes.Subject, "2"),
+            new Claim(AuthClaimTypes.ViewAsActor, "1"),
+            ExpiryClaim(Now.AddMinutes(15)),
+        ],
+        "Bearer"));
+        var context = CreateContext("GET", principal);
+
+        await InvokeNonStoreAsync(context, new SharedCache());
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_TokenWithoutAnExpiry_IsRefused401()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(AuthClaimTypes.Subject, "2"),
+            new Claim(AuthClaimTypes.ViewAsActor, "1"),
+            new Claim(AuthClaimTypes.ViewAsGrant, Guid.NewGuid().ToString()),
+        ],
+        "Bearer"));
+        var context = CreateContext("GET", principal);
+
+        await InvokeNonStoreAsync(context, new SharedCache());
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_WithViewAsDisabled_StillRefusesEveryViewAsToken()
+    {
+        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
+        var services = new ServiceCollection();
+        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = false, HostsGrantStore = false }));
+        services.AddSingleton<ICacheService>(new SharedCache());
+        services.AddSingleton<TimeProvider>(_clock);
+        await using var provider = services.BuildServiceProvider();
+        context.RequestServices = provider;
+
+        await new ViewAsGuardMiddleware(_ =>
+        {
+            _reachedEndpoint = true;
+            return Task.CompletedTask;
+        }).InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    private static Claim ExpiryClaim(DateTimeOffset expiresAt) =>
+        new("exp", expiresAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64);
+
     private static ClaimsPrincipal ViewAsPrincipal(Guid grantId) =>
         new(new ClaimsIdentity(
         [
             new Claim(AuthClaimTypes.Subject, TargetUserId.ToString(CultureInfo.InvariantCulture)),
             new Claim(AuthClaimTypes.ViewAsActor, StaffUserId.ToString(CultureInfo.InvariantCulture)),
             new Claim(AuthClaimTypes.ViewAsGrant, grantId.ToString()),
+            ExpiryClaim(Now.AddMinutes(15)),
         ],
         "Bearer"));
 
@@ -255,6 +414,64 @@ public sealed class ViewAsGuardMiddlewareTests
             return Task.CompletedTask;
         });
         await sut.InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+    }
+
+    private async Task InvokeNonStoreAsync(HttpContext context, ICacheService? cache, IViewAsService? viewAs = null)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = true, HostsGrantStore = false }));
+        services.AddSingleton<TimeProvider>(_clock);
+        if (cache is not null)
+        {
+            services.AddSingleton(cache);
+        }
+
+        if (viewAs is not null)
+        {
+            services.AddSingleton(viewAs);
+        }
+
+        await using var provider = services.BuildServiceProvider();
+        context.RequestServices = provider;
+
+        var sut = new ViewAsGuardMiddleware(_ =>
+        {
+            _reachedEndpoint = true;
+            return Task.CompletedTask;
+        });
+        await sut.InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+    }
+
+    /// <summary>A dictionary standing in for the distributed cache every service shares.</summary>
+    private sealed class SharedCache : ICacheService
+    {
+        public Dictionary<string, object?> Entries { get; } = new(StringComparer.Ordinal);
+
+        public Exception? ReadFault { get; init; }
+
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        {
+            if (ReadFault is not null)
+            {
+                return Task.FromException<T?>(ReadFault);
+            }
+
+            return Task.FromResult(Entries.TryGetValue(key, out var value) ? (T?)value : default);
+        }
+
+        public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+        {
+            Entries[key] = value;
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+        {
+            Entries.Remove(key);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class GrantStore : IViewAsGrantStore
