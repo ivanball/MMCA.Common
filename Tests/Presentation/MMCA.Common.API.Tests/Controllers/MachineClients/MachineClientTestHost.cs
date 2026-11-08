@@ -51,7 +51,10 @@ internal sealed class MachineClientTestHost : IAsyncDisposable
     /// <summary>A role holding user management, which no client may hold.</summary>
     public const string UserAdminRole = "UserAdmin";
 
-    /// <summary>The operator role that administers clients.</summary>
+    /// <summary>A role holding role management (which could grant itself anything), which no client may hold.</summary>
+    public const string RoleAdminRole = "RoleAdmin";
+
+    /// <summary>The operator role that administers clients; holding it would let a client mint more clients.</summary>
     public const string OperatorRole = "Operator";
 
     public const string OrdersRead = "orders:read";
@@ -134,6 +137,7 @@ internal sealed class MachineClientTestHost : IAsyncDisposable
             .Grant(IntegrationRole, OrdersRead, OrdersWrite)
             .Grant(SupportRole, OrdersRead, AdministrationPermissions.ViewAsUsers)
             .Grant(UserAdminRole, AdministrationPermissions.ManageUsers)
+            .Grant(RoleAdminRole, AdministrationPermissions.ManageRoles)
             .Grant(OperatorRole, AdministrationPermissions.ManageClients));
         builder.Services.AddControllers().ConfigureApplicationPartManager(manager =>
         {

@@ -143,6 +143,8 @@ public sealed class MachineTokenEndpointTests
     [Theory]
     [InlineData(MachineClientTestHost.SupportRole)]
     [InlineData(MachineClientTestHost.UserAdminRole)]
+    [InlineData(MachineClientTestHost.RoleAdminRole)]
+    [InlineData(MachineClientTestHost.OperatorRole)]
     public async Task ARoleThatCanViewAsOrManageUsers_CannotBackAClient(string role)
     {
         await using var host = await MachineClientTestHost.StartAsync();

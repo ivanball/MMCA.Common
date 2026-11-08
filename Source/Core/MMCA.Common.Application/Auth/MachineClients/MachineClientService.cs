@@ -44,9 +44,18 @@ public sealed class MachineClientService(
     /// <summary>The only grant type the token endpoint serves.</summary>
     public const string ClientCredentialsGrantType = "client_credentials";
 
-    /// <summary>The permissions no machine client may hold: impersonation and user management.</summary>
+    /// <summary>
+    /// The permissions no machine client may hold: impersonation and user management, plus the two
+    /// that would let a client escalate on its own: role management (it could grant its role anything,
+    /// impersonation included) and client management (it could mint further clients for itself).
+    /// </summary>
     private static readonly string[] ForbiddenPermissions =
-        [AdministrationPermissions.ViewAsUsers, AdministrationPermissions.ManageUsers];
+    [
+        AdministrationPermissions.ViewAsUsers,
+        AdministrationPermissions.ManageUsers,
+        AdministrationPermissions.ManageRoles,
+        AdministrationPermissions.ManageClients,
+    ];
 
     /// <inheritdoc />
     public bool IsEnabled => settings.Value.Enabled;
