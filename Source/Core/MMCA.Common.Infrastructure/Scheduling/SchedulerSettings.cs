@@ -36,8 +36,11 @@ public sealed class SchedulerSettings
     /// <summary>
     /// Gets how long, in seconds, a replica's claim on a job row lasts. Other replicas skip rows
     /// with an unexpired lease, so concurrent replicas never run the same occurrence twice; if a
-    /// replica dies mid-execution, the row becomes claimable again once the lease expires. Set it
-    /// comfortably above the longest expected job duration.
+    /// replica dies mid-execution, the row becomes claimable again once the lease expires. While a
+    /// job runs the holder renews its lease every half of this value, so the lease does not need to
+    /// exceed the longest job. A shorter lease frees a dead replica's row sooner, at a cost: more
+    /// writes, and less time for a failed renewal to be retried before the lease lapses and another
+    /// replica can claim a job that is still running.
     /// </summary>
     [Range(10, 3600)]
     public int LeaseSeconds { get; init; } = 300;

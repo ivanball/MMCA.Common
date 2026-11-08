@@ -15,8 +15,10 @@ namespace MMCA.Common.API.Middleware;
 /// request whose principal carries <c>act_sub</c> (a view-as token):
 /// <list type="number">
 /// <item>refuses every method other than GET, HEAD and OPTIONS with 403, except the one action marked
-/// as the end-view-as endpoint, because several writes never pass through a command (sign-in,
-/// refresh, password and preference changes, device registration);</item>
+/// as the end-view-as endpoint and an endpoint a host marked
+/// <see cref="ViewAsReadOnlyEndpointAttribute"/> (gRPC is always POST), because several writes never
+/// pass through a command (sign-in, refresh, password and preference changes, device
+/// registration);</item>
 /// <item>checks that the token's grant is still live (exists, names this staff user and this
 /// account, not ended, not expired) and refuses it with 401 otherwise, so ending a view takes effect
 /// on the next request rather than at token expiry. On a host with <c>ViewAs:HostsGrantStore</c>
@@ -69,7 +71,7 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
             return;
         }
 
-        if (!IsSafeMethod(context.Request.Method) && !IsEndViewAsEndpoint(context))
+        if (!IsSafeMethod(context.Request.Method) && !IsEndViewAsEndpoint(context) && !IsReadOnlyEndpoint(context))
         {
             LogWriteRefused(logger, context.Request.Method);
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -107,6 +109,14 @@ public sealed partial class ViewAsGuardMiddleware(RequestDelegate next)
     private static bool IsEndViewAsEndpoint(HttpContext context) =>
         HttpMethods.IsPost(context.Request.Method)
         && context.GetEndpoint()?.Metadata.GetMetadata<ViewAsEndEndpointAttribute>() is not null;
+
+    /// <summary>
+    /// Whether this is a POST to an endpoint the host marked read-only (gRPC is always POST). Exempts
+    /// the METHOD rule alone: the Enabled check above and the grant check after it still run.
+    /// </summary>
+    private static bool IsReadOnlyEndpoint(HttpContext context) =>
+        HttpMethods.IsPost(context.Request.Method)
+        && context.GetEndpoint()?.Metadata.GetMetadata<ViewAsReadOnlyEndpointAttribute>() is not null;
 
     private static async Task<bool> IsGrantLiveAsync(
         ClaimsPrincipal user,

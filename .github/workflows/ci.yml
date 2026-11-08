@@ -885,11 +885,11 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (8) and
+        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (9) and
         # PostgreSqlBrokerTransportTests.cs (3: the built-in PostgreSql broker's header round trip,
-        # delayed redelivery and shared data-source authentication), 11 on 2026-10-25; adding a test
+        # delayed redelivery and shared data-source authentication), 12 on 2026-11-08; adding a test
         # means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 11
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 12
 
   sqlserver-integration:
     name: SQL Server integration (Testcontainers)
@@ -927,9 +927,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like
-        # postgresql-integration. Floor = the exact [Fact] count in SQLServerPersistenceTests.cs (3,
-        # 2026-09-30); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 3
+        # postgresql-integration. Floor = the exact [Fact] count in SQLServerPersistenceTests.cs (5,
+        # 2026-11-08); adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 5
 
   aws-integration:
     name: AWS integration (Testcontainers LocalStack)

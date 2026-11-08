@@ -1,1 +1,9 @@
 #nullable enable
+abstract MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.EveryMcpTool_ShouldDeclare_WhoMayCallIt() -> void
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.McpToolAccessDeclarationTestsBase() -> void
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.ScannedMcpToolSet_IsNotEmpty() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CountMcpTools(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.McpToolsDeclareAccess(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> void
+virtual MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.MinimumMcpTools.get -> int

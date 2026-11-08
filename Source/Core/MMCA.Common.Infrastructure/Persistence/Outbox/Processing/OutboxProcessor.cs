@@ -116,7 +116,7 @@ public sealed partial class OutboxProcessor(
     /// would otherwise open a shared circuit under another test's feet.
     /// </para>
     /// </summary>
-    private readonly ResiliencePipeline _brokerPublishPipeline = BuildBrokerPublishPipeline();
+    private readonly ResiliencePipeline _brokerPublishPipeline = BuildBrokerPublishPipeline(timeProvider);
 
     /// <inheritdoc />
     /// <remarks>The loop, startup delay and smart wait are the shared <see cref="PollingLoop"/>.</remarks>
@@ -593,57 +593,7 @@ public sealed partial class OutboxProcessor(
                 }
                 catch (Exception ex)
                 {
-                    message.RetryCount++;
-                    var error = ExceptionChain.Describe(ex);
-                    message.LastError = ColumnWidth.Truncate(error, MaxErrorLength);
-
-                    // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
-                    // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
-                    // that kept the original lease was retried only after the full LeaseSeconds (300s by
-                    // default) no matter what the polling interval or a signal said. That made the retry
-                    // cadence an accident of the lease. Capping at the lease keeps a permanently failing
-                    // message from becoming unclaimable for longer than a dead replica's rows would.
-                    message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
-                        .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
-
-                    activity?.SetStatus(ActivityStatusCode.Error, error);
-
-                    // An open circuit is a rejection, not a delivery attempt: the publish never left
-                    // the process. It still follows the normal failure path above (retry increment and
-                    // re-lease) so the row is retried on a later cycle exactly like any other failure,
-                    // but it gets its own counter and its own log line, because "the broker refused
-                    // 50 messages" and "we did not try, the broker is known-dead" are different
-                    // operational facts.
-                    var circuitOpen = ex is BrokenCircuitException;
-                    if (circuitOpen)
-                    {
-                        BrokerMetrics.CircuitOpenCounter.Add(
-                            1,
-                            new KeyValuePair<string, object?>("event_type", message.EventType));
-                    }
-
-                    if (circuitOpen && !circuitOpenLogged)
-                    {
-                        circuitOpenLogged = true;
-                        LogBrokerCircuitOpen(logger, source.ToString());
-                    }
-
-                    if (message.RetryCount >= _settings.MaxRetries)
-                    {
-                        // The moment of exhaustion is the operator's last loud signal: from here the
-                        // row leaves the poll (RetryCount filter) and is eventually purged by
-                        // OutboxCleanupService after the dead-letter retention window.
-                        OutboxMetrics.DeadLetterCounter.Add(
-                            1,
-                            new KeyValuePair<string, object?>("event_type", message.EventType),
-                            new KeyValuePair<string, object?>("reason", "retries_exhausted"));
-                        LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
-                    }
-                    else if (!circuitOpen)
-                    {
-                        // Circuit-open rejections already reported themselves above, once per batch.
-                        LogMessageRetry(logger, message.Id, message.RetryCount, ex);
-                    }
+                    circuitOpenLogged = ApplyDeliveryFailure(message, ex, activity, source.ToString(), circuitOpenLogged);
                 }
             }
 
@@ -661,6 +611,86 @@ public sealed partial class OutboxProcessor(
         }
 
         return processedAny;
+    }
+
+    /// <summary>
+    /// Writes a failed delivery's retry state onto the row, in memory (the caller persists it), and
+    /// reports it. Returns the batch's circuit-open log latch.
+    /// </summary>
+    /// <param name="message">The row that failed.</param>
+    /// <param name="ex">Why it failed.</param>
+    /// <param name="activity">The row's span, if any.</param>
+    /// <param name="sourceName">The data source, for the circuit-open log line.</param>
+    /// <param name="circuitOpenLogged">Whether this batch has already logged an open circuit.</param>
+    private bool ApplyDeliveryFailure(
+        OutboxMessage message,
+        Exception ex,
+        Activity? activity,
+        string sourceName,
+        bool circuitOpenLogged)
+    {
+        // An open circuit is a rejection, not a delivery attempt: the publish never left the process,
+        // so it does not consume a retry and it cannot dead-letter the row. A long outage would
+        // otherwise walk every undelivered row through its whole retry budget without one real
+        // attempt. Real publish failures, and the failure of the single half-open probe (which
+        // reaches the broker), keep counting.
+        var circuitOpen = ex is BrokenCircuitException;
+        if (!circuitOpen)
+        {
+            message.RetryCount++;
+        }
+
+        var error = ExceptionChain.Describe(ex);
+        message.LastError = ColumnWidth.Truncate(error, MaxErrorLength);
+
+        // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on it. The
+        // claim is not cleared outright: the fetch skips leased rows, so a failure that kept the
+        // original lease was retried only after the full LeaseSeconds (300s by default) no matter what
+        // the polling interval or a signal said. That made the retry cadence an accident of the lease.
+        // Capping at the lease keeps a permanently failing message from becoming unclaimable for
+        // longer than a dead replica's rows would. A rejected row waits out the break (with jitter, so
+        // a whole batch does not return in the same instant) rather than a backoff keyed on a count it
+        // did not spend, and it cannot hot-spin: it is leased, so the next cycle's fetch skips it.
+        message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(
+            circuitOpen
+                ? PollingLoop.ComputeCircuitOpenBackoffSeconds(BrokerResilienceDefaults.BreakDuration, _settings.LeaseSeconds)
+                : ComputeRetryBackoffSeconds(message.RetryCount));
+
+        activity?.SetStatus(ActivityStatusCode.Error, error);
+
+        if (circuitOpen)
+        {
+            // Its own counter and its own log line, because "the broker refused 50 messages" and "we
+            // did not try, the broker is known-dead" are different operational facts.
+            BrokerMetrics.CircuitOpenCounter.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", message.EventType));
+
+            if (!circuitOpenLogged)
+            {
+                LogBrokerCircuitOpen(logger, sourceName);
+            }
+
+            return true;
+        }
+
+        if (message.RetryCount >= _settings.MaxRetries)
+        {
+            // The moment of exhaustion is the operator's last loud signal: from here the row leaves
+            // the poll (RetryCount filter) and is eventually purged by OutboxCleanupService after the
+            // dead-letter retention window.
+            OutboxMetrics.DeadLetterCounter.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", message.EventType),
+                new KeyValuePair<string, object?>("reason", "retries_exhausted"));
+            LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
+        }
+        else
+        {
+            LogMessageRetry(logger, message.Id, message.RetryCount, ex);
+        }
+
+        return circuitOpenLogged;
     }
 
     /// <summary>
@@ -1074,10 +1104,11 @@ public sealed partial class OutboxProcessor(
     /// <see cref="OperationCanceledException"/> is excluded from the handled set: a host shutdown
     /// cancelling a batch mid-flight is not evidence that the broker is unhealthy, and letting it
     /// count toward the failure ratio would leave the circuit open against a perfectly good broker
-    /// on the next start.
+    /// on the next start. The breaker runs on the processor's clock, so a test driving the clock
+    /// drives the break duration too.
     /// </summary>
-    private static ResiliencePipeline BuildBrokerPublishPipeline() =>
-        new ResiliencePipelineBuilder()
+    private static ResiliencePipeline BuildBrokerPublishPipeline(TimeProvider timeProvider) =>
+        new ResiliencePipelineBuilder { TimeProvider = timeProvider }
             .AddCircuitBreaker(new CircuitBreakerStrategyOptions
             {
                 FailureRatio = BrokerResilienceDefaults.FailureRatio,
@@ -1152,7 +1183,8 @@ public sealed partial class OutboxProcessor(
     private static partial void LogRetriesExhausted(ILogger logger, Guid messageId, string eventType, int retryCount, Exception exception);
 
     // Logged once per batch, not once per message: an open circuit rejects every remaining row in
-    // the same instant. Warning rather than Error because nothing is lost, only deferred.
+    // the same instant. Warning rather than Error because nothing is lost, only deferred: a rejected
+    // row is re-leased with its retry count untouched.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Message bus circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
     private static partial void LogBrokerCircuitOpen(ILogger logger, string dataSourceName);
 

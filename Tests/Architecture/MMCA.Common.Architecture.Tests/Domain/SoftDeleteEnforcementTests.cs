@@ -9,10 +9,10 @@ namespace MMCA.Common.Architecture.Tests.Domain;
 /// listed in <see cref="AllowedHardDeleteTypes"/>.
 /// <para>
 /// This is the rule turned back on its own author. Store and ADC subclass the same base and
-/// allowlist exactly these four framework types, because no module of theirs erases a row of its
-/// own; running it here is what keeps that list honest, since a NEW framework eraser would
-/// otherwise land in the packages and fail downstream instead of in this repo. Each entry is named
-/// individually rather than exempting a namespace, so a fifth eraser under
+/// allowlist the framework erasers they run, because no module of theirs erases a row of its own;
+/// running it here is what keeps that list honest, since a NEW framework eraser would otherwise land
+/// in the packages and fail downstream instead of in this repo. Each entry is named individually
+/// rather than exempting a namespace, so another eraser under
 /// <c>MMCA.Common.Infrastructure.Persistence</c> still fails here and gets reviewed.
 /// </para>
 /// </summary>
@@ -30,27 +30,17 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // is about to rewrite, never user data that carries an audit or erasure obligation.
         "MMCA.Common.Infrastructure.Persistence.Repositories.EFRepository`2",
 
-        // Outbox and inbox retention (PurgeAsync, PurgeInboxAsync, SweepDeadLettersAsync). These
-        // rows are delivery plumbing with a bounded lifetime, and the sweep IS the retention policy;
-        // soft-deleting them would grow the table the job exists to bound.
-        "MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService",
-
-        // Internal-command queue retention: the outbox precedent applied to deferred work. A queue
-        // row is execution plumbing with a bounded lifetime whose payload can carry personal data,
-        // so the sweep IS the retention policy. The operator-facing purge sits beside it and erases
-        // only rows that already completed.
-        "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService",
+        // The operator-facing internal-command purge: it erases only rows that already completed.
+        // Queue rows are execution plumbing with a bounded lifetime whose payload can carry personal
+        // data.
         "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration",
 
-        // Audit-trail retention. Erasing past the retention window IS the requirement (keeping an
-        // audit row forever is the privacy defect, not the safeguard).
-        "MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailCleanupJob",
-
-        // Refresh-session retention. A session row is framework bookkeeping, not an aggregate: it
-        // carries no IsDeleted flag and no audit stamps, and its content is a credential digest plus
-        // the IP and user-agent of a device. Flagging it instead of erasing it would keep a growing
-        // record of a data subject's devices past any use for it (ADR-005).
-        "MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService",
+        // The one delete loop every retention sweep goes through, and it refuses a soft-deletable
+        // entity. For each sweep, erasing IS the retention policy: outbox, inbox and queue rows are
+        // plumbing with a bounded lifetime that soft-deleting would grow without bound; keeping an
+        // audit row forever is the privacy defect, not the safeguard; and a refresh session has no
+        // IsDeleted flag, only a credential digest plus a device's IP and user-agent (ADR-005).
+        "MMCA.Common.Infrastructure.Persistence.Retention.BatchedDelete",
 
         // Stored permission grants. A grant row is a set membership, not an aggregate: revoking a
         // capability means the row is not there, and a soft-deleted grant would have to be filtered

@@ -268,6 +268,169 @@ public sealed class NotificationHubServiceTests
         await WaitUntilAsync(() => sut.IsConnected && server.JoinCount("event:1") > joinsBeforeDrop);
     }
 
+    // -- OnConnectionRestored: a subscriber is told when a connection has been restored --
+    [Fact]
+    public async Task ConnectionRestored_IsNotRaisedForTheFirstStart()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+        var raised = 0;
+        using var subscription = sut.OnConnectionRestored(() => CountAsync(ref raised));
+
+        await sut.JoinChannelAsync("event:1");
+        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+
+        Volatile.Read(ref raised).Should().Be(0, "nothing was missed before the first connection");
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_IsRaisedExactlyOnceAfterTheRejoin_OnTheAutomaticReconnectPath()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var raised = 0;
+        var joinsAtSignal = -1;
+        using var subscription = sut.OnConnectionRestored(() =>
+        {
+            Volatile.Write(ref joinsAtSignal, server.JoinCount("event:1"));
+            return CountAsync(ref raised);
+        });
+
+        await sut.JoinChannelAsync("event:1");
+        int joinsBeforeDrop = server.JoinCount("event:1");
+        server.DropAll(new IOException("connection lost"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref raised) > 0);
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+
+        Volatile.Read(ref raised).Should().Be(1);
+        Volatile.Read(ref joinsAtSignal).Should().BeGreaterThan(joinsBeforeDrop, "the rejoin runs before the signal");
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_IsRaisedExactlyOnceAfterTheRejoin_OnTheRestartAfterAClose()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+        var raised = 0;
+        var joinsAtSignal = -1;
+        using var subscription = sut.OnConnectionRestored(() =>
+        {
+            Volatile.Write(ref joinsAtSignal, server.JoinCount("event:1"));
+            return CountAsync(ref raised);
+        });
+
+        await sut.JoinChannelAsync("event:1");
+        int joinsBeforeDrop = server.JoinCount("event:1");
+        server.DropAll(new IOException("reconnect attempts exhausted"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref raised) > 0);
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+
+        Volatile.Read(ref raised).Should().Be(1);
+        Volatile.Read(ref joinsAtSignal).Should().BeGreaterThan(joinsBeforeDrop, "the rejoin runs before the signal");
+    }
+
+    // A second outage on the same connection is a second restoration, so the latch must not swallow it.
+    [Fact]
+    public async Task ConnectionRestored_IsRaisedAgainForASecondOutage()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var raised = 0;
+        using var subscription = sut.OnConnectionRestored(() => CountAsync(ref raised));
+
+        await sut.JoinChannelAsync("event:1");
+        server.DropAll(new IOException("connection lost"));
+        await WaitUntilAsync(() => Volatile.Read(ref raised) == 1);
+
+        server.DropAll(new IOException("connection lost again"));
+        await WaitUntilAsync(() => Volatile.Read(ref raised) == 2);
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_IsStillRaisedWhenAJoinFails()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var raised = 0;
+        using var subscription = sut.OnConnectionRestored(() => CountAsync(ref raised));
+
+        await sut.JoinChannelAsync("event:1");
+        server.FailJoins = true;
+        server.DropAll(new IOException("connection lost"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref raised) == 1);
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_IsNotRaisedAfterDispose_OnTheReconnectPath()
+    {
+        var server = new InMemoryHubServer();
+        var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var raised = 0;
+        using var subscription = sut.OnConnectionRestored(() => CountAsync(ref raised));
+        var joinGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await sut.JoinChannelAsync("event:1");
+        int joinsBeforeDrop = server.JoinCount("event:1");
+        server.JoinGate = joinGate.Task;
+        server.DropAll(new IOException("connection lost"));
+
+        // The rejoin is now in flight on the restored connection, held open by the server.
+        await WaitUntilAsync(() => server.JoinCount("event:1") > joinsBeforeDrop);
+        await sut.DisposeAsync();
+        joinGate.TrySetResult();
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+
+        Volatile.Read(ref raised).Should().Be(0, "a disposed service must not call its subscribers");
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_AHandlerThatThrows_DoesNotBreakTheRejoinOrOtherHandlers()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var other = 0;
+        using var failing = sut.OnConnectionRestored(async () =>
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("subscriber failed");
+        });
+        using var counting = sut.OnConnectionRestored(() => CountAsync(ref other));
+
+        await sut.JoinChannelAsync("event:1");
+        int joinsBeforeDrop = server.JoinCount("event:1");
+        server.DropAll(new IOException("connection lost"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref other) == 1);
+        sut.IsConnected.Should().BeTrue("the connection must survive a handler that throws");
+        server.JoinCount("event:1").Should().BeGreaterThan(joinsBeforeDrop, "the rejoin ran before the handlers were told");
+    }
+
+    [Fact]
+    public async Task ConnectionRestored_ADisposedSubscription_IsNotCalled()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { }, new ImmediateRetryPolicy());
+        var removed = 0;
+        var kept = 0;
+        sut.OnConnectionRestored(() => CountAsync(ref removed)).Dispose();
+        using var subscription = sut.OnConnectionRestored(() => CountAsync(ref kept));
+
+        await sut.JoinChannelAsync("event:1");
+        server.DropAll(new IOException("connection lost"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref kept) == 1);
+        Volatile.Read(ref removed).Should().Be(0);
+    }
+
+    private static Task CountAsync(ref int counter)
+    {
+        Interlocked.Increment(ref counter);
+        return Task.CompletedTask;
+    }
+
     [Fact]
     public async Task DisposeAsync_StopsTheRestartLoop()
     {
@@ -429,7 +592,10 @@ public sealed class NotificationHubServiceTests
         sut.IsConnected.Should().BeFalse();
     }
 
-    private static NotificationHubService CreateInMemorySut(InMemoryHubServer server, Action onBuild) =>
+    private static NotificationHubService CreateInMemorySut(
+        InMemoryHubServer server,
+        Action onBuild,
+        Microsoft.AspNetCore.SignalR.Client.IRetryPolicy? retryPolicy = null) =>
         new(
             new Mock<ITokenStorageService>().Object,
             Options.Create(new ApiSettings { ApiEndpoint = "http://in-memory" }),
@@ -440,7 +606,7 @@ public sealed class NotificationHubServiceTests
             ConnectionFactory = () =>
             {
                 onBuild();
-                return server.CreateConnection();
+                return server.CreateConnection(retryPolicy);
             },
         };
 
@@ -452,6 +618,12 @@ public sealed class NotificationHubServiceTests
             DateTime.UtcNow.Should().BeBefore(deadline, "the condition should hold within five seconds");
             await Task.Delay(10, TestContext.Current.CancellationToken);
         }
+    }
+
+    /// <summary>A reconnect schedule with no wait, so the automatic reconnect path runs at once.</summary>
+    private sealed class ImmediateRetryPolicy : Microsoft.AspNetCore.SignalR.Client.IRetryPolicy
+    {
+        public TimeSpan? NextRetryDelay(Microsoft.AspNetCore.SignalR.Client.RetryContext retryContext) => TimeSpan.Zero;
     }
 
     // ── Concurrent starts must not each build a connection (L11) ──

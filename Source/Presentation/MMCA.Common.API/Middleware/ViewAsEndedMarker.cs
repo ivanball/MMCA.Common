@@ -110,7 +110,7 @@ internal static partial class ViewAsEndedMarker
     }
 
     /// <summary>This host's JWT bearer clock skew, or the library default when none is configured.</summary>
-    private static TimeSpan ClockSkew(IServiceProvider services) =>
+    internal static TimeSpan ClockSkew(IServiceProvider services) =>
         services.GetService<IOptionsMonitor<JwtBearerOptions>>()?
             .Get(JwtBearerDefaults.AuthenticationScheme)
             .TokenValidationParameters?

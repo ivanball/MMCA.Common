@@ -456,9 +456,10 @@ public sealed partial class ScheduledJobRunner(
     private sealed record JobClaim(string JobName, DateTime DueOn, string CronExpression, Guid? LockToken);
 
     /// <summary>
-    /// Executes one claimed job in a fresh DI scope, then stamps the outcome and advances the
-    /// schedule. A job exception is caught and recorded: the schedule still advances (so a
-    /// permanently failing job cannot hot-loop) and the runner survives.
+    /// Executes one claimed job in a fresh DI scope, renewing its lease while it runs, then stamps the
+    /// outcome and advances the schedule. A job exception is caught and recorded: the schedule still
+    /// advances (so a permanently failing job cannot hot-loop) and the runner survives. A job that
+    /// lost its lease is cancelled and nothing is stamped: the row is another replica's now.
     /// </summary>
     private async Task ExecuteClaimedJobAsync(
         ApplicationDbContext context,
@@ -476,7 +477,36 @@ public sealed partial class ScheduledJobRunner(
         SchedulerMetrics.LagHistogram.Record(lagSeconds, new KeyValuePair<string, object?>("job", jobName));
 
         var startTimestamp = _timeProvider.GetTimestamp();
-        (string outcome, string? error) = await InvokeJobAsync(jobName, cancellationToken).ConfigureAwait(false);
+        using var jobCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // The cycle context is idle while the job runs: the job has its own scope, and this method
+        // is the only caller of the context until it returns. The renewal is stopped and awaited in
+        // the finally below, before the stamp reuses the context, so the two never overlap.
+        using var renewalStop = new CancellationTokenSource();
+        var renewal = RenewLeaseWhileRunningAsync(context, jobName, lockToken, () => jobCancellation.CancelAsync(), renewalStop.Token);
+
+        (string Outcome, string? Error)? result = null;
+        try
+        {
+            result = await InvokeJobAsync(jobName, jobCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (jobCancellation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            // The renewal found the row under another token and cancelled this run. Nothing is stamped
+            // or counted: the occurrence belongs to the replica that took the row.
+        }
+        finally
+        {
+            await renewalStop.CancelAsync().ConfigureAwait(false);
+            await renewal.ConfigureAwait(false);
+        }
+
+        if (result is not { } completed)
+        {
+            return;
+        }
+
+        (string outcome, string? error) = completed;
         var elapsed = _timeProvider.GetElapsedTime(startTimestamp);
         var jobTag = new KeyValuePair<string, object?>("job", jobName);
         SchedulerMetrics.DurationHistogram.Record(elapsed.TotalSeconds, jobTag);
@@ -522,6 +552,64 @@ public sealed partial class ScheduledJobRunner(
     }
 
     /// <summary>
+    /// Keeps this replica's claim alive while its job runs: every half lease the row's
+    /// <c>LockedUntil</c> is pushed out by a full lease, guarded by the claim token. A renewal matching
+    /// no row means another replica owns the row, so the job is cancelled through
+    /// <paramref name="cancelJob"/>. A failed renewal is logged and retried sooner than the
+    /// next half lease. A replica that dies stops renewing, and the lease expires as it always did.
+    /// </summary>
+    /// <param name="context">The cycle's context, idle while the job runs on its own scope.</param>
+    /// <param name="jobName">The running job.</param>
+    /// <param name="lockToken">This replica's claim token.</param>
+    /// <param name="cancelJob">Cancels the running job when the lease is found lost.</param>
+    /// <param name="stopToken">Ends the renewal when the job has finished; never throws for it.</param>
+    private async Task RenewLeaseWhileRunningAsync(
+        ApplicationDbContext context,
+        string jobName,
+        Guid lockToken,
+        Func<Task> cancelJob,
+        CancellationToken stopToken)
+    {
+        var interval = TimeSpan.FromSeconds(_settings.LeaseSeconds / 2.0);
+        var retryDelay = interval / 4;
+        var delay = interval;
+
+        while (!stopToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(delay, _timeProvider, stopToken).ConfigureAwait(false);
+
+                var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+                var renewed = await context.Set<ScheduledJobEntry>()
+                    .Where(e => e.JobName == jobName && e.LockToken == lockToken)
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LockedUntil, leaseUntil), stopToken)
+                    .ConfigureAwait(false);
+
+                if (renewed == 0)
+                {
+                    LogLeaseLostWhileRunning(logger, jobName);
+                    await cancelJob().ConfigureAwait(false);
+                    return;
+                }
+
+                delay = interval;
+            }
+            catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                // A blip must not cost the job, or the lease it may still hold: try again soon, well
+                // before the lease this replica last wrote runs out.
+                LogLeaseRenewalFailed(logger, jobName, ex);
+                delay = retryDelay;
+            }
+        }
+    }
+
+    /// <summary>
     /// Resolves the job in a fresh DI scope and runs it, returning the outcome and, on failure, the
     /// message to record. Exactly like a request: the job and every scoped dependency it takes (unit
     /// of work, repositories, handlers) are built and disposed around this one run.
@@ -548,9 +636,10 @@ public sealed partial class ScheduledJobRunner(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // Host shutdown, not a job failure. Leave the row leased: it becomes claimable again when
-            // the lease expires, and the occurrence is retried then rather than being recorded as a
-            // failure it never was.
+            // Host shutdown, or a lost lease (the token is linked to both), not a job failure. On
+            // shutdown the row stays leased: it becomes claimable again when the lease expires, and the
+            // occurrence is retried then rather than being recorded as a failure it never was. On a
+            // lost lease the caller stamps nothing, because the row is another replica's.
             throw;
         }
         catch (Exception ex)
@@ -595,4 +684,10 @@ public sealed partial class ScheduledJobRunner(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled job {JobName} outlived its claim lease; its outcome was discarded because another replica now owns the row")]
     private static partial void LogLeaseLost(ILogger logger, string jobName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled job {JobName} lost its claim lease while running; another replica owns the row, so this run is being cancelled")]
+    private static partial void LogLeaseLostWhileRunning(ILogger logger, string jobName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not renew the claim lease of scheduled job {JobName}; retrying")]
+    private static partial void LogLeaseRenewalFailed(ILogger logger, string jobName, Exception exception);
 }

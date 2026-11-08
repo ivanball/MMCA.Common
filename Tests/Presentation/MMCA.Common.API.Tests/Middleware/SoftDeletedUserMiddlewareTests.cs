@@ -140,6 +140,30 @@ public sealed class SoftDeletedUserMiddlewareTests
             Times.Once);
     }
 
+    // -- A host with a raised access-token lifetime: the marker covers it plus the clock skew --
+    [Fact]
+    public async Task InvokeAsync_OnAHostWithARaisedAccessTokenLifetime_WritesAMarkerCoveringIt()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetFromSharedStoreAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
+        _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var tokens = new Mock<ITokenService>();
+        tokens.SetupGet(t => t.AccessTokenLifetime).Returns(TimeSpan.FromMinutes(60));
+        var sut = new SoftDeletedUserMiddleware(_ => Task.CompletedTask);
+        var services = new ServiceCollection();
+        services.AddSingleton(_validator.Object);
+        services.AddSingleton(tokens.Object);
+        var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+
+        await InvokeAsync(sut, context);
+
+        _cacheService.Verify(
+            c => c.SetAsync(CacheKey, true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // ── Non-deleted user passes through ──
     [Fact]
     public async Task InvokeAsync_NonDeletedUser_PassesThrough()

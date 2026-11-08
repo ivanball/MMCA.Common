@@ -16,6 +16,9 @@ namespace MMCA.Common.Application.Auth;
 /// </remarks>
 public static class SoftDeletedUserCache
 {
+    /// <summary>The JWT bearer library's default clock skew, which the framework never overrides.</summary>
+    private static readonly TimeSpan DefaultClockSkew = TimeSpan.FromMinutes(5);
+
     /// <summary>
     /// Lifetime of the deleted-user marker.
     /// </summary>
@@ -28,11 +31,25 @@ public static class SoftDeletedUserCache
     /// the marker therefore lasts the default access-token lifetime (15 minutes) plus that skew,
     /// 20 minutes. This is a constant rather than a read of the JWT settings because the marker
     /// is written through this static helper, where those settings are not reachable; a host that
-    /// raises the access-token lifetime or the clock skew should write its own marker with a
-    /// duration that covers both. Only positive markers are written: the middleware never caches a
-    /// "not deleted" answer.
+    /// raises the access-token lifetime or the clock skew writes a longer marker through
+    /// <see cref="MarkerDurationFor"/>. Only positive markers are written: the middleware never caches
+    /// a "not deleted" answer.
     /// </remarks>
     public static TimeSpan MarkerDuration => TimeSpan.FromMinutes(20);
+
+    /// <summary>
+    /// The lifetime a marker needs on a host with this access-token lifetime: long enough to outlast
+    /// an already-issued token, which is accepted until its expiry plus the JWT bearer clock skew, and
+    /// never shorter than <see cref="MarkerDuration"/>.
+    /// </summary>
+    /// <param name="accessTokenLifetime">The host's access-token lifetime.</param>
+    /// <param name="clockSkew">The host's JWT bearer clock skew; the library default of 5 minutes when null.</param>
+    /// <returns>The marker lifetime to write.</returns>
+    public static TimeSpan MarkerDurationFor(TimeSpan accessTokenLifetime, TimeSpan? clockSkew = null)
+    {
+        var covering = accessTokenLifetime + (clockSkew ?? DefaultClockSkew);
+        return covering > MarkerDuration ? covering : MarkerDuration;
+    }
 
     /// <summary>
     /// Builds the cache key holding the soft-deleted marker for a user.
@@ -64,5 +81,25 @@ public static class SoftDeletedUserCache
         ArgumentNullException.ThrowIfNull(cache);
 
         return cache.SetAsync(KeyFor(userId), true, MarkerDuration, cancellationToken);
+    }
+
+    /// <summary>
+    /// Writes the soft-deleted marker for a user with an explicit lifetime, for a host whose access
+    /// tokens outlive <see cref="MarkerDuration"/> (see <see cref="MarkerDurationFor"/>).
+    /// </summary>
+    /// <param name="cache">The cache service to write to.</param>
+    /// <param name="userId">The user identifier that was soft-deleted.</param>
+    /// <param name="duration">The marker lifetime.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public static Task MarkDeletedForAsync(
+        ICacheService cache,
+        UserIdentifierType userId,
+        TimeSpan duration,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cache);
+
+        return cache.SetAsync(KeyFor(userId), true, duration, cancellationToken);
     }
 }

@@ -189,10 +189,23 @@ internal static class PollingLoop
         var backoff = baseSeconds * Math.Pow(2, exponent);
 
         // Jitter is applied BEFORE the cap so a capped backoff stays exactly at the ceiling.
-#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
-        var jitter = 0.8 + Random.Shared.NextDouble() * 0.4;
-#pragma warning restore S2245, CA5394
+        var jitter = 0.8 + NextJitter() * 0.4;
 
         return Math.Min(backoff * jitter, capSeconds);
     }
+
+    /// <summary>
+    /// How long a row a circuit breaker rejected stays leased: the break plus up to a quarter of it,
+    /// capped at <paramref name="capSeconds"/>. Without the jitter every rejected row of a batch
+    /// would become claimable at the same instant the circuit half-opens.
+    /// </summary>
+    /// <param name="breakDuration">How long the circuit stays open before a trial.</param>
+    /// <param name="capSeconds">The ceiling, in seconds (the lease).</param>
+    /// <returns>The wait, in seconds, before the row becomes claimable again.</returns>
+    internal static double ComputeCircuitOpenBackoffSeconds(TimeSpan breakDuration, int capSeconds) =>
+        Math.Min(breakDuration.TotalSeconds * (1 + NextJitter() * 0.25), capSeconds);
+
+#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
+    private static double NextJitter() => Random.Shared.NextDouble();
+#pragma warning restore S2245, CA5394
 }

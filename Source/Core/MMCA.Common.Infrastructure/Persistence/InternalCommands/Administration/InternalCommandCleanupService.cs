@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,6 +5,7 @@ using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Persistence.Retention;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 
@@ -107,15 +107,18 @@ public sealed partial class InternalCommandCleanupService(
                 var context = scope.ServiceProvider.GetRequiredService<IDbContextFactory>()
                     .GetDbContext(target.Source);
 
-                var deleted = await context.Set<InternalCommandMessage>()
-                    .Where(c => c.ProcessedOn != null && c.ProcessedOn < cutoff)
-                    .ExecuteDeleteAsync(cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (deleted > 0)
-                {
-                    LogPurged(logger, deleted, sourceName);
-                }
+                await BatchedDelete.DeleteAsync<InternalCommandMessage, DateTime?>(
+                    context,
+                    c => c.ProcessedOn != null && c.ProcessedOn < cutoff,
+                    c => c.ProcessedOn,
+                    deleted =>
+                    {
+                        if (deleted > 0)
+                        {
+                            LogPurged(logger, deleted, sourceName);
+                        }
+                    },
+                    cancellationToken).ConfigureAwait(false);
 
                 await SweepDeadLettersAsync(context, sourceName, deadLetterCutoff, cancellationToken)
                     .ConfigureAwait(false);
@@ -136,22 +139,25 @@ public sealed partial class InternalCommandCleanupService(
     /// Deletes the abandoned rows of one source past their own window, keyed on
     /// <c>DeadLetteredOn</c> rather than the completion stamp they never got.
     /// </summary>
-    private async Task SweepDeadLettersAsync(
+    private Task SweepDeadLettersAsync(
         ApplicationDbContext context,
         string sourceName,
         DateTime deadLetterCutoff,
-        CancellationToken cancellationToken)
-    {
-        var deleted = await context.Set<InternalCommandMessage>()
-            .Where(c => c.DeadLetteredOn != null && c.DeadLetteredOn < deadLetterCutoff)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
+        CancellationToken cancellationToken) =>
 
-        if (deleted > 0)
-        {
-            LogDeadLetterPurged(logger, deleted, sourceName);
-        }
-    }
+        // Reported even when a later batch fails: this deletes the only record the work was asked for.
+        BatchedDelete.DeleteAsync<InternalCommandMessage, DateTime?>(
+            context,
+            c => c.DeadLetteredOn != null && c.DeadLetteredOn < deadLetterCutoff,
+            c => c.DeadLetteredOn,
+            deleted =>
+            {
+                if (deleted > 0)
+                {
+                    LogDeadLetterPurged(logger, deleted, sourceName);
+                }
+            },
+            cancellationToken);
 
     /// <summary>
     /// The relational physical sources whose queue tables this host owns: the same set the

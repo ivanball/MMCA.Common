@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
@@ -18,8 +19,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
 /// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
-/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (15-minute TTL,
-/// <c>SoftDeletedUserCache.MarkerDuration</c>, best effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
+/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (living as long as
+/// an already-issued token can, <c>SoftDeletedUserCache.MarkerDurationFor</c>, best effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
 /// idempotent, retry-safe work there, or schedule an internal command inside the unit (as ADC does for
 /// the avatar blob).
 /// </summary>
@@ -65,6 +66,11 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
 /// <param name="cacheService">The cache the soft-deleted user marker is written to (ADR-047).</param>
 /// <param name="logger">Logger for the erasure audit line and the marker-failure warning.</param>
+/// <param name="tokenService">
+/// Supplies the host's access-token lifetime, which sizes the soft-deleted marker so it outlives every
+/// token issued before the erasure. Required, so a host that raises the lifetime cannot silently keep
+/// a shorter marker. The default bearer clock skew is assumed: this layer cannot read the host's.
+/// </param>
 /// <param name="refreshSessions">
 /// The refresh-session store, or <see langword="null"/> on a host that registered none (refresh
 /// sessions are opt-in). When present, every un-revoked session of the account is revoked and every
@@ -84,6 +90,7 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ICacheService cacheService,
     ILogger logger,
+    ITokenService tokenService,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
     IViewAsGrantStore? viewAsGrants = null) : ICommandHandler<TCommand, Result>
@@ -184,7 +191,11 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         try
         {
             await SoftDeletedUserCache
-                .MarkDeletedAsync(cacheService, command.UserId, cancellationToken)
+                .MarkDeletedForAsync(
+                    cacheService,
+                    command.UserId,
+                    SoftDeletedUserCache.MarkerDurationFor(tokenService.AccessTokenLifetime),
+                    cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Mcp.McpToolPublicAttribute
+MMCA.Common.Mcp.McpToolPublicAttribute.McpToolPublicAttribute() -> void

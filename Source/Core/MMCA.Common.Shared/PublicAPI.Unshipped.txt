@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute
+MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute.ViewAsReadOnlyEndpointAttribute() -> void

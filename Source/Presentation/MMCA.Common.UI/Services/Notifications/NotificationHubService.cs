@@ -61,6 +61,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     private readonly ChannelReferenceCounter _channelRefs = new();
     private readonly Dictionary<string, List<ChannelSubscription>> _channelSubscriptions = [];
+    private readonly List<ConnectionRestoredSubscription> _connectionRestoredSubscriptions = [];
     private HubConnection? _hubConnection;
     private bool _disposed;
 
@@ -69,6 +70,10 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     // starting a connection, so nothing begun before a stop connects after it; the cancellation also
     // cuts short the backoffs and an in-flight connect, which keeps StopAsync's wait for _startSync short.
     private CancellationTokenSource _lifetime = new();
+
+    // The connection a restored signal was last raised for: a restart loop that finds a connection
+    // already signalled stays quiet, so overlapping loops report one restored connection once.
+    private HubConnection? _restoredConnection;
 
     /// <summary>
     /// Callback invoked when a push notification is received.
@@ -224,7 +229,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
         // Group membership lives on the server connection; a new connection after an automatic
         // reconnect starts with no groups, so every tracked channel must be re-joined.
-        connection.Reconnected += _ => RejoinChannelsAsync();
+        connection.Reconnected += _ => RejoinAndRaiseAsync(connection, lifetime);
 
         // Raised with an error when a reconnect is refused or the schedule stopped on a refused
         // authentication; a null error is a deliberate StopAsync or dispose and must not restart. The
@@ -401,6 +406,31 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     }
 
     /// <summary>
+    /// Subscribes a handler invoked once for each restored connection, after the rejoin of its held
+    /// channels was attempted: on the automatic reconnect path and on the restart that follows a
+    /// close. It runs even if a join failed, because a page should still refresh once. SignalR delivers
+    /// nothing that was sent while the connection was down, so a subscriber re-reads whatever it shows
+    /// live. Not invoked for the first successful start of a connection, nor once the service has been
+    /// stopped or disposed. Handlers are awaited one after another; one that throws, synchronously or
+    /// after its first await, is logged and does not affect the rejoin or the other handlers. A method
+    /// rather than an event so a handler is awaited instead of escaping as <c>async void</c>.
+    /// </summary>
+    /// <param name="handler">Invoked when a connection has been restored.</param>
+    /// <returns>A subscription that unsubscribes the handler when disposed.</returns>
+    public IDisposable OnConnectionRestored(Func<Task> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+
+        var subscription = new ConnectionRestoredSubscription(this, handler);
+        lock (_channelSync)
+        {
+            _connectionRestoredSubscriptions.Add(subscription);
+        }
+
+        return subscription;
+    }
+
+    /// <summary>
     /// Stops the SignalR connection. Called on logout or disposal.
     /// </summary>
     /// <remarks>
@@ -466,6 +496,8 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 await _hubConnection.DisposeAsync().ConfigureAwait(false);
                 _hubConnection = null;
             }
+
+            Volatile.Write(ref _restoredConnection, null);
         }
         finally
         {
@@ -651,8 +683,22 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         {
             bool keepTrying = await StartForLifetimeAsync(lifetime).ConfigureAwait(false);
 
-            if (!keepTrying || IsLifetimeOver(lifetime) || _hubConnection is { State: not HubConnectionState.Disconnected })
+            if (!keepTrying || IsLifetimeOver(lifetime))
             {
+                return;
+            }
+
+            if (_hubConnection is { State: not HubConnectionState.Disconnected })
+            {
+                // The rejoin ran inside the start. Only a connection that is really up reports it (a
+                // Reconnecting one will reach the Reconnected handler, which raises its own signal),
+                // and only the first loop to find it does.
+                if (_hubConnection is { State: HubConnectionState.Connected } restored
+                    && !ReferenceEquals(Interlocked.Exchange(ref _restoredConnection, restored), restored))
+                {
+                    await RaiseConnectionRestoredAsync().ConfigureAwait(false);
+                }
+
                 return;
             }
 
@@ -693,6 +739,55 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             {
                 LogChannelHandlerFailed(ex, channelKey, eventName);
             }
+        }
+    }
+
+    /// <summary>
+    /// The automatic reconnect path: one Reconnected is one restoration, so it always signals, unless a
+    /// stop or dispose ended this connection's lifetime during the rejoin. It also takes the latch, so
+    /// a restart loop still running does not report the same connection again.
+    /// </summary>
+    private async Task RejoinAndRaiseAsync(HubConnection connection, CancellationToken lifetime)
+    {
+        await RejoinChannelsAsync().ConfigureAwait(false);
+
+        if (!IsLifetimeOver(lifetime) && connection.State == HubConnectionState.Connected)
+        {
+            Volatile.Write(ref _restoredConnection, connection);
+            await RaiseConnectionRestoredAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Awaits each <see cref="OnConnectionRestored"/> handler in its own guard, so one that throws
+    /// neither stops the others nor reaches the connection callback that raised the signal.
+    /// </summary>
+    private async Task RaiseConnectionRestoredAsync()
+    {
+        ConnectionRestoredSubscription[] subscriptions;
+        lock (_channelSync)
+        {
+            subscriptions = [.. _connectionRestoredSubscriptions];
+        }
+
+        foreach (ConnectionRestoredSubscription subscription in subscriptions)
+        {
+            try
+            {
+                await subscription.Handler().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LogConnectionRestoredHandlerFailed(ex);
+            }
+        }
+    }
+
+    private void RemoveConnectionRestoredSubscription(ConnectionRestoredSubscription subscription)
+    {
+        lock (_channelSync)
+        {
+            _connectionRestoredSubscriptions.Remove(subscription);
         }
     }
 
@@ -769,6 +864,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     [LoggerMessage(Level = LogLevel.Warning, Message = "Channel event handler failed for {ChannelKey}/{EventName}")]
     private partial void LogChannelHandlerFailed(Exception exception, string channelKey, string eventName);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A ConnectionRestored handler failed after the notification hub reconnected")]
+    private partial void LogConnectionRestoredHandlerFailed(Exception exception);
+
     private sealed class ChannelSubscription(NotificationHubService owner, string channelKey, Func<string, string, Task> handler) : IDisposable
     {
         public string ChannelKey { get; } = channelKey;
@@ -776,5 +874,12 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         public Func<string, string, Task> Handler { get; } = handler;
 
         public void Dispose() => owner.RemoveSubscription(this);
+    }
+
+    private sealed class ConnectionRestoredSubscription(NotificationHubService owner, Func<Task> handler) : IDisposable
+    {
+        public Func<Task> Handler { get; } = handler;
+
+        public void Dispose() => owner.RemoveConnectionRestoredSubscription(this);
     }
 }
