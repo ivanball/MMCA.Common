@@ -20,9 +20,9 @@ namespace MMCA.Common.Application.Auth.MachineClients;
 /// permissions exactly as a person's token does, plus <c>client_id</c> and <c>token_use=machine</c>.
 /// </para>
 /// <para>
-/// <b>Two guardrails on the role</b>, checked at create AND at every mint (a role can gain a
-/// permission after the client was created): a role granting <c>users:view-as</c> or
-/// <c>users:manage</c> never backs a client.
+/// <b>Four refused permissions on the role</b>, checked at create AND at every mint (a role can gain a
+/// permission after the client was created): a role granting <c>users:view-as</c>,
+/// <c>users:manage</c>, <c>roles:manage</c> or <c>clients:manage</c> never backs a client.
 /// </para>
 /// </remarks>
 /// <param name="store">The client rows.</param>
