@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.Passkeys;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Infrastructure.Configuration;
@@ -20,7 +21,8 @@ public sealed class CloudAdapterTripwireTests
 {
     private static ValidateOptionsResult Validate(
         Dictionary<string, string?> settings,
-        INativePushSender? nativePush = null)
+        INativePushSender? nativePush = null,
+        IPasskeyCeremony? passkeyCeremony = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
@@ -31,9 +33,36 @@ public sealed class CloudAdapterTripwireTests
             services.AddSingleton(nativePush);
         }
 
+        if (passkeyCeremony is not null)
+        {
+            services.AddSingleton(passkeyCeremony);
+        }
+
         using var provider = services.BuildServiceProvider();
         return new CloudAdapterTripwire(provider).Validate(Options.DefaultName, new CloudAdapterTripwireOptions());
     }
+
+    [Fact]
+    public void PasskeysEnabled_WithoutTheAdapterCall_FailsNamingIt()
+    {
+        var result = Validate(new() { ["Passkeys:Enabled"] = "true" });
+
+        result.Failed.Should().BeTrue("an enabled section the host cannot serve would otherwise answer 404 on every passkey route");
+        result.FailureMessage.Should().Contain("Passkeys:Enabled")
+            .And.Contain("MMCA.Common.Passkeys").And.Contain("AddPasskeys(configuration)");
+    }
+
+    [Fact]
+    public void PasskeysEnabled_WithTheAdapterCall_Succeeds() =>
+        Validate(new() { ["Passkeys:Enabled"] = "true" }, passkeyCeremony: Mock.Of<IPasskeyCeremony>())
+            .Succeeded.Should().BeTrue();
+
+    [Theory]
+    [InlineData("false")]
+    [InlineData("")]
+    public void PasskeysNotEnabled_StaysSilent(string enabled) =>
+        Validate(new() { ["Passkeys:Enabled"] = enabled, ["Passkeys:RelyingPartyId"] = "example.test" })
+            .Succeeded.Should().BeTrue();
 
     [Fact]
     public void FileStorageConfigured_WithTheNullDefault_StaysSilent() =>

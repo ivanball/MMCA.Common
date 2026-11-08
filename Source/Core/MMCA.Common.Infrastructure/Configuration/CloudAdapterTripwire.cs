@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.Passkeys;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 using MMCA.Common.Infrastructure.Storage;
@@ -32,6 +33,13 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
     /// <summary>The configuration key that switches native push on.</summary>
     internal const string NativePushEnabledKey = "NativePush:Enabled";
 
+    /// <summary>
+    /// The configuration key that switches passkeys on. The WebAuthn ceremony lives in the opt-in
+    /// <c>MMCA.Common.Passkeys</c> package (ADR-139), so an enabled section without its registration call
+    /// is the same silent failure as a push section without its adapter: every passkey route 404s.
+    /// </summary>
+    internal const string PasskeysEnabledKey = "Passkeys:Enabled";
+
     /// <inheritdoc />
     public ValidateOptionsResult Validate(string? name, CloudAdapterTripwireOptions options)
     {
@@ -45,6 +53,14 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
 
         using (var scope = serviceProvider.CreateScope())
         {
+            if (bool.TryParse(configuration[PasskeysEnabledKey], out var passkeysEnabled)
+                && passkeysEnabled
+                && scope.ServiceProvider.GetService<IPasskeyCeremony>() is null)
+            {
+                failures.Add(
+                    "Passkeys:Enabled is true, but no passkey ceremony is registered, so every passkey route would answer 404. Reference MMCA.Common.Passkeys and call services.AddPasskeys(configuration), with Passkeys:RelyingPartyId and Passkeys:Origins.");
+            }
+
             if (bool.TryParse(configuration[NativePushEnabledKey], out var nativePushEnabled)
                 && nativePushEnabled
                 && scope.ServiceProvider.GetService<INativePushSender>() is null or NullNativePushSender)
