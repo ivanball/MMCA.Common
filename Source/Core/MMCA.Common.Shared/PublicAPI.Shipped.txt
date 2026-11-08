@@ -542,6 +542,8 @@ MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ViewAsGrantSummaryR
 MMCA.Common.Shared.Auth.RoleValue
 MMCA.Common.Shared.Auth.RoleValue.RoleValue(string! value) -> void
 MMCA.Common.Shared.Auth.RoleValue.Value.get -> string!
+MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute
+MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute.ViewAsReadOnlyEndpointAttribute() -> void
 MMCA.Common.Shared.AuthenticationRequest
 MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest() -> void
 MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest(string! DeviceId, string! Email, string! DeviceFormFactor, string! DevicePlatform, string! DeviceModel, string! DeviceManufacturer, string! DeviceName, string! DeviceType) -> void

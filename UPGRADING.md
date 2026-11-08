@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.282.0] - 2026-11-08
 
 **Breaking: one added constructor parameter on `DeleteUserHandlerBase<TUser, TCommand>`.** No
 namespace, type or configuration key moved.

@@ -238,6 +238,10 @@ MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.Translations_AreC
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.LocalizedTextConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.UserVisibleText_IsLocalized() -> void
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.EveryMcpTool_ShouldDeclare_WhoMayCallIt() -> void
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.McpToolAccessDeclarationTestsBase() -> void
+MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.ScannedMcpToolSet_IsNotEmpty() -> void
 MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase
 MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.EveryServiceAppSettings_BoundsBrokerBackpressure() -> void
 MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.MessageBusBackpressureTestsBase() -> void
@@ -401,6 +405,7 @@ abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.Minim
 abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.RequiredCultures.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 abstract MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.Services.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.MicroserviceExtractionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ModuleConformanceTestsBase<TModule>.ExpectedName.get -> string!
@@ -479,6 +484,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersDoNotDepend
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersDoNotDependOnInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersInheritApiControllerBase(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<string!>? exemptFullNames = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ConventionForeignKeysRestrictDeletes(object! model) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CountMcpTools(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CountNamedPermissions(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DirectTokenReads(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DistinctErrorCodeCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
@@ -529,6 +535,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsResid
 static MMCA.Common.Testing.Architecture.ArchitectureRules.InvariantClassesAreStatic(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelSdksStayAtTheModelBoundary(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.LayerMapDeclaresLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.McpToolsDeclareAccess(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApisAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApplicationsAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApplicationsDoNotReachOtherInfrastructures(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -644,6 +651,7 @@ virtual MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanAl
 virtual MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.MinimumBaseResources.get -> int
 virtual MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.MinimumScannedFiles.get -> int
+virtual MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.MinimumMcpTools.get -> int
 virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.AppSettingsResource(string! service) -> string!
 virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.ModuleConformanceTestsBase<TModule>.AssertDisabledStubs(TModule! module) -> void

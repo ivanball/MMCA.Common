@@ -1,2 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Services.Notifications.NotificationHubService.OnConnectionRestored(System.Func<System.Threading.Tasks.Task!>! handler) -> System.IDisposable!

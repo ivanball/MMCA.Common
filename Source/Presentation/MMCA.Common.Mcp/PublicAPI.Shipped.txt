@@ -16,6 +16,8 @@ MMCA.Common.Mcp.McpSettings.Tools.get -> System.Collections.Generic.IDictionary<
 MMCA.Common.Mcp.McpToolPermissionAttribute
 MMCA.Common.Mcp.McpToolPermissionAttribute.McpToolPermissionAttribute(string! permission) -> void
 MMCA.Common.Mcp.McpToolPermissionAttribute.Permission.get -> string!
+MMCA.Common.Mcp.McpToolPublicAttribute
+MMCA.Common.Mcp.McpToolPublicAttribute.McpToolPublicAttribute() -> void
 MMCA.Common.Mcp.McpToolSettings
 MMCA.Common.Mcp.McpToolSettings.Enabled.get -> bool
 MMCA.Common.Mcp.McpToolSettings.Enabled.set -> void

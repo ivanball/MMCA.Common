@@ -4,7 +4,29 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.282.0] - 2026-11-08
+
+Reliability wave: the hub tells a subscriber when a connection has been restored, view-as works over gRPC, an open circuit no longer spends the outbox retry budget, retention deletes are batched, long-running scheduled jobs renew their lease, and the deleted-user marker outlives a raised access-token lifetime.
+
+**Breaking:** `DeleteUserHandlerBase<TUser, TCommand>` takes a required `ITokenService tokenService` after `logger`, before the optional parameters (MMCA.Common.Application; ADR-047), so a host that raises the access-token lifetime cannot silently keep a 20-minute deleted-user marker. A subclass adds the parameter to its own constructor and passes it to the base as the fourth argument; see [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **`NotificationHubService.OnConnectionRestored`** (MMCA.Common.UI). Subscribes a `Func<Task>` handler (dispose the returned subscription to unsubscribe) that runs once for each restored connection, after the rejoin of its held channels was attempted, on both reconnect paths (the automatic reconnect and the restart after a close), and even if a join failed, because a page should still refresh once. It does not run for the first successful start of a connection or once the service has been stopped or disposed. SignalR delivers nothing that was sent while the connection was down, so a subscriber re-reads what it shows live. Handlers are awaited one after another; one that throws is logged and affects neither the rejoin nor the other handlers.
+- **`ViewAsReadOnlyEndpointAttribute`** (MMCA.Common.Shared, namespace `MMCA.Common.Shared.Auth`; ADR-137). A host marks a read-only gRPC service or method with it, and `ViewAsGuardMiddleware` then treats a POST routed to that endpoint as safe for the METHOD rule only (any other method is still refused): `ViewAs:Enabled` and the grant-liveness check still run, there is no exemption by content type or for gRPC in general, and `ViewAsCommandDecorator` is unchanged. Without the mark, a view-as read that fans out over gRPC is refused on the peer, because gRPC is always POST.
+- **`McpToolPublicAttribute`** (MMCA.Common.Mcp) and **`McpToolAccessDeclarationTestsBase`** (MMCA.Common.Testing.Architecture; ADR-138). `[McpToolPublic]` records that a tool is public on purpose, with no runtime effect. The test base fails when an `[McpServerTool]` method, or an override of one, carries anything other than exactly one of `[McpToolPermission]` or `[McpToolPublic]` of its own; the subclass supplies `TargetAssemblies` and an optional `MinimumMcpTools` floor. The rule is also exposed as `ArchitectureRules.McpToolsDeclareAccess` and `ArchitectureRules.CountMcpTools`.
+- **`SoftDeletedUserCache.MarkerDurationFor`** and **`SoftDeletedUserCache.MarkDeletedForAsync`** (MMCA.Common.Application; ADR-047); see Fixed.
+
+### Changed
+
+- **Retention deletes run in batches of 1000** (MMCA.Common.Infrastructure). The outbox processed and dead-letter purges, the inbox purge, the internal-command processed and dead-letter purges and the refresh-session purge were single unbatched deletes; they now share the loop `AuditTrailCleanupJob` used (ids read a page at a time, deleted by id). Cancellation is observed between batches, the total deleted is logged even when a later batch throws or the sweep is cancelled mid-batch, a soft-deletable entity is refused, and it runs on every relational engine the purges support. The refresh-session sweep orders by its key. No new table or column.
+- **A scheduled job's lease is renewed while it runs** (MMCA.Common.Infrastructure). `ScheduledJobRunner` extends `LockedUntil` every half `Scheduler:LeaseSeconds`, guarded by the claim token and on the cycle's own idle context, stopped before the completion stamp. A renewal matching no row means another replica owns the row: the run is cancelled, nothing is stamped, and one Warning names the job. A failed renewal is logged and retried sooner. A replica that dies stops renewing, so its claim is released when the lease expires, as before.
+
+### Fixed
+
+- **An open circuit no longer consumes the outbox retry budget** (MMCA.Common.Infrastructure, Shared; ADR-087). A `BrokenCircuitException` was charged to the row like a failed publish, so a long broker outage dead-lettered rows that never reached the broker. It no longer increments `RetryCount` and cannot dead-letter the row; the row is re-leased for about `BrokerResilienceDefaults.BreakDuration` plus jitter, capped at the lease, and keeps `LastError`, the `broker.circuit.open.count` counter and the once-per-batch log. Real publish failures and failed half-open probes keep counting. The breaker now also runs on the processor's injected `TimeProvider`.
+- **A scheduled job longer than its lease no longer runs twice** (MMCA.Common.Infrastructure). On two or more replicas such a job ran concurrently, its completion stamp was dropped and the schedule never advanced; the renewal above closes it.
+- **The deleted-user marker outlives a raised access-token lifetime** (MMCA.Common.Application, API; ADR-047). `SoftDeletedUserCache.MarkerDuration` stays 20 minutes, the floor. `DeleteUserHandlerBase`, `SoftDeletedUserMiddleware` and `MachineClientService` now write max(20 minutes, access-token lifetime plus clock skew), so above 15 minutes a deleted user is no longer served on a host without the validator once the marker lapses. The middleware reads the host's bearer clock skew; the two Application-layer writers assume the 5-minute default.
 
 ## [1.281.0] - 2026-11-08
 
