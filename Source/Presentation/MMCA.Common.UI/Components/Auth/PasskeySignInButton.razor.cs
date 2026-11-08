@@ -16,8 +16,9 @@ namespace MMCA.Common.UI.Components.Auth;
 /// token pair is already stored (through <see cref="IPasskeyUIService.SignInAsync"/>) and
 /// <see cref="OnSignedIn"/> runs so the page can land the user.
 /// <para>
-/// <b>Autofill.</b> After the first render it also starts conditional mediation, so a browser that
-/// supports it lists the user's passkeys among the email field's suggestions (the page marks that
+/// <b>Autofill.</b> After the first render, and only where the browser supports conditional mediation
+/// (<see cref="IPasskeyCapability.IsAutofillAvailableAsync"/>, asked before any options are requested,
+/// so an unsupported browser stores no challenge), it also starts autofill, so the browser lists the user's passkeys among the email field's suggestions (the page marks that
 /// field <c>autocomplete="email webauthn"</c>). Picking one completes the same way a click does.
 /// </para>
 /// </summary>
@@ -67,6 +68,13 @@ public partial class PasskeySignInButton : IAsyncDisposable
 
         try
         {
+            // Support first: options store a server challenge, which a browser without conditional
+            // mediation could never redeem.
+            if (!await Capability.IsAutofillAvailableAsync(_cts.LifetimeToken()))
+            {
+                return;
+            }
+
             var options = await Passkeys.BeginSignInAsync(_cts.LifetimeToken());
             if (options.TryGetValue(out var flow))
             {

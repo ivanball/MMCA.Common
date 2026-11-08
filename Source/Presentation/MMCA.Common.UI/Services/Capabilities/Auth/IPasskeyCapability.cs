@@ -31,6 +31,15 @@ public interface IPasskeyCapability
     Task<JsonElement?> GetAsync(JsonElement options, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Whether this browser supports passkey autofill (conditional mediation): <c>PublicKeyCredential</c>
+    /// exists and <c>isConditionalMediationAvailable()</c> answers true. Asked BEFORE any sign-in options are
+    /// requested for autofill, so a browser without it stores no server challenge.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when autofill can be started.</returns>
+    Task<bool> IsAutofillAvailableAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Starts passkey autofill (conditional mediation): the browser offers the user's passkeys in the
     /// email field's suggestions, and <paramref name="onCredential"/> runs if one is picked.
     /// </summary>

@@ -134,14 +134,20 @@ export async function get(options) {
     }
 }
 
+// Whether this browser can run passkey autofill (conditional mediation). The sign-in page asks this
+// BEFORE it requests sign-in options for autofill, so a browser without it stores no server challenge.
+export async function isAutofillAvailable() {
+    if (!isSupported() || typeof PublicKeyCredential.isConditionalMediationAvailable !== 'function') {
+        return false;
+    }
+    return await PublicKeyCredential.isConditionalMediationAvailable();
+}
+
 // Conditional mediation: the browser lists the user's passkeys among the email field's autofill
 // suggestions (the field carries autocomplete="... webauthn"). Resolves at once with whether it
 // started; the pick, if any, arrives later through the .NET callback.
 export async function startAutofill(options, dotNetCallback) {
-    if (!isSupported() || typeof PublicKeyCredential.isConditionalMediationAvailable !== 'function') {
-        return false;
-    }
-    if (!(await PublicKeyCredential.isConditionalMediationAvailable())) {
+    if (!(await isAutofillAvailable())) {
         return false;
     }
 

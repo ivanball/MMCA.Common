@@ -103,3 +103,6 @@ MMCA.Common.UI.Services.Auth.AuthUIService.RenameAsync(System.Guid id, string! n
 MMCA.Common.UI.Services.Auth.AuthUIService.SignInAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 override MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!

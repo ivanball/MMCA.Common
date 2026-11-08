@@ -117,6 +117,43 @@ public sealed class LoginPasskeyTests : BunitTestBase
         _passkeys.Verify(x => x.SignInAsync(It.IsAny<PasskeySignInRequest>(), It.IsAny<CancellationToken>()), Times.Never());
     }
 
+    // == Autofill asks the server for a challenge only where the browser can use one ==
+    [Fact]
+    public void Autofill_OnABrowserWithoutConditionalMediation_RequestsNoChallenge()
+    {
+        Offer();
+        Available();
+        _capability.Setup(x => x.IsAutofillAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        Navigation.NavigateTo("/login");
+
+        var cut = RenderUnderTest<Login>(_ => { });
+
+        cut.WaitForAssertion(() => _capability.Verify(x => x.IsAutofillAvailableAsync(It.IsAny<CancellationToken>()), Times.Once()));
+        _passkeys.Verify(x => x.BeginSignInAsync(It.IsAny<CancellationToken>()), Times.Never(), "an unusable challenge must not be stored on every Login render");
+        _capability.Verify(
+            x => x.StartAutofillAsync(It.IsAny<JsonElement>(), It.IsAny<Func<JsonElement, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public void Autofill_OnABrowserWithConditionalMediation_RequestsOneChallengeAndStartsIt()
+    {
+        Offer();
+        Available();
+        var options = JsonSerializer.SerializeToElement(new { challenge = "abc" });
+        _capability.Setup(x => x.IsAutofillAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _passkeys.Setup(x => x.BeginSignInAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PasskeyOptionsResponse("flow-auto", options)));
+        Navigation.NavigateTo("/login");
+
+        var cut = RenderUnderTest<Login>(_ => { });
+
+        cut.WaitForAssertion(() => _capability.Verify(
+            x => x.StartAutofillAsync(It.IsAny<JsonElement>(), It.IsAny<Func<JsonElement, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Once()));
+        _passkeys.Verify(x => x.BeginSignInAsync(It.IsAny<CancellationToken>()), Times.Once());
+    }
+
     private void Offer() => Services.AddSingleton(Options.Create(new SignInSettings { OfferPasskeys = true }));
 
     private void Available()

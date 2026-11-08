@@ -41,6 +41,21 @@ public sealed class BrowserPasskeyCapability : IPasskeyCapability, IAsyncDisposa
         InvokeCeremonyAsync("get", options, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<bool> IsAutofillAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var module = await _module.GetOrImportAsync(cancellationToken).ConfigureAwait(false);
+            return await module.InvokeAsync<bool>("isAutofillAvailable", cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (IsInteropUnavailable(exception))
+        {
+            // A browser (or a prerender) that cannot answer cannot run autofill either.
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<bool> StartAutofillAsync(JsonElement options, Func<JsonElement, Task> onCredential, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(onCredential);

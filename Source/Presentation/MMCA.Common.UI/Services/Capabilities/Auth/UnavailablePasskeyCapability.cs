@@ -21,6 +21,9 @@ public sealed class UnavailablePasskeyCapability : IPasskeyCapability
         Task.FromResult<JsonElement?>(null);
 
     /// <inheritdoc />
+    public Task<bool> IsAutofillAvailableAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
+
+    /// <inheritdoc />
     public Task<bool> StartAutofillAsync(JsonElement options, Func<JsonElement, Task> onCredential, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
 

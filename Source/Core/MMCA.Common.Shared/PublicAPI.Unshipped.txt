@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse!
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Deconstruct(out string! Provider, out string! DisplayName) -> void
