@@ -213,7 +213,8 @@ public sealed class MachineClientService(
     /// The row is saved first, so no new token is minted from here on, THEN the soft-deleted marker is
     /// written for the service account: every service's <c>SoftDeletedUserMiddleware</c> then answers
     /// 401 to the tokens the client already holds. The marker means what it always means (reject this
-    /// user id) and outlives every machine token, whose lifetime is capped below the marker's.
+    /// user id) and outlives every machine token, whose lifetime is capped below the marker's, and
+    /// any longer-lived token the host's raised access-token lifetime could have minted.
     /// </remarks>
     public async Task<Result<MachineClientResponse>> RevokeAsync(Guid clientId, CancellationToken cancellationToken = default)
     {
@@ -225,7 +226,12 @@ public sealed class MachineClientService(
 
         client.Revoke(UtcNow);
         await store.SaveAsync(client, cancellationToken).ConfigureAwait(false);
-        await SoftDeletedUserCache.MarkDeletedAsync(cache, client.ServiceAccountUserId, cancellationToken).ConfigureAwait(false);
+
+        // Assumes the default bearer clock skew: this layer cannot read the host's JwtBearerOptions.
+        var tokenLifetime = TimeSpan.FromMinutes(settings.Value.AccessTokenMinutes);
+        var markerDuration = SoftDeletedUserCache.MarkerDurationFor(
+            tokenLifetime > tokenService.AccessTokenLifetime ? tokenLifetime : tokenService.AccessTokenLifetime);
+        await SoftDeletedUserCache.MarkDeletedForAsync(cache, client.ServiceAccountUserId, markerDuration, cancellationToken).ConfigureAwait(false);
 
         return Result.Success(ToResponse(client));
     }

@@ -392,6 +392,11 @@ MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInLinkSettings()
 MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInUrl.get -> string!
 MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SignInUrl.init -> void
 MMCA.Common.Application.Auth.SoftDeletedUserCache
+MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter
+MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter.MarkDeletedAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.SoftDeletedUsers.SoftDeletedUserMarkerWriter
+MMCA.Common.Application.Auth.SoftDeletedUsers.SoftDeletedUserMarkerWriter.MarkDeletedAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.SoftDeletedUsers.SoftDeletedUserMarkerWriter.SoftDeletedUserMarkerWriter(MMCA.Common.Application.Interfaces.ICacheService! cache, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService) -> void
 MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator
 MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator.ChallengeAsync(int userId, string? code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome>!>!
 MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator.VerifyEnrollmentCodeAsync(int userId, string! secret, string? code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
@@ -1304,7 +1309,7 @@ MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandle
 MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>
-MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>
@@ -1639,7 +1644,9 @@ static MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.operator !=(MM
 static MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile.operator ==(MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? left, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile? right) -> bool
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.KeyFor(int userId) -> string!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedForAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.TimeSpan duration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> System.TimeSpan
+static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDurationFor(System.TimeSpan accessTokenLifetime, System.TimeSpan? clockSkew = null) -> System.TimeSpan
 static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator !=(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
 static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator ==(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissing(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!

@@ -14,6 +14,9 @@
          Npgsql provider actually emits against a real server, which no in-memory or SQLite
          substitute can reject. -->
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.PostgreSQL.Tests" />
+    <!-- Docker-gated SQL Server tier (outside the .slnx): asserts what the SqlClient provider emits
+         against a real server, for the same reason as the PostgreSQL tier. -->
+    <InternalsVisibleTo Include="MMCA.Common.Infrastructure.SQLServer.Tests" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

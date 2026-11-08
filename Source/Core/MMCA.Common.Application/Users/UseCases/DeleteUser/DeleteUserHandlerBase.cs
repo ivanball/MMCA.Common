@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.SoftDeletedUsers;
 using MMCA.Common.Application.Auth.ViewAs;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
@@ -18,8 +18,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
 /// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
-/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (15-minute TTL,
-/// <c>SoftDeletedUserCache.MarkerDuration</c>, best effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
+/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (living as long as
+/// an already-issued token can, <c>SoftDeletedUserCache.MarkerDurationFor</c>, best effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
 /// idempotent, retry-safe work there, or schedule an internal command inside the unit (as ADC does for
 /// the avatar blob).
 /// </summary>
@@ -63,7 +63,10 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's delete-user command record.</typeparam>
 /// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
-/// <param name="cacheService">The cache the soft-deleted user marker is written to (ADR-047).</param>
+/// <param name="markerWriter">
+/// Writes the soft-deleted user marker (ADR-047), sized so it outlives every access token issued
+/// before the erasure. <c>AddApplication</c> registers it.
+/// </param>
 /// <param name="logger">Logger for the erasure audit line and the marker-failure warning.</param>
 /// <param name="refreshSessions">
 /// The refresh-session store, or <see langword="null"/> on a host that registered none (refresh
@@ -82,7 +85,7 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// </param>
 public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
-    ICacheService cacheService,
+    ISoftDeletedUserMarkerWriter markerWriter,
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
@@ -183,9 +186,7 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         // queued behind it cannot stretch the window in which a deleted user's token still works.
         try
         {
-            await SoftDeletedUserCache
-                .MarkDeletedAsync(cacheService, command.UserId, cancellationToken)
-                .ConfigureAwait(false);
+            await markerWriter.MarkDeletedAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

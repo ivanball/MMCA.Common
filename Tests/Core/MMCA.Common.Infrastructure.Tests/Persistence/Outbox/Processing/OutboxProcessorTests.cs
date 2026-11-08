@@ -726,14 +726,16 @@ public sealed class OutboxProcessorTests : IDisposable
         using OutboxProcessor processor = CreateProcessor(new OutboxSettings(), logger: mockLogger.Object);
         await processor.ProcessPendingMessagesAsync(CancellationToken.None);
 
-        // Every row took the normal failure path: nothing is marked delivered, nothing is lost.
+        // Every row stayed undelivered and nothing is lost: a failure and a circuit rejection both re-lease.
         List<OutboxMessage> updated = await _dbContext.Set<OutboxMessage>().ToListAsync();
         updated.Should().HaveCount(messageCount);
-        updated.Should().AllSatisfy(m =>
-        {
-            m.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered");
-            m.RetryCount.Should().Be(1);
-        });
+        updated.Should().AllSatisfy(m => m.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered"));
+
+        // A row that reached the broker spent a retry; a row the open circuit rejected did not, since
+        // the publish never left the process.
+        updated.Count(m => m.RetryCount == 1).Should().Be(BrokerResilienceDefaults.MinimumThroughput);
+        updated.Where(m => m.RetryCount == 0).Should().HaveCount(5).And.AllSatisfy(m =>
+            m.LastError.Should().Contain("circuit", "a rejection keeps the reason on the row"));
 
         // Some rows never reached the broker at all: that is the breaker doing its job.
         circuitOpenMeasurements.Should().NotBeEmpty("the circuit must open once the failure ratio is provable");
@@ -746,6 +748,99 @@ public sealed class OutboxProcessorTests : IDisposable
         logged.Where(e => e.Message.Contains("circuit is open", StringComparison.Ordinal))
             .Should().ContainSingle();
     }
+
+    // -- A long outage must not spend the rows' retry budget through circuit rejections --
+    [Fact]
+    public async Task OpenCircuit_OverManyCycles_DoesNotExhaustRetries_AndTheRowsAreDeliveredOnceTheBusRecovers()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var settings = new OutboxSettings();
+        var busDown = true;
+        var attempts = 0;
+        _messageBusMock
+            .Setup(b => b.PublishAsync(It.IsAny<IIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                Interlocked.Increment(ref attempts);
+                return busDown ? Task.FromException(new InvalidOperationException("Broker unreachable")) : Task.CompletedTask;
+            });
+
+        var messageCount = BrokerResilienceDefaults.MinimumThroughput + 5;
+        OutboxMessage[] messages = [.. Enumerable.Range(0, messageCount).Select(i =>
+            CreateEligibleMessage(
+                eventType: typeof(TestIntegrationEvent).AssemblyQualifiedName,
+                occurredOn: clock.GetUtcNow().UtcDateTime.AddMinutes(-10).AddSeconds(i)))];
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        using OutboxProcessor processor = CreateProcessor(settings, clock);
+        for (var cycle = 0; cycle < 8; cycle++)
+        {
+            await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+            // Past both the rejected rows' short re-lease and the real failures' backoff, which is
+            // capped at the lease.
+            clock.Advance(TimeSpan.FromSeconds(settings.LeaseSeconds + 1));
+        }
+
+        List<OutboxMessage> afterOutage = await _dbContext.Set<OutboxMessage>().AsNoTracking().ToListAsync();
+        afterOutage.Sum(m => m.RetryCount).Should().Be(
+            Volatile.Read(ref attempts),
+            "a retry is spent only by a real attempt at the broker, never by a circuit rejection");
+        afterOutage.Where(m => m.RetryCount >= settings.MaxRetries).Should().HaveCountLessThanOrEqualTo(
+            1,
+            "only the row carrying the half-open probe spends retries on every cycle");
+
+        // Every row that never reached the broker kept its whole budget.
+        afterOutage.OrderBy(m => m.OccurredOn).TakeLast(5).Should().AllSatisfy(m =>
+        {
+            m.RetryCount.Should().Be(0);
+            m.LastError.Should().Contain("circuit");
+        });
+
+        busDown = false;
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        List<OutboxMessage> afterRecovery = await _dbContext.Set<OutboxMessage>().AsNoTracking().ToListAsync();
+        afterRecovery.Where(m => m.RetryCount < settings.MaxRetries).Should().AllSatisfy(
+            m => m.ProcessedOn.Should().NotBeNull("the broker came back, and the row still had retries left"));
+        afterRecovery.Count(m => m.ProcessedOn != null).Should().BeGreaterThanOrEqualTo(messageCount - 1);
+    }
+
+    [Fact]
+    public async Task CircuitRejectedRow_IsReleasedForAboutTheBreakDuration_NotImmediately()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        _messageBusMock
+            .Setup(b => b.PublishAsync(It.IsAny<IIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Broker unreachable"));
+
+        var messageCount = BrokerResilienceDefaults.MinimumThroughput + 2;
+        OutboxMessage[] messages = [.. Enumerable.Range(0, messageCount).Select(i =>
+            CreateEligibleMessage(
+                eventType: typeof(TestIntegrationEvent).AssemblyQualifiedName,
+                occurredOn: clock.GetUtcNow().UtcDateTime.AddMinutes(-10).AddSeconds(i)))];
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings(), clock);
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        var rejected = (await _dbContext.Set<OutboxMessage>().AsNoTracking().ToListAsync())
+            .Where(m => m.RetryCount == 0)
+            .ToList();
+        rejected.Should().HaveCount(2);
+        rejected.Should().AllSatisfy(m => m.LockedUntil.Should()
+            .BeOnOrAfter(now.Add(BrokerResilienceDefaults.BreakDuration))
+            .And.BeOnOrBefore(now.AddSeconds(BrokerResilienceDefaults.BreakDuration.TotalSeconds * 1.25)));
+    }
+
+    [Fact]
+    public void ComputeCircuitOpenBackoffSeconds_IsCappedAtTheLease() =>
+        MMCA.Common.Infrastructure.Persistence.Polling.PollingLoop
+            .ComputeCircuitOpenBackoffSeconds(TimeSpan.FromSeconds(100), capSeconds: 10)
+            .Should().Be(10);
 
     /// <summary>
     /// Listener for the broker meter's circuit-open counter, mirroring

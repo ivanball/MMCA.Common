@@ -1,10 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Persistence.Retention;
 
 namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 
@@ -50,9 +50,6 @@ internal sealed partial class AuditTrailCleanupJob(
     TimeProvider timeProvider,
     IServiceScopeFactory? scopeFactory = null) : IScheduledJob
 {
-    /// <summary>The number of rows removed per statement.</summary>
-    internal const int BatchSize = 1000;
-
     private readonly AuditTrailSettings _settings = options.Value;
 
     /// <inheritdoc />
@@ -103,7 +100,7 @@ internal sealed partial class AuditTrailCleanupJob(
     }
 
     /// <summary>Resolves the target's context from <paramref name="factory"/> and purges it.</summary>
-    private async Task PurgeWithFactoryAsync(
+    private Task PurgeWithFactoryAsync(
         IDbContextFactory factory,
         TenantDataSourceTarget target,
         DateTime cutoff,
@@ -115,58 +112,22 @@ internal sealed partial class AuditTrailCleanupJob(
         // host disabled the trail after it was written, so the model is the authority.
         if (context.Model.FindEntityType(typeof(AuditTrailEntry)) is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        var deleted = await PurgeSourceAsync(context, cutoff, cancellationToken).ConfigureAwait(false);
-        if (deleted > 0)
-        {
-            var sourceName = target.ToString();
-            LogPurged(logger, deleted, sourceName);
-        }
-    }
-
-    /// <summary>
-    /// Removes every trail row older than <paramref name="cutoff"/> from one data source, a batch at
-    /// a time.
-    /// </summary>
-    private static async Task<int> PurgeSourceAsync(
-        DbContext context,
-        DateTime cutoff,
-        CancellationToken cancellationToken)
-    {
-        var total = 0;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            // The ids are read first and deleted by id, rather than deleting straight from a limited
-            // query: every relational provider translates an IN list, while a limited DELETE is not
-            // universally supported.
-            var ids = await context.Set<AuditTrailEntry>().AsNoTracking()
-                .Where(row => row.ChangedOn < cutoff)
-                .OrderBy(row => row.ChangedOn)
-                .Select(row => row.Id)
-                .Take(BatchSize)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (ids.Count == 0)
+        var sourceName = target.ToString();
+        return BatchedDelete.DeleteAsync<AuditTrailEntry, DateTime>(
+            context,
+            row => row.ChangedOn < cutoff,
+            row => row.ChangedOn,
+            deleted =>
             {
-                break;
-            }
-
-            total += await context.Set<AuditTrailEntry>()
-                .Where(row => ids.Contains(row.Id))
-                .ExecuteDeleteAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (ids.Count < BatchSize)
-            {
-                break;
-            }
-        }
-
-        return total;
+                if (deleted > 0)
+                {
+                    LogPurged(logger, deleted, sourceName);
+                }
+            },
+            cancellationToken);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} audit trail rows older than retention from {DataSourceName}")]

@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
@@ -8,6 +7,7 @@ using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Persistence.Retention;
 
 namespace MMCA.Common.Infrastructure.Persistence.Auth;
 
@@ -121,15 +121,16 @@ public sealed partial class RefreshSessionCleanupService(
             return;
         }
 
-        var deleted = await context.Set<RefreshSession>()
-            .Where(s => s.RevokedAt != null && s.RevokedAt < cutoff
-                || s.RevokedAt == null && s.ExpiresAt < cutoff)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-
+        // Ordered by the key, which the sweep's predicate columns have no index to serve.
         // Logged on every sweep, zero included: this line is the operator's evidence that retention
         // is running at all, which a "only when it deleted something" log cannot give.
-        LogPurged(logger, deleted, _settings.RetentionDays);
+        await BatchedDelete.DeleteAsync<RefreshSession, Guid>(
+            context,
+            s => s.RevokedAt != null && s.RevokedAt < cutoff
+                || s.RevokedAt == null && s.ExpiresAt < cutoff,
+            s => s.Id,
+            deleted => LogPurged(logger, deleted, _settings.RetentionDays),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

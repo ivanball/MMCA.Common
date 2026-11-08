@@ -62,6 +62,71 @@ public sealed class ViewAsGuardMiddlewareTests
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
+    // gRPC is always POST: a host marks a read-only service or method, and the method rule alone relaxes.
+    [Fact]
+    public async Task PostToAReadOnlyEndpoint_UnderALiveGrant_PassesThrough()
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext("POST", ViewAsPrincipal(grant.Id), readOnlyEndpoint: true);
+
+        await InvokeAsync(context);
+
+        _reachedEndpoint.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+    }
+
+    // The mark exempts POST, the one method gRPC uses, and nothing else.
+    [Theory]
+    [InlineData("PUT")]
+    [InlineData("PATCH")]
+    [InlineData("DELETE")]
+    public async Task OtherNonSafeMethod_OnAReadOnlyEndpoint_IsStillRefused403(string method)
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext(method, ViewAsPrincipal(grant.Id), readOnlyEndpoint: true);
+
+        await InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PostToAReadOnlyEndpoint_WithAnEndedGrant_IsStillRefused401()
+    {
+        var grant = SeedLiveGrant();
+        var service = CreateService();
+        (await service.EndAsync(grant.Id, StaffUserId)).IsSuccess.Should().BeTrue();
+
+        var context = CreateContext("POST", ViewAsPrincipal(grant.Id), readOnlyEndpoint: true);
+        await InvokeAsync(context, service);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PostToAReadOnlyEndpoint_WithViewAsDisabled_IsStillRefused401()
+    {
+        var grant = SeedLiveGrant();
+        var context = CreateContext("POST", ViewAsPrincipal(grant.Id), readOnlyEndpoint: true);
+
+        await InvokeAsync(context, enabled: false);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task NonStoreHost_PostToAReadOnlyEndpoint_WithALiveGrant_PassesThrough()
+    {
+        var context = CreateContext("POST", ViewAsPrincipal(Guid.NewGuid()), readOnlyEndpoint: true);
+
+        await InvokeNonStoreAsync(context, new SharedCache());
+
+        _reachedEndpoint.Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("GET")]
     [InlineData("HEAD")]
@@ -374,7 +439,11 @@ public sealed class ViewAsGuardMiddlewareTests
         ],
         "Bearer"));
 
-    private static DefaultHttpContext CreateContext(string method, ClaimsPrincipal user, bool endViewAsEndpoint = false)
+    private static DefaultHttpContext CreateContext(
+        string method,
+        ClaimsPrincipal user,
+        bool endViewAsEndpoint = false,
+        bool readOnlyEndpoint = false)
     {
         var context = new DefaultHttpContext { User = user };
         context.Request.Method = method;
@@ -382,6 +451,11 @@ public sealed class ViewAsGuardMiddlewareTests
         if (endViewAsEndpoint)
         {
             context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ViewAsEndEndpointAttribute()), "end"));
+        }
+
+        if (readOnlyEndpoint)
+        {
+            context.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new ViewAsReadOnlyEndpointAttribute()), "grpc-read"));
         }
 
         return context;

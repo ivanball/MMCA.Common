@@ -32,7 +32,27 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.282.0] - 2026-11-08
+
+**Breaking: one replaced constructor parameter on `DeleteUserHandlerBase<TUser, TCommand>`.** No
+namespace, type or configuration key moved.
+
+The soft-deleted user marker has to outlive every access token issued before the erasure, so the
+shared erasure workflow now writes it through `ISoftDeletedUserMarkerWriter`, which reads the
+access-token lifetime (ADR-047). That replaces the base's cache parameter, so a subclass gains no
+constructor dependency, and a host that raises the lifetime cannot silently keep a 20-minute marker:
+
+```diff
+-DeleteUserHandlerBase(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger, IRefreshSessionStore? refreshSessions = null, TimeProvider? timeProvider = null, IViewAsGrantStore? viewAsGrants = null)
++DeleteUserHandlerBase(IUnitOfWork unitOfWork, ISoftDeletedUserMarkerWriter markerWriter, ILogger logger, IRefreshSessionStore? refreshSessions = null, TimeProvider? timeProvider = null, IViewAsGrantStore? viewAsGrants = null)
+```
+
+The mechanical fix, in each app's `DeleteUserHandler`: swap the handler's own `ICacheService
+cacheService` parameter for `ISoftDeletedUserMarkerWriter markerWriter` and pass it to the base as the
+**second** argument. Keep the cache parameter as well only if the handler uses it for something else.
+`ISoftDeletedUserMarkerWriter` lives in `MMCA.Common.Application.Auth.SoftDeletedUsers`. `AddApplication`
+registers it, and `AddInfrastructure` already registers the `ITokenService` it reads, so no DI change is
+needed.
 
 ## [1.281.0] - 2026-11-08
 

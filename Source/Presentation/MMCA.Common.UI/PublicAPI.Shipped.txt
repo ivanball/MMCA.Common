@@ -1490,6 +1490,7 @@ MMCA.Common.UI.Services.Notifications.NotificationHubService.NotificationFilter.
 MMCA.Common.UI.Services.Notifications.NotificationHubService.NotificationFilter.set -> void
 MMCA.Common.UI.Services.Notifications.NotificationHubService.NotificationHubService(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Common.Settings.ApiSettings!>! apiSettings, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Notifications.NotificationHubService!>! logger) -> void
 MMCA.Common.UI.Services.Notifications.NotificationHubService.OnChannelEvent(string! channelKey, System.Func<string!, string!, System.Threading.Tasks.Task!>! handler) -> System.IDisposable!
+MMCA.Common.UI.Services.Notifications.NotificationHubService.OnConnectionRestored(System.Func<System.Threading.Tasks.Task!>! handler) -> System.IDisposable!
 MMCA.Common.UI.Services.Notifications.NotificationHubService.StartAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Notifications.NotificationHubService.StopAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Notifications.NotificationInboxService

@@ -157,7 +157,7 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
                 {
                     // The deleted-user marker must outlive the access token.
                     await cacheService
-                        .SetAsync(cacheKey, true, SoftDeletedUserCache.MarkerDuration, context.RequestAborted)
+                        .SetAsync(cacheKey, true, MarkerDurationFor(context.RequestServices), context.RequestAborted)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -174,6 +174,16 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
 
         await next(context).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The marker lifetime on this host: the access-token lifetime plus the bearer clock skew, never
+    /// less than <see cref="SoftDeletedUserCache.MarkerDuration"/>. With no <see cref="ITokenService"/>
+    /// registered the lifetime is unknown here, so the default duration is written.
+    /// </summary>
+    private static TimeSpan MarkerDurationFor(IServiceProvider? services) =>
+        services?.GetService<ITokenService>() is { } tokens
+            ? SoftDeletedUserCache.MarkerDurationFor(tokens.AccessTokenLifetime, ViewAsEndedMarker.ClockSkew(services))
+            : SoftDeletedUserCache.MarkerDuration;
 
     [LoggerMessage(
         Level = LogLevel.Warning,

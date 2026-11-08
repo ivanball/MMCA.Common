@@ -26,6 +26,7 @@ internal sealed class InMemoryHubServer : IConnectionFactory
     private int _connectAttempts;
     private volatile bool _refuseConnections;
     private volatile bool _refuseAuthentication;
+    private volatile bool _failJoins;
 
     /// <summary>Gets or sets a value indicating whether new connections fail as if the network were down.</summary>
     public bool RefuseConnections
@@ -40,6 +41,16 @@ internal sealed class InMemoryHubServer : IConnectionFactory
         get => _refuseAuthentication;
         set => _refuseAuthentication = value;
     }
+
+    /// <summary>Gets or sets a value indicating whether a <c>JoinChannel</c> invocation is answered with an error.</summary>
+    public bool FailJoins
+    {
+        get => _failJoins;
+        set => _failJoins = value;
+    }
+
+    /// <summary>Gets or sets a task the answer to a <c>JoinChannel</c> invocation waits for; none when null.</summary>
+    public Task? JoinGate { get; set; }
 
     /// <summary>Gets the number of connection attempts, refused ones included.</summary>
     public int ConnectAttempts => Volatile.Read(ref _connectAttempts);
@@ -56,9 +67,20 @@ internal sealed class InMemoryHubServer : IConnectionFactory
     }
 
     /// <summary>Builds a client connection bound to this server (no automatic reconnect).</summary>
-    public HubConnection CreateConnection()
+    /// <returns>The client connection.</returns>
+    public HubConnection CreateConnection() => CreateConnection(null);
+
+    /// <summary>Builds a client connection bound to this server, with automatic reconnect when a policy is given.</summary>
+    /// <param name="retryPolicy">The automatic reconnect policy; none when null.</param>
+    /// <returns>The client connection.</returns>
+    public HubConnection CreateConnection(IRetryPolicy? retryPolicy)
     {
         var builder = new HubConnectionBuilder();
+        if (retryPolicy is not null)
+        {
+            builder.WithAutomaticReconnect(retryPolicy);
+        }
+
         builder.Services.AddSingleton<IConnectionFactory>(this);
         builder.Services.AddSingleton<EndPoint>(new UriEndPoint(new Uri("http://in-memory/hubs/notifications")));
         return builder.Build();
@@ -203,10 +225,9 @@ internal sealed class InMemoryHubServer : IConnectionFactory
             return true;
         }
 
-        if (root.TryGetProperty("target", out var target)
-            && string.Equals(target.GetString(), "JoinChannel", StringComparison.Ordinal)
-            && root.TryGetProperty("arguments", out var arguments)
-            && arguments.GetArrayLength() > 0)
+        var isJoin = root.TryGetProperty("target", out var target)
+            && string.Equals(target.GetString(), "JoinChannel", StringComparison.Ordinal);
+        if (isJoin && root.TryGetProperty("arguments", out var arguments) && arguments.GetArrayLength() > 0)
         {
             lock (_sync)
             {
@@ -214,9 +235,15 @@ internal sealed class InMemoryHubServer : IConnectionFactory
             }
         }
 
+        if (isJoin && JoinGate is { } gate)
+        {
+            await gate.ConfigureAwait(false);
+        }
+
         try
         {
-            var completion = "{\"type\":3,\"invocationId\":\"" + invocationId.GetString() + "\"}\u001e";
+            var error = isJoin && FailJoins ? ",\"error\":\"join refused\"" : string.Empty;
+            var completion = "{\"type\":3,\"invocationId\":\"" + invocationId.GetString() + "\"" + error + "}\u001e";
             await application.Output.WriteAsync(Encoding.UTF8.GetBytes(completion)).ConfigureAwait(false);
             return true;
         }

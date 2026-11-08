@@ -49,6 +49,23 @@ public sealed class SoftDeletedUserCacheTests
             DefaultAccessTokenLifetime + DefaultJwtClockSkew,
             "a host without the validator query relies on the marker until an already-issued access token stops validating, which is its expiry plus the clock skew");
 
+    [Fact]
+    public void MarkerDurationFor_ARaisedLifetime_CoversItPlusTheDefaultSkew() =>
+        SoftDeletedUserCache.MarkerDurationFor(TimeSpan.FromMinutes(60)).Should().Be(
+            TimeSpan.FromMinutes(65),
+            "a host with a 60-minute token accepts it for 65 minutes under the default bearer skew");
+
+    [Fact]
+    public void MarkerDurationFor_ACustomSkew_IsUsed() =>
+        SoftDeletedUserCache.MarkerDurationFor(TimeSpan.FromMinutes(60), TimeSpan.FromMinutes(2))
+            .Should().Be(TimeSpan.FromMinutes(62));
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(15)]
+    public void MarkerDurationFor_NeverGoesBelowTheFloor(int lifetimeMinutes) =>
+        SoftDeletedUserCache.MarkerDurationFor(TimeSpan.FromMinutes(lifetimeMinutes)).Should().Be(SoftDeletedUserCache.MarkerDuration);
+
     // ── Write helper ──
     [Fact]
     public async Task MarkDeletedAsync_WritesTheTrueMarkerUnderTheKeyForTwentyMinutes()
@@ -81,6 +98,16 @@ public sealed class SoftDeletedUserCacheTests
                 It.IsAny<TimeSpan?>(),
                 cts.Token),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task MarkDeletedForAsync_WritesTheMarkerForTheGivenDuration()
+    {
+        var cache = new Mock<ICacheService>();
+
+        await SoftDeletedUserCache.MarkDeletedForAsync(cache.Object, 7, TimeSpan.FromMinutes(65));
+
+        cache.Verify(c => c.SetAsync("user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

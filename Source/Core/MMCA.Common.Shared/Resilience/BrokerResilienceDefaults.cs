@@ -10,9 +10,10 @@ namespace MMCA.Common.Shared.Resilience;
 /// batch waits out its own transport timeout before failing, so one cycle can spend minutes doing
 /// nothing but timing out, and the retry loop then queues the same wait again on the next cycle.
 /// The breaker turns the second and later attempts into an immediate rejection. Nothing is lost by
-/// failing fast: an outbox row that is not published stays unprocessed, keeps its lease-based
-/// backoff and is retried on a later cycle exactly as a normal publish failure would be. The
-/// breaker only changes how long the processor spends discovering that the broker is still down.
+/// failing fast: a row the circuit rejected stays unprocessed, is re-leased for about the
+/// <see cref="BreakDuration"/> and is retried on a later cycle, and the rejection costs no retry,
+/// since nothing reached the broker. The breaker only changes how long the processor spends
+/// discovering that the broker is still down.
 /// </para>
 /// <para>
 /// Deliberately NOT paired with a retry strategy: the outbox already owns retry (RetryCount,
@@ -48,9 +49,10 @@ public static class BrokerResilienceDefaults
 
     /// <summary>
     /// How long the circuit stays open before a single trial publish is allowed through. Fifteen
-    /// seconds is deliberately short: a rejected publish costs one outbox row a retry increment,
-    /// not a customer-facing error, so recovery latency matters more here than protecting the
-    /// broker from one probe.
+    /// seconds is deliberately short: a rejected publish costs one outbox row a wait of about this
+    /// long and no retry, not a customer-facing error, so recovery latency matters more here than
+    /// protecting the broker from one probe. A failed probe does reach the broker, so it counts
+    /// against the probed row's retry budget like any other failed publish.
     /// </summary>
     public static TimeSpan BreakDuration => TimeSpan.FromSeconds(15);
 }

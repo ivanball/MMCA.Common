@@ -9,6 +9,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Persistence.Retention;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 
@@ -100,15 +101,18 @@ public sealed partial class OutboxCleanupService(
                 var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
                 var context = dbContextFactory.GetDbContext(target.Source);
 
-                var deleted = await context.Set<OutboxMessage>()
-                    .Where(m => m.ProcessedOn != null && m.ProcessedOn < cutoff)
-                    .ExecuteDeleteAsync(cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (deleted > 0)
-                {
-                    LogPurged(logger, deleted, sourceName);
-                }
+                await BatchedDelete.DeleteAsync<OutboxMessage, DateTime?>(
+                    context,
+                    m => m.ProcessedOn != null && m.ProcessedOn < cutoff,
+                    m => m.ProcessedOn,
+                    deleted =>
+                    {
+                        if (deleted > 0)
+                        {
+                            LogPurged(logger, deleted, sourceName);
+                        }
+                    },
+                    cancellationToken).ConfigureAwait(false);
 
                 await SweepDeadLettersAsync(context, sourceName, cancellationToken).ConfigureAwait(false);
 
@@ -146,7 +150,7 @@ public sealed partial class OutboxCleanupService(
     /// and for replay through <c>IOutboxAdministration.ReplayDeadLettersAsync</c>.
     /// </para>
     /// </summary>
-    private async Task SweepDeadLettersAsync(
+    private Task SweepDeadLettersAsync(
         ApplicationDbContext context,
         string sourceName,
         CancellationToken cancellationToken)
@@ -157,35 +161,41 @@ public sealed partial class OutboxCleanupService(
         var deadLetterCutoff = _timeProvider.GetUtcNow().UtcDateTime
             .Subtract(TimeSpan.FromDays(deadLetterRetentionDays));
 
-        var expired = context.Set<OutboxMessage>()
-            .Where(m => m.ProcessedOn == null
-                && m.RetryCount >= _settings.MaxRetries
-                && (m.LockedUntil ?? m.OccurredOn) < deadLetterCutoff);
-
-        var deadLettered = await expired.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
-
-        if (deadLettered > 0)
-        {
-            LogDeadLetterPurged(logger, deadLettered, sourceName);
-        }
+        var maxRetries = _settings.MaxRetries;
+        // Reported even when a later batch fails: this deletes the only record the event was raised.
+        return BatchedDelete.DeleteAsync<OutboxMessage, DateTime>(
+            context,
+            m => m.ProcessedOn == null
+                && m.RetryCount >= maxRetries
+                && (m.LockedUntil ?? m.OccurredOn) < deadLetterCutoff,
+            m => m.LockedUntil ?? m.OccurredOn,
+            deadLettered =>
+            {
+                if (deadLettered > 0)
+                {
+                    LogDeadLetterPurged(logger, deadLettered, sourceName);
+                }
+            },
+            cancellationToken);
     }
 
-    private async Task PurgeInboxAsync(
+    private Task PurgeInboxAsync(
         DbContext context,
         DateTime cutoff,
         string sourceName,
-        CancellationToken cancellationToken)
-    {
-        var inboxDeleted = await context.Set<InboxMessage>()
-            .Where(m => m.ProcessedOn < cutoff)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (inboxDeleted > 0)
-        {
-            LogInboxPurged(logger, inboxDeleted, sourceName);
-        }
-    }
+        CancellationToken cancellationToken) =>
+        BatchedDelete.DeleteAsync<InboxMessage, DateTime>(
+            context,
+            m => m.ProcessedOn < cutoff,
+            m => m.ProcessedOn,
+            inboxDeleted =>
+            {
+                if (inboxDeleted > 0)
+                {
+                    LogInboxPurged(logger, inboxDeleted, sourceName);
+                }
+            },
+            cancellationToken);
 
     /// <summary>
     /// The units this sweep visits: the same relational sources the <see cref="OutboxProcessor"/>

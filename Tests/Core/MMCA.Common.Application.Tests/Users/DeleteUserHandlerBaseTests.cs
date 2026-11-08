@@ -2,8 +2,10 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.SoftDeletedUsers;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.DeleteUser;
 using MMCA.Common.Domain.Auth;
@@ -204,6 +206,29 @@ public sealed class DeleteUserHandlerBaseTests
                 SoftDeletedUserCache.KeyFor(1),
                 true,
                 (TimeSpan?)SoftDeletedUserCache.MarkerDuration,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // A token minted under a raised lifetime is accepted until its expiry plus the bearer skew, so the
+    // marker has to outlive that; the fixed 20 minutes would lapse with the token still valid.
+    [Fact]
+    public async Task HandleAsync_WithARaisedAccessTokenLifetime_WritesAMarkerCoveringIt()
+    {
+        var tokens = new Mock<ITokenService>();
+        tokens.SetupGet(t => t.AccessTokenLifetime).Returns(TimeSpan.FromMinutes(60));
+        var (sut, mocks) = CreateSut(tokenService: tokens.Object);
+        var user = new TestHidingDeleteUser { Id = 1 };
+        ArrangeUser(mocks, user);
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        mocks.Cache.Verify(
+            x => x.SetAsync(
+                SoftDeletedUserCache.KeyFor(1),
+                true,
+                (TimeSpan?)TimeSpan.FromMinutes(65),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -434,7 +459,8 @@ public sealed class DeleteUserHandlerBaseTests
     private static (TestDeleteUserHandler Sut, HandlerMocks Mocks) CreateSut(
         IRefreshSessionStore? refreshSessions = null,
         TimeProvider? timeProvider = null,
-        IViewAsGrantStore? viewAsGrants = null)
+        IViewAsGrantStore? viewAsGrants = null,
+        ITokenService? tokenService = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>>();
@@ -445,7 +471,8 @@ public sealed class DeleteUserHandlerBaseTests
         unitOfWork.Setup(x => x.GetRepository<TestHidingDeleteUser, UserIdentifierType>()).Returns(repository.Object);
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object, refreshSessions, timeProvider, viewAsGrants);
+        var markerWriter = new SoftDeletedUserMarkerWriter(cache.Object, tokenService ?? Mock.Of<ITokenService>());
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, markerWriter, logger.Object, refreshSessions, timeProvider, viewAsGrants);
         return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
@@ -453,12 +480,12 @@ public sealed class DeleteUserHandlerBaseTests
 /// <summary>Concrete subclass standing in for an app's <c>DeleteUserHandler</c> plus its erasure tail.</summary>
 public sealed class TestDeleteUserHandler(
     IUnitOfWork unitOfWork,
-    ICacheService cacheService,
+    ISoftDeletedUserMarkerWriter markerWriter,
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
     IViewAsGrantStore? viewAsGrants = null)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger, refreshSessions, timeProvider, viewAsGrants)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, markerWriter, logger, refreshSessions, timeProvider, viewAsGrants)
 {
     public int TailInvocations { get; private set; }
 
