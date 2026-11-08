@@ -424,6 +424,23 @@ public sealed class OutboxProcessorTests : IDisposable
         retried.LastError.Should().Be("Dispatch failed");
     }
 
+    [Fact]
+    public async Task IncrementsRetryOnDispatchFailure_AWrappedException_StoresTheInnerCauseInLastError()
+    {
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Dispatch failed", new TimeoutException("broker did not answer")));
+
+        OutboxMessage message = CreateEligibleMessage();
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        await InvokeProcessPendingMessagesAsync();
+
+        OutboxMessage retried = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        retried.LastError.Should().Be("Dispatch failed ---> TimeoutException: broker did not answer");
+    }
+
     // M115: LastError is a 4000-character column; an oversize message would fail the whole batch save.
     [Fact]
     public async Task IncrementsRetryOnDispatchFailure_TruncatesAnOversizeErrorToTheColumnWidth()

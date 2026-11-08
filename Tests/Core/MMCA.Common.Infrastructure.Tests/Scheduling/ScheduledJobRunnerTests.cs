@@ -214,6 +214,32 @@ public sealed class ScheduledJobRunnerTests
         row.LockToken.Should().BeNull("the lease is released, so the finished job is not re-run");
     }
 
+    [Fact]
+    public async Task RunCycleAsync_AJobThrowingAWrappedException_RecordsTheInnerCause()
+    {
+        var timeProvider = new FakeTimeProvider(Epoch);
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var context = SchedulerTestContext.Create(connection);
+
+        var job = new DelegateScheduledJob(
+            "nightly",
+            HourlyCron,
+            _ => throw new InvalidOperationException("Failure sending mail.", new IOException("550 5.1.1 mailbox unavailable")));
+
+        var (runner, scopeServices, _) = CreateRunner(context, EnabledSettings(), timeProvider, job);
+        await using var scope = scopeServices;
+        using var service = runner;
+
+        await runner.RunCycleAsync(TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromHours(1));
+        await runner.RunCycleAsync(TestContext.Current.CancellationToken);
+
+        var row = await LoadAsync(context, "nightly");
+        row.LastOutcome.Should().Be("Failed");
+        row.LastError.Should().Be("Failure sending mail. ---> IOException: 550 5.1.1 mailbox unavailable");
+    }
+
     // ── Execution: a failing job is recorded, truncated, and still advanced ──
     [Fact]
     public async Task RunCycleAsync_FailingJob_RecordsFailedWithTruncatedErrorAndStillAdvances()

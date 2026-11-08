@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Diagnostics;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -555,7 +556,7 @@ public sealed partial class ScheduledJobRunner(
         catch (Exception ex)
         {
             LogJobFailed(logger, jobName, ex);
-            return (OutcomeFailed, ex.Message);
+            return (OutcomeFailed, ExceptionChain.Describe(ex));
         }
     }
 

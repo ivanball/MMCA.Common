@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
@@ -161,6 +162,89 @@ public sealed class InternalCommandProcessorTests : IDisposable
         var stored = await ReloadAsync(row.Id);
         stored.DeadLetteredOn.Should().Be(InternalCommandTestHarness.EpochUtc);
         stored.LastError.Should().Be("downstream exploded");
+    }
+
+    [Fact]
+    public async Task Cycle_AWrappedExceptionOnARetry_StoresTheInnerCauseInLastError()
+    {
+        // Store prod, 2026-11-01: SmtpException said only "Failure sending mail." and the server's
+        // reply sat on InnerException, so 21 dead-lettered attempts recorded nothing useful.
+        _log.Throws = () => new InvalidOperationException(
+            "Failure sending mail.", new IOException("550 5.1.1 mailbox unavailable"));
+        var row = Seed(new RecordingCommand("mail"), InternalCommandTestHarness.EpochUtc);
+        var processor = CreateProcessor(maxAttempts: 3);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        var stored = await ReloadAsync(row.Id);
+        stored.DeadLetteredOn.Should().BeNull();
+        stored.LastError.Should().Be("Failure sending mail. ---> IOException: 550 5.1.1 mailbox unavailable");
+    }
+
+    [Fact]
+    public async Task Cycle_AWrappedExceptionOnTheLastAttempt_DeadLettersWithTheInnerCause()
+    {
+        _log.Throws = () => new InvalidOperationException(
+            "Failure sending mail.", new IOException("550 5.1.1 mailbox unavailable"));
+        var row = Seed(new RecordingCommand("mail"), InternalCommandTestHarness.EpochUtc, attempts: 2);
+        var processor = CreateProcessor(maxAttempts: 3);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        var stored = await ReloadAsync(row.Id);
+        stored.DeadLetteredOn.Should().Be(InternalCommandTestHarness.EpochUtc);
+        stored.LastError.Should().Contain("IOException: 550 5.1.1 mailbox unavailable");
+    }
+
+    [Fact]
+    public async Task Cycle_AThrowingAttempt_LogsOneWarningCarryingTheException()
+    {
+        var thrown = new InvalidOperationException("Failure sending mail.", new IOException("550 5.1.1"));
+        _log.Throws = () => thrown;
+        Seed(new RecordingCommand("mail"), InternalCommandTestHarness.EpochUtc);
+        var logger = new RecordingLogger<InternalCommandProcessor>();
+        var processor = CreateProcessor(maxAttempts: 3, logger: logger);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        logger.Entries.Where(e => e.Exception is not null).Should().ContainSingle()
+            .Which.Should().Match<RecordingLogger<InternalCommandProcessor>.Entry>(e =>
+                e.Level == LogLevel.Warning
+                && e.Exception == thrown
+                && e.Message.Contains("attempt 1 threw", StringComparison.Ordinal));
+        logger.Entries.Should().ContainSingle(e => e.EventName == "LogAttemptFailed")
+            .Which.Exception.Should().BeNull("the retry line stays in AppTraces");
+    }
+
+    [Fact]
+    public async Task Cycle_ADeadLetterAfterAThrow_LogsTheDeadLetterLineWithoutAnException()
+    {
+        // An exception on this line would move it from AppTraces to AppExceptions, and Store's
+        // dead-letter alert reads AppTraces only: attaching it would silence the page.
+        _log.Throws = () => new InvalidOperationException("Failure sending mail.", new IOException("550 5.1.1"));
+        Seed(new RecordingCommand("mail"), InternalCommandTestHarness.EpochUtc, attempts: 2);
+        var logger = new RecordingLogger<InternalCommandProcessor>();
+        var processor = CreateProcessor(maxAttempts: 3, logger: logger);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        var deadLetter = logger.Entries.Should().ContainSingle(e => e.EventName == "LogAttemptsExhausted").Which;
+        deadLetter.Level.Should().Be(LogLevel.Error);
+        deadLetter.Exception.Should().BeNull();
+        deadLetter.Message.Should().Contain("dead-lettered").And.Contain("550 5.1.1");
+    }
+
+    [Fact]
+    public async Task Cycle_AResultFailure_LogsNoExceptionAtAll()
+    {
+        _log.Outcome = () => Result.Failure(Error.Failure("Test.Failed", "the work did not happen"));
+        Seed(new RecordingCommand("doomed"), InternalCommandTestHarness.EpochUtc);
+        var logger = new RecordingLogger<InternalCommandProcessor>();
+        var processor = CreateProcessor(maxAttempts: 3, logger: logger);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        logger.Entries.Should().NotContain(e => e.Exception != null, "nothing was thrown");
     }
 
     [Fact]
@@ -438,7 +522,8 @@ public sealed class InternalCommandProcessorTests : IDisposable
         int maxAttempts = 3,
         int batchSize = 50,
         int maxRetryBackoffSeconds = 600,
-        bool registerHandler = true)
+        bool registerHandler = true,
+        ILogger<InternalCommandProcessor>? logger = null)
     {
         (InternalCommandProcessor processor, ServiceProvider services) = InternalCommandTestHarness.CreateProcessor(
             _context,
@@ -447,7 +532,8 @@ public sealed class InternalCommandProcessorTests : IDisposable
             _clock,
             registerHandler
                 ? services => InternalCommandTestHarness.AddRecordingCommandPipeline(services, _log)
-                : null);
+                : null,
+            logger);
 
         _providers.Add(services);
         return processor;

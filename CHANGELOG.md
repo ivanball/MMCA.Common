@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **A failing background job keeps the cause, not only the outer message** (MMCA.Common.Infrastructure). An internal command, outbox message or scheduled job that throws used to record only the outermost `Exception.Message` in `LastError`, in its log text and in its span status, so a wrapper hid the real cause: in Store production on 2026-11-01, `Sales.SendOrderPaidEmail` dead-lettered 21 of 21 attempts as "Failure sending mail." while the SMTP server's reply sat on `InnerException`. All three now record the outer message followed by `" ---> {Type}: {Message}"` for each cause (inside an `AggregateException` too, at most 8 levels, a level repeating the previous message skipped, no stack traces), still cut to the 4000-character column. An exception with no inner exception records exactly what it did before. The text can now include what a cause said, such as a recipient address in an SMTP rejection; it lands in the same column and logs as before. The internal-command processor also writes one new Warning per throwing attempt, "Internal command {CommandId} ({CommandType}) attempt {Attempts} threw", carrying the exception object, so the stack is logged for the first time. The retry and dead-letter lines still carry no exception, so a dead-letter alert that reads AppTraces keeps firing.
+
 ## [1.280.0] - 2026-11-07
 
 Support access log for view-as grants, and per-platform phone delivery recorded on each push notification.
