@@ -1,5 +1,1 @@
 #nullable enable
-MMCA.Common.Passkeys.PasskeysServiceCollectionExtensions
-MMCA.Common.Passkeys.PasskeysServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
-MMCA.Common.Passkeys.PasskeysServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddPasskeys(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Passkeys.PasskeysServiceCollectionExtensions.AddPasskeys(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

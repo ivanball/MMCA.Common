@@ -14,6 +14,7 @@ MMCA.Common.Domain.Attributes.PiiAttribute.PiiAttribute() -> void
 MMCA.Common.Domain.Attributes.SensitiveAttribute
 MMCA.Common.Domain.Attributes.SensitiveAttribute.SensitiveAttribute() -> void
 MMCA.Common.Domain.Auth.IAuthUser
+MMCA.Common.Domain.Auth.IAuthUser.IsServiceAccount.get -> bool
 MMCA.Common.Domain.Auth.IAuthUser.PasswordHash.get -> byte[]!
 MMCA.Common.Domain.Auth.IAuthUser.PasswordSalt.get -> byte[]!
 MMCA.Common.Domain.Auth.IEmailConfirmableUser
@@ -37,6 +38,40 @@ MMCA.Common.Domain.Auth.IUserPreferences
 MMCA.Common.Domain.Auth.IUserPreferences.PreferredCulture.get -> string?
 MMCA.Common.Domain.Auth.IUserPreferences.PreferredTheme.get -> string?
 MMCA.Common.Domain.Auth.IUserPreferences.UpdatePreferences(string? preferredCulture, string? preferredTheme) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Accepts(string? presentedSecret, System.DateTime utcNow) -> bool
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.IsRevoked.get -> bool
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.LastUsedOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Name.get -> string!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.PrimarySecretHash.get -> byte[]!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Promote() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.RecordUse(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Revoke(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.RevokedOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Rotate(byte[]! secondarySecretHash) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.SecondarySecretHash.get -> byte[]?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.SecretExpiresOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.ServiceAccountUserId.get -> int
+MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret
+MMCA.Common.Domain.Auth.PasskeyCredential
+MMCA.Common.Domain.Auth.PasskeyCredential.CreatedOn.get -> System.DateTime
+MMCA.Common.Domain.Auth.PasskeyCredential.CreatedOn.init -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.CredentialId.get -> byte[]!
+MMCA.Common.Domain.Auth.PasskeyCredential.CredentialId.init -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.Id.get -> System.Guid
+MMCA.Common.Domain.Auth.PasskeyCredential.Id.init -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.LastUsedOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.PasskeyCredential.Name.get -> string!
+MMCA.Common.Domain.Auth.PasskeyCredential.PasskeyCredential() -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.PublicKey.get -> byte[]!
+MMCA.Common.Domain.Auth.PasskeyCredential.PublicKey.init -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.RecordUse(uint presentedSignCount, System.DateTime usedOn) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.PasskeyCredential.Rename(string? name) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.PasskeyCredential.SignCount.get -> long
+MMCA.Common.Domain.Auth.PasskeyCredential.Transports.get -> string?
+MMCA.Common.Domain.Auth.PasskeyCredential.Transports.init -> void
+MMCA.Common.Domain.Auth.PasskeyCredential.UserId.get -> int
+MMCA.Common.Domain.Auth.PasskeyCredential.UserId.init -> void
 MMCA.Common.Domain.Auth.PermissionGrant
 MMCA.Common.Domain.Auth.PermissionGrant.GrantedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.PermissionGrant.GrantedAt.init -> void
@@ -136,6 +171,17 @@ MMCA.Common.Domain.Enums.DomainEntityState.Updated = 2 -> MMCA.Common.Domain.Enu
 MMCA.Common.Domain.Extensions.EntityTypeExtensions
 MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!)
 MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!).IsIdValueGenerated.get -> bool
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Change(MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode mode, string! reason, int? percentage = null, System.Collections.Generic.IEnumerable<string!>? users = null, System.Collections.Generic.IEnumerable<string!>? groups = null) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Clear() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Groups.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Mode.get -> MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Name.get -> string!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Percentage.get -> int?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Reason.get -> string!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetGroups.get -> string?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetUsers.get -> string?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Users.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested
 MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Equals(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? other) -> bool
 MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.OutputCacheEvictionRequested() -> void
@@ -256,6 +302,14 @@ MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TId
 MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>!).Or(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>!
 abstract MMCA.Common.Domain.DomainEvents.BaseDomainEvent.<Clone>$() -> MMCA.Common.Domain.DomainEvents.BaseDomainEvent!
 abstract MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+const MMCA.Common.Domain.Auth.MachineClients.MachineClient.NameMaxLength = 100 -> int
+const MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.HashByteLength = 32 -> int
+const MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.SecretByteLength = 32 -> int
+const MMCA.Common.Domain.Auth.PasskeyCredential.CredentialIdMaxLength = 1023 -> int
+const MMCA.Common.Domain.Auth.PasskeyCredential.DefaultName = "Passkey" -> string!
+const MMCA.Common.Domain.Auth.PasskeyCredential.NameMaxLength = 100 -> int
+const MMCA.Common.Domain.Auth.PasskeyCredential.PublicKeyMaxLength = 2048 -> int
+const MMCA.Common.Domain.Auth.PasskeyCredential.TransportsMaxLength = 100 -> int
 const MMCA.Common.Domain.Auth.PermissionGrant.PermissionMaxLength = 128 -> int
 const MMCA.Common.Domain.Auth.PermissionGrant.RoleMaxLength = 64 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
@@ -270,6 +324,12 @@ const MMCA.Common.Domain.Auth.RefreshSession.UserAgentMaxLength = 512 -> int
 const MMCA.Common.Domain.Auth.ViewAsGrant.DisplayMaxLength = 256 -> int
 const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMaxLength = 500 -> int
 const MMCA.Common.Domain.Auth.ViewAsGrant.ReasonMinLength = 10 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.MaxPercentage = 100 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.NameMaxLength = 128 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.ReasonMaxLength = 500 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetListMaxLength = 4000 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetMaxLength = 128 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetSeparator = ',' -> char
 const MMCA.Common.Domain.Invariants.CommonInvariants.DarkTheme = "dark" -> string!
 const MMCA.Common.Domain.Invariants.CommonInvariants.LightTheme = "light" -> string!
 const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKeyMaxLength = 128 -> int
@@ -313,6 +373,12 @@ override sealed MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.Equals(MMCA
 override sealed MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
 override sealed MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Equals(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? other) -> bool
 override sealed MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+static MMCA.Common.Domain.Auth.MachineClients.MachineClient.Create(string! name, int serviceAccountUserId, byte[]! primarySecretHash, System.DateTime? secretExpiresOn, System.DateTime utcNow) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.MachineClients.MachineClient!>!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Generate() -> string!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Hash(string! secret) -> byte[]!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Matches(System.ReadOnlySpan<byte> presented, byte[]? stored) -> bool
+static MMCA.Common.Domain.Auth.PasskeyCredential.Create(int userId, byte[]! credentialId, byte[]! publicKey, uint signCount, System.Collections.Generic.IEnumerable<string!>? transports, string? name, System.DateTime createdOn) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.PasskeyCredential!>!
+static MMCA.Common.Domain.Auth.PasskeyCredential.IsSignCountAcceptable(long stored, uint presented) -> bool
 static MMCA.Common.Domain.Auth.PermissionGrant.Create(string! role, string! permission, System.DateTime grantedAt, string? grantedBy = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.PermissionGrant!>!
 static MMCA.Common.Domain.Auth.RefreshSession.Create(int userId, string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 static MMCA.Common.Domain.Auth.RefreshSession.HashToken(string! refreshToken) -> string!
@@ -332,6 +398,7 @@ static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>
 static MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.operator !=(MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? left, MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? right) -> bool
 static MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.operator ==(MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? left, MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? right) -> bool
 static MMCA.Common.Domain.Extensions.EntityTypeExtensions.get_IsIdValueGenerated(System.Type! entityType) -> bool
+static MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Create(string! name, MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode mode, string! reason, int? percentage = null, System.Collections.Generic.IEnumerable<string!>? users = null, System.Collections.Generic.IEnumerable<string!>? groups = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride!>!
 static MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.operator !=(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? left, MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? right) -> bool
 static MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.operator ==(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? left, MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? right) -> bool
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureBytesAreNotEmpty(byte[]! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!

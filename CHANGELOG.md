@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.281.0] - 2026-11-08
+
+Generic OIDC sign-in, passkeys, machine clients, reloadable feature flags, a permission coverage gate, and background-job failures that keep their cause.
+
 A new package, **MMCA.Common.Passkeys**, joins the framework (the only package that references Fido2NetLib and its native crypto dependency).
 
 **A host that turns on reloadable feature flags, passkeys or machine clients needs one migration** per opt-in (a `FeatureFlagOverrides` table on each database that owns overrides, a `PasskeyCredentials` or `MachineClients` table on the Identity database); see [UPGRADING.md](UPGRADING.md). Nothing changes for a host that opts into none of them.

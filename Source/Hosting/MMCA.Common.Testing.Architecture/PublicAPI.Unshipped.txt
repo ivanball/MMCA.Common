@@ -1,11 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase
-MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.NamedPermissions_ShouldBe_GrantedToARole() -> void
-MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.PermissionCoverageTestsBase() -> void
-MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.ScannedPermissionSet_IsNotEmpty() -> void
-abstract MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.DeclaredPermissions.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
-abstract MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
-static MMCA.Common.Testing.Architecture.ArchitectureRules.CountNamedPermissions(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
-static MMCA.Common.Testing.Architecture.ArchitectureRules.NamedPermissionsAreGranted(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyCollection<string!>! declaredPermissions, System.Collections.Generic.IEnumerable<string!>? additionalReferencedPermissions = null) -> void
-virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.AdditionalReferencedPermissions.get -> System.Collections.Generic.IEnumerable<string!>!
-virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.MinimumNamedPermissions.get -> int

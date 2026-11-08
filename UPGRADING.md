@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.281.0] - 2026-11-08
+
 Nothing breaks. Three opt-ins need a migration:
 
 **Machine clients: one migration on the Identity database, and a provisioner.** A host that does not
