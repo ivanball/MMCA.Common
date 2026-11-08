@@ -34,7 +34,25 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
-Nothing breaks. One opt-in needs a migration:
+Nothing breaks. Two opt-ins need a migration:
+
+**Passkeys: one migration on the Identity database.** A host that does not call `AddPasskeys` changes
+nothing and maps no table.
+
+1. Reference `MMCA.Common.Passkeys` from the Identity service and call
+   `services.AddPasskeys(configuration)`. Set `Passkeys:Enabled`, `Passkeys:RelyingPartyId` (the
+   registrable domain the browser shows; every passkey is bound to it, so a later domain change
+   orphans them) and `Passkeys:Origins` (each web origin that signs in).
+2. In the Identity migrations project, set `DesignTimeDbContextOptions.EnablePasskeys = true`, add a
+   migration (for example `AddPasskeyCredentials`) and apply it.
+3. Derive a routed controller from `PasskeysControllerBase`, set `SignIn:OfferPasskeys` in the web
+   head, place `PasskeysPanel` on the profile page, and override
+   `AuthenticationServiceBase.HasExternalLoginAsync` if your users can sign in through an external
+   provider (otherwise the last-passkey rule ignores it).
+
+```bash
+dotnet ef migrations add AddPasskeyCredentials -- --datasource Identity
+```
 
 **Reloadable feature flags: one migration on each database that owns overrides.** A host that does
 not call `AddReloadableFeatureFlags` changes nothing and maps no table.
