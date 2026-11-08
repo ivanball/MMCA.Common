@@ -34,6 +34,26 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+Nothing breaks. One opt-in needs a migration:
+
+**Reloadable feature flags: one migration on each database that owns overrides.** A host that does
+not call `AddReloadableFeatureFlags` changes nothing and maps no table.
+
+1. Call `services.AddReloadableFeatureFlags(configuration, typeof(MyModuleFeatures).Assembly)` after
+   `AddAPI()` in each service whose flags should be overridable (it throws when called before).
+2. In that service's migrations project, set `DesignTimeDbContextOptions.EnableFeatureFlagOverrides = true`
+   in the design-time factory, add a migration (for example `AddFeatureFlagOverrides`) and apply it.
+   It creates `FeatureFlagOverrides` (the flag name as the key, mode, percentage, targeted users and
+   groups, a required reason, and the audit and soft-delete columns).
+3. Grant `features:manage` (`AdministrationPermissions.ManageFeatures`) to the operator role, derive a
+   routed controller from `FeatureFlagsControllerBase`, and give the `FeatureFlagAdmin` page a route
+   behind the same permission (`services.AddFeatureFlagAdministrationUI("<api prefix>", ...)` lists
+   each service's flags in one table).
+
+```bash
+dotnet ef migrations add AddFeatureFlagOverrides -- --datasource <Service>
+```
+
 ## [1.280.0] - 2026-11-07
 
 **`INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` (breaking, MMCA.Common.Application
