@@ -3,7 +3,10 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.SoftDeletedUsers;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases.Contracts;
@@ -41,6 +44,13 @@ public static partial class DependencyInjection
 
             services.TryAddSingleton<INavigationMetadataProvider, NavigationMetadataProvider>();
             services.TryAddSingleton<IEntityQueryPipeline, EntityQueryPipeline>();
+
+            // A factory, not a type registration: a Development host validates every registration at
+            // build, and only a factory defers the writer's dependencies to the moment it is resolved,
+            // so a host that issues no tokens (and never resolves this) still starts.
+            services.TryAddScoped<ISoftDeletedUserMarkerWriter>(sp => new SoftDeletedUserMarkerWriter(
+                sp.GetRequiredService<ICacheService>(),
+                sp.GetRequiredService<ITokenService>()));
 
             // Register validators defined in MMCA.Common.Application (e.g. LoginRequestValidator,
             // RefreshTokenRequestValidator). Module-level ScanModuleApplicationServices only scans the

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.SoftDeletedUsers;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -470,7 +471,8 @@ public sealed class DeleteUserHandlerBaseTests
         unitOfWork.Setup(x => x.GetRepository<TestHidingDeleteUser, UserIdentifierType>()).Returns(repository.Object);
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object, tokenService ?? Mock.Of<ITokenService>(), refreshSessions, timeProvider, viewAsGrants);
+        var markerWriter = new SoftDeletedUserMarkerWriter(cache.Object, tokenService ?? Mock.Of<ITokenService>());
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, markerWriter, logger.Object, refreshSessions, timeProvider, viewAsGrants);
         return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
@@ -478,13 +480,12 @@ public sealed class DeleteUserHandlerBaseTests
 /// <summary>Concrete subclass standing in for an app's <c>DeleteUserHandler</c> plus its erasure tail.</summary>
 public sealed class TestDeleteUserHandler(
     IUnitOfWork unitOfWork,
-    ICacheService cacheService,
+    ISoftDeletedUserMarkerWriter markerWriter,
     ILogger logger,
-    ITokenService tokenService,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
     IViewAsGrantStore? viewAsGrants = null)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger, tokenService, refreshSessions, timeProvider, viewAsGrants)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, markerWriter, logger, refreshSessions, timeProvider, viewAsGrants)
 {
     public int TailInvocations { get; private set; }
 

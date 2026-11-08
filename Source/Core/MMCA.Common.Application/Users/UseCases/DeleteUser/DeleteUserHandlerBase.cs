@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.SoftDeletedUsers;
 using MMCA.Common.Application.Auth.ViewAs;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
@@ -64,13 +63,11 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's delete-user command record.</typeparam>
 /// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
-/// <param name="cacheService">The cache the soft-deleted user marker is written to (ADR-047).</param>
-/// <param name="logger">Logger for the erasure audit line and the marker-failure warning.</param>
-/// <param name="tokenService">
-/// Supplies the host's access-token lifetime, which sizes the soft-deleted marker so it outlives every
-/// token issued before the erasure. Required, so a host that raises the lifetime cannot silently keep
-/// a shorter marker. The default bearer clock skew is assumed: this layer cannot read the host's.
+/// <param name="markerWriter">
+/// Writes the soft-deleted user marker (ADR-047), sized so it outlives every access token issued
+/// before the erasure. <c>AddApplication</c> registers it.
 /// </param>
+/// <param name="logger">Logger for the erasure audit line and the marker-failure warning.</param>
 /// <param name="refreshSessions">
 /// The refresh-session store, or <see langword="null"/> on a host that registered none (refresh
 /// sessions are opt-in). When present, every un-revoked session of the account is revoked and every
@@ -88,9 +85,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// </param>
 public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
-    ICacheService cacheService,
+    ISoftDeletedUserMarkerWriter markerWriter,
     ILogger logger,
-    ITokenService tokenService,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
     IViewAsGrantStore? viewAsGrants = null) : ICommandHandler<TCommand, Result>
@@ -190,13 +186,7 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         // queued behind it cannot stretch the window in which a deleted user's token still works.
         try
         {
-            await SoftDeletedUserCache
-                .MarkDeletedForAsync(
-                    cacheService,
-                    command.UserId,
-                    SoftDeletedUserCache.MarkerDurationFor(tokenService.AccessTokenLifetime),
-                    cancellationToken)
-                .ConfigureAwait(false);
+            await markerWriter.MarkDeletedAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
