@@ -50,7 +50,8 @@ public static class AuthClaimTypes
     /// The claim asserting that the access token was minted after a second authentication factor was
     /// presented. It is an <c>amr</c>-style claim (RFC 8176, "authentication methods references"):
     /// the VALUE names the method that satisfied the challenge, one of
-    /// <see cref="MultiFactorMethodTotp"/> or <see cref="MultiFactorMethodRecoveryCode"/>.
+    /// <see cref="MultiFactorMethodTotp"/>, <see cref="MultiFactorMethodRecoveryCode"/> or
+    /// <see cref="MultiFactorMethodPasskey"/>.
     /// <para>
     /// <b>Presence is the assertion, not the value.</b> Readers ask whether the claim is there
     /// (<see cref="ClaimsPrincipalExtensions.HasMultiFactor"/>); the value exists for audit and for a
@@ -68,6 +69,28 @@ public static class AuthClaimTypes
     public const string MultiFactorMethodRecoveryCode = "recovery";
 
     /// <summary>
+    /// Value of <see cref="MultiFactor"/> when a passkey (a WebAuthn assertion, ADR-139) signed the user
+    /// in. A passkey is possession of the device plus the authenticator's own user verification, so the
+    /// sign-in is multi-factor by itself, and a refresh carries the value over like the other two.
+    /// </summary>
+    public const string MultiFactorMethodPasskey = "passkey";
+
+    /// <summary>
+    /// The claim carrying the instant of the interactive sign-in a token descends from, in seconds since
+    /// the Unix epoch (the OpenID Connect <c>auth_time</c> claim). Stamped when a sign-in opens a session
+    /// (password, sign-in link, external login, passkey, registration) and carried UNCHANGED across every
+    /// refresh, so unlike <c>iat</c> it does not move when a refresh mints a new access token. A view-as
+    /// token carries none.
+    /// <para>
+    /// It is what "recently signed in" is judged by: registering a passkey requires an
+    /// <c>auth_time</c> within the last ten minutes (ADR-139), so a stolen refresh token cannot keep a
+    /// session fresh enough to plant one. A token minted before the claim shipped has none and reads as
+    /// not recent.
+    /// </para>
+    /// </summary>
+    public const string AuthTime = "auth_time";
+
+    /// <summary>
     /// The claim naming the staff user behind a view-as token (ADR-137): the token's <c>sub</c> is the
     /// user being viewed, and this claim's value is the id of the staff user who is viewing.
     /// <para>
@@ -83,4 +106,22 @@ public static class AuthClaimTypes
     /// view-as request, so ending the grant ends the token before it expires.
     /// </summary>
     public const string ViewAsGrant = "vag";
+
+    /// <summary>
+    /// The OAuth <c>client_id</c> claim (RFC 9068): the machine client a token was issued to through the
+    /// client credentials grant (ADR-140). The token's <c>sub</c> is the client's service-account user.
+    /// </summary>
+    public const string ClientId = "client_id";
+
+    /// <summary>
+    /// The claim naming what kind of caller a token was issued to. Only a machine token carries it, with
+    /// the value <see cref="TokenUseMachine"/>; a token without it was issued to a person.
+    /// </summary>
+    public const string TokenUse = "token_use";
+
+    /// <summary>
+    /// Value of <see cref="TokenUse"/> on a token issued through the client credentials grant (ADR-140).
+    /// Such a token has no refresh token, no session (<c>sid</c>), no <c>auth_time</c> and no <c>mfa</c>.
+    /// </summary>
+    public const string TokenUseMachine = "machine";
 }

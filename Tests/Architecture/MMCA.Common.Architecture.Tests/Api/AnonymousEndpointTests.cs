@@ -45,13 +45,23 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // Both are throttled by the auth-ip policy, and send always answers 202 on a well-formed request.
         "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.SendSignInLinkAsync",
         "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.RedeemSignInLinkAsync",
+        // Passkey sign-in options (ADR-139): issues a single-use challenge before any account is known; auth-ip throttled.
+        "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.BeginSignInAsync",
+        // Passkey sign-in completion (ADR-139): the signed assertion is the credential, so a token would be circular; auth-ip throttled.
+        "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.CompleteSignInAsync",
+        // Machine-client token endpoint (ADR-140): the client secret is the credential, so a token would be circular; auth-ip throttled.
+        "MMCA.Common.API.Controllers.MachineClients.MachineTokenControllerBase.IssueTokenAsync",
         // The three OAuth challenge endpoints and the provider-callback completion run before any
         // local token exists, so they declare their anonymity rather than relying on the absence of
         // an attribute: the framework's fallback authorization policy would otherwise break login.
         "MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin",
+        "MMCA.Common.API.Controllers.OAuthControllerBase.OidcLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.CompleteAsync",
+        // Home-realm discovery runs before sign-in to pick the OIDC provider. Throttled by the auth-ip
+        // policy; it reveals which configured provider owns a domain, never whether an account exists.
+        "MMCA.Common.API.Controllers.OAuthControllerBase.DiscoverOidcProvider",
         // Credential pages: a caller who has to sign in, register or recover cannot already hold a
         // token. AuthorizeRouteView reads attributes and ignores the fallback policy, so these
         // declare themselves.

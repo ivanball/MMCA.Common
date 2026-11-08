@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -91,6 +92,14 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </remarks>
     private string? _multiFactorMethod;
 
+    /// <summary>
+    /// The sign-in instant (<c>auth_time</c>) the presented token carried, armed by
+    /// <see cref="RefreshTokenAsync"/> so the rotated token keeps it UNCHANGED, or null. A sign-in
+    /// leaves it null: the issuer stamps the instant of the session it opens. A plain field for the reason
+    /// <see cref="_multiFactorMethod"/> is one.
+    /// </summary>
+    private DateTimeOffset? _authenticatedAt;
+
     /// <summary>The unit of work (exposed for app-level workflows such as external login).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
 
@@ -167,9 +176,10 @@ public abstract class AuthenticationServiceBase<TUser>(
         var untracked = await FindUntrackedByEmailAsync(loginEmail, cancellationToken).ConfigureAwait(false);
 
         // SECURITY: an account with no stored credential material (the shape an external-OAuth
-        // account carries, ADR-036) can never be reached by password login. It is answered exactly
-        // like an unknown address, cost included, so the two are indistinguishable.
-        if (untracked is null || !HasStoredCredential(untracked))
+        // account carries, ADR-036) can never be reached by password login, and neither can a machine
+        // client's service account (ADR-140), whatever it stores. Both are answered exactly like an
+        // unknown address, cost included, so none of the three can be told apart.
+        if (!CanSignInWithPassword(untracked))
         {
             BurnPasswordVerificationCost(request.Password);
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
@@ -384,6 +394,11 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Dropping it instead would quietly demote a signed-in session every fifteen minutes and make
         // every IRequiresMfa use case unreachable without a fresh sign-in.
         _multiFactorMethod = principal.FindMultiFactorMethod();
+
+        // The sign-in instant rides the rotation the same way, and unchanged: a refresh is not a sign-in,
+        // so a stolen refresh token cannot make its session look recently signed in (ADR-139). A token
+        // with no auth_time (minted before the claim shipped) rotates into one with none.
+        _authenticatedAt = principal.FindAuthTime();
         try
         {
             // The issuer resolves the presented token (reuse detection included) and mints the
@@ -399,6 +414,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         finally
         {
             _multiFactorMethod = null;
+            _authenticatedAt = null;
         }
     }
 
@@ -491,8 +507,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
+        // A service account (ADR-140) has no mailbox to prove; it reads exactly like an unknown account.
         var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (user is null)
+        if (user is null || user.IsServiceAccount)
         {
             return Result.Failure<AuthenticationResponse>(
                 SignInLinks.SignInLinkErrors.InvalidLink(nameof(SignInVerifiedEmailOwnerAsync)));
@@ -514,10 +531,94 @@ public abstract class AuthenticationServiceBase<TUser>(
         return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Runs the app gate a password sign-in runs once the credential is proved
+    /// (<see cref="ValidateLoginCandidateAsync"/>), then mints through <see cref="IssueTokensAsync"/>,
+    /// so the session, the cap and the <c>sid</c> claim are exactly a password sign-in's.
+    /// </para>
+    /// <para>
+    /// <b>No second-factor challenge.</b> A passkey is possession of the authenticator plus its own
+    /// user verification, so it satisfies the second factor itself: the token carries
+    /// <c>mfa=passkey</c>, and <see cref="RefreshTokenAsync"/> carries it across rotations like
+    /// <c>otp</c>. The email-confirmation gate is skipped as well: a passkey can only have been
+    /// registered by a signed-in account that already passed it.
+    /// </para>
+    /// </remarks>
+    public async Task<Result<AuthenticationResponse>> SignInWithPasskeyAsync(
+        UserIdentifierType userId,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
+    {
+        // A service account (ADR-140) never signs in with a passkey; it reads like a vanished account.
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null || user.IsServiceAccount)
+        {
+            return Result.Failure<AuthenticationResponse>(
+                Passkeys.PasskeyErrors.AssertionFailed(nameof(SignInWithPasskeyAsync)));
+        }
+
+        var candidateResult = await ValidateLoginCandidateAsync(user, cancellationToken).ConfigureAwait(false);
+        if (candidateResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
+        }
+
+        _multiFactorMethod = AuthClaimTypes.MultiFactorMethodPasskey;
+        try
+        {
+            return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _multiFactorMethod = null;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A stored password hash counts, and so does whatever <see cref="HasExternalLoginAsync"/> reports
+    /// (no external login unless the app overrides it). A vanished account answers
+    /// <see langword="false"/>.
+    /// </remarks>
+    public async Task<bool> HasSignInMethodBesidesPasskeysAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return false;
+        }
+
+        return user.PasswordHash is { Length: > 0 }
+            || await HasExternalLoginAsync(user, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Whether the account has an external (OAuth/OIDC) login it can sign in with. Asked only by
+    /// <see cref="HasSignInMethodBesidesPasskeysAsync"/>, before an account's last passkey is deleted.
+    /// The default answers <see langword="false"/>; an app whose <c>ExternalLoginAsync</c> links
+    /// accounts overrides it (for example <c>user.LoginProvider is not null</c>).
+    /// </summary>
+    /// <param name="user">The account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the account has an external login.</returns>
+    protected virtual Task<bool> HasExternalLoginAsync(TUser user, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
     /// <summary>
     /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
     /// by the login/registration flows and reusable by app-level flows (e.g. external login). The
     /// user's other sessions are untouched, except for the oldest one when the per-user cap is full.
+    /// <para>
+    /// <b>Never for a service account.</b> A machine client's service account (ADR-140,
+    /// <see cref="IAuthUser.IsServiceAccount"/>) obtains tokens only through the client credentials
+    /// grant, which opens no session. Every interactive sign-in, the app-level external login included,
+    /// mints through here, so the refusal here is the backstop behind the earlier, path-specific ones.
+    /// </para>
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="ipAddress">Optional client IP recorded on the new session.</param>
@@ -530,6 +631,11 @@ public abstract class AuthenticationServiceBase<TUser>(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
+        if (user.IsServiceAccount)
+        {
+            return Task.FromResult(Result.Failure<AuthenticationResponse>(
+                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(IssueTokensAsync))));
+        }
 
         return sessionIssuer.IssueAsync(
             user.Id,
@@ -601,8 +707,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <remarks>
     /// The default stamps the claim without the app hook participating: the issuer arms
     /// <see cref="TokenService"/> for the duration of the <see cref="CreateAccessToken"/> call
-    /// (<see cref="IAuthSessionIssuer.MintForSession"/>), and the wrapper appends <c>sid</c>, plus
-    /// <c>mfa</c> when this request verified a second factor, to whatever claim set the app passed.
+    /// (<see cref="IAuthSessionIssuer.MintForSession(Guid, string?, DateTimeOffset?, Func{string})"/>), and the wrapper appends <c>sid</c>, plus
+    /// <c>mfa</c> when this request verified a second factor and <c>auth_time</c> (the sign-in instant, carried
+    /// over unchanged on a refresh), to whatever claim set the app passed.
     /// Doing it there rather than by changing <see cref="CreateAccessToken"/>'s signature is what makes
     /// the claims additive: every existing subclass keeps compiling and emits them with no edit.
     /// Override this method instead of relying on the wrapper if an app mints from its own
@@ -612,7 +719,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <param name="sessionId">The refresh session the token is being minted for.</param>
     /// <returns>The signed access token.</returns>
     protected virtual string CreateAccessTokenForSession(TUser user, Guid sessionId) =>
-        sessionIssuer.MintForSession(sessionId, _multiFactorMethod, () => CreateAccessToken(user));
+        sessionIssuer.MintForSession(sessionId, _multiFactorMethod, _authenticatedAt, () => CreateAccessToken(user));
 
     /// <summary>
     /// The email-confirmation sign-in gate. Off unless the host both supplied
@@ -725,6 +832,13 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     private static bool HasStoredCredential(TUser user) =>
         user.PasswordHash.Length > 0 && user.PasswordSalt.Length > 0;
+
+    /// <summary>
+    /// Whether password login is a path this candidate has at all: an account that exists, is not a
+    /// machine client's service account (ADR-140), and carries stored password material.
+    /// </summary>
+    private static bool CanSignInWithPassword([NotNullWhen(true)] TUser? user) =>
+        user is not null && !user.IsServiceAccount && HasStoredCredential(user);
 
     /// <summary>
     /// Runs one throwaway key derivation so a login branch that never reaches the real verification

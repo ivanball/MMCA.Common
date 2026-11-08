@@ -101,6 +101,48 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableViewAsGrants { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the stored feature-flag
+    /// override table (<c>FeatureFlagOverrides</c>, ADR-031). Defaults to <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the migrations project of each database whose service calls
+    /// <c>AddReloadableFeatureFlags</c> (the owning service's own database). The helper registers the
+    /// framework's model gate and points <c>FeatureFlags:DataSourceName</c> at the source this context
+    /// resolved to, so the flag opens the gate for exactly the context <c>--datasource</c> selected.
+    /// The flag must match whether the service calls <c>AddReloadableFeatureFlags</c>, or the scaffolded
+    /// migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableFeatureFlagOverrides { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the passkey table
+    /// (<c>PasskeyCredentials</c>, ADR-139), mirroring <c>Passkeys:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the Identity database's migrations project (like <see cref="EnableViewAsGrants"/>)
+    /// when the host calls <c>AddPasskeys</c> with <c>Passkeys:Enabled</c> true, and only there. The
+    /// helper points <c>Passkeys:DataSourceName</c> at the source this context resolved to, so the flag
+    /// opens the gate for exactly the context <c>--datasource</c> selected. The flag must match the
+    /// runtime setting, or the scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnablePasskeys { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the machine-client table
+    /// (<c>MachineClients</c>, ADR-140), mirroring <c>MachineClients:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the Identity database's migrations project (like <see cref="EnablePasskeys"/>) when the
+    /// host calls <c>AddMachineClients</c> with <c>MachineClients:Enabled</c> true, and only there. The
+    /// helper points <c>MachineClients:DataSourceName</c> at the source this context resolved to, so the
+    /// flag opens the gate for exactly the context <c>--datasource</c> selected. The flag must match the
+    /// runtime setting, or the scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableMachineClients { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>

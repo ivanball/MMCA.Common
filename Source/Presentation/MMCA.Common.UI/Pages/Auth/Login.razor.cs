@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.OAuth;
+using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Pages.Auth;
@@ -35,6 +37,17 @@ public partial class Login : IDisposable
     private string? _signInLinkSentTo;
 
     private bool _isSendingLink;
+
+    /// <summary>The configured OIDC providers, one sign-in button each.</summary>
+    private IReadOnlyList<OidcProviderOption> _oidcProviders = [];
+
+    /// <summary>Whether any OIDC provider declares email domains, which offers the organization step.</summary>
+    private bool _offersOrganizationSignIn;
+
+    private bool _isDiscovering;
+
+    /// <summary>Whether the page offers passkey sign-in and autofill (host opt-in AND a WebAuthn-capable head).</summary>
+    private bool _offersPasskeys;
 
     /// <summary>
     /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
@@ -84,6 +97,20 @@ public partial class Login : IDisposable
         }
     }
 
+    /// <summary>
+    /// Whether to offer passkeys (ADR-139): the host turned it on (<c>SignIn:OfferPasskeys</c>) and the
+    /// head's <see cref="IPasskeyCapability"/> can run WebAuthn. The capability is resolved optionally,
+    /// so a host (or a component test) that registers none simply gets no button.
+    /// </summary>
+    private bool OffersPasskeys() =>
+        SignInOptions.Value.OfferPasskeys
+        && Services.GetService<IPasskeyCapability>() is { IsAvailable: true }
+        && Services.GetService<IPasskeyUIService>() is not null;
+
+    /// <summary>A passkey signed the user in (the tokens are stored): land them as a password sign-in does.</summary>
+    private Task OnPasskeySignedInAsync() =>
+        ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
+
     /// <summary>Opens Forgot password with the typed address already filled in.</summary>
     private void OpenPasswordReset() =>
         AuthEmailPrefill.NavigateWithEmail(Navigation, "/forgot-password", _model.Email ?? string.Empty);
@@ -131,6 +158,64 @@ public partial class Login : IDisposable
         finally
         {
             _isSendingLink = false;
+        }
+    }
+
+    /// <summary>
+    /// Starts a configured OIDC provider's sign-in the way the built-in providers start theirs: through
+    /// the system-browser broker on a native head, otherwise through the web redirect.
+    /// </summary>
+    /// <param name="provider">The provider name, its <c>/auth/oauth/{name}</c> route segment.</param>
+    private Task SignInWithOidcAsync(string provider) =>
+        ExternalAuthBroker.IsAvailable ? SignInWithBrokerAsync(provider) : SignInWithRedirectAsync(provider);
+
+    /// <summary>
+    /// The email-first "Sign in with your organization" step: asks the API which configured OIDC
+    /// provider claims the typed address's domain and starts that provider's sign-in. An address no
+    /// provider claims stays on the page with an explanation.
+    /// </summary>
+    private async Task SignInWithOrganizationAsync()
+    {
+        _errorMessage = null;
+
+        var email = _model.Email?.Trim();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            _errorMessage = L["Auth.Login.SignInWithOrganization.EnterEmail"].Value;
+            return;
+        }
+
+        // Resolved at the click, like the sign-in-link client, so a host or a component test that
+        // never offers the step does not have to register it.
+        if (Services.GetService<IOidcDiscoveryUIService>() is not { } discovery)
+        {
+            _errorMessage = L["Auth.Login.GenericError"].Value;
+            return;
+        }
+
+        _isDiscovering = true;
+        try
+        {
+            var match = await discovery.DiscoverAsync(email, _cts.LifetimeToken());
+            if (match is null)
+            {
+                _errorMessage = L["Auth.Login.SignInWithOrganization.NotFound"].Value;
+                return;
+            }
+
+            await SignInWithOidcAsync(match.Provider);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // Expected during component disposal or an InteractiveAuto render-mode transition.
+        }
+        catch (HttpRequestException)
+        {
+            _errorMessage = L["Auth.Login.GenericError"].Value;
+        }
+        finally
+        {
+            _isDiscovering = false;
         }
     }
 

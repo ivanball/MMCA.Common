@@ -17,4 +17,12 @@ public sealed record ViewAsSubject(
     [property: Pii] string Email,
     string Role,
     [property: Pii] string FullName,
-    bool IsDeleted);
+    bool IsDeleted)
+{
+    /// <summary>
+    /// Gets a value indicating whether the account is the service account behind a machine client
+    /// (ADR-140), which is never viewed: there is no person behind it to support. The resolver sets it
+    /// from the app's <c>IAuthUser.IsServiceAccount</c>; it defaults to <see langword="false"/>.
+    /// </summary>
+    public bool IsServiceAccount { get; init; }
+}

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Marcas de funcionalidad</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Cada marca toma su valor de la configuración salvo que una anulación almacenada indique otra cosa. Una anulación surte efecto sin reiniciar y permanece hasta que se borra.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Cargando marcas de funcionalidad</value>
+  </data>
+  <data name="Action.Retry" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+  <data name="Empty.NoFlags" xml:space="preserve">
+    <value>No hay marcas de funcionalidad declaradas.</value>
+  </data>
+  <data name="Aria.Table" xml:space="preserve">
+    <value>Marcas de funcionalidad y sus valores</value>
+  </data>
+  <data name="Column.Flag" xml:space="preserve">
+    <value>Marca</value>
+  </data>
+  <data name="Column.Source" xml:space="preserve">
+    <value>Servicio</value>
+  </data>
+  <data name="Column.Kind" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Column.Owner" xml:space="preserve">
+    <value>Responsable</value>
+  </data>
+  <data name="Column.Configured" xml:space="preserve">
+    <value>Configurada</value>
+  </data>
+  <data name="Column.Override" xml:space="preserve">
+    <value>Anulación</value>
+  </data>
+  <data name="Column.Effective" xml:space="preserve">
+    <value>Vigente</value>
+  </data>
+  <data name="Column.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Lifetime.Permanent" xml:space="preserve">
+    <value>Permanente</value>
+  </data>
+  <data name="Lifetime.Temporary" xml:space="preserve">
+    <value>Temporal</value>
+  </data>
+  <data name="Lifetime.Unknown" xml:space="preserve">
+    <value>Sin declarar</value>
+  </data>
+  <data name="Value.Off" xml:space="preserve">
+    <value>Desactivada</value>
+  </data>
+  <data name="Value.On" xml:space="preserve">
+    <value>Activada</value>
+  </data>
+  <data name="Value.Conditional" xml:space="preserve">
+    <value>Condicional</value>
+  </data>
+  <data name="Mode.Off" xml:space="preserve">
+    <value>Desactivada</value>
+  </data>
+  <data name="Mode.On" xml:space="preserve">
+    <value>Activada</value>
+  </data>
+  <data name="Mode.Percentage" xml:space="preserve">
+    <value>Porcentaje de usuarios</value>
+  </data>
+  <data name="Mode.Targeting" xml:space="preserve">
+    <value>Usuarios y grupos destinatarios</value>
+  </data>
+  <data name="Override.None" xml:space="preserve">
+    <value>Ninguna</value>
+  </data>
+  <data name="Action.Set" xml:space="preserve">
+    <value>Establecer anulación</value>
+  </data>
+  <data name="Action.Clear" xml:space="preserve">
+    <value>Borrar anulación</value>
+  </data>
+  <data name="Aria.Set" xml:space="preserve">
+    <value>Establecer anulación de {0}</value>
+  </data>
+  <data name="Aria.Clear" xml:space="preserve">
+    <value>Borrar anulación de {0}</value>
+  </data>
+  <data name="Editor.Title" xml:space="preserve">
+    <value>Anular {0}</value>
+  </data>
+  <data name="Field.Mode" xml:space="preserve">
+    <value>Valor</value>
+  </data>
+  <data name="Field.Percentage" xml:space="preserve">
+    <value>Porcentaje (0 a 100)</value>
+  </data>
+  <data name="Field.Users" xml:space="preserve">
+    <value>Usuarios</value>
+  </data>
+  <data name="Field.Groups" xml:space="preserve">
+    <value>Grupos</value>
+  </data>
+  <data name="Field.ListHelp" xml:space="preserve">
+    <value>Separe los nombres con comas.</value>
+  </data>
+  <data name="Field.Reason" xml:space="preserve">
+    <value>Motivo</value>
+  </data>
+  <data name="Field.ReasonHelp" xml:space="preserve">
+    <value>Obligatorio. Se muestra junto a la anulación hasta que se borra.</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>Guardar anulación</value>
+  </data>
+  <data name="Action.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+</root>

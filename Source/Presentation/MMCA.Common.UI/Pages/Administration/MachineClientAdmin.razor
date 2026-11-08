@@ -1,0 +1,102 @@
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title" />
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
+
+@* Inline rather than a snackbar, for the RoleAdminList reason: an empty table and a failed load look
+   identical once a toast expires. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
+@if (_issued is not null)
+{
+    @* The one place a secret is ever shown: only its hash is stored, so it cannot be shown again. *@
+    <MudAlert Severity="Severity.Warning" Class="mb-4" data-testid="issued-secret">
+        <MudText Typo="Typo.subtitle2">@T("Secret.Title", _issued.Client.Name)</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">@T("Secret.Warning")</MudText>
+        <MudText Typo="Typo.body2">@T("Secret.ClientId") <code data-testid="issued-client-id">@_issued.Client.ClientId</code></MudText>
+        <MudText Typo="Typo.body2">@T("Secret.ClientSecret") <code data-testid="issued-client-secret">@_issued.ClientSecret</code></MudText>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-2"
+                   OnClick="DismissSecret" data-testid="dismiss-secret">
+            @T("Action.Dismiss")
+        </MudButton>
+    </MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4" Elevation="1" data-testid="create-client">
+    <MudText Typo="Typo.h6" Class="mb-2">@T("Create.Title")</MudText>
+
+    <ErrorSummary Result="_saveResult" Localizer="L" />
+
+    <MudTextField T="string" @bind-Value="_name" Label="@T("Field.Name")" Immediate="true"
+                  Required="true" Class="mb-2" data-testid="client-name" />
+    <MudTextField T="string" @bind-Value="_role" Label="@T("Field.Role")" HelperText="@T("Field.RoleHelp")"
+                  Immediate="true" Required="true" Class="mb-4" data-testid="client-role" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               OnClick="CreateAsync" Disabled="_saving"
+               data-testid="create-client-submit">
+        @T("Action.Create")
+    </MudButton>
+</MudPaper>
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@T("Loading")" />
+}
+else if (_loadResult is { IsFailure: true } && _clients.Count == 0)
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="LoadAsync">
+        @T("Action.Retry")
+    </MudButton>
+}
+else if (_clients.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Key" Message="@T("Empty.NoClients")" />
+}
+else
+{
+    <MudTable Items="_clients" T="MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse" Hover="true" Elevation="1"
+              Breakpoint="Breakpoint.Sm" Class="mb-4"
+              role="region" aria-label="@T("Aria.Table")">
+        <HeaderContent>
+            <MudTh>@T("Column.Name")</MudTh>
+            <MudTh>@T("Column.ClientId")</MudTh>
+            <MudTh>@T("Column.LastUsed")</MudTh>
+            <MudTh>@T("Column.Status")</MudTh>
+            <MudTh>@T("Column.Actions")</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@T("Column.Name")" data-testid="client-row-name">@context.Name</MudTd>
+            <MudTd DataLabel="@T("Column.ClientId")"><code>@context.ClientId</code></MudTd>
+            <MudTd DataLabel="@T("Column.LastUsed")">@(context.LastUsedOn?.ToString("u", System.Globalization.CultureInfo.CurrentCulture) ?? T("LastUsed.Never"))</MudTd>
+            <MudTd DataLabel="@T("Column.Status")" data-testid="client-row-status">@StatusText(context)</MudTd>
+            <MudTd DataLabel="@T("Column.Actions")">
+                @if (context.RevokedOn is null)
+                {
+                    @* Each aria-label STARTS with the visible text and names the client (WCAG 2.5.3). *@
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => RotateAsync(context))" data-testid="rotate-client"
+                               aria-label="@T("Aria.Rotate", context.Name)">
+                        @T("Action.Rotate")
+                    </MudButton>
+                    @if (context.HasSecondarySecret)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                                   OnClick="@(() => PromoteAsync(context))" data-testid="promote-client"
+                                   aria-label="@T("Aria.Promote", context.Name)">
+                            @T("Action.Promote")
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => RevokeAsync(context))" data-testid="revoke-client"
+                               aria-label="@T("Aria.Revoke", context.Name)">
+                        @T("Action.Revoke")
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}

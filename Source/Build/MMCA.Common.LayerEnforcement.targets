@@ -154,6 +154,32 @@
            Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference %(_ForbiddenCloudAdapterRefs.Filename). Adapter packages reference the core, never the other way round." />
   </Target>
 
+  <!-- Passkeys boundary (ADR-139, the ADR-134 adapter shape): Fido2NetLib pulls NSec.Cryptography and
+       the native libsodium, so WebAuthn verification lives in the opt-in MMCA.Common.Passkeys package
+       alone, behind the core IPasskeyCeremony contract. No other framework project may declare a
+       reference to that package (an adapter references the core, never the reverse) or to the WebAuthn
+       packages themselves, so a host that does not reference MMCA.Common.Passkeys restores none of
+       them. Judged on the references each project DECLARES (the Testing.Aspire note on
+       DefiningProjectName): a transitive arrival needs some framework project to declare one, and that
+       project fails here. Test projects (*.Tests) are exempt, as they are the package's consumers.
+       The runtime half is PasskeysIsolationTests. -->
+  <Target Name="EnforcePasskeysBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName.StartsWith('MMCA.Common.')) AND '$(MSBuildProjectName)' != 'MMCA.Common.Passkeys' AND !$(MSBuildProjectName.EndsWith('.Tests'))">
+    <ItemGroup>
+      <_ForbiddenPasskeysRefs Include="@(ProjectReference)"
+        Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)' AND '%(Filename)' == 'MMCA.Common.Passkeys'" />
+      <_ForbiddenWebAuthnRefs Include="@(PackageReference)"
+        Condition="$([System.String]::new('%(Identity)').ToLowerInvariant().StartsWith('fido2'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().Equals('nsec.cryptography'))
+                OR $([System.String]::new('%(Identity)').ToLowerInvariant().Equals('libsodium'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenPasskeysRefs->Count()) &gt; 0"
+           Text="Passkeys boundary violation: $(MSBuildProjectName) must not reference MMCA.Common.Passkeys. The passkey package is an opt-in adapter that references the core, never the other way round; depend on IPasskeyCeremony or IPasskeyService instead." />
+    <Error Condition="@(_ForbiddenWebAuthnRefs->Count()) &gt; 0"
+           Text="Passkeys boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenWebAuthnRefs.Identity). WebAuthn verification (Fido2NetLib, NSec, libsodium) lives in MMCA.Common.Passkeys alone." />
+  </Target>
+
   <!-- UI: depends only on Shared -->
   <Target Name="EnforceUILayerBoundary"
           BeforeTargets="ResolveProjectReferences"

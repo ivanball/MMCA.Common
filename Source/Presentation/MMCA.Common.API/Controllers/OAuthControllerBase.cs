@@ -5,12 +5,17 @@ using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.Authentication;
 using MMCA.Common.API.Idempotency;
+using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.ExternalProviders;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationService;
@@ -18,7 +23,8 @@ using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationServi
 namespace MMCA.Common.API.Controllers;
 
 /// <summary>
-/// OAuth2 authentication flow for external providers (Google, GitHub, Apple), hoisted from the app hosts.
+/// OAuth2 authentication flow for external providers (Google, GitHub, Apple, and any configured
+/// generic OIDC provider), hoisted from the app hosts.
 /// <para>
 /// Flow: challenge endpoint → provider login page → middleware handles callback at
 /// <c>/auth/callback/{provider}</c> (code exchange + state validation + cookie sign-in) →
@@ -127,6 +133,53 @@ public abstract class OAuthControllerBase(
     [AllowAnonymous]
     public ChallengeResult AppleLogin([FromQuery] Uri? returnUrl = null, [FromQuery] string? state = null) =>
         ChallengeProvider(AppleAuthenticationDefaults.AuthenticationScheme, returnUrl, state);
+
+    /// <summary>
+    /// Initiates the sign-in flow of a configured generic OIDC provider (<c>OAuth:Oidc:&lt;Name&gt;</c>,
+    /// registered by <see cref="ExternalAuthExtensions.AddExternalAuthProviders"/>), matched by name
+    /// ignoring case. The literal google, github and apple routes take precedence over this one, and
+    /// those names are reserved, so an OIDC provider can never shadow them. MAUI heads reach it through
+    /// the same <c>auth/oauth/{provider}</c> URL the external auth broker already builds.
+    /// </summary>
+    /// <param name="provider">The provider name from the route.</param>
+    /// <param name="returnUrl">The URL to redirect to after successful authentication.</param>
+    /// <param name="state">Opaque per-attempt value the client round-trips to bind the completion to the flow it started.</param>
+    /// <returns>The challenge, or 404 when no OIDC provider has that name.</returns>
+    [HttpGet("{provider}")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status302Found)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult OidcLogin(string provider, [FromQuery] Uri? returnUrl = null, [FromQuery] string? state = null)
+    {
+        var oidcProvider = OidcProviders?.Find(provider);
+        return oidcProvider is null ? NotFound() : ChallengeProvider(oidcProvider.Name, returnUrl, state);
+    }
+
+    /// <summary>
+    /// Home-realm discovery: maps the domain of <paramref name="email"/> to the OIDC provider whose
+    /// <c>Domains</c> list claims it, so the sign-in page can offer one "Sign in with your
+    /// organization" step instead of a button per identity provider. Anonymous because the caller is
+    /// signing in, and throttled per client IP by the same policy as the other anonymous auth
+    /// endpoints. The answer reveals only which configured provider owns a domain, never whether an
+    /// account exists.
+    /// </summary>
+    /// <param name="email">The address the user typed.</param>
+    /// <returns>The provider name and display name, or 404 when no provider claims the domain.</returns>
+    [HttpGet("discover")]
+    [AllowAnonymous]
+    [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
+    [ProducesResponseType<OidcDiscoveryResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<OidcDiscoveryResponse> DiscoverOidcProvider([FromQuery] string? email)
+    {
+        var oidcProvider = OidcProviders?.FindByEmail(email);
+        return oidcProvider is null
+            ? NotFound()
+            : Ok(new OidcDiscoveryResponse(oidcProvider.Name, oidcProvider.DisplayName));
+    }
+
+    // Registered by AddExternalAuthProviders only when at least one OIDC provider is configured.
+    private OidcProviderRegistry? OidcProviders => HttpContext.RequestServices?.GetService<OidcProviderRegistry>();
 
     /// <summary>
     /// Completes the OAuth flow after the middleware has processed the provider callback.

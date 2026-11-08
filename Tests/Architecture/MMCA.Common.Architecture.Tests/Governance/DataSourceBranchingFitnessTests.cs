@@ -64,6 +64,9 @@ public sealed partial class DataSourceBranchingFitnessTests
         ["Core/MMCA.Common.Infrastructure/Persistence/Auth/EFRefreshSessionStore.cs"] = "framework-default engine request",
         ["Core/MMCA.Common.Infrastructure/Persistence/Auth/EFPermissionGrantStore.cs"] = "framework-default engine request",
         ["Core/MMCA.Common.Infrastructure/Persistence/Auth/EFViewAsGrantStore.cs"] = "framework-default engine request",
+        ["Core/MMCA.Common.Infrastructure/Persistence/FeatureFlags/EFFeatureFlagOverrideStore.cs"] = "framework-default engine request",
+        ["Core/MMCA.Common.Infrastructure/Persistence/Auth/EFPasskeyCredentialStore.cs"] = "framework-default engine request",
+        ["Core/MMCA.Common.Infrastructure/Persistence/MachineClients/EFMachineClientStore.cs"] = "framework-default engine request",
         ["Core/MMCA.Common.Infrastructure/Persistence/EFRawSqlQueryExecutor.cs"] = "framework-default engine request",
         ["Core/MMCA.Common.Infrastructure/Persistence/DbContexts/Factory/DbContextFactory.cs"] = "framework-default engine request",
     };

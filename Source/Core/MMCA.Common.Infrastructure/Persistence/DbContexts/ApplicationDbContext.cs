@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.Permissions;
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Application.FeatureFlags;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -17,9 +18,11 @@ using MMCA.Common.Infrastructure.Persistence.Auth;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
+using MMCA.Common.Infrastructure.Persistence.FeatureFlags;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
+using MMCA.Common.Infrastructure.Persistence.MachineClients;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
 using MMCA.Common.Shared.Identifiers;
@@ -136,6 +139,31 @@ public abstract class ApplicationDbContext(
     /// not hold the grant store, sees no migration.
     /// </summary>
     private bool _viewAsGrantTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>FeatureFlagOverrides</c> table belongs in THIS context's model (ADR-031): the
+    /// host called <c>AddReloadableFeatureFlags</c>, which registers
+    /// <see cref="FeatureFlags.FeatureFlagOverrideModelGate"/>, AND this context targets the source
+    /// <c>FeatureFlags:DataSourceName</c> names (the owning service's own database). The
+    /// <see cref="_permissionGrantTableEnabled"/> shape, so a host that never opts in sees no migration.
+    /// </summary>
+    private bool _featureFlagOverrideTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>PasskeyCredentials</c> table belongs in THIS context's model (ADR-139):
+    /// <c>Passkeys:Enabled</c> AND this context targeting the source named by
+    /// <c>Passkeys:DataSourceName</c>, the view-as grants shape, so a host that never opts in sees no
+    /// migration.
+    /// </summary>
+    private bool _passkeyTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>MachineClients</c> table belongs in THIS context's model (ADR-140):
+    /// <c>MachineClients:Enabled</c> AND this context targeting the source named by
+    /// <c>MachineClients:DataSourceName</c>, the passkey shape, so a host that never opts in sees no
+    /// migration.
+    /// </summary>
+    private bool _machineClientTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -354,6 +382,12 @@ public abstract class ApplicationDbContext(
         // Same two-condition shape as the refresh sessions: see the field's remarks.
         _viewAsGrantTableEnabled = ResolveViewAsGrantGate();
 
+        // Same registration-gated shape as the permission grants: see the field's remarks.
+        _featureFlagOverrideTableEnabled = ResolveFeatureFlagOverrideGate();
+        // Same two-condition shape again: see the field's remarks.
+        _passkeyTableEnabled = ResolvePasskeyGate();
+        _machineClientTableEnabled = ResolveMachineClientGate();
+
         ConfigureSensitiveDataLogging(optionsBuilder);
 
         // Key EF's model cache by (context type, physical source name): the same context class is
@@ -428,6 +462,21 @@ public abstract class ApplicationDbContext(
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // The stored feature-flag overrides (used when AddReloadableFeatureFlags was called, on that
+        // setting's data source only). Mapped FIRST, unlike the other gated tables: the override is
+        // an auditable entity, so the soft-delete filter and the concurrency token below must see it.
+        if (_featureFlagOverrideTableEnabled)
+        {
+            modelBuilder.ApplyFeatureFlagOverrideConfiguration();
+        }
+
+        // The machine clients (used when MachineClients:Enabled, on that setting's data source only).
+        // Mapped first for the same reason: a client is an auditable entity.
+        if (_machineClientTableEnabled)
+        {
+            modelBuilder.ApplyMachineClientConfiguration();
+        }
+
         ApplySoftDeleteFilters(modelBuilder);
         ApplyTenantFilters(modelBuilder);
         ConfigureConcurrencyTokens(modelBuilder);
@@ -460,6 +509,12 @@ public abstract class ApplicationDbContext(
         if (_viewAsGrantTableEnabled)
         {
             modelBuilder.ApplyViewAsGrantConfiguration();
+        }
+
+        // Configure the passkey table (used when Passkeys:Enabled, on that setting's data source only).
+        if (_passkeyTableEnabled)
+        {
+            modelBuilder.ApplyPasskeyCredentialConfiguration();
         }
     }
 
@@ -944,6 +999,20 @@ public abstract class ApplicationDbContext(
             StringComparison.Ordinal);
 
     /// <summary>
+    /// Whether this context instance carries the <c>FeatureFlagOverrides</c> table: the host opted in
+    /// with <c>AddReloadableFeatureFlags</c>, AND this instance targets the source
+    /// <c>FeatureFlags:DataSourceName</c> names. <c>GetService</c>, for the reason
+    /// <see cref="ResolvePermissionGrantGate"/> gives.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveFeatureFlagOverrideGate() =>
+        serviceProvider.GetService<FeatureFlagOverrideModelGate>() is not null
+        && string.Equals(
+            physicalDataSource.Key.Name,
+            serviceProvider.GetService<IOptions<FeatureFlagOverrideSettings>>()?.Value.DataSourceName,
+            StringComparison.Ordinal);
+
+    /// <summary>
     /// Whether this context instance carries the <c>ViewAsGrants</c> table: <c>ViewAs:Enabled</c> AND
     /// <c>ViewAs:HostsGrantStore</c> (a multi-service host's other services check a shared-cache marker
     /// instead, so their models stay unchanged) AND this instance targets the source
@@ -956,6 +1025,34 @@ public abstract class ApplicationDbContext(
         var settings = serviceProvider.GetService<IOptions<ViewAsSettings>>()?.Value;
         return settings?.Enabled == true
             && settings.HostsGrantStore
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>PasskeyCredentials</c> table: <c>Passkeys:Enabled</c>
+    /// AND this instance targets the source <c>Passkeys:DataSourceName</c> names. <c>GetService</c>, for
+    /// the reason <see cref="ResolvePermissionGrantGate"/> gives: a host that never calls
+    /// <c>AddPasskeys</c> registers no settings, and that absence reads as disabled.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolvePasskeyGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<Application.Auth.Passkeys.PasskeySettings>>()?.Value;
+        return settings?.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>MachineClients</c> table: <c>MachineClients:Enabled</c>
+    /// AND this instance targets the source <c>MachineClients:DataSourceName</c> names. <c>GetService</c>,
+    /// for the reason <see cref="ResolvePermissionGrantGate"/> gives: a host that never calls
+    /// <c>AddMachineClients</c> registers no settings, and that absence reads as disabled.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveMachineClientGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<Application.Auth.MachineClients.MachineClientSettings>>()?.Value;
+        return settings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
     }
 

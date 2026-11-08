@@ -80,6 +80,21 @@ public sealed class ViewAsServiceTests
         _tokens.Minted.Should().BeEmpty();
     }
 
+    // Spec D (ADR-140): a machine client's service account is never a view-as target.
+    [Fact]
+    public async Task StartAsync_RefusesAServiceAccount()
+    {
+        _subjects.Setup(s => s.FindAsync(TargetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ViewAsSubject(TargetUserId, "svc-2@service.local", "Attendee", "Nightly sync", IsDeleted: false) { IsServiceAccount = true });
+
+        var result = await CreateSut().StartAsync(StaffUserId, TargetUserId, Reason);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("ViewAs.TargetIsServiceAccount");
+        _grants.Grants.Should().BeEmpty();
+        _tokens.Minted.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task StartAsync_RefusesAnUnknownAccountAsNotFound()
     {

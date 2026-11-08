@@ -191,6 +191,11 @@ public static partial class DependencyInjection
             services.TryAddScoped<Application.Auth.ViewAs.IViewAsGrantStore, Persistence.Auth.EFViewAsGrantStore>();
             services.TryAddScoped<Application.Auth.ViewAs.IViewAsService, Application.Auth.ViewAs.ViewAsService>();
 
+            // Passkey rows (ADR-139), the view-as precedent: registered on every host and inert, because
+            // only the opt-in MMCA.Common.Passkeys package's AddPasskeys registers the ceremony service that
+            // reads them, and the table is mapped only while Passkeys:Enabled is true.
+            services.TryAddScoped<Application.Auth.Passkeys.IPasskeyCredentialStore, Persistence.Auth.EFPasskeyCredentialStore>();
+
             // Retention sweep, gated on the same flag that maps the table. Registering it
             // unconditionally would start a periodic sweep (every CleanupIntervalHours, default 6) in
             // every service of a modular host, all but

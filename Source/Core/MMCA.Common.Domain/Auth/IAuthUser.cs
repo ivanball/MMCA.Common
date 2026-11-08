@@ -22,4 +22,13 @@ public interface IAuthUser
     /// <summary>The salt paired with <see cref="PasswordHash"/> (its length selects the verify algorithm, ADR-032).</summary>
     byte[] PasswordSalt { get; }
 #pragma warning restore CA1819
+
+    /// <summary>
+    /// Gets a value indicating whether this account is the service account behind a machine client
+    /// (ADR-140) rather than a person. A service account obtains tokens only through the client
+    /// credentials grant: password sign-in, sign-in links, external login and passkeys refuse it, and
+    /// it can never be viewed as. Defaults to <see langword="false"/>, so an app that has not adopted
+    /// machine clients implements nothing.
+    /// </summary>
+    bool IsServiceAccount => false;
 }

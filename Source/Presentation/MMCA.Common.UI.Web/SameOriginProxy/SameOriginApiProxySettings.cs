@@ -27,9 +27,10 @@ public sealed class SameOriginApiProxySettings
     /// <summary>
     /// The token-issuing endpoints every MMCA identity API exposes (relative to the gateway root): their
     /// successful responses carry a token pair, which the proxy moves into the HttpOnly session cookies
-    /// before the body reaches the browser (sign-in links included: script may not seed the cookies).
+    /// before the body reaches the browser (sign-in links and passkey sign-in included: script may not
+    /// seed the cookies).
     /// </summary>
-    public static readonly IReadOnlyList<string> DefaultTokenIssuingPaths = ["auth/login", "auth/register", "auth/oauth/exchange", "auth/sign-in-link/redeem"];
+    public static readonly IReadOnlyList<string> DefaultTokenIssuingPaths = ["auth/login", "auth/register", "auth/oauth/exchange", "auth/sign-in-link/redeem", "auth/passkeys/signin"];
 
     /// <summary>
     /// Gets or sets the same-origin path the proxy serves (default <c>/api</c>). A request to

@@ -146,4 +146,26 @@ public static class ClaimsPrincipalExtensions
     /// <returns>The method name, or <see langword="null"/>.</returns>
     public static string? FindMultiFactorMethod(this ClaimsPrincipal? principal) =>
         principal?.FindFirst(AuthClaimTypes.MultiFactor)?.Value;
+
+    /// <summary>
+    /// Returns the instant of the interactive sign-in the token descends from (the
+    /// <see cref="AuthClaimTypes.AuthTime"/> claim, Unix seconds), or <see langword="null"/> when the
+    /// principal carries none (a token minted before the claim shipped, or a view-as token).
+    /// </summary>
+    /// <remarks>
+    /// Reads the raw <c>auth_time</c> first and falls back to <see cref="ClaimTypes.AuthenticationInstant"/>,
+    /// the type the JWT bearer handler's inbound claim map renames it to, for the reason
+    /// <see cref="FindUserIdValue"/> reads two shapes.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal yields null.</param>
+    /// <returns>The sign-in instant, or <see langword="null"/>.</returns>
+    public static DateTimeOffset? FindAuthTime(this ClaimsPrincipal? principal)
+    {
+        var value = principal?.FindFirst(AuthClaimTypes.AuthTime)?.Value
+            ?? principal?.FindFirst(ClaimTypes.AuthenticationInstant)?.Value;
+
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+            : null;
+    }
 }

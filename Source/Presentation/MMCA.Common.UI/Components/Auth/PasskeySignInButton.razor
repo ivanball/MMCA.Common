@@ -1,0 +1,14 @@
+@* "Sign in with a passkey" (ADR-139): the sign-in page renders it only when the host offers passkeys
+   AND the head can run WebAuthn. A refusal or a dismissed prompt shows as an alert above the button. *@
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-2" Dense="true" role="alert"
+              data-testid="login-passkey-error">@_errorMessage</MudAlert>
+}
+<MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Size="Size.Medium"
+           StartIcon="@Icons.Material.Filled.Fingerprint"
+           Disabled="@_isBusy" OnClick="SignInAsync"
+           aria-busy="@(_isBusy ? "true" : "false")"
+           data-testid="login-passkey-sign-in">
+    @L["Auth.Login.SignInWithPasskey"]
+</MudButton>

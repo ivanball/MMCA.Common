@@ -191,6 +191,15 @@ public static class DependencyInjection
             // redeemed link stores its tokens through the same path a password sign-in does.
             services.TryAddScoped<ISignInLinkUIService, AuthUIService>();
 
+            // The passkey client (ADR-139), on the same AuthUIService for the same reason: a passkey
+            // sign-in stores its tokens through the password sign-in's path. Inert until a host offers
+            // passkeys (SignIn:OfferPasskeys) or renders the passkeys panel.
+            services.TryAddScoped<IPasskeyUIService, AuthUIService>();
+
+            // Home-realm discovery for the sign-in page's "Sign in with your organization" step. Inert
+            // until the host configures an OIDC provider that declares email domains.
+            services.TryAddScoped<IOidcDiscoveryUIService, OidcDiscoveryUIService>();
+
             // The terms-acceptance client behind TermsAcceptanceGate. Registered for every host (the
             // confirmation-client precedent) and inert until a host renders the gate.
             services.TryAddScoped<ILegalAcceptanceUIService, LegalAcceptanceUIService>();
@@ -330,6 +339,21 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// The UI opt-in of machine clients (ADR-140): registers the HTTP client for the app's
+        /// <c>Admin/MachineClients</c> endpoints, which is what
+        /// <c>MMCA.Common.UI.Pages.Administration.MachineClientAdmin</c> reads and writes through. Call it
+        /// once per app, after <c>AddUIShared</c>. Nothing else in the framework calls this: an app that
+        /// serves no machine-client endpoints registers nothing and the component is never rendered.
+        /// </summary>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddMachineClientAdministrationUI()
+        {
+            services.TryAddScoped<IMachineClientAdminUIService, MachineClientAdminService>();
+
+            return services;
+        }
+
+        /// <summary>
         /// The UI opt-in of the support access log (ADR-137): registers the HTTP client for the app's
         /// <c>Admin/ViewAsGrants</c> endpoint, which is what
         /// <c>MMCA.Common.UI.Pages.Administration.SupportAccessLog</c> reads through. Call it once per
@@ -343,6 +367,30 @@ public static class DependencyInjection
         public IServiceCollection AddSupportAccessLogUI()
         {
             services.TryAddScoped<IViewAsGrantsUIService, ViewAsGrantsService>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// The UI opt-in of the reloadable feature flags (ADR-031): registers the HTTP client for the
+        /// feature-flag administration endpoints and the flag sources
+        /// <c>MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin</c> lists. Call it once per app,
+        /// after <c>AddUIShared</c>.
+        /// <para>
+        /// Each source is the API route prefix of one service's <c>FeatureFlagsControllerBase</c>
+        /// (for example <c>Admin/Conference/FeatureFlags</c>), so a multi-service host lists every
+        /// service's flags in one table. Nothing else in the framework calls this.
+        /// </para>
+        /// </summary>
+        /// <param name="sources">The API route prefixes to list flags from, in display order.</param>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddFeatureFlagAdministrationUI(params string[] sources)
+        {
+            ArgumentNullException.ThrowIfNull(sources);
+
+            services.TryAddScoped<IFeatureFlagAdminUIService, FeatureFlagAdminService>();
+            services.AddOptions<FeatureFlagAdminUIOptions>()
+                .Configure(options => options.Sources = [.. options.Sources, .. sources]);
 
             return services;
         }

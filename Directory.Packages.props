@@ -17,6 +17,8 @@
     <PackageVersion Include="AspNet.Security.OAuth.Apple" Version="10.0.0" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.14" />
+    <!-- Generic OIDC providers (OAuth:Oidc:<Name>), registered by the same AddExternalAuthProviders call. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
     <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
@@ -93,6 +95,12 @@
          claim) is framework code, so this is the only piece taken as a dependency, and it is
          referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
+    <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
+         MIT, .NET Foundation. Pinned exactly: it parses attacker-supplied CBOR/COSE, so a bump is a
+         reviewed change, never a floating range. Referenced from the opt-in MMCA.Common.Passkeys
+         package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
+         reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
+    <PackageVersion Include="Fido2" Version="4.3.2" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against

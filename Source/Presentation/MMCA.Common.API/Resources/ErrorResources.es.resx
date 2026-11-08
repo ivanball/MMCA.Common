@@ -349,4 +349,97 @@
   <data name="ViewAs.NotViewing" xml:space="preserve">
     <value>No está viendo como otro usuario.</value>
   </data>
+  <data name="FeatureFlag.Undeclared" xml:space="preserve">
+    <value>Este servicio no declara ninguna marca de funcionalidad con ese nombre.</value>
+  </data>
+  <data name="FeatureFlagOverride.ModeInvalid" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad debe ser Off, On, Percentage o Targeting.</value>
+  </data>
+  <data name="FeatureFlagOverride.NameInvalid" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad requiere un nombre de marca de 128 caracteres como máximo.</value>
+  </data>
+  <data name="FeatureFlagOverride.PercentageInvalid" xml:space="preserve">
+    <value>Una anulación por porcentaje requiere un porcentaje de 0 a 100.</value>
+  </data>
+  <data name="FeatureFlagOverride.ReasonRequired" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad requiere un motivo de 500 caracteres como máximo.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetInvalid" xml:space="preserve">
+    <value>Cada usuario o grupo destinatario debe tener 128 caracteres como máximo y no contener comas.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetingEmpty" xml:space="preserve">
+    <value>Una anulación por segmentación debe indicar al menos un usuario o grupo.</value>
+  </data>
+  <data name="Passkeys.AssertionFailed" xml:space="preserve">
+    <value>La llave de acceso no pudo iniciar tu sesión.</value>
+  </data>
+  <data name="Passkeys.Busy" xml:space="preserve">
+    <value>Hay otro cambio en curso en tus llaves de acceso. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Passkeys.ChallengeInvalid" xml:space="preserve">
+    <value>La solicitud de la llave de acceso caducó o ya se usó. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Passkeys.CredentialIdInvalid" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.LastPasskey" xml:space="preserve">
+    <value>Esta llave de acceso es la única forma de iniciar sesión en esta cuenta, así que no se puede eliminar.</value>
+  </data>
+  <data name="Passkeys.NameInvalid" xml:space="preserve">
+    <value>El nombre de la llave de acceso debe tener entre 1 y 100 caracteres.</value>
+  </data>
+  <data name="Passkeys.NotFound" xml:space="preserve">
+    <value>No se encontró la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.NotSupported" xml:space="preserve">
+    <value>El inicio de sesión con llave de acceso no está disponible.</value>
+  </data>
+  <data name="Passkeys.PublicKeyInvalid" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.RegistrationFailed" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.SignCountInvalid" xml:space="preserve">
+    <value>La llave de acceso no pudo iniciar tu sesión.</value>
+  </data>
+  <data name="Passkeys.StepUpRequired" xml:space="preserve">
+    <value>Vuelve a iniciar sesión antes de añadir una llave de acceso.</value>
+  </data>
+  <data name="MachineClients.InvalidClient" xml:space="preserve">
+    <value>No se pudo autenticar al cliente.</value>
+  </data>
+  <data name="MachineClients.InvalidRequest" xml:space="preserve">
+    <value>La solicitud de token debe indicar un grant_type.</value>
+  </data>
+  <data name="MachineClients.NameInvalid" xml:space="preserve">
+    <value>El cliente de máquina necesita un nombre de 1 a 100 caracteres.</value>
+  </data>
+  <data name="MachineClients.NoSecondarySecret" xml:space="preserve">
+    <value>El cliente de máquina no tiene un secreto rotado que promover.</value>
+  </data>
+  <data name="MachineClients.NotFound" xml:space="preserve">
+    <value>No existe ese cliente de máquina.</value>
+  </data>
+  <data name="MachineClients.Revoked" xml:space="preserve">
+    <value>El cliente de máquina ha sido revocado.</value>
+  </data>
+  <data name="MachineClients.RoleNotAllowed" xml:space="preserve">
+    <value>Un rol que permite ver como otros usuarios o administrar usuarios no puede respaldar a un cliente de máquina.</value>
+  </data>
+  <data name="MachineClients.RoleRequired" xml:space="preserve">
+    <value>El cliente de máquina necesita un rol.</value>
+  </data>
+  <data name="MachineClients.SecretExpiryInvalid" xml:space="preserve">
+    <value>La caducidad del secreto del cliente de máquina debe ser una fecha futura.</value>
+  </data>
+  <data name="MachineClients.SecretHashInvalid" xml:space="preserve">
+    <value>El hash del secreto del cliente de máquina debe ser un hash SHA-256.</value>
+  </data>
+  <data name="MachineClients.UnsupportedGrantType" xml:space="preserve">
+    <value>Solo se admite el tipo de concesión client_credentials.</value>
+  </data>
+  <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
+    <value>No se puede ver la cuenta de servicio de un cliente de máquina.</value>
+  </data>
 </root>

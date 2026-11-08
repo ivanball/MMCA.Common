@@ -883,6 +883,15 @@
   <data name="Auth.Login.EmailMeLink" xml:space="preserve">
     <value>Email me a sign-in link</value>
   </data>
+  <data name="Auth.Login.SignInWithPasskey" xml:space="preserve">
+    <value>Sign in with a passkey</value>
+  </data>
+  <data name="Auth.Login.PasskeyCancelled" xml:space="preserve">
+    <value>No passkey was used. Try again, or sign in with your password.</value>
+  </data>
+  <data name="Auth.Login.PasskeyFailed" xml:space="preserve">
+    <value>The passkey could not sign you in.</value>
+  </data>
   <data name="Auth.Login.EmailMeLink.EnterEmail" xml:space="preserve">
     <value>Enter your email address first, then ask for the link.</value>
   </data>
@@ -999,5 +1008,17 @@
   </data>
   <data name="Notif.Phone.Unit.Message.Other" xml:space="preserve">
     <value>messages</value>
+  </data>
+  <data name="Auth.Login.SignInWithProvider" xml:space="preserve">
+    <value>Sign in with {0}</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization" xml:space="preserve">
+    <value>Sign in with your organization</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization.EnterEmail" xml:space="preserve">
+    <value>Enter your work email address first.</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization.NotFound" xml:space="preserve">
+    <value>No organization sign-in is set up for that email address.</value>
   </data>
 </root>

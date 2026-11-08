@@ -349,4 +349,97 @@
   <data name="ViewAs.NotViewing" xml:space="preserve">
     <value>You are not viewing as another user.</value>
   </data>
+  <data name="FeatureFlag.Undeclared" xml:space="preserve">
+    <value>No feature flag with that name is declared by this service.</value>
+  </data>
+  <data name="FeatureFlagOverride.ModeInvalid" xml:space="preserve">
+    <value>A feature flag override must be Off, On, Percentage or Targeting.</value>
+  </data>
+  <data name="FeatureFlagOverride.NameInvalid" xml:space="preserve">
+    <value>A feature flag override requires a flag name of at most 128 characters.</value>
+  </data>
+  <data name="FeatureFlagOverride.PercentageInvalid" xml:space="preserve">
+    <value>A percentage override requires a percentage from 0 to 100.</value>
+  </data>
+  <data name="FeatureFlagOverride.ReasonRequired" xml:space="preserve">
+    <value>A feature flag override requires a reason of at most 500 characters.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetInvalid" xml:space="preserve">
+    <value>Each targeted user or group must be at most 128 characters and contain no comma.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetingEmpty" xml:space="preserve">
+    <value>A targeting override must name at least one user or group.</value>
+  </data>
+  <data name="Passkeys.AssertionFailed" xml:space="preserve">
+    <value>The passkey could not sign you in.</value>
+  </data>
+  <data name="Passkeys.Busy" xml:space="preserve">
+    <value>Another change to your passkeys is in progress. Try again.</value>
+  </data>
+  <data name="Passkeys.ChallengeInvalid" xml:space="preserve">
+    <value>The passkey request expired or was already used. Try again.</value>
+  </data>
+  <data name="Passkeys.CredentialIdInvalid" xml:space="preserve">
+    <value>The passkey could not be registered.</value>
+  </data>
+  <data name="Passkeys.LastPasskey" xml:space="preserve">
+    <value>This passkey is the only way to sign in to this account, so it cannot be deleted.</value>
+  </data>
+  <data name="Passkeys.NameInvalid" xml:space="preserve">
+    <value>A passkey name of 1 to 100 characters is required.</value>
+  </data>
+  <data name="Passkeys.NotFound" xml:space="preserve">
+    <value>The passkey was not found.</value>
+  </data>
+  <data name="Passkeys.NotSupported" xml:space="preserve">
+    <value>Passkey sign-in is not supported.</value>
+  </data>
+  <data name="Passkeys.PublicKeyInvalid" xml:space="preserve">
+    <value>The passkey could not be registered.</value>
+  </data>
+  <data name="Passkeys.RegistrationFailed" xml:space="preserve">
+    <value>The passkey could not be registered.</value>
+  </data>
+  <data name="Passkeys.SignCountInvalid" xml:space="preserve">
+    <value>The passkey could not sign you in.</value>
+  </data>
+  <data name="Passkeys.StepUpRequired" xml:space="preserve">
+    <value>Sign in again before adding a passkey.</value>
+  </data>
+  <data name="MachineClients.InvalidClient" xml:space="preserve">
+    <value>The client could not be authenticated.</value>
+  </data>
+  <data name="MachineClients.InvalidRequest" xml:space="preserve">
+    <value>The token request must name a grant_type.</value>
+  </data>
+  <data name="MachineClients.NameInvalid" xml:space="preserve">
+    <value>A machine client name of 1 to 100 characters is required.</value>
+  </data>
+  <data name="MachineClients.NoSecondarySecret" xml:space="preserve">
+    <value>The machine client has no rotated secret to promote.</value>
+  </data>
+  <data name="MachineClients.NotFound" xml:space="preserve">
+    <value>No such machine client.</value>
+  </data>
+  <data name="MachineClients.Revoked" xml:space="preserve">
+    <value>The machine client has been revoked.</value>
+  </data>
+  <data name="MachineClients.RoleNotAllowed" xml:space="preserve">
+    <value>A role that grants viewing as users or managing users cannot back a machine client.</value>
+  </data>
+  <data name="MachineClients.RoleRequired" xml:space="preserve">
+    <value>A machine client requires a role.</value>
+  </data>
+  <data name="MachineClients.SecretExpiryInvalid" xml:space="preserve">
+    <value>A machine client secret expiry must lie in the future.</value>
+  </data>
+  <data name="MachineClients.SecretHashInvalid" xml:space="preserve">
+    <value>A machine client secret hash must be a SHA-256 hash.</value>
+  </data>
+  <data name="MachineClients.UnsupportedGrantType" xml:space="preserve">
+    <value>Only the client_credentials grant type is supported.</value>
+  </data>
+  <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
+    <value>A machine client&apos;s service account cannot be viewed.</value>
+  </data>
 </root>

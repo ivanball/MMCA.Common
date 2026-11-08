@@ -62,5 +62,11 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // session (no IsDeleted, no audit stamps); erasing it past ViewAs:RetentionDays IS the
         // retention requirement, and the sweep is its only delete.
         "MMCA.Common.Infrastructure.Persistence.Auth.EFViewAsGrantStore",
+
+        // Passkeys (ADR-139). A passkey row is framework bookkeeping (no IsDeleted, no audit stamps)
+        // whose whole content is a public key. Deleting one must stop it signing in: a soft-deleted
+        // credential would have to be filtered out of the sign-in lookup forever, with a missed filter
+        // failing OPEN on a key the user removed.
+        "MMCA.Common.Infrastructure.Persistence.Auth.EFPasskeyCredentialStore",
     ];
 }

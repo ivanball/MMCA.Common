@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Infrastructure.Context;
+using MMCA.Common.Infrastructure.Diagnostics;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -443,11 +444,19 @@ public sealed partial class InternalCommandProcessor(
         CancellationToken cancellationToken)
     {
         var reason = failure is null ? "result_failure" : "exception";
-        var message = failure?.Message ?? DescribeErrors(result!);
+        var message = failure is null ? DescribeErrors(result!) : ExceptionChain.Describe(failure);
         activity?.SetStatus(ActivityStatusCode.Error, message);
         InternalCommandMetrics.FailedCounter.Add(1, commandTypeTag, new KeyValuePair<string, object?>("reason", reason));
 
         var attempts = row.Attempts + 1;
+
+        // The stack goes on its own Warning line, once per throwing attempt. The retry and dead-letter
+        // lines below deliberately carry no exception: one attached would move them from AppTraces to
+        // AppExceptions, where a dead-letter alert reading AppTraces would never see them.
+        if (failure is not null)
+        {
+            LogAttemptThrew(logger, row.Id, row.CommandType, attempts, failure);
+        }
         if (attempts >= _settings.MaxAttempts)
         {
             await DeadLetterAsync(context, row, claimToken, message, "attempts_exhausted", cancellationToken)
@@ -692,6 +701,9 @@ public sealed partial class InternalCommandProcessor(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Internal command {CommandId} ({CommandType}) failed on attempt {Attempts} and will be retried: {Error}")]
     private static partial void LogAttemptFailed(ILogger logger, Guid commandId, string commandType, int attempts, string error);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Internal command {CommandId} ({CommandType}) attempt {Attempts} threw")]
+    private static partial void LogAttemptThrew(ILogger logger, Guid commandId, string commandType, int attempts, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Internal command {CommandId} ({CommandType}) dead-lettered after {Attempts} attempts: {Error}")]
     private static partial void LogAttemptsExhausted(ILogger logger, Guid commandId, string commandType, int attempts, string error);

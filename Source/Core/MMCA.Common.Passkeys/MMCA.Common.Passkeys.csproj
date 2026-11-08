@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Passkeys</PackageId>
+    <Description>MMCA framework: opt-in passkey (WebAuthn) sign-in and second factor. Verifies registrations and assertions with Fido2NetLib behind the core IPasskeyCeremony contract; off unless AddPasskeys is called and Passkeys:Enabled is true</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The only project that references Fido2 (and through it NSec.Cryptography and the native
+         libsodium): the ADR-134 adapter shape, so a host that does not reference this package carries
+         no WebAuthn library at all. It references the core, never the reverse (EnforcePasskeysBoundary
+         and PasskeysIsolationTests). Application is enough: the ceremony contract, the passkey service
+         and the settings live there, and Infrastructure registers the passkey store on every host. -->
+    <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />
+    <PackageReference Include="Fido2" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MMCA.Common.Passkeys.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

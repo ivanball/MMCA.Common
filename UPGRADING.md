@@ -34,6 +34,61 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.281.0] - 2026-11-08
+
+Nothing breaks. Three opt-ins need a migration:
+
+**Machine clients: one migration on the Identity database, and a provisioner.** A host that does not
+call `AddMachineClients` changes nothing and maps no table.
+
+1. Implement `IServiceAccountProvisioner` over your user store: `CreateAsync(name, role)` creates a
+   user with that role, no password and `IsServiceAccount` true, and returns its id; `FindAsync`
+   loads one as a `ServiceAccount`. Have your user type answer `IAuthUser.IsServiceAccount`, and your
+   `IViewAsSubjectResolver` set `ViewAsSubject.IsServiceAccount`, so such accounts never sign in
+   interactively or become a view-as target.
+2. Call `services.AddMachineClients(configuration)` and set `MachineClients:Enabled`.
+3. In the Identity migrations project, set `DesignTimeDbContextOptions.EnableMachineClients = true`,
+   add a migration (for example `AddMachineClients`) and apply it.
+4. Route a controller derived from `MachineTokenControllerBase` at `auth/token` and one derived from
+   `MachineClientsControllerBase` behind `clients:manage`, and grant `clients:manage` to an operator
+   role that no client can hold.
+
+**Passkeys: one migration on the Identity database.** A host that does not call `AddPasskeys` changes
+nothing and maps no table.
+
+1. Reference `MMCA.Common.Passkeys` from the Identity service and call
+   `services.AddPasskeys(configuration)`. Set `Passkeys:Enabled`, `Passkeys:RelyingPartyId` (the
+   registrable domain the browser shows; every passkey is bound to it, so a later domain change
+   orphans them) and `Passkeys:Origins` (each web origin that signs in).
+2. In the Identity migrations project, set `DesignTimeDbContextOptions.EnablePasskeys = true`, add a
+   migration (for example `AddPasskeyCredentials`) and apply it.
+3. Derive a routed controller from `PasskeysControllerBase`, set `SignIn:OfferPasskeys` in the web
+   head, place `PasskeysPanel` on the profile page, and override
+   `AuthenticationServiceBase.HasExternalLoginAsync` if your users can sign in through an external
+   provider (otherwise the last-passkey rule ignores it).
+
+```bash
+dotnet ef migrations add AddPasskeyCredentials -- --datasource Identity
+```
+
+**Reloadable feature flags: one migration on each database that owns overrides.** A host that does
+not call `AddReloadableFeatureFlags` changes nothing and maps no table.
+
+1. Call `services.AddReloadableFeatureFlags(configuration, typeof(MyModuleFeatures).Assembly)` after
+   `AddAPI()` in each service whose flags should be overridable (it throws when called before).
+2. In that service's migrations project, set `DesignTimeDbContextOptions.EnableFeatureFlagOverrides = true`
+   in the design-time factory, add a migration (for example `AddFeatureFlagOverrides`) and apply it.
+   It creates `FeatureFlagOverrides` (the flag name as the key, mode, percentage, targeted users and
+   groups, a required reason, and the audit and soft-delete columns).
+3. Grant `features:manage` (`AdministrationPermissions.ManageFeatures`) to the operator role, derive a
+   routed controller from `FeatureFlagsControllerBase`, and give the `FeatureFlagAdmin` page a route
+   behind the same permission (`services.AddFeatureFlagAdministrationUI("<api prefix>", ...)` lists
+   each service's flags in one table).
+
+```bash
+dotnet ef migrations add AddFeatureFlagOverrides -- --datasource <Service>
+```
+
 ## [1.280.0] - 2026-11-07
 
 **`INativePushSender.SendToUsersAsync` returns `Task<NativePushOutcome>` (breaking, MMCA.Common.Application

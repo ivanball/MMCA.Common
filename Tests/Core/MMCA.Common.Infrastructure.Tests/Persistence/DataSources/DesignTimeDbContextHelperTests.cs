@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.FeatureFlags;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
@@ -174,6 +175,30 @@ public sealed class DesignTimeDbContextHelperTests
         context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull(
             "the gate must be opened for the source the context actually targets, not the one asked for");
     }
+
+    // Same two-part gate for the stored feature-flag overrides (ADR-031).
+    [Fact]
+    public void CreateSqlServer_WithFeatureFlagOverridesEnabled_IncludesTheOverrideTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignFlags"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.EnableFeatureFlagOverrides = true;
+            });
+
+        context.Model.FindEntityType(typeof(FeatureFlagOverride)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CreateSqlServer_ByDefault_ExcludesTheOverrideTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(["--datasource", "DesignNoFlags"], ConfigureOptions);
+
+        context.Model.FindEntityType(typeof(FeatureFlagOverride)).Should().BeNull(
+            "a migrations project that never opts in must keep scaffolding exactly what it did before");
+    }
     // ── SQLite design time ──
     // The symmetric entry point a SQLite-backed application scaffolds through. Without it such an app
     // has no way to run `dotnet ef` against the framework's context at all.
@@ -329,6 +354,17 @@ public sealed class DesignTimeDbContextHelperTests
         {
             SQLServerConnectionString = sharedGrantsConnection,
             SQLServerMigrationsAssembly = "Design.SharedGrants.Migrations",
+        };
+        // Sources used only by the feature-flag override cases, for the same cache reason.
+        options.DataSources["DesignFlags"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=Flags;",
+            SQLServerMigrationsAssembly = "Design.Flags.Migrations",
+        };
+        options.DataSources["DesignNoFlags"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=NoFlags;",
+            SQLServerMigrationsAssembly = "Design.NoFlags.Migrations",
         };
         const string sharedConnection = "Server=design;Database=SharedSessions;";
         options.DataSources["DesignSessionsAlpha"] = new DataSourceEntrySettings

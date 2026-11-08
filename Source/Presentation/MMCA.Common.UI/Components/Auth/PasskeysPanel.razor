@@ -1,0 +1,76 @@
+@using MMCA.Common.Shared.Auth.Passkeys
+@implements IAsyncDisposable
+
+@* The passkeys section of a profile page (ADR-139): the caller's passkeys with rename and delete, and
+   "Add a passkey" where the head can run WebAuthn. It renders a MudCardContent plus MudCardActions
+   pair, like ChangePasswordCard, so the page keeps its own MudCard, heading and layout. *@
+<MudCardContent>
+    <MudText Typo="Typo.body2" Class="mb-3">@L["Passkeys.Intro"]</MudText>
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="@L["Passkeys.Loading"]" />
+    }
+    else if (_passkeys.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" data-testid="passkeys-empty">@L["Passkeys.Empty"]</MudText>
+    }
+    else
+    {
+        @* role="region" names the table's wrapper div, which MudTable splats unmatched attributes onto. *@
+        <MudTable Items="_passkeys" T="PasskeyResponse" Dense="true" Elevation="0" Breakpoint="Breakpoint.Sm"
+                  role="region" aria-label="@L["Passkeys.TableLabel"]">
+            <HeaderContent>
+                <MudTh>@L["Passkeys.Column.Name"]</MudTh>
+                <MudTh>@L["Passkeys.Column.Created"]</MudTh>
+                <MudTh>@L["Passkeys.Column.LastUsed"]</MudTh>
+                <MudTh><span class="visually-hidden">@L["Passkeys.Column.Actions"]</span></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Passkeys.Column.Name"]" data-testid="passkeys-row">
+                    @if (_renamingId == context.Id)
+                    {
+                        <MudTextField @bind-Value="_renameValue" Label="@L["Passkeys.Column.Name"]" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" MaxLength="100" data-testid="passkeys-rename-input" />
+                    }
+                    else
+                    {
+                        @context.Name
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["Passkeys.Column.Created"]">@context.CreatedOn.ToString("d", System.Globalization.CultureInfo.CurrentCulture)</MudTd>
+                <MudTd DataLabel="@L["Passkeys.Column.LastUsed"]">@DescribeLastUsed(context)</MudTd>
+                <MudTd>
+                    @if (_renamingId == context.Id)
+                    {
+                        <MudButton Size="Size.Small" Color="Color.Primary" Disabled="_isBusy"
+                                   OnClick="@(() => SaveRenameAsync(context.Id))" data-testid="passkeys-rename-save">@L["Passkeys.Save"]</MudButton>
+                        <MudButton Size="Size.Small" OnClick="CancelRename">@L["Passkeys.Cancel"]</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Size="Size.Small" Disabled="_isBusy" OnClick="@(() => StartRename(context))"
+                                   aria-label="@L["Passkeys.Rename.Aria", context.Name]" data-testid="passkeys-rename">@L["Passkeys.Rename"]</MudButton>
+                        <MudButton Size="Size.Small" Color="Color.Error" Disabled="_isBusy" OnClick="@(() => DeleteAsync(context))"
+                                   aria-label="@L["Passkeys.Delete.Aria", context.Name]" data-testid="passkeys-delete">@L["Passkeys.Delete"]</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudCardContent>
+<MudCardActions Class="d-flex flex-wrap gap-2">
+    @if (Capability.IsAvailable)
+    {
+        <MudTextField @bind-Value="_newName" Label="@L["Passkeys.NewName"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      MaxLength="100" data-testid="passkeys-new-name" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Fingerprint"
+                   Disabled="_isBusy" OnClick="AddAsync"
+                   aria-busy="@(_isBusy ? "true" : "false")" data-testid="passkeys-add">
+            @L["Passkeys.Add"]
+        </MudButton>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" data-testid="passkeys-unavailable">@L["Passkeys.Unavailable"]</MudText>
+    }
+</MudCardActions>

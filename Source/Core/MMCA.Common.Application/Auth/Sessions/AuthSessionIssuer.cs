@@ -66,6 +66,13 @@ public sealed partial class AuthSessionIssuer(
     /// </summary>
     private readonly SessionStampingTokenService _sessionStampingTokenService = new(tokenService);
 
+    /// <summary>
+    /// The instant of the sign-in <see cref="IssueAsync"/> is opening a session for, armed only while
+    /// it mints that session's first access token, so the token carries it as <c>auth_time</c>. A plain
+    /// field for the reason the session arming is one (see <see cref="MintForSession(Guid, string?, Func{string})"/>).
+    /// </summary>
+    private DateTimeOffset? _signInInstant;
+
     /// <inheritdoc />
     public ITokenService TokenService => _sessionStampingTokenService;
 
@@ -97,10 +104,20 @@ public sealed partial class AuthSessionIssuer(
 
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return Result.Success(new AuthenticationResponse(
-            mintAccessToken(issued.SessionId),
-            issued.RefreshToken,
-            now.Add(AccessTokenLifetime)));
+        // Opening a session IS an interactive sign-in (rotation goes through RotateAsync), so the token
+        // minted here carries this instant as its auth_time, and every refresh carries it over.
+        _signInInstant = new DateTimeOffset(now, TimeSpan.Zero);
+        try
+        {
+            return Result.Success(new AuthenticationResponse(
+                mintAccessToken(issued.SessionId),
+                issued.RefreshToken,
+                now.Add(AccessTokenLifetime)));
+        }
+        finally
+        {
+            _signInInstant = null;
+        }
     }
 
     /// <inheritdoc />
@@ -144,12 +161,22 @@ public sealed partial class AuthSessionIssuer(
     /// The arming is a plain field because this issuer is resolved per request (scoped, like the store
     /// it saves through) and one request mints one token at a time.
     /// </remarks>
-    public string MintForSession(Guid sessionId, string? multiFactorMethod, Func<string> mintAccessToken)
+    public string MintForSession(Guid sessionId, string? multiFactorMethod, Func<string> mintAccessToken) =>
+        MintForSession(sessionId, multiFactorMethod, authenticatedAt: null, mintAccessToken);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A null <paramref name="authenticatedAt"/> stamps the instant of the sign-in
+    /// <see cref="IssueAsync"/> is opening, and nothing outside it (a rotation whose presented token
+    /// carried no <c>auth_time</c> mints none, rather than inventing a sign-in).
+    /// </remarks>
+    public string MintForSession(Guid sessionId, string? multiFactorMethod, DateTimeOffset? authenticatedAt, Func<string> mintAccessToken)
     {
         ArgumentNullException.ThrowIfNull(mintAccessToken);
 
         _sessionStampingTokenService.CurrentSessionId = sessionId;
         _sessionStampingTokenService.CurrentMultiFactorMethod = multiFactorMethod;
+        _sessionStampingTokenService.CurrentAuthTime = authenticatedAt ?? _signInInstant;
         try
         {
             return mintAccessToken();
@@ -158,6 +185,7 @@ public sealed partial class AuthSessionIssuer(
         {
             _sessionStampingTokenService.CurrentSessionId = null;
             _sessionStampingTokenService.CurrentMultiFactorMethod = null;
+            _sessionStampingTokenService.CurrentAuthTime = null;
         }
     }
 
@@ -680,6 +708,9 @@ public sealed partial class AuthSessionIssuer(
         /// </summary>
         public string? CurrentMultiFactorMethod { get; set; }
 
+        /// <summary>The sign-in instant stamped on the next token as <c>auth_time</c>, or null to mint no such claim.</summary>
+        public DateTimeOffset? CurrentAuthTime { get; set; }
+
         /// <inheritdoc />
         public TimeSpan AccessTokenLifetime => inner.AccessTokenLifetime;
 
@@ -694,7 +725,7 @@ public sealed partial class AuthSessionIssuer(
             string fullName,
             IEnumerable<Claim>? additionalClaims = null)
         {
-            if (CurrentSessionId is null && CurrentMultiFactorMethod is null)
+            if (CurrentSessionId is null && CurrentMultiFactorMethod is null && CurrentAuthTime is null)
             {
                 return inner.GenerateAccessToken(userId, email, role, fullName, additionalClaims);
             }
@@ -711,6 +742,14 @@ public sealed partial class AuthSessionIssuer(
             if (CurrentMultiFactorMethod is { } method)
             {
                 claims.Add(new Claim(AuthClaimTypes.MultiFactor, method));
+            }
+
+            if (CurrentAuthTime is { } authTime)
+            {
+                claims.Add(new Claim(
+                    AuthClaimTypes.AuthTime,
+                    authTime.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                    ClaimValueTypes.Integer64));
             }
 
             return inner.GenerateAccessToken(userId, email, role, fullName, claims);

@@ -8,6 +8,7 @@ using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Diagnostics;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -593,7 +594,8 @@ public sealed partial class OutboxProcessor(
                 catch (Exception ex)
                 {
                     message.RetryCount++;
-                    message.LastError = ColumnWidth.Truncate(ex.Message, MaxErrorLength);
+                    var error = ExceptionChain.Describe(ex);
+                    message.LastError = ColumnWidth.Truncate(error, MaxErrorLength);
 
                     // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
                     // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
@@ -604,7 +606,7 @@ public sealed partial class OutboxProcessor(
                     message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
                         .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
 
-                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    activity?.SetStatus(ActivityStatusCode.Error, error);
 
                     // An open circuit is a rejection, not a delivery attempt: the publish never left
                     // the process. It still follows the normal failure path above (retry increment and

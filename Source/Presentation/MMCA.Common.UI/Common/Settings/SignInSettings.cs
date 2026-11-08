@@ -22,6 +22,14 @@ public sealed class SignInSettings
     public bool OfferSignInLink { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the sign-in page offers "Sign in with a passkey" and
+    /// passkey autofill on the email field (ADR-139). Default <see langword="false"/>; turn it on only
+    /// alongside the server's <c>Passkeys:Enabled</c>. Shown only where the head can run WebAuthn
+    /// (<c>IPasskeyCapability.IsAvailable</c>), so a MAUI head never shows it.
+    /// </summary>
+    public bool OfferPasskeys { get; set; }
+
+    /// <summary>
     /// Gets or sets the local path a redeemed sign-in link lands on. Defaults to the home page; an
     /// absolute or off-site value is ignored in favour of the default.
     /// </summary>

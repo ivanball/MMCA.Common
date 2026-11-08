@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -70,7 +71,8 @@ internal static class InternalCommandTestHarness
         ApplicationDbContext context,
         InternalCommandsSettings settings,
         FakeTimeProvider timeProvider,
-        Action<IServiceCollection>? configure = null)
+        Action<IServiceCollection>? configure = null,
+        ILogger<InternalCommandProcessor>? logger = null)
     {
         var dbContextFactory = new Mock<IDbContextFactory>();
         dbContextFactory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(context);
@@ -89,7 +91,7 @@ internal static class InternalCommandTestHarness
 
         var processor = new InternalCommandProcessor(
             scopeServices.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<InternalCommandProcessor>.Instance,
+            logger ?? NullLogger<InternalCommandProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<IInternalCommandSignal>(),
             new FrameworkTableTargets(new EmptyEntityDataSourceRegistry(), new DefaultDataSourceResolver()),
