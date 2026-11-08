@@ -191,6 +191,10 @@ public static class DependencyInjection
             // redeemed link stores its tokens through the same path a password sign-in does.
             services.TryAddScoped<ISignInLinkUIService, AuthUIService>();
 
+            // Home-realm discovery for the sign-in page's "Sign in with your organization" step. Inert
+            // until the host configures an OIDC provider that declares email domains.
+            services.TryAddScoped<IOidcDiscoveryUIService, OidcDiscoveryUIService>();
+
             // The terms-acceptance client behind TermsAcceptanceGate. Registered for every host (the
             // confirmation-client precedent) and inert until a host renders the gate.
             services.TryAddScoped<ILegalAcceptanceUIService, LegalAcceptanceUIService>();

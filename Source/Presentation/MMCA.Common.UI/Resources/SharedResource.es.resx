@@ -1000,4 +1000,16 @@
   <data name="Notif.Phone.Unit.Message.Other" xml:space="preserve">
     <value>mensajes</value>
   </data>
+  <data name="Auth.Login.SignInWithProvider" xml:space="preserve">
+    <value>Iniciar sesión con {0}</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization" xml:space="preserve">
+    <value>Iniciar sesión con su organización</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization.EnterEmail" xml:space="preserve">
+    <value>Escriba primero su correo electrónico del trabajo.</value>
+  </data>
+  <data name="Auth.Login.SignInWithOrganization.NotFound" xml:space="preserve">
+    <value>No hay un inicio de sesión de organización configurado para ese correo electrónico.</value>
+  </data>
 </root>

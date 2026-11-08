@@ -51,7 +51,11 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         "MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin",
+        "MMCA.Common.API.Controllers.OAuthControllerBase.OidcLogin",
         "MMCA.Common.API.Controllers.OAuthControllerBase.CompleteAsync",
+        // Home-realm discovery runs before sign-in to pick the OIDC provider. Throttled by the auth-ip
+        // policy; it reveals which configured provider owns a domain, never whether an account exists.
+        "MMCA.Common.API.Controllers.OAuthControllerBase.DiscoverOidcProvider",
         // Credential pages: a caller who has to sign in, register or recover cannot already hold a
         // token. AuthorizeRouteView reads attributes and ignores the fallback policy, so these
         // declare themselves.

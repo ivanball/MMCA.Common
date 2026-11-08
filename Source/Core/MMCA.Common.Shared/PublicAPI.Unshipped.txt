@@ -1,1 +1,15 @@
 ﻿#nullable enable
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse!
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Deconstruct(out string! Provider, out string! DisplayName) -> void
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.DisplayName.get -> string!
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.DisplayName.init -> void
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Equals(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? other) -> bool
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.OidcDiscoveryResponse(string! Provider, string! DisplayName) -> void
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Provider.get -> string!
+MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Provider.init -> void
+override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator !=(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool
+static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator ==(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool

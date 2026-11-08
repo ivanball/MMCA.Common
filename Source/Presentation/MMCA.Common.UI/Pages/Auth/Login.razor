@@ -201,6 +201,33 @@
                             </MudButton>
                         }
                     }
+                    @* Configured OIDC providers (OAuth:Oidc:<Name>): one button each, challenged at
+                       /auth/oauth/{name} through the broker or the web redirect like the built-ins. *@
+                    @foreach (var oidcProvider in _oidcProviders)
+                    {
+                        var oidcLabel = L["Auth.Login.SignInWithProvider", oidcProvider.DisplayName].Value;
+                        <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                   StartIcon="@Icons.Material.Filled.Business"
+                                   OnClick="@(() => SignInWithOidcAsync(oidcProvider.Name))"
+                                   Disabled="@(!ExternalAuthBroker.IsAvailable && _externalSignInUnavailable)"
+                                   aria-label="@oidcLabel"
+                                   data-testid="@($"login-oidc-{oidcProvider.Name}")">
+                            @oidcLabel
+                        </MudButton>
+                    }
+                    @if (_offersOrganizationSignIn)
+                    {
+                        @* Email-first home-realm discovery: the address typed above picks the provider
+                           whose configured Domains claim it, so a visitor need not know which IdP is theirs. *@
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Size="Size.Medium"
+                                   StartIcon="@Icons.Material.Filled.CorporateFare"
+                                   OnClick="SignInWithOrganizationAsync"
+                                   Disabled="@(_isDiscovering || (!ExternalAuthBroker.IsAvailable && _externalSignInUnavailable))"
+                                   aria-busy="@(_isDiscovering ? "true" : "false")"
+                                   data-testid="login-organization-sign-in">
+                            @L["Auth.Login.SignInWithOrganization"]
+                        </MudButton>
+                    }
                 }
             </MudCardActions>
         </EditForm>
@@ -219,7 +246,10 @@
 
     protected override void OnInitialized()
     {
-        _hasExternalProviders = OAuthSettings.AppleEnabled || OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
+        _oidcProviders = OAuthSettings.OidcProviders ?? [];
+        _offersOrganizationSignIn = _oidcProviders.Any(p => p.UsesDomains);
+        _hasExternalProviders = OAuthSettings.AppleEnabled || OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled
+            || _oidcProviders.Count > 0;
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
         _errorMessage = ExternalSignInErrorMessage(Error);
         ApplyHandedOverEmail();
@@ -227,7 +257,7 @@
 
     private string BuildOAuthUrl(string provider, string? oauthState)
     {
-        var url = $"{_apiBase}/auth/oauth/{provider}";
+        var url = $"{_apiBase}/auth/oauth/{Uri.EscapeDataString(provider)}";
         var safeReturnUrl = ReturnUrlProtector.Sanitize(ReturnUrl, "/");
         var query = new List<string>();
         if (!string.Equals(safeReturnUrl, "/", StringComparison.Ordinal))

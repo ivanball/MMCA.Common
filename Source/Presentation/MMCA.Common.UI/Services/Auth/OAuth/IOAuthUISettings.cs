@@ -16,4 +16,7 @@ public interface IOAuthUISettings
 
     /// <summary>Whether Sign in with Apple is available.</summary>
     bool AppleEnabled => false;
+
+    /// <summary>The configured OIDC providers (<c>OAuth:Oidc:&lt;Name&gt;</c>), one sign-in button each.</summary>
+    IReadOnlyList<OidcProviderOption> OidcProviders => [];
 }

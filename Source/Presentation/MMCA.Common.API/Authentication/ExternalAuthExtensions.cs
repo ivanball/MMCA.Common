@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace MMCA.Common.API.Authentication;
 
@@ -18,6 +19,13 @@ namespace MMCA.Common.API.Authentication;
 /// host with no OAuth configuration keeps the JWT-only default untouched (inert until configured,
 /// the same posture as <c>AddPermissions</c>, ADR-020).
 /// </para>
+/// <para>
+/// Any OIDC provider (Entra ID, Okta, ...) joins by configuration: each <c>OAuth:Oidc:&lt;Name&gt;</c>
+/// section with a <c>ClientId</c> (plus <c>Authority</c>, <c>ClientSecret</c>, and optionally
+/// <c>Scopes</c>, <c>DisplayName</c>, <c>Domains</c>, <c>TrustEmail</c>) becomes an OpenID Connect
+/// scheme named <c>&lt;Name&gt;</c>, challenged at <c>auth/oauth/&lt;Name&gt;</c> with its callback at
+/// <c>/auth/callback/&lt;Name&gt;</c>. The names google, github and apple are reserved.
+/// </para>
 /// </summary>
 public static class ExternalAuthExtensions
 {
@@ -31,8 +39,12 @@ public static class ExternalAuthExtensions
     {
         /// <summary>
         /// Adds the <see cref="ExternalLoginScheme"/> cookie plus the Google, GitHub, and/or Apple
-        /// OAuth schemes, each gated on its <c>OAuth:&lt;Provider&gt;:ClientId</c> being configured.
+        /// OAuth schemes and one OpenID Connect scheme per <c>OAuth:Oidc:&lt;Name&gt;</c> section, each
+        /// gated on its <c>ClientId</c> being configured.
         /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// An <c>OAuth:Oidc</c> section is misconfigured; the message names the key.
+        /// </exception>
         /// <param name="configuration">Application configuration (reads the <c>OAuth</c> section).</param>
         /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
         public IServiceCollection AddExternalAuthProviders(IConfiguration configuration)
@@ -42,11 +54,15 @@ public static class ExternalAuthExtensions
             var githubClientId = oauth["GitHub:ClientId"];
             var appleClientId = oauth["Apple:ClientId"];
 
+            // Read (and validated) eagerly, so a misconfigured section fails startup naming its key.
+            var oidcProviders = OidcProviderSettings.ReadAll(configuration);
+
             // No provider configured → leave the JWT-only pipeline exactly as AddCommonAuthentication
             // left it. This keeps environments without OAuth secrets (most tests, local dev) unchanged.
             if (string.IsNullOrEmpty(googleClientId)
                 && string.IsNullOrEmpty(githubClientId)
-                && string.IsNullOrEmpty(appleClientId))
+                && string.IsNullOrEmpty(appleClientId)
+                && oidcProviders.Count == 0)
             {
                 return services;
             }
@@ -72,9 +88,61 @@ public static class ExternalAuthExtensions
                 AddAppleProvider(authBuilder, oauth, appleClientId);
             }
 
+            if (oidcProviders.Count > 0)
+            {
+                foreach (var oidcProvider in oidcProviders)
+                {
+                    AddOidcProvider(authBuilder, oidcProvider);
+                }
+
+                // The OAuth controller's generic challenge route and home-realm discovery read this.
+                services.AddSingleton(new OidcProviderRegistry(oidcProviders));
+            }
+
             return services;
         }
     }
+
+    /// <summary>
+    /// A generic OIDC provider (<c>OAuth:Oidc:&lt;Name&gt;</c>): authorization code flow with PKCE into
+    /// the same <see cref="ExternalLoginScheme"/> cookie the built-in providers use. The handler keeps
+    /// the ID token's raw claim names and <see cref="OidcClaimNormalizer"/> reshapes them for the
+    /// controller once the token is validated.
+    /// </summary>
+    private static void AddOidcProvider(AuthenticationBuilder authBuilder, OidcProviderSettings provider) =>
+        authBuilder.AddOpenIdConnect(provider.Name, provider.DisplayName, options =>
+        {
+            options.Authority = provider.Authority;
+            options.ClientId = provider.ClientId;
+            options.ClientSecret = provider.ClientSecret;
+            options.ResponseType = OpenIdConnectResponseType.Code;
+            options.UsePkce = true;
+            options.SignInScheme = ExternalLoginScheme;
+            options.CallbackPath = $"/auth/callback/{provider.Name}";
+
+            // Per-provider paths: the handler defaults are shared, so two OIDC providers would both
+            // claim the same sign-out callback.
+            options.SignedOutCallbackPath = $"/auth/signout-callback/{provider.Name}";
+            options.RemoteSignOutPath = $"/auth/signout/{provider.Name}";
+
+            // Raw claim names (sub, iss, tid, oid, email_verified) reach OnTokenValidated unmapped, and
+            // the ID token stays out of the short-lived cookie: nothing downstream reads it.
+            options.MapInboundClaims = false;
+            options.SaveTokens = false;
+            options.GetClaimsFromUserInfoEndpoint = false;
+
+            options.Scope.Clear();
+            foreach (var scope in provider.Scopes)
+            {
+                options.Scope.Add(scope);
+            }
+
+            options.Events.OnTokenValidated = context =>
+            {
+                context.Principal = OidcClaimNormalizer.Normalize(context.Principal!, provider.Name, provider.TrustEmail);
+                return Task.CompletedTask;
+            };
+        });
 
     /// <summary>
     /// Short-lived cookie carrying the external principal from the provider callback to
