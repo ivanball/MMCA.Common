@@ -176,4 +176,44 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default)
         => Task.FromResult(Result.Failure<AuthenticationResponse>(
             SignInLinks.SignInLinkErrors.NotSupported(nameof(SignInVerifiedEmailOwnerAsync))));
+
+    /// <summary>
+    /// Opens a session for an account whose passkey assertion has just been verified (ADR-139). The
+    /// caller has already redeemed the single-use challenge and checked the signature and counter;
+    /// this member applies the account gates a password sign-in does and mints the token pair, whose
+    /// access token carries <c>mfa=passkey</c>.
+    /// </summary>
+    /// <param name="userId">The account the passkey belongs to.</param>
+    /// <param name="ipAddress">Optional client IP recorded on the session.</param>
+    /// <param name="userAgent">Optional client user-agent recorded on the session.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing the authentication tokens, or an error.</returns>
+    /// <remarks>
+    /// The default rejects, so an implementation that has not adopted passkeys keeps compiling and
+    /// never opens a session through this path.
+    /// </remarks>
+    Task<Result<AuthenticationResponse>> SignInWithPasskeyAsync(
+        UserIdentifierType userId,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Failure<AuthenticationResponse>(
+            Passkeys.PasskeyErrors.NotSupported(nameof(SignInWithPasskeyAsync))));
+
+    /// <summary>
+    /// Whether the account can still sign in without a passkey: it has a password or an external
+    /// login. Asked before the account's last passkey is deleted (ADR-139), so a password-less account
+    /// cannot lock itself out.
+    /// </summary>
+    /// <param name="userId">The account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when another sign-in method remains.</returns>
+    /// <remarks>
+    /// The default answers <see langword="false"/>, which keeps the last passkey: refusing a delete is
+    /// recoverable, a locked-out account is not.
+    /// </remarks>
+    Task<bool> HasSignInMethodBesidesPasskeysAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }

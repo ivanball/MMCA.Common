@@ -95,3 +95,78 @@ static MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse.operator !=(MMC
 static MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse.operator ==(MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse? left, MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse? right) -> bool
 static MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest.operator !=(MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest? left, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest? right) -> bool
 static MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest.operator ==(MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest? left, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest? right) -> bool
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodPasskey = "passkey" -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.Deconstruct(out string! FlowId, out System.Text.Json.JsonElement Options) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.Equals(MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse? other) -> bool
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.FlowId.get -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.FlowId.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.Options.get -> System.Text.Json.JsonElement
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.Options.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.PasskeyOptionsResponse(string! FlowId, System.Text.Json.JsonElement Options) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Credential.get -> System.Text.Json.JsonElement
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Credential.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Deconstruct(out string! FlowId, out System.Text.Json.JsonElement Credential, out string? Name) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Equals(MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest? other) -> bool
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.FlowId.get -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.FlowId.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Name.get -> string?
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Name.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.PasskeyRegisterRequest(string! FlowId, System.Text.Json.JsonElement Credential, string? Name = null) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.Deconstruct(out string! Name) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.Equals(MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest? other) -> bool
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.Name.get -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.Name.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.PasskeyRenameRequest(string! Name) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.CreatedOn.get -> System.DateTime
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.CreatedOn.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Deconstruct(out System.Guid Id, out string! Name, out System.DateTime CreatedOn, out System.DateTime? LastUsedOn) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Equals(MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? other) -> bool
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Id.get -> System.Guid
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Id.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.LastUsedOn.get -> System.DateTime?
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.LastUsedOn.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Name.get -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Name.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.PasskeyResponse(System.Guid Id, string! Name, System.DateTime CreatedOn, System.DateTime? LastUsedOn) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest!
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.Credential.get -> System.Text.Json.JsonElement
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.Credential.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.Deconstruct(out string! FlowId, out System.Text.Json.JsonElement Credential) -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.Equals(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? other) -> bool
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.FlowId.get -> string!
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.FlowId.init -> void
+MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.PasskeySignInRequest(string! FlowId, System.Text.Json.JsonElement Credential) -> void
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.ToString() -> string!
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyRenameRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? right) -> bool

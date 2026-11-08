@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Passkeys.Intro" xml:space="preserve">
+    <value>Las llaves de acceso te permiten iniciar sesión con tu huella, tu rostro o el PIN del dispositivo en lugar de una contraseña. Nadie puede robarlas con phishing.</value>
+  </data>
+  <data name="Passkeys.Loading" xml:space="preserve">
+    <value>Cargando tus llaves de acceso</value>
+  </data>
+  <data name="Passkeys.Empty" xml:space="preserve">
+    <value>Todavía no tienes llaves de acceso.</value>
+  </data>
+  <data name="Passkeys.TableLabel" xml:space="preserve">
+    <value>Tus llaves de acceso</value>
+  </data>
+  <data name="Passkeys.Column.Name" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="Passkeys.Column.Created" xml:space="preserve">
+    <value>Añadida</value>
+  </data>
+  <data name="Passkeys.Column.LastUsed" xml:space="preserve">
+    <value>Último uso</value>
+  </data>
+  <data name="Passkeys.Column.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Passkeys.NeverUsed" xml:space="preserve">
+    <value>Nunca</value>
+  </data>
+  <data name="Passkeys.NewName" xml:space="preserve">
+    <value>Nombre de la nueva llave de acceso (opcional)</value>
+  </data>
+  <data name="Passkeys.Add" xml:space="preserve">
+    <value>Añadir una llave de acceso</value>
+  </data>
+  <data name="Passkeys.Added" xml:space="preserve">
+    <value>Llave de acceso añadida.</value>
+  </data>
+  <data name="Passkeys.AddCancelled" xml:space="preserve">
+    <value>No se creó ninguna llave de acceso.</value>
+  </data>
+  <data name="Passkeys.Unavailable" xml:space="preserve">
+    <value>Las llaves de acceso se añaden desde la aplicación web.</value>
+  </data>
+  <data name="Passkeys.Rename" xml:space="preserve">
+    <value>Cambiar nombre</value>
+  </data>
+  <data name="Passkeys.Rename.Aria" xml:space="preserve">
+    <value>Cambiar el nombre de la llave de acceso {0}</value>
+  </data>
+  <data name="Passkeys.Renamed" xml:space="preserve">
+    <value>Nombre de la llave de acceso cambiado.</value>
+  </data>
+  <data name="Passkeys.Save" xml:space="preserve">
+    <value>Guardar</value>
+  </data>
+  <data name="Passkeys.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Passkeys.Delete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Passkeys.Delete.Aria" xml:space="preserve">
+    <value>Eliminar la llave de acceso {0}</value>
+  </data>
+  <data name="Passkeys.Deleted" xml:space="preserve">
+    <value>Llave de acceso eliminada.</value>
+  </data>
+  <data name="Passkeys.DeleteConfirm.Title" xml:space="preserve">
+    <value>Eliminar llave de acceso</value>
+  </data>
+  <data name="Passkeys.DeleteConfirm.Message" xml:space="preserve">
+    <value>¿Eliminar la llave de acceso &quot;{0}&quot;? Ya no podrás iniciar sesión con ella.</value>
+  </data>
+  <data name="Passkeys.Failed" xml:space="preserve">
+    <value>No se pudo cambiar la llave de acceso. Inténtalo de nuevo.</value>
+  </data>
+</root>

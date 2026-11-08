@@ -7,3 +7,12 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOpti
 MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions
 static MMCA.Common.Infrastructure.DependencyInjection.AddReloadableFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, params System.Reflection.Assembly![]! flagAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions.ApplyFeatureFlagOverrideConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+const MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.CredentialIdIndexName = "IX_PasskeyCredentials_CredentialId" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.TableName = "PasskeyCredentials" -> string!
+const MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.UserIdIndexName = "IX_PasskeyCredentials_UserId" -> string!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddPasskeys(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnablePasskeys.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnablePasskeys.set -> void
+static MMCA.Common.Infrastructure.DependencyInjection.AddPasskeys(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.ApplyPasskeyCredentialConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!

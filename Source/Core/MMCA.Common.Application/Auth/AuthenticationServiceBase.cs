@@ -514,6 +514,83 @@ public abstract class AuthenticationServiceBase<TUser>(
         return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Runs the app gate a password sign-in runs once the credential is proved
+    /// (<see cref="ValidateLoginCandidateAsync"/>), then mints through <see cref="IssueTokensAsync"/>,
+    /// so the session, the cap and the <c>sid</c> claim are exactly a password sign-in's.
+    /// </para>
+    /// <para>
+    /// <b>No second-factor challenge.</b> A passkey is possession of the authenticator plus its own
+    /// user verification, so it satisfies the second factor itself: the token carries
+    /// <c>mfa=passkey</c>, and <see cref="RefreshTokenAsync"/> carries it across rotations like
+    /// <c>otp</c>. The email-confirmation gate is skipped as well: a passkey can only have been
+    /// registered by a signed-in account that already passed it.
+    /// </para>
+    /// </remarks>
+    public async Task<Result<AuthenticationResponse>> SignInWithPasskeyAsync(
+        UserIdentifierType userId,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return Result.Failure<AuthenticationResponse>(
+                Passkeys.PasskeyErrors.AssertionFailed(nameof(SignInWithPasskeyAsync)));
+        }
+
+        var candidateResult = await ValidateLoginCandidateAsync(user, cancellationToken).ConfigureAwait(false);
+        if (candidateResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
+        }
+
+        _multiFactorMethod = AuthClaimTypes.MultiFactorMethodPasskey;
+        try
+        {
+            return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _multiFactorMethod = null;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A stored password hash counts, and so does whatever <see cref="HasExternalLoginAsync"/> reports
+    /// (no external login unless the app overrides it). A vanished account answers
+    /// <see langword="false"/>.
+    /// </remarks>
+    public async Task<bool> HasSignInMethodBesidesPasskeysAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return false;
+        }
+
+        return user.PasswordHash is { Length: > 0 }
+            || await HasExternalLoginAsync(user, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Whether the account has an external (OAuth/OIDC) login it can sign in with. Asked only by
+    /// <see cref="HasSignInMethodBesidesPasskeysAsync"/>, before an account's last passkey is deleted.
+    /// The default answers <see langword="false"/>; an app whose <c>ExternalLoginAsync</c> links
+    /// accounts overrides it (for example <c>user.LoginProvider is not null</c>).
+    /// </summary>
+    /// <param name="user">The account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the account has an external login.</returns>
+    protected virtual Task<bool> HasExternalLoginAsync(TUser user, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
     /// <summary>
     /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
     /// by the login/registration flows and reusable by app-level flows (e.g. external login). The

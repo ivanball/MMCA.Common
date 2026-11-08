@@ -209,6 +209,14 @@ public static class DesignTimeDbContextHelper
             {
                 DataSourceName = physical.Key.Name,
             }));
+
+        // Same two-part gate for the passkey table (ADR-139), for the same collapse reason.
+        services.AddSingleton<IOptions<Application.Auth.Passkeys.PasskeySettings>>(
+            Options.Create(new Application.Auth.Passkeys.PasskeySettings
+            {
+                Enabled = designOptions.EnablePasskeys,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

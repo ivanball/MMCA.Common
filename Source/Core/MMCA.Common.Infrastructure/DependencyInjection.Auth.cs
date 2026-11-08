@@ -56,6 +56,45 @@ public static partial class DependencyInjection
         }
 
         /// <summary>
+        /// Registers opt-in passkey sign-in (WebAuthn, ADR-139): the <c>Passkeys</c> settings
+        /// (validated at startup), the Fido2 verifier, the ceremony service and the EF passkey store.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Calling this alone turns nothing on: with <c>Passkeys:Enabled</c> false every passkey
+        /// endpoint answers 404 and no context maps the <c>PasskeyCredentials</c> table. A host that
+        /// never calls it behaves the same way and needs no migration (the view-as grants precedent).
+        /// </para>
+        /// <para>
+        /// Turning it on also needs a controller deriving from <c>PasskeysControllerBase</c> routed at
+        /// <c>auth/passkeys</c>, the <c>PasskeyCredentials</c> migration on the Identity database
+        /// (<c>DesignTimeDbContextOptions.EnablePasskeys</c>), and an app <c>AuthenticationService</c>
+        /// deriving from <c>AuthenticationServiceBase</c> (which implements the passkey sign-in and the
+        /// last-passkey question). The ceremony service needs the shared cache and the distributed lock
+        /// <c>AddCaching</c> registers.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddPasskeys(IConfiguration configuration)
+        {
+            services.AddOptions<Application.Auth.Passkeys.PasskeySettings>()
+                .Bind(configuration.GetSection(Application.Auth.Passkeys.PasskeySettings.SectionName))
+                .ValidateOnStart();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<
+                Microsoft.Extensions.Options.IValidateOptions<Application.Auth.Passkeys.PasskeySettings>,
+                Auth.Passkeys.PasskeySettingsValidator>());
+
+            // Scoped: the store shares the request's Identity context, and the ceremony service signs in
+            // through the app's scoped authentication service.
+            services.TryAddScoped<Application.Auth.Passkeys.IPasskeyCredentialStore, Persistence.Auth.EFPasskeyCredentialStore>();
+            services.TryAddScoped<Application.Auth.Passkeys.IPasskeyService, Auth.Passkeys.PasskeyService>();
+            services.TryAddSingleton(TimeProvider.System);
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers the opt-in email-confirmation token service and its
         /// <c>Authentication:EmailConfirmation</c> settings.
         /// </summary>

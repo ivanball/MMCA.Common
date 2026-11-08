@@ -883,6 +883,15 @@
   <data name="Auth.Login.EmailMeLink" xml:space="preserve">
     <value>Enviarme un enlace de inicio de sesión</value>
   </data>
+  <data name="Auth.Login.SignInWithPasskey" xml:space="preserve">
+    <value>Iniciar sesión con una llave de acceso</value>
+  </data>
+  <data name="Auth.Login.PasskeyCancelled" xml:space="preserve">
+    <value>No se usó ninguna llave de acceso. Inténtalo de nuevo o inicia sesión con tu contraseña.</value>
+  </data>
+  <data name="Auth.Login.PasskeyFailed" xml:space="preserve">
+    <value>La llave de acceso no pudo iniciar tu sesión.</value>
+  </data>
   <data name="Auth.Login.EmailMeLink.EnterEmail" xml:space="preserve">
     <value>Escriba primero su correo electrónico y luego solicite el enlace.</value>
   </data>

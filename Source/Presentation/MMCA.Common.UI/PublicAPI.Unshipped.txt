@@ -49,3 +49,57 @@ MMCA.Common.UI.Services.Administration.IFeatureFlagAdminUIService.SetOverrideAsy
 override MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.OnInitializedAsync() -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.DependencyInjection.AddFeatureFlagAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params string![]! sources) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 virtual MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Dispose(bool disposing) -> void
+~override MMCA.Common.UI.Components.Auth.PasskeysPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Common.Settings.SignInSettings.OfferPasskeys.get -> bool
+MMCA.Common.UI.Common.Settings.SignInSettings.OfferPasskeys.set -> void
+MMCA.Common.UI.Components.Auth.PasskeysPanel
+MMCA.Common.UI.Components.Auth.PasskeysPanel.PasskeysPanel() -> void
+MMCA.Common.UI.Services.Auth.IPasskeyUIService
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.BeginRegistrationAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.BeginSignInAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.CompleteRegistrationAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.RenameAsync(System.Guid id, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.UI.Services.Auth.IPasskeyUIService.SignInAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.CancelAutofillAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.CreateAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.GetAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.IsAvailable.get -> bool
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.StartAutofillAsync(System.Text.Json.JsonElement options, System.Func<System.Text.Json.JsonElement, System.Threading.Tasks.Task!>! onCredential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.CancelAutofillAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.CreateAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.GetAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.IsAvailable.get -> bool
+MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.StartAutofillAsync(System.Text.Json.JsonElement options, System.Func<System.Text.Json.JsonElement, System.Threading.Tasks.Task!>! onCredential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.CancelAutofillAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.CreateAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.GetAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.IsAvailable.get -> bool
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.StartAutofillAsync(System.Text.Json.JsonElement options, System.Func<System.Text.Json.JsonElement, System.Threading.Tasks.Task!>! onCredential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.UnavailablePasskeyCapability() -> void
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.BrowserPasskeyCapability(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.DisposeAsync() -> System.Threading.Tasks.ValueTask
+~override MMCA.Common.UI.Components.Auth.PasskeySignInButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Components.Auth.PasskeySignInButton
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.EnableAutofill.get -> bool
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.EnableAutofill.set -> void
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnSignedIn.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnSignedIn.set -> void
+MMCA.Common.UI.Components.Auth.PasskeySignInButton.PasskeySignInButton() -> void
+MMCA.Common.UI.Components.Auth.PasskeysPanel.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Components.Auth.PasskeysPanel.OnChanged.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Auth.PasskeysPanel.OnChanged.set -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.BeginRegistrationAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.BeginSignInAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.CompleteRegistrationAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RenameAsync(System.Guid id, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.SignInAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+override MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!

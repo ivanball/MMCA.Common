@@ -883,6 +883,15 @@
   <data name="Auth.Login.EmailMeLink" xml:space="preserve">
     <value>Email me a sign-in link</value>
   </data>
+  <data name="Auth.Login.SignInWithPasskey" xml:space="preserve">
+    <value>Sign in with a passkey</value>
+  </data>
+  <data name="Auth.Login.PasskeyCancelled" xml:space="preserve">
+    <value>No passkey was used. Try again, or sign in with your password.</value>
+  </data>
+  <data name="Auth.Login.PasskeyFailed" xml:space="preserve">
+    <value>The passkey could not sign you in.</value>
+  </data>
   <data name="Auth.Login.EmailMeLink.EnterEmail" xml:space="preserve">
     <value>Enter your email address first, then ask for the link.</value>
   </data>

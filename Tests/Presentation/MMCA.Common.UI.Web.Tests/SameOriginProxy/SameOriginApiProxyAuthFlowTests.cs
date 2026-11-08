@@ -73,6 +73,26 @@ public sealed class SameOriginApiProxyAuthFlowTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PasskeySignIn_IsTokenIssuingByDefault_SoTheBrowserLandsSignedIn()
+    {
+        // The default list alone must cover the passkey sign-in (ADR-139), or the API signs the user
+        // in while the browser keeps no session cookie.
+        using var host = await ProxyHost.StartAsync(_gateway);
+        using var client = host.GetTestClient();
+        using var request = ProxyHost.Request(HttpMethod.Post, "/api/auth/passkeys/signin", csrf: true);
+        request.Content = JsonContent.Create(new { flowId = "flow", credential = new { id = "x" } });
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        body.Should().NotContain(_gateway.LoginAccessToken).And.NotContain(FakeGateway.LoginRefreshToken);
+        var cookies = ProxyHost.SetCookies(response);
+        cookies.Should().Contain(c => c.StartsWith($"{SessionCookieEndpoints.AccessTokenCookieName}={_gateway.LoginAccessToken}", StringComparison.Ordinal));
+        cookies.Should().Contain(c => c.StartsWith($"{SessionCookieEndpoints.RefreshTokenCookieName}={FakeGateway.LoginRefreshToken}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Refresh_IsAnsweredByTheProxy_FromTheRefreshCookie()
     {
         using var host = await ProxyHost.StartAsync(_gateway);

@@ -148,6 +148,14 @@ public abstract class ApplicationDbContext(
     /// </summary>
     private bool _featureFlagOverrideTableEnabled;
 
+    /// <summary>
+    /// Whether the <c>PasskeyCredentials</c> table belongs in THIS context's model (ADR-139):
+    /// <c>Passkeys:Enabled</c> AND this context targeting the source named by
+    /// <c>Passkeys:DataSourceName</c>, the view-as grants shape, so a host that never opts in sees no
+    /// migration.
+    /// </summary>
+    private bool _passkeyTableEnabled;
+
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
 
@@ -367,6 +375,8 @@ public abstract class ApplicationDbContext(
 
         // Same registration-gated shape as the permission grants: see the field's remarks.
         _featureFlagOverrideTableEnabled = ResolveFeatureFlagOverrideGate();
+        // Same two-condition shape again: see the field's remarks.
+        _passkeyTableEnabled = ResolvePasskeyGate();
 
         ConfigureSensitiveDataLogging(optionsBuilder);
 
@@ -482,6 +492,12 @@ public abstract class ApplicationDbContext(
         if (_viewAsGrantTableEnabled)
         {
             modelBuilder.ApplyViewAsGrantConfiguration();
+        }
+
+        // Configure the passkey table (used when Passkeys:Enabled, on that setting's data source only).
+        if (_passkeyTableEnabled)
+        {
+            modelBuilder.ApplyPasskeyCredentialConfiguration();
         }
     }
 
@@ -992,6 +1008,20 @@ public abstract class ApplicationDbContext(
         var settings = serviceProvider.GetService<IOptions<ViewAsSettings>>()?.Value;
         return settings?.Enabled == true
             && settings.HostsGrantStore
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>PasskeyCredentials</c> table: <c>Passkeys:Enabled</c>
+    /// AND this instance targets the source <c>Passkeys:DataSourceName</c> names. <c>GetService</c>, for
+    /// the reason <see cref="ResolvePermissionGrantGate"/> gives: a host that never calls
+    /// <c>AddPasskeys</c> registers no settings, and that absence reads as disabled.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolvePasskeyGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<Application.Auth.Passkeys.PasskeySettings>>()?.Value;
+        return settings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
     }
 

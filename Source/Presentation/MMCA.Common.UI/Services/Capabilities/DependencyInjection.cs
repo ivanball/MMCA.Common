@@ -53,6 +53,10 @@ public static class DependencyInjection
             services.TryAddSingleton<IBiometricAuthenticator, NullBiometricAuthenticator>();
             services.TryAddSingleton<ISpeechToTextService, NullSpeechToTextService>();
             services.TryAddSingleton<IExternalAuthBroker, UnavailableExternalAuthBroker>();
+
+            // Passkeys (ADR-139): unavailable unless a browser head overrides it below, so a MAUI head
+            // (no native passkey support yet) hides the passkey button and the add-passkey action.
+            services.TryAddSingleton<IPasskeyCapability, UnavailablePasskeyCapability>();
             services.TryAddSingleton<ILocalCacheStore, NullLocalCacheStore>();
 
             // Native push registration (ADR-044): both default to inert. UI.Maui overrides the
@@ -105,6 +109,9 @@ public static class DependencyInjection
             services.AddScoped<IDevicePreferences, BrowserDevicePreferences>();
             services.AddScoped<ILocalCacheStore, BrowserLocalCacheStore>();
             services.AddScoped<IMapNavigationService, BrowserMapNavigationService>();
+
+            // WebAuthn through passkeys.js; scoped because it holds the circuit's autofill callback.
+            services.AddScoped<IPasskeyCapability, BrowserPasskeyCapability>();
 
             return services;
         }

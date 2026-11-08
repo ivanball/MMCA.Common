@@ -4,6 +4,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.OAuth;
+using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Pages.Auth;
@@ -44,6 +45,9 @@ public partial class Login : IDisposable
     private bool _offersOrganizationSignIn;
 
     private bool _isDiscovering;
+
+    /// <summary>Whether the page offers passkey sign-in and autofill (host opt-in AND a WebAuthn-capable head).</summary>
+    private bool _offersPasskeys;
 
     /// <summary>
     /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
@@ -92,6 +96,20 @@ public partial class Login : IDisposable
             _existingAccountEmail = email;
         }
     }
+
+    /// <summary>
+    /// Whether to offer passkeys (ADR-139): the host turned it on (<c>SignIn:OfferPasskeys</c>) and the
+    /// head's <see cref="IPasskeyCapability"/> can run WebAuthn. The capability is resolved optionally,
+    /// so a host (or a component test) that registers none simply gets no button.
+    /// </summary>
+    private bool OffersPasskeys() =>
+        SignInOptions.Value.OfferPasskeys
+        && Services.GetService<IPasskeyCapability>() is { IsAvailable: true }
+        && Services.GetService<IPasskeyUIService>() is not null;
+
+    /// <summary>A passkey signed the user in (the tokens are stored): land them as a password sign-in does.</summary>
+    private Task OnPasskeySignedInAsync() =>
+        ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
 
     /// <summary>Opens Forgot password with the typed address already filled in.</summary>
     private void OpenPasswordReset() =>

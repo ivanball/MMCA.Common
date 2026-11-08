@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.Passkeys;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Http;
@@ -48,7 +49,7 @@ public sealed class AuthUIService(
     AuthenticationStateProvider authStateProvider,
     IPushRegistrationService pushRegistration,
     IUiReadCache? readCache = null,
-    ILocalCacheStore? localCache = null) : IAuthUIService, ISignInLinkUIService
+    ILocalCacheStore? localCache = null) : IAuthUIService, ISignInLinkUIService, IPasskeyUIService
 {
     /// <summary>
     /// Error code reported when the authentication succeeded but the tokens could not be persisted
@@ -308,6 +309,83 @@ public sealed class AuthUIService(
                 return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
             },
             cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<PasskeyOptionsResponse>> BeginRegistrationAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.PostAsync(
+                    new Uri("auth/passkeys/register/options", UriKind.Relative), content: null, cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<PasskeyOptionsResponse>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<PasskeyResponse>> CompleteRegistrationAsync(PasskeyRegisterRequest request, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.PostAsJsonAsync(
+                    new Uri("auth/passkeys/register", UriKind.Relative), request, cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<PasskeyResponse>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<IReadOnlyList<PasskeyResponse>>> ListAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.GetAsync(new Uri("auth/passkeys", UriKind.Relative), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<IReadOnlyList<PasskeyResponse>>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<PasskeyResponse>> RenameAsync(Guid id, string name, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.PatchAsJsonAsync(
+                    new Uri($"auth/passkeys/{id}", UriKind.Relative), new PasskeyRenameRequest(name), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<PasskeyResponse>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+
+                // 204 on success, so the non-generic reader (the RevokeSessionAsync precedent).
+                using var response = await httpClient.DeleteAsync(new Uri($"auth/passkeys/{id}", UriKind.Relative), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<PasskeyOptionsResponse>> BeginSignInAsync(CancellationToken cancellationToken = default) =>
+        HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                // Anonymous, like login: no bearer header, so a stale session cannot ride along.
+                using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+                using var response = await httpClient.PostAsync(
+                    new Uri("auth/passkeys/signin/options", UriKind.Relative), content: null, cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<PasskeyOptionsResponse>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Result<AuthenticationResponse>> SignInAsync(PasskeySignInRequest request, CancellationToken cancellationToken = default) =>
+        AuthenticateAsync("auth/passkeys/signin", request, cancellationToken);
 
     /// <summary>
     /// The shared body of login, register and OAuth exchange: post the credential, read the token

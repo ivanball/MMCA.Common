@@ -1,4 +1,3 @@
-#nullable enable
 const MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.SectionName = "FeatureFlags" -> string!
 MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings
 MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.DataSourceName.get -> string!
@@ -17,3 +16,56 @@ MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore
 MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.ClearAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideResponse!>!>!
 MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.SetAsync(string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideResponse!>!>!
+﻿#nullable enable
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.AssertionFailedCode = "Passkeys.AssertionFailed" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.ChallengeInvalidCode = "Passkeys.ChallengeInvalid" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.LastPasskeyCode = "Passkeys.LastPasskey" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.NotFoundCode = "Passkeys.NotFound" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.PasskeysNotSupportedCode = "Passkeys.NotSupported" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.RegistrationFailedCode = "Passkeys.RegistrationFailed" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.StepUpRequiredCode = "Passkeys.StepUpRequired" -> string!
+const MMCA.Common.Application.Auth.Passkeys.PasskeySettings.SectionName = "Passkeys" -> string!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.HasSignInMethodBesidesPasskeysAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.SignInWithPasskeyAsync(int userId, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.HasSignInMethodBesidesPasskeysAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Auth.IAuthenticationService.SignInWithPasskeyAsync(int userId, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.AddAsync(MMCA.Common.Domain.Auth.PasskeyCredential! credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.FindAsync(int userId, System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.PasskeyCredential?>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.FindByCredentialIdAsync(byte[]! credentialId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.PasskeyCredential?>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.ListForUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.PasskeyCredential!>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.RemoveAsync(MMCA.Common.Domain.Auth.PasskeyCredential! credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyCredentialStore.UpdateAsync(MMCA.Common.Domain.Auth.PasskeyCredential! credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.BeginRegistrationAsync(int userId, string! userName, string! displayName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.BeginSignInAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.CompleteRegistrationAsync(int userId, MMCA.Common.Shared.Auth.Passkeys.PasskeyRegisterRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.CompleteSignInAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest! request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.DeleteAsync(int userId, System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.IsEnabled.get -> bool
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.ListAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!>!
+MMCA.Common.Application.Auth.Passkeys.IPasskeyService.RenameAsync(int userId, System.Guid id, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse!>!>!
+MMCA.Common.Application.Auth.Passkeys.PasskeyErrors
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.DataSourceName.get -> string!
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.Enabled.init -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.Origins.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.Origins.init -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.PasskeySettings() -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.RelyingPartyId.get -> string?
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.RelyingPartyId.init -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.RelyingPartyName.get -> string?
+MMCA.Common.Application.Auth.Passkeys.PasskeySettings.RelyingPartyName.init -> void
+MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.AssertionFailed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.ChallengeInvalid(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.LastPasskey(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.NotFound(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.NotSupported(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.RegistrationFailed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.StepUpRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.IsSatisfiedBy(System.Security.Claims.ClaimsPrincipal? principal, System.DateTimeOffset now) -> bool
+static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.MaxTokenAge -> System.TimeSpan
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.HasExternalLoginAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!

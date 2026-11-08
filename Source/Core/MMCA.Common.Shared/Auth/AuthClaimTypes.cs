@@ -50,7 +50,8 @@ public static class AuthClaimTypes
     /// The claim asserting that the access token was minted after a second authentication factor was
     /// presented. It is an <c>amr</c>-style claim (RFC 8176, "authentication methods references"):
     /// the VALUE names the method that satisfied the challenge, one of
-    /// <see cref="MultiFactorMethodTotp"/> or <see cref="MultiFactorMethodRecoveryCode"/>.
+    /// <see cref="MultiFactorMethodTotp"/>, <see cref="MultiFactorMethodRecoveryCode"/> or
+    /// <see cref="MultiFactorMethodPasskey"/>.
     /// <para>
     /// <b>Presence is the assertion, not the value.</b> Readers ask whether the claim is there
     /// (<see cref="ClaimsPrincipalExtensions.HasMultiFactor"/>); the value exists for audit and for a
@@ -66,6 +67,13 @@ public static class AuthClaimTypes
 
     /// <summary>Value of <see cref="MultiFactor"/> when a single-use recovery code satisfied the challenge.</summary>
     public const string MultiFactorMethodRecoveryCode = "recovery";
+
+    /// <summary>
+    /// Value of <see cref="MultiFactor"/> when a passkey (a WebAuthn assertion, ADR-139) signed the user
+    /// in. A passkey is possession of the device plus the authenticator's own user verification, so the
+    /// sign-in is multi-factor by itself, and a refresh carries the value over like the other two.
+    /// </summary>
+    public const string MultiFactorMethodPasskey = "passkey";
 
     /// <summary>
     /// The claim naming the staff user behind a view-as token (ADR-137): the token's <c>sub</c> is the

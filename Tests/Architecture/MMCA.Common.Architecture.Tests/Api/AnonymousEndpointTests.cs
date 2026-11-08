@@ -45,6 +45,10 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // Both are throttled by the auth-ip policy, and send always answers 202 on a well-formed request.
         "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.SendSignInLinkAsync",
         "MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase`2.RedeemSignInLinkAsync",
+        // Passkey sign-in options (ADR-139): issues a single-use challenge before any account is known; auth-ip throttled.
+        "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.BeginSignInAsync",
+        // Passkey sign-in completion (ADR-139): the signed assertion is the credential, so a token would be circular; auth-ip throttled.
+        "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.CompleteSignInAsync",
         // The three OAuth challenge endpoints and the provider-callback completion run before any
         // local token exists, so they declare their anonymity rather than relying on the absence of
         // an attribute: the framework's fallback authorization policy would otherwise break login.

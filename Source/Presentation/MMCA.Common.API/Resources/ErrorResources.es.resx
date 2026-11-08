@@ -370,4 +370,40 @@
   <data name="FeatureFlagOverride.TargetingEmpty" xml:space="preserve">
     <value>Una anulación por segmentación debe indicar al menos un usuario o grupo.</value>
   </data>
+  <data name="Passkeys.AssertionFailed" xml:space="preserve">
+    <value>La llave de acceso no pudo iniciar tu sesión.</value>
+  </data>
+  <data name="Passkeys.Busy" xml:space="preserve">
+    <value>Hay otro cambio en curso en tus llaves de acceso. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Passkeys.ChallengeInvalid" xml:space="preserve">
+    <value>La solicitud de la llave de acceso caducó o ya se usó. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Passkeys.CredentialIdInvalid" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.LastPasskey" xml:space="preserve">
+    <value>Esta llave de acceso es la única forma de iniciar sesión en esta cuenta, así que no se puede eliminar.</value>
+  </data>
+  <data name="Passkeys.NameInvalid" xml:space="preserve">
+    <value>El nombre de la llave de acceso debe tener entre 1 y 100 caracteres.</value>
+  </data>
+  <data name="Passkeys.NotFound" xml:space="preserve">
+    <value>No se encontró la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.NotSupported" xml:space="preserve">
+    <value>El inicio de sesión con llave de acceso no está disponible.</value>
+  </data>
+  <data name="Passkeys.PublicKeyInvalid" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.RegistrationFailed" xml:space="preserve">
+    <value>No se pudo registrar la llave de acceso.</value>
+  </data>
+  <data name="Passkeys.SignCountInvalid" xml:space="preserve">
+    <value>La llave de acceso no pudo iniciar tu sesión.</value>
+  </data>
+  <data name="Passkeys.StepUpRequired" xml:space="preserve">
+    <value>Vuelve a iniciar sesión antes de añadir una llave de acceso.</value>
+  </data>
 </root>

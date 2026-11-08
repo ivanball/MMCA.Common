@@ -95,6 +95,11 @@
          claim) is framework code, so this is the only piece taken as a dependency, and it is
          referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
+    <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
+         MIT, .NET Foundation. Pinned exactly: it parses attacker-supplied CBOR/COSE, so a bump is a
+         reviewed change, never a floating range. Referenced from Infrastructure alone, like
+         Otp.NET; a host that does not call AddPasskeys registers no verifier and maps no table. -->
+    <PackageVersion Include="Fido2" Version="4.3.2" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
