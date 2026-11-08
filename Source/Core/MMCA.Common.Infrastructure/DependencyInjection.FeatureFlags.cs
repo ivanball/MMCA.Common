@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
 using MMCA.Common.Application.FeatureFlags;
 using MMCA.Common.Infrastructure.FeatureFlags;
@@ -76,7 +77,8 @@ public static partial class DependencyInjection
             if (!services.TryDecorate<IFeatureDefinitionProvider>((configured, provider) =>
                     new StoredOverrideFeatureDefinitionProvider(
                         configured,
-                        provider.GetRequiredService<IFeatureFlagOverrideSnapshot>())))
+                        provider.GetRequiredService<IFeatureFlagOverrideSnapshot>(),
+                        provider.GetRequiredService<ILogger<StoredOverrideFeatureDefinitionProvider>>())))
             {
                 throw new InvalidOperationException(
                     "AddReloadableFeatureFlags layers stored overrides over the registered IFeatureDefinitionProvider, " +

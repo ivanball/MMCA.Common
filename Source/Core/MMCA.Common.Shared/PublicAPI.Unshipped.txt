@@ -13,7 +13,6 @@ override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.GetHash
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.ToString() -> string!
 static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator !=(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator ==(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool
-#nullable enable
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageFeatures = "features:manage" -> string!
 MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode
 MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode.Off = 0 -> MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode
