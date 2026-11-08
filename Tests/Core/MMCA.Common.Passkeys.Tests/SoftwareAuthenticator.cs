@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace MMCA.Common.API.Tests.Controllers.Passkeys;
+namespace MMCA.Common.Passkeys.Tests;
 
 /// <summary>
 /// A software WebAuthn authenticator for the ceremony tests: an EC P-256 key pair, a <c>none</c>

@@ -76,10 +76,6 @@
          that call it; a host that registers no two-factor service has no second-factor step in its
          sign-in flow at all. -->
     <PackageReference Include="Otp.NET" />
-    <!-- WebAuthn verification behind the opt-in AddPasskeys (Fido2NetLib, ADR-139). Referenced
-         unconditionally so the type is available to hosts that call it; a host that does not
-         registers no verifier, maps no PasskeyCredentials table and exposes no passkey route. -->
-    <PackageReference Include="Fido2" />
     <!-- Circuit breaker guarding the OutboxProcessor's broker-publish call: on a dead broker the
          processor fails fast instead of stacking a publish timeout per row. Polly.Core only (the
          v8 resilience-pipeline API); the v7 compatibility shim in the Polly meta-package is not

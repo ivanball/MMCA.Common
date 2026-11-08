@@ -33,7 +33,7 @@ using MMCA.Common.Shared.ValueObjects.Contact;
 using Moq;
 using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationService;
 
-namespace MMCA.Common.API.Tests.Controllers.Passkeys;
+namespace MMCA.Common.Passkeys.Tests;
 
 /// <summary>
 /// A real ASP.NET Core host over <see cref="PasskeysControllerBase"/> for the passkey ceremony tests:

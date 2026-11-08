@@ -14,7 +14,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Passkeys;
 using MMCA.Common.Shared.Auth.Responses;
 
-namespace MMCA.Common.API.Tests.Controllers.Passkeys;
+namespace MMCA.Common.Passkeys.Tests;
 
 /// <summary>
 /// The passkey endpoints (ADR-139) driven through real routing, the framework's <c>AddPasskeys</c>

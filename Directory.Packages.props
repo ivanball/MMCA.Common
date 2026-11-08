@@ -97,8 +97,9 @@
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
          MIT, .NET Foundation. Pinned exactly: it parses attacker-supplied CBOR/COSE, so a bump is a
-         reviewed change, never a floating range. Referenced from Infrastructure alone, like
-         Otp.NET; a host that does not call AddPasskeys registers no verifier and maps no table. -->
+         reviewed change, never a floating range. Referenced from the opt-in MMCA.Common.Passkeys
+         package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
+         reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
     <PackageVersion Include="Fido2" Version="4.3.2" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->

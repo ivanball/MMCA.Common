@@ -3,8 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.Passkeys;
+using MMCA.Common.Infrastructure;
 
-namespace MMCA.Common.Infrastructure.Tests.Auth.Passkeys;
+namespace MMCA.Common.Passkeys.Tests;
 
 /// <summary>
 /// <c>AddPasskeys(configuration)</c> (ADR-139): the ADR-116 opt-in shape. Enabled settings are

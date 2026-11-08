@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.Passkeys;
 
-namespace MMCA.Common.Infrastructure.Auth.Passkeys;
+namespace MMCA.Common.Passkeys;
 
 /// <summary>
 /// Startup validation for <see cref="PasskeySettings"/> (ADR-139). Disabled settings need nothing;
