@@ -34,7 +34,22 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
-Nothing breaks. Two opt-ins need a migration:
+Nothing breaks. Three opt-ins need a migration:
+
+**Machine clients: one migration on the Identity database, and a provisioner.** A host that does not
+call `AddMachineClients` changes nothing and maps no table.
+
+1. Implement `IServiceAccountProvisioner` over your user store: `CreateAsync(name, role)` creates a
+   user with that role, no password and `IsServiceAccount` true, and returns its id; `FindAsync`
+   loads one as a `ServiceAccount`. Have your user type answer `IAuthUser.IsServiceAccount`, and your
+   `IViewAsSubjectResolver` set `ViewAsSubject.IsServiceAccount`, so such accounts never sign in
+   interactively or become a view-as target.
+2. Call `services.AddMachineClients(configuration)` and set `MachineClients:Enabled`.
+3. In the Identity migrations project, set `DesignTimeDbContextOptions.EnableMachineClients = true`,
+   add a migration (for example `AddMachineClients`) and apply it.
+4. Route a controller derived from `MachineTokenControllerBase` at `auth/token` and one derived from
+   `MachineClientsControllerBase` behind `clients:manage`, and grant `clients:manage` to an operator
+   role that no client can hold.
 
 **Passkeys: one migration on the Identity database.** A host that does not call `AddPasskeys` changes
 nothing and maps no table.
