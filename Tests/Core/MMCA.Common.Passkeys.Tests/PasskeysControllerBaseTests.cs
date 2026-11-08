@@ -83,6 +83,8 @@ public sealed class PasskeysControllerBaseTests
             .Which.Value.Should().Be(AuthClaimTypes.MultiFactorMethodPasskey);
         accessToken.Claims.Should().Contain(c => c.Type == AuthClaimTypes.Subject && c.Value == UserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         accessToken.Claims.Should().Contain(c => c.Type == AuthClaimTypes.SessionId, "the pair is a normal refresh session");
+        accessToken.Claims.Should().ContainSingle(c => c.Type == AuthClaimTypes.AuthTime)
+            .Which.Value.Should().Be(host.Clock.GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -235,43 +237,98 @@ public sealed class PasskeysControllerBaseTests
         host.Store.Rows.Should().ContainSingle();
     }
 
-    // == Register with a 20-minute-old token and no mfa is refused ==
+    // == Registration needs a sign-in (auth_time) within the last 10 minutes ==
     [Theory]
     [InlineData("/auth/passkeys/register/options")]
     [InlineData("/auth/passkeys/register")]
-    public async Task Register_WithATwentyMinuteOldTokenAndNoMfa_IsRefused(string path)
+    public async Task Register_WhenTheSignInIsTwentyMinutesOld_IsRefused_EvenWithABrandNewTokenAndMfa(string path)
     {
         await using var host = await PasskeyTestHost.StartAsync();
         host.Users.Add(UserId);
         using var fresh = host.SignedInClient(UserId);
         var options = await PostOptionsAsync(fresh, "/auth/passkeys/register/options");
         using var authenticator = new SoftwareAuthenticator(PasskeyTestHost.RelyingPartyId, PasskeyTestHost.Origin);
-        using var stale = host.SignedInClient(UserId, tokenAge: TimeSpan.FromMinutes(20));
+        using var stale = host.SignedInClient(UserId, signedInAgo: TimeSpan.FromMinutes(20), multiFactor: AuthClaimTypes.MultiFactorMethodTotp);
 
-        using var response = path.EndsWith("/options", StringComparison.Ordinal)
-            ? await stale.PostAsync(Rel(path), content: null, Ct)
-            : await stale.PostAsJsonAsync(path, new PasskeyRegisterRequest(options.FlowId, authenticator.CreateAttestation(options.Options)), Ct);
+        using var response = await PostRegistrationStepAsync(stale, path, options, authenticator);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await ProblemCodeAsync(response)).Should().Be(PasskeyErrors.StepUpRequiredCode);
         host.Store.Rows.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("/auth/passkeys/register/options")]
+    [InlineData("/auth/passkeys/register")]
+    public async Task Register_WithATokenThatHasNoAuthTime_IsRefused(string path)
+    {
+        await using var host = await PasskeyTestHost.StartAsync();
+        host.Users.Add(UserId);
+        using var fresh = host.SignedInClient(UserId);
+        var options = await PostOptionsAsync(fresh, "/auth/passkeys/register/options");
+        using var authenticator = new SoftwareAuthenticator(PasskeyTestHost.RelyingPartyId, PasskeyTestHost.Origin);
+        using var legacy = host.SignedInClient(UserId, multiFactor: AuthClaimTypes.MultiFactorMethodTotp, withAuthTime: false);
+
+        using var response = await PostRegistrationStepAsync(legacy, path, options, authenticator);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, "a token minted before auth_time shipped cannot prove a recent sign-in");
+        (await ProblemCodeAsync(response)).Should().Be(PasskeyErrors.StepUpRequiredCode);
+    }
+
     [Fact]
-    public async Task Register_WithATwentyMinuteOldTokenThatCarriesMfa_IsAllowed()
+    public async Task Register_WithTheTokenOfAFreshSignIn_IsAllowed()
+    {
+        await using var host = await PasskeyTestHost.StartAsync();
+        host.Users.Add(UserId);
+        using var first = new SoftwareAuthenticator(PasskeyTestHost.RelyingPartyId, PasskeyTestHost.Origin);
+        await RegisterAsync(host, first, signCount: 0);
+        var (_, tokens) = await SignInAsync(host, first, signCount: 0);
+
+        using var client = host.BearerClient(tokens!.Value.AccessToken);
+        using var second = new SoftwareAuthenticator(PasskeyTestHost.RelyingPartyId, PasskeyTestHost.Origin);
+        var options = await PostOptionsAsync(client, "/auth/passkeys/register/options");
+        using var response = await client.PostAsJsonAsync(
+            "/auth/passkeys/register", new PasskeyRegisterRequest(options.FlowId, second.CreateAttestation(options.Options)), Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        host.Store.Rows.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Register_AfterARefreshOfATwentyMinuteOldSignIn_IsRefused_ThoughTheAccessTokenIsBrandNew()
     {
         await using var host = await PasskeyTestHost.StartAsync();
         host.Users.Add(UserId);
         using var authenticator = new SoftwareAuthenticator(PasskeyTestHost.RelyingPartyId, PasskeyTestHost.Origin);
-        using var client = host.SignedInClient(UserId, tokenAge: TimeSpan.FromMinutes(20), multiFactor: AuthClaimTypes.MultiFactorMethodTotp);
+        await RegisterAsync(host, authenticator, signCount: 0);
+        var (_, signedIn) = await SignInAsync(host, authenticator, signCount: 0);
+        var signInTime = AuthTimeOf(signedIn!.Value.AccessToken);
 
-        var options = await PostOptionsAsync(client, "/auth/passkeys/register/options");
-        using var response = await client.PostAsJsonAsync(
-            "/auth/passkeys/register", new PasskeyRegisterRequest(options.FlowId, authenticator.CreateAttestation(options.Options)), Ct);
+        host.Clock.Advance(TimeSpan.FromMinutes(20));
+        var refreshed = await host.RefreshAsync(signedIn.Value);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        refreshed.AccessToken.Should().NotBe(signedIn.Value.AccessToken, "the refresh mints a brand-new access token");
+        AuthTimeOf(refreshed.AccessToken).Should().Be(signInTime, "a refresh carries the sign-in instant over unchanged");
+        new JwtSecurityTokenHandler().ReadJwtToken(refreshed.AccessToken).Claims
+            .Should().Contain(c => c.Type == AuthClaimTypes.MultiFactor, "mfa rides the refresh too, and must not stand in for a recent sign-in");
+        using var client = host.BearerClient(refreshed.AccessToken);
+        using var response = await client.PostAsync(Rel("/auth/passkeys/register/options"), content: null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await ProblemCodeAsync(response)).Should().Be(PasskeyErrors.StepUpRequiredCode);
     }
 
+    private static string? AuthTimeOf(string accessToken) =>
+        new JwtSecurityTokenHandler().ReadJwtToken(accessToken).Claims.SingleOrDefault(c => c.Type == AuthClaimTypes.AuthTime)?.Value;
+
+    private static async Task<HttpResponseMessage> PostRegistrationStepAsync(
+        HttpClient client,
+        string path,
+        PasskeyOptionsResponse options,
+        SoftwareAuthenticator authenticator) =>
+        path.EndsWith("/options", StringComparison.Ordinal)
+            ? await client.PostAsync(Rel(path), content: null, Ct)
+            : await client.PostAsJsonAsync(path, new PasskeyRegisterRequest(options.FlowId, authenticator.CreateAttestation(options.Options)), Ct);
     // == Attribute contract: anonymous sign-in on the auth-ip policy, the rest signed in ==
     [Theory]
     [InlineData("signin/options")]

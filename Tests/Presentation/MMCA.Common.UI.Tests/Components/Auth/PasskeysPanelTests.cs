@@ -90,6 +90,33 @@ public sealed class PasskeysPanelTests : BunitTestBase
             Times.Once());
     }
 
+    [Theory]
+    [InlineData("en", "sign out and sign in again")]
+    [InlineData("es", "cierra la sesión y vuelve a iniciarla")]
+    public void Add_RefusedForAStaleSignIn_SaysToSignInAgain(string culture, string expected)
+    {
+        _passkeys.Setup(x => x.BeginRegistrationAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<PasskeyOptionsResponse>(
+                Error.Forbidden("Passkeys.StepUpRequired", "Sign in again before adding a passkey.")));
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        System.Globalization.CultureInfo.CurrentUICulture = new System.Globalization.CultureInfo(culture);
+        try
+        {
+            var cut = RenderUnderTest<PasskeysPanel>(_ => { });
+            cut.WaitForAssertion(() => cut.FindAll("[data-testid='passkeys-add']").Should().ContainSingle());
+            cut.Find("[data-testid='passkeys-add']").Click();
+
+            cut.WaitForAssertion(() => _toasts.Verify(
+                x => x.Error(It.Is<string>(m => m.Contains(expected, StringComparison.OrdinalIgnoreCase))),
+                Times.Once()));
+            _capability.Verify(x => x.CreateAsync(It.IsAny<JsonElement>(), It.IsAny<CancellationToken>()), Times.Never());
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     [Fact]
     public void Rename_SendsTheNewName()
     {

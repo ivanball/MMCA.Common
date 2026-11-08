@@ -87,4 +87,7 @@
   <data name="Passkeys.Failed" xml:space="preserve">
     <value>No se pudo cambiar la llave de acceso. Inténtalo de nuevo.</value>
   </data>
+  <data name="Passkeys.SignInAgain" xml:space="preserve">
+    <value>Por seguridad, añadir una llave de acceso requiere un inicio de sesión reciente. Cierra la sesión y vuelve a iniciarla, y añade la llave en los 10 minutos siguientes.</value>
+  </data>
 </root>

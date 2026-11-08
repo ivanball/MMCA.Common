@@ -76,6 +76,21 @@ public static class AuthClaimTypes
     public const string MultiFactorMethodPasskey = "passkey";
 
     /// <summary>
+    /// The claim carrying the instant of the interactive sign-in a token descends from, in seconds since
+    /// the Unix epoch (the OpenID Connect <c>auth_time</c> claim). Stamped when a sign-in opens a session
+    /// (password, sign-in link, external login, passkey, registration) and carried UNCHANGED across every
+    /// refresh, so unlike <c>iat</c> it does not move when a refresh mints a new access token. A view-as
+    /// token carries none.
+    /// <para>
+    /// It is what "recently signed in" is judged by: registering a passkey requires an
+    /// <c>auth_time</c> within the last ten minutes (ADR-139), so a stolen refresh token cannot keep a
+    /// session fresh enough to plant one. A token minted before the claim shipped has none and reads as
+    /// not recent.
+    /// </para>
+    /// </summary>
+    public const string AuthTime = "auth_time";
+
+    /// <summary>
     /// The claim naming the staff user behind a view-as token (ADR-137): the token's <c>sub</c> is the
     /// user being viewed, and this claim's value is the id of the staff user who is viewing.
     /// <para>

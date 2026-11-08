@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.API.Controllers.Passkeys;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.Passkeys;
@@ -29,7 +30,9 @@ using MMCA.Common.Infrastructure;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.ValueObjects.Contact;
+using MMCA.Common.Testing.Support;
 using Moq;
 using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationService;
 
@@ -39,9 +42,10 @@ namespace MMCA.Common.Passkeys.Tests;
 /// A real ASP.NET Core host over <see cref="PasskeysControllerBase"/> for the passkey ceremony tests:
 /// the framework's <c>AddPasskeys</c> (Fido2 verification, the shared-cache challenges and the
 /// distributed lock from <c>AddCaching</c>), and the framework's <see cref="AuthenticationServiceBase{TUser}"/>
-/// minting the token pair. Only the edges are doubles: the passkey rows live in memory, the caller is
-/// whoever the <c>X-Test-*</c> headers say, and access tokens are unsigned JWTs so a test can read the
-/// claims the workflow stamped.
+/// and <see cref="AuthSessionIssuer"/> minting and rotating the token pair on a controllable clock. Only
+/// the edges are doubles: the passkey rows and refresh sessions live in memory, access tokens are
+/// unsigned JWTs (so a test reads the claims the workflow stamped, and presents them back), and a
+/// caller is either such a token or whoever the <c>X-Test-*</c> headers say.
 /// </summary>
 internal sealed class PasskeyTestHost : IAsyncDisposable
 {
@@ -50,16 +54,20 @@ internal sealed class PasskeyTestHost : IAsyncDisposable
 
     private readonly WebApplication _app;
 
-    private PasskeyTestHost(WebApplication app, PasskeyTestUsers users, InMemoryPasskeyStore store)
+    private PasskeyTestHost(WebApplication app, PasskeyTestUsers users, InMemoryPasskeyStore store, FakeTimeProvider clock)
     {
         _app = app;
         Users = users;
         Store = store;
+        Clock = clock;
     }
 
     public PasskeyTestUsers Users { get; }
 
     public InMemoryPasskeyStore Store { get; }
+
+    /// <summary>The clock every session instant (and so every <c>auth_time</c>) is stamped from.</summary>
+    public FakeTimeProvider Clock { get; }
 
     public IServiceProvider Services => _app.Services;
 
@@ -79,19 +87,21 @@ internal sealed class PasskeyTestHost : IAsyncDisposable
 
         var users = new PasskeyTestUsers();
         var store = new InMemoryPasskeyStore();
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
-        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<TimeProvider>(clock);
         builder.Services.AddCaching();
         builder.Services.AddSingleton(users);
         builder.Services.AddSingleton<IPasskeyCredentialStore>(store);
+        builder.Services.AddSingleton<IRefreshSessionStore, InMemoryRefreshSessionStore>();
         builder.Services.AddScoped<IAuthenticationService, PasskeyTestAuthenticationService>();
         if (addPasskeys)
         {
             builder.Services.AddPasskeys(builder.Configuration);
         }
 
-        builder.Services.AddAuthentication(HeaderAuthenticationHandler.SchemeName)
-            .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(HeaderAuthenticationHandler.SchemeName, _ => { });
+        builder.Services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName, _ => { });
         builder.Services.AddAuthorization();
         builder.Services.AddControllers().ConfigureApplicationPartManager(manager =>
         {
@@ -111,26 +121,54 @@ internal sealed class PasskeyTestHost : IAsyncDisposable
         app.UseAuthorization();
         app.MapControllers();
         await app.StartAsync(Xunit.TestContext.Current.CancellationToken);
-        return new PasskeyTestHost(app, users, store);
+        return new PasskeyTestHost(app, users, store, clock);
     }
 
     /// <summary>An anonymous client.</summary>
     public HttpClient AnonymousClient() => _app.GetTestClient();
 
-    /// <summary>A client signed in as <paramref name="userId"/> with a token issued <paramref name="tokenAge"/> ago.</summary>
-    public HttpClient SignedInClient(int userId, TimeSpan? tokenAge = null, string? multiFactor = null)
+    /// <summary>
+    /// A client signed in as <paramref name="userId"/> holding a brand-new access token (its <c>iat</c> is
+    /// now) whose session signed in <paramref name="signedInAgo"/> ago (its <c>auth_time</c>), or that
+    /// carries no <c>auth_time</c> at all when <paramref name="withAuthTime"/> is false.
+    /// </summary>
+    public HttpClient SignedInClient(int userId, TimeSpan? signedInAgo = null, string? multiFactor = null, bool withAuthTime = true)
     {
         var client = _app.GetTestClient();
-        var issuedAt = DateTimeOffset.UtcNow - (tokenAge ?? TimeSpan.FromMinutes(1));
-        client.DefaultRequestHeaders.Add(HeaderAuthenticationHandler.UserHeader, userId.ToString(CultureInfo.InvariantCulture));
-        client.DefaultRequestHeaders.Add(HeaderAuthenticationHandler.IssuedAtHeader, issuedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        var now = Clock.GetUtcNow();
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserHeader, userId.ToString(CultureInfo.InvariantCulture));
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.IssuedAtHeader, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        if (withAuthTime)
+        {
+            var signedInAt = now - (signedInAgo ?? TimeSpan.FromMinutes(1));
+            client.DefaultRequestHeaders.Add(TestAuthenticationHandler.AuthTimeHeader, signedInAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture));
+        }
+
         if (multiFactor is not null)
         {
-            client.DefaultRequestHeaders.Add(HeaderAuthenticationHandler.MultiFactorHeader, multiFactor);
+            client.DefaultRequestHeaders.Add(TestAuthenticationHandler.MultiFactorHeader, multiFactor);
         }
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
+    }
+
+    /// <summary>A client presenting <paramref name="accessToken"/> (a token this host minted) as its bearer token.</summary>
+    public HttpClient BearerClient(string accessToken)
+    {
+        var client = _app.GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        return client;
+    }
+
+    /// <summary>Refreshes a token pair through the framework's workflow, as <c>POST auth/refresh</c> would.</summary>
+    public async Task<AuthenticationResponse> RefreshAsync(AuthenticationResponse tokens)
+    {
+        await using var scope = _app.Services.CreateAsyncScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IAuthenticationService>()
+            .RefreshTokenAsync(new RefreshTokenRequest(tokens.AccessToken, tokens.RefreshToken));
+        return result.Value;
     }
 
     public async ValueTask DisposeAsync() => await _app.DisposeAsync();
@@ -174,15 +212,15 @@ public sealed class PasskeyTestUser : AuditableAggregateRootEntity<UserIdentifie
 /// <summary>
 /// The framework's shared authentication workflow over the in-memory accounts: everything the
 /// passkey path runs (<c>SignInWithPasskeyAsync</c>, <c>HasSignInMethodBesidesPasskeysAsync</c>, the
-/// session issuer) is the production code.
+/// refresh, the session issuer) is the production code.
 /// </summary>
-internal sealed class PasskeyTestAuthenticationService(PasskeyTestUsers users, TimeProvider timeProvider)
+internal sealed class PasskeyTestAuthenticationService(PasskeyTestUsers users, IRefreshSessionStore sessions, TimeProvider timeProvider)
     : AuthenticationServiceBase<PasskeyTestUser>(
         UnitOfWorkOver(users),
         Mock.Of<IPasswordHasher>(),
         Mock.Of<ILoginProtectionService>(),
         new AuthenticationValidators(Valid<LoginRequest>(), Valid<RegisterRequest>(), Valid<RefreshTokenRequest>()),
-        new AuthSessionIssuer(UnsignedJwtTokenService(), SessionStore(), Options.Create(new RefreshSessionSettings()), timeProvider))
+        new AuthSessionIssuer(UnsignedJwtTokenService(), sessions, Options.Create(new RefreshSessionSettings()), timeProvider))
 {
     protected override Task<PasskeyTestUser?> FindUntrackedByEmailAsync(Email? email, CancellationToken cancellationToken) =>
         Task.FromResult<PasskeyTestUser?>(null);
@@ -209,7 +247,7 @@ internal sealed class PasskeyTestAuthenticationService(PasskeyTestUsers users, T
     }
 
     // Unsigned JWTs carrying every claim the workflow passed in, so a test reads them back off the
-    // response exactly as a client would.
+    // response exactly as a client would, and a refresh reads them back off the presented token.
     private static ITokenService UnsignedJwtTokenService()
     {
         var tokens = new Mock<ITokenService>();
@@ -224,17 +262,10 @@ internal sealed class PasskeyTestAuthenticationService(PasskeyTestUsers users, T
             .Returns((UserIdentifierType id, string _, string _, string _, IEnumerable<Claim>? claims) =>
                 new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
                     claims: [new Claim(AuthClaimTypes.Subject, id.ToString(CultureInfo.InvariantCulture)), .. claims ?? []])));
+        tokens
+            .Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>()))
+            .Returns((string token) => new ClaimsPrincipal(new ClaimsIdentity(new JwtSecurityTokenHandler().ReadJwtToken(token).Claims)));
         return tokens.Object;
-    }
-
-    private static IRefreshSessionStore SessionStore()
-    {
-        var store = new Mock<IRefreshSessionStore>();
-        store
-            .Setup(x => x.GetUnrevokedByUserAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-        store.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
-        return store.Object;
     }
 
     private static IValidator<T> Valid<T>()
@@ -278,19 +309,31 @@ internal sealed class InMemoryPasskeyStore : IPasskeyCredentialStore
     }
 }
 
-/// <summary>Authenticates whoever the <c>X-Test-*</c> headers name, with the <c>iat</c> and <c>mfa</c> claims a real token carries.</summary>
-internal sealed class HeaderAuthenticationHandler(
+/// <summary>
+/// Authenticates a bearer token this host minted (its claims exactly as stamped), or else whoever the
+/// <c>X-Test-*</c> headers name, with the <c>iat</c>, <c>auth_time</c> and <c>mfa</c> claims a real
+/// token carries.
+/// </summary>
+internal sealed class TestAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string SchemeName = "TestHeaders";
+    public const string SchemeName = "TestTokens";
     public const string UserHeader = "X-Test-User";
     public const string IssuedAtHeader = "X-Test-Iat";
+    public const string AuthTimeHeader = "X-Test-AuthTime";
     public const string MultiFactorHeader = "X-Test-Mfa";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        var authorization = Request.Headers.Authorization.ToString();
+        if (authorization.StartsWith("Bearer ", StringComparison.Ordinal))
+        {
+            var token = new JwtSecurityTokenHandler().ReadJwtToken(authorization["Bearer ".Length..]);
+            return Task.FromResult(Success([.. token.Claims]));
+        }
+
         if (!Request.Headers.TryGetValue(UserHeader, out var userId))
         {
             return Task.FromResult(AuthenticateResult.NoResult());
@@ -299,17 +342,23 @@ internal sealed class HeaderAuthenticationHandler(
         List<Claim> claims =
         [
             new(AuthClaimTypes.Subject, userId.ToString()),
-            new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Email, $"user{userId}@example.com"),
             new(ClaimTypes.Name, "Test User"),
             new("iat", Request.Headers[IssuedAtHeader].ToString()),
         ];
+        if (Request.Headers.TryGetValue(AuthTimeHeader, out var authTime))
+        {
+            claims.Add(new Claim(AuthClaimTypes.AuthTime, authTime.ToString()));
+        }
+
         if (Request.Headers.TryGetValue(MultiFactorHeader, out var method))
         {
             claims.Add(new Claim(AuthClaimTypes.MultiFactor, method.ToString()));
         }
 
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
+        return Task.FromResult(Success(claims));
     }
+
+    private static AuthenticateResult Success(List<Claim> claims) =>
+        AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName)), SchemeName));
 }

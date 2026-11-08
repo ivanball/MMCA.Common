@@ -12,6 +12,8 @@
     <PackageReference Include="Moq" />
     <!-- In-memory TestServer: the ceremony tests drive the real auth/passkeys endpoints. -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- FakeTimeProvider: the step-up tests age a sign-in past the ten-minute window. -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -21,5 +23,7 @@
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Passkeys\MMCA.Common.Passkeys.csproj" />
     <!-- PasskeysControllerBase, and through it AddCaching (the shared cache and lock the challenges use). -->
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <!-- InMemoryRefreshSessionStore, so a refresh rotates a real session. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
   </ItemGroup>
 </Project>

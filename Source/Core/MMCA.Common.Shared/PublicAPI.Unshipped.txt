@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse!
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Deconstruct(out string! Provider, out string! DisplayName) -> void
@@ -170,3 +170,5 @@ static MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.operator !=(MMCA.Common.
 static MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? left, MMCA.Common.Shared.Auth.Passkeys.PasskeyResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator !=(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? right) -> bool
 static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? right) -> bool
+const MMCA.Common.Shared.Auth.AuthClaimTypes.AuthTime = "auth_time" -> string!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindAuthTime(this System.Security.Claims.ClaimsPrincipal? principal) -> System.DateTimeOffset?

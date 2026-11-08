@@ -87,4 +87,7 @@
   <data name="Passkeys.Failed" xml:space="preserve">
     <value>The passkey change failed. Try again.</value>
   </data>
+  <data name="Passkeys.SignInAgain" xml:space="preserve">
+    <value>For your security, adding a passkey needs a recent sign-in. Please sign out and sign in again, then add the passkey within 10 minutes.</value>
+  </data>
 </root>

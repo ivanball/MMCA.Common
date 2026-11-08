@@ -27,7 +27,7 @@ public interface IAuthSessionIssuer
 {
     /// <summary>
     /// The token service an app mints access tokens through. While the issuer is minting for a
-    /// session (<see cref="MintForSession"/>), this instance appends that session's <c>sid</c> claim,
+    /// session (<see cref="MintForSession(Guid, string?, DateTimeOffset?, Func{string})"/>), this instance appends that session's <c>sid</c> claim,
     /// and the <c>mfa</c> claim when a second factor verified, to whatever claim set the app passes; at
     /// any other time it is the plain registered <see cref="ITokenService"/>.
     /// </summary>
@@ -84,6 +84,25 @@ public interface IAuthSessionIssuer
     /// <param name="mintAccessToken">Mints the token through <see cref="TokenService"/>.</param>
     /// <returns>The signed access token.</returns>
     string MintForSession(Guid sessionId, string? multiFactorMethod, Func<string> mintAccessToken);
+
+    /// <summary>
+    /// Runs <paramref name="mintAccessToken"/> like <see cref="MintForSession(Guid, string?, Func{string})"/>,
+    /// also stamping the <c>auth_time</c> claim: <paramref name="authenticatedAt"/> when given (a refresh
+    /// carrying the presented token's sign-in instant over unchanged), otherwise the instant of the sign-in
+    /// <see cref="IssueAsync"/> is opening, and none outside it.
+    /// </summary>
+    /// <param name="sessionId">The refresh session the token is being minted for.</param>
+    /// <param name="multiFactorMethod">The second-factor method that verified, or null for none.</param>
+    /// <param name="authenticatedAt">The sign-in instant to carry over, or null.</param>
+    /// <param name="mintAccessToken">Mints the token through <see cref="TokenService"/>.</param>
+    /// <returns>The signed access token.</returns>
+    /// <remarks>
+    /// The default ignores <paramref name="authenticatedAt"/> and delegates to the three-argument member,
+    /// so an implementation written before <c>auth_time</c> shipped keeps compiling; it then mints no
+    /// <c>auth_time</c>, and passkey registration (which requires one) stays refused on that host.
+    /// </remarks>
+    string MintForSession(Guid sessionId, string? multiFactorMethod, DateTimeOffset? authenticatedAt, Func<string> mintAccessToken) =>
+        MintForSession(sessionId, multiFactorMethod, mintAccessToken);
 
     /// <summary>
     /// Signs one device out: revokes the live session behind <paramref name="refreshToken"/> when it

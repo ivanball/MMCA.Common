@@ -67,7 +67,6 @@ static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.NotSupported(string? 
 static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.RegistrationFailed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.Passkeys.PasskeyErrors.StepUpRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.IsSatisfiedBy(System.Security.Claims.ClaimsPrincipal? principal, System.DateTimeOffset now) -> bool
-static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.MaxTokenAge -> System.TimeSpan
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.HasExternalLoginAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.Application.Auth.Passkeys.IPasskeyCeremony
 MMCA.Common.Application.Auth.Passkeys.IPasskeyCeremony.CreateRegistrationOptions(byte[]! userHandle, string! userName, string! displayName, System.Collections.Generic.IReadOnlyCollection<byte[]!>! excludeCredentialIds) -> string!
@@ -144,3 +143,6 @@ override MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge.ToString() -> st
 static MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge.operator !=(MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge? left, MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge? right) -> bool
 static MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge.operator ==(MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge? left, MMCA.Common.Application.Auth.Passkeys.PasskeyChallenge? right) -> bool
 static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyChallenges.Lifetime -> System.TimeSpan
+MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.MintForSession(System.Guid sessionId, string? multiFactorMethod, System.DateTimeOffset? authenticatedAt, System.Func<string!>! mintAccessToken) -> string!
+MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.MintForSession(System.Guid sessionId, string? multiFactorMethod, System.DateTimeOffset? authenticatedAt, System.Func<string!>! mintAccessToken) -> string!
+static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.MaxSignInAge -> System.TimeSpan

@@ -20,6 +20,9 @@ namespace MMCA.Common.UI.Components.Auth;
 /// </summary>
 public partial class PasskeysPanel
 {
+    // The code PasskeyErrors.StepUpRequired carries; UI references Shared only, so it is restated here.
+    private const string StepUpRequiredCode = "Passkeys.StepUpRequired";
+
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlyList<PasskeyResponse> _passkeys = [];
     private bool _isLoading = true;
@@ -215,8 +218,12 @@ public partial class PasskeysPanel
         await OnChanged.InvokeAsync();
     }
 
+    // A stale sign-in is the one refusal with a fix the user can act on, so it gets its own words (sign
+    // out and back in) rather than the server's sentence.
     private string FailureMessage(Result result) =>
-        result.LocalizedErrorMessage(L) ?? L["Passkeys.Failed"].Value;
+        result.Errors.Any(e => string.Equals(e.Code, StepUpRequiredCode, StringComparison.Ordinal))
+            ? L["Passkeys.SignInAgain"].Value
+            : result.LocalizedErrorMessage(L) ?? L["Passkeys.Failed"].Value;
 
     private string DescribeLastUsed(PasskeyResponse passkey) =>
         passkey.LastUsedOn is { } lastUsed

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -90,6 +90,14 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// resolved per request, and one request issues one token pair.
     /// </remarks>
     private string? _multiFactorMethod;
+
+    /// <summary>
+    /// The sign-in instant (<c>auth_time</c>) the presented token carried, armed by
+    /// <see cref="RefreshTokenAsync"/> so the rotated token keeps it UNCHANGED, or null. A sign-in
+    /// leaves it null: the issuer stamps the instant of the session it opens. A plain field for the reason
+    /// <see cref="_multiFactorMethod"/> is one.
+    /// </summary>
+    private DateTimeOffset? _authenticatedAt;
 
     /// <summary>The unit of work (exposed for app-level workflows such as external login).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
@@ -384,6 +392,11 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Dropping it instead would quietly demote a signed-in session every fifteen minutes and make
         // every IRequiresMfa use case unreachable without a fresh sign-in.
         _multiFactorMethod = principal.FindMultiFactorMethod();
+
+        // The sign-in instant rides the rotation the same way, and unchanged: a refresh is not a sign-in,
+        // so a stolen refresh token cannot make its session look recently signed in (ADR-139). A token
+        // with no auth_time (minted before the claim shipped) rotates into one with none.
+        _authenticatedAt = principal.FindAuthTime();
         try
         {
             // The issuer resolves the presented token (reuse detection included) and mints the
@@ -399,6 +412,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         finally
         {
             _multiFactorMethod = null;
+            _authenticatedAt = null;
         }
     }
 
@@ -678,8 +692,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <remarks>
     /// The default stamps the claim without the app hook participating: the issuer arms
     /// <see cref="TokenService"/> for the duration of the <see cref="CreateAccessToken"/> call
-    /// (<see cref="IAuthSessionIssuer.MintForSession"/>), and the wrapper appends <c>sid</c>, plus
-    /// <c>mfa</c> when this request verified a second factor, to whatever claim set the app passed.
+    /// (<see cref="IAuthSessionIssuer.MintForSession(Guid, string?, DateTimeOffset?, Func{string})"/>), and the wrapper appends <c>sid</c>, plus
+    /// <c>mfa</c> when this request verified a second factor and <c>auth_time</c> (the sign-in instant, carried
+    /// over unchanged on a refresh), to whatever claim set the app passed.
     /// Doing it there rather than by changing <see cref="CreateAccessToken"/>'s signature is what makes
     /// the claims additive: every existing subclass keeps compiling and emits them with no edit.
     /// Override this method instead of relying on the wrapper if an app mints from its own
@@ -689,7 +704,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <param name="sessionId">The refresh session the token is being minted for.</param>
     /// <returns>The signed access token.</returns>
     protected virtual string CreateAccessTokenForSession(TUser user, Guid sessionId) =>
-        sessionIssuer.MintForSession(sessionId, _multiFactorMethod, () => CreateAccessToken(user));
+        sessionIssuer.MintForSession(sessionId, _multiFactorMethod, _authenticatedAt, () => CreateAccessToken(user));
 
     /// <summary>
     /// The email-confirmation sign-in gate. Off unless the host both supplied

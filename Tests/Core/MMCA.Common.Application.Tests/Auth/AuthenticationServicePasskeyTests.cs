@@ -23,7 +23,7 @@ namespace MMCA.Common.Application.Tests.Auth;
 /// The shared workflow's passkey members (ADR-139): a verified assertion mints the normal token pair
 /// with <c>mfa=passkey</c>, a refresh carries that value over like <c>otp</c>, the app's login gate
 /// still applies, and the last-passkey question answers from the stored password (and the app's
-/// external-login hook). Plus the recent-sign-in rule registration runs on.
+/// external-login hook). The recent-sign-in rule is covered by <see cref="AuthTimeClaimTests"/>.
 /// </summary>
 public sealed class AuthenticationServicePasskeyTests
 {
@@ -94,34 +94,6 @@ public sealed class AuthenticationServicePasskeyTests
 
         (await harness.Sut.HasSignInMethodBesidesPasskeysAsync(1)).Should().BeFalse();
     }
-
-    // == The recent-sign-in rule for registering a passkey ==
-    [Fact]
-    public void StepUp_ATokenIssuedNineMinutesAgo_IsFresh() =>
-        PasskeyStepUp.IsSatisfiedBy(Principal(issuedAgo: TimeSpan.FromMinutes(9)), FixedNow).Should().BeTrue();
-
-    [Fact]
-    public void StepUp_ATokenIssuedTwentyMinutesAgoWithoutMfa_IsRefused() =>
-        PasskeyStepUp.IsSatisfiedBy(Principal(issuedAgo: TimeSpan.FromMinutes(20)), FixedNow).Should().BeFalse();
-
-    [Fact]
-    public void StepUp_ATokenIssuedTwentyMinutesAgoWithMfa_IsAllowed() =>
-        PasskeyStepUp.IsSatisfiedBy(
-            Principal(issuedAgo: TimeSpan.FromMinutes(20), new Claim(AuthClaimTypes.MultiFactor, AuthClaimTypes.MultiFactorMethodTotp)),
-            FixedNow).Should().BeTrue();
-
-    [Fact]
-    public void StepUp_ATokenWithNoIssuedAtAndNoMfa_IsRefused() =>
-        PasskeyStepUp.IsSatisfiedBy(new ClaimsPrincipal(new ClaimsIdentity([new Claim(AuthClaimTypes.Subject, "1")])), FixedNow)
-            .Should().BeFalse();
-
-    private static ClaimsPrincipal Principal(TimeSpan issuedAgo, params Claim[] extra) =>
-        new(new ClaimsIdentity(
-        [
-            new Claim(AuthClaimTypes.Subject, "1"),
-            new Claim("iat", (FixedNow - issuedAgo).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)),
-            .. extra,
-        ]));
 
     private sealed class Harness
     {

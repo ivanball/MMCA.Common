@@ -27,8 +27,9 @@ namespace MMCA.Common.API.Controllers.Passkeys;
 /// none to inject.
 /// </para>
 /// <para>
-/// <b>Registration needs a recent sign-in</b> (<see cref="PasskeyStepUp"/>): an access token under ten
-/// minutes old, or one carrying <c>mfa</c>. A long-lived stolen session cannot plant its own passkey.
+/// <b>Registration needs a recent sign-in</b> (<see cref="PasskeyStepUp"/>): the session's <c>auth_time</c>
+/// within the last ten minutes. A refresh never renews it, so a stolen refresh token cannot plant its own
+/// passkey.
 /// </para>
 /// <para>
 /// <b>The two sign-in actions are anonymous by necessity</b> (the caller is signing in) and carry

@@ -55,8 +55,8 @@ public static class PasskeyErrors
         Error.Unauthorized(AssertionFailedCode, "The passkey could not sign you in.", source);
 
     /// <summary>
-    /// Registering a passkey needs a recent sign-in: an access token under ten minutes old, or one
-    /// minted after a second factor.
+    /// Registering a passkey needs a recent sign-in: the session's <c>auth_time</c> within the last ten
+    /// minutes (<see cref="PasskeyStepUp"/>). The client should sign out and sign in again.
     /// </summary>
     /// <param name="source">The member that refused.</param>
     /// <returns>The error.</returns>
