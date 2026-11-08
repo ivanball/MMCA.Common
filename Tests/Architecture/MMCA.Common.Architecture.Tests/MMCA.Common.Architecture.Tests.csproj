@@ -87,5 +87,8 @@
     <!-- AiBoundaryRulesTests (M257): a fixture names a governed MMCA.Common.AI type so the type-level
          governed-AI rule can be shown to bite. The AI package takes no MMCA reference, so nothing else moves. -->
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+    <!-- PermissionCoverageTests: a fixture MCP tool carries a real [McpToolPermission], and the
+         framework's own subclass scans the MCP package for permissioned tools. -->
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.Mcp\MMCA.Common.Mcp.csproj" />
   </ItemGroup>
 </Project>
