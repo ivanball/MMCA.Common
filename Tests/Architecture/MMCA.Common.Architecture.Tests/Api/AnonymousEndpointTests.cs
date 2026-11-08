@@ -49,6 +49,8 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.BeginSignInAsync",
         // Passkey sign-in completion (ADR-139): the signed assertion is the credential, so a token would be circular; auth-ip throttled.
         "MMCA.Common.API.Controllers.Passkeys.PasskeysControllerBase.CompleteSignInAsync",
+        // Machine-client token endpoint (ADR-140): the client secret is the credential, so a token would be circular; auth-ip throttled.
+        "MMCA.Common.API.Controllers.MachineClients.MachineTokenControllerBase.IssueTokenAsync",
         // The three OAuth challenge endpoints and the provider-callback completion run before any
         // local token exists, so they declare their anonymity rather than relying on the absence of
         // an attribute: the framework's fallback authorization policy would otherwise break login.

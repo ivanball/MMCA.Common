@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Clientes de máquina</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Un cliente de máquina permite que un programa llame a la API con su propio token. Cada cliente actúa como su propia cuenta de servicio, con el rol de esa cuenta y nada más. Un secreto se muestra una sola vez, cuando se emite.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Cargando clientes de máquina</value>
+  </data>
+  <data name="Action.Retry" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+  <data name="Empty.NoClients" xml:space="preserve">
+    <value>Aún no hay clientes de máquina.</value>
+  </data>
+  <data name="Aria.Table" xml:space="preserve">
+    <value>Clientes de máquina y su estado</value>
+  </data>
+  <data name="Column.Name" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="Column.ClientId" xml:space="preserve">
+    <value>ID de cliente</value>
+  </data>
+  <data name="Column.LastUsed" xml:space="preserve">
+    <value>Último uso</value>
+  </data>
+  <data name="Column.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Column.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="LastUsed.Never" xml:space="preserve">
+    <value>Nunca</value>
+  </data>
+  <data name="Status.Active" xml:space="preserve">
+    <value>Activo</value>
+  </data>
+  <data name="Status.RotationPending" xml:space="preserve">
+    <value>Secreto nuevo en espera</value>
+  </data>
+  <data name="Status.Revoked" xml:space="preserve">
+    <value>Revocado</value>
+  </data>
+  <data name="Create.Title" xml:space="preserve">
+    <value>Nuevo cliente de máquina</value>
+  </data>
+  <data name="Field.Name" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="Field.Role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="Field.RoleHelp" xml:space="preserve">
+    <value>El rol que recibe la cuenta de servicio del cliente. Se rechaza un rol que pueda ver como otros usuarios o administrar usuarios.</value>
+  </data>
+  <data name="Action.Create" xml:space="preserve">
+    <value>Crear</value>
+  </data>
+  <data name="Action.Rotate" xml:space="preserve">
+    <value>Secreto nuevo</value>
+  </data>
+  <data name="Action.Promote" xml:space="preserve">
+    <value>Usar secreto nuevo</value>
+  </data>
+  <data name="Action.Revoke" xml:space="preserve">
+    <value>Revocar</value>
+  </data>
+  <data name="Action.Dismiss" xml:space="preserve">
+    <value>Ya lo guardé</value>
+  </data>
+  <data name="Aria.Rotate" xml:space="preserve">
+    <value>Secreto nuevo para {0}</value>
+  </data>
+  <data name="Aria.Promote" xml:space="preserve">
+    <value>Usar secreto nuevo para {0}</value>
+  </data>
+  <data name="Aria.Revoke" xml:space="preserve">
+    <value>Revocar {0}</value>
+  </data>
+  <data name="Secret.Title" xml:space="preserve">
+    <value>Secreto para {0}</value>
+  </data>
+  <data name="Secret.Warning" xml:space="preserve">
+    <value>Cópialo ahora. Solo se guarda su hash, así que no se puede volver a mostrar.</value>
+  </data>
+  <data name="Secret.ClientId" xml:space="preserve">
+    <value>ID de cliente:</value>
+  </data>
+  <data name="Secret.ClientSecret" xml:space="preserve">
+    <value>Secreto de cliente:</value>
+  </data>
+</root>

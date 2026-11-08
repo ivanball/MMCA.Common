@@ -14,3 +14,11 @@ MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensi
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnablePasskeys.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnablePasskeys.set -> void
 static MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.ApplyPasskeyCredentialConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+const MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions.ServiceAccountIndexName = "IX_MachineClients_ServiceAccountUserId" -> string!
+const MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions.TableName = "MachineClients" -> string!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMachineClients(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableMachineClients.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableMachineClients.set -> void
+MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions
+static MMCA.Common.Infrastructure.DependencyInjection.AddMachineClients(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions.ApplyMachineClientConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!

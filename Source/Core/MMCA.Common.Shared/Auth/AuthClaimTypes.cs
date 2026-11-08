@@ -106,4 +106,22 @@ public static class AuthClaimTypes
     /// view-as request, so ending the grant ends the token before it expires.
     /// </summary>
     public const string ViewAsGrant = "vag";
+
+    /// <summary>
+    /// The OAuth <c>client_id</c> claim (RFC 9068): the machine client a token was issued to through the
+    /// client credentials grant (ADR-140). The token's <c>sub</c> is the client's service-account user.
+    /// </summary>
+    public const string ClientId = "client_id";
+
+    /// <summary>
+    /// The claim naming what kind of caller a token was issued to. Only a machine token carries it, with
+    /// the value <see cref="TokenUseMachine"/>; a token without it was issued to a person.
+    /// </summary>
+    public const string TokenUse = "token_use";
+
+    /// <summary>
+    /// Value of <see cref="TokenUse"/> on a token issued through the client credentials grant (ADR-140).
+    /// Such a token has no refresh token, no session (<c>sid</c>), no <c>auth_time</c> and no <c>mfa</c>.
+    /// </summary>
+    public const string TokenUseMachine = "machine";
 }

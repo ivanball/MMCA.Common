@@ -172,3 +172,94 @@ static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator !=(MMCA.Co
 static MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest.operator ==(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? left, MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest? right) -> bool
 const MMCA.Common.Shared.Auth.AuthClaimTypes.AuthTime = "auth_time" -> string!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindAuthTime(this System.Security.Claims.ClaimsPrincipal? principal) -> System.DateTimeOffset?
+const MMCA.Common.Shared.Auth.AuthClaimTypes.ClientId = "client_id" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.TokenUse = "token_use" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.TokenUseMachine = "machine" -> string!
+const MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.InvalidClient = "invalid_client" -> string!
+const MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.InvalidRequest = "invalid_request" -> string!
+const MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.UnsupportedGrantType = "unsupported_grant_type" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageClients = "clients:manage" -> string!
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.<Clone>$() -> MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest!
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.CreateMachineClientRequest(string! Name, string! Role, System.DateTime? SecretExpiresOn = null) -> void
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Deconstruct(out string! Name, out string! Role, out System.DateTime? SecretExpiresOn) -> void
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Equals(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? other) -> bool
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Name.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Name.init -> void
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Role.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Role.init -> void
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.SecretExpiresOn.get -> System.DateTime?
+MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.SecretExpiresOn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.<Clone>$() -> MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.ClientId.get -> System.Guid
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.ClientId.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.CreatedOn.get -> System.DateTime
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.CreatedOn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.Deconstruct(out System.Guid ClientId, out string! Name, out int ServiceAccountUserId, out System.DateTime CreatedOn, out System.DateTime? SecretExpiresOn, out System.DateTime? RevokedOn, out System.DateTime? LastUsedOn, out bool HasSecondarySecret) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.Equals(MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse? other) -> bool
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.HasSecondarySecret.get -> bool
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.HasSecondarySecret.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.LastUsedOn.get -> System.DateTime?
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.LastUsedOn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.MachineClientResponse(System.Guid ClientId, string! Name, int ServiceAccountUserId, System.DateTime CreatedOn, System.DateTime? SecretExpiresOn, System.DateTime? RevokedOn, System.DateTime? LastUsedOn, bool HasSecondarySecret) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.Name.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.Name.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.RevokedOn.get -> System.DateTime?
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.RevokedOn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.SecretExpiresOn.get -> System.DateTime?
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.SecretExpiresOn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.ServiceAccountUserId.get -> int
+MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.ServiceAccountUserId.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.<Clone>$() -> MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.Client.get -> MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.Client.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.ClientSecret.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.ClientSecret.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.Deconstruct(out MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse! Client, out string! ClientSecret) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.Equals(MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse? other) -> bool
+MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.MachineClientSecretResponse(MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse! Client, string! ClientSecret) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.<Clone>$() -> MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse!
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.Deconstruct(out string! Error) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.Equals(MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse? other) -> bool
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.Error.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.Error.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.MachineTokenErrorResponse(string! Error) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.<Clone>$() -> MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse!
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.AccessToken.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.Deconstruct(out string! AccessToken, out string! TokenType, out int ExpiresIn) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.Equals(MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse? other) -> bool
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.ExpiresIn.get -> int
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.ExpiresIn.init -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.MachineTokenResponse(string! AccessToken, string! TokenType, int ExpiresIn) -> void
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.TokenType.get -> string!
+MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.TokenType.init -> void
+override MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.operator !=(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? left, MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.operator ==(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? left, MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.operator !=(MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse.operator ==(MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.operator !=(MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse.operator ==(MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.operator !=(MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse.operator ==(MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineTokenErrorResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.operator !=(MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse? right) -> bool
+static MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse.operator ==(MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse? left, MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse? right) -> bool

@@ -22,6 +22,7 @@ using MMCA.Common.Infrastructure.Persistence.FeatureFlags;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
+using MMCA.Common.Infrastructure.Persistence.MachineClients;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
 using MMCA.Common.Shared.Identifiers;
@@ -155,6 +156,14 @@ public abstract class ApplicationDbContext(
     /// migration.
     /// </summary>
     private bool _passkeyTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>MachineClients</c> table belongs in THIS context's model (ADR-140):
+    /// <c>MachineClients:Enabled</c> AND this context targeting the source named by
+    /// <c>MachineClients:DataSourceName</c>, the passkey shape, so a host that never opts in sees no
+    /// migration.
+    /// </summary>
+    private bool _machineClientTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -377,6 +386,7 @@ public abstract class ApplicationDbContext(
         _featureFlagOverrideTableEnabled = ResolveFeatureFlagOverrideGate();
         // Same two-condition shape again: see the field's remarks.
         _passkeyTableEnabled = ResolvePasskeyGate();
+        _machineClientTableEnabled = ResolveMachineClientGate();
 
         ConfigureSensitiveDataLogging(optionsBuilder);
 
@@ -458,6 +468,13 @@ public abstract class ApplicationDbContext(
         if (_featureFlagOverrideTableEnabled)
         {
             modelBuilder.ApplyFeatureFlagOverrideConfiguration();
+        }
+
+        // The machine clients (used when MachineClients:Enabled, on that setting's data source only).
+        // Mapped first for the same reason: a client is an auditable entity.
+        if (_machineClientTableEnabled)
+        {
+            modelBuilder.ApplyMachineClientConfiguration();
         }
 
         ApplySoftDeleteFilters(modelBuilder);
@@ -1021,6 +1038,20 @@ public abstract class ApplicationDbContext(
     private bool ResolvePasskeyGate()
     {
         var settings = serviceProvider.GetService<IOptions<Application.Auth.Passkeys.PasskeySettings>>()?.Value;
+        return settings?.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>MachineClients</c> table: <c>MachineClients:Enabled</c>
+    /// AND this instance targets the source <c>MachineClients:DataSourceName</c> names. <c>GetService</c>,
+    /// for the reason <see cref="ResolvePermissionGrantGate"/> gives: a host that never calls
+    /// <c>AddMachineClients</c> registers no settings, and that absence reads as disabled.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveMachineClientGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<Application.Auth.MachineClients.MachineClientSettings>>()?.Value;
         return settings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
     }

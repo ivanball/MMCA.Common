@@ -31,4 +31,11 @@ public static class AdministrationPermissions
     /// switch flips without a new revision.
     /// </summary>
     public const string ManageFeatures = "features:manage";
+
+    /// <summary>
+    /// Lists machine clients and creates, rotates, promotes and revokes them (ADR-140). Creating a
+    /// client creates the service-account user behind it, so grant it as sparingly as
+    /// <see cref="ManageUsers"/>.
+    /// </summary>
+    public const string ManageClients = "clients:manage";
 }

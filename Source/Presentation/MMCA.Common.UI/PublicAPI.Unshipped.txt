@@ -106,3 +106,31 @@ override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnInitializedAsync() -> Sy
 MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+~override MMCA.Common.UI.Pages.Administration.MachineClientAdmin.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMachineClientAdministrationUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Dispose() -> void
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.MachineClientAdmin.MachineClientAdmin() -> void
+MMCA.Common.UI.Pages.Administration.MachineClientAdminResources
+MMCA.Common.UI.Pages.Administration.MachineClientAdminResources.MachineClientAdminResources() -> void
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService.CreateAsync(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService.PromoteAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService.RevokeAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.UI.Services.Administration.IMachineClientAdminUIService.RotateAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.UI.Services.Administration.MachineClientAdminService
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.CreateAsync(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.MachineClientAdminService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.PromoteAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.RevokeAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.UI.Services.Administration.MachineClientAdminService.RotateAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+override MMCA.Common.UI.Pages.Administration.MachineClientAdmin.OnInitializedAsync() -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.DependencyInjection.AddMachineClientAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+virtual MMCA.Common.UI.Pages.Administration.MachineClientAdmin.Dispose(bool disposing) -> void

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.MachineClients;
 using MMCA.Common.Application.Auth.Passkeys;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
@@ -40,6 +41,13 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
     /// </summary>
     internal const string PasskeysEnabledKey = "Passkeys:Enabled";
 
+    /// <summary>
+    /// The configuration key that switches machine clients on (ADR-140). An enabled section without
+    /// <c>AddMachineClients</c> is the same silent failure: the token endpoint and every administration
+    /// route answer 404. (A missing provisioner is caught by the settings validator that call registers.)
+    /// </summary>
+    internal const string MachineClientsEnabledKey = "MachineClients:Enabled";
+
     /// <inheritdoc />
     public ValidateOptionsResult Validate(string? name, CloudAdapterTripwireOptions options)
     {
@@ -53,16 +61,20 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
 
         using (var scope = serviceProvider.CreateScope())
         {
-            if (bool.TryParse(configuration[PasskeysEnabledKey], out var passkeysEnabled)
-                && passkeysEnabled
+            if (IsSwitchedOn(configuration, PasskeysEnabledKey)
                 && scope.ServiceProvider.GetService<IPasskeyCeremony>() is null)
             {
                 failures.Add(
                     "Passkeys:Enabled is true, but no passkey ceremony is registered, so every passkey route would answer 404. Reference MMCA.Common.Passkeys and call services.AddPasskeys(configuration), with Passkeys:RelyingPartyId and Passkeys:Origins.");
             }
 
-            if (bool.TryParse(configuration[NativePushEnabledKey], out var nativePushEnabled)
-                && nativePushEnabled
+            if (IsSwitchedOn(configuration, MachineClientsEnabledKey) && !IsRegistered<IMachineClientService>(scope.ServiceProvider))
+            {
+                failures.Add(
+                    "MachineClients:Enabled is true, but machine clients are not registered, so the token endpoint and every machine-client route would answer 404. Call services.AddMachineClients(configuration) and register the app's IServiceAccountProvisioner.");
+            }
+
+            if (IsSwitchedOn(configuration, NativePushEnabledKey)
                 && scope.ServiceProvider.GetService<INativePushSender>() is null or NullNativePushSender)
             {
                 failures.Add(
@@ -72,4 +84,18 @@ internal sealed class CloudAdapterTripwire(IServiceProvider serviceProvider) : I
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
+
+    /// <summary>Whether the boolean switch at <paramref name="key"/> is set to true.</summary>
+    /// <param name="configuration">The host configuration.</param>
+    /// <param name="key">The switch's configuration key.</param>
+    /// <returns><see langword="true"/> when the key parses as true.</returns>
+    private static bool IsSwitchedOn(IConfiguration configuration, string key) =>
+        bool.TryParse(configuration[key], out var enabled) && enabled;
+
+    /// <summary>Whether <typeparamref name="TService"/> is registered, asked without constructing it.</summary>
+    /// <typeparam name="TService">The service type.</typeparam>
+    /// <param name="services">The provider to ask.</param>
+    /// <returns><see langword="true"/> when the provider can resolve it.</returns>
+    private static bool IsRegistered<TService>(IServiceProvider services) =>
+        services.GetService<IServiceProviderIsService>()?.IsService(typeof(TService)) != false;
 }

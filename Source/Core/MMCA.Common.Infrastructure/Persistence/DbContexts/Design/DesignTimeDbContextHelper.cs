@@ -217,6 +217,14 @@ public static class DesignTimeDbContextHelper
                 Enabled = designOptions.EnablePasskeys,
                 DataSourceName = physical.Key.Name,
             }));
+
+        // Same two-part gate for the machine-client table (ADR-140), for the same collapse reason.
+        services.AddSingleton<IOptions<Application.Auth.MachineClients.MachineClientSettings>>(
+            Options.Create(new Application.Auth.MachineClients.MachineClientSettings
+            {
+                Enabled = designOptions.EnableMachineClients,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

@@ -339,6 +339,21 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// The UI opt-in of machine clients (ADR-140): registers the HTTP client for the app's
+        /// <c>Admin/MachineClients</c> endpoints, which is what
+        /// <c>MMCA.Common.UI.Pages.Administration.MachineClientAdmin</c> reads and writes through. Call it
+        /// once per app, after <c>AddUIShared</c>. Nothing else in the framework calls this: an app that
+        /// serves no machine-client endpoints registers nothing and the component is never rendered.
+        /// </summary>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddMachineClientAdministrationUI()
+        {
+            services.TryAddScoped<IMachineClientAdminUIService, MachineClientAdminService>();
+
+            return services;
+        }
+
+        /// <summary>
         /// The UI opt-in of the support access log (ADR-137): registers the HTTP client for the app's
         /// <c>Admin/ViewAsGrants</c> endpoint, which is what
         /// <c>MMCA.Common.UI.Pages.Administration.SupportAccessLog</c> reads through. Call it once per

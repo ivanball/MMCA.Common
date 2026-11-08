@@ -406,4 +406,40 @@
   <data name="Passkeys.StepUpRequired" xml:space="preserve">
     <value>Sign in again before adding a passkey.</value>
   </data>
+  <data name="MachineClients.InvalidClient" xml:space="preserve">
+    <value>The client could not be authenticated.</value>
+  </data>
+  <data name="MachineClients.InvalidRequest" xml:space="preserve">
+    <value>The token request must name a grant_type.</value>
+  </data>
+  <data name="MachineClients.NameInvalid" xml:space="preserve">
+    <value>A machine client name of 1 to 100 characters is required.</value>
+  </data>
+  <data name="MachineClients.NoSecondarySecret" xml:space="preserve">
+    <value>The machine client has no rotated secret to promote.</value>
+  </data>
+  <data name="MachineClients.NotFound" xml:space="preserve">
+    <value>No such machine client.</value>
+  </data>
+  <data name="MachineClients.Revoked" xml:space="preserve">
+    <value>The machine client has been revoked.</value>
+  </data>
+  <data name="MachineClients.RoleNotAllowed" xml:space="preserve">
+    <value>A role that grants viewing as users or managing users cannot back a machine client.</value>
+  </data>
+  <data name="MachineClients.RoleRequired" xml:space="preserve">
+    <value>A machine client requires a role.</value>
+  </data>
+  <data name="MachineClients.SecretExpiryInvalid" xml:space="preserve">
+    <value>A machine client secret expiry must lie in the future.</value>
+  </data>
+  <data name="MachineClients.SecretHashInvalid" xml:space="preserve">
+    <value>A machine client secret hash must be a SHA-256 hash.</value>
+  </data>
+  <data name="MachineClients.UnsupportedGrantType" xml:space="preserve">
+    <value>Only the client_credentials grant type is supported.</value>
+  </data>
+  <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
+    <value>A machine client&apos;s service account cannot be viewed.</value>
+  </data>
 </root>

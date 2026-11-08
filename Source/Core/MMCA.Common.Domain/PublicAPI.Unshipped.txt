@@ -43,3 +43,26 @@ MMCA.Common.Domain.Auth.PasskeyCredential.UserId.get -> int
 MMCA.Common.Domain.Auth.PasskeyCredential.UserId.init -> void
 static MMCA.Common.Domain.Auth.PasskeyCredential.Create(int userId, byte[]! credentialId, byte[]! publicKey, uint signCount, System.Collections.Generic.IEnumerable<string!>? transports, string? name, System.DateTime createdOn) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.PasskeyCredential!>!
 static MMCA.Common.Domain.Auth.PasskeyCredential.IsSignCountAcceptable(long stored, uint presented) -> bool
+const MMCA.Common.Domain.Auth.MachineClients.MachineClient.NameMaxLength = 100 -> int
+const MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.HashByteLength = 32 -> int
+const MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.SecretByteLength = 32 -> int
+MMCA.Common.Domain.Auth.IAuthUser.IsServiceAccount.get -> bool
+MMCA.Common.Domain.Auth.MachineClients.MachineClient
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Accepts(string? presentedSecret, System.DateTime utcNow) -> bool
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.IsRevoked.get -> bool
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.LastUsedOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Name.get -> string!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.PrimarySecretHash.get -> byte[]!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Promote() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.RecordUse(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Revoke(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.RevokedOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.Rotate(byte[]! secondarySecretHash) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.SecondarySecretHash.get -> byte[]?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.SecretExpiresOn.get -> System.DateTime?
+MMCA.Common.Domain.Auth.MachineClients.MachineClient.ServiceAccountUserId.get -> int
+MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret
+static MMCA.Common.Domain.Auth.MachineClients.MachineClient.Create(string! name, int serviceAccountUserId, byte[]! primarySecretHash, System.DateTime? secretExpiresOn, System.DateTime utcNow) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.MachineClients.MachineClient!>!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Generate() -> string!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Hash(string! secret) -> byte[]!
+static MMCA.Common.Domain.Auth.MachineClients.MachineClientSecret.Matches(System.ReadOnlySpan<byte> presented, byte[]? stored) -> bool

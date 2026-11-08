@@ -146,3 +146,72 @@ static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyChallenges.Lifetime
 MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.MintForSession(System.Guid sessionId, string? multiFactorMethod, System.DateTimeOffset? authenticatedAt, System.Func<string!>! mintAccessToken) -> string!
 MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.MintForSession(System.Guid sessionId, string? multiFactorMethod, System.DateTimeOffset? authenticatedAt, System.Func<string!>! mintAccessToken) -> string!
 static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyStepUp.MaxSignInAge -> System.TimeSpan
+const MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.InvalidClientCode = "MachineClients.InvalidClient" -> string!
+const MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.InvalidRequestCode = "MachineClients.InvalidRequest" -> string!
+const MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.RoleNotAllowedCode = "MachineClients.RoleNotAllowed" -> string!
+const MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.UnsupportedGrantTypeCode = "MachineClients.UnsupportedGrantType" -> string!
+const MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.MaxAccessTokenMinutes = 15 -> int
+const MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.MinAccessTokenMinutes = 1 -> int
+const MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.SectionName = "MachineClients" -> string!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.CreateAsync(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.IsEnabled.get -> bool
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.IssueTokenAsync(string? grantType, string? clientId, string? clientSecret, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.PromoteAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.RevokeAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientService.RotateAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore.AddAsync(MMCA.Common.Domain.Auth.MachineClients.MachineClient! client, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore.FindAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.MachineClients.MachineClient?>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.MachineClients.MachineClient!>!>!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore.RecordUseAsync(MMCA.Common.Domain.Auth.MachineClients.MachineClient! client, System.DateTime usedOn, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.MachineClients.IMachineClientStore.SaveAsync(MMCA.Common.Domain.Auth.MachineClients.MachineClient! client, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.MachineClients.IServiceAccountProvisioner
+MMCA.Common.Application.Auth.MachineClients.IServiceAccountProvisioner.CreateAsync(string! name, string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Auth.MachineClients.IServiceAccountProvisioner.FindAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Auth.MachineClients.ServiceAccount?>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientErrors
+MMCA.Common.Application.Auth.MachineClients.MachineClientService
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.CreateAsync(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.IsEnabled.get -> bool
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.IssueTokenAsync(string? grantType, string? clientId, string? clientSecret, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineTokenResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.MachineClientService(MMCA.Common.Application.Auth.MachineClients.IMachineClientStore! store, MMCA.Common.Application.Auth.MachineClients.IServiceAccountProvisioner! provisioner, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry! permissions, MMCA.Common.Application.Interfaces.ICacheService! cache, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.MachineClients.MachineClientSettings!>! settings, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.PromoteAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.RevokeAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientService.RotateAsync(System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.MachineClients.MachineClientSecretResponse!>!>!
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.AccessTokenMinutes.get -> int
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.AccessTokenMinutes.init -> void
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.DataSourceName.get -> string!
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.MachineClients.MachineClientSettings.MachineClientSettings() -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.<Clone>$() -> MMCA.Common.Application.Auth.MachineClients.ServiceAccount!
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Deconstruct(out int UserId, out string! Name, out string! Email, out string! Role) -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Email.get -> string!
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Email.init -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Equals(MMCA.Common.Application.Auth.MachineClients.ServiceAccount? other) -> bool
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Name.get -> string!
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Name.init -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Role.get -> string!
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Role.init -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.ServiceAccount(int UserId, string! Name, string! Email, string! Role) -> void
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.UserId.get -> int
+MMCA.Common.Application.Auth.MachineClients.ServiceAccount.UserId.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsServiceAccount.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsServiceAccount.init -> void
+override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Equals(object? obj) -> bool
+override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.GetHashCode() -> int
+override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.ToString() -> string!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.InvalidClient(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.InvalidRequest(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.NotFound(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.RoleNotAllowed(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.RoleRequired(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.MachineClientErrors.UnsupportedGrantType(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.MachineClients.ServiceAccount.operator !=(MMCA.Common.Application.Auth.MachineClients.ServiceAccount? left, MMCA.Common.Application.Auth.MachineClients.ServiceAccount? right) -> bool
+static MMCA.Common.Application.Auth.MachineClients.ServiceAccount.operator ==(MMCA.Common.Application.Auth.MachineClients.ServiceAccount? left, MMCA.Common.Application.Auth.MachineClients.ServiceAccount? right) -> bool
+const MMCA.Common.Application.Auth.MachineClients.MachineClientService.ClientCredentialsGrantType = "client_credentials" -> string!

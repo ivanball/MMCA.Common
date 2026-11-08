@@ -29,11 +29,12 @@ public sealed class PermissionCoverageTests : PermissionCoverageTestsBase
         AdministrationPermissions.ManageRoles,
         AdministrationPermissions.ViewAsUsers,
         AdministrationPermissions.ManageFeatures,
+        AdministrationPermissions.ManageClients,
         NotificationPermissions.Manage,
     ];
 
-    // The admin, feature-flag and notification controller bases name six permissions between them.
-    protected override int MinimumNamedPermissions => 6;
+    // The admin, feature-flag, machine-client and notification controller bases name seven permissions between them.
+    protected override int MinimumNamedPermissions => 7;
 }
 
 /// <summary>

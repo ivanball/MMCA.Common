@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -175,9 +176,10 @@ public abstract class AuthenticationServiceBase<TUser>(
         var untracked = await FindUntrackedByEmailAsync(loginEmail, cancellationToken).ConfigureAwait(false);
 
         // SECURITY: an account with no stored credential material (the shape an external-OAuth
-        // account carries, ADR-036) can never be reached by password login. It is answered exactly
-        // like an unknown address, cost included, so the two are indistinguishable.
-        if (untracked is null || !HasStoredCredential(untracked))
+        // account carries, ADR-036) can never be reached by password login, and neither can a machine
+        // client's service account (ADR-140), whatever it stores. Both are answered exactly like an
+        // unknown address, cost included, so none of the three can be told apart.
+        if (!CanSignInWithPassword(untracked))
         {
             BurnPasswordVerificationCost(request.Password);
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
@@ -505,8 +507,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
+        // A service account (ADR-140) has no mailbox to prove; it reads exactly like an unknown account.
         var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (user is null)
+        if (user is null || user.IsServiceAccount)
         {
             return Result.Failure<AuthenticationResponse>(
                 SignInLinks.SignInLinkErrors.InvalidLink(nameof(SignInVerifiedEmailOwnerAsync)));
@@ -549,8 +552,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
+        // A service account (ADR-140) never signs in with a passkey; it reads like a vanished account.
         var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (user is null)
+        if (user is null || user.IsServiceAccount)
         {
             return Result.Failure<AuthenticationResponse>(
                 Passkeys.PasskeyErrors.AssertionFailed(nameof(SignInWithPasskeyAsync)));
@@ -609,6 +613,12 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
     /// by the login/registration flows and reusable by app-level flows (e.g. external login). The
     /// user's other sessions are untouched, except for the oldest one when the per-user cap is full.
+    /// <para>
+    /// <b>Never for a service account.</b> A machine client's service account (ADR-140,
+    /// <see cref="IAuthUser.IsServiceAccount"/>) obtains tokens only through the client credentials
+    /// grant, which opens no session. Every interactive sign-in, the app-level external login included,
+    /// mints through here, so the refusal here is the backstop behind the earlier, path-specific ones.
+    /// </para>
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="ipAddress">Optional client IP recorded on the new session.</param>
@@ -621,6 +631,11 @@ public abstract class AuthenticationServiceBase<TUser>(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
+        if (user.IsServiceAccount)
+        {
+            return Task.FromResult(Result.Failure<AuthenticationResponse>(
+                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(IssueTokensAsync))));
+        }
 
         return sessionIssuer.IssueAsync(
             user.Id,
@@ -817,6 +832,13 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     private static bool HasStoredCredential(TUser user) =>
         user.PasswordHash.Length > 0 && user.PasswordSalt.Length > 0;
+
+    /// <summary>
+    /// Whether password login is a path this candidate has at all: an account that exists, is not a
+    /// machine client's service account (ADR-140), and carries stored password material.
+    /// </summary>
+    private static bool CanSignInWithPassword([NotNullWhen(true)] TUser? user) =>
+        user is not null && !user.IsServiceAccount && HasStoredCredential(user);
 
     /// <summary>
     /// Runs one throwaway key derivation so a login branch that never reaches the real verification

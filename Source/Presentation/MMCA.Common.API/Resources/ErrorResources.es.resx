@@ -406,4 +406,40 @@
   <data name="Passkeys.StepUpRequired" xml:space="preserve">
     <value>Vuelve a iniciar sesión antes de añadir una llave de acceso.</value>
   </data>
+  <data name="MachineClients.InvalidClient" xml:space="preserve">
+    <value>No se pudo autenticar al cliente.</value>
+  </data>
+  <data name="MachineClients.InvalidRequest" xml:space="preserve">
+    <value>La solicitud de token debe indicar un grant_type.</value>
+  </data>
+  <data name="MachineClients.NameInvalid" xml:space="preserve">
+    <value>El cliente de máquina necesita un nombre de 1 a 100 caracteres.</value>
+  </data>
+  <data name="MachineClients.NoSecondarySecret" xml:space="preserve">
+    <value>El cliente de máquina no tiene un secreto rotado que promover.</value>
+  </data>
+  <data name="MachineClients.NotFound" xml:space="preserve">
+    <value>No existe ese cliente de máquina.</value>
+  </data>
+  <data name="MachineClients.Revoked" xml:space="preserve">
+    <value>El cliente de máquina ha sido revocado.</value>
+  </data>
+  <data name="MachineClients.RoleNotAllowed" xml:space="preserve">
+    <value>Un rol que permite ver como otros usuarios o administrar usuarios no puede respaldar a un cliente de máquina.</value>
+  </data>
+  <data name="MachineClients.RoleRequired" xml:space="preserve">
+    <value>El cliente de máquina necesita un rol.</value>
+  </data>
+  <data name="MachineClients.SecretExpiryInvalid" xml:space="preserve">
+    <value>La caducidad del secreto del cliente de máquina debe ser una fecha futura.</value>
+  </data>
+  <data name="MachineClients.SecretHashInvalid" xml:space="preserve">
+    <value>El hash del secreto del cliente de máquina debe ser un hash SHA-256.</value>
+  </data>
+  <data name="MachineClients.UnsupportedGrantType" xml:space="preserve">
+    <value>Solo se admite el tipo de concesión client_credentials.</value>
+  </data>
+  <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
+    <value>No se puede ver la cuenta de servicio de un cliente de máquina.</value>
+  </data>
 </root>
