@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.Permissions;
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Application.FeatureFlags;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -17,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.Auth;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
+using MMCA.Common.Infrastructure.Persistence.FeatureFlags;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
@@ -136,6 +138,15 @@ public abstract class ApplicationDbContext(
     /// not hold the grant store, sees no migration.
     /// </summary>
     private bool _viewAsGrantTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>FeatureFlagOverrides</c> table belongs in THIS context's model (ADR-031): the
+    /// host called <c>AddReloadableFeatureFlags</c>, which registers
+    /// <see cref="FeatureFlags.FeatureFlagOverrideModelGate"/>, AND this context targets the source
+    /// <c>FeatureFlags:DataSourceName</c> names (the owning service's own database). The
+    /// <see cref="_permissionGrantTableEnabled"/> shape, so a host that never opts in sees no migration.
+    /// </summary>
+    private bool _featureFlagOverrideTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -354,6 +365,9 @@ public abstract class ApplicationDbContext(
         // Same two-condition shape as the refresh sessions: see the field's remarks.
         _viewAsGrantTableEnabled = ResolveViewAsGrantGate();
 
+        // Same registration-gated shape as the permission grants: see the field's remarks.
+        _featureFlagOverrideTableEnabled = ResolveFeatureFlagOverrideGate();
+
         ConfigureSensitiveDataLogging(optionsBuilder);
 
         // Key EF's model cache by (context type, physical source name): the same context class is
@@ -428,6 +442,14 @@ public abstract class ApplicationDbContext(
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // The stored feature-flag overrides (used when AddReloadableFeatureFlags was called, on that
+        // setting's data source only). Mapped FIRST, unlike the other gated tables: the override is
+        // an auditable entity, so the soft-delete filter and the concurrency token below must see it.
+        if (_featureFlagOverrideTableEnabled)
+        {
+            modelBuilder.ApplyFeatureFlagOverrideConfiguration();
+        }
+
         ApplySoftDeleteFilters(modelBuilder);
         ApplyTenantFilters(modelBuilder);
         ConfigureConcurrencyTokens(modelBuilder);
@@ -941,6 +963,20 @@ public abstract class ApplicationDbContext(
         && string.Equals(
             physicalDataSource.Key.Name,
             serviceProvider.GetService<IOptions<PermissionGrantSettings>>()?.Value.DataSourceName,
+            StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether this context instance carries the <c>FeatureFlagOverrides</c> table: the host opted in
+    /// with <c>AddReloadableFeatureFlags</c>, AND this instance targets the source
+    /// <c>FeatureFlags:DataSourceName</c> names. <c>GetService</c>, for the reason
+    /// <see cref="ResolvePermissionGrantGate"/> gives.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveFeatureFlagOverrideGate() =>
+        serviceProvider.GetService<FeatureFlagOverrideModelGate>() is not null
+        && string.Equals(
+            physicalDataSource.Key.Name,
+            serviceProvider.GetService<IOptions<FeatureFlagOverrideSettings>>()?.Value.DataSourceName,
             StringComparison.Ordinal);
 
     /// <summary>

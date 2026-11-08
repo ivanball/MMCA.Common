@@ -1,3 +1,10 @@
 ﻿#nullable enable
 MMCA.Common.API.Controllers.OAuthControllerBase.DiscoverOidcProvider(string? email) -> Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse!>!
 MMCA.Common.API.Controllers.OAuthControllerBase.OidcLogin(string! provider, System.Uri? returnUrl = null, string? state = null) -> Microsoft.AspNetCore.Mvc.IActionResult!
+#nullable enable
+MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase
+MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.Administration.get -> MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService!
+MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.FeatureFlagsControllerBase(MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService! administration) -> void
+virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.ClearOverrideAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!>!
+virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.SetOverrideAsync(string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!

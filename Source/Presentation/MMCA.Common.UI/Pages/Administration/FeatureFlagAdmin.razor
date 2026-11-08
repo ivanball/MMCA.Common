@@ -1,0 +1,138 @@
+@using MMCA.Common.Shared.FeatureFlags
+
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title" />
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
+
+@* Inline rather than a snackbar, for the RoleAdminList reason: an empty table and a failed load look
+   identical once a toast expires. A source that failed does not hide the sources that loaded. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@T("Loading")" />
+}
+else if (_loadResult is { IsFailure: true } && _rows.Count == 0)
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="LoadAsync">
+        @T("Action.Retry")
+    </MudButton>
+}
+else if (_rows.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Flag" Message="@T("Empty.NoFlags")" />
+}
+else
+{
+    @* Breakpoint.Sm stacks each row into a card on a phone, with the DataLabel as each cell's
+       heading; role="region" labels the wrapper div MudTable splats the attribute onto. *@
+    <MudTable Items="_rows" T="FlagRow" Hover="true" Elevation="1"
+              Breakpoint="Breakpoint.Sm" Class="mb-4"
+              role="region" aria-label="@T("Aria.Table")">
+        <HeaderContent>
+            <MudTh>@T("Column.Flag")</MudTh>
+            @if (ShowSource)
+            {
+                <MudTh>@T("Column.Source")</MudTh>
+            }
+            <MudTh>@T("Column.Kind")</MudTh>
+            <MudTh>@T("Column.Owner")</MudTh>
+            <MudTh>@T("Column.Configured")</MudTh>
+            <MudTh>@T("Column.Override")</MudTh>
+            <MudTh>@T("Column.Effective")</MudTh>
+            <MudTh>@T("Column.Actions")</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@T("Column.Flag")" data-testid="flag-name">@context.Flag.Name</MudTd>
+            @if (ShowSource)
+            {
+                <MudTd DataLabel="@T("Column.Source")" data-testid="flag-source">@context.Source</MudTd>
+            }
+            <MudTd DataLabel="@T("Column.Kind")">@LifetimeText(context.Flag.Lifetime)</MudTd>
+            <MudTd DataLabel="@T("Column.Owner")">@(context.Flag.Owner ?? "-")</MudTd>
+            <MudTd DataLabel="@T("Column.Configured")">@ValueText(context.Flag.Configured)</MudTd>
+            <MudTd DataLabel="@T("Column.Override")" data-testid="flag-override">
+                @if (context.Flag.Override is { } stored)
+                {
+                    @* The reason is always shown with the override: an override is never time-boxed,
+                       so its reason is what tells the next operator whether it can go. *@
+                    <MudText Typo="Typo.body2">@ModeText(stored.Mode)</MudText>
+                    <MudText Typo="Typo.caption">@stored.Reason</MudText>
+                }
+                else
+                {
+                    @T("Override.None")
+                }
+            </MudTd>
+            <MudTd DataLabel="@T("Column.Effective")">@ValueText(context.Flag.Effective)</MudTd>
+            <MudTd DataLabel="@T("Column.Actions")">
+                @* Each aria-label STARTS with the visible text and names the flag (WCAG 2.5.3 Label
+                   in Name), so every row's buttons are distinct to a screen reader. *@
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Edit"
+                           OnClick="@(() => BeginEdit(context))"
+                           data-testid="set-override"
+                           aria-label="@T("Aria.Set", context.Flag.Name)">
+                    @T("Action.Set")
+                </MudButton>
+                @if (context.Flag.Override is not null)
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.Undo"
+                               OnClick="@(() => ClearAsync(context))"
+                               data-testid="clear-override"
+                               aria-label="@T("Aria.Clear", context.Flag.Name)">
+                        @T("Action.Clear")
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@if (_editing is not null)
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="1" data-testid="override-editor">
+        <MudText Typo="Typo.h6" Class="mb-2">@T("Editor.Title", _editing.Flag.Name)</MudText>
+
+        <ErrorSummary Result="_saveResult" Localizer="L" />
+
+        <MudSelect T="FeatureFlagOverrideMode" @bind-Value="_mode" Label="@T("Field.Mode")" Class="mb-2">
+            @foreach (var mode in Modes)
+            {
+                <MudSelectItem T="FeatureFlagOverrideMode" Value="mode">@ModeText(mode)</MudSelectItem>
+            }
+        </MudSelect>
+
+        @if (_mode is FeatureFlagOverrideMode.Percentage or FeatureFlagOverrideMode.Targeting)
+        {
+            <MudNumericField T="int?" @bind-Value="_percentage" Label="@T("Field.Percentage")"
+                             Min="0" Max="100" Class="mb-2" />
+        }
+
+        @if (_mode == FeatureFlagOverrideMode.Targeting)
+        {
+            <MudTextField T="string" @bind-Value="_users" Label="@T("Field.Users")"
+                          HelperText="@T("Field.ListHelp")" Immediate="true" Class="mb-2" />
+            <MudTextField T="string" @bind-Value="_groups" Label="@T("Field.Groups")"
+                          HelperText="@T("Field.ListHelp")" Immediate="true" Class="mb-2" />
+        }
+
+        <MudTextField T="string" @bind-Value="_reason" Label="@T("Field.Reason")"
+                      HelperText="@T("Field.ReasonHelp")" Lines="3" Required="true"
+                      Immediate="true" Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="SaveAsync" Disabled="_saving"
+                   data-testid="save-override">
+            @T("Action.Save")
+        </MudButton>
+        <MudButton Variant="Variant.Text" OnClick="CancelEdit" data-testid="cancel-override">
+            @T("Action.Cancel")
+        </MudButton>
+    </MudPaper>
+}

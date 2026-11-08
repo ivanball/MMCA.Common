@@ -349,4 +349,25 @@
   <data name="ViewAs.NotViewing" xml:space="preserve">
     <value>No está viendo como otro usuario.</value>
   </data>
+  <data name="FeatureFlag.Undeclared" xml:space="preserve">
+    <value>Este servicio no declara ninguna marca de funcionalidad con ese nombre.</value>
+  </data>
+  <data name="FeatureFlagOverride.ModeInvalid" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad debe ser Off, On, Percentage o Targeting.</value>
+  </data>
+  <data name="FeatureFlagOverride.NameInvalid" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad requiere un nombre de marca de 128 caracteres como máximo.</value>
+  </data>
+  <data name="FeatureFlagOverride.PercentageInvalid" xml:space="preserve">
+    <value>Una anulación por porcentaje requiere un porcentaje de 0 a 100.</value>
+  </data>
+  <data name="FeatureFlagOverride.ReasonRequired" xml:space="preserve">
+    <value>Una anulación de marca de funcionalidad requiere un motivo de 500 caracteres como máximo.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetInvalid" xml:space="preserve">
+    <value>Cada usuario o grupo destinatario debe tener 128 caracteres como máximo y no contener comas.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetingEmpty" xml:space="preserve">
+    <value>Una anulación por segmentación debe indicar al menos un usuario o grupo.</value>
+  </data>
 </root>

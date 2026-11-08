@@ -352,6 +352,30 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// The UI opt-in of the reloadable feature flags (ADR-031): registers the HTTP client for the
+        /// feature-flag administration endpoints and the flag sources
+        /// <c>MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin</c> lists. Call it once per app,
+        /// after <c>AddUIShared</c>.
+        /// <para>
+        /// Each source is the API route prefix of one service's <c>FeatureFlagsControllerBase</c>
+        /// (for example <c>Admin/Conference/FeatureFlags</c>), so a multi-service host lists every
+        /// service's flags in one table. Nothing else in the framework calls this.
+        /// </para>
+        /// </summary>
+        /// <param name="sources">The API route prefixes to list flags from, in display order.</param>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddFeatureFlagAdministrationUI(params string[] sources)
+        {
+            ArgumentNullException.ThrowIfNull(sources);
+
+            services.TryAddScoped<IFeatureFlagAdminUIService, FeatureFlagAdminService>();
+            services.AddOptions<FeatureFlagAdminUIOptions>()
+                .Configure(options => options.Sources = [.. options.Sources, .. sources]);
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers one UI module: the Scrutor scan that picks up every
         /// <see cref="IEntityService{TEntityDTO, TIdentifierType}"/> implementation in
         /// <typeparamref name="TModule"/>'s assembly, plus the module descriptor itself (nav items,

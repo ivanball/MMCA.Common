@@ -1,1 +1,9 @@
 #nullable enable
+const MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions.NameColumn = "Name" -> string!
+const MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions.TableName = "FeatureFlagOverrides" -> string!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddReloadableFeatureFlags(Microsoft.Extensions.Configuration.IConfiguration! configuration, params System.Reflection.Assembly![]! flagAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableFeatureFlagOverrides.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableFeatureFlagOverrides.set -> void
+MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions
+static MMCA.Common.Infrastructure.DependencyInjection.AddReloadableFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, params System.Reflection.Assembly![]! flagAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions.ApplyFeatureFlagOverrideConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!

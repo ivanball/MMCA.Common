@@ -197,6 +197,18 @@ public static class DesignTimeDbContextHelper
                 Enabled = designOptions.EnableViewAsGrants,
                 DataSourceName = physical.Key.Name,
             }));
+        // Same two-part gate for the stored feature-flag overrides (ADR-031), for the same collapse
+        // reason: the marker behind the flag, the source name the one THIS context resolved to.
+        if (designOptions.EnableFeatureFlagOverrides)
+        {
+            services.AddSingleton<Persistence.FeatureFlags.FeatureFlagOverrideModelGate>();
+        }
+
+        services.AddSingleton<IOptions<Application.FeatureFlags.FeatureFlagOverrideSettings>>(
+            Options.Create(new Application.FeatureFlags.FeatureFlagOverrideSettings
+            {
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

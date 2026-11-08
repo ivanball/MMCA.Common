@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Feature flags</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Each flag takes its value from configuration unless a stored override says otherwise. An override takes effect without a restart and stays until it is cleared.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading feature flags</value>
+  </data>
+  <data name="Action.Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Empty.NoFlags" xml:space="preserve">
+    <value>No feature flags are declared.</value>
+  </data>
+  <data name="Aria.Table" xml:space="preserve">
+    <value>Feature flags and their values</value>
+  </data>
+  <data name="Column.Flag" xml:space="preserve">
+    <value>Flag</value>
+  </data>
+  <data name="Column.Source" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="Column.Kind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="Column.Owner" xml:space="preserve">
+    <value>Owner</value>
+  </data>
+  <data name="Column.Configured" xml:space="preserve">
+    <value>Configured</value>
+  </data>
+  <data name="Column.Override" xml:space="preserve">
+    <value>Override</value>
+  </data>
+  <data name="Column.Effective" xml:space="preserve">
+    <value>In force</value>
+  </data>
+  <data name="Column.Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Lifetime.Permanent" xml:space="preserve">
+    <value>Permanent</value>
+  </data>
+  <data name="Lifetime.Temporary" xml:space="preserve">
+    <value>Temporary</value>
+  </data>
+  <data name="Lifetime.Unknown" xml:space="preserve">
+    <value>Undeclared</value>
+  </data>
+  <data name="Value.Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Value.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Value.Conditional" xml:space="preserve">
+    <value>Conditional</value>
+  </data>
+  <data name="Mode.Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Mode.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Mode.Percentage" xml:space="preserve">
+    <value>Percentage of users</value>
+  </data>
+  <data name="Mode.Targeting" xml:space="preserve">
+    <value>Targeted users and groups</value>
+  </data>
+  <data name="Override.None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Action.Set" xml:space="preserve">
+    <value>Set override</value>
+  </data>
+  <data name="Action.Clear" xml:space="preserve">
+    <value>Clear override</value>
+  </data>
+  <data name="Aria.Set" xml:space="preserve">
+    <value>Set override for {0}</value>
+  </data>
+  <data name="Aria.Clear" xml:space="preserve">
+    <value>Clear override for {0}</value>
+  </data>
+  <data name="Editor.Title" xml:space="preserve">
+    <value>Override {0}</value>
+  </data>
+  <data name="Field.Mode" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="Field.Percentage" xml:space="preserve">
+    <value>Percentage (0 to 100)</value>
+  </data>
+  <data name="Field.Users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Field.Groups" xml:space="preserve">
+    <value>Groups</value>
+  </data>
+  <data name="Field.ListHelp" xml:space="preserve">
+    <value>Separate names with commas.</value>
+  </data>
+  <data name="Field.Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Field.ReasonHelp" xml:space="preserve">
+    <value>Required. Shown beside the override until it is cleared.</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>Save override</value>
+  </data>
+  <data name="Action.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+</root>

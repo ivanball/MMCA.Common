@@ -349,4 +349,25 @@
   <data name="ViewAs.NotViewing" xml:space="preserve">
     <value>You are not viewing as another user.</value>
   </data>
+  <data name="FeatureFlag.Undeclared" xml:space="preserve">
+    <value>No feature flag with that name is declared by this service.</value>
+  </data>
+  <data name="FeatureFlagOverride.ModeInvalid" xml:space="preserve">
+    <value>A feature flag override must be Off, On, Percentage or Targeting.</value>
+  </data>
+  <data name="FeatureFlagOverride.NameInvalid" xml:space="preserve">
+    <value>A feature flag override requires a flag name of at most 128 characters.</value>
+  </data>
+  <data name="FeatureFlagOverride.PercentageInvalid" xml:space="preserve">
+    <value>A percentage override requires a percentage from 0 to 100.</value>
+  </data>
+  <data name="FeatureFlagOverride.ReasonRequired" xml:space="preserve">
+    <value>A feature flag override requires a reason of at most 500 characters.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetInvalid" xml:space="preserve">
+    <value>Each targeted user or group must be at most 128 characters and contain no comma.</value>
+  </data>
+  <data name="FeatureFlagOverride.TargetingEmpty" xml:space="preserve">
+    <value>A targeting override must name at least one user or group.</value>
+  </data>
 </root>

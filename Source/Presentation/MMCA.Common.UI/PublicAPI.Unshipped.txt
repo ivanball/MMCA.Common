@@ -19,3 +19,34 @@ override MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption.GetHashCode() -> 
 override MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption.ToString() -> string!
 static MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption.operator !=(MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption? left, MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption? right) -> bool
 static MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption.operator ==(MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption? left, MMCA.Common.UI.Services.Auth.OAuth.OidcProviderOption? right) -> bool
+#nullable enable
+~override MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddFeatureFlagAdministrationUI(params string![]! sources) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Dispose() -> void
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.FeatureFlagAdmin() -> void
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Sources.get -> System.Collections.Generic.IReadOnlyList<string!>?
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Sources.set -> void
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdminResources
+MMCA.Common.UI.Pages.Administration.FeatureFlagAdminResources.FeatureFlagAdminResources() -> void
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminService
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminService.ClearOverrideAsync(string! source, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminService.FeatureFlagAdminService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminService.GetAllAsync(string! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminService.SetOverrideAsync(string! source, string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminUIOptions
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminUIOptions.FeatureFlagAdminUIOptions() -> void
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminUIOptions.Sources.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.UI.Services.Administration.FeatureFlagAdminUIOptions.Sources.set -> void
+MMCA.Common.UI.Services.Administration.IFeatureFlagAdminUIService
+MMCA.Common.UI.Services.Administration.IFeatureFlagAdminUIService.ClearOverrideAsync(string! source, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.IFeatureFlagAdminUIService.GetAllAsync(string! source, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.IFeatureFlagAdminUIService.SetOverrideAsync(string! source, string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!
+override MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.OnInitializedAsync() -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.DependencyInjection.AddFeatureFlagAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params string![]! sources) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+virtual MMCA.Common.UI.Pages.Administration.FeatureFlagAdmin.Dispose(bool disposing) -> void

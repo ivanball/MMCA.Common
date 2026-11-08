@@ -1,1 +1,19 @@
 #nullable enable
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.MaxPercentage = 100 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.NameMaxLength = 128 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.ReasonMaxLength = 500 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetListMaxLength = 4000 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetMaxLength = 128 -> int
+const MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetSeparator = ',' -> char
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Change(MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode mode, string! reason, int? percentage = null, System.Collections.Generic.IEnumerable<string!>? users = null, System.Collections.Generic.IEnumerable<string!>? groups = null) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Clear() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Groups.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Mode.get -> MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Name.get -> string!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Percentage.get -> int?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Reason.get -> string!
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetGroups.get -> string?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.TargetUsers.get -> string?
+MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Users.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride.Create(string! name, MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideMode mode, string! reason, int? percentage = null, System.Collections.Generic.IEnumerable<string!>? users = null, System.Collections.Generic.IEnumerable<string!>? groups = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.FeatureFlags.FeatureFlagOverride!>!

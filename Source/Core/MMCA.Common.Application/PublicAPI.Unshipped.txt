@@ -1,1 +1,19 @@
-﻿#nullable enable
+#nullable enable
+const MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.SectionName = "FeatureFlags" -> string!
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.DataSourceName.get -> string!
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.DataSourceName.init -> void
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.FeatureFlagOverrideSettings() -> void
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.OverrideCacheSeconds.get -> int
+MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.OverrideCacheSeconds.init -> void
+MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService
+MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService.ClearOverrideAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService.SetOverrideAsync(string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideSnapshot
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideSnapshot.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideResponse!>!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideSnapshot.InvalidateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.ClearAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideResponse!>!>!
+MMCA.Common.Application.FeatureFlags.IFeatureFlagOverrideStore.SetAsync(string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.FeatureFlags.FeatureFlagOverrideResponse!>!>!

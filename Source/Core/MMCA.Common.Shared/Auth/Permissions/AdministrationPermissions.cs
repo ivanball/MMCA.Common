@@ -25,4 +25,10 @@ public static class AdministrationPermissions
     /// holds it can never be viewed itself, so staff cannot view each other.
     /// </summary>
     public const string ViewAsUsers = "users:view-as";
+
+    /// <summary>
+    /// Lists the declared feature flags and sets or clears their stored overrides (ADR-031), so a kill
+    /// switch flips without a new revision.
+    /// </summary>
+    public const string ManageFeatures = "features:manage";
 }

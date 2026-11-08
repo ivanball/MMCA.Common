@@ -101,6 +101,20 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableViewAsGrants { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the stored feature-flag
+    /// override table (<c>FeatureFlagOverrides</c>, ADR-031). Defaults to <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the migrations project of each database whose service calls
+    /// <c>AddReloadableFeatureFlags</c> (the owning service's own database). The helper registers the
+    /// framework's model gate and points <c>FeatureFlags:DataSourceName</c> at the source this context
+    /// resolved to, so the flag opens the gate for exactly the context <c>--datasource</c> selected.
+    /// The flag must match whether the service calls <c>AddReloadableFeatureFlags</c>, or the scaffolded
+    /// migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableFeatureFlagOverrides { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>
