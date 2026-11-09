@@ -12,6 +12,10 @@ public sealed class NullBarcodeScannerService : IBarcodeScannerService
     public bool IsSupported => false;
 
     /// <inheritdoc />
+    public Task<bool> EnsureCameraAccessAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
+    /// <inheritdoc />
     public Task<string?> ScanAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<string?>(null);
 }

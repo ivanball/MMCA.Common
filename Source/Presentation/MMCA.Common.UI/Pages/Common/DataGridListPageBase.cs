@@ -1349,6 +1349,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     }
 
     /// <summary>
+    /// Saves the page's current filters (URL, in-memory state and sessionStorage), keeping the pager
+    /// and sort as they are. The desktop grid and <see cref="LoadMobileDataAsync"/> save after every
+    /// fetch; a page whose <c>MobileInfiniteScrollList</c> fetches through its own delegate saves
+    /// nothing, so it calls this when the user changes a filter that has to survive leaving the page.
+    /// </summary>
+    protected void SaveFilterState() => SaveCurrentState(null, null, _savedSortColumn, _savedSortDescending);
+
+    /// <summary>
     /// Flips the grid density (comfortable ↔ dense) and persists the choice (URL + in-memory +
     /// sessionStorage) so it survives navigation, refresh, and shareable links. Wire a toggle in the
     /// derived page's markup to call this; the bound <c>Dense="@DenseGrid"</c> re-renders the grid.

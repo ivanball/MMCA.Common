@@ -121,7 +121,9 @@ main {
 
 /* ── Footer ── */
 .app-footer {
-    padding: 1.25rem 1.5rem;
+    /* The last row must clear the Android navigation bar on an edge-to-edge head. The inset reads 0
+       on a cold launch, so the native fallback from theme-prepaint.js backs it up. */
+    padding: 1.25rem 1.5rem calc(1.25rem + max(env(safe-area-inset-bottom, 0px), var(--mmca-navigation-bar-fallback, 0px)));
     border-top: 1px solid var(--mmca-divider, #E0E0E0);
     margin-top: auto;
     font-size: 0.8125rem;

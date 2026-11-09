@@ -48,6 +48,15 @@ public sealed class InAppDiagnosticsLogTests : BunitTestBase
         items[2].ClassList.Should().Contain("mud-error-text");
     }
 
+    // A-55: four buttons and a heading do not fit one row at 360 dp, so the toolbar must wrap.
+    [Fact]
+    public void Toolbar_WrapsInsideItsCard()
+    {
+        var cut = RenderLog();
+
+        cut.Find("[data-testid=diagnostics-toolbar]").ClassList.Should().Contain("flex-wrap");
+    }
+
     [Fact]
     public void WithNoEntries_ShowsTheEmptyState()
     {

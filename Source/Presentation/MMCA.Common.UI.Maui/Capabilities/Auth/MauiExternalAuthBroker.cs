@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System.Diagnostics;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Services.Auth.OAuth;
@@ -16,12 +18,18 @@ namespace MMCA.Common.UI.Maui.Capabilities.Auth;
 /// configuration (also allow-listed server-side via <c>OAuth:AllowedReturnUrlSchemes</c>)
 /// plus the platform callback registrations; unset means unavailable and the Login page
 /// keeps its web anchor flow.
+/// <para>
+/// Every attempt logs one start line and the exit it took, with the elapsed time, because the page
+/// shows the same message for all of them. The lines carry fixed exit names only: the callback's
+/// code and state, and any exception text (a redirect failure quotes the callback URI), stay out.
+/// </para>
 /// </summary>
-public sealed class MauiExternalAuthBroker : IExternalAuthBroker
+public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
 {
     private readonly NavigationManager _navigationManager;
     private readonly IOptions<ApiSettings> _apiSettings;
     private readonly OAuthFlowStateStore _flowState;
+    private readonly ILogger<MauiExternalAuthBroker> _logger;
     private readonly string? _callbackScheme;
 
     /// <summary>Initializes the broker from the head's configuration.</summary>
@@ -29,13 +37,15 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
         NavigationManager navigationManager,
         IOptions<ApiSettings> apiSettings,
         OAuthFlowStateStore flowState,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<MauiExternalAuthBroker> logger)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
         _navigationManager = navigationManager;
         _apiSettings = apiSettings;
         _flowState = flowState;
+        _logger = logger;
         _callbackScheme = configuration["OAuth:MobileRedirectScheme"];
     }
 
@@ -47,15 +57,18 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(provider);
 
+        var started = Stopwatch.GetTimestamp();
+        LogStarted(_logger, provider);
+
         if (!IsAvailable)
         {
-            return false;
+            return Exit(provider, "NoCallbackScheme", started, succeeded: false);
         }
 
         var apiBase = _apiSettings.Value.ApiEndpoint?.TrimEnd('/');
         if (string.IsNullOrWhiteSpace(apiBase))
         {
-            return false;
+            return Exit(provider, "NoApiEndpoint", started, succeeded: false);
         }
 
         var callbackUrl = new Uri($"{_callbackScheme}://oauth-complete");
@@ -80,32 +93,67 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
                 },
                 cancellationToken).ConfigureAwait(false);
 
-            if (result?.Properties is null
-                || !result.Properties.TryGetValue("code", out var code)
-                || string.IsNullOrWhiteSpace(code))
-            {
-                return false;
-            }
-
-            result.Properties.TryGetValue("state", out var returnedState);
-
-            // The shared completion page owns the exchange + token storage + auth-state refresh.
-            // Reusing it keeps the single-use-code contract in exactly one place.
-            var returnedStateQuery = string.IsNullOrEmpty(returnedState)
-                ? string.Empty
-                : $"&state={Uri.EscapeDataString(returnedState)}";
-            _navigationManager.NavigateTo(
-                $"/auth/oauth-complete?code={Uri.EscapeDataString(code)}{returnedStateQuery}");
-            return true;
+            return CompleteSignIn(provider, result, started);
         }
         catch (TaskCanceledException)
         {
-            // User dismissed the system browser window.
-            return false;
+            // The user dismissed the system browser, a newer attempt replaced this one, or the
+            // platform's launch activity resumed with no callback. The elapsed time tells a sheet
+            // the user closed from one that never appeared.
+            var exit = cancellationToken.IsCancellationRequested ? "CancelledByCaller" : "CancelledWithoutCallback";
+            return Exit(provider, exit, started, succeeded: false);
         }
         catch (FeatureNotSupportedException)
         {
-            return false;
+            return Exit(provider, "NotSupported", started, succeeded: false);
+        }
+        catch (Exception ex) when (LogUnexpectedExit(provider, ex, started))
+        {
+            throw; // Unreachable: the filter only records the exit and always declines.
         }
     }
+
+    private bool CompleteSignIn(string provider, WebAuthenticatorResult? result, long started)
+    {
+        if (result?.Properties is null)
+        {
+            return Exit(provider, "CallbackWithoutResult", started, succeeded: false);
+        }
+
+        if (!result.Properties.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
+        {
+            return Exit(provider, "CallbackWithoutCode", started, succeeded: false);
+        }
+
+        result.Properties.TryGetValue("state", out var returnedState);
+
+        // The shared completion page owns the exchange + token storage + auth-state refresh.
+        // Reusing it keeps the single-use-code contract in exactly one place.
+        var returnedStateQuery = string.IsNullOrEmpty(returnedState)
+            ? string.Empty
+            : $"&state={Uri.EscapeDataString(returnedState)}";
+        _navigationManager.NavigateTo(
+            $"/auth/oauth-complete?code={Uri.EscapeDataString(code)}{returnedStateQuery}");
+        return Exit(provider, "CodeReceived", started, succeeded: true);
+    }
+
+    private bool Exit(string provider, string exit, long started, bool succeeded)
+    {
+        var elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        LogExit(_logger, provider, exit, elapsedMilliseconds);
+        return succeeded;
+    }
+
+    // The type name only: this exception's message can quote the callback URI, code included.
+    private bool LogUnexpectedExit(string provider, Exception exception, long started)
+    {
+        Exit(provider, exception.GetType().Name, started, succeeded: false);
+        return false;
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "External sign-in started for {Provider}")]
+    private static partial void LogStarted(ILogger logger, string provider);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "External sign-in for {Provider} ended with {Exit} after {ElapsedMilliseconds} ms")]
+    private static partial void LogExit(ILogger logger, string provider, string exit, long elapsedMilliseconds);
 }
