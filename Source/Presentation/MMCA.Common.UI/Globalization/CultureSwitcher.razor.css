@@ -1,0 +1,12 @@
+/* The size and shape MudIconButton gives its siblings in the app bar. */
+.culture-switcher-activator {
+    display: inline-flex;
+    padding: 12px;
+    border-radius: 50%;
+    color: inherit;
+    cursor: pointer;
+}
+
+.culture-switcher-activator:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}

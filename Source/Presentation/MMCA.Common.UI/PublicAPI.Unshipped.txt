@@ -1,4 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.SaveFilterState() -> void
-MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.EnsureCameraAccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService.EnsureCameraAccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!

@@ -20,8 +20,9 @@ namespace MMCA.Common.UI.Maui.Capabilities.Auth;
 /// keeps its web anchor flow.
 /// <para>
 /// Every attempt logs one start line and the exit it took, with the elapsed time, because the page
-/// shows the same message for all of them. The lines carry fixed exit names only: the callback's
-/// code and state, and any exception text (a redirect failure quotes the callback URI), stay out.
+/// shows the same message for all of them. The lines carry fixed exit names and the server's error
+/// name only: the callback's code and state, and any exception text (a redirect failure quotes the
+/// callback URI), stay out.
 /// </para>
 /// </summary>
 public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
@@ -122,7 +123,7 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
 
         if (!result.Properties.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
         {
-            return Exit(provider, "CallbackWithoutCode", started, succeeded: false);
+            return Exit(provider, DescribeMissingCode(result), started, succeeded: false);
         }
 
         result.Properties.TryGetValue("state", out var returnedState);
@@ -136,6 +137,18 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
             $"/auth/oauth-complete?code={Uri.EscapeDataString(code)}{returnedStateQuery}");
         return Exit(provider, "CodeReceived", started, succeeded: true);
     }
+
+    /// <summary>
+    /// A completion the server could not finish comes back as <c>error=&lt;code&gt;</c>. The server's
+    /// code is a fixed name and safe to log; anything else in that parameter is dropped, because a
+    /// custom-scheme callback can be sent by another app.
+    /// </summary>
+    private static string DescribeMissingCode(WebAuthenticatorResult result) =>
+        result.Properties.TryGetValue("error", out var error)
+            && error is { Length: > 0 and <= 80 }
+            && error.All(static c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')
+            ? $"ServerError:{error}"
+            : "CallbackWithoutCode";
 
     private bool Exit(string provider, string exit, long started, bool succeeded)
     {

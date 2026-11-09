@@ -75,9 +75,38 @@ public sealed class CultureSwitcherTests : BunitTestBase
     {
         var providers = RenderMudProviders();
         var cut = RenderUnderTest<CultureSwitcher>(_ => { });
-        cut.Find("button").Click();
+        cut.Find(".mud-menu").Click();
 
         return [.. providers.Popover.FindAll("div.mud-menu-item")];
+    }
+
+    // Run 16 D5: the Android WebView gives a button with aria-haspopup no name from aria-label, so
+    // the name has to be text inside the one interactive activator (a nested button would break
+    // axe nested-interactive).
+    [Fact]
+    public void Activator_IsNamedByItsOwnText_WithNoNestedButton()
+    {
+        RenderMudProviders();
+
+        var cut = RenderUnderTest<CultureSwitcher>(_ => { });
+
+        var activator = cut.Find("div[role=button][aria-haspopup=menu]");
+        activator.TextContent.Should().Contain("Language");
+        activator.HasAttribute("aria-label").Should().BeFalse();
+        cut.FindAll("button").Should().BeEmpty();
+    }
+
+    // An accessibility click (TalkBack's double-tap) lands on the role=button element itself, not on
+    // the content inside it, so the menu has to open from a click on exactly that element.
+    [Fact]
+    public void ClickOnTheActivatorElementItself_OpensTheMenu()
+    {
+        var providers = RenderMudProviders();
+        var cut = RenderUnderTest<CultureSwitcher>(_ => { });
+
+        cut.Find("div[role=button][aria-haspopup=menu]").Click();
+
+        providers.Popover.FindAll("div.mud-menu-item").Should().NotBeEmpty();
     }
 
     private sealed class RecordingCultureApplier : ICultureApplier

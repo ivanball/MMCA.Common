@@ -32,6 +32,14 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.283.0] - 2026-11-09
+
+**Breaking: one new interface member and one new constructor argument.** No namespace, type or
+configuration key moved.
+
+- `IBarcodeScannerService` gains `Task<bool> EnsureCameraAccessAsync(CancellationToken)` (MMCA.Common.UI). A custom implementation adds it and returns whether the camera may be used; a test double that stubs a successful scan also stubs this as true, because `MauiBarcodeScannerService.ScanAsync` now checks it first.
+- `MauiExternalAuthBroker` takes `ILogger<MauiExternalAuthBroker>` as a new last constructor argument (MMCA.Common.UI.Maui). DI supplies it; only code that constructs the broker by hand changes.
+
 ## [1.282.0] - 2026-11-08
 
 **Breaking: one replaced constructor parameter on `DeleteUserHandlerBase<TUser, TCommand>`.** No
