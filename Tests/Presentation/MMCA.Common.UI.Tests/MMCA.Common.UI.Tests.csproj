@@ -39,5 +39,9 @@
     <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\wwwroot\app.css" LogicalName="app.css" />
     <!-- Embed the sidebar's scoped stylesheet so MainLayoutSkipLinkTests can assert its keyboard-focus rule. -->
     <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\Layout\NavMenu.razor.css" LogicalName="NavMenu.razor.css" />
+    <!-- The navigation bar fallback spans these three files; NavigationBarFallbackTests pins the names they share. -->
+    <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\Layout\MainLayout.razor.css" LogicalName="MainLayout.razor.css" />
+    <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\wwwroot\theme-prepaint.js" LogicalName="theme-prepaint.js" />
+    <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\MainPageBase.cs" LogicalName="MainPageBase.cs" />
   </ItemGroup>
 </Project>

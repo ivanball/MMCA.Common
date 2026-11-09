@@ -6,17 +6,21 @@ namespace MMCA.Common.UI.Maui.Capabilities.Media;
 /// MAUI Essentials media picker (ADR-045, avatar upload). MediaPicker owns the platform
 /// permission prompts (photo library on pick, camera on capture); a denied permission,
 /// cancelled sheet, or unsupported device all surface as <see langword="null"/>, never an
-/// exception.
+/// exception. Every photo is downscaled and recompressed on the device, because a full-size camera
+/// capture is several megabytes and an avatar upload is capped well below that.
 /// </summary>
 public sealed class MauiMediaPickerService : IMediaPickerService
 {
+    private const int MaxPhotoDimension = 1024;
+    private const int PhotoQuality = 85;
+
     /// <inheritdoc />
     public bool IsSupported => MediaPicker.Default.IsCaptureSupported || DeviceInfo.Current.Platform != DevicePlatform.WinUI;
 
     /// <inheritdoc />
     public Task<PickedMedia?> PickPhotoAsync(CancellationToken cancellationToken = default) =>
 #pragma warning disable CS0618 // PickPhotoAsync is "obsolete" in favor of the multi-select PickPhotosAsync; an avatar is exactly one photo
-        PickCoreAsync(() => MediaPicker.Default.PickPhotoAsync(), cancellationToken);
+        PickCoreAsync(() => MediaPicker.Default.PickPhotoAsync(UploadOptions()), cancellationToken);
 #pragma warning restore CS0618
 
     /// <inheritdoc />
@@ -27,9 +31,24 @@ public sealed class MauiMediaPickerService : IMediaPickerService
     public Task<PickedMedia?> CapturePhotoAsync(CancellationToken cancellationToken = default) =>
         PickCoreAsync(
             () => MediaPicker.Default.IsCaptureSupported
-                ? MediaPicker.Default.CapturePhotoAsync()
+                ? MediaPicker.Default.CapturePhotoAsync(UploadOptions())
                 : Task.FromResult<FileResult?>(null),
             cancellationToken);
+
+    /// <summary>
+    /// The platform resize. Rotation is applied to the pixels because the metadata that records the
+    /// orientation is dropped, which also keeps the capture's location off the upload. The platform
+    /// returns the original file when it cannot process one, so a caller with a size limit still
+    /// has to check it.
+    /// </summary>
+    private static MediaPickerOptions UploadOptions() => new()
+    {
+        MaximumWidth = MaxPhotoDimension,
+        MaximumHeight = MaxPhotoDimension,
+        CompressionQuality = PhotoQuality,
+        RotateImage = true,
+        PreserveMetaData = false,
+    };
 
     private static async Task<PickedMedia?> PickCoreAsync(Func<Task<FileResult?>> pick, CancellationToken cancellationToken)
     {

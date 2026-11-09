@@ -132,6 +132,7 @@ public sealed class CapabilityFallbackTests
         var sut = new NullBarcodeScannerService();
 
         sut.IsSupported.Should().BeFalse();
+        (await sut.EnsureCameraAccessAsync()).Should().BeFalse();
         (await sut.ScanAsync()).Should().BeNull();
 
         // Even a pre-cancelled token must come back as a plain null, never an OperationCanceledException:

@@ -754,6 +754,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnScrollPositionChanged(d
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ResizeOptions.get -> MudBlazor.Services.ResizeOptions!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RowsPerPageState.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RowsPerPageState.set -> void
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.SaveFilterState() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.get -> MMCA.Common.UI.Common.Interfaces.IToastService!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ToggleDensity() -> void
@@ -1251,6 +1252,7 @@ MMCA.Common.UI.Services.Capabilities.Interop.NullShareService.NullShareService()
 MMCA.Common.UI.Services.Capabilities.Interop.NullShareService.ShareFileAsync(string! title, string! filePath, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Interop.NullShareService.ShareLinkAsync(string! title, System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService
+MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.EnsureCameraAccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.IsSupported.get -> bool
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.ScanAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService
@@ -1265,6 +1267,7 @@ MMCA.Common.UI.Services.Capabilities.Media.ITextToSpeechService.IsSupported.get 
 MMCA.Common.UI.Services.Capabilities.Media.ITextToSpeechService.SpeakAsync(string! text, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Media.ITextToSpeechService.StopAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService
+MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService.EnsureCameraAccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService.IsSupported.get -> bool
 MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService.NullBarcodeScannerService() -> void
 MMCA.Common.UI.Services.Capabilities.Media.NullBarcodeScannerService.ScanAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!

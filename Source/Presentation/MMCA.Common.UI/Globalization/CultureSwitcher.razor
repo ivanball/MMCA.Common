@@ -6,17 +6,28 @@
 @inject ICultureApplier CultureApplier
 @inject IStringLocalizer<SharedResource> L
 
-<MudMenu Icon="@Icons.Material.Filled.Translate"
-         Color="Color.Inherit"
-         Dense="true"
-         AriaLabel="@L["Culture.Switcher.Label"].Value">
-    @foreach (var culture in OfferedCultures)
-    {
-        <MudMenuItem OnClick="@(() => SetCulture(culture))">@GetCultureName(culture)</MudMenuItem>
-    }
+@* The name is text inside the activator, not MudMenu's AriaLabel: the Android WebView exposes no name
+   for an aria-label on a button with aria-haspopup, which MudMenu always sets, so TalkBack read only
+   its state. The toggle is on the menu root rather than the inner span because an accessibility
+   click targets the role=button activator itself, and from there it only bubbles upwards. *@
+<MudMenu @ref="_menu" Dense="true" @onclick="@(args => _menu.ToggleMenuAsync(args))">
+    <ActivatorContent>
+        <span class="culture-switcher-activator">
+            <MudIcon Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit" />
+            <span class="visually-hidden">@L["Culture.Switcher.Label"]</span>
+        </span>
+    </ActivatorContent>
+    <ChildContent>
+        @foreach (var culture in OfferedCultures)
+        {
+            <MudMenuItem OnClick="@(() => SetCulture(culture))">@GetCultureName(culture)</MudMenuItem>
+        }
+    </ChildContent>
 </MudMenu>
 
 @code {
+    private MudMenu _menu = default!;
+
     // The supported cultures, plus the pseudo-localization locale in Development only (ADR-027 §8).
     // IHostEnvironment is registered on the Blazor Server host; on a WASM-only render it resolves to
     // null and the pseudo entry is simply not offered (a developer can still activate it via the

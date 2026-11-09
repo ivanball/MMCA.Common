@@ -4,6 +4,25 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.283.0] - 2026-11-09
+
+Phone fixes from ADC manual test Run 16: photo uploads are sized on the device, the page bottom clears the Android navigation bar, a denied camera no longer opens a black scanner, and external sign-in logs how each attempt ended.
+
+**Breaking:** `IBarcodeScannerService` gains `EnsureCameraAccessAsync(CancellationToken)` (MMCA.Common.UI), so a caller can explain a denied camera. A custom implementation adds the member; `NullBarcodeScannerService` returns false. `MauiExternalAuthBroker` takes an `ILogger<MauiExternalAuthBroker>` as a new last constructor argument (MMCA.Common.UI.Maui); DI supplies it. See [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **`DataGridListPageBase<TDto>.SaveFilterState()`** (MMCA.Common.UI). Saves the page's current filters to the URL, in-memory state and sessionStorage, keeping pager and sort. For a page whose `MobileInfiniteScrollList` fetches through its own delegate, which saves nothing.
+- **External sign-in exit logging** (MMCA.Common.UI.Maui). `MauiExternalAuthBroker` logs one start line and the exit taken, with the elapsed time, at Information, so the in-app diagnostics log shows it. Lines carry fixed exit names and the server's error name only, never the callback's code or state or any exception text.
+
+### Fixed
+
+- **Photos are downscaled on the device** (MMCA.Common.UI.Maui). `MauiMediaPickerService` fits take and choose results within 1024 px at JPEG quality 85, applies the rotation to the pixels and drops the metadata. The platform returns the original file when it cannot process one, so a caller with a size limit still checks it.
+- **The page bottom clears the Android navigation bar** (MMCA.Common.UI, UI.Maui). `MainPageBase` adds a `MmcaNavigationBar/<css px>` user agent token, `theme-prepaint.js` exposes it as `--mmca-navigation-bar-fallback`, and the footer and drawer pad with the larger of that and `env(safe-area-inset-bottom)`, which reads 0 on a cold launch.
+- **A denied camera no longer opens a black scanner** (MMCA.Common.UI.Maui). `MauiBarcodeScannerService` requests the permission before the scan page opens; a denial reads as no scan.
+- **The diagnostics log toolbar wraps** (MMCA.Common.UI) instead of overflowing its card on a phone.
+- **The language button has an accessible name on Android** (MMCA.Common.UI). The Android WebView exposes no name for an `aria-label` on a button with `aria-haspopup`, which MudMenu always sets, so `CultureSwitcher` names its activator with visually hidden text.
+
 ## [1.282.0] - 2026-11-08
 
 Reliability wave: the hub tells a subscriber when a connection has been restored, view-as works over gRPC, an open circuit no longer spends the outbox retry budget, retention deletes are batched, long-running scheduled jobs renew their lease, and the deleted-user marker outlives a raised access-token lifetime.

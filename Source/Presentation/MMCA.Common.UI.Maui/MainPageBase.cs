@@ -62,7 +62,9 @@ public abstract class MainPageBase : ContentPage
     /// natively before the page loads; <c>theme-prepaint.js</c> (MMCA.Common.UI) turns the token into
     /// <c>--mmca-status-bar-fallback</c>, and the head sizes its spacer with
     /// <c>max(env(safe-area-inset-top), var(--mmca-status-bar-fallback, 0px))</c>. The other platforms
-    /// report the inset reliably, so only Android sends it.
+    /// report the inset reliably, so only Android sends it. The navigation bar takes the same route
+    /// (<c>MmcaNavigationBar/&lt;css px&gt;</c>, <c>--mmca-navigation-bar-fallback</c>): the system
+    /// resolves its height for the active mode, three-button or gesture.
     /// </summary>
     private static void OnHostWebViewInitialized(object? sender, Microsoft.AspNetCore.Components.WebView.BlazorWebViewInitializedEventArgs e)
     {
@@ -73,22 +75,29 @@ public abstract class MainPageBase : ContentPage
             return;
         }
 
-        var dimensionId = resources.GetIdentifier("status_bar_height", "dimen", "android");
+        var tokens = string.Concat(
+            SystemBarToken(resources, "status_bar_height", "MmcaStatusBar"),
+            SystemBarToken(resources, "navigation_bar_height", "MmcaNavigationBar"));
+        if (tokens.Length > 0)
+        {
+            webView.Settings.UserAgentString = webView.Settings.UserAgentString + tokens;
+        }
+    }
+
+    /// <summary>The user agent token for one system bar, or empty when the platform has no such dimension.</summary>
+    private static string SystemBarToken(Android.Content.Res.Resources resources, string dimensionName, string tokenName)
+    {
+        var dimensionId = resources.GetIdentifier(dimensionName, "dimen", "android");
         if (dimensionId == 0)
         {
-            return;
+            return string.Empty;
         }
 
         var density = resources.DisplayMetrics?.Density ?? 1f;
         var cssPixels = (int)Math.Ceiling(resources.GetDimensionPixelSize(dimensionId) / (density > 0 ? density : 1f));
-        if (cssPixels <= 0)
-        {
-            return;
-        }
-
-        webView.Settings.UserAgentString = string.Create(
-            System.Globalization.CultureInfo.InvariantCulture,
-            $"{webView.Settings.UserAgentString} MmcaStatusBar/{cssPixels}");
+        return cssPixels > 0
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" {tokenName}/{cssPixels}")
+            : string.Empty;
     }
 #endif
 

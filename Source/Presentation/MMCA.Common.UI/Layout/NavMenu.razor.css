@@ -131,9 +131,10 @@
     transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, visibility 0s linear 0s;
     /* Bottom clearance for the last nav item in the open mobile menu. Without it the final row sits
        flush on the container edge, and on phones with a bottom browser bar or home indicator it
-       lands under the chrome; env() adds the device inset where one exists (0 elsewhere), the
-       0.75rem is the breathing room on every phone. */
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+       lands under the chrome; env() adds the device inset where one exists (0 elsewhere, and on an
+       Android cold launch, which the native fallback covers), the 0.75rem is the breathing room on
+       every phone. */
+    padding-bottom: calc(0.75rem + max(env(safe-area-inset-bottom, 0px), var(--mmca-navigation-bar-fallback, 0px)));
 }
 
 /* ── Mobile Nav Backdrop ── */

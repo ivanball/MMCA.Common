@@ -5,10 +5,10 @@ namespace MMCA.Common.UI.Maui.Capabilities.Media;
 /// <summary>
 /// MAUI camera scanner over ZXing.Net.MAUI (ADR-042). Pushes <see cref="BarcodeScanPage"/> modally
 /// over the current window page, resolves on the first decoded payload, and pops the page again on
-/// every exit path. The camera permission belongs to the platform (Android CAMERA, iOS
-/// NSCameraUsageDescription): a head that has not declared it, or a user who denies it, gets a scan
-/// that simply never decodes and is cancelled out of, which the contract surfaces as
-/// <see langword="null"/> rather than an exception.
+/// every exit path. The head declares the camera permission (Android CAMERA, iOS
+/// NSCameraUsageDescription) and this service requests it before the page opens, because the camera
+/// view of a page opened without it stays black: a denial, or a head that never declared it, reads
+/// as <see langword="null"/> with no page shown.
 /// <para>
 /// Registered by <c>UseCommonBarcodeScanner</c> only, so a head that never scans neither ships
 /// the camera handler nor needs the permission.
@@ -53,9 +53,29 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
         DeviceInfo.Current.Platform == DevicePlatform.iOS;
 
     /// <inheritdoc />
-    public async Task<string?> ScanAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> EnsureCameraAccessAsync(CancellationToken cancellationToken = default)
     {
         if (!IsSupported || cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await MainThread.InvokeOnMainThreadAsync(RequestCameraAsync).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types - a head that never declared the permission throws here, and that must read as "no camera access"
+        catch
+#pragma warning restore CA1031
+        {
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> ScanAsync(CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureCameraAccessAsync(cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
@@ -74,6 +94,18 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
         {
             return null;
         }
+    }
+
+    private static async Task<bool> RequestCameraAsync()
+    {
+        // ConfigureAwait(true): the platform prompt must be raised from the main thread.
+        var status = await Permissions.CheckStatusAsync<Permissions.Camera>().ConfigureAwait(true);
+        if (status != PermissionStatus.Granted)
+        {
+            status = await Permissions.RequestAsync<Permissions.Camera>().ConfigureAwait(true);
+        }
+
+        return status == PermissionStatus.Granted;
     }
 
     private static async Task<string?> ScanOnMainThreadAsync(
