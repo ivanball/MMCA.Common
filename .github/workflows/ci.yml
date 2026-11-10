@@ -96,7 +96,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -187,7 +187,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -239,7 +239,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -403,7 +403,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -447,7 +447,7 @@ jobs:
     # smallest timeout in this file (`changes`) and still bounds a hung tool install or download.
     timeout-minutes: 5
     steps:
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
 
@@ -567,7 +567,7 @@ jobs:
           # CONSUMER_CANARY_PAT secret with contents:read on it.
           token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -735,7 +735,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -823,7 +823,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
@@ -869,7 +869,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Same cache posture and the same reasons as the redis-integration job above.
@@ -911,7 +911,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Same cache posture and the same reasons as the redis-integration job above.
@@ -950,7 +950,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Same cache posture and the same reasons as the redis-integration job above.
@@ -997,7 +997,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Same cache posture and the same reasons as the redis-integration job above.
@@ -1041,7 +1041,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           dotnet-version: '10.0.x'
           # Same cache posture and the same reasons as the redis-integration job above.
