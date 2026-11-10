@@ -1,9 +1,21 @@
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)build\Frameworks.props" />
+  <!-- Target frameworks come from build/Frameworks.props (the dual-TFM policy lives there). Libraries
+       and their tests build for every version; the handful of projects that are run rather than
+       referenced build for the newest one only. -->
+  <PropertyGroup Condition="!$(MmcaSingleTargetProjects.Contains(';$(MSBuildProjectName);')) And !$(MmcaOldestTargetProjects.Contains(';$(MSBuildProjectName);'))">
+    <TargetFrameworks>$(MmcaNetVersions)</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MmcaSingleTargetProjects.Contains(';$(MSBuildProjectName);'))">
+    <TargetFramework>$(MmcaDefaultNet)</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MmcaOldestTargetProjects.Contains(';$(MSBuildProjectName);'))">
+    <TargetFramework>$(MmcaOldestNet)</TargetFramework>
+  </PropertyGroup>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>15.0</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <NuGetAudit>true</NuGetAudit>
@@ -27,17 +39,46 @@
     <!-- CS1591 (missing XML comment on a public member) is NOT suppressed here: it is ratcheted per
          project (FR-7), so a project not yet fully documented carries its own NoWarn line and a
          clean project cannot regress. -->
-    <NoWarn>$(NoWarn);RMG020;S8970;RS0041</NoWarn>
+    <!-- S3881 ("fix this implementation of IDisposable") fires only on the Razor-GENERATED partial
+         declaration of a component that implements IDisposable (the *_razor.decl.g.cs file the
+         .NET 11 SDK Razor compiler emits), on both target frameworks. Same reasoning as S8970 and
+         RS0041 above: an .editorconfig severity does not reach generated code. -->
+    <NoWarn>$(NoWarn);RMG020;S8970;RS0041;S3881</NoWarn>
   </PropertyGroup>
+
+  <!-- System.Net.Http.Json is an implicit using on net11.0 and not on net10.0. Declared here for
+       both so no file carries a using directive that is required on one framework and IDE0005
+       (unnecessary using) on the other. -->
+  <ItemGroup>
+    <Using Include="System.Net.Http.Json" />
+  </ItemGroup>
 
   <!-- Accepted NuGet advisories: none today. Add each as
        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." /> in an ItemGroup here,
        with its reachability argument in a comment; the CI audit step
        (.github/actions/nuget-vulnerability-audit) re-applies exactly this list. -->
 
-  <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
+  <!-- net11.0 ONLY, and a false positive rather than an accepted risk. The two
+       System.Security.Cryptography.Pkcs advisories are fixed by the direct pin in
+       Directory.Packages.props, and that pin is what a net11.0 app loads: the ASP.NET Core 11 shared
+       framework carries the package at 11.0.0. Restore, though, prunes the 11.0.0 pin in every project
+       that references that shared framework (its PackageOverrides.txt lists Pkcs|11.0.0, and a pin
+       at or below that ceiling is pruned), then records and audits Microsoft.Data.SqlClient's
+       unpruned transitive 9.0.18 instead, which never loads. net10.0 is unaffected because 10.0.14
+       sits above the 10.0 ceiling. REMOVE these two entries when a Pkcs 11.0.1 exists and the net11.0
+       value of MmcaFrameworkVersion moves to it: a pin above the ceiling is not pruned.
+       The condition keeps restore-time audit fully armed for net10.0. -->
+  <ItemGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-846f-f764-76mx" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2fmv-rv2c-59x7" />
+  </ItemGroup>
+
+  <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects.
+       SYSLIB0066 (IStartupValidator is obsolete on net11.0 in favour of IAsyncStartupValidator, which
+       net10.0 does not have): tests resolve the synchronous validator to trigger ValidateOnStart
+       without booting a host, and that call is the same on both frameworks. -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
-    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+    <NoWarn>$(NoWarn);xUnit1051;SYSLIB0066</NoWarn>
   </PropertyGroup>
 
   <!-- CA2263 (prefer generic overload): the NetArchTest-based architecture tests deliberately use

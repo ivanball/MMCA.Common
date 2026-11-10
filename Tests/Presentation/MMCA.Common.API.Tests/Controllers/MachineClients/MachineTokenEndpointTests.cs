@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Auth;

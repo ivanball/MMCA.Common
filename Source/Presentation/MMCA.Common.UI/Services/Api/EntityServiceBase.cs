@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Http;

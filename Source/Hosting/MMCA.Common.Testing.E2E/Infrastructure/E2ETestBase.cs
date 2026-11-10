@@ -73,8 +73,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     private async Task StopTracingAsync(string tracePath)
     {
         var isDirectory = Directory.Exists(tracePath)
-            || tracePath.EndsWith('/')
-            || tracePath.EndsWith('\\');
+            || tracePath.AsSpan().EndsWith('/')
+            || tracePath.AsSpan().EndsWith('\\');
         if (!isDirectory)
         {
             await _context.Tracing.StopAsync(new() { Path = tracePath }).ConfigureAwait(false);

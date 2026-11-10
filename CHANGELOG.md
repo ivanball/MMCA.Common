@@ -4,6 +4,25 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Every package now ships for .NET 10 and .NET 11 from one source tree. No public API changes: the surface is identical on both target frameworks.
+
+### Added
+
+- **`net11.0` assets in every package** (all packages except MMCA.Common.UI.Maui, which stays on its four `net10.0` platform targets for now). Each `.nupkg` carries `lib/net10.0` and `lib/net11.0`; a consumer gets the one matching its own target framework and changes nothing. The target frameworks are named once, in `build/Frameworks.props`, which also states the rules for version-specific code (`#if NET11_0_OR_GREATER` only, with the existing code as the `#else` branch).
+
+### Changed
+
+- **Per-framework dependency versions.** On `net11.0` the packages depend on ASP.NET Core and `Microsoft.Extensions.*` 11.0.0 and on `Microsoft.OpenApi` 3.11.0; on `net10.0` they stay on 10.0.14 and 2.13.0. Entity Framework Core stays on 10.0.14 for BOTH frameworks: the only `Npgsql.EntityFrameworkCore.PostgreSQL` 11 build is a release candidate that pins EF Core to that exact candidate. EF Core 10 runs on the .NET 11 runtime.
+- **Built with the .NET 11 SDK and C# 15.** `global.json` pins SDK 11.0.100 and `LangVersion` is `15.0` instead of `preview`. A consumer building MMCA.Common from source (`local.props`) needs the .NET 11 SDK; a consumer on packages does not.
+- **A dropped browser connection no longer throws from three UI JavaScript call sites** (MMCA.Common.UI): the file-download button, `DocumentLanguage` and the list-page scroll tracking now treat `JSDisconnectedException` as "nothing left to update" instead of letting it escape.
+
+### Notes for a .NET 11 host
+
+- An ASP.NET Core 11 host emits OpenAPI 3.2 by default and orders tags alphabetically. Set `OpenApiOptions.OpenApiVersion` in the host's own `AddOpenApi(...)` call to keep a committed document stable across frameworks.
+- NuGet reports `System.Security.Cryptography.Pkcs` 9.0.18 (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7) on `net11.0` projects that reference the ASP.NET Core shared framework and `Microsoft.Data.SqlClient`. It is a false positive: the shared framework supplies 11.0.0 and that is what loads. `Directory.Build.props` here carries the two `net11.0`-only `NuGetAuditSuppress` entries with the removal condition; a consumer host that sees the same two warnings can carry the same pair until a Pkcs 11.0.1 exists.
+
 ## [1.285.0] - 2026-11-10
 
 Dependency release from the 2026-11-10 NuGet audit. No public API changes.

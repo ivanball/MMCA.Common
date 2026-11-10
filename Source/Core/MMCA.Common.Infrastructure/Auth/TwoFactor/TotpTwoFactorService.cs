@@ -21,7 +21,7 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// </para>
 /// <para>
 /// <b>Comparison is fixed time.</b> A presented recovery code is compared against every stored hash
-/// with <see cref="CryptographicOperations.FixedTimeEquals"/> and without an early exit, so the reply
+/// with <see cref="CryptographicOperations.FixedTimeEquals(ReadOnlySpan{byte}, ReadOnlySpan{byte})"/> and without an early exit, so the reply
 /// time does not say how many codes were checked before a match.
 /// </para>
 /// <para>

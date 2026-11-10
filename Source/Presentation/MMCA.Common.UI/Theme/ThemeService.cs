@@ -40,10 +40,12 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
         }
 
         var module = await GetModuleAsync();
+#pragma warning disable BL0016 // A failure must reach the caller: MmcaThemeProviders observes it through ThemeInterop.TryAsync and keeps the initial mode
         var stored = await module.InvokeAsync<string?>("get");
         IsDarkMode = stored is not null
             ? string.Equals(stored, "dark", StringComparison.OrdinalIgnoreCase)
             : await module.InvokeAsync<bool>("systemPrefersDark");
+#pragma warning restore BL0016
 
         IsInitialized = true;
         OnChange?.Invoke(this, EventArgs.Empty);
@@ -75,7 +77,9 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
         // Reseeding is the last step: a failure leaves the native value in force, and the caller's
         // best-effort guard reports it.
         var module = await GetModuleAsync();
+#pragma warning disable BL0016 // A failure must reach the caller: MmcaThemeProviders observes it through ThemeInterop.TryAsync, the native value stays in force
         await module.InvokeVoidAsync("set", isDarkMode ? "dark" : "light");
+#pragma warning restore BL0016
     }
 
     /// <summary>Sets the mode, persists it, and notifies subscribers.</summary>
@@ -85,7 +89,9 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
         // Persist first: a failed import or call leaves the flag (and every subscriber) on the
         // mode that is actually stored, instead of flipped with nothing persisted and no OnChange.
         var module = await GetModuleAsync();
+#pragma warning disable BL0016 // A failure must propagate so IsDarkMode is not flipped and the caller (ThemeToggle via ThemeInterop.TryAsync, Login) sees the persist failed
         await module.InvokeVoidAsync("set", isDarkMode ? "dark" : "light");
+#pragma warning restore BL0016
         IsDarkMode = isDarkMode;
         OnChange?.Invoke(this, EventArgs.Empty);
     }

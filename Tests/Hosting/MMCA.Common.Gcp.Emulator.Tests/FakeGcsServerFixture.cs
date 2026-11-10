@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Google.Cloud.Storage.V1;

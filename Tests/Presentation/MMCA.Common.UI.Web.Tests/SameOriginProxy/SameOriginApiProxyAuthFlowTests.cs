@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.TestHost;
@@ -151,7 +150,7 @@ public sealed class SameOriginApiProxyAuthFlowTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         body.Should().NotContain(access);
-        var handoff = JsonDocument.Parse(body).RootElement.GetProperty("handoff").GetString();
+        var handoff = JsonElement.Parse(body).GetProperty("handoff").GetString();
         var protector = host.Services.GetRequiredService<SessionHandoffProtector>();
         protector.UnprotectAccessToken(handoff).Should().Be(access);
         protector.UnprotectTokenPair(handoff).Should().BeNull("an access-token handoff cannot be replayed as a cookie write");

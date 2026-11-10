@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using Xunit;
 
 namespace MMCA.Common.Testing.Fixtures;

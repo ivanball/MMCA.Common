@@ -52,7 +52,7 @@ public static partial class ArchitectureRules
             var index = new CallGraphIndex(modules);
             var handlers = index.Types
                 .Where(type => !type.IsInterface
-                    && !type.Name.StartsWith('<')
+                    && !type.Name.AsSpan().StartsWith('<')
                     && index.Implements(type, QueryHandlerInterfaceFullName))
                 .ToList();
 

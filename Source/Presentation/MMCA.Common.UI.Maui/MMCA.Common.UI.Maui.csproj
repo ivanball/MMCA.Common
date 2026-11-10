@@ -28,6 +28,14 @@
          redundant. The windows requirement wins — silence the redundancy style rules here. -->
     <NoWarn>$(NoWarn);MA0204;RCS1043</NoWarn>
 
+    <!-- CS1591 on the windows TFM only. With the .NET 11 SDK the WinRT source generator emits its own
+         partial declaration of every public type implementing a projected interface (the
+         NativeThemeSync component, through IDisposable), and that generated part has no XML
+         documentation comment. A hand-written documented partial is not an option: it moves CA1063
+         (dispose pattern) onto non-generated code for a component whose Dispose is Razor-authored.
+         The other three TFMs keep CS1591 at error, so a missing comment on real code still fails. -->
+    <NoWarn Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">$(NoWarn);CS1591</NoWarn>
+
     <!-- CsWinRT1030 (windows TFM): custom types crossing the WinRT ABI inside generics
          (Task&lt;PickedMedia&gt; from IMediaPickerService) need CsWinRT-generated marshaling
          code, which is emitted as unsafe. This only permits the GENERATOR's output; no

@@ -169,7 +169,7 @@ public static class GoogleCloudTelemetryExporterExtensions
         }
 
         // A root without a trailing slash would have its last segment replaced by the signal path.
-        return endpoint.AbsolutePath.EndsWith('/')
+        return endpoint.AbsolutePath.AsSpan().EndsWith('/')
             ? endpoint
             : new UriBuilder(endpoint) { Path = $"{endpoint.AbsolutePath}/" }.Uri;
     }

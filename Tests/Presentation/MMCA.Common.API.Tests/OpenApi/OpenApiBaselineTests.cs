@@ -37,6 +37,16 @@ public sealed class OpenApiBaselineTests
     /// <summary>Set to <c>1</c> to rewrite the committed baseline instead of asserting against it.</summary>
     private const string UpdateBaselineVariable = "MMCA_UPDATE_OPENAPI_BASELINE";
 
+    // One baseline per target framework. ASP.NET Core 11 and the Microsoft.OpenApi 3.x writer it
+    // brings emit the same contract with a different spec patch revision and tag ordering, so a single
+    // file cannot describe both; the diff between the two files is the reviewable record of what the
+    // newer framework changed.
+#if NET11_0_OR_GREATER
+    private const string BaselineFileName = "openapi-baseline.v1.net11.json";
+#else
+    private const string BaselineFileName = "openapi-baseline.v1.json";
+#endif
+
     /// <summary>Root properties dropped before comparison because they vary per host, not per contract.</summary>
     private static readonly HashSet<string> VolatileRootProperties =
         new(StringComparer.Ordinal) { "servers" };
@@ -97,7 +107,7 @@ public sealed class OpenApiBaselineTests
     private static string RegenerationGuidance =>
         "If the change is intended, regenerate the baseline deliberately in the same pull request: set "
         + UpdateBaselineVariable
-        + "=1 and re-run this test, then review and commit the updated openapi-baseline.v1.json. "
+        + "=1 and re-run this test, then review and commit the updated " + BaselineFileName + " (run the test for each target framework: each has its own baseline). "
         + "If it is not intended, the framework's OpenAPI generation regressed.";
 
     /// <summary>
@@ -159,7 +169,8 @@ public sealed class OpenApiBaselineTests
     /// </summary>
     /// <param name="callerFilePath">Supplied by the compiler; never passed explicitly.</param>
     private static string GetBaselinePath([CallerFilePath] string callerFilePath = "") =>
-        Path.Combine(Path.GetDirectoryName(callerFilePath)!, "openapi-baseline.v1.json");
+        Path.Combine(Path.GetDirectoryName(callerFilePath)!, BaselineFileName);
+
 }
 
 /// <summary>

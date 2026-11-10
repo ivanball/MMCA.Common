@@ -137,7 +137,7 @@ public static partial class ArchitectureRules
     private static string SourceMemberName(TypeDefinition type, MethodDefinition method)
     {
         var current = type;
-        while (current is not null && current.Name.StartsWith('<'))
+        while (current is not null && current.Name.AsSpan().StartsWith('<'))
         {
             if (BracketedName(current.Name) is { Length: > 0 } fromType)
             {
@@ -169,7 +169,7 @@ public static partial class ArchitectureRules
             return null;
         }
 
-        var close = name.IndexOf('>', start);
-        return close > start ? name[start..close] : null;
+        var length = name.AsSpan(start).IndexOf('>');
+        return length > 0 ? name[start..(start + length)] : null;
     }
 }

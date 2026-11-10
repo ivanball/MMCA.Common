@@ -183,7 +183,9 @@ public sealed partial class ConfirmEmail : IDisposable
         }
 
         _isBusy = true;
+#pragma warning disable BL0012 // Shows the busy state before the await below, and ConfirmAsync also runs from OnAfterRenderAsync, which does not re-render
         StateHasChanged();
+#pragma warning restore BL0012
 
         try
         {
@@ -209,7 +211,9 @@ public sealed partial class ConfirmEmail : IDisposable
             _isBusy = false;
             if (!_disposed)
             {
+#pragma warning disable BL0012 // ConfirmAsync also runs from OnAfterRenderAsync, which does not re-render once it completes
                 StateHasChanged();
+#pragma warning restore BL0012
             }
         }
     }

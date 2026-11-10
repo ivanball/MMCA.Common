@@ -18,9 +18,16 @@
             return;
         }
 
-        await using var module = await JS.InvokeAsync<IJSObjectReference>(
-            "import", "./_content/MMCA.Common.UI/culture.js");
-        await module.InvokeVoidAsync(
-            "setDocumentLanguage", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/MMCA.Common.UI/culture.js");
+            await module.InvokeVoidAsync(
+                "setDocumentLanguage", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone: there is no document left to stamp.
+        }
     }
 }

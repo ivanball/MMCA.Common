@@ -262,7 +262,7 @@ public static class DocumentContentSniffer
             return null;
         }
 
-        int dot = fileName.LastIndexOf('.');
+        int dot = fileName.AsSpan().LastIndexOf('.');
         return dot <= 0 || dot == fileName.Length - 1 ? null : fileName[dot..];
     }
 }

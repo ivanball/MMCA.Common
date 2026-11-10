@@ -904,3 +904,10 @@ dotnet_diagnostic.RS0053.severity = none
 dotnet_diagnostic.RS0054.severity = none
 dotnet_diagnostic.RS0055.severity = none
 dotnet_diagnostic.RS0056.severity = none
+
+# BL0016 (JS interop call not guarded with try/catch) ships with the ASP.NET Core 11 Blazor
+# analyzers, so it fires on the net11.0 build only. In tests it flags Moq Setup/Verify lambdas over
+# IJSRuntime and hand-written IJSRuntime fakes: expressions that describe an interop call, never
+# one made against a live circuit. Product code under Source/ keeps the rule at its default.
+[Tests/**.cs]
+dotnet_diagnostic.BL0016.severity = none

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.UI.Services.Auth;

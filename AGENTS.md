@@ -6,7 +6,7 @@ This file holds the rules you act on. How each mechanism works lives in the ADR 
 
 ## Project Overview
 
-MMCA.Common is a .NET 10 NuGet package framework for modular monolith applications (DDD, Clean Architecture, CQRS). It is not a runnable app. Packages publish to both nuget.org and GitHub Packages (ADR-053) in lockstep; authoritative package list and count: `FACTS.md`. `MMCA.Common.UI.Maui` is the one MAUI-TFM package, outside `MMCA.Common.slnx`, built and packed by dedicated windows jobs (ADR-042).
+MMCA.Common is a NuGet package framework for modular monolith applications (DDD, Clean Architecture, CQRS), built for .NET 10 AND .NET 11 from one source tree. It is not a runnable app. **`build/Frameworks.props` names the target frameworks and states the dual-TFM rules; read it before writing version-specific code** (only `#if NET11_0_OR_GREATER` with the existing code as `#else`, identical public API on both, per-framework package versions as properties in `Directory.Packages.props`). The build needs the .NET 11 SDK (`global.json`), which compiles both. Packages publish to both nuget.org and GitHub Packages (ADR-053) in lockstep; authoritative package list and count: `FACTS.md`. `MMCA.Common.UI.Maui` is the one MAUI-TFM package, outside `MMCA.Common.slnx`, built and packed by dedicated windows jobs (ADR-042).
 
 ## Build & Test
 

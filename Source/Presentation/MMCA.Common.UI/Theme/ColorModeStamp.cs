@@ -27,11 +27,16 @@ internal static class ColorModeStamp
         }
 
         // Best-effort, like the interactivity marker: an app's styling hook must never break theme init.
-        await ThemeInterop.TryAsync(async () =>
+        // The same failures ThemeInterop.TryAsync tolerates, caught inline so the guard is visible here.
+        try
         {
             await using var module = await js.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/MMCA.Common.UI/theme.js");
             await module.InvokeVoidAsync("stampColorMode", isDarkMode ? "dark" : "light");
-        }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException)
+        {
+            // Best-effort: the stamp is skipped and the theme stays as it is.
+        }
     }
 }

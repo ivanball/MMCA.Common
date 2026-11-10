@@ -22,7 +22,7 @@ internal sealed class LeadingSlashPathPrefixesAttribute : ValidationAttribute
             return ValidationResult.Success;
         }
 
-        string[] offenders = [.. prefixes.Where(prefix => !string.IsNullOrWhiteSpace(prefix) && !prefix.StartsWith('/'))];
+        string[] offenders = [.. prefixes.Where(prefix => !string.IsNullOrWhiteSpace(prefix) && !prefix.AsSpan().StartsWith('/'))];
 
         return offenders.Length == 0
             ? ValidationResult.Success

@@ -25,7 +25,7 @@ internal sealed class OidcProviderRegistry(IReadOnlyList<OidcProviderSettings> p
     /// <returns>The provider, or <see langword="null"/> for a malformed address or an unclaimed domain.</returns>
     public OidcProviderSettings? FindByEmail(string? email)
     {
-        var at = email?.LastIndexOf('@') ?? -1;
+        var at = email is null ? -1 : email.AsSpan().LastIndexOf('@');
         if (at <= 0 || at == email!.Length - 1)
         {
             return null;

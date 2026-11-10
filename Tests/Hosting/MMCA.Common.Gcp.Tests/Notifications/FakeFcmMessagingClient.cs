@@ -27,7 +27,7 @@ internal sealed class FakeFcmMessagingClient : IFcmMessagingClient
     /// <param name="message">The message.</param>
     /// <returns>The JSON object.</returns>
     public static JsonElement Wire(Message message) =>
-        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(message, WireSettings)).RootElement.Clone();
+        JsonElement.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(message, WireSettings));
 
     /// <summary>The token a message targets, read from its wire form.</summary>
     /// <param name="message">The message.</param>

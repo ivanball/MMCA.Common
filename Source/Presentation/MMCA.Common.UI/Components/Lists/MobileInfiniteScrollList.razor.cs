@@ -289,11 +289,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             ? EventCallback.Factory.Create(this, () => OnCardClick.InvokeAsync(item))
             : default;
 
-    private async Task RetryAsync()
-    {
-        await LoadNextPageAsync(isInitial: false);
-        StateHasChanged();
-    }
+    private Task RetryAsync() => LoadNextPageAsync(isInitial: false);
 
     /// <summary>
     /// Clears all loaded items and reloads from page 1.

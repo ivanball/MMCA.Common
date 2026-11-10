@@ -42,9 +42,11 @@ public static class MmcaCultureBootstrap
     {
         ArgumentNullException.ThrowIfNull(jsRuntime);
 
+#pragma warning disable BL0016 // Runs in the WASM Program.cs before the host starts (no circuit), and a failure must reach that caller rather than silently boot in the default culture
         await using var module = await jsRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./_content/MMCA.Common.UI/culture.js");
         var culture = await module.InvokeAsync<string?>("getCulture");
+#pragma warning restore BL0016
 
         var accepted = SupportedCultures.IsSupported(culture)
             || allowPseudoLocale && SupportedCultures.IsPseudoLocale(culture);

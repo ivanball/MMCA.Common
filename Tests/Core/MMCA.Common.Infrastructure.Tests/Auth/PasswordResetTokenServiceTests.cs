@@ -61,7 +61,7 @@ public sealed class PasswordResetTokenServiceTests
 
         // Give the second call the chance to reach the read too. Serialized, it never does (it waits
         // on the lock), so the short timeout is the expected path for the fixed code.
-        await Task.WhenAny(cache.SecondGatedReadPending.Task, Task.Delay(TimeSpan.FromMilliseconds(500)));
+        await cache.SecondGatedReadPending.Task.WaitAsync(TimeSpan.FromMilliseconds(500)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         cache.ReleaseTokenReads();
         Result<UserIdentifierType>[] results = await Task.WhenAll(first, second);
 

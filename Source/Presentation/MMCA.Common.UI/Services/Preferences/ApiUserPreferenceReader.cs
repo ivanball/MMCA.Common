@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Preferences;

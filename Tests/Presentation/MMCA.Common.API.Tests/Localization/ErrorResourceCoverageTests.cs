@@ -280,9 +280,9 @@ public sealed partial class ErrorResourceCoverageTests
         foreach (var (name, values) in raw.Where(entry => entry.Value.Count == 1))
         {
             var expression = values.Single();
-            for (var hops = 0; hops < 8 && !expression.StartsWith('"'); hops++)
+            for (var hops = 0; hops < 8 && !expression.AsSpan().StartsWith('"'); hops++)
             {
-                var alias = expression[(expression.LastIndexOf('.') + 1)..];
+                var alias = expression[(expression.AsSpan().LastIndexOf('.') + 1)..];
                 if (!raw.TryGetValue(alias, out var aliasValues) || aliasValues.Count != 1)
                 {
                     break;
@@ -313,7 +313,7 @@ public sealed partial class ErrorResourceCoverageTests
             return null;
         }
 
-        return constants.TryGetValue(argument[(argument.LastIndexOf('.') + 1)..], out var value) ? value : null;
+        return constants.TryGetValue(argument[(argument.AsSpan().LastIndexOf('.') + 1)..], out var value) ? value : null;
     }
 
     /// <summary>
@@ -420,8 +420,8 @@ public sealed partial class ErrorResourceCoverageTests
             }
             else if (c == '/' && next == '/')
             {
-                var end = text.IndexOf('\n', i);
-                i = end < 0 ? text.Length : end;
+                var end = text.AsSpan(i).IndexOf('\n');
+                i = end < 0 ? text.Length : i + end;
             }
             else if (c == '/' && next == '*')
             {

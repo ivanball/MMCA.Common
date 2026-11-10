@@ -141,8 +141,8 @@ internal static class UserAgentSummary
             return (null, null);
         }
 
-        var commentEnd = userAgent.IndexOf(')', commentStart);
-        var comment = commentEnd < 0 ? userAgent[(commentStart + 1)..] : userAgent[(commentStart + 1)..commentEnd];
+        var commentLength = userAgent.AsSpan(commentStart).IndexOf(')');
+        var comment = commentLength < 0 ? userAgent[(commentStart + 1)..] : userAgent[(commentStart + 1)..(commentStart + commentLength)];
         var parts = comment.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (!parts.Contains(AppUserAgent.Marker, StringComparer.Ordinal))
         {

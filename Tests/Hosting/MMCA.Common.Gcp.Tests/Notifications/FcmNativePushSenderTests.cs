@@ -190,6 +190,6 @@ public sealed class FcmNativePushSenderTests
 
     [Fact]
     public void WireJson_IsTheHttpV1MessageObject() =>
-        JsonDocument.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForToken("token-1", "t", "b", null)))
-            .RootElement.GetProperty("token").GetString().Should().Be("token-1");
+        JsonElement.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(FcmPushMessage.ForToken("token-1", "t", "b", null)))
+            .GetProperty("token").GetString().Should().Be("token-1");
 }

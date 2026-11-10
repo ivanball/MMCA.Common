@@ -269,7 +269,7 @@ public static partial class ArchitectureRules
     private static string Describe(MethodDefinition method)
     {
         var declaringType = method.DeclaringType;
-        while (declaringType.DeclaringType is not null && declaringType.Name.StartsWith('<'))
+        while (declaringType.DeclaringType is not null && declaringType.Name.AsSpan().StartsWith('<'))
         {
             declaringType = declaringType.DeclaringType;
         }

@@ -97,9 +97,11 @@
         // Best-effort only: the marker is test infrastructure, so nothing here may break theme init.
         await ThemeInterop.TryAsync(async () =>
         {
+#pragma warning disable BL0016 // Already guarded: ThemeInterop.TryAsync catches the JS, disconnect and unavailable-interop failures, which the analyzer cannot see through the lambda
             await using var module = await JS.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/MMCA.Common.UI/theme.js");
             await module.InvokeVoidAsync("markInteractive");
+#pragma warning restore BL0016
         });
     }
 

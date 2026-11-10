@@ -213,7 +213,7 @@ public sealed class NavMenuOrderingTests : BunitTestBase
     private static string IconPath(string icon)
     {
         var start = icon.LastIndexOf("d=\"", StringComparison.Ordinal) + 3;
-        return icon[start..icon.IndexOf('"', start)];
+        return icon[start..(start + icon.AsSpan(start).IndexOf('"'))];
     }
 
     private IRenderedComponent<NavMenu> RenderSignedIn()
