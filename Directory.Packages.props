@@ -14,8 +14,8 @@
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
     <!-- External OAuth providers for the config-gated AddExternalAuthProviders / OAuthControllerBase (inert without OAuth:*:ClientId). -->
-    <PackageVersion Include="AspNet.Security.OAuth.Apple" Version="10.0.0" />
-    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.Apple" Version="10.1.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.1.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.14" />
     <!-- Generic OIDC providers (OAuth:Oidc:<Name>), registered by the same AddExternalAuthProviders call. -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
@@ -37,7 +37,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.7" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.19.0" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -117,13 +117,13 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="13.4.0" />
+    <PackageVersion Include="Anthropic" Version="13.7.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
          the vendor SDK is pinned here like Anthropic is, not floated by the adapter's own floor. -->
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
-    <PackageVersion Include="OpenAI" Version="2.14.0" />
+    <PackageVersion Include="OpenAI" Version="2.15.0" />
     <!-- MCP (MMCA.Common.Mcp): the official Model Context Protocol C# SDK, server half over ASP.NET
          Core. Referenced by MMCA.Common.Mcp alone, so no core package carries it (ADR-134). Pinned
          EXACTLY: the SDK moved 1.x to 2.x within a year and its filter and transport surface changed
@@ -161,11 +161,11 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.8" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.11" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
-    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.0.100.22" />
+    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.0.100.25" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
          SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
          AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
@@ -173,16 +173,16 @@
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.RDS" Version="4.0.107.2" />
+    <PackageVersion Include="AWSSDK.RDS" Version="4.0.108.2" />
     <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
          per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.22" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.25" />
     <!-- The native push installation registry (MMCA.Common.Aws.AddAmazonSnsPush): one DynamoDB item
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.109.3" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.110.2" />
     <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
@@ -250,13 +250,13 @@
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
     <PackageVersion Include="MudBlazor" Version="9.12.0" />
-    <PackageVersion Include="Polly" Version="8.9.0" />
+    <PackageVersion Include="Polly" Version="8.9.1" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
          rather than the Polly meta-package: Core carries the v8 resilience-pipeline API on its own,
          while Polly adds the v7 Policy compatibility shim that Infrastructure has no use for. Kept
          on the same version as the Polly pin above so the two never resolve to different Core
          assemblies in one graph. -->
-    <PackageVersion Include="Polly.Core" Version="8.9.0" />
+    <PackageVersion Include="Polly.Core" Version="8.9.1" />
     <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
          native binary, no network call, no image service, so it renders identically on every head
          including Blazor WebAssembly. -->
@@ -296,7 +296,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.320" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.322" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -308,7 +308,7 @@
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
-    <PackageVersion Include="bunit" Version="2.13.3" />
+    <PackageVersion Include="bunit" Version="2.14.0" />
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
          2.13.3 now floors it at 1.8.6. CPM does not pin transitives, so the two bUnit-referencing projects
@@ -316,7 +316,7 @@
          1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
          does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
          only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
-    <PackageVersion Include="AngleSharp" Version="1.9.1" />
+    <PackageVersion Include="AngleSharp" Version="1.10.1" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -377,8 +377,8 @@
          than merely skipping one AddXInstrumentation call that another component re-adds. Version
          tracks the OpenTelemetry family pinned below. -->
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
-    <PackageVersion Include="xunit.v3" Version="4.0.2" />
-    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.3" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
@@ -424,8 +424,8 @@
     <PackageVersion Include="OpenTelemetry.Api" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
