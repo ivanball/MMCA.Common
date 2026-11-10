@@ -4,16 +4,15 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.Forms;
-using MMCA.Common.UI.Components.Lists;
 using MMCA.Common.UI.Pages.Common;
 using Moq;
 
 namespace MMCA.Common.UI.Tests.Pages.Common;
 
 /// <summary>
-/// bUnit tests for <see cref="ListPageActions"/>: the reload dispatch that has to hit whichever
-/// layout is actually rendered, and the confirm-delete-reload flow every list page repeats. The
-/// failure branches are the load-bearing ones: a rejected confirmation must not delete, a failed
+/// bUnit tests for <see cref="ListPageActions"/>: the confirm-delete-reload flow every list page
+/// repeats (the reload dispatch moved to the base, see <c>DataGridListPageBaseFilterStateTests</c>).
+/// The failure branches are the load-bearing ones: a rejected confirmation must not delete, a failed
 /// <see cref="Result"/> must not toast success or reload, and a cancellation (component disposal or
 /// an InteractiveAuto render-mode transition) must stay silent.
 /// </summary>
@@ -23,40 +22,6 @@ public sealed class ListPageActionsTests : BunitTestBase
     // an argument, so the flow's own toasts are asserted here while the components rendered by
     // RenderMudProviders keep the base class's real Mud-backed facade.
     private readonly Mock<IToastService> _toast = new();
-
-    [Fact]
-    public async Task ReloadActiveLayout_OnMobile_ResetsTheMobileList()
-    {
-        var fetches = 0;
-        var list = RenderMobileList(() => fetches++);
-        var before = fetches;
-
-        await list.InvokeAsync(() =>
-            ListPageActions.ReloadActiveLayoutAsync<string>(true, list.Instance, null));
-
-        fetches.Should().BeGreaterThan(before);
-    }
-
-    [Fact]
-    public async Task ReloadActiveLayout_OnDesktop_LeavesTheMobileListAlone()
-    {
-        var fetches = 0;
-        var list = RenderMobileList(() => fetches++);
-        var before = fetches;
-
-        await list.InvokeAsync(() =>
-            ListPageActions.ReloadActiveLayoutAsync<string>(false, list.Instance, null));
-
-        fetches.Should().Be(before);
-    }
-
-    [Fact]
-    public async Task ReloadActiveLayout_WithNeitherLayoutRendered_IsANoOp()
-    {
-        var act = async () => await ListPageActions.ReloadActiveLayoutAsync<string>(true, null, null);
-
-        await act.Should().NotThrowAsync();
-    }
 
     [Fact]
     public async Task Delete_WhenConfirmed_TogglesSuccessAndReloads()
@@ -195,14 +160,4 @@ public sealed class ListPageActionsTests : BunitTestBase
         await act.Should().NotThrowAsync();
         _toast.VerifyNoOtherCalls();
     }
-
-    private IRenderedComponent<MobileInfiniteScrollList<string>> RenderMobileList(Action onFetch) =>
-        RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
-            .Add(c => c.CardTemplate, item => item)
-            .Add(c => c.FetchPageResult, (_, _, _) =>
-            {
-                onFetch();
-                return Task.FromResult(
-                    Result.Success<(IReadOnlyList<string> Items, int TotalItems)>((["Alpha"], 1)));
-            }));
 }

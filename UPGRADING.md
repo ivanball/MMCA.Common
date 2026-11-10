@@ -32,6 +32,12 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.284.0] - 2026-11-09
+
+**Breaking: one static method removed.** No namespace, type or configuration key moved.
+
+- `ListPageActions.ReloadActiveLayoutAsync(isMobile, mobileList, dataGrid)` is removed (MMCA.Common.UI). In a page derived from `DataGridListPageBase<TDto>`, replace `ListPageActions.ReloadActiveLayoutAsync(IsMobile, _infiniteList, _dataGrid)` with `ReloadActiveLayoutAsync(_infiniteList)`. The base reloads `GridRef` on a desktop, so the page must override `GridRef` to return the grid it passed before. On a phone the call now saves the filters before the card list reloads. A component that is not a list page and holds the card list for one (a child view) exposes the list to its page, as it already exposes the grid, and the page calls the base method with it.
+
 ## [1.283.0] - 2026-11-09
 
 **Breaking: one new interface member and one new constructor argument.** No namespace, type or

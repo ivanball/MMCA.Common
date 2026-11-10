@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.284.0] - 2026-11-09
+
+A filter changed on a phone list now survives leaving the page and coming back.
+
+**Breaking:** `ListPageActions.ReloadActiveLayoutAsync(isMobile, mobileList, dataGrid)` is removed (MMCA.Common.UI). A page derived from `DataGridListPageBase<TDto>` calls the new protected `ReloadActiveLayoutAsync(mobileList)` instead, which reloads `GridRef` on a desktop. See [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **`DataGridListPageBase<TDto>.ReloadActiveLayoutAsync(MobileInfiniteScrollList<TDto>?)`** (MMCA.Common.UI). Reloads whichever layout is rendered. On a phone it calls `SaveFilterState()` and then resets the card list; otherwise it reloads `GridRef`, whose fetch saves on its own.
+
+### Fixed
+
+- **Phone list filters are saved** (MMCA.Common.UI). A `MobileInfiniteScrollList` fetches through the page's own delegate, which saved nothing, so a search or filter changed on a phone was lost on leaving the page, and an older saved value came back on return (ADC Run 16, D6). `UserAdminList` search is saved the same way.
+
 ## [1.283.0] - 2026-11-09
 
 Phone fixes from ADC manual test Run 16: photo uploads are sized on the device, the page bottom clears the Android navigation bar, a denied camera no longer opens a black scanner, and external sign-in logs how each attempt ended.

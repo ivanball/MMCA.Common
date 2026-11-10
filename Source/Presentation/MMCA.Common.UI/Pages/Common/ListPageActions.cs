@@ -1,43 +1,18 @@
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.Forms;
-using MMCA.Common.UI.Components.Lists;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Pages.Common;
 
 /// <summary>
-/// Shared actions for list pages built on <see cref="DataGridListPageBase{TDto}"/>: the
-/// mobile/desktop reload dispatch and the confirm-delete-reload flow that every admin list
-/// page repeats. Kept as plain statics rather than members on the base so a page that composes
-/// its own layout (or holds several grids) can reuse them without inheriting anything.
+/// The confirm-delete-reload flow every admin list page repeats. A plain static rather than a
+/// member on <see cref="DataGridListPageBase{TDto}"/>, so a page that composes its own layout can
+/// reuse it without inheriting anything. The reload after a filter change is not here: it lives
+/// on the base (<c>ReloadActiveLayoutAsync</c>), because on a phone it must save the page's
+/// filters, which only the page can read.
 /// </summary>
 public static class ListPageActions
 {
-    /// <summary>
-    /// Reloads whichever layout is active: resets the mobile infinite-scroll list on mobile,
-    /// otherwise reloads the desktop data grid's server data. Either ref may be null while the
-    /// other layout is rendered.
-    /// </summary>
-    /// <typeparam name="TDto">The list item DTO type.</typeparam>
-    /// <param name="isMobile">Whether the mobile layout is active.</param>
-    /// <param name="mobileList">The mobile infinite-scroll list ref, if rendered.</param>
-    /// <param name="dataGrid">The desktop data grid ref, if rendered.</param>
-    public static async Task ReloadActiveLayoutAsync<TDto>(
-        bool isMobile,
-        MobileInfiniteScrollList<TDto>? mobileList,
-        MudDataGrid<TDto>? dataGrid)
-    {
-        if (isMobile && mobileList is not null)
-        {
-            await mobileList.ResetAsync();
-        }
-        else if (dataGrid is not null)
-        {
-            await dataGrid.ReloadServerData();
-        }
-    }
-
     /// <summary>
     /// Runs the canonical destructive-action flow: confirm via <see cref="DeleteConfirmation"/>,
     /// delete, toast success, and reload the active layout; a failed <see cref="Result"/> toasts the
