@@ -88,7 +88,7 @@ public sealed class ProbeTelemetryFilterProcessor : BaseProcessor<Activity>
     /// <returns>The trailing route segment, or the whole name when there is no method prefix.</returns>
     private static string RouteOfDisplayName(string displayName)
     {
-        var lastSpace = displayName.LastIndexOf(' ');
+        var lastSpace = displayName.AsSpan().LastIndexOf(' ');
         return lastSpace < 0 ? displayName : displayName[(lastSpace + 1)..];
     }
 }

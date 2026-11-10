@@ -2,7 +2,6 @@
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Net.Http.Json;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Bunit;

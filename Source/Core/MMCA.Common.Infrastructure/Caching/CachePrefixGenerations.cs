@@ -247,9 +247,12 @@ internal sealed partial class CachePrefixGenerations
     {
         List<string> boundaries = [string.Empty];
 
-        for (var end = key.IndexOf(':', StringComparison.Ordinal); end >= 0; end = key.IndexOf(':', end + 1))
+        for (var end = 0; end < key.Length; end++)
         {
-            boundaries.Add(key[..(end + 1)]);
+            if (key[end] == ':')
+            {
+                boundaries.Add(key[..(end + 1)]);
+            }
         }
 
         return boundaries;

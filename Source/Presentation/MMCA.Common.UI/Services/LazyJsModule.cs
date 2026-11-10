@@ -75,9 +75,11 @@ internal sealed class LazyJsModule(IJSRuntime js, string modulePath) : IAsyncDis
 
     private async Task<IJSObjectReference> ImportAsync()
     {
+#pragma warning disable BL0016 // A failed import must fault the shared task so GetOrImportAsync evicts it and every awaiting caller (ThemeService and the other module owners) observes the failure
         var module = await js
             .InvokeAsync<IJSObjectReference>("import", CancellationToken.None, modulePath)
             .ConfigureAwait(false);
+#pragma warning restore BL0016
 
         _module = module;
         return module;

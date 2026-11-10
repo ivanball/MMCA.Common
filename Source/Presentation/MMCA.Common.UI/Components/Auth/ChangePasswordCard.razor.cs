@@ -220,7 +220,7 @@ public partial class ChangePasswordCard
                 return false;
             }
 
-            var lastSegment = target[(target.LastIndexOf('.') + 1)..];
+            var lastSegment = target[(target.AsSpan().LastIndexOf('.') + 1)..];
             return string.Equals(lastSegment, field, StringComparison.OrdinalIgnoreCase);
         }
     }

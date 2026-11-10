@@ -5,7 +5,7 @@
 [![CI](https://github.com/ivanball/MMCA.Common/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanball/MMCA.Common/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/ivanball/MMCA.Common/blob/main/LICENSE)
 
-A .NET 10 framework for building a modular monolith you can extract services out of later, without a rewrite.
+A .NET 10 and .NET 11 framework for building a modular monolith you can extract services out of later, without a rewrite.
 
 [**Cleavestack**](https://cleavestack.com/) is the commercial home of MMCA: build as one, ship as many.
 
@@ -30,7 +30,7 @@ The framework is not a demo. It runs two production applications (a conference p
 dotnet add package MMCA.Common.API
 ```
 
-Each package transitively includes the layers below it (`API -> Infrastructure -> Application -> Domain -> Shared`), so one reference is usually enough to start. Requires **.NET 10** with `LangVersion: preview` (the DI registration uses C# extension types).
+Each package transitively includes the layers below it (`API -> Infrastructure -> Application -> Domain -> Shared`), so one reference is usually enough to start. Requires **.NET 10 or .NET 11** (every package carries both) with `LangVersion: preview` (the DI registration uses C# extension types).
 
 ## Try it in 15 minutes
 

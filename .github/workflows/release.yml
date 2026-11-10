@@ -47,7 +47,11 @@ jobs:
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
-          dotnet-version: '10.0.x'
+          # SDK 11 builds both target frameworks (global.json pins it); the 10.0 line is installed
+          # as well because the net10.0 test assemblies run on the .NET 10 runtime.
+          dotnet-version: |
+            10.0.x
+            11.0.x
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
@@ -225,7 +229,11 @@ jobs:
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
-          dotnet-version: '10.0.x'
+          # SDK 11 builds both target frameworks (global.json pins it); the 10.0 line is installed
+          # as well because the net10.0 test assemblies run on the .NET 10 runtime.
+          dotnet-version: |
+            10.0.x
+            11.0.x
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts, build/perfgate and the Benchmarks project sit outside
           # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.

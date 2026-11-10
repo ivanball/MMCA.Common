@@ -387,7 +387,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (_pendingScrollRestore is { } pending && !IsLoading && _scrollModule is not null)
         {
             _pendingScrollRestore = null;
-            await _scrollModule.InvokeVoidAsync("setScrollPosition", pending, ScrollContainerSelector);
+            try
+            {
+                await _scrollModule.InvokeVoidAsync("setScrollPosition", pending, ScrollContainerSelector);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit gone: there is no page left to scroll.
+            }
         }
 
         await base.OnAfterRenderAsync(firstRender);
@@ -465,9 +472,19 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return false;
         }
 
-        _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/MMCA.Common.UI/list-page-scroll.js");
+        try
+        {
+            _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/MMCA.Common.UI/list-page-scroll.js");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit torn down mid-setup: release what was created, as for a disposal.
+            await ReleaseLateFirstRenderSetupAsync();
+            return false;
+        }
+
         if (_disposed)
         {
             await ReleaseLateFirstRenderSetupAsync();
@@ -475,12 +492,22 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         _dotNetRef = DotNetObjectReference.Create(this);
-        await _scrollModule.InvokeVoidAsync(
-            "enableScrollTracking",
-            _dotNetRef,
-            _scrollTrackerId,
-            150,
-            ScrollContainerSelector);
+        try
+        {
+            await _scrollModule.InvokeVoidAsync(
+                "enableScrollTracking",
+                _dotNetRef,
+                _scrollTrackerId,
+                150,
+                ScrollContainerSelector);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit torn down mid-setup: release what was created, as for a disposal.
+            await ReleaseLateFirstRenderSetupAsync();
+            return false;
+        }
+
         if (_disposed)
         {
             await ReleaseLateFirstRenderSetupAsync();

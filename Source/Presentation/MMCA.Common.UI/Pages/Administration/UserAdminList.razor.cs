@@ -179,7 +179,9 @@ public partial class UserAdminList<TUser>
     {
         await base.OnInitializedAsync();
 
+#pragma warning disable BL0013 // Read once per load to hide actions on the operator's own account; subscribing needs a dispose hook the non-virtual base DisposeAsync does not offer
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+#pragma warning restore BL0013
         _currentUserId = authState.User.GetUserId();
     }
 

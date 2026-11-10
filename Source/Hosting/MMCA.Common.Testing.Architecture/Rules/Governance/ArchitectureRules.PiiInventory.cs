@@ -108,7 +108,7 @@ public static partial class ArchitectureRules
         foreach (var rawLine in markdown.Split('\n'))
         {
             var line = rawLine.Trim();
-            if (!line.StartsWith('|'))
+            if (!line.AsSpan().StartsWith('|'))
             {
                 header = null;
                 continue;

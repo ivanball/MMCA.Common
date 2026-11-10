@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;

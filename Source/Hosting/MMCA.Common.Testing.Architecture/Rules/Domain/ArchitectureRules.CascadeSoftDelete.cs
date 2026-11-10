@@ -241,7 +241,7 @@ public static partial class ArchitectureRules
     /// </summary>
     private static string DeclaredMemberName(string fieldName)
     {
-        if (!fieldName.StartsWith('<'))
+        if (!fieldName.AsSpan().StartsWith('<'))
         {
             return fieldName;
         }

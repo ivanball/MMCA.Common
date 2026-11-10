@@ -127,11 +127,11 @@ public sealed class QueryFilterModelBinder : IModelBinder
     private static string? GetFilterPropertyName(string key)
     {
         var startIndex = "filters[".Length;
-        var endIndex = key.IndexOf(']', startIndex);
-        if (endIndex < 0)
+        var length = key.AsSpan(startIndex).IndexOf(']');
+        if (length < 0)
             return null;
 
-        return key[startIndex..endIndex];
+        return key[startIndex..(startIndex + length)];
     }
 
     /// <summary>

@@ -37,7 +37,11 @@ internal static class OpenApiProbeHost
 
         builder.Services.AddControllers();
         builder.Services.AddCommonApiVersioning();
-        builder.Services.AddOpenApi();
+
+        // The document version is stated rather than left to the framework default, which is 3.1 on
+        // net10.0 and 3.2 on net11.0: one committed baseline then describes both target frameworks,
+        // and a difference between them in what the framework layer emits still fails the gate.
+        builder.Services.AddOpenApi(static options => options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_1);
         builder.Services.AddCommonOpenApi();
 
         // Restricting discovery has to happen AFTER the framework registrations: the API-versioning

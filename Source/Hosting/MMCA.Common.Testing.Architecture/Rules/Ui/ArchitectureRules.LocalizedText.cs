@@ -188,6 +188,6 @@ public static partial class ArchitectureRules
     private static bool EndsStartTag(string line)
     {
         var trimmed = line.TrimEnd();
-        return trimmed.EndsWith('>') && !trimmed.EndsWith("=>", StringComparison.Ordinal);
+        return trimmed.AsSpan().EndsWith('>') && !trimmed.EndsWith("=>", StringComparison.Ordinal);
     }
 }

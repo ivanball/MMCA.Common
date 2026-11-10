@@ -176,7 +176,8 @@ function Invoke-ScaffoldStage {
     Write-TextFile -Path (Join-Path $ConsumerDir 'Consumer.csproj') -Lines @(
         '<Project Sdk="Microsoft.NET.Sdk">'
         '  <PropertyGroup>'
-        '    <TargetFramework>net10.0</TargetFramework>'
+        '    <!-- Both target frameworks: every package must bind from its lib/net10.0 AND lib/net11.0. -->'
+        '    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>'
         '    <Nullable>enable</Nullable>'
         '    <ImplicitUsings>enable</ImplicitUsings>'
         '  </PropertyGroup>'
@@ -212,7 +213,7 @@ function New-Probe {
 
     $lines = @(
         '<Project Sdk="Microsoft.NET.Sdk">'
-        '  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>'
+        '  <PropertyGroup><TargetFrameworks>net10.0;net11.0</TargetFrameworks></PropertyGroup>'
         '  <ItemGroup>')
     $lines += $Items | ForEach-Object { "    $_" }
     $lines += @(

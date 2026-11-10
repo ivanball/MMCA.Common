@@ -217,10 +217,17 @@ public partial class ApiFileDownloadButton
     private async Task SaveInBrowserAsync(string safeName, byte[] bytes)
     {
         using var content = new DotNetStreamReference(new MemoryStream(bytes));
-        var module = await JS.InvokeAsync<IJSObjectReference>("import", SaveFileModulePath);
-        await using (module.ConfigureAwait(false))
+        try
         {
-            await module.InvokeVoidAsync("saveFile", safeName, ContentType, content);
+            var module = await JS.InvokeAsync<IJSObjectReference>("import", SaveFileModulePath);
+            await using (module.ConfigureAwait(false))
+            {
+                await module.InvokeVoidAsync("saveFile", safeName, ContentType, content);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone: there is no browser left to save into or to show the failure toast in.
         }
     }
 

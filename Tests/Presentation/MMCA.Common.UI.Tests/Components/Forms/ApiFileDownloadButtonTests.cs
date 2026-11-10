@@ -24,6 +24,11 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 {
     private static readonly byte[] PayloadBytes = "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"u8.ToArray();
 
+    // The native-head tests stage real files in the shared temp directory. The net10.0 and net11.0
+    // builds of this assembly run as two processes at the same time, so every staged name carries
+    // the runtime it ran on; without it the two runs overwrite and delete each other's files.
+    private static readonly string Tfm = "net" + Environment.Version.Major.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     private int _requestsSeen;
 
     public ApiFileDownloadButtonTests()
@@ -145,13 +150,13 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/43/ics")
-            .Add(c => c.FileName, "session-43.ics")
+            .Add(c => c.FileName, $"session-43-{Tfm}.ics")
             .Add(c => c.ShareTitle, "Intro to Blazor")
             .Add(c => c.UnavailableMessage, "Calendar export is not available on this device"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
         VerifyToast(toast, "Calendar export is not available on this device");
-        File.Delete(Path.Combine(Path.GetTempPath(), "session-43.ics"));
+        File.Delete(Path.Combine(Path.GetTempPath(), $"session-43-{Tfm}.ics"));
     }
 
     [Fact]
@@ -199,7 +204,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/42/ics")
-            .Add(c => c.FileName, "staging-failure.ics")
+            .Add(c => c.FileName, $"staging-failure-{Tfm}.ics")
             .Add(c => c.ShareTitle, "Intro to Blazor"));
         try
         {
@@ -209,7 +214,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         }
         finally
         {
-            File.Delete(Path.Combine(Path.GetTempPath(), "staging-failure.ics"));
+            File.Delete(Path.Combine(Path.GetTempPath(), $"staging-failure-{Tfm}.ics"));
         }
     }
 
@@ -219,20 +224,20 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     [Fact]
     public async Task OnNativeHead_StripsDirectoryTraversalFromTheFileName()
     {
-        var sharedPath = await ShareWithFileNameAsync("../../evil.ics");
+        var sharedPath = await ShareWithFileNameAsync($"../../evil-{Tfm}.ics");
 
-        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), "evil.ics"));
+        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), $"evil-{Tfm}.ics"));
         File.Delete(sharedPath!);
     }
 
     [Fact]
     public async Task OnNativeHead_IgnoresARootedFileName()
     {
-        var rooted = Path.Combine(Path.GetTempPath(), "sub", "escaped.ics");
+        var rooted = Path.Combine(Path.GetTempPath(), "sub", $"escaped-{Tfm}.ics");
 
         var sharedPath = await ShareWithFileNameAsync(rooted);
 
-        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), "escaped.ics"));
+        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), $"escaped-{Tfm}.ics"));
         File.Delete(sharedPath!);
     }
 
@@ -298,7 +303,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         // Every tap writes to the same per-entity path, so a leftover from a previous tap must not
         // survive into the share. Deleting AFTER the share is deliberately not done: on Android
         // the intent returns as soon as it launches and the delete would race the receiving app.
-        var stalePath = Path.Combine(Path.GetTempPath(), "session-99.ics");
+        var stalePath = Path.Combine(Path.GetTempPath(), $"session-99-{Tfm}.ics");
         await File.WriteAllBytesAsync(stalePath, "STALE"u8.ToArray(), Xunit.TestContext.Current.CancellationToken);
 
         ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
@@ -317,7 +322,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/99/ics")
-            .Add(c => c.FileName, "session-99.ics")
+            .Add(c => c.FileName, $"session-99-{Tfm}.ics")
             .Add(c => c.ShareTitle, "Intro to Blazor"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
@@ -345,12 +350,12 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Exports/44")
-            .Add(c => c.FileName, "export-44.bin")
+            .Add(c => c.FileName, $"export-44-{Tfm}.bin")
             .Add(c => c.ShareTitle, "Export"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
         contentType.Should().Be("application/octet-stream");
-        File.Delete(Path.Combine(Path.GetTempPath(), "export-44.bin"));
+        File.Delete(Path.Combine(Path.GetTempPath(), $"export-44-{Tfm}.bin"));
     }
 
     private IRenderedComponent<ApiFileDownloadButton> RenderButton() =>

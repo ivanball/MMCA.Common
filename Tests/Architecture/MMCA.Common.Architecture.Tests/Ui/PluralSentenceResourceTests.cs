@@ -98,7 +98,7 @@ public sealed partial class PluralSentenceResourceTests
         word.EndsWith("(s)", StringComparison.OrdinalIgnoreCase)
         || word.EndsWith("(es)", StringComparison.OrdinalIgnoreCase)
         || word.Length >= 4
-            && word.EndsWith('s')
+            && word.AsSpan().EndsWith('s')
             && !NonNounsEndingInS.Contains(word);
 
     /// <summary>English and Spanish words ending in "s" that follow a count without being its noun.</summary>

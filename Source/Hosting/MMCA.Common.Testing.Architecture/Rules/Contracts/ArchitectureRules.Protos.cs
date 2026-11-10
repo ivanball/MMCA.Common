@@ -158,7 +158,7 @@ public static partial class ArchitectureRules
                 signatures.Add(signature);
             }
 
-            if (statement.EndsWith('{'))
+            if (statement.AsSpan().EndsWith('{'))
             {
                 // Any other block (an rpc's option body, an aggregate option value) opens an
                 // anonymous scope, so its closing brace pops it rather than the enclosing scope.

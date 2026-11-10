@@ -171,7 +171,9 @@ public partial class BiometricGate
         if (await Biometrics.AuthenticateAsync(L["Prompt.Reason"].Value))
         {
             _locked = false;
+#pragma warning disable BL0012 // UnlockAsync also runs from OnAfterRenderAsync and ReLockAsync, where nothing re-renders automatically
             StateHasChanged();
+#pragma warning restore BL0012
             return;
         }
 
@@ -179,7 +181,9 @@ public partial class BiometricGate
         // hold focus. Queued rather than applied here, because the first lock runs before the locked
         // branch has rendered and the button reference is still null.
         _focusUnlockPending = true;
+#pragma warning disable BL0012 // UnlockAsync also runs from OnAfterRenderAsync and ReLockAsync, where nothing re-renders automatically
         StateHasChanged();
+#pragma warning restore BL0012
     }
 
     /// <summary>

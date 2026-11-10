@@ -127,7 +127,7 @@ public abstract class IntegrationEventContractTestsBase
         foreach (var line in lines)
         {
             var open = line.IndexOf('{', StringComparison.Ordinal);
-            var close = line.LastIndexOf('}');
+            var close = line.AsSpan().LastIndexOf('}');
             if (open < 0 || close < open)
             {
                 // Braces are stripped from the key: the reported difference is formatted through the
@@ -141,7 +141,7 @@ public abstract class IntegrationEventContractTestsBase
             var members = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var member in SplitTopLevel(line[(open + 1)..close]))
             {
-                var separator = member.LastIndexOf(':');
+                var separator = member.AsSpan().LastIndexOf(':');
                 var (name, type) = separator < 0
                     ? (member, string.Empty)
                     : (member[..separator], member[(separator + 1)..]);

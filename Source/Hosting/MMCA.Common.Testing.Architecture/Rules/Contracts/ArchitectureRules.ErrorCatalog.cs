@@ -260,7 +260,7 @@ public static partial class ArchitectureRules
     private static string OwnerName(TypeDefinition type)
     {
         var owner = type;
-        while (owner.DeclaringType is not null && owner.Name.StartsWith('<'))
+        while (owner.DeclaringType is not null && owner.Name.AsSpan().StartsWith('<'))
         {
             owner = owner.DeclaringType;
         }

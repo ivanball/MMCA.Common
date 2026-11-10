@@ -61,6 +61,6 @@ public sealed class OptionalEmailAttribute : ValidationAttribute
         var index = value.IndexOf('@', StringComparison.Ordinal);
         return index > 0
             && index != value.Length - 1
-            && index == value.LastIndexOf('@');
+            && index == value.AsSpan().LastIndexOf('@');
     }
 }

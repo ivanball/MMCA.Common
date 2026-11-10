@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using MMCA.Common.UI.Services.Capabilities.Notifications;

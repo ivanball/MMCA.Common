@@ -28,7 +28,7 @@ internal sealed record GcsObjectLocation(string Bucket, string ObjectName)
         {
             var rest = value[Scheme.Length..];
             var slash = rest.IndexOf('/', StringComparison.Ordinal);
-            if (slash > 0 && slash < rest.Length - 1 && !rest.EndsWith('/'))
+            if (slash > 0 && slash < rest.Length - 1 && !rest.AsSpan().EndsWith('/'))
             {
                 return new GcsObjectLocation(rest[..slash], rest[(slash + 1)..]);
             }

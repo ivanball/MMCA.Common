@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;

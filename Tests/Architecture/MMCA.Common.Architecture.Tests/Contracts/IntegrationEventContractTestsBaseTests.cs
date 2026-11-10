@@ -223,7 +223,7 @@ public sealed class IntegrationEventContractTestsBaseTests
     private static (string Name, string[] Members) Split(string line)
     {
         var open = line.IndexOf('{', StringComparison.Ordinal);
-        var close = line.LastIndexOf('}');
+        var close = line.AsSpan().LastIndexOf('}');
         return (line[..open].Trim(), SplitTopLevel(line[(open + 1)..close]));
     }
 

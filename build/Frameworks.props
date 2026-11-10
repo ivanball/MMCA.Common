@@ -1,0 +1,29 @@
+<Project>
+  <!--
+    The one place the framework's target frameworks are named (dual-TFM policy).
+
+    MmcaNetVersions   every .NET version the packaged libraries and their tests build for. Each
+                      MMCA.Common.* package carries one lib/ folder per entry.
+    MmcaDefaultNet    the single version used by projects that are run rather than referenced
+                      (the UI gallery, the sample AppHost and service, benchmarks, load tests, the
+                      browser E2E tier). Always the newest entry.
+
+    Rules that keep two versions cheap to maintain:
+      * Version-specific code is written ONLY as `#if NET11_0_OR_GREATER` with the existing code as
+        the `#else` branch, never as `#if NET10_0`, so a later version inherits the newer branch.
+      * The public API is identical on every entry unless a member is listed in a per-TFM
+        PublicAPI file.
+      * A package whose version must differ per target framework takes it from a property in
+        Directory.Packages.props, never from a second PackageVersion item.
+
+    Retiring a version: remove it from MmcaNetVersions, delete the `#else` branches, and collapse the
+    per-TFM properties in Directory.Packages.props.
+  -->
+  <PropertyGroup>
+    <MmcaNetVersions>net10.0;net11.0</MmcaNetVersions>
+    <MmcaDefaultNet>net11.0</MmcaDefaultNet>
+    <!-- Projects that build for MmcaDefaultNet only. Delimited on both sides so Contains() cannot
+         match a project whose name merely starts with a listed one. -->
+    <MmcaSingleTargetProjects>;MMCA.Common.UI.Gallery;MMCA.Common.UI.E2E.Tests;MMCA.Common.Benchmarks;MMCA.Common.LoadTests;MMCA.Common.Testing.Aspire.AppHostTests;MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost;MMCA.Common.Testing.Aspire.AppHostTests.SampleService;</MmcaSingleTargetProjects>
+  </PropertyGroup>
+</Project>

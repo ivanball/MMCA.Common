@@ -43,7 +43,7 @@ public static class BlobNames
             return FallbackName;
         }
 
-        int dot = cleaned.LastIndexOf('.');
+        int dot = cleaned.AsSpan().LastIndexOf('.');
         string stem;
         string extension;
         if (dot > 0)
