@@ -264,13 +264,13 @@
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.120" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.130" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
-    <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (requires Controls >= 10.0.60),
+    <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (16.x requires Controls >= 10.0.90),
          bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="CommunityToolkit.Maui" Version="15.0.1" />
+    <PackageVersion Include="CommunityToolkit.Maui" Version="16.0.0" />
     <!-- Android-only biometric prompt binding for UI.Maui (platform-direct, ADR-042 Wave 4).
          Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
@@ -289,7 +289,7 @@
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.120" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.130" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
          Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
