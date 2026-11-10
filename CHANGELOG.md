@@ -4,6 +4,16 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.285.0] - 2026-11-10
+
+Dependency release from the 2026-11-10 NuGet audit. No public API changes.
+
+### Changed
+
+- **MAUI 10.0.130** (MMCA.Common.UI.Maui). `Microsoft.Maui.Controls` and `Microsoft.AspNetCore.Components.WebView.Maui` move from 10.0.120; consumer heads pin the same version.
+- **CommunityToolkit.Maui 16.0.0** (MMCA.Common.UI.Maui), from 15.0.1. The toolkit now throws `ArgumentNullException` at the call for a null argument it cannot handle, and on Android `CommunityToolkit.Maui.Core` adds a launcher `<queries>` entry to the merged manifest. Heads keep calling `UseMauiCommunityToolkit()`; `MauiSpeechToTextService` needs no change.
+- **Minor and patch updates**: xunit.v3 and xunit.v3.extensibility.core 4.0.3 (Microsoft.Testing.Platform 2.5.2; a consumer pinning `Microsoft.Testing.Extensions.Retry` moves it to 2.5.2 with it), bunit 2.14.0 with AngleSharp 1.10.1, Polly and Polly.Core 8.9.1, AspNet.Security.OAuth.Apple and .GitHub 10.1.0, OpenTelemetry.Instrumentation.AspNetCore and .Http 1.20.2, Anthropic 13.7.0, OpenAI 2.15.0, Scalar.AspNetCore 2.19.0, Meziantou.Analyzer 3.0.322, and AWSSDK patch updates.
+
 ## [1.284.0] - 2026-11-09
 
 A filter changed on a phone list now survives leaving the page and coming back.
