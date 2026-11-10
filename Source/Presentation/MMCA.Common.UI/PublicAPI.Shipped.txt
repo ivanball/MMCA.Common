@@ -751,6 +751,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageSize.set -> voi
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileTotalItems.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.NotifyBrowserViewportChangeAsync(MudBlazor.BrowserViewportEventArgs! browserViewportEventArgs) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnScrollPositionChanged(double scrollTop) -> void
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ReloadActiveLayoutAsync(MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>? mobileList) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ResizeOptions.get -> MudBlazor.Services.ResizeOptions!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RowsPerPageState.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RowsPerPageState.set -> void
@@ -1786,7 +1787,6 @@ static MMCA.Common.UI.Pages.Common.ErrorMessages.NotFound(string! entityName, ob
 static MMCA.Common.UI.Pages.Common.ErrorMessages.SaveError(string! entityName, System.Exception! ex) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.ValidationError.get -> string!
 static MMCA.Common.UI.Pages.Common.ListPageActions.DeleteWithConfirmationAsync(MMCA.Common.UI.Components.Forms.DeleteConfirmation! deleteConfirm, string? entityName, System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! deleteAsync, MMCA.Common.UI.Common.Interfaces.IToastService! toast, string! successMessage, System.Func<MMCA.Common.Shared.Abstractions.Result!, string!>! errorMessage, System.Func<System.Threading.Tasks.Task!>! reloadAsync) -> System.Threading.Tasks.Task!
-static MMCA.Common.UI.Pages.Common.ListPageActions.ReloadActiveLayoutAsync<TDto>(bool isMobile, MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>? mobileList, MudBlazor.MudDataGrid<TDto>? dataGrid) -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.NewIdempotencyKey() -> string!
 static MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.ConcurrencyTagOf(TEntityDTO entity) -> string?
 static MMCA.Common.UI.Services.Api.HttpResultExecutor.ExecuteAsync(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! operation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!

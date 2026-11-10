@@ -1,3 +1,1 @@
 ﻿#nullable enable
-*REMOVED*static MMCA.Common.UI.Pages.Common.ListPageActions.ReloadActiveLayoutAsync<TDto>(bool isMobile, MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>? mobileList, MudBlazor.MudDataGrid<TDto>? dataGrid) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ReloadActiveLayoutAsync(MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>? mobileList) -> System.Threading.Tasks.Task!
