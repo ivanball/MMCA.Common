@@ -3,11 +3,14 @@
   <!-- Target frameworks come from build/Frameworks.props (the dual-TFM policy lives there). Libraries
        and their tests build for every version; the handful of projects that are run rather than
        referenced build for the newest one only. -->
-  <PropertyGroup Condition="!$(MmcaSingleTargetProjects.Contains(';$(MSBuildProjectName);'))">
+  <PropertyGroup Condition="!$(MmcaSingleTargetProjects.Contains(';$(MSBuildProjectName);')) And !$(MmcaOldestTargetProjects.Contains(';$(MSBuildProjectName);'))">
     <TargetFrameworks>$(MmcaNetVersions)</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$(MmcaSingleTargetProjects.Contains(';$(MSBuildProjectName);'))">
     <TargetFramework>$(MmcaDefaultNet)</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MmcaOldestTargetProjects.Contains(';$(MSBuildProjectName);'))">
+    <TargetFramework>$(MmcaOldestNet)</TargetFramework>
   </PropertyGroup>
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>

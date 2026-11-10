@@ -24,6 +24,12 @@
     <MmcaDefaultNet>net11.0</MmcaDefaultNet>
     <!-- Projects that build for MmcaDefaultNet only. Delimited on both sides so Contains() cannot
          match a project whose name merely starts with a listed one. -->
-    <MmcaSingleTargetProjects>;MMCA.Common.UI.Gallery;MMCA.Common.UI.E2E.Tests;MMCA.Common.Benchmarks;MMCA.Common.LoadTests;MMCA.Common.Testing.Aspire.AppHostTests;MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost;MMCA.Common.Testing.Aspire.AppHostTests.SampleService;</MmcaSingleTargetProjects>
+    <MmcaSingleTargetProjects>;MMCA.Common.UI.Gallery;MMCA.Common.UI.E2E.Tests;MMCA.Common.LoadTests;MMCA.Common.Testing.Aspire.AppHostTests;MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost;MMCA.Common.Testing.Aspire.AppHostTests.SampleService;</MmcaSingleTargetProjects>
+    <!-- Projects held on the OLDEST version. The benchmark harness: no stable BenchmarkDotNet
+         recognizes net11.0 yet (0.15.8 throws "GetRuntimeVersion not implemented for NotRecognized"),
+         and perf-baseline.json was measured on net10.0, so the gate compares like with like. Move it
+         to MmcaSingleTargetProjects, and re-measure the baseline in the same PR, once it does. -->
+    <MmcaOldestNet>net10.0</MmcaOldestNet>
+    <MmcaOldestTargetProjects>;MMCA.Common.Benchmarks;</MmcaOldestTargetProjects>
   </PropertyGroup>
 </Project>
