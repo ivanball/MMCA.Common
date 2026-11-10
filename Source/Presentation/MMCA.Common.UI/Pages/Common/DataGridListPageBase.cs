@@ -6,6 +6,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Components.Lists;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services;
 using MudBlazor;
@@ -1351,10 +1352,29 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <summary>
     /// Saves the page's current filters (URL, in-memory state and sessionStorage), keeping the pager
     /// and sort as they are. The desktop grid and <see cref="LoadMobileDataAsync"/> save after every
-    /// fetch; a page whose <c>MobileInfiniteScrollList</c> fetches through its own delegate saves
-    /// nothing, so it calls this when the user changes a filter that has to survive leaving the page.
+    /// fetch; a <see cref="MobileInfiniteScrollList{TItem}"/> fetches through the page's own delegate
+    /// and saves nothing, which <see cref="ReloadActiveLayoutAsync"/> covers by calling this first.
     /// </summary>
     protected void SaveFilterState() => SaveCurrentState(null, null, _savedSortColumn, _savedSortDescending);
+
+    /// <summary>
+    /// Reloads whichever layout is rendered, after a filter change or a delete. On a phone it saves
+    /// the filters first and then resets the card list from page 1: the list's fetch saves nothing,
+    /// so without the save a filter the user changed there was lost on leaving, and an older saved
+    /// value came back on return. Otherwise it reloads <see cref="GridRef"/>, whose fetch saves.
+    /// </summary>
+    /// <param name="mobileList">The page's card list, or <see langword="null"/> while the grid is rendered.</param>
+    /// <returns>A task that completes when the reload has run.</returns>
+    protected Task ReloadActiveLayoutAsync(MobileInfiniteScrollList<TDto>? mobileList)
+    {
+        if (IsMobile && mobileList is not null)
+        {
+            SaveFilterState();
+            return mobileList.ResetAsync();
+        }
+
+        return GridRef?.ReloadServerData() ?? Task.CompletedTask;
+    }
 
     /// <summary>
     /// Flips the grid density (comfortable ↔ dense) and persists the choice (URL + in-memory +

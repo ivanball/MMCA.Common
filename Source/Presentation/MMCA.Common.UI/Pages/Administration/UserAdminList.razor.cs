@@ -232,8 +232,7 @@ public partial class UserAdminList<TUser>
     /// <returns>A task that completes when the reload has been requested.</returns>
     public Task ReloadAsync() => ReloadActiveLayoutAsync();
 
-    private Task ReloadActiveLayoutAsync()
-        => ListPageActions.ReloadActiveLayoutAsync(IsMobile, _infiniteList, _dataGrid);
+    private Task ReloadActiveLayoutAsync() => ReloadActiveLayoutAsync(_infiniteList);
 
     /// <summary>Retries a failed grid fetch from the inline error state (<c>LoadFailed</c>).</summary>
     private Task RetryLoadAsync() => GridRef?.ReloadServerData() ?? Task.CompletedTask;
