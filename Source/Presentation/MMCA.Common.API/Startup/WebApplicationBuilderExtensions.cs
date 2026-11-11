@@ -63,13 +63,20 @@ public static partial class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers Brotli + Gzip response compression for HTTPS responses.
+        /// Registers response compression for HTTPS responses: Brotli then Gzip, with Zstandard
+        /// ahead of both on .NET 11, where ASP.NET Core ships the provider. Registration order is
+        /// the server's preference among the encodings a client weights equally.
         /// </summary>
         public IServiceCollection AddCommonResponseCompression()
         {
             services.AddResponseCompression(options =>
             {
                 options.EnableForHttps = true;
+#if NET11_0_OR_GREATER
+                // Left at its default level, which is already the fast end of the Zstandard range,
+                // for the same reason Brotli and Gzip are pinned to Fastest below.
+                options.Providers.Add<ZstandardCompressionProvider>();
+#endif
                 options.Providers.Add<BrotliCompressionProvider>();
                 options.Providers.Add<GzipCompressionProvider>();
             });

@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **Zstandard response compression on .NET 11** (MMCA.Common.API). `AddCommonResponseCompression()` registers ASP.NET Core 11's `ZstandardCompressionProvider` ahead of Brotli and Gzip, so a `net11.0` host answers a client that accepts `zstd` with `Content-Encoding: zstd`. A `net10.0` host is unchanged (Brotli, then Gzip), and so is the middleware order. No public API change.
+
 ## [1.286.0] - 2026-11-10
 
 Every package now ships for .NET 10 and .NET 11 from one source tree. No public API changes: the surface is identical on both target frameworks.

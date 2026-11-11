@@ -123,6 +123,41 @@ public sealed class WebApplicationBuilderExtensionsTests
         result.Should().BeSameAs(services);
     }
 
+    // Provider order is the server's preference when a client weights encodings equally, so the
+    // newest encoding the runtime ships goes first and Brotli stays ahead of Gzip.
+    [Fact]
+    public void AddCommonResponseCompression_RegistersProvidersInPreferenceOrder()
+    {
+        List<Type> providerTypes = RegisteredCompressionProviderTypes();
+
+#if NET11_0_OR_GREATER
+        providerTypes.Should().Equal(
+            typeof(ZstandardCompressionProvider),
+            typeof(BrotliCompressionProvider),
+            typeof(GzipCompressionProvider));
+#else
+        providerTypes.Should().Equal(
+            typeof(BrotliCompressionProvider),
+            typeof(GzipCompressionProvider));
+#endif
+    }
+
+#if NET11_0_OR_GREATER
+    [Fact]
+    public void AddCommonResponseCompression_RegistersZstandardProvider() =>
+        RegisteredCompressionProviderTypes().Should().Contain(typeof(ZstandardCompressionProvider));
+
+    [Fact]
+    public void AddCommonResponseCompression_RegistersZstandardBeforeBrotli()
+    {
+        List<Type> providerTypes = RegisteredCompressionProviderTypes();
+
+        providerTypes.Should().Contain(typeof(ZstandardCompressionProvider));
+        providerTypes.IndexOf(typeof(ZstandardCompressionProvider))
+            .Should().BeLessThan(providerTypes.IndexOf(typeof(BrotliCompressionProvider)));
+    }
+#endif
+
     [Fact]
     public void AddCommonAuthentication_WithValidConfig_RegistersAuthenticationServices()
     {
@@ -412,6 +447,44 @@ public sealed class WebApplicationBuilderExtensionsTests
 
         await options.Events.OnMessageReceived(context);
         return context.Token;
+    }
+
+    // Reads the registered providers in order through the public negotiation API rather than the
+    // options collection, whose Providers.Add<T>() entries are internal factories that hide the
+    // provider type. Offering every known encoding at equal weight picks the first registered
+    // provider among them; removing that encoding and asking again yields the next one.
+    private static List<Type> RegisteredCompressionProviderTypes()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddCommonResponseCompression();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        var negotiator = provider.GetRequiredService<IResponseCompressionProvider>();
+        var remaining = new List<string> { "zstd", "br", "gzip", "deflate" };
+        var ordered = new List<Type>();
+
+        while (remaining.Count > 0)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Headers.AcceptEncoding = string.Join(", ", remaining);
+            ICompressionProvider? selected = negotiator.GetCompressionProvider(context);
+            if (selected is null)
+            {
+                break;
+            }
+
+            ordered.Add(selected.GetType());
+            if (remaining.RemoveAll(encoding => string.Equals(encoding, selected.EncodingName, StringComparison.OrdinalIgnoreCase)) == 0)
+            {
+                break;
+            }
+        }
+
+        // Every registered provider must be one of the offered encodings, so "exactly" holds.
+        provider.GetRequiredService<IOptions<ResponseCompressionOptions>>().Value.Providers.Count
+            .Should().Be(ordered.Count, "every registered provider answers one of the offered encodings");
+        return ordered;
     }
 
     private static IConfiguration CreateCorsConfiguration(params string[] allowedOrigins) =>
