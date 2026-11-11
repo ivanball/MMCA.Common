@@ -11,6 +11,8 @@
          and the settings live there, and Infrastructure registers the passkey store on every host. -->
     <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />
     <PackageReference Include="Fido2" />
+    <!-- Security lift of a transitive of Fido2 (GHSA-vmv3-wvjp-wqpj); see Directory.Packages.props. -->
+    <PackageReference Include="System.Formats.Cbor" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

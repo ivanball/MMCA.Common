@@ -24,7 +24,13 @@ public static class SignalRExtensions
             var settings = app.Services.GetService<IOptions<PushNotificationSettings>>()?.Value;
             if (settings is { Enabled: true })
             {
-                app.MapHub<NotificationHub>(settings.HubPath);
+                // Opt-in (PushNotificationSettings.CloseConnectionsOnTokenExpiry): the connection ends
+                // with the token it was authenticated with, so a locked or revoked user is cut off
+                // within one token lifetime. Each replica enforces it on its own connections, which
+                // is why it needs neither negotiation nor a sticky ingress.
+                app.MapHub<NotificationHub>(
+                    settings.HubPath,
+                    options => options.CloseOnAuthenticationExpiration = settings.CloseConnectionsOnTokenExpiry);
             }
 
             return app;

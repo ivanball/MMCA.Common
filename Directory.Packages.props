@@ -21,8 +21,8 @@
                             ASP.NET Core 11 needs the 3.x line.
   -->
   <PropertyGroup>
-    <MmcaFrameworkVersion>10.0.14</MmcaFrameworkVersion>
-    <MmcaEfCoreVersion>10.0.14</MmcaEfCoreVersion>
+    <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
+    <MmcaEfCoreVersion>10.0.15</MmcaEfCoreVersion>
     <MmcaOpenApiVersion>2.13.0</MmcaOpenApiVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
@@ -128,6 +128,12 @@
          package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
          reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
     <PackageVersion Include="Fido2" Version="4.3.2" />
+    <!-- Direct pin to lift the transitive System.Formats.Cbor off 9.0.0 (pulled by Fido2) to the
+         first patched version for GHSA-vmv3-wvjp-wqpj / CVE-2026-118747 (moderate, denial of
+         service in the CBOR reader, which is exactly what Fido2 feeds attacker-supplied bytes to).
+         It follows the framework version (10.0.15 / 11.0.0, both patched) and is referenced
+         directly in MMCA.Common.Passkeys so the pin takes effect and flows to consumers. -->
+    <PackageVersion Include="System.Formats.Cbor" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
@@ -271,7 +277,13 @@
          Pages/NotFound.razor needs for its 403 re-execution check. Common.UI is consumed by Blazor
          WebAssembly clients, so <FrameworkReference Include="Microsoft.AspNetCore.App" /> cannot
          replace it. Removing it means moving that check into a server-only project first. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.14" />
+    <!-- Direct pin to lift the transitive Microsoft.AspNetCore.WebUtilities off 2.3.12 (pulled by
+         Mvc.Core 2.3.14 through Microsoft.AspNetCore.Http 2.3.13) to the first patched version for
+         GHSA-6527-9fp8-r4x6 / CVE-2026-118750 (moderate, denial of service); referenced directly in
+         MMCA.Common.UI so the pin takes effect (no transitive pinning) and flows to consumers through
+         the published package graph. Drop it when Mvc.Core itself depends on 2.3.14 or later. -->
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
@@ -468,20 +480,20 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.4" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.4" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.5" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
     <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
          MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
          SDK's own version, the same shape as the consumer AppHosts. -->
