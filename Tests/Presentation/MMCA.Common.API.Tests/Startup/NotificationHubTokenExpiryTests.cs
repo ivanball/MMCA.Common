@@ -209,6 +209,10 @@ public sealed class NotificationHubTokenExpiryTests
             .WithUrl(new Uri(server.BaseAddress, HubPath.TrimStart('/')), options =>
             {
                 options.Transports = HttpTransportType.WebSockets;
+
+                // As the shipped NotificationHubService client does, and so that each connection
+                // attempt is ONE authenticated request and therefore one ticket.
+                options.SkipNegotiation = true;
                 options.HttpMessageHandlerFactory = _ => server.CreateHandler();
                 options.WebSocketFactory = (context, cancellationToken) => ConnectWebSocketAsync(server, context.Uri, cancellationToken);
             });
@@ -298,7 +302,13 @@ public sealed class NotificationHubTokenExpiryTests
                 }
 
                 var issued = DateTimeOffset.UtcNow;
-                _lastExpiry = issued + TicketLifetime;
+
+                // Whole seconds, because that is all a ticket keeps: AuthenticationProperties stores
+                // ExpiresUtc as an RFC 1123 string, so the server acts on the truncated instant, up to a
+                // second before issued + TicketLifetime. Truncating here keeps LastExpiry equal to the
+                // expiry the ticket really carries.
+                var expires = issued + TicketLifetime;
+                _lastExpiry = expires.AddTicks(-(expires.Ticks % TimeSpan.TicksPerSecond));
                 var identity = new ClaimsIdentity([new Claim(AuthClaimTypes.Subject, _userId)], scheme);
                 var properties = new AuthenticationProperties { IssuedUtc = issued, ExpiresUtc = _lastExpiry };
                 return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), properties, scheme));
