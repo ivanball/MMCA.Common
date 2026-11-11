@@ -129,7 +129,7 @@
     reviewable diff in a text file instead of something a consumer discovers after the release.
     Source-only (tests have no shipped surface) and never on a .dcproj, mirroring the analyzer group below.
     MMCA.Common.UI.Maui is deliberately excluded: it lives outside MMCA.Common.slnx and builds only on the
-    windows build-maui job across four MAUI TFMs (ADR-042), so its baseline could neither be bootstrapped
+    windows build-maui job across the MAUI platform TFMs (ADR-042), so its baseline could neither be bootstrapped
     nor kept honest from the normal build.
   -->
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source')) AND '$(MSBuildProjectExtension)' != '.dcproj' AND '$(MSBuildProjectName)' != 'MMCA.Common.UI.Maui'">

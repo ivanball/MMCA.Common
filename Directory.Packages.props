@@ -19,15 +19,31 @@
                             the Npgsql provider pin, when Npgsql ships its 11.0.0.
       MmcaOpenApiVersion    Microsoft.OpenApi: ASP.NET Core 10 constrains it below 3.0.0 and
                             ASP.NET Core 11 needs the 3.x line.
+      MmcaMauiVersion       Microsoft.Maui.Controls and Microsoft.AspNetCore.Components.WebView.Maui
+                            (MMCA.Common.UI.Maui only). MAUI majors follow the .NET major, and a
+                            consumer head pins the same value for its own framework.
+      MmcaMauiToolkitVersion
+                            CommunityToolkit.Maui, which binds to the MAUI major: 16.x is the MAUI 10
+                            line, 17.x the MAUI 11 line.
+      MmcaAndroidBiometricVersion
+                            Xamarin.AndroidX.Biometric. MAUI 10 needs the HELD 1.1.0.30 (see the pin
+                            below); MAUI 11's Essentials requires at least 1.1.0.33 (NU1605 on the
+                            older one).
   -->
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
     <MmcaEfCoreVersion>10.0.15</MmcaEfCoreVersion>
     <MmcaOpenApiVersion>2.13.0</MmcaOpenApiVersion>
+    <MmcaMauiVersion>10.0.130</MmcaMauiVersion>
+    <MmcaMauiToolkitVersion>16.0.0</MmcaMauiToolkitVersion>
+    <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
     <MmcaOpenApiVersion>3.11.0</MmcaOpenApiVersion>
+    <MmcaMauiVersion>11.0.10</MmcaMauiVersion>
+    <MmcaMauiToolkitVersion>17.0.0</MmcaMauiToolkitVersion>
+    <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
   </PropertyGroup>
   <!--
     CentralPackageTransitivePinningEnabled is deliberately NOT set in this workspace: CPM pins DIRECT
@@ -303,36 +319,39 @@
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.130" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MmcaMauiVersion)" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
     <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (16.x requires Controls >= 10.0.90),
          bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="CommunityToolkit.Maui" Version="16.0.0" />
+    <PackageVersion Include="CommunityToolkit.Maui" Version="$(MmcaMauiToolkitVersion)" />
     <!-- Android-only biometric prompt binding for UI.Maui (platform-direct, ADR-042 Wave 4).
          Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
-    <!-- HELD at 1.1.0.30 2026-08-28, re-verified 2026-10-25 on MAUI 10.0.120: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
+    <!-- HELD at 1.1.0.30 ON MAUI 10 (MmcaAndroidBiometricVersion) 2026-08-28, re-verified 2026-10-25 on MAUI 10.0.120: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
          10.0.100 (Fragment 1.8.9.3 / Activity 1.13.0.1 / Lifecycle 2.11.0.1 / SavedState 1.5.0.1 /
          Collection.Jvm 1.6.0.1 resolved past the .Ktx packages' upper bounds). -->
-    <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
+    <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="$(MmcaAndroidBiometricVersion)" />
     <!-- Android-only Firebase Cloud Messaging binding for UI.Maui's FCM device-token provider
          (ADR-044). Bindings track the Google Play services train, not the MAUI one, but they pull
          AndroidX packages: verify a restore of the android TFM after any bump (the Biometric pin
          above is the one that reacts first, with NU1608). -->
     <!-- HELD at 124.1.2 2026-08-28, re-verified 2026-10-25 on MAUI 10.0.120 with 125.1.3: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
          Activity 1.13.0.1, Fragment 1.8.9.3, SavedState 1.5.0.1, Collection.Jvm 1.6.0.1) past the
-         .Ktx packages' upper bounds and fails the android restore with NU1608. -->
+         .Ktx packages' upper bounds and fails the android restore with NU1608. Re-verified 2026-11-11
+         on MAUI 11.0.10 (the net11.0-android target): 125.1.3 fails the same way (Fragment 1.9.0 and
+         Tracing 2.0.0 past the .Ktx upper bounds), so the hold covers both frameworks. -->
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.130" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MmcaMauiVersion)" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
-         Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
+         Ships net10.0 assets for all four MAUI platforms (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
-         binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
+         binds to the MAUI train: bump together with Microsoft.Maui.Controls. The net11.0 platform
+         targets take the same assets (0.10.4 is the newest release and restores against MAUI 11). -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.322" />

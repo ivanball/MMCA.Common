@@ -59,7 +59,7 @@ dotnet test --solution MMCA.Common.slnx -c Release
 2. Commit your work (Scoped Commits, above), push the branch, and open a PR against `main`.
 3. CI runs automatically. The eight required merge gates are:
    - `build-and-test` (includes the FACTS drift gate, the vuln audit, and the tests)
-   - `Build MMCA.Common.UI.Maui (windows, 4 TFMs)`
+   - `Build MMCA.Common.UI.Maui (windows)`
    - `UI a11y + render smoke (chromium)`, `UI a11y + render smoke (firefox)`, and
      `UI a11y + render smoke (webkit)` - all three engines block (webkit was promoted from
      advisory to required on 2026-07-16)
@@ -198,7 +198,7 @@ gh api -X PUT repos/ivanball/MMCA.Common/branches/main/protection \
     "strict": true,
     "checks": [
       {"context": "build-and-test"},
-      {"context": "Build MMCA.Common.UI.Maui (windows, 4 TFMs)"},
+      {"context": "Build MMCA.Common.UI.Maui (windows)"},
       {"context": "UI a11y + render smoke (chromium)"},
       {"context": "UI a11y + render smoke (firefox)"},
       {"context": "UI a11y + render smoke (webkit)"},

@@ -184,7 +184,7 @@ jobs:
           gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
 
   # MMCA.Common.UI.Maui (the one MAUI-TFM package; the full id list lives in FACTS.md) cannot
-  # build on ubuntu (its four TFMs need the MAUI workloads), so it packs on windows, versioned
+  # build on ubuntu (its platform TFMs need the MAUI workloads), so it packs on windows, versioned
   # from the same tag so the lockstep release stays whole. Same SBOM hard gate as the main job,
   # scoped to this project.
   publish-maui:
@@ -252,7 +252,7 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Build (all four MAUI TFMs)
+      - name: Build (every MAUI TFM)
         run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
 
       - name: Pack
