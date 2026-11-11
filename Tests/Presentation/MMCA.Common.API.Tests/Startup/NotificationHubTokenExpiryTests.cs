@@ -209,6 +209,13 @@ public sealed class NotificationHubTokenExpiryTests
             .WithUrl(new Uri(server.BaseAddress, HubPath.TrimStart('/')), options =>
             {
                 options.Transports = HttpTransportType.WebSockets;
+
+                // As the shipped NotificationHubService client does. It also makes each connection
+                // attempt ONE authenticated request: with negotiation there are two (negotiate, then
+                // the WebSocket), each issued its own ticket, so TicketIssuer.LastExpiry named a later
+                // ticket than the one the server had bound to the connection and the lower-bound
+                // assertion failed whenever the two requests landed far enough apart.
+                options.SkipNegotiation = true;
                 options.HttpMessageHandlerFactory = _ => server.CreateHandler();
                 options.WebSocketFactory = (context, cancellationToken) => ConnectWebSocketAsync(server, context.Uri, cancellationToken);
             });
