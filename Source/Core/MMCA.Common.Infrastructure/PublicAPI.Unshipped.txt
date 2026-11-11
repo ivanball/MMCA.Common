@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.CloseConnectionsOnTokenExpiry.get -> bool
+MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.CloseConnectionsOnTokenExpiry.init -> void

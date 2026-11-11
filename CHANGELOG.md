@@ -4,6 +4,25 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Security patch release for the 2026-11-10 Microsoft advisories, plus two opt-in or framework-conditional additions. No breaking change.
+
+### Security
+
+- **ASP.NET Core 10.0.15** (CVE-2026-114147, GHSA-wr8v-9x5q-ggcm, high, denial of service). On `net10.0` the packages now depend on ASP.NET Core, `Microsoft.Extensions.*` and EF Core 10.0.15 (was 10.0.14); `net11.0` was already on the patched 11.0.0. **A `net10.0` host must also move its runtime image to 10.0.15**: the advisory covers the shared runtime, not only the packages.
+- **Aspire 13.6.5** (CVE-2026-120006, GHSA-f7vh-h5g3-7jrh, high, elevation of privilege in `Aspire.Hosting`). Every Aspire pin moves from 13.6.4; a consumer AppHost should move its own `Aspire.Hosting.*` pins and `Aspire.AppHost.Sdk` to match.
+- **`Microsoft.AspNetCore.WebUtilities` 2.3.14** (CVE-2026-118750, GHSA-6527-9fp8-r4x6, moderate, denial of service). MMCA.Common.UI lifts it directly, because `Microsoft.AspNetCore.Mvc.Core` 2.3.14 still resolves the vulnerable 2.3.12.
+- **`System.Formats.Cbor` 10.0.15 / 11.0.0** (CVE-2026-118747, GHSA-vmv3-wvjp-wqpj, moderate, denial of service in the CBOR reader). MMCA.Common.Passkeys lifts it directly off the 9.0.0 that Fido2 resolves.
+
+### Added
+
+- **`PushNotifications:CloseConnectionsOnTokenExpiry`** (MMCA.Common.Infrastructure, MMCA.Common.API; off by default). When on, `MapNotificationHub()` has the server close a hub connection when the access token it was authenticated with expires. The shipped client reconnects at once with a fresh token; a user who was locked, lost a role or signed out everywhere cannot obtain one and is refused, so an open connection no longer outlives a revoked session by more than one token lifetime. It needs neither negotiation nor a sticky ingress: each replica enforces it on the connections it holds.
+
+### Changed
+
+- **Zstandard response compression on .NET 11** (MMCA.Common.API). `AddCommonResponseCompression()` registers ASP.NET Core 11's `ZstandardCompressionProvider` ahead of Brotli and Gzip, so a `net11.0` host answers a client that accepts `zstd` with `Content-Encoding: zstd`. A `net10.0` host is unchanged (Brotli, then Gzip), and so is the middleware order. No public API change.
+
 ## [1.286.0] - 2026-11-10
 
 Every package now ships for .NET 10 and .NET 11 from one source tree. No public API changes: the surface is identical on both target frameworks.

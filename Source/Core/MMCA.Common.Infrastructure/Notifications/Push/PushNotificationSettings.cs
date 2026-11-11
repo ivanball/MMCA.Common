@@ -48,4 +48,19 @@ public sealed class PushNotificationSettings
     /// </remarks>
     [System.ComponentModel.DataAnnotations.Range(0, 10_000)]
     public int MaxConnectionsPerUser { get; init; } = 20;
+    /// <summary>
+    /// Gets a value indicating whether the server closes a hub connection when the access token it
+    /// was authenticated with expires. Off by default.
+    /// </summary>
+    /// <remarks>
+    /// A hub connection is authenticated once, when it opens, and otherwise keeps that identity for
+    /// as long as it stays open: a user who is locked, loses a role or signs out everywhere keeps
+    /// receiving pushes until the connection happens to drop. With this on, the connection ends with
+    /// its token. The shipped client reconnects at once with a fresh token, so a signed-in user sees
+    /// one reconnect per token lifetime, and a user whose sessions were revoked cannot obtain a token
+    /// and is refused. The cut-off is bounded by <c>Jwt:AccessTokenExpirationMinutes</c>, not
+    /// immediate. It works behind a non-sticky ingress with several replicas, because each replica
+    /// enforces it on the connections it holds and no message has to reach them.
+    /// </remarks>
+    public bool CloseConnectionsOnTokenExpiry { get; init; }
 }

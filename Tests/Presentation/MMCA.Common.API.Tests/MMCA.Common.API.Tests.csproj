@@ -21,6 +21,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <!-- FakeTimeProvider for the deterministic session-cookie expiry test. -->
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <!-- A real SignalR client for the notification hub connection-lifetime tests (already pinned
+         centrally; MMCA.Common.UI references the same package). -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
