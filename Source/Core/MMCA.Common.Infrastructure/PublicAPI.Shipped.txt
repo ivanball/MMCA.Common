@@ -280,6 +280,8 @@ MMCA.Common.Infrastructure.Notifications.Push.NullPushNotificationSender.SendToU
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.ChannelKeyPattern.get -> string!
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.ChannelKeyPattern.init -> void
+MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.CloseConnectionsOnTokenExpiry.get -> bool
+MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.CloseConnectionsOnTokenExpiry.init -> void
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.Enabled.get -> bool
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.Enabled.init -> void
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.HubPath.get -> string!
