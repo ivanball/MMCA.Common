@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- **`net11.0` platform targets in MMCA.Common.UI.Maui.** The package now carries `net11.0-android`, `-ios`, `-maccatalyst` and `-windows10.0.19041.0` beside the four `net10.0` ones, so a MAUI head on either .NET version finds its assets. The `net11.0` targets depend on MAUI 11.0.10, CommunityToolkit.Maui 17.0.0 and Xamarin.AndroidX.Biometric 1.1.0.33; the `net10.0` targets are unchanged (MAUI 10.0.130, 16.0.0, 1.1.0.30). No source change and no API change. **A head that moves to `net11.0-android` compiles against Android API 37**: a `TargetPlatformVersion` of 36.0 is rejected by the .NET 11 Android workload (NETSDK1140), so review the head's target API level when it moves.
+
 ## [1.287.0] - 2026-11-11
 
 Security patch release for the 2026-11-10 Microsoft advisories, plus two opt-in or framework-conditional additions. No breaking change.

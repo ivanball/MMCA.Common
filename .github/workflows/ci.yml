@@ -174,14 +174,14 @@ jobs:
           path: coverage.unit.cobertura.xml
           if-no-files-found: warn
 
-  # The MAUI multi-target package (MMCA.Common.UI.Maui) cannot build on ubuntu — its four TFMs
+  # The MAUI multi-target package (MMCA.Common.UI.Maui) cannot build on ubuntu — its platform TFMs
   # (android/ios/maccatalyst/windows) need the MAUI workloads — so it builds in its own
   # windows job and stays OUT of MMCA.Common.slnx, the same mechanism that keeps the gallery
   # and UI E2E projects out of the unit run. Required merge gate alongside build-and-test.
   # (No tests here: the capability contracts and fallbacks are covered in MMCA.Common.UI.Tests
   # on ubuntu; the MAUI implementations are thin Essentials wrappers exercised on-device.)
   build-maui:
-    name: Build MMCA.Common.UI.Maui (windows, 4 TFMs)
+    name: Build MMCA.Common.UI.Maui (windows)
     needs: changes
     runs-on: windows-latest
     timeout-minutes: 30
@@ -219,7 +219,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: dotnet workload install maui
 
-      - name: Build (android + ios + maccatalyst + windows)
+      - name: Build (android + ios + maccatalyst + windows, per .NET version)
         if: needs.changes.outputs.code == 'true'
         run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release
 

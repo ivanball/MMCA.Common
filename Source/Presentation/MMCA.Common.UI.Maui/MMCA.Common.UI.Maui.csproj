@@ -5,14 +5,17 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <!-- Clear the single net10.0 TargetFramework inherited from Directory.Build.props;
-         this package multi-targets the MAUI platform TFMs instead. The windows TFM is
-         unconditional (unlike the app heads) so the published .nupkg always carries the
-         same four TFMs regardless of the build OS. CI builds and packs this project on a
-         windows runner (ubuntu cannot build MAUI TFMs), which is also why it stays out of
+    <!-- Replace the plain frameworks inherited from Directory.Build.props: this package targets
+         the four MAUI platforms instead, once per entry of MmcaNetVersions (build/Frameworks.props),
+         so the platform list follows the dual-TFM knob and a head on either .NET version finds its
+         assets. The windows TFM is unconditional (unlike the app heads) so the published .nupkg
+         always carries the same TFMs regardless of the build OS. CI builds and packs this project
+         on a windows runner (ubuntu cannot build MAUI TFMs), which is also why it stays out of
          MMCA.Common.slnx — the same mechanism as UI.Gallery / UI.E2E.Tests. -->
     <TargetFramework />
-    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <!-- Unescape: a property function returns its semicolons escaped, and an escaped list is read
+         as ONE framework name (NETSDK1046). -->
+    <TargetFrameworks>$([MSBuild]::Unescape('$(MmcaNetVersions.Replace(';', '-android;'))-android;$(MmcaNetVersions.Replace(';', '-ios;'))-ios;$(MmcaNetVersions.Replace(';', '-maccatalyst;'))-maccatalyst;$(MmcaNetVersions.Replace(';', '-windows10.0.19041.0;'))-windows10.0.19041.0'))</TargetFrameworks>
     <UseMaui>true</UseMaui>
     <PackageId>MMCA.Common.UI.Maui</PackageId>
     <Description>MMCA framework: native device-capability implementations (share, clipboard, haptics, geolocation, local notifications, biometrics, deep links) plus the hybrid host layer (back-navigation page base, SecureStorage token storage, native theme sync) for MAUI Blazor Hybrid heads; pairs with the capability contracts in MMCA.Common.UI</Description>
