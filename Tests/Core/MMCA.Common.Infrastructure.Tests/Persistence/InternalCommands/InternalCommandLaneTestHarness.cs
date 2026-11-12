@@ -101,7 +101,6 @@ internal static class InternalCommandLaneTestHarness
             rows,
             scopeServices.GetRequiredService<IServiceScopeFactory>(),
             logger ?? NullLogger<InternalCommandLaneProcessor>.Instance,
-            Options.Create(settings),
             signal ?? Mock.Of<IInternalCommandSignal>(),
             tableTargets,
             timeProvider,

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -35,7 +34,6 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 /// <param name="rows">A not-started shared processor whose row methods the lane calls; owned and disposed by the lane.</param>
 /// <param name="scopeFactory">Factory for the per-target scope (the row runner creates the execution scopes).</param>
 /// <param name="logger">Logger for lane diagnostics.</param>
-/// <param name="options">The internal-command queue settings, shared with the shared loop.</param>
 /// <param name="signal">The queue's wake-up signal; the framework signal gives the lane a wake of its own.</param>
 /// <param name="tableTargets">Decides which databases (and per-tenant copies) hold a queue table this host drains.</param>
 /// <param name="timeProvider">Clock for the loop, the cooldowns and every eligibility timestamp.</param>
@@ -44,7 +42,6 @@ internal sealed partial class InternalCommandLaneProcessor(
     InternalCommandProcessor rows,
     IServiceScopeFactory scopeFactory,
     ILogger<InternalCommandLaneProcessor> logger,
-    IOptions<InternalCommandsSettings> options,
     IInternalCommandSignal signal,
     FrameworkTableTargets tableTargets,
     TimeProvider timeProvider,
@@ -61,10 +58,10 @@ internal sealed partial class InternalCommandLaneProcessor(
 
     private static readonly ActivitySource LaneActivitySource = new(InternalCommandMetrics.MeterName);
 
-    private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeSpan _effectiveCooldown = EffectiveCooldown(lane.ReceiverCooldown, options.Value);
+    private readonly InternalCommandsSettings _settings = rows.Settings;
+    private readonly TimeSpan _effectiveCooldown = EffectiveCooldown(lane.ReceiverCooldown, rows.Settings);
     private readonly KeyValuePair<string, object?> _laneTag = new("lane", lane.Name);
-    private readonly ReceiverCooldowns _cooldowns = new(EffectiveCooldown(lane.ReceiverCooldown, options.Value));
+    private readonly ReceiverCooldowns _cooldowns = new(EffectiveCooldown(lane.ReceiverCooldown, rows.Settings));
 
     /// <summary>
     /// The cooldown the lane actually applies: the configured value, clamped to the shortest possible

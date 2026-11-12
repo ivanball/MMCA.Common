@@ -68,7 +68,8 @@ public sealed partial class InternalCommandProcessor(
 
     private static readonly ActivitySource InternalCommandActivitySource = new(InternalCommandMetrics.MeterName);
 
-    private readonly InternalCommandsSettings _settings = options.Value;
+    /// <summary>The queue settings this loop runs with; a dedicated lane reads the same values.</summary>
+    internal InternalCommandsSettings Settings { get; } = options.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <summary>
@@ -93,8 +94,8 @@ public sealed partial class InternalCommandProcessor(
                 return (cycle.HasMoreDueWork, cycle.EarliestUpcoming);
             },
             ex => LogCycleError(logger, ex),
-            _settings.ProcessingDelaySeconds,
-            _settings.PollingIntervalSeconds,
+            Settings.ProcessingDelaySeconds,
+            Settings.PollingIntervalSeconds,
             signal.WaitAsync,
             stoppingToken);
 
@@ -122,7 +123,7 @@ public sealed partial class InternalCommandProcessor(
     /// queue table nothing else opens.
     /// </summary>
     internal IReadOnlyList<TenantDataSourceTarget> GetTargets() =>
-        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
+        tableTargets.Relational(Settings.DataSource, Settings.DatabaseName);
 
     /// <summary>
     /// Drains every target once and aggregates the per-source results: any source with more due work
@@ -165,7 +166,7 @@ public sealed partial class InternalCommandProcessor(
         var context = scope.ServiceProvider.GetRequiredService<IDbContextFactory>().GetDbContext(target.Source);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var cutoff = now.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
+        var cutoff = now.Subtract(TimeSpan.FromSeconds(Settings.ProcessingDelaySeconds));
 
         var candidates = await FetchCandidatesAsync(context, sourceName, now, cancellationToken).ConfigureAwait(false);
         var pendingDepth = await CountPendingAsync(context, sourceName, candidates.Count, now, cancellationToken)
@@ -223,7 +224,7 @@ public sealed partial class InternalCommandProcessor(
 
         return (
             new InternalCommandCycleResult(
-                HasMoreDueWork: dueCount == _settings.BatchSize && progressed,
+                HasMoreDueWork: dueCount == Settings.BatchSize && progressed,
                 earliestUpcoming),
             pendingDepth);
     }
@@ -250,7 +251,7 @@ public sealed partial class InternalCommandProcessor(
         var pending = context.Set<InternalCommandMessage>().AsNoTracking()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
-                && c.Attempts < _settings.MaxAttempts
+                && c.Attempts < Settings.MaxAttempts
                 && (c.ClaimedUntil == null || c.ClaimedUntil < now));
 
         if (excluded is not null)
@@ -261,7 +262,7 @@ public sealed partial class InternalCommandProcessor(
         return await pending
             .OrderBy(c => c.ScheduledOn)
             .ThenBy(c => c.Id)
-            .Take(_settings.BatchSize)
+            .Take(Settings.BatchSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -279,7 +280,7 @@ public sealed partial class InternalCommandProcessor(
         DateTime now,
         CancellationToken cancellationToken)
     {
-        if (fetchedCount < _settings.BatchSize)
+        if (fetchedCount < Settings.BatchSize)
         {
             return fetchedCount;
         }
@@ -292,7 +293,7 @@ public sealed partial class InternalCommandProcessor(
         var pending = context.Set<InternalCommandMessage>()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
-                && c.Attempts < _settings.MaxAttempts
+                && c.Attempts < Settings.MaxAttempts
                 && (c.ClaimedUntil == null || c.ClaimedUntil < now));
 
         if (excluded is not null)
@@ -338,7 +339,7 @@ public sealed partial class InternalCommandProcessor(
         CancellationToken cancellationToken)
     {
         Guid[] dueIds = [.. candidates.Take(dueCount).Select(c => c.Id)];
-        var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
+        var leaseUntil = now.AddSeconds(Settings.LeaseSeconds);
         var queue = context.Set<InternalCommandMessage>();
 
         var claimedCount = await queue
@@ -383,7 +384,7 @@ public sealed partial class InternalCommandProcessor(
         Guid claimToken,
         CancellationToken cancellationToken)
     {
-        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(Settings.LeaseSeconds);
 
         var kept = await context.Set<InternalCommandMessage>()
             .Where(c => c.Id == row.Id && c.ClaimedBy == claimToken)
@@ -509,7 +510,7 @@ public sealed partial class InternalCommandProcessor(
         {
             LogAttemptThrew(logger, row.Id, row.CommandType, attempts, failure);
         }
-        if (attempts >= _settings.MaxAttempts)
+        if (attempts >= Settings.MaxAttempts)
         {
             await DeadLetterAsync(context, row, claimToken, message, "attempts_exhausted", cancellationToken)
                 .ConfigureAwait(false);
@@ -692,7 +693,7 @@ public sealed partial class InternalCommandProcessor(
     /// <param name="attempts">The attempt number that just failed, counting from one.</param>
     /// <returns>The wait, in seconds, before the row becomes claimable again.</returns>
     internal double ComputeRetryBackoffSeconds(int attempts) =>
-        PollingLoop.ComputeRetryBackoffSeconds(attempts, _settings.RetryBackoffBaseSeconds, _settings.MaxRetryBackoffSeconds);
+        PollingLoop.ComputeRetryBackoffSeconds(attempts, Settings.RetryBackoffBaseSeconds, Settings.MaxRetryBackoffSeconds);
 
     /// <summary>
     /// Renders a failed result's errors for the <c>LastError</c> column. Codes and messages only: the

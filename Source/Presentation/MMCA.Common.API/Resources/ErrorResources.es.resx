@@ -217,6 +217,9 @@
   <data name="InternalCommands.InvalidTake" xml:space="preserve">
     <value>Take debe estar entre 1 y 500.</value>
   </data>
+  <data name="InternalCommands.ReceiverCoolingDown" xml:space="preserve">
+    <value>El receptor está en pausa tras una entrega fallida.</value>
+  </data>
   <data name="InternalCommands.NullCommand" xml:space="preserve">
     <value>No se puede programar un comando nulo.</value>
   </data>

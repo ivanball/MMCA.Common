@@ -306,6 +306,10 @@ public sealed class QueryFieldService
             // into CPU churn, which is the more expensive failure; skipping projection only widens
             // the column list sent to the database, and the response shape is unchanged because
             // ShapeCollectionData still trims the payload to the requested fields.
+            // At the cap nothing is admitted, so there is nothing to serialize: answer without the lock.
+            if (ProjectionCache.Count >= MaxCacheEntries)
+                return query;
+
             lock (CacheAdmissionLock)
             {
                 if (!ProjectionCache.TryGetValue(key, out selectExpression))
@@ -658,6 +662,10 @@ public sealed class QueryFieldService
         // Past the cap, filter per request rather than admitting another client-shaped key. This
         // path is a single LINQ pass over an already-compiled accessor array (no expression
         // compilation), so an uncached shape costs a scan, not a rebuild.
+        // At the cap nothing is admitted, so there is nothing to serialize: answer without the lock.
+        if (ShapedAccessorCache.Count >= MaxCacheEntries)
+            return FilterAccessorsByFields(accessors, fieldsSet);
+
         lock (CacheAdmissionLock)
         {
             if (ShapedAccessorCache.TryGetValue(key, out cached))

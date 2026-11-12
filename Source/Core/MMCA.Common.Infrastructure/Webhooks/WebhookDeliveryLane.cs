@@ -68,7 +68,6 @@ internal static class WebhookDeliveryLane
             ActivatorUtilities.CreateInstance<InternalCommandProcessor>(provider),
             provider.GetRequiredService<IServiceScopeFactory>(),
             provider.GetRequiredService<ILogger<InternalCommandLaneProcessor>>(),
-            provider.GetRequiredService<IOptions<InternalCommandsSettings>>(),
             provider.GetRequiredService<IInternalCommandSignal>(),
             provider.GetRequiredService<FrameworkTableTargets>(),
             provider.GetRequiredService<TimeProvider>(),
