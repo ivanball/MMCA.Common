@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Caching;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.API.Startup;
@@ -49,6 +50,13 @@ public sealed class PublicCachedReadsAttributeTests
     public const string OverrideDeclaredRouteName = "OverrideDeclaredProbeById";
 
     private static readonly string[] ReadSuffixes = [string.Empty, "/paged", "/lookup", "/{id}"];
+
+    private static readonly string[] BaseReadNames =
+    [
+        nameof(EntityControllerBase<,,>.GetAllAsync),
+        nameof(EntityControllerBase<,,>.GetAllForLookupAsync),
+        nameof(EntityControllerBase<,,>.GetByIdAsync),
+    ];
 
     // -- Rule 1 --
     [Theory]
@@ -293,7 +301,96 @@ public sealed class PublicCachedReadsAttributeTests
         post.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "the class-level [Authorize] still gates every other action");
     }
 
+    // -- Rule 10: an override that declares authorization is refused, not silently opened --
+    [Fact]
+    public void OverriddenRead_DeclaringAuthorize_Throws()
+    {
+        var model = BuildControllerModel(typeof(AuthorizedOverrideReadsProbeController));
+
+        var act = () => new PublicCachedReadsAttribute(ProbePolicy).Apply(model);
+
+        act.Should().Throw<InvalidOperationException>(
+            "an [Authorize] the override declares would otherwise be silently replaced by anonymous access")
+            .Which.Message.Should().Contain(typeof(AuthorizedOverrideReadsProbeController).FullName!)
+            .And.Contain(nameof(EntityControllerBase<,,>.GetByIdAsync))
+            .And.Contain("PublicCachedReads");
+    }
+
+    [Fact]
+    public void OverriddenRead_DeclaringHasPermission_Throws()
+    {
+        var model = BuildControllerModel(typeof(PermissionOverrideReadsProbeController));
+
+        var act = () => new PublicCachedReadsAttribute(ProbePolicy).Apply(model);
+
+        act.Should().Throw<InvalidOperationException>(
+            "a [HasPermission] the override declares would otherwise be silently replaced by anonymous access")
+            .Which.Message.Should().Contain(typeof(PermissionOverrideReadsProbeController).FullName!)
+            .And.Contain(nameof(EntityControllerBase<,,>.GetAllForLookupAsync))
+            .And.Contain("PublicCachedReads");
+    }
+
+    [Fact]
+    public void OverriddenRead_DeclaringAuthorizeAndAllowAnonymous_IsMarked()
+    {
+        var model = BuildControllerModel(typeof(StatedIntentOverrideReadsProbeController));
+
+        var act = () => new PublicCachedReadsAttribute(ProbePolicy).Apply(model);
+
+        act.Should().NotThrow("[AllowAnonymous] beside [Authorize] states the intent");
+        BaseReads(model).Should().HaveCount(4);
+        AssertMarked(BaseReads(model));
+    }
+
+    [Theory]
+    [InlineData(typeof(AuthReadsProbeController))]
+    [InlineData(typeof(ClassAuthorizedOverrideReadsProbeController))]
+    public void ClassLevelAuthorize_WithoutActionLevelAuthorization_IsMarked(Type controllerType)
+    {
+        var model = BuildControllerModel(controllerType);
+
+        var act = () => new PublicCachedReadsAttribute(ProbePolicy).Apply(model);
+
+        act.Should().NotThrow("a class-level [Authorize] gates the writes; the reads are meant to be public");
+        BaseReads(model).Should().HaveCount(4);
+        AssertMarked(BaseReads(model));
+    }
+
+    [Fact]
+    public void AppDeclaredAction_WithAuthorize_DoesNotThrow_AndGetsNeitherMarker()
+    {
+        var model = BuildControllerModel(typeof(AppDeclaredAuthorizedReadsProbeController));
+
+        var act = () => new PublicCachedReadsAttribute(ProbePolicy).Apply(model);
+
+        act.Should().NotThrow("the rule covers the base reads only");
+        var selector = model.Actions.Single(a => a.ActionMethod.Name == nameof(AppDeclaredAuthorizedReadsProbeController.Mine))
+            .Selectors.Should().ContainSingle().Subject;
+        selector.EndpointMetadata.OfType<IAllowAnonymous>().Should().BeEmpty("an app-declared action decides for itself");
+        selector.EndpointMetadata.OfType<OutputCacheAttribute>().Should().BeEmpty("an app-declared action decides for itself");
+    }
+
     // -- Helpers --
+    private static ActionModel[] BaseReads(ControllerModel model) =>
+        [.. model.Actions.Where(a => BaseReadNames.Contains(a.ActionMethod.Name, StringComparer.Ordinal))];
+
+    private static void AssertMarked(IEnumerable<ActionModel> actions)
+    {
+        foreach (var action in actions)
+        {
+            foreach (var selector in action.Selectors)
+            {
+                selector.EndpointMetadata.OfType<IAllowAnonymous>().Should().NotBeEmpty(
+                    "{0} is a base read on a [PublicCachedReads] controller",
+                    action.ActionMethod.Name);
+                selector.EndpointMetadata.OfType<OutputCacheAttribute>().Should().ContainSingle(
+                    "{0} is output-cached exactly once",
+                    action.ActionMethod.Name)
+                    .Which.PolicyName.Should().Be(ProbePolicy);
+            }
+        }
+    }
+
     private static Task<WebApplication> CreateProbeHostAsync() =>
         OpenApiProbeHost.CreateAsync(
             typeof(PublicReadsProbeController),
@@ -523,6 +620,83 @@ public sealed class NotAnEntityReadsProbeController : ApiControllerBase
 {
     [HttpGet("probe")]
     public IActionResult Get() => Ok();
+}
+
+// The probes below carry no [PublicCachedReads] of their own: the tests apply it by hand, so a host
+// that discovers every controller in this assembly never trips over the ones it must refuse.
+
+/// <summary>Gates its by-id override with [Authorize].</summary>
+public sealed class AuthorizedOverrideReadsProbeController(
+    IEntityQueryService<OverrideReadsEntity, PublicReadsDto, int> queryService,
+    ILogger<EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>> logger)
+    : EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>(queryService, logger)
+{
+    [Authorize]
+    public override Task<ActionResult<PublicReadsDto>> GetByIdAsync(
+        int id,
+        bool includeFKs = true,
+        bool includeChildren = false,
+        [FromQuery] string? fields = null,
+        CancellationToken cancellationToken = default) =>
+        base.GetByIdAsync(id, includeFKs, includeChildren, fields, cancellationToken);
+}
+
+/// <summary>Gates its lookup override with [HasPermission].</summary>
+public sealed class PermissionOverrideReadsProbeController(
+    IEntityQueryService<OverrideReadsEntity, PublicReadsDto, int> queryService,
+    ILogger<EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>> logger)
+    : EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>(queryService, logger)
+{
+    [HasPermission("some:permission")]
+    public override Task<ActionResult<CollectionResult<BaseLookup<int>>>> GetAllForLookupAsync(
+        [Required] string nameProperty,
+        CancellationToken cancellationToken = default) =>
+        base.GetAllForLookupAsync(nameProperty, cancellationToken);
+}
+
+/// <summary>Declares both [Authorize] and [AllowAnonymous] on its by-id override: the intent is stated.</summary>
+public sealed class StatedIntentOverrideReadsProbeController(
+    IEntityQueryService<OverrideReadsEntity, PublicReadsDto, int> queryService,
+    ILogger<EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>> logger)
+    : EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>(queryService, logger)
+{
+    [Authorize]
+    [AllowAnonymous]
+    public override Task<ActionResult<PublicReadsDto>> GetByIdAsync(
+        int id,
+        bool includeFKs = true,
+        bool includeChildren = false,
+        [FromQuery] string? fields = null,
+        CancellationToken cancellationToken = default) =>
+        base.GetByIdAsync(id, includeFKs, includeChildren, fields, cancellationToken);
+}
+
+/// <summary>Authorized at class level; overrides the by-id read without action-level authorization.</summary>
+[Authorize]
+public sealed class ClassAuthorizedOverrideReadsProbeController(
+    IEntityQueryService<OverrideReadsEntity, PublicReadsDto, int> queryService,
+    ILogger<EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>> logger)
+    : EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>(queryService, logger)
+{
+    [HttpGet("{id}")]
+    public override Task<ActionResult<PublicReadsDto>> GetByIdAsync(
+        int id,
+        bool includeFKs = true,
+        bool includeChildren = false,
+        [FromQuery] string? fields = null,
+        CancellationToken cancellationToken = default) =>
+        base.GetByIdAsync(id, includeFKs, includeChildren, fields, cancellationToken);
+}
+
+/// <summary>Declares an authorized action of its own beside the inherited reads.</summary>
+public sealed class AppDeclaredAuthorizedReadsProbeController(
+    IEntityQueryService<OverrideReadsEntity, PublicReadsDto, int> queryService,
+    ILogger<EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>> logger)
+    : EntityControllerBase<OverrideReadsEntity, PublicReadsDto, int>(queryService, logger)
+{
+    [HttpGet("mine")]
+    [Authorize]
+    public IActionResult Mine() => Ok();
 }
 
 /// <summary>Authenticated by default; the attribute opens the inherited reads only.</summary>
