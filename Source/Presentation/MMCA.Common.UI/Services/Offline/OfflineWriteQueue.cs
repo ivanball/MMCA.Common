@@ -14,8 +14,9 @@ namespace MMCA.Common.UI.Services.Offline;
 /// <summary>
 /// The <see cref="IOfflineWriteQueue"/> over the device's <see cref="ILocalCacheStore"/>. The whole
 /// queue is one <see cref="List{T}"/> under <see cref="OfflineWriteQueueOptions.StorageKey"/>; every
-/// change re-reads, edits and writes it back under one semaphore, so concurrent callers never lose a
-/// write. Entries are scoped to the signed-in user read from the <see cref="AuthenticationStateProvider"/>.
+/// change re-reads, edits and writes it back under one semaphore, so concurrent callers of this
+/// instance never lose a write. Two instances over one store (two browser tabs, two circuits) are not
+/// coordinated. Entries are scoped to the signed-in user read from the <see cref="AuthenticationStateProvider"/>.
 /// </summary>
 /// <remarks>
 /// <para>

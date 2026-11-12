@@ -13,10 +13,11 @@
   <ItemGroup>
     <!-- Only the SDKs start-up needs: a gateway or any host that wants vault configuration, the
          exporter and the shared key ring references this package and carries no EF Core, MassTransit,
-         Service Bus, Notification Hubs or Blob storage dependency (EnforceAzureStartupBoundary in
+         Service Bus, Notification Hubs or blob file-storage adapter (EnforceAzureStartupBoundary in
          Source/Build/MMCA.Common.LayerEnforcement.targets and AzureStartupPackageBoundaryTests hold
-         that line). MMCA.Common.Azure references this package, so a host on the full adapter still
-         gets all three calls. -->
+         that line). The Blob SDK below stays: the key ring itself is stored in a blob.
+         MMCA.Common.Azure references this package, so a host on the full adapter still gets all
+         three calls. -->
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
     <!-- Direct only to lift the Blob SDK the DataProtection Blobs package brings: without it a host on

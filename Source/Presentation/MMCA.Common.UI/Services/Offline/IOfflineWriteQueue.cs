@@ -5,7 +5,8 @@ namespace MMCA.Common.UI.Services.Offline;
 /// <summary>
 /// A durable queue of writes made while the device was offline, kept in the device's local store
 /// and replayed through the registered <see cref="IOfflineWriteHandler"/>s when it is back online.
-/// Registered by <c>AddOfflineWriteQueue</c>; scoped per signed-in user.
+/// Registered as a scoped service by <c>AddOfflineWriteQueue</c>; each entry belongs to the user who
+/// was signed in when it was queued.
 /// </summary>
 public interface IOfflineWriteQueue
 {

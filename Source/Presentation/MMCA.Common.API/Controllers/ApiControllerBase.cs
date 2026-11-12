@@ -13,7 +13,8 @@ using MMCA.Common.Shared.Http;
 namespace MMCA.Common.API.Controllers;
 
 /// <summary>
-/// Base controller for all API controllers. Provides centralized error-to-HTTP-status mapping
+/// Base controller for the entity and use-case API controllers (the OAuth and service-info bases
+/// derive <see cref="ControllerBase"/> directly). Provides centralized error-to-HTTP-status mapping
 /// using the Result pattern, translating domain <see cref="ErrorType"/> values into RFC 9457
 /// Problem Details responses.
 /// </summary>
