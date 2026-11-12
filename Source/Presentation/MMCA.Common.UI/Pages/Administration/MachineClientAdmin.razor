@@ -4,6 +4,14 @@
 
 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
 
+@if (NotEnabled)
+{
+    @* The server serves no machine-client route (MachineClients:Enabled is false there): say so and
+       show nothing to act on, instead of a load failure with a Retry that can never succeed. *@
+    <MudAlert Severity="Severity.Info" Class="mb-4" data-testid="machine-clients-not-enabled">@T("NotEnabled")</MudAlert>
+    return;
+}
+
 @* Inline rather than a snackbar, for the RoleAdminList reason: an empty table and a failed load look
    identical once a toast expires. *@
 <ErrorSummary Result="_loadResult" Localizer="L" />

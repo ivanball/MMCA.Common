@@ -26,6 +26,13 @@ namespace MMCA.Common.API.Caching;
 /// controller gives them. A controller without the attribute is untouched.
 /// </para>
 /// <para>
+/// <b>What it refuses.</b> An override of a base read is still a base read and is marked like an
+/// inherited one. If that override declares its own <c>[Authorize]</c> or permission attribute and no
+/// <c>[AllowAnonymous]</c>, the convention throws when the application model is built, because the
+/// anonymous marker would silently replace the requirement. A read that needs a gate belongs on a
+/// controller without this attribute.
+/// </para>
+/// <para>
 /// The policy must be registered with <c>AddOutputCache</c> (for example through
 /// <c>AddPublicEndpointPolicy</c>); an unknown name fails at request time exactly as
 /// <c>[OutputCache(PolicyName = ...)]</c> does.
@@ -70,7 +77,8 @@ public sealed class PublicCachedReadsAttribute : Attribute, IControllerModelConv
     /// <param name="controller">The controller carrying the attribute.</param>
     /// <exception cref="InvalidOperationException">
     /// The controller does not derive from <see cref="EntityControllerBase{TEntity, TEntityDTO, TIdentifierType}"/>,
-    /// or <see cref="ByIdRouteName"/> is empty or whitespace.
+    /// <see cref="ByIdRouteName"/> is empty or whitespace, or an overridden base read declares its own
+    /// authorization attribute without <c>[AllowAnonymous]</c>.
     /// </exception>
     public void Apply(ControllerModel controller)
     {
@@ -90,6 +98,8 @@ public sealed class PublicCachedReadsAttribute : Attribute, IControllerModelConv
 
         foreach (var action in controller.Actions.Where(IsBaseRead))
         {
+            EnsureNoDeclaredAuthorization(controller, action);
+
             var isById = string.Equals(action.ActionMethod.Name, nameof(EntityControllerBase<,,>.GetByIdAsync), StringComparison.Ordinal);
 
             foreach (var selector in action.Selectors)
@@ -120,6 +130,25 @@ public sealed class PublicCachedReadsAttribute : Attribute, IControllerModelConv
         if (routeName is not null && selector.AttributeRouteModel is { Name: null } routeModel)
         {
             routeModel.Name = routeName;
+        }
+    }
+
+    /// <summary>
+    /// Refuses a base read whose own method declares authorization. The attribute adds anonymous access
+    /// to every base read, and anonymous access wins over <c>[Authorize]</c> or a permission attribute,
+    /// so an override that declares one would become public without anyone having said so. An override
+    /// that also declares <c>[AllowAnonymous]</c> has said so and is left alone, and so is authorization
+    /// declared on the controller class (the usual shape: gated writes, public reads).
+    /// </summary>
+    /// <param name="controller">The controller carrying the attribute.</param>
+    /// <param name="action">A base read of that controller.</param>
+    /// <exception cref="InvalidOperationException">The read declares authorization and no <c>[AllowAnonymous]</c>.</exception>
+    private static void EnsureNoDeclaredAuthorization(ControllerModel controller, ActionModel action)
+    {
+        if (action.Attributes.OfType<IAuthorizeData>().Any() && !action.Attributes.OfType<IAllowAnonymous>().Any())
+        {
+            throw new InvalidOperationException(
+                $"[{nameof(PublicCachedReadsAttribute)}] is on {controller.ControllerType.FullName}, whose {action.ActionMethod.Name} declares its own authorization attribute. The attribute marks every base read anonymous and output-cached, which would silently replace that requirement. Remove the authorization attribute from the read, add [AllowAnonymous] to it to state that the read is public, or move the gated read to a controller without [{nameof(PublicCachedReadsAttribute)}].");
         }
     }
 

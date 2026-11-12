@@ -53,6 +53,13 @@ public partial class MachineClientAdmin : ComponentBase, IDisposable
 
     private string Title => Heading ?? T("Title");
 
+    /// <summary>
+    /// True when the list load answered not found with nothing loaded. Every machine-client route
+    /// answers 404 while <c>MachineClients:Enabled</c> is false on the server, so from here that is what
+    /// "not enabled" looks like; the component then renders a notice in place of the form and the list.
+    /// </summary>
+    private bool NotEnabled => _clients.Count == 0 && _loadResult is { IsFailure: true } failure && failure.IsNotFound();
+
     /// <inheritdoc />
     public void Dispose()
     {
