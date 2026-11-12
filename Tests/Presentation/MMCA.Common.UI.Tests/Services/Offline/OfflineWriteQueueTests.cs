@@ -377,6 +377,48 @@ public sealed class OfflineWriteQueueTests : IDisposable
         handler.Calls.Should().ContainSingle();
     }
 
+    [Fact]
+    public async Task Replay_WriteCancelledWhileAnEarlierWriteIsInFlight_IsNotSent()
+    {
+        var a = Write(WidgetKind, "7", TimeSpan.FromMinutes(10));
+        var b = Write(WidgetKind, "7", TimeSpan.FromMinutes(5), coalesceKey: "k");
+        Seed(a, b);
+        var aEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var aGate = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new ScriptedWriteHandler(WidgetKind, (write, _) =>
+        {
+            if (write.Id != a.Id)
+            {
+                return Task.FromResult(Result.Success());
+            }
+
+            aEntered.TrySetResult();
+            return aGate.Task;
+        });
+        var queue = CreateQueue(handler);
+        var settled = new List<OfflineWriteSettledEventArgs>();
+        queue.WriteSettled += (_, args) => settled.Add(args);
+
+        // A's handler is held open, so the pass has read its snapshot and has not reached B yet.
+        var pass = queue.ReplayAsync(Ct);
+        await aEntered.Task.WaitAsync(WaitBudget, TimeProvider.System, Ct);
+
+        (await queue.CancelPendingAsync("k", Ct).WaitAsync(WaitBudget, TimeProvider.System, Ct))
+            .Should().BeTrue("B is still stored when it is cancelled");
+
+        aGate.SetResult(Result.Success());
+        var count = await pass.WaitAsync(WaitBudget, TimeProvider.System, Ct);
+
+        handler.Calls.Select(w => w.Id).Should().Equal(
+            [a.Id],
+            "a write cancelled before the running pass reaches it must not be sent to its handler");
+        Stored().Should().BeEmpty();
+        count.Should().Be(1);
+        var args = settled.Should().ContainSingle().Subject;
+        args.Write.Id.Should().Be(a.Id);
+        args.Outcome.Should().Be(OfflineWriteOutcome.Completed);
+    }
+
     // Rule 9: order and scope
     [Fact]
     public async Task Replay_WalksTheCurrentScopeOldestFirst()
