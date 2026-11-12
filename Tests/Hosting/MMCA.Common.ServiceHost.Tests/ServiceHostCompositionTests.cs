@@ -216,6 +216,24 @@ public sealed class ServiceHostCompositionTests
         act.Should().Throw<InvalidOperationException>().WithMessage("*Jwt:Audience*");
     }
 
+    // Rule 19.13, the other half: the token issuer validates in process and reads neither the
+    // forwarded audience nor the authority at registration, so the architecture rule that counts
+    // composed hosts rightly leaves the issuer out.
+    [Fact]
+    public void TokenIssuer_WithoutAudience_DoesNotThrow()
+    {
+        var builder = ServiceHostTestHost.CreateBuilder(adjustSettings: s =>
+        {
+            s.Remove(JwtAudience.ConfigKey);
+            s.Remove(JwtAuthorityExtensions.JwtAuthorityConfigKey);
+        });
+
+        Action act = () => builder.AddMmcaServiceHost(
+            ServiceHostTestHost.Options(authentication: ServiceHostAuthentication.TokenIssuer));
+
+        act.Should().NotThrow("the forwarded audience guard runs only on the ForwardedJwtBearer path");
+    }
+
     // Rules 19.14 and 19.15: exception handlers and infrastructure precede the host's registrations,
     // and the pipeline is still open while they run.
     [Fact]
