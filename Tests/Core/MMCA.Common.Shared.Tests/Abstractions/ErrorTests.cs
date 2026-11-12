@@ -84,6 +84,79 @@ public class ErrorTests
         original.Target.Should().BeNull();
     }
 
+    // ── For<TTarget>: source plus the target type's simple name in one call ──
+    [Fact]
+    public void For_SetsSourceAndTargetFromTheTypeName()
+    {
+        var error = Error.Validation("code", "msg").For<ErrorForTestOrder>("PlaceOrder");
+
+        error.Source.Should().Be("PlaceOrder");
+        error.Target.Should().Be(
+            "ErrorForTestOrder",
+            "the target is the type's simple Name, not its FullName");
+    }
+
+    [Fact]
+    public void For_KeepsCodeMessageAndType()
+    {
+        var error = Error.Conflict("Order.Duplicate", "The order already exists").For<ErrorForTestOrder>("PlaceOrder");
+
+        error.Code.Should().Be("Order.Duplicate");
+        error.Message.Should().Be("The order already exists");
+        error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public void For_ReplacesAnExistingSourceAndTarget()
+    {
+        var error = Error.Validation("code", "msg", "OldSource", "OldTarget").For<ErrorForTestLine>("AddLine");
+
+        error.Source.Should().Be("AddLine");
+        error.Target.Should().Be("ErrorForTestLine");
+    }
+
+    [Fact]
+    public void For_LeavesTheOriginalErrorUnchanged()
+    {
+        var original = Error.Validation("code", "msg");
+
+        _ = original.For<ErrorForTestOrder>("PlaceOrder");
+
+        original.Source.Should().BeNull();
+        original.Target.Should().BeNull();
+    }
+
+    [Fact]
+    public void For_OnTheSharedNotFoundInstance_KeepsNotFoundAndDoesNotMutateTheStatic()
+    {
+        var error = Error.NotFound.For<ErrorForTestOrder>("GetOrder");
+
+        error.Type.Should().Be(ErrorType.NotFound);
+        error.Code.Should().Be(Error.NotFound.Code);
+        error.Source.Should().Be("GetOrder");
+        error.Target.Should().Be("ErrorForTestOrder");
+        Error.NotFound.Source.Should().BeNull("Error.NotFound is a shared static and must never pick up a caller's context");
+        Error.NotFound.Target.Should().BeNull();
+    }
+
+    [Fact]
+    public void For_EqualsWithSourceThenWithTarget()
+    {
+        var viaFor = Error.NotFound.For<ErrorForTestLine>("RemoveLine");
+        var viaChain = Error.NotFound.WithSource("RemoveLine").WithTarget(nameof(ErrorForTestLine));
+
+        viaFor.Should().Be(viaChain);
+    }
+
+    [Fact]
+    public void For_DoesNotValidateItsArgument()
+    {
+        var act = () => Error.Validation("code", "msg").For<ErrorForTestOrder>(string.Empty);
+
+        act.Should().NotThrow("For<TTarget> does no validation, exactly like WithSource and WithTarget");
+        act().Source.Should().BeEmpty();
+    }
+
     // ── Static instances ──
     [Fact]
     public void NotFound_StaticInstance_HasCorrectType() =>
@@ -96,4 +169,9 @@ public class ErrorTests
     [Fact]
     public void InvalidEntityField_StaticInstance_HasValidationType() =>
         Error.InvalidEntityField.Type.Should().Be(ErrorType.Validation);
+
+    // ── Target types for For<TTarget> (only their names matter) ──
+    private sealed class ErrorForTestOrder;
+
+    private sealed class ErrorForTestLine;
 }

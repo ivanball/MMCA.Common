@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- **`Error.For<TTarget>(source)`** (MMCA.Common.Shared). Returns a copy of the error with `Source` set to `source` and `Target` set to `typeof(TTarget).Name`, the same result as `WithSource(source).WithTarget(typeof(TTarget).Name)` in one call, with no validation. The generic CRUD handler bases (`MutateEntityHandlerBase`, `ChildEntityHandlerBase`, `DeleteEntityHandler`) now build their not-found errors with it; the `Source` and `Target` they report are unchanged.
+- **`ICacheInvalidating<TEntity>` and `EntityCachePrefix`** (MMCA.Common.Application). A command that implements `ICacheInvalidating<TEntity>` and declares no `CachePrefix` evicts `"{typeof(TEntity).FullName}:"`, the prefix the generic CRUD commands already default to, supplied as a default interface member of the non-generic `ICacheInvalidating` the caching decorator reads. `EntityCachePrefix.For<TEntity>()` and `EntityCachePrefix.For(Type)` build that prefix; `UpdateEntityCommand` and `DeleteEntityCommand` now initialize their settable `CachePrefix` from it (same value, same empty-string opt-out). Existing `ICacheInvalidating` commands keep working unchanged.
+- **`CacheInvalidationConventionTestsBase`** (MMCA.Common.Testing.Architecture). One fact: every concrete `ICacheInvalidating` implementer in the mapped Application assemblies (framework and module) implements `ICacheInvalidating<TEntity>` and declares no `CachePrefix` of its own, or is named in the overridable `AllowedCustomPrefixTypes` (empty by default; an open generic definition exempts its closed forms, and a type deriving from an allow-listed type is exempt). The failure names each offending type. MMCA.Common subclasses it, allow-listing the generic `UpdateEntityCommand` and `DeleteEntityCommand`, whose settable prefix is the per-instance opt-out; a consumer that subclasses the base and derives its own commands from those keeps that exemption.
+
+### Changed
+
+- **The push-notification DTO projection is one class** (MMCA.Common.Application). `PushNotificationDTOProjector` is now itself the Mapperly `[Mapper]`, with `ProjectTo` a generated partial instance method; the internal static `PushNotificationDTOProjection` class is removed. No public API change, and the projected values are unchanged. The `IEntityDTOProjector` documentation example shows the same one-class form.
+
 ## [1.288.0] - 2026-11-11
 
 ### Added

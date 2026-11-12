@@ -1,1 +1,5 @@
-﻿#nullable enable
+#nullable enable
+MMCA.Common.Application.UseCases.Markers.EntityCachePrefix
+MMCA.Common.Application.UseCases.Markers.ICacheInvalidating<TEntity>
+static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For(System.Type! entityType) -> string!
+static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For<TEntity>() -> string!

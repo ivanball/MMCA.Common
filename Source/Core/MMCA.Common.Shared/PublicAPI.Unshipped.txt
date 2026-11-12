@@ -1,1 +1,2 @@
-﻿#nullable enable
+#nullable enable
+MMCA.Common.Shared.Abstractions.Error.For<TTarget>(string! source) -> MMCA.Common.Shared.Abstractions.Error!

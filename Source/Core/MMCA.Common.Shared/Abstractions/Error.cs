@@ -137,4 +137,15 @@ public record Error(
     /// <returns>A new <see cref="Error"/> with the updated <see cref="Target"/>.</returns>
     public Error WithTarget(string target) =>
         this with { Target = target };
+
+    /// <summary>
+    /// Returns a copy of this error with the specified <paramref name="source"/> and a
+    /// <see cref="Target"/> of <typeparamref name="TTarget"/>'s simple type name, the same result as
+    /// chaining <see cref="WithSource"/> and <see cref="WithTarget"/> with <c>typeof(TTarget).Name</c>.
+    /// </summary>
+    /// <typeparam name="TTarget">The entity or type the error relates to; only its simple name is used.</typeparam>
+    /// <param name="source">The origin context to attach.</param>
+    /// <returns>A new <see cref="Error"/> with the updated <see cref="Source"/> and <see cref="Target"/>.</returns>
+    public Error For<TTarget>(string source) =>
+        this with { Source = source, Target = typeof(TTarget).Name };
 }

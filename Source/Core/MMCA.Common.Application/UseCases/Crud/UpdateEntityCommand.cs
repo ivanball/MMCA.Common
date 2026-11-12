@@ -62,7 +62,7 @@ public record UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>(
     /// A derived command inherits the same default and the same opt-out, and can narrow it by
     /// initializing the property to a per-verb prefix.
     /// </remarks>
-    public string CachePrefix { get; init; } = typeof(TEntity).FullName + ":";
+    public string CachePrefix { get; init; } = EntityCachePrefix.For<TEntity>();
 }
 
 /// <summary>

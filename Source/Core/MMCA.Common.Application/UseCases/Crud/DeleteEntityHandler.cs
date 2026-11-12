@@ -71,7 +71,7 @@ public class DeleteEntityHandler<TEntity, TIdentifierType>(
         var repository = unitOfWork.GetRepository<TEntity, TIdentifierType>();
         var entity = await LoadAsync(repository, command, cancellationToken).ConfigureAwait(false);
         if (entity is null)
-            return Result.Failure(Error.NotFound.WithSource(HandlerName).WithTarget(typeof(TEntity).Name));
+            return Result.Failure(Error.NotFound.For<TEntity>(HandlerName));
 
         var refusal = await OnDeletingAsync(entity, command, cancellationToken).ConfigureAwait(false);
         if (refusal.IsFailure)

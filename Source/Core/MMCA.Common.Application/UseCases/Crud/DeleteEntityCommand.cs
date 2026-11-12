@@ -19,5 +19,5 @@ public sealed record DeleteEntityCommand<TEntity, TIdentifierType>(TIdentifierTy
     /// (<c>{entity full name}:</c>), because the generic controller constructs this command
     /// itself and cannot supply one. Set it to an empty string to opt out of invalidation.
     /// </summary>
-    public string CachePrefix { get; init; } = typeof(TEntity).FullName + ":";
+    public string CachePrefix { get; init; } = EntityCachePrefix.For<TEntity>();
 }
