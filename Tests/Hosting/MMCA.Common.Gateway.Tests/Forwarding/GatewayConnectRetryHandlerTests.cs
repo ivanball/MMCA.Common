@@ -202,7 +202,7 @@ public sealed class GatewayConnectRetryHandlerTests
         sending.IsCompleted.Should().BeFalse();
 
         time.Advance(TimeSpan.FromMilliseconds(1));
-        using var response = await sending.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        using var response = await sending.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         inner.Calls.Should().Be(2);

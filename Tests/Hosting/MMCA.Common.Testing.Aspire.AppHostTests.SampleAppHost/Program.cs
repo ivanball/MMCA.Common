@@ -21,9 +21,50 @@
 //                        fixture's per-resource wait means "the service can serve a request" rather
 //                        than "its process started". Liveness, never readiness: a startup gate on
 //                        readiness can deadlock a dependency graph.
+using Microsoft.Extensions.Configuration;
 using MMCA.Common.Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+// The outage scenario (SampleOutageAppHostFixture passes --SampleAppHost:Outage=true): ONLY a SQL
+// Server container with one database, a RabbitMQ broker, and the sample service wired to both with a
+// real outbox, for DependencyOutageTestBase to stop and start. No data volume on SQL Server: a per-run
+// SA password would not open an old volume, and the service keeps its own schema instead. The outbox
+// settings retry fast and often, so 20 attempts outlast a 90-second outage; the health report cache
+// is one second, so a probe sees a state change promptly. Liveness, never readiness, is the gate.
+if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
+{
+    var sql = builder.AddSqlServer("sql");
+    var sampleDb = sql.AddDatabase("sampledb");
+
+    // The broker's AMQP endpoint is NOT proxied, on a port reserved now. Behind the orchestrator's
+    // proxy a stopped broker's port keeps accepting connections and holds them, so the service's
+    // broker health check hangs instead of failing and the health report cache keeps serving the
+    // last healthy answer. Without the proxy a stopped broker refuses the connection, which is what a
+    // real outage looks like. The fixed port keeps the connection string valid across the restart.
+    var brokerPort = ReserveLoopbackPort();
+    var broker = builder.AddMessageBroker()
+        .WithEndpoint("tcp", endpoint =>
+        {
+            endpoint.IsProxied = false;
+            endpoint.Port = brokerPort;
+        });
+
+    builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-outage")
+        .WithSQLServerDataSource(sampleDb, "Sample")
+        .WithBroker(broker)
+        .WithEnvironment("SampleService__Outage", "true")
+        .WithEnvironment("Outbox__PollingIntervalSeconds", "1")
+        .WithEnvironment("Outbox__ProcessingDelaySeconds", "0")
+        .WithEnvironment("Outbox__MaxRetries", "20")
+        .WithEnvironment("Outbox__RetryBackoffBaseSeconds", "1")
+        .WithEnvironment("Outbox__LeaseSeconds", "10")
+        .WithEnvironment("HealthChecks__CacheSeconds", "1")
+        .WithHttpHealthCheck("/alive");
+
+    await builder.Build().RunAsync().ConfigureAwait(false);
+    return;
+}
 
 var databasePath = Path.Combine(Path.GetTempPath(), "mmca-apphost-testing-sample.db");
 
@@ -47,3 +88,11 @@ builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleServic
     .WithH2cHealthCheck();
 
 await builder.Build().RunAsync().ConfigureAwait(false);
+
+// A free loopback port, released at once so the broker container can bind it.
+static int ReserveLoopbackPort()
+{
+    using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    listener.Start();
+    return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+}

@@ -45,6 +45,15 @@ internal sealed class HostIntegrationTripwire(
     /// <summary>The configuration key whose presence requires the Google Cloud telemetry exporter.</summary>
     internal const string GoogleCloudTelemetryProjectIdKey = "GoogleCloudTelemetry:ProjectId";
 
+    /// <summary>The configuration key whose presence requires the AWS telemetry exporter.</summary>
+    internal const string AwsTelemetryRegionKey = "AwsTelemetry:Region";
+
+    /// <summary>
+    /// The boolean key that, when it parses true, requires the Azure PostgreSQL Entra token
+    /// configurator. A boolean gate, so an explicit <see langword="false"/> never trips it.
+    /// </summary>
+    internal const string AzurePostgreSqlEntraAuthenticationEnabledKey = "AzurePostgreSql:EntraAuthentication:Enabled";
+
     /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
     private static readonly string[] KeyRingKeys =
     [
@@ -100,6 +109,18 @@ internal sealed class HostIntegrationTripwire(
             HostIntegrationNames.GoogleCloudTelemetryExporter,
             "no Google Cloud telemetry exporter is registered, so no trace or log reaches Cloud Trace or Cloud Logging. Reference MMCA.Common.Gcp and call builder.AddGoogleCloudTelemetryExporter() after AddServiceDefaults()",
             failures);
+        Check(
+            AwsTelemetryRegionKey,
+            HostIntegrationNames.AwsTelemetryExporter,
+            "no AWS telemetry exporter is registered, so no trace or log reaches X-Ray or CloudWatch Logs. Reference MMCA.Common.Aws and call builder.AddAwsTelemetryExporter() after AddServiceDefaults()",
+            failures);
+
+        if (IsEnabled(AzurePostgreSqlEntraAuthenticationEnabledKey)
+            && !_registered.Contains(HostIntegrationNames.AzurePostgreSqlEntraAuthentication))
+        {
+            failures.Add(
+                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is true, but no Entra token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Azure and call services.AddAzurePostgreSqlEntraAuthentication(configuration).");
+        }
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration
         // runs last owns the repository, so services that disagree on the order, or that call only
@@ -123,4 +144,7 @@ internal sealed class HostIntegrationTripwire(
     }
 
     private bool IsSet(string key) => !string.IsNullOrWhiteSpace(configuration[key]);
+
+    /// <summary>A boolean gate: true only when the value parses as true, so <see langword="false"/> and blank never trip it.</summary>
+    private bool IsEnabled(string key) => bool.TryParse(configuration[key]?.Trim(), out var enabled) && enabled;
 }

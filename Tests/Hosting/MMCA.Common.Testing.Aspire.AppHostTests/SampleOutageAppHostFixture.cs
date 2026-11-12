@@ -6,7 +6,7 @@ namespace MMCA.Common.Testing.Aspire.AppHostTests;
 /// Boots the sample AppHost in its outage scenario: a SQL Server container with one database, a
 /// RabbitMQ broker, and the sample service wired to both with a real outbox. The default scenario
 /// (<see cref="SampleAppHostFixture"/>) stays container-free; this one needs a container runtime,
-/// which the inherited <see cref="RequiredEnvironment"/> (opt-in plus Docker) already demands.
+/// which the inherited <c>RequiredEnvironment</c> (opt-in plus Docker) already demands.
 /// </summary>
 public sealed class SampleOutageAppHostFixture
     : AppHostFixtureBase<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleAppHost>

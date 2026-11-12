@@ -33,7 +33,7 @@ namespace MMCA.Common.Testing.Tests.Fixtures;
 /// </summary>
 public sealed class ServiceHostTestFactoryTests
 {
-    private const string Audience = "MMCA.Tests.api";
+    private const string TestAudience = "MMCA.Tests.api";
 
     private interface IFoo
     {
@@ -64,13 +64,13 @@ public sealed class ServiceHostTestFactoryTests
     [Fact]
     public void WithAudience_RepointsTheBearerScheme()
     {
-        using var factory = new TestFactory { AudienceOverride = Audience };
+        using var factory = new TestFactory { AudienceOverride = TestAudience };
         using var host = BuildHost(factory);
 
         var options = BearerOptions(host);
 
         options.Authority.Should().BeNull("discovery against the Identity service's JWKS must be switched off");
-        options.TokenValidationParameters.ValidAudience.Should().Be(Audience);
+        options.TokenValidationParameters.ValidAudience.Should().Be(TestAudience);
         options.TokenValidationParameters.ValidIssuer.Should().Be(JwtTokenGenerator.DefaultIssuer);
         options.TokenValidationParameters.IssuerSigningKey.Should().NotBeNull();
         options.TokenValidationParameters.IssuerSigningKey!.KeyId.Should().Be(JwtTokenGenerator.DefaultKeyId);
@@ -143,7 +143,7 @@ public sealed class ServiceHostTestFactoryTests
         // a subclass that adjusts the bearer options in its hook has the last word.
         using var factory = new TestFactory
         {
-            AudienceOverride = Audience,
+            AudienceOverride = TestAudience,
             TestServices = static services => services.PostConfigure<JwtBearerOptions>(
                 JwtBearerDefaults.AuthenticationScheme,
                 static options => options.TokenValidationParameters.ValidAudience = "subclass-audience"),
@@ -168,13 +168,13 @@ public sealed class ServiceHostTestFactoryTests
     {
         // Rule 1: ConfigureWebHost is ApplyTestDefaults and nothing else, so the same host built
         // through the protected override carries the same defaults.
-        using var factory = new TestFactory { AudienceOverride = Audience };
+        using var factory = new TestFactory { AudienceOverride = TestAudience };
         using var host = BuildHost(factory, throughConfigureWebHost: true);
 
         host.Services.GetRequiredService<IHostEnvironment>().EnvironmentName.Should().Be("Testing");
         host.Services.GetRequiredService<IConfiguration>()[WebApplicationBuilderExtensions.RequireHttpsMetadataConfigKey]
             .Should().Be("false");
-        BearerOptions(host).TokenValidationParameters.ValidAudience.Should().Be(Audience);
+        BearerOptions(host).TokenValidationParameters.ValidAudience.Should().Be(TestAudience);
         host.Services.GetRequiredService<IOptions<RateLimiterOptions>>().Value.GlobalLimiter.Should().NotBeNull();
         factory.Calls.Should().Equal(["host", "services"], "the override applies the same hooks in the same order");
     }

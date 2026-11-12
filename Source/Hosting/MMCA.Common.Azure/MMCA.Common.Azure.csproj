@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Azure</PackageId>
-    <Description>MMCA framework: the Microsoft Azure adapter. Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport and the Entra SQL authentication provider, plus (through MMCA.Common.Azure.Startup) Key Vault configuration, the Azure Monitor exporter and the Blob + Key Vault DataProtection key ring; the core packages stay cloud-neutral</Description>
+    <Description>MMCA framework: the Microsoft Azure adapter. Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport, the Entra SQL authentication provider and Entra token login for Azure Database for PostgreSQL, plus (through MMCA.Common.Azure.Startup) Key Vault configuration, the Azure Monitor exporter and the Blob + Key Vault DataProtection key ring; the core packages stay cloud-neutral</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

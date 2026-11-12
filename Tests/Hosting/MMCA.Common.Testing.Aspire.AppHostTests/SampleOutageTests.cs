@@ -14,7 +14,7 @@ namespace MMCA.Common.Testing.Aspire.AppHostTests;
 /// <para>
 /// Order-independent by construction: every scenario opens with the base's baseline (both probes 200)
 /// and ends with recovery, a test that stops a resource directly starts it again in a
-/// <c>finally</c>, and the sample service keeps its own schema because Aspire recreates a container on
+/// <see langword="finally"/>, and the sample service keeps its own schema because Aspire recreates a container on
 /// start (the database comes back empty).
 /// </para>
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class SampleOutageTests(SampleOutageAppHostFixture fixture)
     private const string OutboxProbePath = "/sample/outbox";
 
     [Fact]
-    public async Task DatabaseOutage_FailsReadiness_KeepsLiveness_AndRecovers()
+    public Task DatabaseOutage_FailsReadiness_KeepsLiveness_AndRecovers()
     {
         if (!Fixture.IsAvailable)
         {
@@ -39,11 +39,11 @@ public sealed class SampleOutageTests(SampleOutageAppHostFixture fixture)
             DependencyOutageKind.Database,
             SampleOutageAppHostFixture.ServiceResourceName);
 
-        await RunOutageAsync(scenario, TestContext.Current.CancellationToken);
+        return RunOutageAsync(scenario, TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task BrokerOutage_KeepsReadiness_FailsHealth_AndDrainsTheOutbox()
+    public Task BrokerOutage_KeepsReadiness_FailsHealth_AndDrainsTheOutbox()
     {
         if (!Fixture.IsAvailable)
         {
@@ -59,7 +59,7 @@ public sealed class SampleOutageTests(SampleOutageAppHostFixture fixture)
             DuringOutage = WriteOneOutboxRowAsync,
         };
 
-        await RunOutageAsync(scenario, TestContext.Current.CancellationToken);
+        return RunOutageAsync(scenario, TestContext.Current.CancellationToken);
     }
 
     [Fact]

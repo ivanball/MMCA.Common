@@ -297,24 +297,21 @@
        the DataProtection key ring). A gateway or any host that needs only start-up wiring references
        this package instead of the full MMCA.Common.Azure adapter, so it must carry no persistence,
        messaging, transport or presentation dependency: that unused weight is why the package exists.
-       It may reference MMCA.Common.Aspire (and Shared through it) only. Judged on DECLARED
-       references. The runtime half is AzureStartupPackageBoundaryTests. -->
+       It may reference MMCA.Common.Aspire and MMCA.Common.Shared only: an ALLOW-list, so every other
+       framework project (including one added later) is refused. Judged on DECLARED references. The
+       runtime half is AzureStartupPackageBoundaryTests plus the Layering fitness tests. -->
   <Target Name="EnforceAzureStartupBoundary"
           BeforeTargets="ResolveProjectReferences"
           Condition="$(MSBuildProjectName) == 'MMCA.Common.Azure.Startup'">
     <ItemGroup>
       <_ForbiddenAzureStartupRefs Include="@(ProjectReference)"
         Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)'
-               AND ($([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Grpc'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.UI'))
-                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Gateway')))" />
+               AND $([System.String]::new('%(Filename)').StartsWith('MMCA.Common.'))
+               AND '%(Filename)' != 'MMCA.Common.Aspire'
+               AND '%(Filename)' != 'MMCA.Common.Shared'" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenAzureStartupRefs->Count()) &gt; 0"
-           Text="Layer violation: MMCA.Common.Azure.Startup must not reference %(_ForbiddenAzureStartupRefs.Filename). The Azure start-up adapter depends on MMCA.Common.Aspire only, so a host that takes it carries no persistence or messaging dependency." />
+           Text="Layer violation: MMCA.Common.Azure.Startup must not reference %(_ForbiddenAzureStartupRefs.Filename). The Azure start-up adapter depends on MMCA.Common.Aspire and MMCA.Common.Shared only, so a host that takes it carries no persistence or messaging dependency." />
   </Target>
 
 </Project>

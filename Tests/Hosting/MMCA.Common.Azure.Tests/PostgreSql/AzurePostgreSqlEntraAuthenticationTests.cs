@@ -1,5 +1,5 @@
-using Azure.Core;
 using AwesomeAssertions;
+using Azure.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Aspire.Integrations;

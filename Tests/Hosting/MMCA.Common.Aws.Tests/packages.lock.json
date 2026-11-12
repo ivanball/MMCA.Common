@@ -20,6 +20,12 @@
         "resolved": "3.0.322",
         "contentHash": "aaynUqEHHeD0v1/RDW/Rq3d/gRkF8bRKJcvblhvuvyTAB+hGuzgFl4pBD9g6jGu+VqMWPinEGqu4hzG12TtnqQ=="
       },
+      "Microsoft.Extensions.TimeProvider.Testing": {
+        "type": "Direct",
+        "requested": "[10.11.0, )",
+        "resolved": "10.11.0",
+        "contentHash": "DTivKZ2Du0dJideTTa6vPj/eXKNRu+RxtjBX7NOOUXHBtHx1ehbE+lM+j3/5M3wU6BqzcZqEEyR4+FnPKs2rTA=="
+      },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
         "requested": "[18.12.1, )",
@@ -72,11 +78,6 @@
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
         }
-      },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",
@@ -674,6 +675,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.Core": "[4.0.102.19, )",
           "AWSSDK.DynamoDBv2": "[4.0.110.2, )",
           "AWSSDK.RDS": "[4.0.108.2, )",
           "AWSSDK.S3": "[4.0.104.11, )",
@@ -802,6 +804,12 @@
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.2"
         }
+      },
+      "AWSSDK.Core": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",
@@ -1243,6 +1251,12 @@
         "resolved": "3.0.322",
         "contentHash": "aaynUqEHHeD0v1/RDW/Rq3d/gRkF8bRKJcvblhvuvyTAB+hGuzgFl4pBD9g6jGu+VqMWPinEGqu4hzG12TtnqQ=="
       },
+      "Microsoft.Extensions.TimeProvider.Testing": {
+        "type": "Direct",
+        "requested": "[10.11.0, )",
+        "resolved": "10.11.0",
+        "contentHash": "DTivKZ2Du0dJideTTa6vPj/eXKNRu+RxtjBX7NOOUXHBtHx1ehbE+lM+j3/5M3wU6BqzcZqEEyR4+FnPKs2rTA=="
+      },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
         "requested": "[18.12.1, )",
@@ -1295,11 +1309,6 @@
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
         }
-      },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",
@@ -1896,6 +1905,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.Core": "[4.0.102.19, )",
           "AWSSDK.DynamoDBv2": "[4.0.110.2, )",
           "AWSSDK.RDS": "[4.0.108.2, )",
           "AWSSDK.S3": "[4.0.104.11, )",
@@ -2023,6 +2033,12 @@
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.2"
         }
+      },
+      "AWSSDK.Core": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",

@@ -22,6 +22,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <!-- DependencyOutageTestBase counts pending outbox rows on SQL Server by default. Already in the
+         graph through MMCA.Common.Testing; direct because this package's own code calls it. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>
   <ItemGroup>

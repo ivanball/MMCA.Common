@@ -24,7 +24,7 @@ namespace MMCA.Common.Aws.Tests.Telemetry;
 /// its inner handler unsigned.
 /// </para>
 /// </summary>
-public sealed class AwsSigV4ExportHandlerTests
+public sealed partial class AwsSigV4ExportHandlerTests
 {
     private const string AccessKeyId = "AKIDEXAMPLE";
     private const string SecretAccessKey = "secret";
@@ -45,7 +45,7 @@ public sealed class AwsSigV4ExportHandlerTests
         using var invoker = Invoker(inner, StaticCredentials(), "xray");
         using var request = ExportRequest(TracesUri, [1, 2, 3]);
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var sent = inner.Requests.Should().ContainSingle().Which;
@@ -64,7 +64,7 @@ public sealed class AwsSigV4ExportHandlerTests
         using var invoker = Invoker(inner, StaticCredentials(), "xray");
         using var request = ExportRequest(TracesUri, [1, 2, 3]);
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         inner.Requests.Should().ContainSingle().Which.Header("X-Amz-Date").Should().Be("20261111T120000Z");
     }
@@ -80,7 +80,7 @@ public sealed class AwsSigV4ExportHandlerTests
         using var invoker = Invoker(inner, session, "xray");
         using var request = ExportRequest(TracesUri, [1, 2, 3]);
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         var sent = inner.Requests.Should().ContainSingle().Which;
         sent.Header("X-Amz-Security-Token").Should().Be("example-session-token");
@@ -97,8 +97,8 @@ public sealed class AwsSigV4ExportHandlerTests
         using var first = ExportRequest(TracesUri, [1, 2, 3]);
         using var second = ExportRequest(TracesUri, [4, 5, 6]);
 
-        using var firstResponse = await SendAsync(invoker, first, synchronous);
-        using var secondResponse = await SendAsync(invoker, second, synchronous);
+        using var firstResponse = await SendOnPathAsync(invoker, first, synchronous);
+        using var secondResponse = await SendOnPathAsync(invoker, second, synchronous);
 
         // Same key, same clock, same URL and headers: only the payload hash differs.
         inner.Requests.Should().HaveCount(2);
@@ -122,7 +122,7 @@ public sealed class AwsSigV4ExportHandlerTests
         request.Headers.TryAddWithoutValidation("x-aws-log-group", "mmca-group");
         request.Headers.TryAddWithoutValidation("x-aws-log-stream", "mmca-stream");
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         var sent = inner.Requests.Should().ContainSingle().Which;
         sent.Authorization.Should().StartWith(
@@ -151,7 +151,7 @@ public sealed class AwsSigV4ExportHandlerTests
         });
         using var request = ExportRequest(TracesUri, [1, 2, 3]);
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         inner.Requests.Should().BeEmpty("no unsigned request may leave the process");
@@ -168,7 +168,7 @@ public sealed class AwsSigV4ExportHandlerTests
         using var invoker = Invoker(inner, StaticCredentials(), "xray");
         using var request = ExportRequest(TracesUri, body);
 
-        using var response = await SendAsync(invoker, request, synchronous);
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
 
         var sent = inner.Requests.Should().ContainSingle().Which;
         sent.Body.Should().Equal(body);
@@ -192,24 +192,34 @@ public sealed class AwsSigV4ExportHandlerTests
         return new HttpRequestMessage(HttpMethod.Post, uri) { Content = content };
     }
 
-    private static Task<HttpResponseMessage> SendAsync(HttpMessageInvoker invoker, HttpRequestMessage request, bool synchronous) =>
+    private static Task<HttpResponseMessage> SendOnPathAsync(HttpMessageInvoker invoker, HttpRequestMessage request, bool synchronous) =>
         synchronous
-            ? Task.FromResult(invoker.Send(request, TestContext.Current.CancellationToken))
+            ? Task.FromResult(SendSynchronously(invoker, request))
             : invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+    // The exporter's own path, HttpMessageInvoker.Send, kept out of the Task-returning helper.
+    private static HttpResponseMessage SendSynchronously(HttpMessageInvoker invoker, HttpRequestMessage request) =>
+        invoker.Send(request, TestContext.Current.CancellationToken);
 
     private static string[] SignedHeaders(string authorization)
     {
-        var match = Regex.Match(authorization, "SignedHeaders=([^,\\s]+)", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        var match = SignedHeadersPattern.Match(authorization);
         match.Success.Should().BeTrue($"'{authorization}' carries SignedHeaders");
-        return match.Groups[1].Value.Split(';');
+        return match.Groups["headers"].Value.Split(';');
     }
 
     private static string Signature(string authorization)
     {
-        var match = Regex.Match(authorization, "Signature=([0-9a-f]+)", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        var match = SignaturePattern.Match(authorization);
         match.Success.Should().BeTrue($"'{authorization}' carries a Signature");
-        return match.Groups[1].Value;
+        return match.Groups["signature"].Value;
     }
+
+    [GeneratedRegex("SignedHeaders=(?<headers>[^,\\s]+)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SignedHeadersPattern { get; }
+
+    [GeneratedRegex("Signature=(?<signature>[0-9a-f]+)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SignaturePattern { get; }
 
     /// <summary>One request as the inner handler saw it.</summary>
     private sealed record SentRequest(string Authorization, IReadOnlyDictionary<string, string> Headers, string? ContentType, byte[] Body)

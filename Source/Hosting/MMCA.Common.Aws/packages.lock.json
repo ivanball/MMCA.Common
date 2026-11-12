@@ -12,6 +12,12 @@
           "AWSSDK.SimpleSystemsManagement": "4.0.7.3"
         }
       },
+      "AWSSDK.Core": {
+        "type": "Direct",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
+      },
       "AWSSDK.DynamoDBv2": {
         "type": "Direct",
         "requested": "[4.0.110.2, )",
@@ -120,11 +126,6 @@
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
         }
-      },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",
@@ -1062,6 +1063,12 @@
           "AWSSDK.SimpleSystemsManagement": "4.0.7.3"
         }
       },
+      "AWSSDK.Core": {
+        "type": "Direct",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
+      },
       "AWSSDK.DynamoDBv2": {
         "type": "Direct",
         "requested": "[4.0.110.2, )",
@@ -1170,11 +1177,6 @@
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
         }
-      },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",

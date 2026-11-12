@@ -19,6 +19,9 @@
          gets all three calls. -->
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <!-- Direct only to lift the Blob SDK the DataProtection Blobs package brings: without it a host on
+         this package alone resolves Azure.Storage.Blobs 12.26.0 instead of the pinned version. -->
+    <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <!-- DefaultAzureCredential for Key Vault and the DataProtection sinks. -->
     <PackageReference Include="Azure.Identity" />

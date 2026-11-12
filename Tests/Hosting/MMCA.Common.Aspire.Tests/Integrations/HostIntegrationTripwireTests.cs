@@ -213,18 +213,16 @@ public sealed class HostIntegrationTripwireTests
             HostIntegrationNames.AzurePostgreSqlEntraAuthentication)
             .Succeeded.Should().BeTrue();
 
+    // "false" is a set, non-blank value: the presence check the other rows use would trip on it,
+    // which is exactly what this row must not do.
     [Theory]
     [InlineData("false")]
     [InlineData("False")]
     [InlineData("")]
     [InlineData(null)]
-    public void AzurePostgreSqlDisabledFalse_DoesNotTrip(string? enabled)
-    {
-        // "false" is a set, non-blank value: the presence check the other rows use would trip on it,
-        // which is exactly what this row must not do.
+    public void AzurePostgreSqlDisabledFalse_DoesNotTrip(string? enabled) =>
         Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled })
             .Succeeded.Should().BeTrue("an explicit false is how a host leaves Entra token login off");
-    }
 
     [Fact]
     public void AddServiceDefaults_ValidatesOnStart_AndFailsTheHost()

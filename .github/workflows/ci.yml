@@ -1070,7 +1070,7 @@ jobs:
     name: AppHost integration (Aspire.Hosting.Testing)
     needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     # BLOCKING: a red here fails the run. This is the only tier that starts a real orchestrator and
     # the slowest thing in the repo per assertion; it is not a required merge check.
     #
@@ -1079,10 +1079,14 @@ jobs:
     # WebApplicationFactory, bypassing the orchestration, so a renamed resource, an unresolvable
     # reference or a WaitFor cycle is invisible everywhere else.
     #
-    # The sample AppHost declares two resources over one sample project (one with a SQLite file, one on
-    # the Http2-only h2c profile), so this needs neither a container runtime nor a dev certificate. A
-    # consumer stack with an https launch profile adds a `dotnet dev-certs https --trust` step before
-    # the test run, since a resource probed over untrusted TLS never turns healthy.
+    # The sample AppHost's default scenario declares two resources over one sample project (one with a
+    # SQLite file, one on the Http2-only h2c profile) and needs no container runtime. Its outage
+    # scenario (SampleOutageTests, DependencyOutageTestBase) runs a SQL Server and a RabbitMQ container
+    # and stops and starts them, so this job now needs Docker, which ubuntu-latest has; the image pulls
+    # and the stop-start cycles are why the budget is 40 minutes. Neither scenario needs a dev
+    # certificate. A consumer stack with an https launch profile adds a
+    # `dotnet dev-certs https --trust` step before the test run, since a resource probed over untrusted
+    # TLS never turns healthy.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

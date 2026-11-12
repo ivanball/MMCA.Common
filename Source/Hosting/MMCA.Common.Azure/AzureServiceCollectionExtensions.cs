@@ -7,8 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Azure.Messaging;
 using MMCA.Common.Azure.Notifications;
+using MMCA.Common.Azure.PostgreSql;
 using MMCA.Common.Azure.Storage;
 using MMCA.Common.Infrastructure;
 
@@ -116,5 +118,58 @@ public static class AzureServiceCollectionExtensions
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAzureServiceBusTransport() =>
             services.AddBrokerTransport(new AzureServiceBusTransport());
+
+        /// <summary>
+        /// Puts every PostgreSQL data source on Microsoft Entra token login for Azure Database for
+        /// PostgreSQL when <c>AzurePostgreSql:EntraAuthentication:Enabled</c> is true: Npgsql's periodic
+        /// password provider sends an Entra access token for the
+        /// <c>https://ossrdbms-aad.database.windows.net/.default</c> scope from
+        /// <c>DefaultAzureCredential</c> (a managed identity in Azure; a user-assigned one selects
+        /// itself through <c>AZURE_CLIENT_ID</c>), refreshed every four minutes, inside the credential's
+        /// five-minute refresh margin. Off (absent or false), this registers nothing. Order-independent
+        /// relative to <c>AddInfrastructure</c>.
+        /// <para>
+        /// The connection strings carry no password, set <c>Username</c> to the Entra principal name, and
+        /// require TLS (<c>SSL Mode=Require</c>, <c>VerifyCA</c> or <c>VerifyFull</c>), because the token
+        /// is sent as the password: a configured PostgreSQL connection string that does not fails
+        /// registration naming its key, and one supplied later fails when its data source is built. A
+        /// connection string that also carries a static <c>Password</c> is refused by Npgsql when the
+        /// data source is built. SQL Server, SQLite and Cosmos sources are untouched (SQL Server takes
+        /// Entra through the SqlClient extension this package already carries).
+        /// </para>
+        /// </summary>
+        /// <param name="configuration">Application configuration providing <c>AzurePostgreSql:EntraAuthentication</c> and the connection strings.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// A configured PostgreSQL connection string does not require TLS (the message names its key).
+        /// </exception>
+        public IServiceCollection AddAzurePostgreSqlEntraAuthentication(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration
+                .GetSection(AzurePostgreSqlEntraAuthenticationSettings.SectionPath)
+                .Get<AzurePostgreSqlEntraAuthenticationSettings>();
+            if (settings is not { Enabled: true })
+            {
+                return services;
+            }
+
+            // Deterministic: a connection string already in configuration that would send the token
+            // in clear fails here, at registration, not on the first query.
+            AzurePostgreSqlEntraAuthenticationConfigurator.EnsureConfiguredConnectionStringsAreEncrypted(configuration);
+
+            // The receipt the core startup tripwire checks: the gate set without this call fails the
+            // host instead of letting it log in with whatever password the connection string carries.
+            if (!services.Any(static descriptor =>
+                    descriptor.ServiceType == typeof(HostIntegrationMarker)
+                    && descriptor.ImplementationInstance is HostIntegrationMarker marker
+                    && string.Equals(marker.Name, HostIntegrationNames.AzurePostgreSqlEntraAuthentication, StringComparison.Ordinal)))
+            {
+                services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzurePostgreSqlEntraAuthentication));
+            }
+
+            return services.AddNpgsqlDataSourceConfigurator(new AzurePostgreSqlEntraAuthenticationConfigurator());
+        }
     }
 }
