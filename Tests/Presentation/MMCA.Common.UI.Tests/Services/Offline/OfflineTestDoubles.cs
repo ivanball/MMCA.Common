@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
@@ -154,6 +155,64 @@ internal sealed class SwitchableAuthenticationStateProvider : AuthenticationStat
 
     public override Task<AuthenticationState> GetAuthenticationStateAsync() =>
         Task.FromResult(new AuthenticationState(_principal));
+}
+
+/// <summary>
+/// A <see cref="TimeProvider"/> over a <see cref="FakeTimeProvider"/> that records every timer the
+/// queue creates (its due time) and how many are still alive (created and not disposed), so a test
+/// can prove the retry schedule holds at most one timer, none while idle, and none after disposal.
+/// Time moves only through <see cref="Advance"/>, which runs due callbacks on the calling thread.
+/// </summary>
+internal sealed class CountingTimeProvider(FakeTimeProvider inner) : TimeProvider
+{
+    private readonly ConcurrentQueue<TimeSpan> _dueTimes = new();
+    private int _active;
+
+    public override TimeZoneInfo LocalTimeZone => inner.LocalTimeZone;
+
+    public override long TimestampFrequency => inner.TimestampFrequency;
+
+    /// <summary>Gets the due time of every timer created so far, in creation order.</summary>
+    public IReadOnlyList<TimeSpan> DueTimes => [.. _dueTimes];
+
+    /// <summary>Gets how many created timers have not been disposed.</summary>
+    public int ActiveTimers => Volatile.Read(ref _active);
+
+    public override DateTimeOffset GetUtcNow() => inner.GetUtcNow();
+
+    public override long GetTimestamp() => inner.GetTimestamp();
+
+    public void Advance(TimeSpan delta) => inner.Advance(delta);
+
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+    {
+        _dueTimes.Enqueue(dueTime);
+        Interlocked.Increment(ref _active);
+        return new CountedTimer(inner.CreateTimer(callback, state, dueTime, period), this);
+    }
+
+    private sealed class CountedTimer(ITimer timer, CountingTimeProvider owner) : ITimer
+    {
+        private int _disposed;
+
+        public bool Change(TimeSpan dueTime, TimeSpan period) => timer.Change(dueTime, period);
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                Interlocked.Decrement(ref owner._active);
+            }
+
+            timer.Dispose();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
+    }
 }
 
 /// <summary>

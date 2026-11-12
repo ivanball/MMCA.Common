@@ -124,6 +124,19 @@ internal sealed class RabbitMqHealthConnection : IAsyncDisposable
         }
     }
 
+    /// <summary>Cancels a token source, best effort: a callback that throws must not replace the timeout.</summary>
+    private static async Task CancelQuietlyAsync(CancellationTokenSource source)
+    {
+        try
+        {
+            await source.CancelAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // Best effort: the caller is already reporting the timeout.
+        }
+    }
+
     /// <summary>
     /// Disposes the result of a creation that was abandoned at the timeout, should it ever finish, and
     /// only then the token source that creation was given.
@@ -164,6 +177,10 @@ internal sealed class RabbitMqHealthConnection : IAsyncDisposable
             {
                 var owned = bounded;
                 bounded = null;
+
+                // The wait can end a moment before the token's own timer fires. Cancel it here, so an
+                // abandoned creation that honours its token is always told to stop.
+                await CancelQuietlyAsync(owned).ConfigureAwait(false);
                 _ = DisposeWhenCreatedAsync(creation, owned);
                 throw;
             }

@@ -59,7 +59,7 @@
         }
         catch (Exception ex)
         {
-            // The queue keeps every entry it did not settle; the next reconnect or app start retries.
+            // The queue keeps every entry it did not settle and schedules its own next attempt while online.
             Logger.LogWarning(ex, "Draining the offline write queue on first render failed.");
         }
     }

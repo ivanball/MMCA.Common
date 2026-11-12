@@ -27,12 +27,30 @@ namespace MMCA.Common.UI.Services.Offline;
 /// <see cref="OfflineWriteOutcome.Conflict"/>, and any other failure as <see cref="OfflineWriteOutcome.Rejected"/>.
 /// </para>
 /// <para>
-/// The queue starts a replay, without awaiting it, whenever the device comes back online. Signing out
-/// clears the local store (<see cref="ILocalCacheStore.ClearAsync"/>), and with it the queue.
+/// A replay runs in three situations: the queue starts one, without awaiting it, whenever the device
+/// comes back online; <c>OfflineWriteNotifier</c> runs one on its first interactive render; and the
+/// queue retries by itself while the current user has a write it can replay and the device reports
+/// online. That retry is one timer on the injected <see cref="TimeProvider"/>, never more than one:
+/// it is set <see cref="InitialRetryDelay"/> after a write with a registered handler is queued online,
+/// and after any pass that leaves such a write pending, either because the pass stopped on a transient
+/// failure or faulted (the delay doubles after each pass that settled nothing, up to
+/// <see cref="MaxRetryDelay"/>, and returns to <see cref="InitialRetryDelay"/> after a pass that
+/// settled a write) or because a write was queued while the pass ran. A pass that leaves nothing to
+/// retry, the device going offline, and <see cref="Dispose"/> remove the timer, so an empty queue or an
+/// offline device holds none. A retry is refused like any other replay while one is running.
+/// </para>
+/// <para>
+/// Signing out clears the local store (<see cref="ILocalCacheStore.ClearAsync"/>), and with it the queue.
 /// </para>
 /// </remarks>
 public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
 {
+    /// <summary>The delay of the first scheduled retry, and of the next one after a pass that settled a write.</summary>
+    internal static readonly TimeSpan InitialRetryDelay = TimeSpan.FromSeconds(5);
+
+    /// <summary>The longest delay between scheduled retries; the doubling stops here.</summary>
+    internal static readonly TimeSpan MaxRetryDelay = TimeSpan.FromMinutes(5);
+
     private readonly ILocalCacheStore _store;
     private readonly IConnectivityStatusService _connectivity;
     private readonly Dictionary<string, IOfflineWriteHandler> _handlers = [with(StringComparer.Ordinal)];
@@ -41,8 +59,13 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
     private readonly OfflineWriteQueueOptions _options;
     private readonly ILogger<OfflineWriteQueue> _logger;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Lock _scheduleSync = new();
     private int _replaying;
+    private long _replayableEnqueues;
     private bool _disposed;
+    private ITimer? _retryTimer;
+    private object? _retryToken;
+    private TimeSpan _retryDelay = InitialRetryDelay;
 
     /// <summary>Initializes a new instance of the <see cref="OfflineWriteQueue"/> class and subscribes to connectivity changes.</summary>
     /// <param name="store">The device's local store.</param>
@@ -88,6 +111,12 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
     /// <inheritdoc />
     public bool IsAvailable => _store.IsAvailable;
 
+    /// <summary>
+    /// Gets the replay the queue last started by itself (on reconnect or from the retry timer), which
+    /// never faults; completed when none was started. Lets tests wait for a background pass to finish.
+    /// </summary>
+    internal Task BackgroundReplay { get; private set; } = Task.CompletedTask;
+
     /// <inheritdoc />
     public async Task<Result<PendingWrite>> EnqueueAsync<TPayload>(
         string kind,
@@ -128,6 +157,17 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
                 return true;
             },
             cancellationToken);
+
+        if (added && _handlers.ContainsKey(kind))
+        {
+            // Counted before the schedule check, so a pass that read the store before this write was
+            // saved sees the count move and keeps a retry scheduled (CompletePass).
+            Interlocked.Increment(ref _replayableEnqueues);
+            lock (_scheduleSync)
+            {
+                ScheduleRetryLocked();
+            }
+        }
 
         return added
             ? Result.Success(write)
@@ -174,12 +214,20 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
             return 0;
         }
 
+        var enqueuesBefore = Interlocked.Read(ref _replayableEnqueues);
+        var settled = 0;
+        var retry = true;
         try
         {
-            return await ReplayPassAsync(cancellationToken);
+            (settled, var stoppedOnTransient) = await ReplayPassAsync(cancellationToken);
+            retry = stoppedOnTransient;
+            return settled;
         }
         finally
         {
+            // A pass that threw (a store fault, a cancellation) leaves its writes pending, so it counts
+            // as a pass that settled nothing and still schedules the next attempt.
+            CompletePass(settled, retry, enqueuesBefore);
             Volatile.Write(ref _replaying, 0);
         }
     }
@@ -187,12 +235,17 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed)
+        lock (_scheduleSync)
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            CancelRetryLocked();
         }
 
-        _disposed = true;
         _connectivity.ConnectivityChanged -= OnConnectivityChanged;
         _gate.Dispose();
     }
@@ -228,7 +281,14 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         || string.Equals(error.Code, HttpResultExecutor.TimeoutErrorCode, StringComparison.Ordinal)
         || error.Type is ErrorType.Unexpected or ErrorType.TooManyRequests or ErrorType.Unauthorized;
 
-    private async Task<int> ReplayPassAsync(CancellationToken cancellationToken)
+    private static TimeSpan NextDelay(TimeSpan delay) =>
+        delay >= MaxRetryDelay / 2 ? MaxRetryDelay : delay * 2;
+
+    /// <summary>
+    /// Walks the current scope's entries once. Returns how many settled and whether the pass stopped
+    /// on a transient failure, which leaves that entry (and the ones after it) pending.
+    /// </summary>
+    private async Task<(int Settled, bool StoppedOnTransient)> ReplayPassAsync(CancellationToken cancellationToken)
     {
         var scope = await GetUserScopeAsync();
         var snapshot = InScope(await ReadAsync(cancellationToken), scope).ToList();
@@ -265,20 +325,88 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
             {
                 LogHandlerFailed(exception, write.Kind, write.Id);
                 await CountAttemptAsync(write, cancellationToken);
-                break;
+                return (settled, true);
             }
 
             if (Classify(result) is not { } outcome)
             {
                 await CountAttemptAsync(write, cancellationToken);
-                break;
+                return (settled, true);
             }
 
             await SettleAsync(write, outcome, result, cancellationToken);
             settled++;
         }
 
-        return settled;
+        return (settled, false);
+    }
+
+    /// <summary>
+    /// Sets or removes the retry timer after a pass that ran. <paramref name="retry"/> is true when
+    /// the pass stopped on a transient failure or threw; otherwise a retry is kept only when a
+    /// replayable write was queued after the pass started, since the pass may not have seen it.
+    /// </summary>
+    private void CompletePass(int settled, bool retry, long enqueuesBefore)
+    {
+        lock (_scheduleSync)
+        {
+            if (retry)
+            {
+                _retryDelay = settled > 0 ? InitialRetryDelay : NextDelay(_retryDelay);
+                ScheduleRetryLocked();
+            }
+            else if (Interlocked.Read(ref _replayableEnqueues) != enqueuesBefore)
+            {
+                _retryDelay = InitialRetryDelay;
+                ScheduleRetryLocked();
+            }
+            else
+            {
+                CancelRetryLocked();
+            }
+        }
+    }
+
+    /// <summary>Creates the one retry timer unless it exists, the queue is disposed or the device is offline. Caller holds <see cref="_scheduleSync"/>.</summary>
+    private void ScheduleRetryLocked()
+    {
+        if (_disposed || _retryTimer is not null || !_connectivity.IsOnline)
+        {
+            return;
+        }
+
+        // The token tells this timer's callback apart from one a later schedule replaced.
+        var token = new object();
+        _retryToken = token;
+        _retryTimer = _timeProvider.CreateTimer(OnRetryTimer, token, _retryDelay, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Removes the retry timer and resets the backoff. Caller holds <see cref="_scheduleSync"/>.</summary>
+    private void CancelRetryLocked()
+    {
+        _retryTimer?.Dispose();
+        _retryTimer = null;
+        _retryToken = null;
+        _retryDelay = InitialRetryDelay;
+    }
+
+    private void OnRetryTimer(object? state)
+    {
+        lock (_scheduleSync)
+        {
+            if (_disposed || state is null || !ReferenceEquals(state, _retryToken))
+            {
+                return;
+            }
+
+            // One-shot: the timer is spent. The pass it starts schedules the next one if needed, and a
+            // pass already running refuses this one and schedules on its own completion.
+            _retryTimer?.Dispose();
+            _retryTimer = null;
+            _retryToken = null;
+        }
+
+        BackgroundReplay = ReplayInBackgroundAsync(fromRetryTimer: true);
     }
 
     private async Task SettleAsync(PendingWrite write, OfflineWriteOutcome outcome, Result? result, CancellationToken cancellationToken)
@@ -346,15 +474,26 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
 
     private void OnConnectivityChanged(object? sender, EventArgs e)
     {
-        if (_disposed || !_connectivity.IsOnline)
+        if (_disposed)
         {
             return;
         }
 
-        _ = ReplayInBackgroundAsync();
+        if (!_connectivity.IsOnline)
+        {
+            // Offline: no retry until the change back to online, which replays at once.
+            lock (_scheduleSync)
+            {
+                CancelRetryLocked();
+            }
+
+            return;
+        }
+
+        BackgroundReplay = ReplayInBackgroundAsync(fromRetryTimer: false);
     }
 
-    private async Task ReplayInBackgroundAsync()
+    private async Task ReplayInBackgroundAsync(bool fromRetryTimer)
     {
         try
         {
@@ -363,7 +502,16 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         catch (Exception exception)
         {
             // A queue disposed while the replay ran (the scope ended) has nobody left to tell.
-            if (!_disposed)
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (fromRetryTimer)
+            {
+                LogScheduledReplayFailed(exception);
+            }
+            else
             {
                 LogBackgroundReplayFailed(exception);
             }
@@ -375,4 +523,7 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Offline write replay started on reconnect failed")]
     private partial void LogBackgroundReplayFailed(Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Offline write replay started by the retry schedule failed; the next attempt stays scheduled")]
+    private partial void LogScheduledReplayFailed(Exception exception);
 }
