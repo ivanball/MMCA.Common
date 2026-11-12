@@ -9,4 +9,7 @@ internal sealed class StaticAwsTelemetryCredentialSource(AWSCredentials credenti
     /// <inheritdoc />
     public ValueTask<AWSCredentials?> GetAsync(CancellationToken cancellationToken) =>
         ValueTask.FromResult<AWSCredentials?>(credentials);
+
+    /// <inheritdoc />
+    public AWSCredentials? Get(CancellationToken cancellationToken) => credentials;
 }

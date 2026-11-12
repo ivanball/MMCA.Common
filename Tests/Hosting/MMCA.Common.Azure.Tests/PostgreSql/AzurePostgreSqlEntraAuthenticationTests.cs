@@ -87,6 +87,23 @@ public sealed class AzurePostgreSqlEntraAuthenticationTests
         services.Count(d => d.ServiceType == typeof(INpgsqlDataSourceConfigurator)).Should().Be(1);
     }
 
+    // Ruling L3: a keyed registration of the marker type is skipped, not read (reading
+    // ImplementationInstance on a keyed descriptor throws), and it does not count as the receipt.
+    [Fact]
+    public void AKeyedMarker_NeitherThrowsNorCounts()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton(
+            "some-key",
+            new HostIntegrationMarker(HostIntegrationNames.AzurePostgreSqlEntraAuthentication));
+
+        var act = () => services.AddAzurePostgreSqlEntraAuthentication(
+            EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString }));
+
+        act.Should().NotThrow();
+        services.Should().ContainSingle(d => !d.IsKeyedService && IsTheEntraMarker(d), "the keyed one is not the receipt");
+    }
+
     [Fact]
     public async Task ThePasswordProvider_ReturnsTheTokenFromTheInjectedSource()
     {

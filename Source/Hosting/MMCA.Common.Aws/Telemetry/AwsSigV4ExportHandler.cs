@@ -13,14 +13,32 @@ namespace MMCA.Common.Aws.Telemetry;
 /// region, over the buffered body, at the injected clock's time. Both send paths sign, because the
 /// OTLP/HTTP exporter uses the synchronous one.
 /// <para>
-/// When no credential can be resolved the handler sends nothing and answers 401 itself, so no
-/// unsigned request ever leaves the process. On the synchronous path a credential lookup that has not
-/// finished yet (the default chain's first resolution) counts as "no credential" for that export; the
-/// lookup keeps running and the next export signs.
+/// The signature covers a fixed, minimal header set: <c>host</c>, <c>content-type</c>, the
+/// <c>x-amz-*</c> headers the signer adds, and on a logs request <c>x-aws-log-group</c> and
+/// <c>x-aws-log-stream</c>. Every other header still goes out but is not signed, so a header whose
+/// values the transport joins differently from the signer cannot invalidate the signature.
+/// </para>
+/// <para>
+/// The synchronous path resolves the credential synchronously when it is not resolved yet, so it may
+/// block the exporter's own background thread while the default chain answers (as the SDK signer
+/// itself does when it refreshes an expiring credential). When no credential can be resolved, or
+/// signing throws, the handler sends nothing and answers 401 itself, so no unsigned request ever
+/// leaves the process; it logs one Warning per kind of failure, with the exception type and message,
+/// and the next export tries again.
 /// </para>
 /// </summary>
 internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
 {
+    /// <summary>The one content header that is signed.</summary>
+    private const string ContentTypeHeader = "content-type";
+
+    /// <summary>The request headers signed when present: the CloudWatch Logs destination.</summary>
+    private static readonly string[] SignedRequestHeaders =
+    [
+        AwsTelemetryExporterExtensions.LogGroupHeader,
+        AwsTelemetryExporterExtensions.LogStreamHeader,
+    ];
+
     private readonly IAwsTelemetryCredentialSource _credentials;
 
     private readonly RegionEndpoint _region;
@@ -37,17 +55,17 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
 
     private int _warnedCredentialFailure;
 
-    private int _warnedCredentialsPending;
+    private int _warnedSigningFailure;
 
     /// <summary>Initializes a new instance of the <see cref="AwsSigV4ExportHandler"/> class.</summary>
     /// <param name="credentials">The credentials every request is signed with.</param>
     /// <param name="region">The signing region.</param>
     /// <param name="service">The signing service name, <c>xray</c> or <c>logs</c>.</param>
     /// <param name="timeProvider">The clock the signing time is read from.</param>
-    /// <param name="logger">Logs one Warning per kind of credential failure.</param>
+    /// <param name="logger">Logs one Warning per kind of credential or signing failure.</param>
     /// <param name="addedHeaders">
-    /// Headers added to every request BEFORE signing, so they are signed (the logs exporter's
-    /// <c>x-aws-log-group</c> and <c>x-aws-log-stream</c>). Each replaces any value already present.
+    /// Headers added to every request BEFORE signing (the logs exporter's <c>x-aws-log-group</c> and
+    /// <c>x-aws-log-stream</c>, which are part of the signed set). Each replaces any value already present.
     /// </param>
     public AwsSigV4ExportHandler(
         IAwsTelemetryCredentialSource credentials,
@@ -76,13 +94,12 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // The capture runs synchronously to the end when the lookup has already finished (a static
-        // credential, or the default chain once resolved), so no thread is ever blocked here.
-        var capture = new CredentialCapture();
-        Task captured;
+        // The exporter calls this on its own background thread, which already blocks on the send:
+        // an unresolved credential is resolved here, synchronously, rather than the export refused.
+        AWSCredentials? credentials;
         try
         {
-            captured = capture.RunAsync(_credentials.GetAsync(cancellationToken));
+            credentials = _credentials.Get(cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -90,22 +107,6 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
             return Refuse(request);
         }
 
-        if (!captured.IsCompleted)
-        {
-            // Never block the exporter thread on a credential lookup: it finishes in the background
-            // (the capture swallows its outcome) and this one export is refused.
-            Warn(ref _warnedCredentialsPending, CredentialFailure.Pending, exception: null);
-            return Refuse(request);
-        }
-
-        if (capture.Failure is not null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Warn(ref _warnedCredentialFailure, CredentialFailure.Threw, capture.Failure);
-            return Refuse(request);
-        }
-
-        var credentials = capture.Credentials;
         if (credentials is null)
         {
             Warn(ref _warnedNoCredentials, CredentialFailure.None, exception: null);
@@ -113,8 +114,19 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
         }
 
         var body = ReadBody(request, cancellationToken);
-        var signing = PrepareSigningRequest(request, body);
-        var result = AWSSigV4Signer.Sign(signing, Parameters(credentials));
+        AWSSigningResult result;
+        try
+        {
+            // The signer resolves a refreshing credential itself (AWSCredentials.GetCredentials), so a
+            // failed refresh surfaces here.
+            result = AWSSigV4Signer.Sign(PrepareSigningRequest(request, body), Parameters(credentials));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Warn(ref _warnedSigningFailure, CredentialFailure.SigningFailed, exception);
+            return Refuse(request);
+        }
+
         ApplySignature(request, result);
 
         return base.Send(request, cancellationToken);
@@ -146,18 +158,23 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
             ? null
             : await request.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         ReplaceContent(request, body);
-        var signing = PrepareSigningRequest(request, body);
-        var result = await AWSSigV4Signer.SignAsync(signing, Parameters(credentials), cancellationToken).ConfigureAwait(false);
+        AWSSigningResult result;
+        try
+        {
+            result = await AWSSigV4Signer
+                .SignAsync(PrepareSigningRequest(request, body), Parameters(credentials), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Warn(ref _warnedSigningFailure, CredentialFailure.SigningFailed, exception);
+            return Refuse(request);
+        }
+
         ApplySignature(request, result);
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
-
-    /// <summary>The headers the signer computes itself, or that must never be signed from the caller.</summary>
-    private static bool IsExcludedFromSigning(string name) =>
-        string.Equals(name, "Authorization", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(name, "Host", StringComparison.OrdinalIgnoreCase)
-        || name.StartsWith("X-Amz-", StringComparison.OrdinalIgnoreCase);
 
     private static HttpResponseMessage Refuse(HttpRequestMessage request) =>
         new(HttpStatusCode.Unauthorized) { RequestMessage = request };
@@ -223,14 +240,25 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
         Message = "AWS telemetry export to {Service} in {Region} was not sent: {Reason}.")]
     private static partial void LogNotSentAgain(ILogger logger, string service, string region, string reason, Exception? exception);
 
-    private static string Describe(CredentialFailure failure) => failure switch
+    /// <summary>The reason a log line gives, with the exception's type and message when there is one (never key material).</summary>
+    private static string Describe(CredentialFailure failure, Exception? exception)
     {
-        CredentialFailure.None => "no AWS credential was found (set AwsTelemetry:AccessKeyId and AwsTelemetry:SecretAccessKey, or give the host an IAM role)",
-        CredentialFailure.Threw => "resolving the AWS credential failed",
-        CredentialFailure.Pending => "the AWS credential is still being resolved",
-        _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "Unknown credential failure."),
-    };
+        var reason = failure switch
+        {
+            CredentialFailure.None => "no AWS credential was found (set AwsTelemetry:AccessKeyId and AwsTelemetry:SecretAccessKey, or give the host an IAM role)",
+            CredentialFailure.Threw => "resolving the AWS credential failed",
+            CredentialFailure.SigningFailed => "signing the request failed",
+            _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "Unknown credential failure."),
+        };
 
+        return exception is null ? reason : $"{reason} ({exception.GetType().FullName}: {exception.Message})";
+    }
+
+    /// <summary>
+    /// Adds the configured headers, then builds the signing request over the fixed header set only:
+    /// <c>content-type</c> and, when present, the CloudWatch Logs destination headers. The signer adds
+    /// <c>host</c> from the URL and its own <c>x-amz-*</c> headers.
+    /// </summary>
     private AWSSigningRequest PrepareSigningRequest(HttpRequestMessage request, byte[]? body)
     {
         foreach (var header in _addedHeaders)
@@ -246,12 +274,18 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
             Content = body,
         };
 
-        var headers = request.Content is null
-            ? request.Headers.NonValidated
-            : request.Headers.NonValidated.Concat(request.Content.Headers.NonValidated);
-        foreach (var header in headers.Where(static header => !IsExcludedFromSigning(header.Key)))
+        if (request.Content is not null
+            && request.Content.Headers.NonValidated.TryGetValues(ContentTypeHeader, out var contentType))
         {
-            signing.Headers[header.Key] = JoinValues(header.Value);
+            signing.Headers[ContentTypeHeader] = JoinValues(contentType);
+        }
+
+        foreach (var name in SignedRequestHeaders)
+        {
+            if (request.Headers.NonValidated.TryGetValues(name, out var values))
+            {
+                signing.Headers[name] = JoinValues(values);
+            }
         }
 
         return signing;
@@ -269,7 +303,7 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
     /// <summary>One Warning per kind of failure for the life of the handler; repeats go to Debug.</summary>
     private void Warn(ref int warned, CredentialFailure failure, Exception? exception)
     {
-        var reason = Describe(failure);
+        var reason = Describe(failure, exception);
         if (Interlocked.Exchange(ref warned, 1) == 0)
         {
             LogNotSent(_logger, _service, _region.SystemName, reason, exception);
@@ -280,6 +314,7 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
         }
     }
 
+    /// <summary>One value per header, as the signer expects; the signed headers each carry a single value.</summary>
     private static string JoinValues(HeaderStringValues values) =>
         string.Join(',', values.Select(static value => value.Trim()));
 
@@ -287,35 +322,6 @@ internal sealed partial class AwsSigV4ExportHandler : DelegatingHandler
     {
         None,
         Threw,
-        Pending,
-    }
-
-    /// <summary>
-    /// Awaits one credential lookup and keeps its outcome, so the synchronous path reads the result
-    /// of a lookup that already finished without a blocking wait. It never faults: a failure is kept,
-    /// not thrown, so a lookup left running in the background cannot surface as an unobserved fault.
-    /// </summary>
-    private sealed class CredentialCapture
-    {
-        /// <summary>The resolved credentials, or <see langword="null"/>.</summary>
-        public AWSCredentials? Credentials { get; private set; }
-
-        /// <summary>The lookup's failure, or <see langword="null"/>.</summary>
-        public Exception? Failure { get; private set; }
-
-        /// <summary>Awaits the lookup and records its outcome.</summary>
-        /// <param name="lookup">The lookup.</param>
-        /// <returns>A task that completes when the outcome is recorded.</returns>
-        public async Task RunAsync(ValueTask<AWSCredentials?> lookup)
-        {
-            try
-            {
-                Credentials = await lookup.ConfigureAwait(false);
-            }
-            catch (Exception exception) when (exception is not OutOfMemoryException)
-            {
-                Failure = exception;
-            }
-        }
+        SigningFailed,
     }
 }

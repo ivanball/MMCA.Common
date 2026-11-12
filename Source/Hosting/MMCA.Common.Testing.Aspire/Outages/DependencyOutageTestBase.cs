@@ -384,20 +384,12 @@ public abstract class DependencyOutageTestBase<TFixture>(TFixture fixture) : App
 
     /// <summary>
     /// Issues the start command once after a failure while the dependency was down, so the next
-    /// scenario does not inherit the outage. Its own failure is swallowed: the original one is the
-    /// one worth reporting.
+    /// scenario does not inherit the outage. Best effort and bounded by
+    /// <see cref="DependencyOutageBudget.StateChange"/>: whatever it throws is swallowed and a start
+    /// that does not finish in time is abandoned, so the original failure is the one reported.
     /// </summary>
-    private async Task TryIssueStartCommandAsync(string resourceName)
-    {
-        try
-        {
-            await Application.ResourceCommands
-                .ExecuteCommandAsync(resourceName, KnownResourceCommands.StartCommand, CancellationToken.None)
-                .ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or OperationCanceledException or TimeoutException)
-        {
-            // Best effort: the exception that brought us here propagates, not this one.
-        }
-    }
+    private Task TryIssueStartCommandAsync(string resourceName) =>
+        OutageCommands.RunBestEffortAsync(
+            token => Application.ResourceCommands.ExecuteCommandAsync(resourceName, KnownResourceCommands.StartCommand, token),
+            OutageBudget.StateChange);
 }

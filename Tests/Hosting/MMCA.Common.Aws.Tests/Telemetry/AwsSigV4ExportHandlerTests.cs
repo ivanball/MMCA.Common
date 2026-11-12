@@ -175,12 +175,200 @@ public sealed partial class AwsSigV4ExportHandlerTests
         sent.ContentType.Should().Be("application/x-protobuf");
     }
 
+    // Rulings M1 and M2: the synchronous path resolves the credential itself rather than refusing an
+    // export while a lookup is pending, so the first batch after a cold start is signed.
+    [Fact]
+    public async Task TheFirstSyncExport_IsSigned_WhenTheChainIsSlowButSucceeds()
+    {
+        var inner = new RecordingHandler();
+        var asyncLookup = new TaskCompletionSource<AWSCredentials?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new DefaultChainAwsTelemetryCredentialSource(
+            () =>
+            {
+                // A slow chain: the synchronous resolver takes a while, and the asynchronous lookup a
+                // warm-up may have started has not finished either.
+                using var slow = new ManualResetEventSlim(initialState: false);
+                slow.Wait(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+                return new BasicAWSCredentials(AccessKeyId, SecretAccessKey);
+            },
+            () => asyncLookup.Task);
+        var warmup = source.GetAsync(TestContext.Current.CancellationToken).AsTask();
+        using var invoker = Invoker(inner, source, "xray");
+        using var request = ExportRequest(TracesUri, [1, 2, 3]);
+
+        using var response = await SendOnPathAsync(invoker, request, synchronous: true);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        inner.Requests.Should().ContainSingle().Which.Authorization.Should().StartWith(
+            "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261111/us-east-1/xray/aws4_request");
+        asyncLookup.SetResult(null);
+        await warmup;
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AThrowingChain_LogsTheRealException_AndIsRetriedOnTheNextExport(bool synchronous)
+    {
+        var inner = new RecordingHandler();
+        var logger = new RecordingLogger();
+        var attempts = 0;
+        var source = new FakeCredentialSource(() => Interlocked.Increment(ref attempts) == 1
+            ? throw new AmazonClientException("the instance metadata service did not answer")
+            : new BasicAWSCredentials(AccessKeyId, SecretAccessKey));
+        using var invoker = Invoker(inner, source, "xray", logger);
+        using var first = ExportRequest(TracesUri, [1, 2, 3]);
+        using var second = ExportRequest(TracesUri, [4, 5, 6]);
+
+        using var firstResponse = await SendOnPathAsync(invoker, first, synchronous);
+        using var secondResponse = await SendOnPathAsync(invoker, second, synchronous);
+
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK, "a failed lookup is not cached, so the next export tries again");
+        inner.Requests.Should().ContainSingle("only the second export had a credential to sign with");
+        source.Calls.Should().Be(2);
+        var warning = logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Which;
+        warning.Message.Should().Contain(nameof(AmazonClientException))
+            .And.Contain("the instance metadata service did not answer");
+        warning.Exception.Should().BeOfType<AmazonClientException>();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AThrowingSigner_SendsNothing_AndAnswers401(bool synchronous)
+    {
+        var inner = new RecordingHandler();
+        var logger = new RecordingLogger();
+        using var invoker = Invoker(inner, new StaticAwsTelemetryCredentialSource(new ThrowingCredentials()), "xray", logger);
+        using var request = ExportRequest(TracesUri, [1, 2, 3]);
+
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        inner.Requests.Should().BeEmpty("a request the signer could not sign must not leave the process");
+        var warning = logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Which;
+        warning.Message.Should().Contain(nameof(AmazonClientException)).And.Contain("the credential refresh failed");
+    }
+
+    [Fact]
+    public async Task NoLogLine_CarriesTheKeyIdTheSecretOrASignature()
+    {
+        const string distinctSecret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+        var inner = new RecordingHandler();
+        var logger = new RecordingLogger();
+        var attempts = 0;
+
+        // Every outcome the handler logs, on both paths: a throwing lookup, a null lookup, a throwing
+        // signer, and successful signatures in between.
+        var source = new FakeCredentialSource(() => (Interlocked.Increment(ref attempts) % 3) switch
+        {
+            1 => throw new AmazonClientException("no credential in the chain"),
+            2 => null,
+            _ => new BasicAWSCredentials(AccessKeyId, distinctSecret),
+        });
+        using var invoker = Invoker(inner, source, "logs", logger);
+        using var throwingSigner = Invoker(inner, new StaticAwsTelemetryCredentialSource(new ThrowingCredentials()), "logs", logger);
+        foreach (var synchronous in new[] { true, false, true, false, true, false })
+        {
+            using var request = ExportRequest(LogsUri, [1, 2, 3]);
+            using var response = await SendOnPathAsync(invoker, request, synchronous);
+            using var refused = ExportRequest(LogsUri, [4, 5, 6]);
+            using var refusedResponse = await SendOnPathAsync(throwingSigner, refused, synchronous);
+        }
+
+        inner.Requests.Should().NotBeEmpty();
+        logger.Entries.Should().NotBeEmpty();
+        var signatures = inner.Requests.Select(sent => Signature(sent.Authorization)).ToList();
+        foreach (var entry in logger.Entries)
+        {
+            entry.Text.Should().NotContain(AccessKeyId).And.NotContain(distinctSecret);
+            foreach (var signature in signatures)
+            {
+                entry.Text.Should().NotContain(signature);
+            }
+        }
+    }
+
+    // Ruling L8: the signature covers a fixed, minimal header set, never whatever else the request
+    // carries, so a multi-valued header joined differently from the wire cannot break it.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SignedHeaders_AreExactlyTheFixedSet_ForTraces(bool synchronous)
+    {
+        var inner = new RecordingHandler();
+        using var invoker = Invoker(inner, StaticCredentials(), "xray");
+        using var request = WithExtraHeaders(ExportRequest(TracesUri, [1, 2, 3]));
+
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
+
+        SignedHeaders(inner.Requests.Should().ContainSingle().Which.Authorization)
+            .Should().BeEquivalentTo("content-type", "host", "x-amz-content-sha256", "x-amz-date");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SignedHeaders_AreExactlyTheFixedSet_ForLogs(bool synchronous)
+    {
+        var inner = new RecordingHandler();
+        using var invoker = new HttpMessageInvoker(new AwsSigV4ExportHandler(
+            StaticCredentials(),
+            RegionEndpoint.USEast1,
+            "logs",
+            new FakeTimeProvider(SigningTime),
+            NullLogger.Instance,
+            [new("x-aws-log-group", "mmca-group"), new("x-aws-log-stream", "mmca-stream")])
+        {
+            InnerHandler = inner,
+        });
+        using var request = WithExtraHeaders(ExportRequest(LogsUri, [1, 2, 3]));
+
+        using var response = await SendOnPathAsync(invoker, request, synchronous);
+
+        var sent = inner.Requests.Should().ContainSingle().Which;
+        SignedHeaders(sent.Authorization).Should().BeEquivalentTo("content-type", "host", "x-amz-content-sha256", "x-amz-date", "x-aws-log-group", "x-aws-log-stream");
+        sent.Header("x-aws-log-group").Should().Be("mmca-group");
+        sent.Header("x-aws-log-stream").Should().Be("mmca-stream");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MultiValuedHeaders_DoNotChangeTheSignature(bool synchronous)
+    {
+        var inner = new RecordingHandler();
+        using var invoker = Invoker(inner, StaticCredentials(), "xray");
+        using var plain = ExportRequest(TracesUri, [1, 2, 3]);
+        using var decorated = WithExtraHeaders(ExportRequest(TracesUri, [1, 2, 3]));
+
+        using var plainResponse = await SendOnPathAsync(invoker, plain, synchronous);
+        using var decoratedResponse = await SendOnPathAsync(invoker, decorated, synchronous);
+
+        inner.Requests.Should().HaveCount(2);
+        Signature(inner.Requests[1].Authorization).Should().Be(
+            Signature(inner.Requests[0].Authorization),
+            "the signature depends only on the fixed header set, the URL, the clock and the body");
+        inner.Requests[1].Header("User-Agent").Should().NotBeNullOrEmpty("unsigned headers still go out on the wire");
+    }
+
+    private static HttpRequestMessage WithExtraHeaders(HttpRequestMessage request)
+    {
+        request.Headers.UserAgent.ParseAdd("OTel-OTLP-Exporter-Dotnet/1.15.0");
+        request.Headers.UserAgent.ParseAdd("mmca-test/1.0");
+        request.Headers.Accept.ParseAdd("application/x-protobuf");
+        request.Headers.Accept.ParseAdd("application/json");
+        request.Headers.TryAddWithoutValidation("x-custom", ["one", "two"]);
+        return request;
+    }
+
     private static StaticAwsTelemetryCredentialSource StaticCredentials() =>
         new(new BasicAWSCredentials(AccessKeyId, SecretAccessKey));
 
-    private static HttpMessageInvoker Invoker(HttpMessageHandler inner, IAwsTelemetryCredentialSource credentials, string service) =>
+    private static HttpMessageInvoker Invoker(HttpMessageHandler inner, IAwsTelemetryCredentialSource credentials, string service, ILogger? logger = null) =>
         new(new AwsSigV4ExportHandler(
-            credentials, RegionEndpoint.USEast1, service, new FakeTimeProvider(SigningTime), NullLogger.Instance)
+            credentials, RegionEndpoint.USEast1, service, new FakeTimeProvider(SigningTime), logger ?? NullLogger.Instance)
         {
             InnerHandler = inner,
         });
@@ -261,10 +449,16 @@ public sealed partial class AwsSigV4ExportHandlerTests
             Task.FromResult(Send(request, cancellationToken));
     }
 
+    /// <summary>Answers both paths from one delegate, counting the calls.</summary>
     private sealed class FakeCredentialSource(Func<AWSCredentials?> resolve) : IAwsTelemetryCredentialSource
     {
+        private int _calls;
+
+        public int Calls => Volatile.Read(ref _calls);
+
         public ValueTask<AWSCredentials?> GetAsync(CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref _calls);
             try
             {
                 return ValueTask.FromResult(resolve());
@@ -274,11 +468,43 @@ public sealed partial class AwsSigV4ExportHandlerTests
                 return ValueTask.FromException<AWSCredentials?>(ex);
             }
         }
+
+        public AWSCredentials? Get(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _calls);
+            return resolve();
+        }
+    }
+
+    /// <summary>Credentials whose resolution throws inside the SDK signer, as a failed refresh does.</summary>
+    private sealed class ThrowingCredentials : AWSCredentials
+    {
+        public override ImmutableCredentials GetCredentials() =>
+            throw new AmazonClientException("the credential refresh failed");
+    }
+
+    /// <summary>One log entry as written: level, rendered message and exception.</summary>
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception)
+    {
+        public string Text => Message + Environment.NewLine + Exception;
     }
 
     private sealed class RecordingLogger : ILogger
     {
-        public List<LogLevel> Levels { get; } = [];
+        private readonly List<LogEntry> _entries = [];
+
+        public IReadOnlyList<LogEntry> Entries
+        {
+            get
+            {
+                lock (_entries)
+                {
+                    return [.. _entries];
+                }
+            }
+        }
+
+        public IReadOnlyList<LogLevel> Levels => [.. Entries.Select(static entry => entry.Level)];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;
@@ -287,9 +513,9 @@ public sealed partial class AwsSigV4ExportHandlerTests
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            lock (Levels)
+            lock (_entries)
             {
-                Levels.Add(logLevel);
+                _entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
             }
         }
     }

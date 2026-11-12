@@ -51,12 +51,15 @@ public static class AwsTelemetryExporterExtensions
         ///     the CloudWatch Logs destination. Without them no log is exported.</item>
         ///   <item><c>AwsTelemetry:TracesEndpoint</c> and <c>AwsTelemetry:LogsEndpoint</c> (optional):
         ///     the full signal URLs, defaulting to <c>https://xray.{region}.amazonaws.com/v1/traces</c>
-        ///     and <c>https://logs.{region}.amazonaws.com/v1/logs</c>.</item>
+        ///     and <c>https://logs.{region}.amazonaws.com/v1/logs</c>. The defaults are for the
+        ///     commercial <c>aws</c> partition; a host in the China or GovCloud partitions sets
+        ///     <c>AwsTelemetry:TracesEndpoint</c> and <c>AwsTelemetry:LogsEndpoint</c>.</item>
         ///   <item><c>AwsTelemetry:AccessKeyId</c> and <c>AwsTelemetry:SecretAccessKey</c> (optional,
         ///     together): static credentials. Without them the AWS default credential chain (an IAM
-        ///     role on ECS, EKS or EC2, the environment, the shared profile) is resolved on the first
-        ///     export, never at registration. The identity needs permission to write to X-Ray and to the
-        ///     log group.</item>
+        ///     role on ECS, EKS or EC2, the environment, the shared profile) is resolved once while the
+        ///     host starts, never at registration; a failure there is logged as one Warning and does not
+        ///     fail the host, and each export then resolves the chain itself until one succeeds. The
+        ///     identity needs permission to write to X-Ray and to the log group.</item>
         /// </list>
         /// </para>
         /// <para>
@@ -121,6 +124,16 @@ public static class AwsTelemetryExporterExtensions
             IAwsTelemetryCredentialSource credentials = staticCredentials is null
                 ? new DefaultChainAwsTelemetryCredentialSource()
                 : new StaticAwsTelemetryCredentialSource(staticCredentials);
+
+            // The default chain is warmed while the host starts (never at registration), so the first
+            // export already finds it; a failure there is logged and never fails the host.
+            if (staticCredentials is null)
+            {
+                builder.Services.AddSingleton(provider => new AwsTelemetryCredentialWarmup(
+                    credentials,
+                    provider.GetRequiredService<ILogger<AwsTelemetryCredentialWarmup>>()));
+                builder.Services.AddHostedService(provider => provider.GetRequiredService<AwsTelemetryCredentialWarmup>());
+            }
 
             // The exporters are built by hand rather than through AddOtlpExporter: the OpenTelemetry SDK
             // refuses a signal-specific AddOtlpExporter on a service collection where UseOtlpExporter

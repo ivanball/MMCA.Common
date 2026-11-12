@@ -50,7 +50,8 @@ internal sealed class HostIntegrationTripwire(
 
     /// <summary>
     /// The boolean key that, when it parses true, requires the Azure PostgreSQL Entra token
-    /// configurator. A boolean gate, so an explicit <see langword="false"/> never trips it.
+    /// configurator. A boolean gate, so an explicit <see langword="false"/> or a blank value never
+    /// trips it; a value that is neither blank nor a boolean always does, naming the accepted values.
     /// </summary>
     internal const string AzurePostgreSqlEntraAuthenticationEnabledKey = "AzurePostgreSql:EntraAuthentication:Enabled";
 
@@ -115,7 +116,15 @@ internal sealed class HostIntegrationTripwire(
             "no AWS telemetry exporter is registered, so no trace or log reaches X-Ray or CloudWatch Logs. Reference MMCA.Common.Aws and call builder.AddAwsTelemetryExporter() after AddServiceDefaults()",
             failures);
 
-        if (IsEnabled(AzurePostgreSqlEntraAuthenticationEnabledKey)
+        var entraGate = ReadBooleanGate(AzurePostgreSqlEntraAuthenticationEnabledKey);
+        if (entraGate is null)
+        {
+            // Unreadable is not "off": whoever wrote "yes" or "1" meant on, and the host would
+            // otherwise log in with whatever password the connection string carries.
+            failures.Add(
+                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is \"{configuration[AzurePostgreSqlEntraAuthenticationEnabledKey]}\", which is not a boolean. Set it to true or false (or leave it blank for off).");
+        }
+        else if (entraGate.Value
             && !_registered.Contains(HostIntegrationNames.AzurePostgreSqlEntraAuthentication))
         {
             failures.Add(
@@ -145,6 +154,19 @@ internal sealed class HostIntegrationTripwire(
 
     private bool IsSet(string key) => !string.IsNullOrWhiteSpace(configuration[key]);
 
-    /// <summary>A boolean gate: true only when the value parses as true, so <see langword="false"/> and blank never trip it.</summary>
-    private bool IsEnabled(string key) => bool.TryParse(configuration[key]?.Trim(), out var enabled) && enabled;
+    /// <summary>
+    /// A boolean gate: <see langword="false"/> when blank or absent, the parsed value when it reads
+    /// <see langword="true"/> or <see langword="false"/> (any case), and <see langword="null"/> when it
+    /// is set to anything else.
+    /// </summary>
+    private bool? ReadBooleanGate(string key)
+    {
+        var value = configuration[key];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return bool.TryParse(value.Trim(), out var enabled) ? enabled : null;
+    }
 }

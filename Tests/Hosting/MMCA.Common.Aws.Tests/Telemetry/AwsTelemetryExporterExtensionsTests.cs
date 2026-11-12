@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire;
 using MMCA.Common.Aspire.Integrations;
+using MMCA.Common.Aws.Telemetry;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 
@@ -159,6 +160,41 @@ public sealed class AwsTelemetryExporterExtensionsTests
         var act = () => builder.AddAwsTelemetryExporter();
 
         act.Should().Throw<InvalidOperationException>().WithMessage($"*{key}*");
+    }
+
+    // Ruling M1: with no static key pair the default chain is warmed while the host starts. Only the
+    // registration is inspected; the host is not built, so nothing reaches the real chain.
+    [Fact]
+    public void WithoutStaticKeys_RegistersTheCredentialWarmup()
+    {
+        var builder = BuilderWith(new() { ["AwsTelemetry:Region"] = Region });
+        builder.AddServiceDefaults();
+
+        builder.AddAwsTelemetryExporter();
+
+        builder.Services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(AwsTelemetryCredentialWarmup));
+        builder.Services.Should().Contain(descriptor => descriptor.ServiceType == typeof(IHostedService)
+            && descriptor.ImplementationFactory != null
+            && descriptor.ImplementationFactory.Method.ReturnType == typeof(AwsTelemetryCredentialWarmup));
+    }
+
+    [Fact]
+    public void WithStaticKeys_RegistersNoWarmup()
+    {
+        var builder = ConfiguredBuilder();
+
+        builder.Services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(AwsTelemetryCredentialWarmup));
+    }
+
+    [Fact]
+    public void WithoutARegion_RegistersNoWarmup()
+    {
+        var builder = BuilderWith([]);
+        builder.AddServiceDefaults();
+
+        builder.AddAwsTelemetryExporter();
+
+        builder.Services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(AwsTelemetryCredentialWarmup));
     }
 
     [Fact]

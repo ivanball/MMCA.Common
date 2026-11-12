@@ -37,18 +37,10 @@ if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
     var sql = builder.AddSqlServer("sql");
     var sampleDb = sql.AddDatabase("sampledb");
 
-    // The broker's AMQP endpoint is NOT proxied, on a port reserved now. Behind the orchestrator's
-    // proxy a stopped broker's port keeps accepting connections and holds them, so the service's
-    // broker health check hangs instead of failing and the health report cache keeps serving the
-    // last healthy answer. Without the proxy a stopped broker refuses the connection, which is what a
-    // real outage looks like. The fixed port keeps the connection string valid across the restart.
-    var brokerPort = ReserveLoopbackPort();
-    var broker = builder.AddMessageBroker()
-        .WithEndpoint("tcp", endpoint =>
-        {
-            endpoint.IsProxied = false;
-            endpoint.Port = brokerPort;
-        });
+    // The broker keeps the orchestrator's proxied endpoint, exactly as a real AppHost wires it. While
+    // the broker is stopped the proxy still accepts connections and holds them; the service's broker
+    // health check is bounded by HealthChecks:CheckTimeoutSeconds, so /health turns 503 anyway.
+    var broker = builder.AddMessageBroker();
 
     builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-outage")
         .WithSQLServerDataSource(sampleDb, "Sample")
@@ -88,11 +80,3 @@ builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleServic
     .WithH2cHealthCheck();
 
 await builder.Build().RunAsync().ConfigureAwait(false);
-
-// A free loopback port, released at once so the broker container can bind it.
-static int ReserveLoopbackPort()
-{
-    using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
-    listener.Start();
-    return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-}

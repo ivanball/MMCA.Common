@@ -1,5 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -40,5 +42,29 @@ public sealed class GatewayRetryForwarderHttpClientFactoryTests
 
         var retry = wrapped.Should().BeOfType<GatewayConnectRetryHandler>().Which;
         retry.InnerHandler.Should().BeSameAs(handler, "YARP's base WrapHandler returns the handler unchanged");
+    }
+
+    // Ruling L2: the container sees exactly one public constructor, so a host that also registers a
+    // non-generic ILogger cannot make the factory's construction ambiguous.
+    [Fact]
+    public void TheFactory_HasExactlyOnePublicConstructor() =>
+        typeof(GatewayRetryForwarderHttpClientFactory).GetConstructors(BindingFlags.Instance | BindingFlags.Public)
+            .Should().ContainSingle()
+            .Which.GetParameters()[0].ParameterType.Should().Be<ILoggerFactory>();
+
+    [Fact]
+    public void TheContainer_BuildsTheFactory_WhenTheHostAlsoRegistersANonGenericLogger()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ILogger>(NullLogger.Instance);
+        services.AddSingleton(Options.Create(new GatewaySettings { Retry = new GatewayRetrySettings { Enabled = true } }));
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider());
+        services.AddSingleton<GatewayRetryForwarderHttpClientFactory>();
+        using var provider = services.BuildServiceProvider();
+
+        var resolve = () => provider.GetRequiredService<GatewayRetryForwarderHttpClientFactory>();
+
+        resolve.Should().NotThrow();
     }
 }

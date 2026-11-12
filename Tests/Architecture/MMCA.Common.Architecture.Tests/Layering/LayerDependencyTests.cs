@@ -8,8 +8,10 @@ namespace MMCA.Common.Architecture.Tests.Layering;
 /// <para>
 /// Plus the runtime half of <c>EnforceServiceHostLayerBoundary</c>: the composed service host stays a
 /// SERVICE host, so its compiled assembly references no UI layer, no gateway, no MCP endpoint, no test
-/// infrastructure, no language-model package and no AppHost model, whether the edge arrives through a
-/// declared reference or a transitive one. (The Azure.Startup half lives in
+/// infrastructure, no language-model package and no AppHost model. It reads the assembly references
+/// the compiled ServiceHost assembly itself declares (<c>GetReferencedAssemblies()</c>): a reference
+/// only a dependency of ServiceHost carries, or one the compiler dropped because nothing uses it, is
+/// not seen here. (The Azure.Startup half lives in
 /// <c>AzureStartupPackageBoundaryTests</c>, which already asserts its Aspire-and-Shared allow-list.)
 /// </para>
 /// </summary>

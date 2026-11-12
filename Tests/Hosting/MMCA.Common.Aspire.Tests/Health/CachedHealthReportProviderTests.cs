@@ -48,6 +48,28 @@ public sealed class CachedHealthReportProviderTests
         public void Advance(TimeSpan delta) => _utcNow = _utcNow.Add(delta);
     }
 
+    /// <summary>Healthy until told to hang; then waits until its token is cancelled.</summary>
+    private sealed class HangingCheck : IHealthCheck
+    {
+        private int _started;
+
+        public bool Hangs { get; set; }
+
+        public int Started => Volatile.Read(ref _started);
+
+        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            if (!Hangs)
+            {
+                return HealthCheckResult.Healthy();
+            }
+
+            Interlocked.Increment(ref _started);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return HealthCheckResult.Healthy();
+        }
+    }
+
     private static (CachedHealthReportProvider Provider, CountingCheck Check, StubClock Clock, ServiceProvider Services)
         Build(int cacheSeconds)
     {
@@ -140,6 +162,75 @@ public sealed class CachedHealthReportProviderTests
         await Task.WhenAll([first, .. followers]);
 
         check.Invocations.Should().Be(1, "single flight means one probe round, not one per waiting caller");
+    }
+
+    [Fact]
+    public void Options_DefaultToAFiveSecondCheckTimeout() =>
+        new HealthReportCacheOptions().CheckTimeoutSeconds.Should().Be(5);
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(60, true)]
+    [InlineData(61, false)]
+    public void CheckTimeoutSeconds_IsRangeValidated(int seconds, bool valid)
+    {
+        var options = new HealthReportCacheOptions { CheckTimeoutSeconds = seconds };
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+
+        var isValid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+            options,
+            new System.ComponentModel.DataAnnotations.ValidationContext(options),
+            results,
+            validateAllProperties: true);
+
+        isValid.Should().Be(valid);
+    }
+
+    // Ruling "health checks are bounded": a check that never finishes on its own is cut off by its
+    // registration timeout and reported failed, and while that one round runs the cache serves the
+    // previous report at most for that round.
+    [Fact]
+    public async Task AHangingCheck_IsReportedFailedAfterItsTimeout_AndTheStaleReportLastsOneRound()
+    {
+        var hang = new HangingCheck();
+        var clock = new StubClock();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHealthChecks().Add(new HealthCheckRegistration(
+            "hanging",
+            hang,
+            failureStatus: null,
+            tags: null,
+            timeout: TimeSpan.FromSeconds(1)));
+        await using var provider = services.BuildServiceProvider();
+        using var sut = new CachedHealthReportProvider(
+            provider.GetRequiredService<HealthCheckService>(),
+            Options.Create(new HealthReportCacheOptions { CacheSeconds = 5 }),
+            clock);
+
+        (await sut.GetReportAsync("/health", predicate: null, TestContext.Current.CancellationToken))
+            .Status.Should().Be(HealthStatus.Healthy);
+
+        hang.Hangs = true;
+        clock.Advance(TimeSpan.FromSeconds(6));
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        var refreshing = sut.GetReportAsync("/health", predicate: null, TestContext.Current.CancellationToken);
+        while (hang.Started == 0)
+        {
+            await Task.Yield();
+        }
+
+        var duringTheRound = await sut.GetReportAsync("/health", predicate: null, TestContext.Current.CancellationToken);
+        var refreshed = await refreshing.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System, TestContext.Current.CancellationToken);
+        elapsed.Stop();
+        var afterTheRound = await sut.GetReportAsync("/health", predicate: null, TestContext.Current.CancellationToken);
+
+        duringTheRound.Status.Should().Be(HealthStatus.Healthy, "the one round in progress serves the previous report");
+        refreshed.Status.Should().Be(HealthStatus.Unhealthy);
+        refreshed.Entries["hanging"].Description.Should().Contain("timeout");
+        elapsed.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(4), "the check timeout bounds the round");
+        afterTheRound.Status.Should().Be(HealthStatus.Unhealthy, "no stale report survives the round that timed out");
     }
 
     [Fact]

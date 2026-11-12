@@ -224,6 +224,36 @@ public sealed class HostIntegrationTripwireTests
         Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled })
             .Succeeded.Should().BeTrue("an explicit false is how a host leaves Entra token login off");
 
+    // Ruling L1: a set value that is not a boolean is a mistake to report, not a silent "off": an
+    // operator who wrote "yes" or "1" meant on, and the host would otherwise log in with a password.
+    [Theory]
+    [InlineData("yes")]
+    [InlineData("1")]
+    [InlineData("on")]
+    public void AzurePostgreSqlEnabled_NotABoolean_Fails_NamingTheKeyAndTheAcceptedValues(string enabled)
+    {
+        var result = Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled });
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle().Which.Should()
+            .Contain("AzurePostgreSql:EntraAuthentication:Enabled")
+            .And.Contain($"\"{enabled}\"")
+            .And.Contain("true")
+            .And.Contain("false");
+    }
+
+    [Fact]
+    public void AzurePostgreSqlEnabled_NotABoolean_FailsEvenWithTheMarker() =>
+        Validate(
+            new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = "yes" },
+            HostIntegrationNames.AzurePostgreSqlEntraAuthentication)
+            .Failed.Should().BeTrue("the value is unreadable whichever registrations ran");
+
+    [Fact]
+    public void AzurePostgreSqlEnabled_Whitespace_DoesNotTrip() =>
+        Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = "   " })
+            .Succeeded.Should().BeTrue("blank stays off");
+
     [Fact]
     public void AddServiceDefaults_ValidatesOnStart_AndFailsTheHost()
     {

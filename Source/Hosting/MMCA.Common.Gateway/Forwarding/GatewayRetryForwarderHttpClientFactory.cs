@@ -40,11 +40,13 @@ internal sealed class GatewayRetryForwarderHttpClientFactory : ForwarderHttpClie
 
     /// <summary>
     /// Builds the factory around one logger for the retry Warning; YARP's own factory logging is off.
+    /// Internal so the container sees exactly one public constructor: a host that also registers a
+    /// non-generic <see cref="ILogger"/> would otherwise make the choice ambiguous.
     /// </summary>
     /// <param name="retryLogger">Logs the retry Warning.</param>
     /// <param name="settings">The gateway settings, whose <see cref="GatewaySettings.Retry"/> block is used.</param>
     /// <param name="timeProvider">The clock the delay between attempts is measured on.</param>
-    public GatewayRetryForwarderHttpClientFactory(
+    internal GatewayRetryForwarderHttpClientFactory(
         ILogger retryLogger,
         IOptions<GatewaySettings> settings,
         TimeProvider timeProvider)
