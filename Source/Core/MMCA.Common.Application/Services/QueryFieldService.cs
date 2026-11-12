@@ -38,6 +38,13 @@ public sealed class QueryFieldService
     /// </remarks>
     private const int MaxCacheEntries = 512;
 
+    /// <summary>
+    /// Serializes admission to the two field-set caches, so the count check and the add are one step
+    /// and <see cref="MaxCacheEntries"/> is an exact bound under concurrency. Taken on a cache miss
+    /// only; a hit stays a lock-free read.
+    /// </summary>
+    private static readonly Lock CacheAdmissionLock = new();
+
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertiesCache = new();
     private static readonly ConcurrentDictionary<Type, PropertyAccessor[]> AccessorCache = new();
     private static readonly JsonNamingPolicy CamelCase = JsonNamingPolicy.CamelCase;
@@ -299,13 +306,19 @@ public sealed class QueryFieldService
             // into CPU churn, which is the more expensive failure; skipping projection only widens
             // the column list sent to the database, and the response shape is unchanged because
             // ShapeCollectionData still trims the payload to the requested fields.
-            if (ProjectionCache.Count >= MaxCacheEntries)
-                return query;
+            lock (CacheAdmissionLock)
+            {
+                if (!ProjectionCache.TryGetValue(key, out selectExpression))
+                {
+                    if (ProjectionCache.Count >= MaxCacheEntries)
+                        return query;
 
-            selectExpression = ProjectionCache.GetOrAdd(
-                key,
-                static (_, set) => BuildProjection<TEntity>(set),
-                fieldsSet);
+                    selectExpression = ProjectionCache.GetOrAdd(
+                        key,
+                        static (_, set) => BuildProjection<TEntity>(set),
+                        fieldsSet);
+                }
+            }
         }
 
         return selectExpression is null
@@ -645,13 +658,19 @@ public sealed class QueryFieldService
         // Past the cap, filter per request rather than admitting another client-shaped key. This
         // path is a single LINQ pass over an already-compiled accessor array (no expression
         // compilation), so an uncached shape costs a scan, not a rebuild.
-        if (ShapedAccessorCache.Count >= MaxCacheEntries)
-            return FilterAccessorsByFields(accessors, fieldsSet);
+        lock (CacheAdmissionLock)
+        {
+            if (ShapedAccessorCache.TryGetValue(key, out cached))
+                return cached;
 
-        return ShapedAccessorCache.GetOrAdd(
-            key,
-            static (_, arg) => FilterAccessorsByFields(arg.Accessors, arg.FieldsSet),
-            (Accessors: accessors, FieldsSet: fieldsSet));
+            if (ShapedAccessorCache.Count >= MaxCacheEntries)
+                return FilterAccessorsByFields(accessors, fieldsSet);
+
+            return ShapedAccessorCache.GetOrAdd(
+                key,
+                static (_, arg) => FilterAccessorsByFields(arg.Accessors, arg.FieldsSet),
+                (Accessors: accessors, FieldsSet: fieldsSet));
+        }
     }
 
     /// <summary>
