@@ -216,9 +216,15 @@ needs the shared key ring (ADR-069). `Webhooks:AllowInsecureTargetsInDevelopment
 host target `http://localhost` and private addresses; any other environment ignores it with one startup
 warning.
 
-Deliveries are internal commands and a replica runs them one row at a time, so one slow receiver
-delays every other internal command on that replica for up to `Webhooks:TimeoutSeconds` (1 to 30,
-default 10) per row; keep the timeout low. The `MMCA.Webhooks` client runs its own handler and nothing
+Deliveries run in a dedicated lane on every replica, so a slow or failing receiver never delays the
+other internal commands; the lane sends one delivery at a time, so keep `Webhooks:TimeoutSeconds` (1 to
+30, default 10) low. A subscription whose attempt failed is cooled down for
+`Webhooks:ReceiverCooldownSeconds` (5 to 120, default 60); its deliveries due meanwhile are not sent and
+each spends one attempt, with `LastError` 'Receiver cooling down after a failed delivery.' Set
+`Webhooks:Enabled` the same on every replica. Delivery backlog moves from
+`internal_commands.pending.depth` to `internal_commands.lane.pending.depth`. Many failing subscriptions
+of one tenant can still slow other tenants' deliveries.
+The `MMCA.Webhooks` client runs its own handler and nothing
 else: host-wide client defaults (the standard resilience handler, service discovery, any delegating
 handler) are cleared from it, its loggers are removed, and it sends no `traceparent`, `tracestate` or
 `baggage` header. The HTTP client trace still records the URL path, so a host that exports traces to a

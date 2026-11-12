@@ -46,14 +46,14 @@ public sealed class WebhookDeliveryLaneSqlServerTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        await _sqlServer.StartAsync();
+        await _sqlServer.StartAsync(Ct);
 
         await using (var master = new SqlConnection(_sqlServer.GetConnectionString()))
         {
-            await master.OpenAsync();
+            await master.OpenAsync(Ct);
             await using var create = master.CreateCommand();
             create.CommandText = "CREATE DATABASE [MmcaLaneTier]";
-            await create.ExecuteNonQueryAsync();
+            await create.ExecuteNonQueryAsync(Ct);
         }
 
         _connectionString = new SqlConnectionStringBuilder(_sqlServer.GetConnectionString())
@@ -63,7 +63,7 @@ public sealed class WebhookDeliveryLaneSqlServerTests : IAsyncLifetime
 
         await using var host = BuildHost();
         await using var scope = host.Provider.CreateAsyncScope();
-        await GetContext(scope.ServiceProvider).Database.EnsureCreatedAsync();
+        await GetContext(scope.ServiceProvider).Database.EnsureCreatedAsync(Ct);
     }
 
     public async ValueTask DisposeAsync() => await _sqlServer.DisposeAsync();
@@ -94,7 +94,7 @@ public sealed class WebhookDeliveryLaneSqlServerTests : IAsyncLifetime
 
         await lane.ProcessDueCommandsAsync(Ct);
 
-        _log.Deliveries.Should().BeEquivalentTo(first.DeliveryId, second.DeliveryId);
+        _log.Deliveries.Should().BeEquivalentTo(new[] { first.DeliveryId, second.DeliveryId });
         _log.Shared.Should().HaveCount(2, "the lane never runs a shared row");
         (await LoadRowsAsync(host)).Should().AllSatisfy(r => r.ProcessedOn.Should().NotBeNull());
     }

@@ -107,6 +107,50 @@ internal static class InternalCommandMetrics
         unit: "s",
         description: "Age in seconds of the oldest due internal-command row, tagged by data source.");
 
+    /// <summary>
+    /// Backing store for <see cref="LanePendingDepthGauge"/>: the backlog each dedicated lane observed at
+    /// the start of its most recent cycle, keyed by the lane name. Empty when no lane runs.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, long> LanePendingDepths = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Backing store for <see cref="LaneOldestDueAgeGauge"/>: how overdue the oldest due lane row was on
+    /// each source's most recent lane cycle, keyed by lane and source. Empty when no lane runs.
+    /// </summary>
+    private static readonly ConcurrentDictionary<(string Lane, string DataSource), double> LaneOldestDueAgeSeconds = new();
+
+    /// <summary>
+    /// Due rows a dedicated lane charged one failed attempt without sending them, because their receiver
+    /// was cooling down, tagged by <c>lane</c>. Each one is also a <see cref="FailedCounter"/> attempt.
+    /// </summary>
+    internal static readonly Counter<long> LaneShortCircuitedCounter = Meter.CreateCounter<long>(
+        "internal_commands.lane.short_circuited.count",
+        unit: "commands",
+        description: "Lane rows charged a failed attempt without being sent because their receiver was cooling down, tagged by lane.");
+
+    /// <summary>Receivers a dedicated lane started cooling down after a failed real attempt, tagged by <c>lane</c>.</summary>
+    internal static readonly Counter<long> LaneReceiverCooldownsCounter = Meter.CreateCounter<long>(
+        "internal_commands.lane.receiver_cooldowns.count",
+        unit: "receivers",
+        description: "Receivers a lane started cooling down after a failed delivery attempt, tagged by lane.");
+
+    /// <summary>
+    /// Backlog depth a dedicated lane observed at the start of its most recent cycle, summed across every
+    /// source, tagged by <c>lane</c>. Read per instance, like <see cref="PendingDepthGauge"/>.
+    /// </summary>
+    internal static readonly ObservableGauge<long> LanePendingDepthGauge = Meter.CreateObservableGauge(
+        "internal_commands.lane.pending.depth",
+        ObserveLanePendingDepth,
+        unit: "commands",
+        description: "Lane rows awaiting execution, as observed by this lane instance on its last cycle, tagged by lane.");
+
+    /// <summary>Age in SECONDS of the oldest due lane row, tagged by <c>lane</c> and <c>data_source</c>.</summary>
+    internal static readonly ObservableGauge<double> LaneOldestDueAgeGauge = Meter.CreateObservableGauge(
+        "internal_commands.lane.oldest_due.age",
+        ObserveLaneOldestDueAge,
+        unit: "s",
+        description: "Age in seconds of the oldest due lane row, tagged by lane and data source.");
+
     /// <summary>Publishes the backlog depth observed for the cycle that just ran.</summary>
     /// <param name="depth">Pending rows summed across every source drained this cycle.</param>
     internal static void SetPendingDepth(long depth) => Interlocked.Exchange(ref _pendingDepth, depth);
@@ -116,6 +160,37 @@ internal static class InternalCommandMetrics
     /// <param name="ageSeconds">Age of the oldest due row in seconds; <c>0</c> when none is due.</param>
     internal static void SetOldestDueAge(string dataSourceName, double ageSeconds) =>
         OldestDueAgeSeconds[dataSourceName] = ageSeconds;
+
+    /// <summary>Publishes the backlog depth one lane observed for the cycle that just ran.</summary>
+    /// <param name="lane">The lane name, emitted as the <c>lane</c> tag.</param>
+    /// <param name="depth">Pending lane rows summed across every source drained this cycle.</param>
+    internal static void SetLanePendingDepth(string lane, long depth) => LanePendingDepths[lane] = depth;
+
+    /// <summary>Publishes how overdue one source's oldest due lane row was, for the lane cycle that just ran.</summary>
+    /// <param name="lane">The lane name, emitted as the <c>lane</c> tag.</param>
+    /// <param name="dataSourceName">The source name, emitted as the <c>data_source</c> tag.</param>
+    /// <param name="ageSeconds">Age of the oldest due lane row in seconds; <c>0</c> when none is due.</param>
+    internal static void SetLaneOldestDueAge(string lane, string dataSourceName, double ageSeconds) =>
+        LaneOldestDueAgeSeconds[(lane, dataSourceName)] = ageSeconds;
+
+    private static IEnumerable<Measurement<long>> ObserveLanePendingDepth()
+    {
+        foreach (KeyValuePair<string, long> entry in LanePendingDepths)
+        {
+            yield return new Measurement<long>(entry.Value, new KeyValuePair<string, object?>("lane", entry.Key));
+        }
+    }
+
+    private static IEnumerable<Measurement<double>> ObserveLaneOldestDueAge()
+    {
+        foreach (KeyValuePair<(string Lane, string DataSource), double> entry in LaneOldestDueAgeSeconds)
+        {
+            yield return new Measurement<double>(
+                entry.Value,
+                new KeyValuePair<string, object?>("lane", entry.Key.Lane),
+                new KeyValuePair<string, object?>("data_source", entry.Key.DataSource));
+        }
+    }
 
     private static IEnumerable<Measurement<double>> ObserveOldestDueAge()
     {

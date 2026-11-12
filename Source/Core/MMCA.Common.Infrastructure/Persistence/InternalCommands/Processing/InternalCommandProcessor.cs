@@ -71,6 +71,15 @@ public sealed partial class InternalCommandProcessor(
     private readonly InternalCommandsSettings _settings = options.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
 
+    /// <summary>
+    /// The command type a registered dedicated lane owns, which the fetch and the count exclude; null
+    /// when no lane is registered. Resolved once, on the first cycle (see <see cref="GetExcludedCommandType"/>).
+    /// </summary>
+    private string? _excludedCommandType;
+
+    /// <summary>Whether <see cref="_excludedCommandType"/> has been resolved.</summary>
+    private bool _exclusionResolved;
+
     /// <inheritdoc />
     /// <remarks>The loop, startup delay and smart wait are the shared <see cref="PollingLoop"/>.</remarks>
     protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
@@ -233,14 +242,23 @@ public sealed partial class InternalCommandProcessor(
         DateTime now,
         CancellationToken cancellationToken)
     {
+        var excluded = GetExcludedCommandType();
+
         using var pollActivity = InternalCommandActivitySource.StartActivity(PollActivityName);
         pollActivity?.SetTag("messaging.internal_commands.data_source", sourceName);
 
-        return await context.Set<InternalCommandMessage>().AsNoTracking()
+        var pending = context.Set<InternalCommandMessage>().AsNoTracking()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
                 && c.Attempts < _settings.MaxAttempts
-                && (c.ClaimedUntil == null || c.ClaimedUntil < now))
+                && (c.ClaimedUntil == null || c.ClaimedUntil < now));
+
+        if (excluded is not null)
+        {
+            pending = pending.Where(c => c.CommandType != excluded);
+        }
+
+        return await pending
             .OrderBy(c => c.ScheduledOn)
             .ThenBy(c => c.Id)
             .Take(_settings.BatchSize)
@@ -266,16 +284,43 @@ public sealed partial class InternalCommandProcessor(
             return fetchedCount;
         }
 
+        var excluded = GetExcludedCommandType();
+
         using var pollActivity = InternalCommandActivitySource.StartActivity(PollActivityName);
         pollActivity?.SetTag("messaging.internal_commands.data_source", sourceName);
 
-        return await context.Set<InternalCommandMessage>()
+        var pending = context.Set<InternalCommandMessage>()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
                 && c.Attempts < _settings.MaxAttempts
-                && (c.ClaimedUntil == null || c.ClaimedUntil < now))
+                && (c.ClaimedUntil == null || c.ClaimedUntil < now));
+
+        if (excluded is not null)
+        {
+            pending = pending.Where(c => c.CommandType != excluded);
+        }
+
+        return await pending
             .LongCountAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The command type a dedicated lane drains instead of this loop, or null when no lane is
+    /// registered (the default, under which the fetch and the count are exactly the pending
+    /// predicate). Read once, on the first cycle, from a scope, so a lane registered before or after
+    /// this processor is seen either way.
+    /// </summary>
+    private string? GetExcludedCommandType()
+    {
+        if (!_exclusionResolved)
+        {
+            using var scope = scopeFactory.CreateScope();
+            _excludedCommandType = scope.ServiceProvider.GetService<InternalCommandLanes>()?.DedicatedCommandType;
+            _exclusionResolved = true;
+        }
+
+        return _excludedCommandType;
     }
 
     /// <summary>
@@ -284,7 +329,7 @@ public sealed partial class InternalCommandProcessor(
     /// run the same command at the same time. Returns the rows this replica actually owns (empty when
     /// another replica claimed the whole prefix between the fetch and the claim).
     /// </summary>
-    private async Task<List<InternalCommandMessage>> ClaimDueAsync(
+    internal async Task<List<InternalCommandMessage>> ClaimDueAsync(
         ApplicationDbContext context,
         List<InternalCommandMessage> candidates,
         int dueCount,
@@ -332,7 +377,7 @@ public sealed partial class InternalCommandProcessor(
     /// the claim token, so a row another replica has taken over since the batch claim is skipped
     /// rather than run a second time. Returns whether the claim is still this replica's.
     /// </summary>
-    private async Task<bool> RenewClaimAsync(
+    internal async Task<bool> RenewClaimAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
@@ -353,12 +398,18 @@ public sealed partial class InternalCommandProcessor(
     /// this cycle (completed or dead-lettered), which is what tells the caller a full batch made
     /// progress and is worth re-polling for.
     /// </summary>
-    private async Task<bool> ExecuteClaimedAsync(
+    /// <remarks>
+    /// The optional observer is invoked just before a failed attempt is recorded (a <c>Result.Failure</c>
+    /// or an exception, whether the row then retries or dead-letters). The shared loop passes none; a
+    /// dedicated lane uses it to cool a failing receiver down.
+    /// </remarks>
+    internal async Task<bool> ExecuteClaimedAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         string sourceName,
         Guid claimToken,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action? onFailedAttempt = null)
     {
         using var activity = StartExecutionActivity(row, sourceName);
 
@@ -421,6 +472,7 @@ public sealed partial class InternalCommandProcessor(
             return true;
         }
 
+        onFailedAttempt?.Invoke();
         return await RecordFailedAttemptAsync(
             context, row, claimToken, result, failure, commandTypeTag, activity, cancellationToken)
             .ConfigureAwait(false);
@@ -433,7 +485,7 @@ public sealed partial class InternalCommandProcessor(
     /// the difference an operator cares about is WHY, not which mechanism reported it.
     /// </summary>
     /// <returns><see langword="true"/> when the row was dead-lettered, false when it will retry.</returns>
-    private async Task<bool> RecordFailedAttemptAsync(
+    internal async Task<bool> RecordFailedAttemptAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
@@ -657,7 +709,7 @@ public sealed partial class InternalCommandProcessor(
     /// execution appears under the request that asked for it. Returns null when no trace context was
     /// captured (a row scheduled outside any activity).
     /// </summary>
-    private static Activity? StartExecutionActivity(InternalCommandMessage row, string sourceName)
+    internal static Activity? StartExecutionActivity(InternalCommandMessage row, string sourceName)
     {
         if (string.IsNullOrEmpty(row.TraceId) || string.IsNullOrEmpty(row.SpanId))
         {

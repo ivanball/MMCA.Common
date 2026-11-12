@@ -24,12 +24,20 @@ public sealed class WebhookSettings
 
     /// <summary>Gets the delivery timeout of one POST, in seconds, from 1 to 30. Defaults to 10.</summary>
     /// <remarks>
-    /// Deliveries are internal commands and a replica runs them one row at a time, so one slow receiver
-    /// delays every other internal command on that replica for up to this many seconds per row; keep
-    /// the timeout low.
+    /// Deliveries run in a dedicated delivery lane, so a slow receiver never delays the other internal
+    /// commands. The lane sends one delivery at a time per replica, so one slow receiver delays the other
+    /// deliveries on that replica for up to this many seconds per attempt; keep the timeout low.
     /// </remarks>
     [Range(1, 30)]
     public int TimeoutSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Gets how long, in seconds, a subscription whose delivery attempt failed is cooled down on this replica,
+    /// from 5 to 120. Defaults to 60. While it cools down, its due deliveries are not sent and each one spends
+    /// one attempt.
+    /// </summary>
+    [Range(5, 120)]
+    public int ReceiverCooldownSeconds { get; init; } = 60;
 
     /// <summary>
     /// Gets the largest event payload, in UTF-8 bytes, that is delivered; a larger event is skipped with a

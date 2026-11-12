@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -630,7 +631,7 @@ public sealed class InternalCommandProcessorTests : IDisposable
         for (var index = 0; index < 3; index++)
         {
             SeedAny(NewDelivery(), InternalCommandTestHarness.EpochUtc.AddSeconds(-60 + index));
-            Seed(new RecordingCommand($"shared-{index}"), InternalCommandTestHarness.EpochUtc.AddSeconds(-30 + index));
+            Seed(new RecordingCommand(string.Create(CultureInfo.InvariantCulture, $"shared-{index}")), InternalCommandTestHarness.EpochUtc.AddSeconds(-30 + index));
         }
 
         var processor = CreateProcessorWith(

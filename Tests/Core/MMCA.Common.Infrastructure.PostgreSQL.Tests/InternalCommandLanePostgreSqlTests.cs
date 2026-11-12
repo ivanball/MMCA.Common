@@ -43,11 +43,11 @@ public sealed class InternalCommandLanePostgreSqlTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await _postgres.StartAsync(Ct);
 
         await using var host = BuildHost();
         await using var scope = host.Provider.CreateAsyncScope();
-        await GetContext(scope.ServiceProvider).Database.EnsureCreatedAsync();
+        await GetContext(scope.ServiceProvider).Database.EnsureCreatedAsync(Ct);
     }
 
     public async ValueTask DisposeAsync() => await _postgres.DisposeAsync();
@@ -75,7 +75,7 @@ public sealed class InternalCommandLanePostgreSqlTests : IAsyncLifetime
 
         await lane.ProcessDueCommandsAsync(Ct);
 
-        _log.Deliveries.Should().BeEquivalentTo(first.DeliveryId, second.DeliveryId);
+        _log.Deliveries.Should().BeEquivalentTo(new[] { first.DeliveryId, second.DeliveryId });
         _log.Shared.Should().HaveCount(2, "the lane never runs a shared row");
         (await LoadRowsAsync(host)).Should().AllSatisfy(r => r.ProcessedOn.Should().NotBeNull());
     }

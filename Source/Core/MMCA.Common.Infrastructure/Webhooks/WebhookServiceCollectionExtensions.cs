@@ -54,9 +54,12 @@ public static class WebhookServiceCollectionExtensions
         /// host that exports traces to a shared backend filters the <c>MMCA.Webhooks</c> spans itself.
         /// </para>
         /// <para>
-        /// Deliveries are internal commands and a replica runs them one row at a time, so one slow
-        /// receiver delays every other internal command on that replica for up to
-        /// <c>Webhooks:TimeoutSeconds</c> per row; keep the timeout low.
+        /// Deliveries are internal-command rows drained by a dedicated delivery lane, never by the shared
+        /// queue, so a slow or failing receiver cannot delay the other internal commands. The lane sends
+        /// one delivery at a time per replica. A subscription whose attempt failed is cooled down on that
+        /// replica for <c>Webhooks:ReceiverCooldownSeconds</c>; its deliveries that come due meanwhile are
+        /// not sent and each spends one attempt, so they retry and dead-letter on the normal
+        /// <c>InternalCommands</c> budget.
         /// </para>
         /// </remarks>
         public IServiceCollection AddWebhooks(IConfiguration configuration)
@@ -97,6 +100,8 @@ public static class WebhookServiceCollectionExtensions
                 .RemoveAllLoggers();
 
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, InsecureWebhookTargetsNoticeService>());
+
+            WebhookDeliveryLane.Register(services, configuration);
 
             return services;
         }

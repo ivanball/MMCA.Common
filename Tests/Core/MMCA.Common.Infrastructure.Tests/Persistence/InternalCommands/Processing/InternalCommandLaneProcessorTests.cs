@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -364,7 +365,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         for (var trial = 0; trial < 10; trial++)
         {
             var lane = CreateLane();
-            var receiver = $"healthy-{trial}";
+            var receiver = string.Create(CultureInfo.InvariantCulture, $"healthy-{trial}");
             await OpenCooldownAsync(lane, receiver);
             var row = Seed(receiver, "scheduled-after-the-failure", Now);
 
@@ -378,12 +379,13 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
                 }
 
                 current.ClaimedUntil.Should().NotBeNull("an unfinished row is parked for its backoff");
-                _clock.Advance(current.ClaimedUntil!.Value - Now);
+                // One tick past the parked time: the pending predicate is strictly ClaimedUntil < now.
+                _clock.Advance(current.ClaimedUntil!.Value - Now + TimeSpan.FromTicks(1));
             }
 
             var stored = await ReloadAsync(row.Id);
-            stored.DeadLetteredOn.Should().BeNull($"trial {trial}: a receiver healthy at scheduling must get a real attempt");
-            stored.ProcessedOn.Should().NotBeNull($"trial {trial}");
+            stored.DeadLetteredOn.Should().BeNull(string.Create(CultureInfo.InvariantCulture, $"trial {trial}: a receiver healthy at scheduling must get a real attempt"));
+            stored.ProcessedOn.Should().NotBeNull(string.Create(CultureInfo.InvariantCulture, $"trial {trial}"));
             _probes.ValuesFor(receiver).Should().Contain("scheduled-after-the-failure");
         }
     }
@@ -526,7 +528,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         _probes.Behave("x", async (_, ct) =>
         {
             started.TrySetResult();
-            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            await Task.Delay(Timeout.InfiniteTimeSpan, TimeProvider.System, ct);
             return Result.Success();
         });
         var sending = Seed("x", "sending", Now.AddSeconds(-2));
@@ -767,10 +769,10 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         var start = Now;
         for (var index = 0; index < 50; index++)
         {
-            Seed("x", $"x-{index:D2}", start.AddSeconds(-200 + index));
+            Seed("x", string.Create(CultureInfo.InvariantCulture, $"x-{index:D2}"), start.AddSeconds(-200 + index));
         }
 
-        var yRows = Enumerable.Range(0, 5).Select(index => Seed("y", $"y-{index}", start.AddSeconds(-100 + index))).ToList();
+        var yRows = Enumerable.Range(0, 5).Select(index => Seed("y", string.Create(CultureInfo.InvariantCulture, $"y-{index}"), start.AddSeconds(-100 + index))).ToList();
 
         var first = await lane.Lane.ProcessDueCommandsAsync(Ct);
 
@@ -897,13 +899,12 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         return row;
     }
 
-    private InternalCommandMessage SeedWithOrigin(IInternalCommand command, DateTime scheduledOn, InternalCommandOrigin origin)
+    private void SeedWithOrigin(IInternalCommand command, DateTime scheduledOn, InternalCommandOrigin origin)
     {
         var row = InternalCommandMessage.FromCommand(command, scheduledOn, scheduledOn, origin);
         _context.Add(row);
         _context.SaveChanges();
         _context.ChangeTracker.Clear();
-        return row;
     }
 
     private Task<InternalCommandMessage> ReloadAsync(Guid id)

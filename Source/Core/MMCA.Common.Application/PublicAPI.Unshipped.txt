@@ -272,3 +272,5 @@ static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.GenerateSecret
 static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.Verify(string! webhookId, long timestamp, string! body, string! signatureHeader, System.ReadOnlySpan<byte> key, long nowUnixSeconds, System.TimeSpan tolerance) -> bool
 static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator !=(MMCA.Common.Application.Webhooks.WebhookEventRegistration? left, MMCA.Common.Application.Webhooks.WebhookEventRegistration? right) -> bool
 static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator ==(MMCA.Common.Application.Webhooks.WebhookEventRegistration? left, MMCA.Common.Application.Webhooks.WebhookEventRegistration? right) -> bool
+MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.init -> void
