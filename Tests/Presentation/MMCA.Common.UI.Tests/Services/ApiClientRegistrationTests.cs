@@ -2,10 +2,14 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auditing;
 using MMCA.Common.Shared.Resilience;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Services.Auditing;
 using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Offline;
 
 namespace MMCA.Common.UI.Tests.Services;
 
@@ -83,5 +87,94 @@ public sealed class ApiClientRegistrationTests
         };
 
         act.Should().Throw<OptionsValidationException>();
+    }
+
+    // Item 12: audit-history client
+    [Fact]
+    public void AddAuditHistoryUI_RegistersScopedService_Idempotent()
+    {
+        var services = new ServiceCollection();
+
+        services.AddAuditHistoryUI();
+        services.AddAuditHistoryUI();
+
+        var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(IAuditHistoryUIService)).Subject;
+        descriptor.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        descriptor.ImplementationType.Should().Be<AuditHistoryService>();
+
+        // TryAddScoped: an app's own registration made first is kept.
+        var custom = new ServiceCollection();
+        custom.AddScoped<IAuditHistoryUIService, AppAuditHistoryService>();
+        custom.AddAuditHistoryUI();
+        custom.Should().ContainSingle(d => d.ServiceType == typeof(IAuditHistoryUIService))
+            .Which.ImplementationType.Should().Be<AppAuditHistoryService>();
+    }
+
+    // Item 38: offline write queue
+    [Fact]
+    public void AddOfflineWriteQueue_RegistersScopedQueue_AppliesConfigure()
+    {
+        var services = new ServiceCollection();
+
+        services.AddOfflineWriteQueue(options =>
+        {
+            options.StorageKey = "app.offline";
+            options.MaxPendingWrites = 5;
+        });
+        services.AddOfflineWriteQueue();
+
+        var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(IOfflineWriteQueue)).Subject;
+        descriptor.Lifetime.Should().Be(ServiceLifetime.Scoped, "the browser connectivity service and cache store it depends on are scoped");
+        descriptor.ImplementationType.Should().Be<OfflineWriteQueue>();
+        services.Should().Contain(d => d.ServiceType == typeof(TimeProvider));
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<OfflineWriteQueueOptions>>().Value;
+        options.StorageKey.Should().Be("app.offline");
+        options.MaxPendingWrites.Should().Be(5);
+        options.MaxAge.Should().Be(TimeSpan.FromHours(24), "an unconfigured option keeps its default");
+    }
+
+    [Fact]
+    public void AddOfflineWriteHandler_AddsEachHandlerOnce()
+    {
+        var services = new ServiceCollection();
+
+        services.AddOfflineWriteHandler<CreateWidgetReplayHandler>();
+        services.AddOfflineWriteHandler<CreateWidgetReplayHandler>();
+        services.AddOfflineWriteHandler<DeleteWidgetReplayHandler>();
+
+        var handlers = services.Where(d => d.ServiceType == typeof(IOfflineWriteHandler)).ToList();
+        Type[] expected = [typeof(CreateWidgetReplayHandler), typeof(DeleteWidgetReplayHandler)];
+        handlers.Select(d => d.ImplementationType).Should().BeEquivalentTo(expected);
+        handlers.Should().AllSatisfy(d => d.Lifetime.Should().Be(ServiceLifetime.Scoped));
+    }
+
+    private sealed class AppAuditHistoryService : IAuditHistoryUIService
+    {
+        public Task<Result<IReadOnlyList<AuditHistoryEntryDTO>>> GetPageAsync(
+            string routePrefix,
+            string entityAlias,
+            string entityKey,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Result.Success<IReadOnlyList<AuditHistoryEntryDTO>>([]));
+    }
+
+    private sealed class CreateWidgetReplayHandler : IOfflineWriteHandler
+    {
+        public string Kind => "Tests.Widget.Create.v1";
+
+        public Task<Result> ReplayAsync(PendingWrite write, CancellationToken cancellationToken) =>
+            Task.FromResult(Result.Success());
+    }
+
+    private sealed class DeleteWidgetReplayHandler : IOfflineWriteHandler
+    {
+        public string Kind => "Tests.Widget.Delete.v1";
+
+        public Task<Result> ReplayAsync(PendingWrite write, CancellationToken cancellationToken) =>
+            Task.FromResult(Result.Success());
     }
 }

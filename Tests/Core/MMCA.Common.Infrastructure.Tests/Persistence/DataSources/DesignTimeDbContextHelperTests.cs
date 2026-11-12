@@ -5,8 +5,10 @@ using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.FeatureFlags;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
+using MMCA.Common.Shared.Identifiers;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.DataSources;
 
@@ -199,6 +201,98 @@ public sealed class DesignTimeDbContextHelperTests
         context.Model.FindEntityType(typeof(FeatureFlagOverride)).Should().BeNull(
             "a migrations project that never opts in must keep scaffolding exactly what it did before");
     }
+
+    // -- Strongly typed identifiers at design time (ADR-115) --
+    // `dotnet ef` builds the model through this helper, never through the host, so the registry
+    // AddStronglyTypedIds puts in the host container is absent here. The options name the assemblies
+    // declaring the wrappers instead, and the helper registers the registry over them.
+    [Fact]
+    public void StronglyTypedIdAssemblies_ByDefault_AreEmpty() =>
+        new DesignTimeDbContextOptions().StronglyTypedIdAssemblies.Should().BeEmpty(
+            "a migrations project that never opts in must keep scaffolding exactly what it did before");
+
+    [Fact]
+    public void AddStronglyTypedIdAssembly_ReturnsTheSameOptionsInstance()
+    {
+        var options = new DesignTimeDbContextOptions();
+
+        options.AddStronglyTypedIdAssembly(typeof(DesignWrappedId).Assembly).Should().BeSameAs(
+            options,
+            "the method chains like AddConfigurationAssembly");
+    }
+
+    [Fact]
+    public void AddStronglyTypedIdAssembly_SameAssemblyTwice_KeepsOneEntry()
+    {
+        var options = new DesignTimeDbContextOptions();
+        var assembly = typeof(DesignWrappedId).Assembly;
+
+        options.AddStronglyTypedIdAssembly(assembly).AddStronglyTypedIdAssembly(assembly);
+
+        options.StronglyTypedIdAssemblies.Should().ContainSingle().Which.Should().BeSameAs(assembly);
+    }
+
+    [Fact]
+    public void AddStronglyTypedIdAssembly_Null_Throws()
+    {
+        var act = () => new DesignTimeDbContextOptions().AddStronglyTypedIdAssembly(null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("assembly");
+    }
+
+    [Fact]
+    public void WithStronglyTypedIdAssembly_MapsWrapperKeyThroughConverter()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignWrapped"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.AddStronglyTypedIdAssembly(typeof(DesignWrappedId).Assembly);
+            });
+
+        var key = context.Model.FindEntityType(typeof(DesignWrappedEntity))!
+            .FindProperty(nameof(DesignWrappedEntity.Id))!;
+
+        key.GetValueConverter().Should().BeOfType<StronglyTypedIdValueConverter<DesignWrappedId, int>>(
+            "the design-time model must map the wrapper exactly as the runtime model does");
+        key.GetValueConverter()!.ProviderClrType.Should().Be<int>(
+            "the column stays the primitive, so adopting a wrapper is not a migration");
+    }
+
+    // The empty-list path: no assembly named, so no registry is registered and the wrapper reaches
+    // EF's own "the database provider does not support this type" validation, exactly as before.
+    [Fact]
+    public void WithoutIt_ModelBuildThrowsNamingTheProperty()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignWrappedBare"],
+            ConfigureOptions);
+
+        var act = () => context.Model.FindEntityType(typeof(DesignBareWrappedEntity));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*DesignBareWrappedEntity.Id*value converter*");
+    }
+
+    [Fact]
+    public void CreateSqlServer_WithNoStronglyTypedIdAssemblies_LeavesAPrimitiveKeyUnconverted()
+    {
+        int namedAssemblies = -1;
+
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignAlpha"],
+            options =>
+            {
+                ConfigureOptions(options);
+                namedAssemblies = options.StronglyTypedIdAssemblies.Count;
+            });
+
+        namedAssemblies.Should().Be(0);
+        context.Model.FindEntityType(typeof(DesignAlphaEntity))!
+            .FindProperty(nameof(DesignAlphaEntity.Id))!
+            .GetValueConverter().Should().BeNull("an int key maps natively when no wrapper is in play");
+    }
+
     // ── SQLite design time ──
     // The symmetric entry point a SQLite-backed application scaffolds through. Without it such an app
     // has no way to run `dotnet ef` against the framework's context at all.
@@ -366,6 +460,18 @@ public sealed class DesignTimeDbContextHelperTests
             SQLServerConnectionString = "Server=design;Database=NoFlags;",
             SQLServerMigrationsAssembly = "Design.NoFlags.Migrations",
         };
+        // Sources used only by the strongly typed identifier cases, for the same cache reason. Each
+        // wrapper-keyed entity lives on a source of its own, so no other model ever contains it.
+        options.DataSources["DesignWrapped"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=Wrapped;",
+            SQLServerMigrationsAssembly = "Design.Wrapped.Migrations",
+        };
+        options.DataSources["DesignWrappedBare"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=WrappedBare;",
+            SQLServerMigrationsAssembly = "Design.WrappedBare.Migrations",
+        };
         const string sharedConnection = "Server=design;Database=SharedSessions;";
         options.DataSources["DesignSessionsAlpha"] = new DataSourceEntrySettings
         {
@@ -403,6 +509,31 @@ public sealed class DesignTimeDbContextHelperTests
     {
         public string Name { get; set; } = string.Empty;
     }
+
+    /// <summary>An int-backed strongly typed identifier, the shape the design-time cases map.</summary>
+    public readonly record struct DesignWrappedId(int Value) : IStronglyTypedId<DesignWrappedId, int>
+    {
+        /// <summary>Wraps a primitive key.</summary>
+        public static DesignWrappedId From(int value) => new(value);
+    }
+
+    /// <summary>Keyed by a wrapper; mapped only into the source whose options name its assembly.</summary>
+    public sealed class DesignWrappedEntity : AuditableAggregateRootEntity<DesignWrappedId>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    /// <summary>Keyed by the same wrapper, on a source whose options name no identifier assembly.</summary>
+    public sealed class DesignBareWrappedEntity : AuditableAggregateRootEntity<DesignWrappedId>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    [UseDatabase("DesignWrapped")]
+    private sealed class DesignWrappedEntityConfiguration : EntityTypeConfigurationSQLServer<DesignWrappedEntity, DesignWrappedId>;
+
+    [UseDatabase("DesignWrappedBare")]
+    private sealed class DesignBareWrappedEntityConfiguration : EntityTypeConfigurationSQLServer<DesignBareWrappedEntity, DesignWrappedId>;
 
     [UseDatabase("DesignAlpha")]
     private sealed class DesignAlphaEntityConfiguration : EntityTypeConfigurationSQLServer<DesignAlphaEntity, int>;
