@@ -274,3 +274,5 @@ static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator !=(MMC
 static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator ==(MMCA.Common.Application.Webhooks.WebhookEventRegistration? left, MMCA.Common.Application.Webhooks.WebhookEventRegistration? right) -> bool
 MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.get -> int
 MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.DeliveryConcurrency.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.DeliveryConcurrency.init -> void

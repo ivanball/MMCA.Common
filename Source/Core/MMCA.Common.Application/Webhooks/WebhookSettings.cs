@@ -25,11 +25,20 @@ public sealed class WebhookSettings
     /// <summary>Gets the delivery timeout of one POST, in seconds, from 1 to 30. Defaults to 10.</summary>
     /// <remarks>
     /// Deliveries run in a dedicated delivery lane, so a slow receiver never delays the other internal
-    /// commands. The lane sends one delivery at a time per replica, so one slow receiver delays the other
-    /// deliveries on that replica for up to this many seconds per attempt; keep the timeout low.
+    /// commands. The lane sends up to <see cref="DeliveryConcurrency"/> deliveries at once per replica, never
+    /// two to one subscription at once, and no lane batch starts a delivery after this many seconds, so one
+    /// slow receiver holds at most one of those slots for up to this many seconds per attempt; keep the
+    /// timeout low.
     /// </remarks>
     [Range(1, 30)]
     public int TimeoutSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Gets how many deliveries one replica sends at once in the webhook delivery lane, from 1 to 16. Defaults
+    /// to 4. Two deliveries to one subscription never run at once.
+    /// </summary>
+    [Range(1, 16)]
+    public int DeliveryConcurrency { get; init; } = 4;
 
     /// <summary>
     /// Gets how long, in seconds, a subscription whose delivery attempt failed is cooled down on this replica,

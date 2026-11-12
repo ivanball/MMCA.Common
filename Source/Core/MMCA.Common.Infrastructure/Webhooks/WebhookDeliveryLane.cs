@@ -13,9 +13,9 @@ namespace MMCA.Common.Infrastructure.Webhooks;
 
 /// <summary>
 /// The webhook delivery lane: delivery rows (<see cref="DeliverWebhookInternalCommand"/>) are drained by
-/// their own sequential <see cref="InternalCommandLaneProcessor"/>, never by the shared internal-command
-/// loop, so a slow or failing receiver cannot delay the other internal commands. Rows are keyed by
-/// subscription, so a failing subscription is cooled down on its own.
+/// their own <see cref="InternalCommandLaneProcessor"/>, never by the shared internal-command loop, so a
+/// slow or failing receiver cannot delay the other internal commands. Rows are keyed by subscription, so a
+/// failing subscription is cooled down on its own and two deliveries to one subscription never run at once.
 /// </summary>
 internal static class WebhookDeliveryLane
 {
@@ -26,7 +26,11 @@ internal static class WebhookDeliveryLane
     internal static string CommandType { get; } =
         InternalCommandNameResolver.GetStorageName(typeof(DeliverWebhookInternalCommand));
 
-    /// <summary>Builds the lane from the webhook settings; the receiver key is the subscription id.</summary>
+    /// <summary>
+    /// Builds the lane from the webhook settings: the receiver key is the subscription id, the concurrency
+    /// is <see cref="WebhookSettings.DeliveryConcurrency"/>, and the batch start budget (also the attempt
+    /// timeout the cooldown clamp leaves room for) is <see cref="WebhookSettings.TimeoutSeconds"/>.
+    /// </summary>
     /// <param name="settings">The validated webhook settings.</param>
     /// <returns>The lane.</returns>
     internal static InternalCommandLane Create(WebhookSettings settings)
@@ -39,7 +43,9 @@ internal static class WebhookDeliveryLane
             TimeSpan.FromSeconds(settings.ReceiverCooldownSeconds),
             command => command is DeliverWebhookInternalCommand delivery
                 ? delivery.SubscriptionId.ToString("N")
-                : null);
+                : null,
+            MaxConcurrency: settings.DeliveryConcurrency,
+            BatchStartBudget: TimeSpan.FromSeconds(settings.TimeoutSeconds));
     }
 
     /// <summary>

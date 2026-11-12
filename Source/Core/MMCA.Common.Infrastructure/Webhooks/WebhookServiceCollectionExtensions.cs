@@ -56,7 +56,9 @@ public static class WebhookServiceCollectionExtensions
         /// <para>
         /// Deliveries are internal-command rows drained by a dedicated delivery lane, never by the shared
         /// queue, so a slow or failing receiver cannot delay the other internal commands. The lane sends
-        /// one delivery at a time per replica. A subscription whose attempt failed is cooled down on that
+        /// up to <c>Webhooks:DeliveryConcurrency</c> (default 4) deliveries at once per replica, never two to
+        /// one subscription at once, and no lane batch starts a delivery after <c>Webhooks:TimeoutSeconds</c>.
+        /// A subscription whose attempt failed is cooled down on that
         /// replica for <c>Webhooks:ReceiverCooldownSeconds</c>; its deliveries that come due meanwhile are
         /// not sent and each spends one attempt, so they retry and dead-letter on the normal
         /// <c>InternalCommands</c> budget.

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
@@ -909,37 +910,50 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         await lane.Lane.StopAsync(Ct);
     }
 
-    // F3: internal_commands.lane.short_circuited.count is incremented after the charged attempt is
-    // recorded, not when the lease was lost before the write. Another replica takes the row to be charged
-    // over while an earlier row runs; the guarded stamp matches nothing and nothing is counted.
+    // F3 as NARROWED by the ruling on the Phase 2 test writer's questions (results/review-lane-phase1-rulings.md,
+    // item 1): internal_commands.lane.short_circuited.count is incremented only after the charged attempt's
+    // record call returns, so a charge cut short by shutdown before its write counts nothing. (A charge whose
+    // row another replica had taken over is still counted; the ruling accepts that over-count.) The cycle's
+    // token is cancelled the moment the charged row's execution activity starts, which is after its turn
+    // came and before the failure path's guarded write; the write sees the cancelled token and never runs.
+    // An ActivityListener samples only this row's own trace, so no other test's activities are affected.
     [Fact]
-    public async Task Cycle_AChargedRowWhoseClaimWasTakenOver_RecordsNoShortCircuit()
+    public async Task Cycle_AChargeCancelledBeforeItsWrite_RecordsNoShortCircuit()
     {
         var lane = CreateLane();
         await OpenCooldownAsync(lane, "x");
-        var foreignReplica = Guid.NewGuid();
-        var takenUntil = Now.AddMinutes(5);
-        Seed("y", "first", Now.AddSeconds(-2));
-        var toCharge = Seed("x", "to-charge", Now.AddSeconds(-1));
-        _probes.Behave("y", async (_, ct) =>
+        var traceId = ActivityTraceId.CreateRandom();
+        var origin = new InternalCommandOrigin(
+            null, null, null, null, null, traceId.ToHexString(), ActivitySpanId.CreateRandom().ToHexString());
+        SeedWithOrigin(new LaneProbeCommand("x", "to-charge"), Now.AddSeconds(-1), origin);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        using var listener = new ActivityListener
         {
-            await _context.Set<InternalCommandMessage>()
-                .Where(c => c.Id == toCharge.Id)
-                .ExecuteUpdateAsync(
-                    s => s.SetProperty(c => c.ClaimedBy, foreignReplica)
-                        .SetProperty(c => c.ClaimedUntil, takenUntil),
-                    ct);
-            return Result.Success();
-        });
+            ShouldListenTo = source => source.Name == InternalCommandMetrics.MeterName,
+            Sample = (ref options) =>
+                options.Parent.TraceId == traceId ? ActivitySamplingResult.AllData : ActivitySamplingResult.None,
+            ActivityStarted = activity =>
+            {
+                if (activity.TraceId == traceId)
+                {
+                    stopping.Cancel();
+                }
+            },
+        };
+        ActivitySource.AddActivityListener(listener);
         using var meters = new InternalCommandMeterRecorder();
 
-        await lane.Lane.ProcessDueCommandsAsync(Ct);
+        var act = () => lane.Lane.ProcessDueCommandsAsync(stopping.Token);
 
-        var stored = await ReloadAsync(toCharge.Id);
-        stored.ClaimedBy.Should().Be(foreignReplica, "setup: the row is the other replica's");
-        stored.Attempts.Should().Be(0, "the guarded charge stamped nothing");
+        await act.Should().ThrowAsync<OperationCanceledException>("shutdown is rethrown, never recorded as a failure");
+        _context.ChangeTracker.Clear();
+        var stored = await _context.Set<InternalCommandMessage>().AsNoTracking()
+            .SingleAsync(c => c.TraceId == traceId.ToHexString(), Ct);
+        stored.Attempts.Should().Be(0, "setup: the charge was cancelled before its write");
+        stored.LastError.Should().BeNull();
+        _probes.ValuesFor("x").Should().Equal(["poison-x"], "a charged row is never sent");
         meters.For("internal_commands.lane.short_circuited.count").Where(IsProbeLane)
-            .Should().BeEmpty("F3: a charge whose write matched nothing is not counted");
+            .Should().BeEmpty("F3 as narrowed: the counter moves only after the charge is recorded");
     }
 
     // L1.5, the polling half Phase 1 left unpinned: with a custom IInternalCommandSignal the lane never

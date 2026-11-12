@@ -122,11 +122,22 @@ internal static class InternalCommandMetrics
     /// <summary>
     /// Due rows a dedicated lane charged one failed attempt without sending them, because their receiver
     /// was cooling down, tagged by <c>lane</c>. Each one is also a <see cref="FailedCounter"/> attempt.
+    /// Counted after the charge is recorded, so a charge cut short by shutdown is not counted; a charge
+    /// whose row another replica had taken over (its guarded stamp matched nothing) is still counted.
     /// </summary>
     internal static readonly Counter<long> LaneShortCircuitedCounter = Meter.CreateCounter<long>(
         "internal_commands.lane.short_circuited.count",
         unit: "commands",
-        description: "Lane rows charged a failed attempt without being sent because their receiver was cooling down, tagged by lane.");
+        description: "Lane rows charged a failed attempt without being sent because their receiver was cooling down, tagged by lane. Counted once the charge is recorded; a charge whose row another replica had taken over is still counted.");
+
+    /// <summary>
+    /// Claimed lane rows released uncharged because they never started before the batch start budget
+    /// elapsed, tagged by <c>lane</c>. A released row is due again at once.
+    /// </summary>
+    internal static readonly Counter<long> LaneReleasedCounter = Meter.CreateCounter<long>(
+        "internal_commands.lane.released.count",
+        unit: "commands",
+        description: "Claimed lane rows released uncharged because they never started before the batch start budget elapsed, tagged by lane.");
 
     /// <summary>Receivers a dedicated lane started cooling down after a failed real attempt, tagged by <c>lane</c>.</summary>
     internal static readonly Counter<long> LaneReceiverCooldownsCounter = Meter.CreateCounter<long>(

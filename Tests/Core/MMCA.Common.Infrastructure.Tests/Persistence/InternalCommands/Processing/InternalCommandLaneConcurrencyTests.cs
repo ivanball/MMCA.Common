@@ -30,6 +30,10 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 {
     private static readonly TimeSpan Budget = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SafetyTimeout = TimeSpan.FromSeconds(30);
+    private static readonly string[] ThreeEarliest = ["a", "b", "c"];
+    private static readonly string[] FirstWaveOfThree = ["x1", "y1", "z1"];
+    private static readonly string[] FirstWaveOfTwo = ["x1", "y1"];
+    private static readonly string[] BothRunningRows = ["a", "b"];
 
     private readonly FakeTimeProvider _clock = new(InternalCommandTestHarness.Epoch);
     private readonly InternalCommandLaneDatabase _db;
@@ -64,7 +68,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         await Within(Probes.WhenStartedCountAsync(3));
 
         Probes.InFlight.Should().Be(3, "three rows of three different receivers run at once");
-        Probes.StartedValues.Should().BeEquivalentTo(new[] { "a", "b", "c" }, "the three earliest rows fill the three slots");
+        Probes.StartedValues.Should().BeEquivalentTo(ThreeEarliest, "the three earliest rows fill the three slots");
 
         gates["a"].SetResult(Result.Success());
         await Within(Probes.WhenStartedCountAsync(4));
@@ -124,7 +128,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
                 .Should().ContainSingle("a row's context renews and stamps that row only");
             group.Should().HaveCount(2, "its renew and its completion stamp");
         });
-        perRowContext.Select(g => g.SelectMany(c => c.Ids).Single(rowIds.Contains))
+        perRowContext.Select(g => g.SelectMany(c => c.Ids).Where(rowIds.Contains).Distinct().Single())
             .Should().BeEquivalentTo(rowIds, "every row was renewed and stamped on its own context");
 
         foreach (var row in rows)
@@ -154,7 +158,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         var cycle = RunCycle(lane);
 
         await Within(Probes.WhenStartedCountAsync(3));
-        Probes.StartedValues.Should().BeEquivalentTo(new[] { "x1", "y1", "z1" }, "x2 and x3 wait for x1; w1 is the latest row");
+        Probes.StartedValues.Should().BeEquivalentTo(FirstWaveOfThree, "x2 and x3 wait for x1; w1 is the latest row");
 
         gates["x1"].SetResult(Result.Success());
         await Within(Probes.WhenStartedCountAsync(4));
@@ -189,7 +193,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 
         var cycle = RunCycle(lane);
         await Within(Probes.WhenStartedCountAsync(2));
-        Probes.StartedValues.Should().BeEquivalentTo(new[] { "x1", "y1" }, "x2 waits for its receiver");
+        Probes.StartedValues.Should().BeEquivalentTo(FirstWaveOfTwo, "x2 waits for its receiver");
 
         x1Gate.SetResult(ConcurrentProbeLog.FailedDelivery());
         await Within(Probes.WhenFinishedAsync("x1"));
@@ -278,7 +282,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         storedC.Attempts.Should().Be(0);
     }
 
-    // L2.6: HasMoreDueWork = (dueCount == BatchSize && (progressed || chargedCount > 0)) || releasedCount > 0.
+    // L2.6: more due work is reported when a full batch moved (a row progressed or was charged) OR when any row was released.
     // A partial batch (3 rows, BatchSize 10) reports more due work only because rows were released.
     [Fact]
     public async Task Cycle_ReleasedRows_ReportMoreDueWork()
@@ -386,7 +390,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         var act = async () => await Within(cycle);
         await act.Should().ThrowAsync<OperationCanceledException>("shutdown is rethrown, never recorded as a failure");
 
-        Probes.FinishedValues.Should().BeEquivalentTo(new[] { "a", "b" }, "the lane awaited every running row before it returned");
+        Probes.FinishedValues.Should().BeEquivalentTo(BothRunningRows, "the lane awaited every running row before it returned");
         var storedA = await _db.ReloadAsync(a.Id, Ct);
         storedA.ClaimedBy.Should().NotBeNull("a cancelled row stays leased");
         foreach (var row in new[] { storedA, await _db.ReloadAsync(b.Id, Ct), await _db.ReloadAsync(c.Id, Ct) })
@@ -468,7 +472,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         await Within(cycle);
 
         Probes.Invocations.Should().AllSatisfy(i => (i.At - firstStart).Should().BeLessThan(Budget, "no row starts after the budget"));
-        Probes.StartedValues.Should().BeEquivalentTo(new[] { "r1", "r2", "r3" });
+        Probes.StartedValues.Should().BeEquivalentTo("r1", "r2", "r3");
         foreach (var row in rows.Skip(3))
         {
             (await _db.ReloadAsync(row.Id, Ct)).ClaimedBy.Should().BeNull("the rows that never started are released");
@@ -515,7 +519,7 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 
     private static Task Within(Task task) => task.WaitAsync(SafetyTimeout, TimeProvider.System, Ct);
 
-    private static Task RunCycle(LaneUnderTest lane) =>
+    private static Task<InternalCommandCycleResult> RunCycle(LaneUnderTest lane) =>
         Task.Run(() => lane.Lane.ProcessDueCommandsAsync(Ct), Ct);
 
     private LaneUnderTest CreateLane(

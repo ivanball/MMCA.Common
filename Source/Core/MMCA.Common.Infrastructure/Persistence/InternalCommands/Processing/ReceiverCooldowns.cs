@@ -3,7 +3,8 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 /// <summary>
 /// Per-receiver cooldown state of one lane on this replica: a receiver whose real attempt failed cools
 /// down for <c>cooldown</c>, and while it does the lane charges its due rows without sending them.
-/// In memory only, used by one sequential lane, so it takes no lock.
+/// In memory only. The lane reads and writes it only on its scheduling path, never from a running row
+/// (a running row reports its outcome and the scheduler applies it), so it takes no lock.
 /// </summary>
 /// <param name="cooldown">How long a receiver cools down after a failed real attempt.</param>
 internal sealed class ReceiverCooldowns(TimeSpan cooldown)

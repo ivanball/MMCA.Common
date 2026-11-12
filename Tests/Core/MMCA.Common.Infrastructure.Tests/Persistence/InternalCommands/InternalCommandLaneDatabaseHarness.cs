@@ -282,10 +282,7 @@ internal sealed class InternalCommandLaneDatabase : IDisposable
 internal sealed class LaneDatabaseContext : ApplicationDbContext
 {
     public LaneDatabaseContext(DbContextOptions<LaneDatabaseContext> options, IServiceProvider serviceProvider, int number)
-        : base(options, serviceProvider, new NoConfigurationAssemblies(), TestPhysicalDataSources.Sqlite())
-    {
-        Number = number;
-    }
+        : base(options, serviceProvider, new NoConfigurationAssemblies(), TestPhysicalDataSources.Sqlite()) => Number = number;
 
     /// <summary>Gets the creation number of this context; 0 for the test's own contexts.</summary>
     public int Number { get; }
@@ -428,6 +425,8 @@ internal sealed class LaneDatabaseCommandLog : DbCommandInterceptor
                     break;
                 case string text when Guid.TryParse(text, out var parsed):
                     ids.Add(parsed);
+                    break;
+                default:
                     break;
             }
         }
@@ -711,7 +710,7 @@ internal sealed class TimerWatchingTimeProvider(DateTimeOffset start) : FakeTime
     /// <returns>A task that completes when they exist.</returns>
     public Task WhenTimersCreatedAsync(TimeSpan dueTime, int count)
     {
-        bool Reached(IReadOnlyList<TimeSpan> created) => created.Count(t => t == dueTime) >= count;
+        bool Reached(IReadOnlyList<TimeSpan> created) => created.Where(t => t == dueTime).Take(count).Count() >= count;
 
         lock (_gate)
         {

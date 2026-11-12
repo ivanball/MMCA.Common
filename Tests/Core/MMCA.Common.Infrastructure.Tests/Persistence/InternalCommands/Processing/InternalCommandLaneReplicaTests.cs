@@ -99,7 +99,7 @@ public sealed class InternalCommandLaneReplicaTests : IDisposable
             }
 
             current.ClaimedUntil.Should().NotBeNull($"{label}: an unfinished row is parked for its backoff");
-            var wait = current.ClaimedUntil!.Value - clock.GetUtcNow().UtcDateTime;
+            var wait = current.ClaimedUntil.Value - clock.GetUtcNow().UtcDateTime;
             if (wait > TimeSpan.Zero)
             {
                 clock.Advance(wait);

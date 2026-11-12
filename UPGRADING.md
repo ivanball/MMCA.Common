@@ -217,10 +217,14 @@ host target `http://localhost` and private addresses; any other environment igno
 warning.
 
 Deliveries run in a dedicated lane on every replica, so a slow or failing receiver never delays the
-other internal commands; the lane sends one delivery at a time, so keep `Webhooks:TimeoutSeconds` (1 to
-30, default 10) low. A subscription whose attempt failed is cooled down for
-`Webhooks:ReceiverCooldownSeconds` (5 to 120, default 60); its deliveries due meanwhile are not sent and
-each spends one attempt, with `LastError` 'Receiver cooling down after a failed delivery.' Set
+other internal commands; the lane sends up to `Webhooks:DeliveryConcurrency` (1 to 16, default 4)
+deliveries at once per replica, never two to one subscription at once, and no lane batch starts a
+delivery after `Webhooks:TimeoutSeconds` (1 to 30, default 10), so keep the timeout low. A subscription
+whose attempt failed is cooled down for `Webhooks:ReceiverCooldownSeconds` (5 to 120, default 60); its
+deliveries due meanwhile are not sent and each spends one attempt, with `LastError` 'Receiver cooling
+down after a failed delivery.' The cooldown is clamped to leave room for one attempt of
+`Webhooks:TimeoutSeconds` inside the shortest `InternalCommands` retry span, with a start-up warning
+when it is. Set
 `Webhooks:Enabled` the same on every replica. Delivery backlog moves from
 `internal_commands.pending.depth` to `internal_commands.lane.pending.depth`. Many failing subscriptions
 of one tenant can still slow other tenants' deliveries.
