@@ -24,6 +24,7 @@ public sealed class HostIntegrationTripwireTests
         { "GoogleSecretManager:NamePrefix", HostIntegrationNames.GoogleSecretManagerConfiguration, "AddGoogleSecretManagerConfiguration()", "MMCA.Common.Gcp" },
         { "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection, "AddGoogleCloudDataProtection()", "MMCA.Common.Gcp" },
         { "GoogleCloudTelemetry:ProjectId", HostIntegrationNames.GoogleCloudTelemetryExporter, "AddGoogleCloudTelemetryExporter()", "MMCA.Common.Gcp" },
+        { "AwsTelemetry:Region", HostIntegrationNames.AwsTelemetryExporter, "AddAwsTelemetryExporter()", "MMCA.Common.Aws" },
     };
 
     public static TheoryData<string, string, string, string> KeyRingPairs => new()
@@ -172,6 +173,58 @@ public sealed class HostIntegrationTripwireTests
             },
             HostIntegrationNames.AwsDataProtection)
             .Succeeded.Should().BeTrue("a blank placeholder for the other cloud's key ring is not a second key ring");
+
+    // Item 32, rule 14: a region with no AWS exporter fails start naming the call.
+    [Fact]
+    public void AwsTelemetryRegion_WithoutTheMarker_Fails()
+    {
+        var result = Validate(new() { ["AwsTelemetry:Region"] = "eu-west-1" });
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle().Which.Should()
+            .Contain("AwsTelemetry:Region")
+            .And.Contain("MMCA.Common.Aws")
+            .And.Contain("builder.AddAwsTelemetryExporter()")
+            .And.Contain("after AddServiceDefaults()");
+        HostIntegrationTripwire.AwsTelemetryRegionKey.Should().Be("AwsTelemetry:Region");
+        HostIntegrationNames.AwsTelemetryExporter.Should().Be("AwsTelemetryExporter");
+    }
+
+    // Item 33, rule 11: a boolean gate, so the check is "parsed true", not "set".
+    [Theory]
+    [InlineData("true")]
+    [InlineData("True")]
+    public void AzurePostgreSqlEnabled_WithoutTheMarker_Fails(string enabled)
+    {
+        var result = Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled });
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle().Which.Should()
+            .Contain("AzurePostgreSql:EntraAuthentication:Enabled")
+            .And.Contain("MMCA.Common.Azure")
+            .And.Contain("services.AddAzurePostgreSqlEntraAuthentication(configuration)");
+        HostIntegrationNames.AzurePostgreSqlEntraAuthentication.Should().Be("AzurePostgreSqlEntraAuthentication");
+    }
+
+    [Fact]
+    public void AzurePostgreSqlEnabled_WithTheMarker_Succeeds() =>
+        Validate(
+            new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = "true" },
+            HostIntegrationNames.AzurePostgreSqlEntraAuthentication)
+            .Succeeded.Should().BeTrue();
+
+    [Theory]
+    [InlineData("false")]
+    [InlineData("False")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void AzurePostgreSqlDisabledFalse_DoesNotTrip(string? enabled)
+    {
+        // "false" is a set, non-blank value: the presence check the other rows use would trip on it,
+        // which is exactly what this row must not do.
+        Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled })
+            .Succeeded.Should().BeTrue("an explicit false is how a host leaves Entra token login off");
+    }
 
     [Fact]
     public void AddServiceDefaults_ValidatesOnStart_AndFailsTheHost()

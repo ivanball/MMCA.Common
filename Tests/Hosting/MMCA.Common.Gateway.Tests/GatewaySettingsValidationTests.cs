@@ -81,6 +81,59 @@ public sealed class GatewaySettingsValidationTests
             .Should().Be(GatewayTraceHeaderSettings.DefaultRouteHeaderName);
     }
 
+    // Item 31, rule 12: the retry block is one of the nested objects, so its ranges fail registration.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public void RetryAttemptsOutOfRange_FailsRegistration(int attempts)
+    {
+        var settings = new GatewaySettings
+        {
+            Retry = new GatewayRetrySettings { Enabled = true, MaxRetryAttempts = attempts },
+        };
+        var services = new ServiceCollection();
+
+        var act = () => services.AddReverseProxy().AddMmcaGateway(settings);
+
+        act.Should().Throw<ValidationException>().Which.Message.Should().Contain("MaxRetryAttempts");
+    }
+
+    [Fact]
+    public void RetryDelayOutOfRange_FailsRegistration()
+    {
+        var settings = new GatewaySettings
+        {
+            Retry = new GatewayRetrySettings { Enabled = true, Delay = TimeSpan.FromSeconds(6) },
+        };
+
+        var fromSettings = () => new ServiceCollection().AddReverseProxy().AddMmcaGateway(settings);
+        var fromConfiguration = () => new ServiceCollection().AddReverseProxy().AddMmcaGateway(Configuration(
+            ("MmcaGateway:Retry:Enabled", "true"),
+            ("MmcaGateway:Retry:Delay", "00:00:06")));
+
+        fromSettings.Should().Throw<ValidationException>().Which.Message.Should().Contain("Delay");
+        fromConfiguration.Should().Throw<ValidationException>().Which.Message.Should().Contain("Delay");
+    }
+
+    [Fact]
+    public void RetryDefaults_AreOffOneAttempt200ms()
+    {
+        var defaults = new GatewaySettings().Retry;
+
+        defaults.Enabled.Should().BeFalse();
+        defaults.MaxRetryAttempts.Should().Be(1);
+        defaults.Delay.Should().Be(TimeSpan.FromMilliseconds(200));
+
+        var services = new ServiceCollection();
+        services.AddReverseProxy().AddMmcaGateway(Configuration());
+        using var provider = services.BuildServiceProvider();
+        var bound = provider.GetRequiredService<IOptions<GatewaySettings>>().Value.Retry;
+
+        bound.Enabled.Should().BeFalse();
+        bound.MaxRetryAttempts.Should().Be(1);
+        bound.Delay.Should().Be(TimeSpan.FromMilliseconds(200));
+    }
+
     private static IConfigurationRoot Configuration(params (string Key, string Value)[] values) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(values.Select(v => new KeyValuePair<string, string?>(v.Key, v.Value)))
