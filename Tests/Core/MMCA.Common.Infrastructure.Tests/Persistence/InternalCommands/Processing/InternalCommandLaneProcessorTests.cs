@@ -10,9 +10,11 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
+using MMCA.Common.Infrastructure.Persistence.Polling;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 using static MMCA.Common.Infrastructure.Tests.Persistence.InternalCommands.InternalCommandLaneTestHarness;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.InternalCommands.Processing;
@@ -122,11 +124,12 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         _probes.ValuesFor("r1").Should().HaveCount(claimable ? 1 : 0, $"a {state} row is {(claimable ? string.Empty : "not ")}pending for the shared loop either");
     }
 
-    // L1.6: one row at a time per replica, in ScheduledOn then Id order.
+    // L1.6 as kept by L2.11: with a concurrency of 1 the lane runs one row at a time per replica, in
+    // ScheduledOn then Id order (L2.1 replaces L1.6 above 1; InternalCommandLaneConcurrencyTests).
     [Fact]
     public async Task Cycle_RunsRowsOneAtATimeInScheduledOrder()
     {
-        var lane = CreateLane();
+        var lane = CreateLane(lane: ProbeLane(maxConcurrency: 1));
         foreach (var receiver in new[] { "r1", "r2", "r3" })
         {
             _probes.Behave(receiver, async (_, _) =>
@@ -144,7 +147,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         await lane.Lane.ProcessDueCommandsAsync(Ct);
 
         _probes.Invocations.Select(i => i.Value).Should().Equal("first", "second", "third");
-        _probes.MaxInFlight.Should().Be(1, "Phase 1 sends one delivery at a time per replica");
+        _probes.MaxInFlight.Should().Be(1, "with a concurrency of 1 the lane keeps Phase 1's one delivery at a time (L2.11)");
     }
 
     // L1.7: a row that cannot be deserialized has no key and dead-letters exactly as today; it neither
@@ -694,17 +697,26 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
             && e.Message.Contains(CoolingDownError, StringComparison.Ordinal));
     }
 
-    // L1.19: the effective cooldown is min(configured, S), S = sum over k = 1 .. MaxAttempts-1 of
-    // min(0.8 x base x 2^(k-1), cap): the shortest span from a row's first attempt to its last.
+    // L1.19 as amended by ruling F1: the effective cooldown is min(configured, S - TimeoutSeconds - 1),
+    // never below 1 second, where S = sum over k = 1 .. MaxAttempts-1 of min(0.8 x base x 2^(k-1), cap)
+    // is the shortest span from a row's first attempt to its last. Rows named by the ruling: defaults
+    // (60, 10, S 120: no clamp), cooldown 120 with timeout 30 (89), MaxAttempts 3 with timeout 30
+    // (24 - 31 < 1: floored at 1).
+    // DESIGN-QUESTION: MaxAttempts 1 makes S = 0. Phase 1's L1.19 says the cooldown is then OFF (0), and
+    // F1 says "never below 1 second" without naming that case. A 1 s cooldown at MaxAttempts 1 would
+    // dead-letter a charged row with no real attempt, so the row below keeps L1.19's 0.
     [Theory]
-    [InlineData(60, 5, 10, 600, 60d)]
-    [InlineData(120, 5, 10, 600, 120d)]
-    [InlineData(60, 3, 10, 600, 24d)]
-    [InlineData(60, 1, 10, 600, 0d)]
-    [InlineData(60, 5, 10, 15, 53d)]
-    [InlineData(5, 3, 10, 600, 5d)]
+    [InlineData(60, 10, 5, 10, 600, 60d)]
+    [InlineData(120, 30, 5, 10, 600, 89d)]
+    [InlineData(120, 10, 5, 10, 600, 109d)]
+    [InlineData(60, 10, 3, 10, 600, 13d)]
+    [InlineData(60, 30, 3, 10, 600, 1d)]
+    [InlineData(60, 10, 1, 10, 600, 0d)]
+    [InlineData(60, 10, 5, 10, 15, 42d)]
+    [InlineData(5, 10, 3, 10, 600, 5d)]
     public void EffectiveCooldown_IsClampedToTheShortestRetrySpan(
         int configuredSeconds,
+        int timeoutSeconds,
         int maxAttempts,
         int retryBackoffBaseSeconds,
         int maxRetryBackoffSeconds,
@@ -715,22 +727,31 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
             retryBackoffBaseSeconds: retryBackoffBaseSeconds,
             maxRetryBackoffSeconds: maxRetryBackoffSeconds);
 
-        var effective = InternalCommandLaneProcessor.EffectiveCooldown(TimeSpan.FromSeconds(configuredSeconds), settings);
+        var effective = InternalCommandLaneProcessor.EffectiveCooldown(
+            TimeSpan.FromSeconds(configuredSeconds),
+            TimeSpan.FromSeconds(timeoutSeconds),
+            settings);
 
         effective.TotalSeconds.Should().BeApproximately(expectedSeconds, 0.001);
     }
 
-    // L1.19, L1.17: a clamped cooldown logs exactly one Warning at start naming both numbers, beside
-    // the one Information start line carrying the effective value; an unclamped one logs no Warning.
+    // L1.19, L1.17 (amended by ruling F1): a clamped cooldown logs exactly one Warning at start naming the
+    // configured cooldown, the timeout and the retry span, beside the one Information start line carrying
+    // the effective value; an unclamped one logs no Warning.
     // DESIGN-QUESTION: "at start" is read as "before the polling loop's startup delay": the fake clock
     // never leaves that delay here, so a start line written after it would never arrive.
     [Fact]
     public async Task Start_WithAClampedCooldown_LogsOneWarning()
     {
-        // MaxAttempts 3 at base 10 makes S = 8 + 16 = 24 s, below the configured 60 s.
+        // MaxAttempts 3 at base 10 makes S = 8 + 16 = 24 s; with a 10 s timeout the effective cooldown is
+        // min(60, 24 - 10 - 1) = 13 s: clamped, not floored.
         var clampedLogger = new StructuredRecordingLogger<InternalCommandLaneProcessor>();
         using var clampedSignal = new InternalCommandSignal();
-        var clamped = CreateLane(maxAttempts: 3, logger: clampedLogger, signal: clampedSignal);
+        var clamped = CreateLane(
+            maxAttempts: 3,
+            lane: ProbeLane(batchStartBudget: TimeSpan.FromSeconds(10)),
+            logger: clampedLogger,
+            signal: clampedSignal);
 
         await clamped.Lane.StartAsync(Ct);
         await clampedLogger.WhenCountAsync(2).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, Ct);
@@ -738,9 +759,10 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
 
         var warning = clampedLogger.Entries.Where(e => e.Level == LogLevel.Warning).Should().ContainSingle().Subject;
         warning.CarriesNumber(60).Should().BeTrue("the warning names the configured cooldown");
-        warning.CarriesNumber(24).Should().BeTrue("the warning names the shortest retry span it was clamped to");
+        warning.CarriesNumber(10).Should().BeTrue("F1: the warning now names the timeout as well");
+        warning.CarriesNumber(24).Should().BeTrue("and the shortest retry span");
         clampedLogger.Entries.Where(e => e.Level == LogLevel.Information).Should().ContainSingle()
-            .Which.CarriesNumber(24).Should().BeTrue("the start line carries the effective cooldown");
+            .Which.CarriesNumber(13).Should().BeTrue("the start line carries the effective cooldown");
 
         var plainLogger = new StructuredRecordingLogger<InternalCommandLaneProcessor>();
         using var plainSignal = new InternalCommandSignal();
@@ -825,6 +847,166 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         c.Count.Should().Be(1, "it ended exactly one cooldown ago, not more");
         c.Prune(t0.AddSeconds(120.001));
         c.Count.Should().Be(0, "it ended more than one cooldown ago");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Rulings on the Phase 1 review (results/review-lane-phase1-rulings.md), written with lane Phase 2:
+    // F1 (the floor and its second warning), F2 (the lane wake exists before the first wait), F3 (the
+    // short-circuit counter counts recorded charges only), and the two rules Phase 1 left unpinned
+    // (L1.5's polling half, L1.17's Debug line). These run with the default probe lane, concurrency 1.
+    // ---------------------------------------------------------------------------------------------
+
+    // F1: when S - TimeoutSeconds - 1 is below 1 second the effective cooldown is floored at 1 second, and
+    // the lane logs, besides the clamp warning (naming the configured cooldown and the timeout), a second
+    // warning at start that the retry span is too short for the recovery guarantee and that
+    // InternalCommands:MaxAttempts or the backoff must grow or Webhooks:TimeoutSeconds must shrink.
+    // MaxAttempts 3 at base 10 gives S = 24 s; with a 30 s timeout 24 - 30 - 1 < 1.
+    [Fact]
+    public async Task Start_WithARetrySpanTooShortForTheGuarantee_FloorsTheCooldownAndWarnsTwice()
+    {
+        var logger = new StructuredRecordingLogger<InternalCommandLaneProcessor>();
+        using var signal = new InternalCommandSignal();
+        var lane = CreateLane(
+            maxAttempts: 3,
+            lane: ProbeLane(batchStartBudget: TimeSpan.FromSeconds(30)),
+            logger: logger,
+            signal: signal);
+
+        await lane.Lane.StartAsync(Ct);
+        await logger.WhenCountAsync(3).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, Ct);
+        await lane.Lane.StopAsync(Ct);
+
+        logger.Entries.Where(e => e.Level == LogLevel.Information).Should().ContainSingle()
+            .Which.CarriesNumber(1).Should().BeTrue("the effective cooldown is floored at 1 second");
+        var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
+        warnings.Should().HaveCount(2, "the clamp warning and the recovery-guarantee warning, once each");
+        warnings.Should().Contain(
+            w => w.CarriesNumber(60) && w.CarriesNumber(30),
+            "the clamp warning names the configured cooldown and the timeout");
+        warnings.Should().Contain(
+            w => w.Mentions("MaxAttempts") && w.Mentions("TimeoutSeconds"),
+            "the second warning says which settings must change");
+    }
+
+    // F2: the lane wake exists before the lane's first wait (created at construction or registration),
+    // so a Signal() sent after start and before that wait is kept for it. The frozen clock holds the lane
+    // in its startup delay, before its first wait; the wait the lane would make then returns at once.
+    [Fact]
+    public async Task Start_ASignalSentBeforeTheLanesFirstWait_IsNotLost()
+    {
+        using var signal = new InternalCommandSignal();
+        var lane = CreateLane(signal: signal);
+        await lane.Lane.StartAsync(Ct);
+
+        signal.Signal();
+
+        signal.HasLaneWake.Should().BeTrue("F2: the lane wake exists before the lane's first wait");
+        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var wait = signal.WaitForLaneAsync(TimeSpan.FromHours(1), waiting.Token);
+        wait.IsCompletedSuccessfully.Should().BeTrue("the signal sent before the first wait is kept for it");
+
+        await waiting.CancelAsync();
+        await lane.Lane.StopAsync(Ct);
+    }
+
+    // F3: internal_commands.lane.short_circuited.count is incremented after the charged attempt is
+    // recorded, not when the lease was lost before the write. Another replica takes the row to be charged
+    // over while an earlier row runs; the guarded stamp matches nothing and nothing is counted.
+    [Fact]
+    public async Task Cycle_AChargedRowWhoseClaimWasTakenOver_RecordsNoShortCircuit()
+    {
+        var lane = CreateLane();
+        await OpenCooldownAsync(lane, "x");
+        var foreignReplica = Guid.NewGuid();
+        var takenUntil = Now.AddMinutes(5);
+        Seed("y", "first", Now.AddSeconds(-2));
+        var toCharge = Seed("x", "to-charge", Now.AddSeconds(-1));
+        _probes.Behave("y", async (_, ct) =>
+        {
+            await _context.Set<InternalCommandMessage>()
+                .Where(c => c.Id == toCharge.Id)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(c => c.ClaimedBy, foreignReplica)
+                        .SetProperty(c => c.ClaimedUntil, takenUntil),
+                    ct);
+            return Result.Success();
+        });
+        using var meters = new InternalCommandMeterRecorder();
+
+        await lane.Lane.ProcessDueCommandsAsync(Ct);
+
+        var stored = await ReloadAsync(toCharge.Id);
+        stored.ClaimedBy.Should().Be(foreignReplica, "setup: the row is the other replica's");
+        stored.Attempts.Should().Be(0, "the guarded charge stamped nothing");
+        meters.For("internal_commands.lane.short_circuited.count").Where(IsProbeLane)
+            .Should().BeEmpty("F3: a charge whose write matched nothing is not counted");
+    }
+
+    // L1.5, the polling half Phase 1 left unpinned: with a custom IInternalCommandSignal the lane never
+    // waits on that signal (which would take the shared loop's permit); it waits its smart wait and the
+    // polling interval on the clock. The clock reports each timer the loop creates, so the test advances
+    // it only once the loop is waiting: after the first cycle the lane waits PollingIntervalSeconds, a
+    // Signal() on the custom signal does not wake it, and advancing the interval runs the next cycle.
+    [Fact]
+    public async Task Run_WithACustomSignal_WaitsOnThePollingIntervalOnly()
+    {
+        var clock = new TimerWatchingTimeProvider(InternalCommandTestHarness.Epoch);
+        var probes = new LaneProbeLog(clock);
+        var custom = new Mock<IInternalCommandSignal>();
+        var settings = InternalCommandTestHarness.Settings(maxAttempts: 5);
+        var pollingInterval = TimeSpan.FromSeconds(settings.PollingIntervalSeconds);
+        var lane = InternalCommandLaneTestHarness.CreateLaneProcessor(_context, settings, clock, probes, signal: custom.Object);
+        _disposables.Add(lane);
+        Seed("r1", "first", clock.GetUtcNow().UtcDateTime);
+
+        await lane.Lane.StartAsync(Ct);
+        await clock.WhenTimersCreatedAsync(PollingLoop.StartupDelay, 1).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, Ct);
+        clock.Advance(PollingLoop.StartupDelay);
+
+        await clock.WhenTimersCreatedAsync(pollingInterval, 1).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, Ct);
+        probes.ValuesFor("r1").Should().Equal(["first"], "the first cycle ran before the lane began to wait");
+
+        Seed("r2", "second", clock.GetUtcNow().UtcDateTime);
+        custom.Object.Signal();
+        probes.ValuesFor("r2").Should().BeEmpty("a custom signal cannot wake the lane; it waits its polling interval");
+
+        clock.Advance(pollingInterval);
+        await clock.WhenTimersCreatedAsync(pollingInterval, 2).WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System, Ct);
+        probes.ValuesFor("r2").Should().Equal(["second"], "the polling interval elapsed, so the next cycle ran");
+
+        custom.Verify(
+            s => s.WaitAsync(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "waiting on the custom signal would take the permit the shared loop needs");
+        await lane.Lane.StopAsync(Ct);
+    }
+
+    // L1.17, the Debug line Phase 1 left unpinned: a batch that charged rows logs one Debug line carrying
+    // the lane, the data source and the count, and no payload, tenant id or URL.
+    [Fact]
+    public async Task Cycle_ABatchThatChargedRows_LogsOneDebugLineWithIdsOnly()
+    {
+        const string payloadMarker = "https://payload-marker-never-logged.example";
+        const string tenantMarker = "tenant-marker-never-logged";
+        var logger = new StructuredRecordingLogger<InternalCommandLaneProcessor>();
+        var lane = CreateLane(logger: logger);
+        await OpenCooldownAsync(lane, "x");
+        var linesBefore = logger.Entries.Count;
+        var origin = new InternalCommandOrigin(null, null, null, tenantMarker, null, null, null);
+        SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-2), origin);
+        SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-1), origin);
+
+        await lane.Lane.ProcessDueCommandsAsync(Ct);
+
+        var sourceName = new TenantDataSourceTarget(DataSourceKey.Default(DataSource.Sqlite), null).ToString();
+        var debug = logger.Entries.Skip(linesBefore).Where(e => e.Level == LogLevel.Debug)
+            .Should().ContainSingle("one Debug line per batch that charged rows").Subject;
+        debug.CarriesText(LaneName).Should().BeTrue("the line names the lane");
+        debug.CarriesText(sourceName).Should().BeTrue("the line names the data source");
+        debug.CarriesNumber(2).Should().BeTrue("the line carries the number of charged rows");
+        debug.Mentions(payloadMarker).Should().BeFalse("no payload and no URL");
+        debug.Mentions("https://").Should().BeFalse("no URL");
+        debug.Mentions(tenantMarker).Should().BeFalse("no tenant id");
     }
 
     private static bool IsProbeLane(RecordedMeasurement measurement) =>

@@ -156,6 +156,39 @@ public sealed class WebhookDeliveryLaneSqlServerTests : IAsyncLifetime
         _log.Deliveries.Should().Equal(blocked.DeliveryId);
     }
 
+    // L2.12 (lane Phase 2): two replicas' lanes, each running up to Webhooks:DeliveryConcurrency (default 4)
+    // rows at once, each row on its own scope and context against the real server, race for one queue of
+    // 32 deliveries to 8 subscriptions; every row is sent exactly once, because no row is sent without its
+    // token-guarded renew and every stamp and release is token-guarded.
+    [Fact]
+    public async Task TwoConcurrentLaneReplicas_SendEachRowOnce()
+    {
+        await using var replicaA = BuildHost();
+        await using var replicaB = BuildHost();
+        var subscriptions = Enumerable.Range(0, 8).Select(_ => Guid.NewGuid()).ToArray();
+        var deliveries = Enumerable.Range(0, 32).Select(index => NewDeliveryTo(subscriptions[index % subscriptions.Length])).ToArray();
+        await SeedAsync(replicaA, [.. deliveries]);
+        using var laneA = ResolveLane(replicaA);
+        using var laneB = ResolveLane(replicaB);
+
+        for (var round = 0; round < 10 && _log.Deliveries.Count < deliveries.Length; round++)
+        {
+            await Task.WhenAll(laneA.ProcessDueCommandsAsync(Ct), laneB.ProcessDueCommandsAsync(Ct));
+        }
+
+        _log.Deliveries.Should().HaveCount(deliveries.Length, "every row is sent once and only once");
+        _log.Deliveries.Should().OnlyHaveUniqueItems();
+        _log.Deliveries.Should().BeEquivalentTo(deliveries.Select(d => d.DeliveryId));
+        (await LoadRowsAsync(replicaA)).Should().AllSatisfy(r =>
+        {
+            r.ProcessedOn.Should().NotBeNull();
+            r.DeadLetteredOn.Should().BeNull();
+        });
+    }
+
+    private static DeliverWebhookInternalCommand NewDeliveryTo(Guid subscriptionId) =>
+        new(subscriptionId, Guid.NewGuid(), "probe.happened", Guid.NewGuid(), DateTime.UtcNow, "{}");
+
     private static DeliverWebhookInternalCommand NewDelivery() =>
         new(Guid.NewGuid(), Guid.NewGuid(), "probe.happened", Guid.NewGuid(), DateTime.UtcNow, "{}");
 

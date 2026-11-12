@@ -250,6 +250,39 @@ public sealed class AddWebhooksTests
         provider.GetRequiredService<IOptions<WebhookSettings>>().Value.ReceiverCooldownSeconds.Should().Be(60);
     }
 
+    // Webhook delivery lane, Phase 2 (design-webhook-lane.md L2.11): DeliveryConcurrency is
+    // [Range(1, 16)], default 4, validated at start with the rest of the section. Added as new methods,
+    // as Phase 1 did for ReceiverCooldownSeconds, so the existing Theory and defaults fact stay as they are.
+    [Theory]
+    [InlineData("0")]
+    [InlineData("17")]
+    public void ADeliveryConcurrencyOutsideItsRange_FailsValidationNamingTheKey(string value)
+    {
+        using var provider = Build(new() { ["Webhooks:DeliveryConcurrency"] = value });
+
+        var act = () => provider.GetRequiredService<IOptions<WebhookSettings>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*DeliveryConcurrency*");
+    }
+
+    [Theory]
+    [InlineData("1", 1)]
+    [InlineData("16", 16)]
+    public void ADeliveryConcurrencyAtItsBounds_Binds(string value, int expected)
+    {
+        using var provider = Build(new() { ["Webhooks:DeliveryConcurrency"] = value });
+
+        provider.GetRequiredService<IOptions<WebhookSettings>>().Value.DeliveryConcurrency.Should().Be(expected);
+    }
+
+    [Fact]
+    public void AnAbsentSection_BindsTheDefaultDeliveryConcurrency()
+    {
+        using var provider = Build([]);
+
+        provider.GetRequiredService<IOptions<WebhookSettings>>().Value.DeliveryConcurrency.Should().Be(4);
+    }
+
     private static void AssertRegistered<TService>(ServiceCollection services, Type implementationType, ServiceLifetime lifetime)
     {
         var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(TService), "registered once, with TryAdd").Which;

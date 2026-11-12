@@ -80,6 +80,67 @@ public sealed class InternalCommandLanePostgreSqlTests : IAsyncLifetime
         (await LoadRowsAsync(host)).Should().AllSatisfy(r => r.ProcessedOn.Should().NotBeNull());
     }
 
+    // L2.5 (lane Phase 2): the release of claimed rows that never started translates on Npgsql and clears
+    // the claim and nothing else. DeliveryConcurrency 1 and TimeoutSeconds 1 (the batch start budget):
+    // the first delivery advances the host's clock by 2 s, so the budget is spent and the other three rows
+    // of the batch are released uncharged; the next cycle delivers them. The clock is a stepping
+    // TimeProvider registered before AddInfrastructure (whose TryAdd keeps it), so no test waits on wall time.
+    [Fact]
+    public async Task Release_TranslatesAndClearsTheClaim()
+    {
+        var clock = new SteppingClock(DateTimeOffset.UtcNow);
+        var releaseLog = new ReleaseProbeLog(clock);
+        await using var host = BuildReleaseHost(clock, releaseLog);
+        var deliveries = Enumerable.Range(0, 4).Select(_ => NewDelivery()).ToArray();
+        await SeedAsync(host, [.. deliveries]);
+        using var lane = ResolveLane(host);
+
+        await lane.ProcessDueCommandsAsync(Ct);
+
+        releaseLog.Deliveries.Should().ContainSingle("one row ran and spent the 1 s budget");
+        var afterFirst = await LoadRowsAsync(host);
+        afterFirst.Should().ContainSingle(r => r.ProcessedOn != null);
+        afterFirst.Where(r => r.ProcessedOn == null).Should().HaveCount(3).And.AllSatisfy(r =>
+        {
+            r.ClaimedBy.Should().BeNull("a row that never started is released");
+            r.ClaimedUntil.Should().BeNull();
+            r.Attempts.Should().Be(0, "a release charges nothing");
+            r.LastError.Should().BeNull();
+            r.DeadLetteredOn.Should().BeNull();
+        });
+
+        await lane.ProcessDueCommandsAsync(Ct);
+
+        releaseLog.Deliveries.Should().BeEquivalentTo(deliveries.Select(d => d.DeliveryId), "released rows are due again at once");
+        (await LoadRowsAsync(host)).Should().AllSatisfy(r => r.ProcessedOn.Should().NotBeNull());
+    }
+
+    private LaneTierHost BuildReleaseHost(SteppingClock clock, ReleaseProbeLog releaseLog)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["ConnectionStrings:PostgreSQLConnectionString"] = _postgres.GetConnectionString(),
+                ["InternalCommands:DataSource"] = nameof(DataSource.PostgreSQL),
+                ["InternalCommands:Enabled"] = "true",
+                ["Webhooks:Enabled"] = "true",
+                ["Webhooks:DeliveryConcurrency"] = "1",
+                ["Webhooks:TimeoutSeconds"] = "1",
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<TimeProvider>(clock);
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton<IDomainEventDispatcher, NoOpDomainEventDispatcher>();
+        services.AddInfrastructure(configuration);
+        services.AddWebhooks(configuration);
+        services.AddSingleton(releaseLog);
+        services.AddScoped<ICommandHandler<DeliverWebhookInternalCommand, Result>, ClockAdvancingDeliveryHandler>();
+        return new LaneTierHost(services, services.BuildServiceProvider());
+    }
+
     private static DeliverWebhookInternalCommand NewDelivery() =>
         new(Guid.NewGuid(), Guid.NewGuid(), "probe.happened", Guid.NewGuid(), DateTime.UtcNow, "{}");
 
@@ -183,6 +244,48 @@ public sealed class InternalCommandLanePostgreSqlTests : IAsyncLifetime
         public Task<Result> HandleAsync(DeliverWebhookInternalCommand command, CancellationToken cancellationToken = default)
         {
             log.Deliveries.Enqueue(command.DeliveryId);
+            return Task.FromResult(Result.Success());
+        }
+    }
+
+    /// <summary>A clock only the test moves, so the batch start budget elapses without waiting on wall time.</summary>
+    /// <param name="start">The starting instant.</param>
+    private sealed class SteppingClock(DateTimeOffset start) : TimeProvider
+    {
+        private long _utcTicks = start.UtcTicks;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override DateTimeOffset GetUtcNow() => new(Interlocked.Read(ref _utcTicks), TimeSpan.Zero);
+
+        public override long GetTimestamp() => Interlocked.Read(ref _utcTicks);
+
+        public void Advance(TimeSpan by) => Interlocked.Add(ref _utcTicks, by.Ticks);
+    }
+
+    private sealed class ReleaseProbeLog(SteppingClock clock)
+    {
+        private int _advanced;
+
+        public ConcurrentQueue<Guid> Deliveries { get; } = new();
+
+        /// <summary>Spends the 1 s budget once: the first delivery advances the clock by 2 s.</summary>
+        public void AdvanceOnce()
+        {
+            if (Interlocked.Exchange(ref _advanced, 1) == 0)
+            {
+                clock.Advance(TimeSpan.FromSeconds(2));
+            }
+        }
+    }
+
+    /// <summary>Records the delivery and, on the first one only, moves the clock past the start budget.</summary>
+    private sealed class ClockAdvancingDeliveryHandler(ReleaseProbeLog log) : ICommandHandler<DeliverWebhookInternalCommand, Result>
+    {
+        public Task<Result> HandleAsync(DeliverWebhookInternalCommand command, CancellationToken cancellationToken = default)
+        {
+            log.Deliveries.Enqueue(command.DeliveryId);
+            log.AdvanceOnce();
             return Task.FromResult(Result.Success());
         }
     }

@@ -101,6 +101,11 @@ public sealed class AddWebhookDeliveryTests
     public void Settings_DefaultReceiverCooldownIsSixtySeconds() =>
         new WebhookSettings().ReceiverCooldownSeconds.Should().Be(60);
 
+    // Webhook delivery lane, Phase 2 (design-webhook-lane.md 2(a), L2.11): the one new setting.
+    [Fact]
+    public void Settings_DefaultDeliveryConcurrencyIsFour() =>
+        new WebhookSettings().DeliveryConcurrency.Should().Be(4);
+
     [Fact]
     public void DeliverCommand_HasItsStableInternalCommandName()
     {

@@ -42,13 +42,29 @@ internal static class InternalCommandLaneTestHarness
     /// <summary>Builds the test lane: rows of <see cref="LaneProbeCommand"/>, keyed by their receiver.</summary>
     /// <param name="cooldown">The configured receiver cooldown; 60 seconds when omitted.</param>
     /// <param name="commandType">The stored command type the lane claims; the probe's own when omitted.</param>
+    /// <param name="maxConcurrency">
+    /// Phase 2 (design 2(a)): rows of one batch run at once. 1 by default, so the Phase 1 tests keep
+    /// Phase 1's one-row-at-a-time order (L2.11).
+    /// </param>
+    /// <param name="batchStartBudget">
+    /// Phase 2 (design 2(a), L2.5): the batch start budget, which the webhook lane takes from
+    /// <c>TimeoutSeconds</c> and which also sets the F1 clamp. 30 seconds (the largest <c>TimeoutSeconds</c>)
+    /// by default: longer than any in-cycle clock advance of the Phase 1 tests, and at their settings
+    /// (MaxAttempts 5, S = 120 s) it leaves the 60 s cooldown unclamped (120 - 30 - 1 = 89).
+    /// </param>
     /// <returns>The lane.</returns>
-    public static InternalCommandLane ProbeLane(TimeSpan? cooldown = null, string? commandType = null) =>
+    public static InternalCommandLane ProbeLane(
+        TimeSpan? cooldown = null,
+        string? commandType = null,
+        int maxConcurrency = 1,
+        TimeSpan? batchStartBudget = null) =>
         new(
             LaneName,
             commandType ?? ProbeCommandType,
             cooldown ?? TimeSpan.FromSeconds(60),
-            command => ((LaneProbeCommand)command).Receiver);
+            command => ((LaneProbeCommand)command).Receiver,
+            MaxConcurrency: maxConcurrency,
+            BatchStartBudget: batchStartBudget ?? TimeSpan.FromSeconds(30));
 
     /// <summary>
     /// Builds a lane processor over <paramref name="context"/>. The returned provider is what both the

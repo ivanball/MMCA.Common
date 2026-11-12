@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Webhooks;
 using MMCA.Common.Application.Webhooks.Delivery;
@@ -153,6 +154,46 @@ public sealed class WebhookDeliveryLaneTests
         withCustom.Count(e => e.Level == LogLevel.Information).Should().Be(2, "the start line plus one custom-signal notice");
         withCustom.Should().NotContain(e => e.Level >= LogLevel.Warning);
         custom.Verify(s => s.WaitAsync(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // L2.11 (lane Phase 2): the lane takes its concurrency from Webhooks:DeliveryConcurrency and its batch
+    // start budget from Webhooks:TimeoutSeconds (design 2(a): BatchStartBudget = TimeoutSeconds).
+    [Theory]
+    [InlineData(null, null, 4, 10)]
+    [InlineData(1, 30, 1, 30)]
+    [InlineData(16, 1, 16, 1)]
+    public void Create_TakesConcurrencyAndBudgetFromSettings(
+        int? deliveryConcurrency,
+        int? timeoutSeconds,
+        int expectedConcurrency,
+        int expectedBudgetSeconds)
+    {
+        var settings = deliveryConcurrency is { } concurrency && timeoutSeconds is { } timeout
+            ? new WebhookSettings { DeliveryConcurrency = concurrency, TimeoutSeconds = timeout }
+            : new WebhookSettings();
+
+        var lane = WebhookDeliveryLane.Create(settings);
+
+        lane.MaxConcurrency.Should().Be(expectedConcurrency);
+        lane.BatchStartBudget.Should().Be(TimeSpan.FromSeconds(expectedBudgetSeconds));
+    }
+
+    // L2.11: the lane is built from the VALIDATED options, so a DeliveryConcurrency outside [1, 16] fails
+    // when the registered lane is built, naming the key, instead of reaching the lane.
+    [Fact]
+    public void LaneService_IsBuiltFromTheValidatedOptions()
+    {
+        var services = CreateServices(new(StringComparer.Ordinal)
+        {
+            ["Webhooks:Enabled"] = "true",
+            ["InternalCommands:Enabled"] = "true",
+            ["Webhooks:DeliveryConcurrency"] = "17",
+        });
+        using var provider = services.BuildServiceProvider();
+
+        var act = () => CountLaneServices(services, provider);
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*DeliveryConcurrency*");
     }
 
     private static DeliverWebhookInternalCommand NewDelivery(Guid subscriptionId) =>
