@@ -96,6 +96,11 @@ public sealed class AddWebhookDeliveryTests
         settings.AllowInsecureTargetsInDevelopment.Should().BeFalse();
     }
 
+    // Webhook delivery lane, Phase 1 (design-webhook-lane.md 1(a), L1.19): the one new setting.
+    [Fact]
+    public void Settings_DefaultReceiverCooldownIsSixtySeconds() =>
+        new WebhookSettings().ReceiverCooldownSeconds.Should().Be(60);
+
     [Fact]
     public void DeliverCommand_HasItsStableInternalCommandName()
     {

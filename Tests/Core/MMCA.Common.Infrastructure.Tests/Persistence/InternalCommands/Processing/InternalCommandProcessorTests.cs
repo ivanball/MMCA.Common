@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using MMCA.Common.Application.InternalCommands;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.Webhooks.Delivery;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
@@ -537,5 +540,148 @@ public sealed class InternalCommandProcessorTests : IDisposable
 
         _providers.Add(services);
         return processor;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Webhook delivery lane, Phase 1 (design-webhook-lane.md 1(c)): additions only. Every test above
+    // is the equivalence suite for L1.2 and runs unchanged, with no lane registered.
+    // ---------------------------------------------------------------------------------------------
+
+    // L1.2 and the equivalence argument, point 3: with no InternalCommandLanes registered, the fetch
+    // and the count of a full batch filter on nothing but the pending predicate. The SELECT list
+    // projects every column, so it is the WHERE clause that must not mention CommandType.
+    // DESIGN-QUESTION: 1(c) says "no statement before the claim mentions CommandType"; read literally
+    // that fails today, because the fetch selects the CommandType column.
+    [Fact]
+    public async Task Cycle_NoLaneRegistered_FetchAndCountCarryNoCommandTypePredicate()
+    {
+        Seed(new RecordingCommand("one"), InternalCommandTestHarness.EpochUtc);
+        Seed(new RecordingCommand("two"), InternalCommandTestHarness.EpochUtc);
+        var processor = CreateProcessor(batchSize: 2);
+        using var recorder = new EfCommandRecorder(_context);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        var beforeClaim = recorder.Commands.TakeWhile(sql => !EfCommandRecorder.IsUpdate(sql)).ToList();
+        beforeClaim.Should().HaveCount(2, "a full batch runs the fetch and then the count before it claims");
+        beforeClaim.Should().AllSatisfy(sql =>
+            EfCommandRecorder.WhereClause(sql).Should().NotContain("CommandType", "no lane is registered, so nothing is excluded"));
+        _log.Executions.Should().HaveCount(2);
+    }
+
+    // L1.2, L1.20: without a lane a delivery row is just another internal command to the shared loop.
+    [Fact]
+    public async Task Cycle_NoLaneRegistered_RunsADeliveryRowInTheSharedLoop()
+    {
+        var deliveries = new List<DeliverWebhookInternalCommand>();
+        var row = SeedAny(NewDelivery(), InternalCommandTestHarness.EpochUtc);
+        var processor = CreateProcessorWith(services =>
+            services.AddScoped<ICommandHandler<DeliverWebhookInternalCommand, Result>>(_ => new RecordingDeliveryHandler(deliveries)));
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        deliveries.Should().ContainSingle("the shared loop runs delivery rows when no lane exists");
+        var stored = await ReloadAsync(row.Id);
+        stored.ProcessedOn.Should().Be(InternalCommandTestHarness.EpochUtc);
+    }
+
+    // L1.3: with a lane registered, the shared fetch and count gain exactly the CommandType predicate.
+    // Two delivery rows at the head of a batch of two would fill the whole window without it (option
+    // A' in the design); with it, the two shared rows behind them run, in ScheduledOn order.
+    [Fact]
+    public async Task Cycle_LaneRegistered_SkipsLaneRowsAndRunsTheRest_InScheduledOrder()
+    {
+        var deliveries = new List<DeliverWebhookInternalCommand>();
+        var headA = SeedAny(NewDelivery(), InternalCommandTestHarness.EpochUtc.AddSeconds(-40));
+        var headB = SeedAny(NewDelivery(), InternalCommandTestHarness.EpochUtc.AddSeconds(-35));
+        Seed(new RecordingCommand("second"), InternalCommandTestHarness.EpochUtc.AddSeconds(-10));
+        Seed(new RecordingCommand("first"), InternalCommandTestHarness.EpochUtc.AddSeconds(-30));
+        var processor = CreateProcessorWith(
+            services =>
+            {
+                services.AddSingleton(new InternalCommandLanes(DeliveryCommandType));
+                services.AddScoped<ICommandHandler<DeliverWebhookInternalCommand, Result>>(_ => new RecordingDeliveryHandler(deliveries));
+            },
+            batchSize: 2);
+        using var recorder = new EfCommandRecorder(_context);
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        _log.Executions.Select(e => e.Value).Should().Equal("first", "second");
+        deliveries.Should().BeEmpty("delivery rows belong to the lane");
+        foreach (var head in new[] { headA, headB })
+        {
+            var stored = await ReloadAsync(head.Id);
+            stored.Attempts.Should().Be(0);
+            stored.ClaimedBy.Should().BeNull("the shared loop does not even claim a lane row");
+        }
+
+        var beforeClaim = recorder.Commands.TakeWhile(sql => !EfCommandRecorder.IsUpdate(sql)).ToList();
+        beforeClaim.Should().HaveCount(2, "the fetch and the count of a full batch");
+        beforeClaim.Should().AllSatisfy(sql =>
+            EfCommandRecorder.WhereClause(sql).Should().Contain("CommandType", "the one guarded predicate"));
+    }
+
+    // L1.3: with a lane registered, the shared depth gauge describes shared rows only. A full batch of
+    // two pays for the count, which sees the three shared rows and none of the three delivery rows.
+    [Fact]
+    public async Task Cycle_LaneRegistered_PendingDepthCountsSharedRowsOnly()
+    {
+        for (var index = 0; index < 3; index++)
+        {
+            SeedAny(NewDelivery(), InternalCommandTestHarness.EpochUtc.AddSeconds(-60 + index));
+            Seed(new RecordingCommand($"shared-{index}"), InternalCommandTestHarness.EpochUtc.AddSeconds(-30 + index));
+        }
+
+        var processor = CreateProcessorWith(
+            services => services.AddSingleton(new InternalCommandLanes(DeliveryCommandType)),
+            batchSize: 2);
+        using var meters = new InternalCommandMeterRecorder();
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+        meters.RecordObservableInstruments();
+
+        meters.For("internal_commands.pending.depth").Should().ContainSingle()
+            .Which.Value.Should().Be(3, "the delivery rows are the lane's backlog, not the shared queue's");
+    }
+
+    private static string DeliveryCommandType { get; } =
+        InternalCommandNameResolver.GetStorageName(typeof(DeliverWebhookInternalCommand));
+
+    private static DeliverWebhookInternalCommand NewDelivery() =>
+        new(Guid.NewGuid(), Guid.NewGuid(), "probe.happened", Guid.NewGuid(), InternalCommandTestHarness.EpochUtc, "{}");
+
+    private InternalCommandMessage SeedAny(IInternalCommand command, DateTime scheduledOn)
+    {
+        var row = InternalCommandTestHarness.Seed(_context, command, scheduledOn);
+        _context.ChangeTracker.Clear();
+        return row;
+    }
+
+    private InternalCommandProcessor CreateProcessorWith(Action<IServiceCollection> configure, int batchSize = 50)
+    {
+        (InternalCommandProcessor processor, ServiceProvider services) = InternalCommandTestHarness.CreateProcessor(
+            _context,
+            InternalCommandTestHarness.Settings(batchSize: batchSize),
+            _clock,
+            collection =>
+            {
+                InternalCommandTestHarness.AddRecordingCommandPipeline(collection, _log);
+                configure(collection);
+            });
+
+        _providers.Add(services);
+        return processor;
+    }
+
+    /// <summary>Stands in for the delivery handler: records the command and succeeds without a request.</summary>
+    private sealed class RecordingDeliveryHandler(List<DeliverWebhookInternalCommand> deliveries)
+        : ICommandHandler<DeliverWebhookInternalCommand, Result>
+    {
+        public Task<Result> HandleAsync(DeliverWebhookInternalCommand command, CancellationToken cancellationToken = default)
+        {
+            deliveries.Add(command);
+            return Task.FromResult(Result.Success());
+        }
     }
 }

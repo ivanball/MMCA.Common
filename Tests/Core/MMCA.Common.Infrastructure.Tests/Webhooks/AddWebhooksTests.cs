@@ -217,6 +217,39 @@ public sealed class AddWebhooksTests
         provider.GetRequiredService<WebhookEventCatalog>().EventTypes.Should().Equal("probe.happened");
     }
 
+    // Webhook delivery lane, Phase 1 (design-webhook-lane.md L1.19): ReceiverCooldownSeconds is
+    // [Range(5, 120)], default 60, validated at start with the rest of the section. Added as new
+    // methods so the existing Theory and defaults fact stay as they are.
+    [Theory]
+    [InlineData("4")]
+    [InlineData("121")]
+    public void AReceiverCooldownOutsideItsRange_FailsValidationNamingTheKey(string value)
+    {
+        using var provider = Build(new() { ["Webhooks:ReceiverCooldownSeconds"] = value });
+
+        var act = () => provider.GetRequiredService<IOptions<WebhookSettings>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*ReceiverCooldownSeconds*");
+    }
+
+    [Theory]
+    [InlineData("5", 5)]
+    [InlineData("120", 120)]
+    public void AReceiverCooldownAtItsBounds_Binds(string value, int expected)
+    {
+        using var provider = Build(new() { ["Webhooks:ReceiverCooldownSeconds"] = value });
+
+        provider.GetRequiredService<IOptions<WebhookSettings>>().Value.ReceiverCooldownSeconds.Should().Be(expected);
+    }
+
+    [Fact]
+    public void AnAbsentSection_BindsTheDefaultReceiverCooldown()
+    {
+        using var provider = Build([]);
+
+        provider.GetRequiredService<IOptions<WebhookSettings>>().Value.ReceiverCooldownSeconds.Should().Be(60);
+    }
+
     private static void AssertRegistered<TService>(ServiceCollection services, Type implementationType, ServiceLifetime lifetime)
     {
         var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(TService), "registered once, with TryAdd").Which;
