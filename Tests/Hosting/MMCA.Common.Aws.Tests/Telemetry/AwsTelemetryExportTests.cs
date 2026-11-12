@@ -29,18 +29,25 @@ public sealed class AwsTelemetryExportTests
     {
         await using var receiver = await AwsOtlpTestReceiver.StartAsync();
         const string applicationName = "mmca-aws-telemetry-export";
+        using var telemetryEvents = new OpenTelemetryEventCollector();
         using var host = BuildHost(applicationName, receiver.BaseAddress, Region);
         await host.StartAsync(TestContext.Current.CancellationToken);
 
-        Emit(host, applicationName);
+        var emitted = Emit(host, applicationName);
         Flush(host);
         await host.StopAsync(TestContext.Current.CancellationToken);
 
         var requests = receiver.Requests.ToList();
         var traces = requests.Where(request => request.Path == "/v1/traces").ToList();
         var logs = requests.Where(request => request.Path == "/v1/logs").ToList();
-        traces.Should().NotBeEmpty("the span must be exported to the traces endpoint");
-        logs.Should().NotBeEmpty("the log record must be exported to the logs endpoint");
+
+        // This test has failed in CI with no request at the traces endpoint and no reason in the log:
+        // the SDK reports an export failure only on its own event sources. The details say which side
+        // lost the span the next time: the span itself, what the receiver saw, and those events.
+        var details =
+            $"{emitted}; receiver saw [{string.Join(", ", requests.Select(request => request.Path))}]; OpenTelemetry events: {telemetryEvents.Describe()}";
+        traces.Should().NotBeEmpty("the span must be exported to the traces endpoint ({0})", details);
+        logs.Should().NotBeEmpty("the log record must be exported to the logs endpoint ({0})", details);
         requests.Should().NotContain(request => request.Path == "/v1/metrics", "metrics are left to an ADOT collector");
 
         foreach (var request in traces)
@@ -102,16 +109,24 @@ public sealed class AwsTelemetryExportTests
         return builder.Build();
     }
 
-    private static void Emit(IHost host, string applicationName)
+    /// <summary>Emits one span and one log record, and describes the span for a failure message.</summary>
+    private static string Emit(IHost host, string applicationName)
     {
+        var ambient = Activity.Current;
+        string description;
         using (var source = new ActivitySource(applicationName))
         {
             using var activity = source.StartActivity("aws-telemetry-span");
             activity.Should().NotBeNull("service defaults subscribe the application's own source");
+            var ambientDescription = ambient is null
+                ? "none"
+                : $"{ambient.Source.Name}/{ambient.OperationName} recorded {ambient.Recorded}";
+            description = $"span recorded: {activity?.Recorded}, ambient activity: {ambientDescription}";
         }
 
         var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("MMCA.Common.Aws.Tests.Telemetry");
         logger.LogWarning("aws-telemetry-log-record");
+        return description;
     }
 
     private static void Flush(IHost host)
@@ -122,4 +137,30 @@ public sealed class AwsTelemetryExportTests
 
     private static bool Contains(byte[] body, string text) =>
         body.AsSpan().IndexOf(Encoding.UTF8.GetBytes(text)) >= 0;
+
+    /// <summary>
+    /// Collects the OpenTelemetry SDK's own warnings and errors (its event sources are the only place an
+    /// export failure is reported) for a failure message. Process-wide, so it can also hold events of a
+    /// test running beside this one.
+    /// </summary>
+    private sealed class OpenTelemetryEventCollector : System.Diagnostics.Tracing.EventListener
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _events = new();
+
+        public string Describe() => _events.IsEmpty ? "none" : string.Join(" | ", _events);
+
+        protected override void OnEventSourceCreated(System.Diagnostics.Tracing.EventSource eventSource)
+        {
+            if (eventSource.Name.StartsWith("OpenTelemetry-", StringComparison.Ordinal))
+            {
+                EnableEvents(eventSource, System.Diagnostics.Tracing.EventLevel.Warning);
+            }
+        }
+
+        protected override void OnEventWritten(System.Diagnostics.Tracing.EventWrittenEventArgs eventData)
+        {
+            var payload = eventData.Payload is null ? string.Empty : string.Join(", ", eventData.Payload);
+            _events.Enqueue($"{eventData.EventSource.Name}/{eventData.EventName}: {payload}");
+        }
+    }
 }
