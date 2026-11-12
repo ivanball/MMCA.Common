@@ -20,6 +20,9 @@ internal sealed class AwsOtlpTestReceiver : IAsyncDisposable
 {
     private readonly WebApplication _app;
 
+    /// <summary>Released once per recorded request, so a test can wait for an arrival instead of sleeping.</summary>
+    private readonly SemaphoreSlim _arrived = new(0);
+
     private AwsOtlpTestReceiver(WebApplication app, Uri baseAddress)
     {
         _app = app;
@@ -53,6 +56,7 @@ internal sealed class AwsOtlpTestReceiver : IAsyncDisposable
                 headers,
                 context.Request.ContentType,
                 body.ToArray()));
+            receiver._arrived.Release();
             context.Response.StatusCode = StatusCodes.Status200OK;
             context.Response.ContentType = "application/x-protobuf";
         });
@@ -64,10 +68,34 @@ internal sealed class AwsOtlpTestReceiver : IAsyncDisposable
         return receiver;
     }
 
+    /// <summary>
+    /// Waits until a request to <paramref name="path"/> has been recorded, or <paramref name="timeout"/>
+    /// passes. Returns whether one arrived; the caller's own assertions report a miss.
+    /// </summary>
+    public async Task<bool> WaitForRequestAsync(string path, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        bounded.CancelAfter(timeout);
+        try
+        {
+            while (!Requests.Any(request => string.Equals(request.Path, path, StringComparison.Ordinal)))
+            {
+                await _arrived.WaitAsync(bounded.Token);
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _app.StopAsync();
         await _app.DisposeAsync();
+        _arrived.Dispose();
     }
 
     /// <summary>One received OTLP request.</summary>

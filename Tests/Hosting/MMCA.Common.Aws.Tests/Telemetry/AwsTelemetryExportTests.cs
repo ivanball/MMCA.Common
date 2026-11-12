@@ -24,6 +24,9 @@ public sealed class AwsTelemetryExportTests
     private const string Region = "us-east-1";
     private const int FlushTimeoutMilliseconds = 10_000;
 
+    /// <summary>How long a flushed signal may take to reach the receiver before the test reports a miss.</summary>
+    private static readonly TimeSpan ArrivalTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ASpanAndALogRecord_ReachTheReceiver_Signed()
     {
@@ -35,15 +38,22 @@ public sealed class AwsTelemetryExportTests
 
         var emitted = Emit(host, applicationName);
         Flush(host);
+
+        // A flush that returns true has handed the batch to the exporter; it does not mean the HTTP
+        // round trip is over. On a slow machine the batch processor's flush poll can see its buffer
+        // drained while the request is still in flight, and an assertion made then finds nothing
+        // (seen in CI: span recorded, no exporter error, receiver empty). So wait for the arrivals
+        // themselves, while the host is still up, and let the assertions below report a miss.
+        await receiver.WaitForRequestAsync("/v1/traces", ArrivalTimeout, TestContext.Current.CancellationToken);
+        await receiver.WaitForRequestAsync("/v1/logs", ArrivalTimeout, TestContext.Current.CancellationToken);
         await host.StopAsync(TestContext.Current.CancellationToken);
 
         var requests = receiver.Requests.ToList();
         var traces = requests.Where(request => request.Path == "/v1/traces").ToList();
         var logs = requests.Where(request => request.Path == "/v1/logs").ToList();
 
-        // This test has failed in CI with no request at the traces endpoint and no reason in the log:
-        // the SDK reports an export failure only on its own event sources. The details say which side
-        // lost the span the next time: the span itself, what the receiver saw, and those events.
+        // The SDK reports an export failure only on its own event sources, so a miss carries the span
+        // itself, what the receiver saw, and those events.
         var details =
             $"{emitted}; receiver saw [{string.Join(", ", requests.Select(request => request.Path))}]; OpenTelemetry events: {telemetryEvents.Describe()}";
         traces.Should().NotBeEmpty("the span must be exported to the traces endpoint ({0})", details);
@@ -159,6 +169,12 @@ public sealed class AwsTelemetryExportTests
 
         protected override void OnEventWritten(System.Diagnostics.Tracing.EventWrittenEventArgs eventData)
         {
+            // One warning per runtime instrument no provider subscribes to: dozens of them, never the reason.
+            if (string.Equals(eventData.EventName, "MetricInstrumentIgnored", StringComparison.Ordinal))
+            {
+                return;
+            }
+
             var payload = eventData.Payload is null ? string.Empty : string.Join(", ", eventData.Payload);
             _events.Enqueue($"{eventData.EventSource.Name}/{eventData.EventName}: {payload}");
         }
