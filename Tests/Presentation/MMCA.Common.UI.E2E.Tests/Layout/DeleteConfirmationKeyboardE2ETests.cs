@@ -36,6 +36,11 @@ public sealed class DeleteConfirmationKeyboardE2ETests : GalleryAxeTestBase
         await OpenDeleteConfirmationAsync();
         var confirm = Page.GetByTestId("confirm-delete");
 
+        // The dialog closes on Escape through its own key handler, so the key only reaches it once the
+        // focus trap has moved focus inside. WebKit does not focus a clicked button, so a key pressed
+        // before that lands on the document and is lost; wait for the initial focus first.
+        await Expect(Page.GetByRole(AriaRole.Dialog).GetByRole(AriaRole.Button, new() { Name = "Cancel" })).ToBeFocusedAsync();
+
         await Page.Keyboard.PressAsync("Escape");
 
         await Expect(confirm).Not.ToBeVisibleAsync();
