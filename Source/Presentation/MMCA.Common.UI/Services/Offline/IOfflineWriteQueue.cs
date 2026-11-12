@@ -9,7 +9,11 @@ namespace MMCA.Common.UI.Services.Offline;
 /// </summary>
 public interface IOfflineWriteQueue
 {
-    /// <summary>Gets a value indicating whether the device has a local store (false on Blazor Server).</summary>
+    /// <summary>
+    /// Gets a value indicating whether the host registered a device-local store. False only with the
+    /// default <c>NullLocalCacheStore</c>; a host that calls <c>AddBrowserDeviceCapabilities</c> (Blazor
+    /// Server and WebAssembly alike) or the MAUI capabilities has one.
+    /// </summary>
     bool IsAvailable { get; }
 
     /// <summary>Raised once per write that left the queue by a replay, after the store no longer holds it.</summary>

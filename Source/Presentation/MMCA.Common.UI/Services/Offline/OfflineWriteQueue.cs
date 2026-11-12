@@ -285,8 +285,9 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         delay >= MaxRetryDelay / 2 ? MaxRetryDelay : delay * 2;
 
     /// <summary>
-    /// Walks the current scope's entries once. Returns how many settled and whether the pass stopped
-    /// on a transient failure, which leaves that entry (and the ones after it) pending.
+    /// Walks the current scope's entries once, skipping any that left the store since the pass read it.
+    /// Returns how many settled and whether the pass stopped on a transient failure, which leaves that
+    /// entry (and the ones after it) pending.
     /// </summary>
     private async Task<(int Settled, bool StoppedOnTransient)> ReplayPassAsync(CancellationToken cancellationToken)
     {
@@ -298,6 +299,14 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         foreach (var write in snapshot)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // The snapshot is as old as the handlers before this entry took to answer. A write
+            // cancelled since then (CancelPendingAsync) is no longer wanted and must not be sent; a
+            // write cancelled while its own request is in flight still lands.
+            if (!await IsStillPendingAsync(write.Id, cancellationToken))
+            {
+                continue;
+            }
 
             if (now - write.EnqueuedOn > _options.MaxAge)
             {
@@ -458,6 +467,20 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         }
 
         return changed;
+    }
+
+    /// <summary>Whether the store still holds the write, read under the one semaphore.</summary>
+    private async Task<bool> IsStillPendingAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            return (await ReadAsync(cancellationToken)).Exists(w => w.Id == id);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private async Task<List<PendingWrite>> ReadAsync(CancellationToken cancellationToken) =>
