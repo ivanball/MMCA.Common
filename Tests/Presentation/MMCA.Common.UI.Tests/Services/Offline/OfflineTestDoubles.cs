@@ -69,9 +69,11 @@ internal sealed class InMemoryLocalCacheStore : ILocalCacheStore
     }
 
     /// <summary>Writes a value directly, bypassing the counters (test arrangement).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     public void Seed<T>(string key, T value) => _entries[key] = JsonSerializer.Serialize(value);
 
     /// <summary>Reads a value directly, bypassing the counters (test assertion).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     public T? Peek<T>(string key) =>
         _entries.TryGetValue(key, out var json) ? JsonSerializer.Deserialize<T>(json) : default;
 }

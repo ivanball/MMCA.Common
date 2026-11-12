@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.StronglyTypedIdAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.AddStronglyTypedIdAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
+MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>
+MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>.EnumerationNameValueConverter() -> void

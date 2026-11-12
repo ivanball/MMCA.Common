@@ -25,7 +25,7 @@ public sealed class AuditHistoryPanelTests : BunitTestBase
 
     private readonly List<(int Page, int PageSize)> _calls = [];
 
-    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+    private static CancellationToken Ct => Xunit.TestContext.Current.CancellationToken;
 
     // Guard and prerender (rules 4, 5)
     [Fact]
@@ -380,7 +380,7 @@ public sealed class AuditHistoryPanelTests : BunitTestBase
         status.QuerySelector("[aria-label='Loading']").Should().NotBeNull("the progress bar carries the Loading.Label aria-label inside role=status");
         status.QuerySelector(".mud-progress-linear").Should().NotBeNull();
 
-        await cut.InvokeAsync(() => { pending.SetResult(Result.Success<IReadOnlyList<AuditHistoryEntryDTO>>([Entry(1)])); });
+        await cut.InvokeAsync(() => pending.SetResult(Result.Success<IReadOnlyList<AuditHistoryEntryDTO>>([Entry(1)])));
 
         await cut.WaitForAssertionAsync(() => cut.FindComponents<MudProgressLinear>().Should().BeEmpty(), TimeSpan.FromSeconds(5));
     }
@@ -410,9 +410,20 @@ public sealed class AuditHistoryPanelTests : BunitTestBase
     private static List<AngleSharp.Dom.IElement> LoadMoreButtons(IRenderedComponent<AuditHistoryPanel> cut) =>
         [.. cut.FindAll("button").Where(b => b.TextContent.Contains("Load more", StringComparison.Ordinal))];
 
-    /// <summary>A fetcher answering page N with the Nth supplied list (empty past the end), recording each call.</summary>
+    /// <summary>A fetcher answering page 1 with the supplied list (empty past the end), recording each call.</summary>
     private Func<int, int, CancellationToken, Task<Result<IReadOnlyList<AuditHistoryEntryDTO>>>> Serve(
-        params IReadOnlyList<AuditHistoryEntryDTO>[] pages) =>
+        IReadOnlyList<AuditHistoryEntryDTO> firstPage) =>
+        ServePages([firstPage]);
+
+    /// <summary>A fetcher answering pages 1 and 2 with the supplied lists (empty past the end), recording each call.</summary>
+    private Func<int, int, CancellationToken, Task<Result<IReadOnlyList<AuditHistoryEntryDTO>>>> Serve(
+        IReadOnlyList<AuditHistoryEntryDTO> firstPage,
+        IReadOnlyList<AuditHistoryEntryDTO> secondPage) =>
+        ServePages([firstPage, secondPage]);
+
+    /// <summary>A fetcher answering page N with the Nth supplied list (empty past the end), recording each call.</summary>
+    private Func<int, int, CancellationToken, Task<Result<IReadOnlyList<AuditHistoryEntryDTO>>>> ServePages(
+        IReadOnlyList<AuditHistoryEntryDTO>[] pages) =>
         (page, size, _) =>
         {
             _calls.Add((page, size));

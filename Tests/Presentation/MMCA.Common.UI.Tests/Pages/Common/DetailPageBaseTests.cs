@@ -158,7 +158,7 @@ public sealed class DetailPageBaseTests : BunitTestBase
 
     [Fact]
     public void DetailPageBase_DerivesFromCancellablePageBase() =>
-        typeof(DetailPageBase).BaseType.Should().Be(typeof(CancellablePageBase));
+        typeof(DetailPageBase).BaseType.Should().Be<CancellablePageBase>();
 
     private sealed class ProbePage : DetailPageBase
     {

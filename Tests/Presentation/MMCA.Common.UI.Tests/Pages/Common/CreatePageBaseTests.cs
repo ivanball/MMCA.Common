@@ -27,12 +27,9 @@ public sealed class CreatePageBaseTests : BunitTestBase
 
     private readonly Mock<IToastService> _toast = new();
 
-    public CreatePageBaseTests()
-    {
-        // Last registration wins over the Mud-backed facade the base registered, so every toast the
-        // submit pipeline raises (or must not raise) can be asserted exactly.
-        Services.AddSingleton<IToastService>(_toast.Object);
-    }
+    // Last registration wins over the Mud-backed facade the base registered, so every toast the
+    // submit pipeline raises (or must not raise) can be asserted exactly.
+    public CreatePageBaseTests() => Services.AddSingleton<IToastService>(_toast.Object);
 
     private sealed record CreatedWidget(int Id);
 
@@ -112,22 +109,22 @@ public sealed class CreatePageBaseTests : BunitTestBase
         var releaseSave = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var saveCalls = 0;
 
-        Func<CancellationToken, Task<Result<CreatedWidget>>> save = async _ =>
+        async Task<Result<CreatedWidget>> Save(CancellationToken _)
         {
             saveCalls++;
             saveStarted.TrySetResult();
             await releaseSave.Task;
             return Result.Success(new CreatedWidget(7));
-        };
+        }
 
         Task<bool>? first = null;
         await cut.InvokeAsync(() =>
         {
-            first = cut.Instance.CallSubmitAsync(save, _ => { });
+            first = cut.Instance.CallSubmitAsync(Save, _ => { });
         });
         await saveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var second = await SubmitOnDispatcherAsync(cut, save, _ => { });
+        var second = await SubmitOnDispatcherAsync(cut, Save, _ => { });
 
         second.Should().BeFalse("a submit while a save is in flight is ignored");
         saveCalls.Should().Be(1);
@@ -282,7 +279,7 @@ public sealed class CreatePageBaseTests : BunitTestBase
         var cut = RenderProbe();
         cut.Instance.CallMarkDirty();
         bool? dirtyInOnCreated = null;
-        Result? saveResultInOnCreated = Result.Failure(Error.Failure("Sentinel", "not observed"));
+        var saveResultInOnCreated = Result.Failure(Error.Failure("Sentinel", "not observed"));
         CreatedWidget? createdValue = null;
 
         var submitted = await SubmitOnDispatcherAsync(
@@ -512,10 +509,10 @@ public sealed class CreatePageBaseTests : BunitTestBase
             builder.AddAttribute(2, nameof(MudForm.ChildContent), (RenderFragment)(child =>
             {
                 child.OpenComponent<MudTextField<string>>(3);
-                child.AddAttribute(4, nameof(MudTextField<string>.Value), Name);
-                child.AddAttribute(5, nameof(MudTextField<string>.Required), true);
-                child.AddAttribute(6, nameof(MudTextField<string>.RequiredError), "Name is required.");
-                child.AddAttribute(7, nameof(MudTextField<string>.Validation), new Func<string, string?>(_ =>
+                child.AddAttribute(4, nameof(MudTextField<>.Value), Name);
+                child.AddAttribute(5, nameof(MudTextField<>.Required), true);
+                child.AddAttribute(6, nameof(MudTextField<>.RequiredError), "Name is required.");
+                child.AddAttribute(7, nameof(MudTextField<>.Validation), new Func<string, string?>(_ =>
                 {
                     SaveResultsSeenDuringValidation.Add(SaveResult);
                     return null;

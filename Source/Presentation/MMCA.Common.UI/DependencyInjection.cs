@@ -13,6 +13,7 @@ using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Notifications;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Administration;
+using MMCA.Common.UI.Services.Auditing;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.OAuth;
 using MMCA.Common.UI.Services.Caching;
@@ -20,6 +21,7 @@ using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Services.Legal;
 using MMCA.Common.UI.Services.Navigation;
+using MMCA.Common.UI.Services.Offline;
 using MMCA.Common.UI.Services.Preferences;
 using MMCA.Common.UI.Theme;
 using MudBlazor.Services;
@@ -367,6 +369,64 @@ public static class DependencyInjection
         public IServiceCollection AddSupportAccessLogUI()
         {
             services.TryAddScoped<IViewAsGrantsUIService, ViewAsGrantsService>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// The UI opt-in of the audit history (ADR-075): registers <see cref="IAuditHistoryUIService"/>,
+        /// the HTTP client an <c>AuditHistoryPanel</c>'s <c>FetchPage</c> delegate reads an
+        /// <c>AuditHistoryControllerBase</c> endpoint through. Call it once per app, after
+        /// <c>AddUIShared</c>; calling it again changes nothing, and an app's own registration made
+        /// first is kept.
+        /// <para>
+        /// Nothing else in the framework calls this: an app that shows no change history registers
+        /// nothing and the panel is simply never rendered.
+        /// </para>
+        /// </summary>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddAuditHistoryUI()
+        {
+            services.TryAddScoped<IAuditHistoryUIService, AuditHistoryService>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// The opt-in durable offline write queue: registers <see cref="IOfflineWriteQueue"/> (scoped,
+        /// because the browser connectivity service and local store it reads are scoped),
+        /// <see cref="TimeProvider.System"/> unless one is registered, and
+        /// <see cref="OfflineWriteQueueOptions"/> with <paramref name="configure"/> applied. Register
+        /// one replay handler per write kind with <see cref="AddOfflineWriteHandler{THandler}"/>.
+        /// Common's <c>MainLayout</c> already hosts the <c>OfflineWriteNotifier</c> that drains and
+        /// reports the queue. Nothing in the framework calls this.
+        /// </summary>
+        /// <param name="configure">Optional options callback (storage key, maximum age, maximum pending writes).</param>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddOfflineWriteQueue(Action<OfflineWriteQueueOptions>? configure = null)
+        {
+            services.TryAddScoped<IOfflineWriteQueue, OfflineWriteQueue>();
+            services.TryAddSingleton(TimeProvider.System);
+
+            var optionsBuilder = services.AddOptions<OfflineWriteQueueOptions>();
+            if (configure is not null)
+            {
+                optionsBuilder.Configure(configure);
+            }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the replay handler of one offline write kind (scoped); registering the same handler
+        /// type again adds nothing.
+        /// </summary>
+        /// <typeparam name="THandler">The handler type.</typeparam>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddOfflineWriteHandler<THandler>()
+            where THandler : class, IOfflineWriteHandler
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IOfflineWriteHandler, THandler>());
 
             return services;
         }

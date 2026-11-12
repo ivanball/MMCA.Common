@@ -249,13 +249,15 @@ public partial class UserAdminList<TUser>
         LoadServerDataAsync(state, FetchPage, InjectSearchFilter);
 
     // ── Mobile ──
-    private Task<Result<(IReadOnlyList<TUser> Items, int TotalItems)>> FetchMobilePage(int page, int pageSize, CancellationToken ct)
-    {
-        var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.Ordinal);
-        InjectSearchFilter(filters);
-        InjectMobileFilters?.Invoke(filters);
-        return FetchPage(filters, page, pageSize, "Email", "asc", ct);
-    }
+    private Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TUser> Items, int TotalItems)>>> MobileFetch =>
+        MobilePageFetcher(
+            FetchPage,
+            filters =>
+            {
+                InjectSearchFilter(filters);
+                InjectMobileFilters?.Invoke(filters);
+            },
+            "Email");
 
     /// <summary>
     /// Adds the free-text box to the filter bag as a "contains" filter on the Email column, under

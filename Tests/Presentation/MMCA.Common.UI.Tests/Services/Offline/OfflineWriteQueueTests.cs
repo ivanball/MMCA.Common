@@ -365,7 +365,7 @@ public sealed class OfflineWriteQueueTests : IDisposable
         var queue = CreateQueue(handler);
 
         var first = queue.ReplayAsync(Ct);
-        await entered.Task.WaitAsync(WaitBudget, Ct);
+        await entered.Task.WaitAsync(WaitBudget, TimeProvider.System, Ct);
         var reads = _store.ReadCount;
 
         var second = await queue.ReplayAsync(Ct);
@@ -373,7 +373,7 @@ public sealed class OfflineWriteQueueTests : IDisposable
         second.Should().Be(0, "replay is single flight");
         _store.ReadCount.Should().Be(reads, "the refused replay does not touch the store");
         gate.SetResult(Result.Success());
-        (await first.WaitAsync(WaitBudget, Ct)).Should().Be(1);
+        (await first.WaitAsync(WaitBudget, TimeProvider.System, Ct)).Should().Be(1);
         handler.Calls.Should().ContainSingle();
     }
 
@@ -714,7 +714,7 @@ public sealed class OfflineWriteQueueTests : IDisposable
             ScriptedWriteHandler.Returning(WidgetKind, Result.Success()),
             ScriptedWriteHandler.Returning(OtherKind, Result.Failure(Error.Validation("Widget.Invalid", "Invalid."))));
         var seen = new List<(Guid Id, OfflineWriteOutcome Outcome, bool StillStored)>();
-        queue.WriteSettled += (_, args) => seen.Add((args.Write.Id, args.Outcome, Stored().Any(w => w.Id == args.Write.Id)));
+        queue.WriteSettled += (_, args) => seen.Add((args.Write.Id, args.Outcome, Stored().Exists(w => w.Id == args.Write.Id)));
 
         var count = await queue.ReplayAsync(Ct);
 
@@ -747,11 +747,12 @@ public sealed class OfflineWriteQueueTests : IDisposable
 
         // The event source must get control back while the replay is still running: the handler
         // below is held open, so a queue that awaited (or blocked on) the replay would time out here.
-        await Task.Run(() => _connectivity.SetOnline(true), Ct).WaitAsync(WaitBudget, Ct);
+        await Task.Run(() => _connectivity.SetOnline(true), Ct).WaitAsync(WaitBudget, TimeProvider.System, Ct);
 
-        await entered.Task.WaitAsync(WaitBudget, Ct);
+        await entered.Task.WaitAsync(WaitBudget, TimeProvider.System, Ct);
         gate.SetResult(Result.Success());
         await Eventually(() => Stored().Count == 0, "the replay started by the reconnect settles the entry");
+        Stored().Should().BeEmpty("the replay started by the reconnect settles the entry");
     }
 
     [Fact]
@@ -769,7 +770,7 @@ public sealed class OfflineWriteQueueTests : IDisposable
     }
 
     [Fact]
-    public async Task ConnectivityBackOnline_ReplayFault_IsLoggedNotThrown()
+    public Task ConnectivityBackOnline_ReplayFault_IsLoggedNotThrown()
     {
         _connectivity.SetOnline(false);
         CreateQueue(ScriptedWriteHandler.Returning(WidgetKind, Result.Success()));
@@ -778,7 +779,7 @@ public sealed class OfflineWriteQueueTests : IDisposable
         var raise = () => _connectivity.SetOnline(true);
 
         raise.Should().NotThrow("a fault in the background replay never reaches the event source");
-        await Eventually(
+        return Eventually(
             () => _logger.Invocations.Any(i => i.Method.Name == nameof(ILogger.Log) && i.Arguments[3] is InvalidOperationException),
             "the background replay's fault is logged");
     }

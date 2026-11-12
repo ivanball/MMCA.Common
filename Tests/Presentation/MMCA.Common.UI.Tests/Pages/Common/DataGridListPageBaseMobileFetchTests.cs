@@ -538,16 +538,13 @@ public sealed class DataGridListPageBaseMobileFetchTests : BunitTestBase
         var calls = new List<FetchCall>();
         cut.Instance.Fetch = Recording(calls);
 
-        await cut.InvokeAsync(async () =>
+        await cut.InvokeAsync(async () => await cut.Instance.LoadMobileAsync(filters =>
         {
-            await cut.Instance.LoadMobileAsync(filters =>
+            if (eventId is not null)
             {
-                if (eventId is not null)
-                {
-                    filters["EventId"] = ("eq", eventId);
-                }
-            });
-        });
+                filters["EventId"] = ("eq", eventId);
+            }
+        }));
 
         calls.Should().ContainSingle();
         calls[0].Filters.Should().ContainKey("EventId").WhoseValue.Should().Be(("eq", "42"));
@@ -707,7 +704,7 @@ public sealed class DataGridListPageBaseMobileFetchTests : BunitTestBase
         calls[0].PageSize.Should().Be(25);
         calls[0].Filters.Keys.Should().Equal(["search"], "the grid filter bag carries the callback filter as it does today");
         calls[0].SortColumn.Should().BeNull();
-        calls[0].SortDirection.Should().BeNull();
+        calls[0].SortDirection.Should().Be("asc", "a grid load with no sort definition sends asc today, and rule 12 keeps that request unchanged");
     }
 
     private sealed class TestGridPage : DataGridListPageBase<WidgetRow>

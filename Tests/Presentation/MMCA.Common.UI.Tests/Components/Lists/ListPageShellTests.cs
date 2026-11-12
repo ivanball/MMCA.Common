@@ -9,6 +9,7 @@ using MMCA.Common.UI.Components.Forms;
 using MMCA.Common.UI.Components.Lists;
 using MMCA.Common.UI.Components.PageState;
 using MudBlazor;
+using MudBlazor.Extensions;
 
 namespace MMCA.Common.UI.Tests.Components.Lists;
 
@@ -59,7 +60,10 @@ public sealed class ListPageShellTests : BunitTestBase
 
         var grid = cut.FindComponent<MudDataGrid<Row>>().Instance;
         grid.RowsPerPage.Should().Be(25);
-        grid.Loading.Should().BeTrue("Loading follows IsLoading");
+
+        // Loading is not read here: MudDataGrid sets its own Loading to false when its first server-data
+        // call completes, so the value after the first render is the grid's, not the shell's. The binding
+        // itself is pinned by ParameterChanges_AreWhatTheGridAndHeaderFollow.
         grid.Dense.Should().BeFalse();
         grid.AllowUnsorted.Should().BeFalse();
         grid.Elevation.Should().Be(1);
@@ -110,7 +114,7 @@ public sealed class ListPageShellTests : BunitTestBase
 
         var cut = RenderShell(p => p
             .Add(s => s.IsMobile, true)
-            .Add(s => s.OnCardClick, (Row row) => clicked = row));
+            .Add(s => s.OnCardClick, row => clicked = row));
 
         cut.WaitForAssertion(() => cut.FindAll(".mobile-list-card").Should().HaveCount(2));
         cut.FindAll(".mobile-list-card")[1].Click();
@@ -181,7 +185,7 @@ public sealed class ListPageShellTests : BunitTestBase
     {
         string? typed = null;
 
-        var cut = RenderShell(p => p.Add(s => s.SearchTextChanged, (string value) => typed = value));
+        var cut = RenderShell(p => p.Add(s => s.SearchTextChanged, value => typed = value));
 
         await cut.Find(".list-search-field input").InputAsync(new ChangeEventArgs { Value = "bra" });
 
@@ -204,7 +208,7 @@ public sealed class ListPageShellTests : BunitTestBase
         var cut = RenderShell(p => p.Add(s => s.SearchText, "alp"));
 
         var field = cut.FindComponent<MudTextField<string>>().Instance;
-        field.Value.Should().Be("alp");
+        field.GetState(x => x.Value).Should().Be("alp");
         field.Placeholder.Should().Be("Search", "the placeholder defaults to List.Search.Placeholder");
         field.Adornment.Should().Be(Adornment.Start);
         field.AdornmentIcon.Should().Be(Icons.Material.Filled.Search);
@@ -299,7 +303,7 @@ public sealed class ListPageShellTests : BunitTestBase
         var firstPage = Enumerable.Range(1, 10).Select(i => new Row(i, "Room")).ToList();
 
         var cut = RenderShell(
-            p => p.Add(s => s.CurrentPageChanged, (int page) => raised.Add(page)),
+            p => p.Add(s => s.CurrentPageChanged, page => raised.Add(page)),
             serverData: (_, _) => Task.FromResult(new GridData<Row> { Items = firstPage, TotalItems = 30 }));
         await cut.WaitForAssertionAsync(() => cut.FindAll("button[aria-label='Next page']").Should().NotBeEmpty(), TimeSpan.FromSeconds(5));
 
@@ -398,7 +402,7 @@ public sealed class ListPageShellTests : BunitTestBase
     {
         var cut = RenderShell(p => p
             .Add(s => s.RowsPerPage, 20)
-            .Add(s => s.PageSizeOptions, (IReadOnlyList<int>)[20, 40]));
+            .Add(s => s.PageSizeOptions, [20, 40]));
 
         await cut.WaitForAssertionAsync(() => cut.FindComponents<MudDataGridPager<Row>>().Should().NotBeEmpty(), TimeSpan.FromSeconds(5));
         cut.FindComponent<MudDataGridPager<Row>>().Instance.PageSizeOptions.Should().Equal(20, 40);
@@ -475,9 +479,8 @@ public sealed class ListPageShellTests : BunitTestBase
     private IRenderedComponent<ListPageShell<Row>> RenderShell(
         Action<ComponentParameterCollectionBuilder<ListPageShell<Row>>>? configure = null,
         Func<GridState<Row>, CancellationToken, Task<GridData<Row>>>? serverData = null,
-        Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<Row> Items, int TotalItems)>>>? mobileFetch = null)
-    {
-        return RenderUnderTest<ListPageShell<Row>>(p =>
+        Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<Row> Items, int TotalItems)>>>? mobileFetch = null) =>
+        RenderUnderTest<ListPageShell<Row>>(p =>
         {
             p.Add(s => s.Title, "Rooms")
                 .Add(s => s.ServerData, serverData ?? StaticServerData)
@@ -486,5 +489,4 @@ public sealed class ListPageShellTests : BunitTestBase
                 .Add(s => s.Columns, NameColumn);
             configure?.Invoke(p);
         });
-    }
 }

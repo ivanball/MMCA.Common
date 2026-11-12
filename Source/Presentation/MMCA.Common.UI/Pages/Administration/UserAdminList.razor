@@ -29,7 +29,7 @@
     @MobileFilters
     <MobileInfiniteScrollList TItem="TUser"
                               @ref="_infiniteList"
-                              FetchPageResult="FetchMobilePage"
+                              FetchPageResult="MobileFetch"
                               EmptyMessage="@T("Empty.NoUsers")">
         <CardTemplate Context="item">
             @* The card itself binds no OnCardClick, so it renders as plain content: a card carrying

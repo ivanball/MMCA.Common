@@ -94,6 +94,35 @@ public async Task<IActionResult> RenameAsync(int id, [FromBody] CategoryRenameRe
         cancellationToken: cancellationToken);
 ```
 
+**Breaking: create forms move to `CreatePageBase` (MMCA.Common.Testing.Architecture).**
+`FormsConventionTestsBase.RequiredMarkers` now expects the `CreatePageBase` member names, and the new
+fact `AdminCreateForms_InheritCreatePageBase` requires every `*Create.razor` to derive from
+`CreatePageBase` (an `@inherits CreatePageBase` line in the markup, or `: CreatePageBase` in the
+code-behind class declaration). A consumer subclass is red until its create forms move.
+
+| Old (private member of the page) | New (inherited from `CreatePageBase`) |
+|---|---|
+| `_isDirty` (and `IsDirtyAccessor="() => _isDirty"`) | `IsDirty` (`IsDirtyAccessor="() => IsDirty"`) |
+| `_form` (`@ref="_form"`, `Messages="_form?.Errors"`) | `Form` (`@ref="Form"`, `Messages="Form?.Errors"`) |
+| `_saveResult` (`Result="_saveResult"`) | `SaveResult` (`Result="SaveResult"`) |
+| `_cts.LifetimeToken()` | `PageToken` |
+
+The mechanical fix, per create page: derive from `CreatePageBase` (drop `IDisposable`), delete `_cts`,
+`IsSaving`, `_isDirty`, `MarkDirty`, `_saveResult`, `_form`, the `[Inject] IToastService Toast`
+property (it would hide the base member) and the `Dispose` methods, rename the members in the markup
+as the table says, and replace the hand-written submit body with one `SubmitAsync` call:
+
+```csharp
+// After
+private Task CreateRoomAsync() => SubmitAsync(
+    ct => RoomService.AddAsync(_model.ToNew(_eventId!.Value), ct),
+    created => { Toast.Success(L["Snackbar.Created"]); NavigationManager.NavigateTo(ConferenceRoutePaths.RoomDetails(created.Id)); },
+    new CreateSubmitOptions { Localizer = L, PreCheck = () => _eventId is null ? L["Validation.EventRequired"] : null });
+```
+
+There is no interim setting: overriding `RequiredMarkers` with the previous list does not satisfy
+`AdminCreateForms_InheritCreatePageBase`, so move every create form in the same change as the upgrade.
+
 **Replace attribute-only read overrides with `[PublicCachedReads]` (MMCA.Common.API).** Not breaking
 on its own, but the new `ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching`
 fact fails a module controller that overrides a base read only to add `[AllowAnonymous]` or

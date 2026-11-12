@@ -51,6 +51,25 @@
         </CardTemplate>
     </MobileInfiniteScrollList>
 
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">List page shell</MudText>
+    <ListPageShell TItem="SampleItem" Title="Sample rooms"
+                   SearchText="@_shellSearch" SearchTextChanged="@(value => _shellSearch = value)"
+                   MobileFetch="FetchSamplePageAsync" ServerData="LoadSampleGridAsync"
+                   EmptyConfirmed="true" EmptyMessage="No items to show."
+                   ShowDeleteConfirmation="false">
+        <CardTemplate>
+            <MudText Typo="Typo.subtitle2">@context.Name</MudText>
+        </CardTemplate>
+        <Columns>
+            <PropertyColumn T="SampleItem" TProperty="string" Property="x => x.Name" Title="Name">
+                <CellTemplate>
+                    <RowLinkCell Href="/components">@context.Item.Name</RowLinkCell>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn T="SampleItem" TProperty="string" Property="x => x.Description" Title="Description" />
+        </Columns>
+    </ListPageShell>
+
     <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Touch target affordance</MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Icon buttons carrying the shared <c>mmca-touch-target</c> class meet the WCAG 2.5.5/2.5.8
@@ -77,6 +96,7 @@
     ];
 
     private bool _isDirty;
+    private string _shellSearch = string.Empty;
     private DeleteConfirmation _deleteConfirmation = null!;
 
     private Task ShowDeleteConfirmationAsync() => _deleteConfirmation.ShowAsync("First item");
@@ -84,4 +104,7 @@
     private Task<Result<(IReadOnlyList<SampleItem> Items, int TotalItems)>> FetchSamplePageAsync(
         int page, int pageSize, CancellationToken cancellationToken)
         => Task.FromResult(Result.Success<(IReadOnlyList<SampleItem>, int)>((_items, _items.Count)));
+
+    private Task<GridData<SampleItem>> LoadSampleGridAsync(GridState<SampleItem> state, CancellationToken cancellationToken)
+        => Task.FromResult(new GridData<SampleItem> { Items = _items, TotalItems = _items.Count });
 }

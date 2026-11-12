@@ -161,4 +161,30 @@ public sealed class DesignTimeDbContextOptions
 
         return this;
     }
+
+    /// <summary>
+    /// Gets the assemblies whose strongly typed identifiers (ADR-115) the design-time model maps,
+    /// mirroring the host's <c>AddStronglyTypedIds(assembly)</c> calls. Empty by default, which
+    /// registers no identifier registry and leaves the model exactly as before.
+    /// </summary>
+    /// <remarks>
+    /// List every assembly the host passes to <c>AddStronglyTypedIds</c> whose identifiers this data
+    /// source's entities use: without it the design-time model has no value converter for a wrapped
+    /// key, and building the model fails naming the property.
+    /// </remarks>
+    public IList<Assembly> StronglyTypedIdAssemblies { get; } = [];
+
+    /// <summary>Adds an assembly declaring strongly typed identifiers; adding the same assembly twice keeps one entry.</summary>
+    /// <param name="assembly">The identifier assembly.</param>
+    /// <returns>These options, for chaining.</returns>
+    public DesignTimeDbContextOptions AddStronglyTypedIdAssembly(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+        if (!StronglyTypedIdAssemblies.Contains(assembly))
+        {
+            StronglyTypedIdAssemblies.Add(assembly);
+        }
+
+        return this;
+    }
 }

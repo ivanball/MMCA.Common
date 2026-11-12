@@ -1,0 +1,12 @@
+@* The grid cell link wrapper of an admin list page: the cell text links to the row's detail page,
+   in the row's own colour and with no underline, so a keyboard, pointer or screen-reader user
+   reaches the record through a real link instead of a mouse-only row click. *@
+<MudLink Href="@Href" Color="Color.Inherit" Underline="Underline.None">@ChildContent</MudLink>
+
+@code {
+    /// <summary>The detail page the cell links to.</summary>
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+
+    /// <summary>The cell content, usually the row's display value.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

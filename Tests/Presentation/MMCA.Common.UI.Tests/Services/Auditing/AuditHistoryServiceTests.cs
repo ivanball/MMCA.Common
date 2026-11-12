@@ -20,12 +20,13 @@ public sealed class AuditHistoryServiceTests : IDisposable
 {
     private const string StoredAccessToken = "audit-access-token";
 
-    private const string TwoEntries = """
-        [
-          { "id": "11111111-1111-1111-1111-111111111111", "entityType": "MMCA.Store.Catalog.Domain.Products.Product", "entityKey": "17", "propertyName": "Name", "oldValue": "Alpha", "newValue": "Beta", "operation": "Modified", "changedBy": 42, "changedOn": "2026-11-11T14:30:00Z", "correlationId": "trace-1" },
-          { "id": "22222222-2222-2222-2222-222222222222", "entityType": "MMCA.Store.Catalog.Domain.Products.Product", "entityKey": "17", "propertyName": null, "oldValue": null, "newValue": null, "operation": "Added", "changedBy": null, "changedOn": "2026-11-10T08:00:00Z", "correlationId": null }
-        ]
-        """;
+    // One concatenated string (no multi-line raw literal) to stay clear of MA0136.
+    private const string TwoEntries =
+        "["
+        + """{ "id": "11111111-1111-1111-1111-111111111111", "entityType": "MMCA.Store.Catalog.Domain.Products.Product", "entityKey": "17", "propertyName": "Name", "oldValue": "Alpha", "newValue": "Beta", "operation": "Modified", "changedBy": 42, "changedOn": "2026-11-11T14:30:00Z", "correlationId": "trace-1" }"""
+        + ","
+        + """{ "id": "22222222-2222-2222-2222-222222222222", "entityType": "MMCA.Store.Catalog.Domain.Products.Product", "entityKey": "17", "propertyName": null, "oldValue": null, "newValue": null, "operation": "Added", "changedBy": null, "changedOn": "2026-11-10T08:00:00Z", "correlationId": null }"""
+        + "]";
 
     private readonly Mock<ITokenStorageService> _tokenStorage = new();
 
@@ -64,7 +65,7 @@ public sealed class AuditHistoryServiceTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var entries = result.Value!;
         entries.Should().HaveCount(2);
-        entries[0].Id.Should().Be(Guid.Parse("11111111-1111-1111-1111-111111111111"), "entries keep the order the server sent");
+        entries[0].Id.Should().Be(new Guid(0x11111111, 0x1111, 0x1111, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11), "entries keep the order the server sent");
         entries[0].PropertyName.Should().Be("Name");
         entries[0].OldValue.Should().Be("Alpha");
         entries[0].NewValue.Should().Be("Beta");

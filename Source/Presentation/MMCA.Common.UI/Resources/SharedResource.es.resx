@@ -1021,4 +1021,61 @@
   <data name="Auth.Login.SignInWithOrganization.NotFound" xml:space="preserve">
     <value>No hay un inicio de sesión de organización configurado para ese correo electrónico.</value>
   </data>
+  <data name="List.Aria.CancelLoading" xml:space="preserve">
+    <value>Cancelar la carga</value>
+  </data>
+  <data name="List.Search.Placeholder" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="AuditHistory.Title" xml:space="preserve">
+    <value>Historial de cambios</value>
+  </data>
+  <data name="AuditHistory.Column.When" xml:space="preserve">
+    <value>Cuándo</value>
+  </data>
+  <data name="AuditHistory.Column.Who" xml:space="preserve">
+    <value>Modificado por</value>
+  </data>
+  <data name="AuditHistory.Column.Operation" xml:space="preserve">
+    <value>Cambio</value>
+  </data>
+  <data name="AuditHistory.Column.Field" xml:space="preserve">
+    <value>Campo</value>
+  </data>
+  <data name="AuditHistory.Column.Before" xml:space="preserve">
+    <value>Antes</value>
+  </data>
+  <data name="AuditHistory.Column.After" xml:space="preserve">
+    <value>Después</value>
+  </data>
+  <data name="AuditHistory.Operation.Added" xml:space="preserve">
+    <value>Creado</value>
+  </data>
+  <data name="AuditHistory.Operation.Modified" xml:space="preserve">
+    <value>Modificado</value>
+  </data>
+  <data name="AuditHistory.Operation.Deleted" xml:space="preserve">
+    <value>Eliminado</value>
+  </data>
+  <data name="AuditHistory.System" xml:space="preserve">
+    <value>Sistema</value>
+  </data>
+  <data name="AuditHistory.Empty" xml:space="preserve">
+    <value>No hay cambios registrados.</value>
+  </data>
+  <data name="AuditHistory.LoadMore" xml:space="preserve">
+    <value>Cargar más</value>
+  </data>
+  <data name="OfflineWrites.Conflict" xml:space="preserve">
+    <value>Un cambio que hizo sin conexión no se pudo aplicar porque el elemento cambió. Vuelva a cargar e inténtelo de nuevo.</value>
+  </data>
+  <data name="OfflineWrites.Rejected" xml:space="preserve">
+    <value>El servidor rechazó un cambio que hizo sin conexión.</value>
+  </data>
+  <data name="OfflineWrites.Expired" xml:space="preserve">
+    <value>Un cambio que hizo sin conexión era demasiado antiguo para enviarse y se descartó.</value>
+  </data>
+  <data name="OfflineWrites.Synced" xml:space="preserve">
+    <value>Se guardaron los cambios que hizo sin conexión.</value>
+  </data>
 </root>

@@ -9,3 +9,5 @@ MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ReadOverrides_Sho
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses() -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ReadOverridesDoNotRedeclarePublicCaching(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
+MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_InheritCreatePageBase() -> void
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.InheritsCreatePageBase(string! razorMarkup, string? codeBehind) -> bool
