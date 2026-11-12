@@ -94,7 +94,7 @@ public sealed class ModuleControllerFeatureProviderTests
         ModulesSettings settings = CreateSettings(("Catalog", false));
         var sut = new ModuleControllerFeatureProvider(settings);
         var feature = new ControllerFeature();
-        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        TypeInfo catalogControllerType = typeof(global::Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
         feature.Controllers.Add(catalogControllerType);
 
         sut.PopulateFeature([], feature);
@@ -108,7 +108,7 @@ public sealed class ModuleControllerFeatureProviderTests
         ModulesSettings settings = CreateSettings(("Catalog", true));
         var sut = new ModuleControllerFeatureProvider(settings);
         var feature = new ControllerFeature();
-        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        TypeInfo catalogControllerType = typeof(global::Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
         feature.Controllers.Add(catalogControllerType);
 
         sut.PopulateFeature([], feature);
@@ -124,7 +124,7 @@ public sealed class ModuleControllerFeatureProviderTests
         ModulesSettings settings = CreateSettings(("Cat", false));
         var sut = new ModuleControllerFeatureProvider(settings);
         var feature = new ControllerFeature();
-        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        TypeInfo catalogControllerType = typeof(global::Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
         feature.Controllers.Add(catalogControllerType);
 
         sut.PopulateFeature([], feature);

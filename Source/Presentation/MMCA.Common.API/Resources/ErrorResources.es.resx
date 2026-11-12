@@ -442,4 +442,16 @@
   <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
     <value>No se puede ver la cuenta de servicio de un cliente de máquina.</value>
   </data>
+  <data name="AuditHistory.UnknownEntity" xml:space="preserve">
+    <value>Este punto de acceso no sirve ninguna entidad auditada con ese nombre.</value>
+  </data>
+  <data name="AuditHistory.KeyRequired" xml:space="preserve">
+    <value>La clave de la entidad es obligatoria.</value>
+  </data>
+  <data name="Query.CursorPagingNotSupported" xml:space="preserve">
+    <value>La paginación por cursor no está disponible para este recurso.</value>
+  </data>
+  <data name="Query.ChangeFeedNotSupported" xml:space="preserve">
+    <value>El flujo de cambios no está disponible para este recurso.</value>
+  </data>
 </root>

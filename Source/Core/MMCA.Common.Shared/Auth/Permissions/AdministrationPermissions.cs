@@ -38,4 +38,10 @@ public static class AdministrationPermissions
     /// <see cref="ManageUsers"/>.
     /// </summary>
     public const string ManageClients = "clients:manage";
+
+    /// <summary>
+    /// Reads the recorded change history of the audited entities a host serves (ADR-075), through the
+    /// audit-history endpoint a host mounts from <c>AuditHistoryControllerBase</c>.
+    /// </summary>
+    public const string ViewAuditTrail = "audit:view";
 }

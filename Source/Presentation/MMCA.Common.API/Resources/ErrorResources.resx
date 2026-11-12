@@ -442,4 +442,16 @@
   <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
     <value>A machine client&apos;s service account cannot be viewed.</value>
   </data>
+  <data name="AuditHistory.UnknownEntity" xml:space="preserve">
+    <value>This endpoint serves no audited entity with that name.</value>
+  </data>
+  <data name="AuditHistory.KeyRequired" xml:space="preserve">
+    <value>The entity key is required.</value>
+  </data>
+  <data name="Query.CursorPagingNotSupported" xml:space="preserve">
+    <value>Cursor paging is not available for this resource.</value>
+  </data>
+  <data name="Query.ChangeFeedNotSupported" xml:space="preserve">
+    <value>The change feed is not available for this resource.</value>
+  </data>
 </root>

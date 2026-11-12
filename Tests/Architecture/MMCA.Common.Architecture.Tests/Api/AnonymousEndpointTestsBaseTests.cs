@@ -1,5 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using MMCA.Common.API.Caching;
+using MMCA.Common.API.Controllers;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Architecture.Tests.ControllerConventionFixtures;
 using MMCA.Common.Testing.Architecture;
 
 namespace MMCA.Common.Architecture.Tests.Api;
@@ -124,6 +129,60 @@ public sealed class AnonymousEndpointTestsBaseTests
             .Which.Message.Should().Contain(nameof(UndecoratedFixtureController));
     }
 
+    // -- [PublicCachedReads] (item 6, rules 10 and 11) --
+    [Fact]
+    public void PublicCachedReadsType_YieldsThreeReadIdentifiers()
+    {
+        var reported = new ConformantTests().AnonymousEndpointsForTest();
+        var direct = typeof(PublicCachedReadsFixtureController).FullName!;
+        var declaringBase = typeof(PublicCachedReadsFixtureControllerBase).FullName!;
+        var inheriting = typeof(InheritsPublicCachedReadsFixtureController).FullName!;
+
+        reported.Where(e => e.StartsWith(direct + ".", StringComparison.Ordinal)).Should().BeEquivalentTo(
+            [$"{direct}.GetAllAsync", $"{direct}.GetAllForLookupAsync", $"{direct}.GetByIdAsync"],
+            "the attribute opens exactly the base reads, under the identifiers a deleted override produced");
+        reported.Should().NotContain(direct, "the attribute is not a type-level [AllowAnonymous]");
+        reported.Where(e => e.StartsWith(declaringBase + ".", StringComparison.Ordinal)).Should().BeEquivalentTo(
+            [$"{declaringBase}.GetAllAsync", $"{declaringBase}.GetAllForLookupAsync", $"{declaringBase}.GetByIdAsync"],
+            "an abstract base carrying the attribute is a scanned declaration site too");
+        reported.Should().NotContain(
+            e => e.StartsWith(inheriting, StringComparison.Ordinal),
+            "only a type's OWN attributes are read, so an inherited attribute is reported once, at its declaration");
+    }
+
+    [Fact]
+    public void PublicCachedReadsType_CountsAsAuthorizationDecision()
+    {
+        var reported = new StrictConformantTests().UndecoratedEndpointsForTest();
+
+        reported.Should().NotContain(
+            typeof(PublicCachedReadsFixtureController).FullName!,
+            "[PublicCachedReads] decides access for the reads it opens");
+        reported.Should().NotContain(
+            typeof(InheritsPublicCachedReadsFixtureController).FullName!,
+            "the attribute counts anywhere in the type's base chain");
+    }
+
+    /// <summary>Carries <c>[PublicCachedReads]</c> itself and no other authorization attribute.</summary>
+    [PublicCachedReads("FixtureCache")]
+    public sealed class PublicCachedReadsFixtureController(
+        IEntityQueryService<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int> queryService,
+        ILogger<EntityControllerBase<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int>> logger)
+        : EntityControllerBase<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int>(queryService, logger);
+
+    /// <summary>Declares <c>[PublicCachedReads]</c> once, for every controller that inherits it.</summary>
+    [PublicCachedReads("FixtureCache")]
+    public abstract class PublicCachedReadsFixtureControllerBase(
+        IEntityQueryService<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int> queryService,
+        ILogger<EntityControllerBase<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int>> logger)
+        : EntityControllerBase<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int>(queryService, logger);
+
+    /// <summary>Inherits the base's attribute without redeclaring it, and carries nothing else.</summary>
+    public sealed class InheritsPublicCachedReadsFixtureController(
+        IEntityQueryService<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int> queryService,
+        ILogger<EntityControllerBase<ControllerConventionFixtureEntity, ControllerConventionFixtureDto, int>> logger)
+        : PublicCachedReadsFixtureControllerBase(queryService, logger);
+
     /// <summary>Carries no authorization attribute at all: the forgotten-[Authorize] shape.</summary>
     public sealed class UndecoratedFixtureController : ControllerBase
     {
@@ -232,6 +291,18 @@ public sealed class AnonymousEndpointTestsBaseTests
             $"{typeof(AnonymousFixtureController).FullName}.{nameof(AnonymousFixtureController.PeekAsync)}",
             $"{typeof(AbstractAnonymousFixtureControllerBase).FullName}.{nameof(AbstractAnonymousFixtureControllerBase.InheritedAnonymousAsync)}",
             typeof(TypeLevelAnonymousFixtureController).FullName!,
+
+            // [PublicCachedReads] fixtures in this assembly: the three read identifiers each (rule 10).
+            $"{typeof(PublicCachedReadsFixtureController).FullName}.GetAllAsync",
+            $"{typeof(PublicCachedReadsFixtureController).FullName}.GetAllForLookupAsync",
+            $"{typeof(PublicCachedReadsFixtureController).FullName}.GetByIdAsync",
+            $"{typeof(PublicCachedReadsFixtureControllerBase).FullName}.GetAllAsync",
+            $"{typeof(PublicCachedReadsFixtureControllerBase).FullName}.GetAllForLookupAsync",
+            $"{typeof(PublicCachedReadsFixtureControllerBase).FullName}.GetByIdAsync",
+
+            // ControllerConventionFixtures carrying [AllowAnonymous] (ControllerReadOverrideRuleTests).
+            $"{typeof(AllowAnonymousReadOverrideFixtureController).FullName}.{nameof(AllowAnonymousReadOverrideFixtureController.GetByIdAsync)}",
+            $"{typeof(AppActionMarkersFixtureController).FullName}.{nameof(AppActionMarkersFixtureController.Search)}",
         ];
 
         internal IReadOnlyCollection<string> AnonymousEndpointsForTest() => [.. AnonymousEndpoints()];

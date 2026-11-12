@@ -5,3 +5,7 @@ MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInval
 MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInvalidationConventionTestsBase() -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CacheInvalidatingCommandsUseEntityKeyedMarker(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<System.Type!>! allowedCustomPrefixTypes) -> void
 virtual MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.AllowedCustomPrefixTypes.get -> System.Collections.Generic.IReadOnlyCollection<System.Type!>!
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching() -> void
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ReadOverridesDoNotRedeclarePublicCaching(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void

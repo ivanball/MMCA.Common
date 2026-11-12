@@ -525,6 +525,99 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         CancellationToken cancellationToken = default)
         => Repository.ExistsAsync(where, ignoreQueryFilters, cancellationToken);
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The sort column is validated as the list read validates it (one name, resolved through
+    /// <see cref="DTOToEntityPropertyMap"/>, <see cref="FieldContract"/> and the entity's properties) and
+    /// a name found in <see cref="DTOToEntityPropertyMap"/> is replaced by its entity value before the
+    /// repository runs; a mapped navigation path is refused there as <c>Error.InvalidEntityField</c>.
+    /// Rows are mapped with <see cref="DTOMapper"/> in repository order.
+    /// </remarks>
+    public virtual async Task<Result<KeysetCollectionResult<TEntityDTO>>> GetPageByCursorAsync(
+        KeysetPageRequest request,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var validation = QueryFieldService.ValidateSortColumn<TEntity>(request.SortColumn, DTOToEntityPropertyMap, FieldContract);
+        if (validation.IsFailure)
+        {
+            return Result.Failure<KeysetCollectionResult<TEntityDTO>>(
+                [.. validation.Errors.Select(e => e with
+                {
+                    Source = nameof(GetPageByCursorAsync),
+                    Target = typeof(TEntity).Name,
+                })]);
+        }
+
+        var entityRequest = request;
+        if (!string.IsNullOrWhiteSpace(request.SortColumn)
+            && DTOToEntityPropertyMap.TryGetValue(request.SortColumn.Trim(), out var entitySortColumn))
+        {
+            entityRequest = request with { SortColumn = entitySortColumn };
+        }
+
+        var page = await Repository.GetPageByCursorAsync(entityRequest, specification, cancellationToken).ConfigureAwait(false);
+        if (!page.TryGetValue(out var entities))
+            return Result.Failure<KeysetCollectionResult<TEntityDTO>>(page.Errors);
+
+        return Result.Success(new KeysetCollectionResult<TEntityDTO>(DTOMapper.MapToDTOs([.. entities.Items]), entities.NextCursor));
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// One keyset read over <c>LastModifiedOn</c> ascending (<c>Id</c> as tie-break) through a
+    /// specification that lifts the soft-delete filter only, so the tenant filter stays in force. A
+    /// soft-deleted row is reported as a tombstone and never mapped, so none of its fields leave the
+    /// service; a live row carries its <see cref="DTOMapper"/> DTO. <c>ChangedOn</c> is
+    /// <c>LastModifiedOn</c>, else <c>CreatedOn</c>.
+    /// </remarks>
+    public virtual async Task<Result<KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>>> GetChangesSinceAsync(
+        DateTime? since,
+        string? cursor,
+        int pageSize,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default)
+    {
+        var feedSpecification = new ChangeFeedSpecification<TEntity, TIdentifierType>(ToUtc(since), specification);
+        var request = new KeysetPageRequest(
+            pageSize,
+            nameof(AuditableBaseEntity<>.LastModifiedOn),
+            descending: false,
+            cursor);
+
+        var page = await Repository.GetPageByCursorAsync(request, feedSpecification, cancellationToken).ConfigureAwait(false);
+        if (!page.TryGetValue(out var entities))
+            return Result.Failure<KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>>(page.Errors);
+
+        var rows = entities.Items.ToList();
+
+        // Only live rows are mapped, in page order; the mapper returns them in the order given.
+        var liveDtos = new Queue<TEntityDTO>(DTOMapper.MapToDTOs([.. rows.Where(e => !e.IsDeleted)]));
+
+        var changes = rows
+            .Select(row => new EntityChange<TEntityDTO, TIdentifierType>
+            {
+                Id = row.Id,
+                IsDeleted = row.IsDeleted,
+                ChangedOn = row.LastModifiedOn ?? row.CreatedOn,
+                Item = row.IsDeleted ? default : liveDtos.Dequeue(),
+            })
+            .ToList();
+
+        return Result.Success(new KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>(changes, entities.NextCursor));
+    }
+
+    /// <summary>Normalizes the feed's lower bound: a local value is converted, an unspecified one is taken as UTC.</summary>
+    private static DateTime? ToUtc(DateTime? since) => since switch
+    {
+        null => null,
+        { Kind: DateTimeKind.Local } local => local.ToUniversalTime(),
+        { Kind: DateTimeKind.Unspecified } unspecified => DateTime.SpecifyKind(unspecified, DateTimeKind.Utc),
+        { } utc => utc,
+    };
+
     /// <summary>
     /// Validates a client-supplied <c>fields=</c> list against what shaping will actually do with it
     /// (M227). Shaping reflects over <typeparamref name="TEntityDTO"/>, so every name must resolve

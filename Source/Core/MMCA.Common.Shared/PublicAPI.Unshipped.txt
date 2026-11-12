@@ -1,2 +1,95 @@
 #nullable enable
 MMCA.Common.Shared.Abstractions.Error.For<TTarget>(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+MMCA.Common.Shared.Imports.ImportConventions
+const MMCA.Common.Shared.Imports.ImportConventions.DryRunFieldName = "dryRun" -> string!
+MMCA.Common.Shared.Imports.ImportReportDTO
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.EqualityContract.get -> System.Type!
+override MMCA.Common.Shared.Imports.ImportReportDTO.ToString() -> string!
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.PrintMembers(System.Text.StringBuilder! builder) -> bool
+static MMCA.Common.Shared.Imports.ImportReportDTO.operator !=(MMCA.Common.Shared.Imports.ImportReportDTO? left, MMCA.Common.Shared.Imports.ImportReportDTO? right) -> bool
+static MMCA.Common.Shared.Imports.ImportReportDTO.operator ==(MMCA.Common.Shared.Imports.ImportReportDTO? left, MMCA.Common.Shared.Imports.ImportReportDTO? right) -> bool
+override MMCA.Common.Shared.Imports.ImportReportDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Imports.ImportReportDTO.Equals(object? obj) -> bool
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.Equals(MMCA.Common.Shared.Imports.ImportReportDTO? other) -> bool
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.<Clone>$() -> MMCA.Common.Shared.Imports.ImportReportDTO!
+MMCA.Common.Shared.Imports.ImportReportDTO.ImportReportDTO(MMCA.Common.Shared.Imports.ImportReportDTO! original) -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.ImportReportDTO() -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.ToString() -> string!
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.operator !=(MMCA.Common.Shared.Imports.ImportRowErrorDTO? left, MMCA.Common.Shared.Imports.ImportRowErrorDTO? right) -> bool
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.operator ==(MMCA.Common.Shared.Imports.ImportRowErrorDTO? left, MMCA.Common.Shared.Imports.ImportRowErrorDTO? right) -> bool
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.Equals(object? obj) -> bool
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Equals(MMCA.Common.Shared.Imports.ImportRowErrorDTO? other) -> bool
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.<Clone>$() -> MMCA.Common.Shared.Imports.ImportRowErrorDTO!
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.ImportRowErrorDTO() -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.LineNumber.get -> int
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.LineNumber.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Column.get -> string?
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Column.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Code.get -> string!
+MMCA.Common.Shared.Imports.ImportReportDTO.DryRun.get -> bool
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Code.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.DryRun.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Message.get -> string!
+MMCA.Common.Shared.Imports.ImportReportDTO.TotalRows.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.TotalRows.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Added.get -> int
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Message.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Added.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Updated.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Updated.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Unchanged.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Unchanged.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Rejected.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Rejected.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.RowErrors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Imports.ImportRowErrorDTO!>!
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.FromError(MMCA.Common.Shared.Abstractions.Error! error, int lineNumber, string? column = null) -> MMCA.Common.Shared.Imports.ImportRowErrorDTO!
+MMCA.Common.Shared.Imports.ImportReportDTO.RowErrors.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ToString() -> string!
+static MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.operator !=(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? left, MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? right) -> bool
+static MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.operator ==(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? left, MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? right) -> bool
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Equals(object? obj) -> bool
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Equals(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? other) -> bool
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.<Clone>$() -> MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.AuditHistoryEntryDTO() -> void
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ViewAuditTrail = "audit:view" -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Id.get -> System.Guid
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Id.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityType.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityType.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityKey.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityKey.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.PropertyName.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.PropertyName.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.OldValue.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.OldValue.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.NewValue.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.NewValue.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Operation.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Operation.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedOn.get -> System.DateTime
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedBy.get -> int?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedBy.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedOn.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.CorrelationId.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.CorrelationId.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ToString() -> string!
+static MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.operator !=(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? left, MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? right) -> bool
+static MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.operator ==(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? left, MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? right) -> bool
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Equals(object? obj) -> bool
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Equals(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? other) -> bool
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.<Clone>$() -> MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.EntityChange() -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.IsDeleted.get -> bool
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Id.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.IsDeleted.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ChangedOn.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ChangedOn.get -> System.DateTime
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.get -> TEntityDTO?
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.init -> void

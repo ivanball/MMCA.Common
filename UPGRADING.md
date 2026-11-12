@@ -53,6 +53,97 @@ instead: a `Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TItem> 
 TotalItems)>>>` that takes the 1-based page number and the page size and returns that page with the
 total count. The list fetches, pages and shows its own loading and load-failure states.
 
+**Breaking: the audit-trail DTO moves to Shared and is renamed (MMCA.Common.Application to
+MMCA.Common.Shared).** Members and the `required` set are unchanged. No consumer references the old
+type.
+
+| Old | New |
+|---|---|
+| `MMCA.Common.Application.Auditing.AuditTrailEntryDTO` | `MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO` |
+| `IAuditTrailReader.GetForEntityAsync(...)` returning `Task<IReadOnlyList<AuditTrailEntryDTO>>` | the same method returning `Task<IReadOnlyList<AuditHistoryEntryDTO>>` |
+
+The mechanical fix: replace the using. `using MMCA.Common.Application.Auditing;` becomes
+`using MMCA.Common.Shared.Auditing;`, and every `AuditTrailEntryDTO` becomes `AuditHistoryEntryDTO`.
+
+**Breaking (binary only): `SetConcurrencyETag` moves to `ApiControllerBase` (MMCA.Common.API).** It
+was a protected member of `EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>`; it is now a
+protected member of `ApiControllerBase`, which every entity controller derives from, so every call
+compiles unchanged. Recompile against the new version; nothing else changes. The same release adds
+two narrow-update helpers beside it, which replace the hand-written conditional-write body:
+
+```csharp
+// Before
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+public async Task<IActionResult> RenameAsync(int id, [FromBody] CategoryRenameRequest request, CancellationToken cancellationToken)
+{
+    var rowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext);
+    var result = await renameHandler.HandleAsync(
+        new UpdateEntityCommand<Category, CategoryRenameRequest, CategoryIdentifierType>(id, request, rowVersion),
+        cancellationToken);
+    return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
+}
+
+// After (204; HandleConditionalCommandWithResponseAsync answers 200 with the value and its ETag)
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+public async Task<IActionResult> RenameAsync(int id, [FromBody] CategoryRenameRequest request, CancellationToken cancellationToken) =>
+    await HandleConditionalCommandAsync(
+        renameHandler,
+        token => new UpdateEntityCommand<Category, CategoryRenameRequest, CategoryIdentifierType>(id, request, token),
+        cancellationToken: cancellationToken);
+```
+
+**Replace attribute-only read overrides with `[PublicCachedReads]` (MMCA.Common.API).** Not breaking
+on its own, but the new `ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching`
+fact fails a module controller that overrides a base read only to add `[AllowAnonymous]` or
+`[OutputCache]`. Put the attribute on the class and delete those overrides; keep an override that has
+a real body and drop its two markers. The by-id route name defaults to `Get{EntityName}ById`, the name
+those overrides already used; pass `ByIdRouteName` when it differs. Allow-lists of
+`AnonymousEndpointTestsBase` stay as they are.
+
+```csharp
+// Before
+[HasPermission(ConferencePermissions.ManageRooms)]
+public sealed class RoomsController(...) : CrudEntityControllerBase<...>(...)
+{
+    [AllowAnonymous]
+    [OutputCache(PolicyName = "RoomsCache")]
+    public override Task<ActionResult<RoomDTO>> GetByIdAsync(...) => base.GetByIdAsync(...);
+
+    // ... the same for GetAllAsync (both overloads) and GetAllForLookupAsync
+}
+
+// After
+[HasPermission(ConferencePermissions.ManageRooms)]
+[PublicCachedReads("RoomsCache")]
+public sealed class RoomsController(...) : CrudEntityControllerBase<...>(...)
+{
+}
+```
+
+**Delete hand-written 412/428 response attributes (MMCA.Common.API).** `[SupportsIfMatch]` now
+documents both, typed as Problem Details, after the action's own response types, and the new
+`ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses` fact fails
+a module action that still declares either by hand. Delete the two lines; when they were the last two
+declared, the OpenAPI document is identical.
+
+```csharp
+// Before
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+[ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+[ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+
+// After
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+```
+
 ## [1.284.0] - 2026-11-09
 
 **Breaking: one static method removed.** No namespace, type or configuration key moved.

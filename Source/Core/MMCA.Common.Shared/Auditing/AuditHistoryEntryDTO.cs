@@ -1,7 +1,7 @@
-namespace MMCA.Common.Application.Auditing;
+namespace MMCA.Common.Shared.Auditing;
 
 /// <summary>
-/// One recorded change in an entity's history, as returned by <c>IAuditTrailReader</c>.
+/// One recorded change in an entity's history, as returned by <c>IAuditTrailReader</c> and served by the audit-history endpoint.
 /// </summary>
 /// <remarks>
 /// A read-side projection of the framework's trail row, deliberately minimal in v1: it carries what
@@ -9,7 +9,7 @@ namespace MMCA.Common.Application.Auditing;
 /// store. Values are the invariant string forms recorded at capture time, and a value that belonged
 /// to a property marked as personal data reads as the redaction placeholder on both sides.
 /// </remarks>
-public sealed record AuditTrailEntryDTO
+public sealed record AuditHistoryEntryDTO
 {
     /// <summary>Gets the identifier of the trail row.</summary>
     public required Guid Id { get; init; }

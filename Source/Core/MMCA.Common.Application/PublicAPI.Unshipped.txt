@@ -3,3 +3,40 @@ MMCA.Common.Application.UseCases.Markers.EntityCachePrefix
 MMCA.Common.Application.UseCases.Markers.ICacheInvalidating<TEntity>
 static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For(System.Type! entityType) -> string!
 static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For<TEntity>() -> string!
+MMCA.Common.Application.Interfaces.IAuditTrailReader.GetForEntityAsync(string! entityType, string! entityKey, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.<Clone>$() -> MMCA.Common.Application.Auditing.AuditTrailEntryDTO!
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.AuditTrailEntryDTO() -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.get -> int?
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.get -> System.DateTime
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.get -> string?
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.get -> string!
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.get -> string!
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? other) -> bool
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.get -> System.Guid
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.get -> string?
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.get -> string?
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.get -> string!
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.init -> void
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.get -> string?
+*REMOVED*MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.init -> void
+*REMOVED*MMCA.Common.Application.Interfaces.IAuditTrailReader.GetForEntityAsync(string! entityType, string! entityKey, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Auditing.AuditTrailEntryDTO!>!>!
+*REMOVED*override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(object? obj) -> bool
+*REMOVED*override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.GetHashCode() -> int
+*REMOVED*override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ToString() -> string!
+*REMOVED*static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator !=(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
+*REMOVED*static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator ==(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
+const MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.ChangeFeedNotSupportedErrorCode = "Query.ChangeFeedNotSupported" -> string!
+const MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.CursorPagingNotSupportedErrorCode = "Query.CursorPagingNotSupported" -> string!
+MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetPageByCursorAsync(MMCA.Common.Shared.Abstractions.KeysetPageRequest! request, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntityDTO>!>!>!
+MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetChangesSinceAsync(System.DateTime? since, string? cursor, int pageSize, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!>!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetPageByCursorAsync(MMCA.Common.Shared.Abstractions.KeysetPageRequest! request, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntityDTO>!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetChangesSinceAsync(System.DateTime? since, string? cursor, int pageSize, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!>!>!>!

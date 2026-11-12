@@ -33,6 +33,10 @@ public abstract class AnonymousEndpointTestsBase
     private const string AuthorizeAttributeFullName = "Microsoft.AspNetCore.Authorization.AuthorizeAttribute";
     private const string ControllerBaseFullName = "Microsoft.AspNetCore.Mvc.ControllerBase";
     private const string RouteAttributeFullName = "Microsoft.AspNetCore.Components.RouteAttribute";
+    private const string PublicCachedReadsAttributeFullName = "MMCA.Common.API.Caching.PublicCachedReadsAttribute";
+
+    /// <summary>The base read actions <c>[PublicCachedReads]</c> opens (both <c>GetAllAsync</c> overloads share one identifier).</summary>
+    private static readonly string[] PublicCachedReadActionNames = ["GetAllAsync", "GetAllForLookupAsync", "GetByIdAsync"];
 
     /// <summary>The assemblies whose controllers and routable components are scanned.</summary>
     protected abstract IReadOnlyCollection<Assembly> TargetAssemblies { get; }
@@ -250,13 +254,30 @@ public abstract class AnonymousEndpointTestsBase
     private static bool HasAuthorizationAttribute(object[] attributes) =>
         attributes.Any(a =>
             IsOrDerivesFrom(a.GetType(), AllowAnonymousAttributeFullName)
-            || IsOrDerivesFrom(a.GetType(), AuthorizeAttributeFullName));
+            || IsOrDerivesFrom(a.GetType(), AuthorizeAttributeFullName)
+            || IsOrDerivesFrom(a.GetType(), PublicCachedReadsAttributeFullName));
+
+    private static bool HasPublicCachedReads(object[] attributes) =>
+        attributes.Any(a => IsOrDerivesFrom(a.GetType(), PublicCachedReadsAttributeFullName));
 
     private static IEnumerable<string> AnonymousEndpointsOf(Type type)
     {
-        if (HasAllowAnonymous(type.GetCustomAttributes(inherit: false)) && type.FullName is { } typeName)
+        var typeAttributes = type.GetCustomAttributes(inherit: false);
+
+        if (HasAllowAnonymous(typeAttributes) && type.FullName is { } typeName)
         {
             yield return typeName;
+        }
+
+        // [PublicCachedReads] opens the inherited base reads. They are reported under the identifiers a
+        // deleted attribute-only override produced, so an existing allow-list stays valid; only the
+        // type's OWN attribute is read, so an inherited one is reported once, at its declaration.
+        if (HasPublicCachedReads(typeAttributes) && type.FullName is { } readsTypeName)
+        {
+            foreach (var readAction in PublicCachedReadActionNames)
+            {
+                yield return $"{readsTypeName}.{readAction}";
+            }
         }
 
         // DeclaredOnly plus inherit:false keeps a framework base action reported once, at the base

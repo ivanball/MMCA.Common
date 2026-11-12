@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Reflection;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,12 +10,12 @@ using MMCA.Common.API.Export;
 using MMCA.Common.API.ModelBinders;
 using MMCA.Common.API.Pagination;
 using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
-using MMCA.Common.Shared.Http;
 
 namespace MMCA.Common.API.Controllers;
 
@@ -384,62 +383,95 @@ public abstract class EntityControllerBase<
     }
 
     /// <summary>
-    /// The DTO's <c>RowVersion</c> property when it carries one, resolved once per closed controller
-    /// type because a DTO's shape cannot change at runtime. Null for a DTO with no concurrency token,
-    /// which makes <see cref="SetConcurrencyETag"/> a no-op with no per-request reflection at all.
+    /// Returns one keyset ("seek") page of entities: the rows after <paramref name="cursor"/>, ordered by
+    /// <paramref name="sortColumn"/> with <c>Id</c> as tie-break, plus the cursor of the next page.
+    /// Opt-in: the action exists only on a controller carrying <see cref="SupportsCursorPagingAttribute"/>.
     /// </summary>
-    private static readonly PropertyInfo? RowVersionProperty = typeof(TEntityDTO)
-        .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-        .FirstOrDefault(p => p.CanRead
-            && p.PropertyType == typeof(byte[])
-            && string.Equals(p.Name, "RowVersion", StringComparison.Ordinal));
-
-    /// <summary>
-    /// Emits the read's concurrency token as a weak <c>ETag</c>, so a client can hand it straight back
-    /// as an <c>If-Match</c> precondition on the next write (see
-    /// <see cref="Concurrency.SupportsIfMatchAttribute"/>), which is the only route a token travels.
-    /// </summary>
-    /// <param name="dto">The DTO just served, or null: a typed DTO on an ordinary read, or a shaped
-    /// dictionary keyed by JSON names when the caller asked for a field projection.</param>
+    /// <param name="sortColumn">DTO property name to sort by, or null to page by <c>Id</c> alone.</param>
+    /// <param name="sortDirection">Sort direction: "asc" or "desc".</param>
+    /// <param name="cursor">The opaque cursor of the previous page, or null for the first page.</param>
+    /// <param name="pageSize">Number of items per page (clamped to <see cref="MaxPageSize"/>).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The page and its next cursor (null on the last page), or Problem Details.</returns>
     /// <remarks>
-    /// <para>
-    /// A DTO without a <c>RowVersion</c> gets no header: absent is the correct answer for a resource
-    /// that has no version to condition on, and a fabricated tag would invite preconditions the write
-    /// side cannot honour.
-    /// </para>
-    /// <para>
-    /// Protected rather than private so a derived controller that serves a row from somewhere other
-    /// than <see cref="GetByIdAsync"/> (a custom read action, a projection built by hand) can emit
-    /// the same header instead of re-implementing the reflection and the base64 format, which is
-    /// where the two drift apart and an <c>If-Match</c> precondition quietly stops working.
-    /// </para>
+    /// The rows are scoped by <see cref="GetReadSpecificationAsync"/>. Unlike the paged endpoint there is
+    /// no total, no pagination header, no field projection, no includes and no filter dictionary: the
+    /// keyset read takes a specification only. A malformed cursor or an unknown sort column is a 400.
     /// </remarks>
-    protected void SetConcurrencyETag(object? dto)
+    [HttpGet("cursor")]
+    [OptInAction(typeof(SupportsCursorPagingAttribute))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult<KeysetCollectionResult<TEntityDTO>>> GetCursorPageAsync(
+        string? sortColumn = null,
+        string? sortDirection = null,
+        string? cursor = null,
+        [Range(1, int.MaxValue)] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
-        if (RowVersionProperty is null || dto is null)
-            return;
+        var direction = QueryFieldService.ValidateSortDirection(sortDirection);
+        if (direction.IsFailure)
+            return HandleFailure(direction.Errors);
 
-        if (ReadRowVersion(dto) is not { Length: > 0 } rowVersion)
-            return;
+        pageSize = Math.Min(pageSize, MaxPageSize);
+        var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
 
-        Response.Headers[ConcurrencyETag.ETagHeaderName] = ConcurrencyETag.Format(rowVersion);
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
+        var result = await QueryService.GetPageByCursorAsync(
+            new KeysetPageRequest(pageSize, sortColumn, descending, cursor),
+            specification,
+            cancellationToken).ConfigureAwait(false);
+
+        return result.TryGetValue(out var page)
+            ? Ok(page)
+            : HandleFailure(result.Errors);
     }
 
     /// <summary>
-    /// Reads the concurrency token off a served row, which is a typed DTO on an ordinary read and a
-    /// shaped dictionary keyed by JSON names when the caller asked for a field projection.
+    /// Returns one page of the change feed: the rows changed at or after <paramref name="since"/>, ordered
+    /// by <c>(LastModifiedOn, Id)</c> ascending, each an upsert carrying the DTO or a tombstone for a
+    /// soft-deleted row. Opt-in: the action exists only on a controller carrying
+    /// <see cref="SupportsChangeFeedAttribute"/>.
     /// </summary>
-    /// <param name="dto">The row just served.</param>
-    /// <returns>The token, or null when this row carries none.</returns>
-    private static byte[]? ReadRowVersion(object dto)
+    /// <param name="since">The inclusive lower bound (ISO-8601, UTC), or null for every row.</param>
+    /// <param name="cursor">The opaque cursor of the previous page, or null for the first page.</param>
+    /// <param name="pageSize">Number of changes per page (clamped to <see cref="MaxPageSize"/>).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The page of changes and its next cursor, or Problem Details.</returns>
+    /// <remarks>
+    /// <para>
+    /// The rows are scoped by <see cref="GetReadSpecificationAsync"/>; the tenant filter stays in force.
+    /// A client pages with the same <paramref name="since"/> until the next cursor is null, then keeps the
+    /// largest <c>changedOn</c> as its next <paramref name="since"/>; the bound is inclusive, so boundary
+    /// rows come again and are applied idempotently by id and row version.
+    /// </para>
+    /// <para>
+    /// A row that left the read scope without being deleted yields no tombstone.
+    /// </para>
+    /// </remarks>
+    [HttpGet("changes")]
+    [OptInAction(typeof(SupportsChangeFeedAttribute))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult<KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>>> GetChangesAsync(
+        DateTime? since = null,
+        string? cursor = null,
+        [Range(1, int.MaxValue)] int pageSize = 100,
+        CancellationToken cancellationToken = default)
     {
-        if (RowVersionProperty!.DeclaringType!.IsInstanceOfType(dto))
-            return RowVersionProperty.GetValue(dto) as byte[];
+        pageSize = Math.Min(pageSize, MaxPageSize);
 
-        return dto is IDictionary<string, object?> shaped
-            && (shaped.TryGetValue("rowVersion", out var value) || shaped.TryGetValue("RowVersion", out value))
-            ? value as byte[]
-            : null;
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
+        var result = await QueryService.GetChangesSinceAsync(since, cursor, pageSize, specification, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.TryGetValue(out var page)
+            ? Ok(page)
+            : HandleFailure(result.Errors);
     }
 
     /// <summary>
