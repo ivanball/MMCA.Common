@@ -33,6 +33,21 @@ public sealed class ServiceHostApplicationExtensionsTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // Rule 22a (ruling 2026-11-12): the host's own AddOpenApi() call is required, checked before
+    // anything is mapped, and the message names the call.
+    [Fact]
+    public async Task UseMmcaServiceHostAsync_WithoutAddOpenApi_ThrowsNamingTheCall()
+    {
+        var builder = ServiceHostTestHost.CreateAppBuilder(addOpenApi: false);
+        var host = builder.AddMmcaServiceHost(ServiceHostTestHost.Options());
+        await using var app = builder.Build();
+
+        var act = () => app.UseMmcaServiceHostAsync(host, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*AddOpenApi*");
+        RoutePatterns(app).Should().BeEmpty("the check runs before anything is mapped");
+    }
+
     // Rule 19.21
     [Fact]
     public async Task DesignTimeDevelopment_SkipsDatabaseInitialization_WithoutADatabase()

@@ -41,7 +41,8 @@ internal static class ServiceDescriptorInspection
     public static bool HasServiceDefaultsTelemetryMarker(IServiceCollection services) =>
         services.Any(d => !d.IsKeyedService
             && d.ServiceType == typeof(HostIntegrationMarker)
-            && d.ImplementationInstance is HostIntegrationMarker { Name: HostIntegrationNames.ServiceDefaultsTelemetry });
+            && d.ImplementationInstance is HostIntegrationMarker marker
+            && string.Equals(marker.Name, HostIntegrationNames.ServiceDefaultsTelemetry, StringComparison.Ordinal));
 
     private static Type? ImplementationTypeOf(ServiceDescriptor descriptor) =>
         descriptor.ImplementationType

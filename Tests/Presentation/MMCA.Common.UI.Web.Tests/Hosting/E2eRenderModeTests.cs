@@ -48,7 +48,7 @@ public sealed class E2eRenderModeTests
 
     /// <summary>
     /// A flag that is present but false selects nothing, the same as an absent one: the AppHost writes
-    /// only <c>true</c>, but a hand-set <c>false</c> must not be read as "set".
+    /// only <see langword="true"/>, but a hand-set <see langword="false"/> must not be read as "set".
     /// </summary>
     [Fact]
     public void FalseFlags_AreInteractiveAuto()

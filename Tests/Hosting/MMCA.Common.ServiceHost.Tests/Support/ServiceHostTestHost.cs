@@ -85,16 +85,21 @@ internal static class ServiceHostTestHost
     /// Creates a builder for the <c>UseMmcaServiceHostAsync</c> tests: Development, the design-time
     /// switch on (so initialization is skipped, design 19(c)), and an in-memory TestServer.
     /// <para>
-    /// The default provider's ValidateOnBuild is turned off: these tests pin what the use call maps
-    /// and when it disposes the bootstrap factory, not the completeness of a host's service graph,
-    /// which depends on the host's own modules and broker wiring. The per-service
-    /// <c>WebApplicationFactory&lt;Program&gt;</c> suites in ADC and Store own that check (CI only).
-    /// Scope validation stays as Development sets it.
+    /// The default provider keeps Development's ValidateOnBuild and ValidateScopes: the composed
+    /// graph validates cleanly with no host modules and no broker wiring. The per-service
+    /// <c>WebApplicationFactory&lt;Program&gt;</c> suites in ADC and Store check each host's full graph
+    /// (CI only).
+    /// </para>
+    /// <para>
+    /// Like a real host, the builder registers the OpenAPI document itself with
+    /// <c>builder.Services.AddOpenApi()</c> (ruling 2026-11-12 on rule 19.12): the composed call pins the
+    /// version and the use call refuses to start without the host's registration.
     /// </para>
     /// </summary>
     /// <param name="designTime">The value of the design-time switch, or <see langword="null"/> to leave it unset.</param>
+    /// <param name="addOpenApi">Whether the host registers its OpenAPI document (a real host always does).</param>
     /// <returns>The builder.</returns>
-    public static WebApplicationBuilder CreateAppBuilder(string? designTime = "true")
+    public static WebApplicationBuilder CreateAppBuilder(string? designTime = "true", bool addOpenApi = true)
     {
         var builder = CreateBuilder(
             Environments.Development,
@@ -108,14 +113,10 @@ internal static class ServiceHostTestHost
 
         builder.WebHost.UseTestServer();
 
-        // DESIGN-QUESTION: 19(c) does not say whether the use-call tests build with Development's
-        // ValidateOnBuild. This harness turns it off (see the summary); if the implementer finds the
-        // composed graph validates cleanly with no host modules, delete this call and keep the default.
-        builder.Host.UseDefaultServiceProvider((context, options) =>
+        if (addOpenApi)
         {
-            options.ValidateScopes = context.HostingEnvironment.IsDevelopment();
-            options.ValidateOnBuild = false;
-        });
+            builder.Services.AddOpenApi();
+        }
 
         return builder;
     }

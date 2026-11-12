@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Azure.Startup</PackageId>
+    <Description>MMCA framework: the Azure start-up adapter. Key Vault configuration, the Azure Monitor exporter and the Blob + Key Vault DataProtection key ring, with no persistence or messaging dependency</Description>
+    <!-- The three types keep the MMCA.Common.Azure namespace they had before the move, so
+         `using MMCA.Common.Azure;` compiles unchanged in every consumer (and IDE0130 stays quiet). -->
+    <RootNamespace>MMCA.Common.Azure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.Azure.Startup.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Only the SDKs start-up needs: a gateway or any host that wants vault configuration, the
+         exporter and the shared key ring references this package and carries no EF Core, MassTransit,
+         Service Bus, Notification Hubs or Blob storage dependency (EnforceAzureStartupBoundary in
+         Source/Build/MMCA.Common.LayerEnforcement.targets and AzureStartupPackageBoundaryTests hold
+         that line). MMCA.Common.Azure references this package, so a host on the full adapter still
+         gets all three calls. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
+    <!-- DefaultAzureCredential for Key Vault and the DataProtection sinks. -->
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Aspire supplies HostIntegrationMarker, the receipt the core start-up tripwire checks. -->
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

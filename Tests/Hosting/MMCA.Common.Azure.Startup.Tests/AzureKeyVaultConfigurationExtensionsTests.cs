@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
-namespace MMCA.Common.Azure.Tests;
+namespace MMCA.Common.Azure.Startup.Tests;
 
 /// <summary>
 /// Guards the configuration gate on <c>AddAzureKeyVaultConfiguration</c>: no <c>KeyVault:Uri</c>

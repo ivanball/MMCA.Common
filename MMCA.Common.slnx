@@ -29,8 +29,10 @@
     <Project Path="Source/Hosting/MMCA.Common.Aspire.Hosting/MMCA.Common.Aspire.Hosting.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Aws/MMCA.Common.Aws.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Azure/MMCA.Common.Azure.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Azure.Startup/MMCA.Common.Azure.Startup.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Gateway/MMCA.Common.Gateway.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Gcp/MMCA.Common.Gcp.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.ServiceHost/MMCA.Common.ServiceHost.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing.Architecture/MMCA.Common.Testing.Architecture.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.AI.Testing/MMCA.Common.AI.Testing.csproj" />
@@ -61,8 +63,10 @@
     <Project Path="Tests/Hosting/MMCA.Common.Aspire.Hosting.Tests/MMCA.Common.Aspire.Hosting.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Aws.Tests/MMCA.Common.Aws.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Azure.Tests/MMCA.Common.Azure.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.Azure.Startup.Tests/MMCA.Common.Azure.Startup.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Gateway.Tests/MMCA.Common.Gateway.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Gcp.Tests/MMCA.Common.Gcp.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.ServiceHost.Tests/MMCA.Common.ServiceHost.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Aspire.Tests/MMCA.Common.Testing.Aspire.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Tests/MMCA.Common.Testing.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.E2E.Tests/MMCA.Common.Testing.E2E.Tests.csproj" />

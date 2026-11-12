@@ -11,8 +11,6 @@ namespace MMCA.Common.API.Tests.Controllers.Auth;
 public sealed class OAuthControllerBaseConfigKeyTests
 {
     [Fact]
-    public void UIBaseUrlConfigKey_IsOAuthUIBaseUrl()
-    {
+    public void UIBaseUrlConfigKey_IsOAuthUIBaseUrl() =>
         OAuthControllerBase.UIBaseUrlConfigKey.Should().Be("OAuth:UIBaseUrl");
-    }
 }

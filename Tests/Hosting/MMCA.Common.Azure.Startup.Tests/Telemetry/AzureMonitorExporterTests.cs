@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire;
 
-namespace MMCA.Common.Azure.Tests.Telemetry;
+namespace MMCA.Common.Azure.Startup.Tests.Telemetry;
 
 /// <summary>
 /// <c>AddAzureMonitorExporter()</c>: refuses to run ahead of the service defaults whose filter

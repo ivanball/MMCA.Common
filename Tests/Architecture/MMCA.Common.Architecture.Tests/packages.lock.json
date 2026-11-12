@@ -1666,6 +1666,14 @@
           "ModelContextProtocol.AspNetCore": "[2.4.0, )"
         }
       },
+      "mmca.common.servicehost": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.API": "[1.0.0, )",
+          "MMCA.Common.Aspire": "[1.0.0, )",
+          "MMCA.Common.Grpc": "[1.0.0, )"
+        }
+      },
       "mmca.common.shared": {
         "type": "Project"
       },
@@ -4160,6 +4168,14 @@
         "dependencies": {
           "MMCA.Common.API": "[1.0.0, )",
           "ModelContextProtocol.AspNetCore": "[2.4.0, )"
+        }
+      },
+      "mmca.common.servicehost": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.API": "[1.0.0, )",
+          "MMCA.Common.Aspire": "[1.0.0, )",
+          "MMCA.Common.Grpc": "[1.0.0, )"
         }
       },
       "mmca.common.shared": {

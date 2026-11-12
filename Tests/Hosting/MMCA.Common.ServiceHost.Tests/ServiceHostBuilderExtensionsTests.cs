@@ -303,12 +303,24 @@ public sealed class ServiceHostBuilderExtensionsTests
             .Should().Contain(t => t != null && t.Name.Contains("Redis", StringComparison.Ordinal));
     }
 
-    // Rule 19.12
-    [Fact]
-    public async Task OpenApi_IsPinnedTo31()
+    // Rule 19.12 (ruling 2026-11-12): the host keeps its own AddOpenApi() line, before or after the
+    // composed call, and the composed call's pin holds either way.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OpenApi_IsPinnedTo31(bool hostAddsOpenApiFirst)
     {
         var builder = ServiceHostTestHost.CreateBuilder();
+        if (hostAddsOpenApiFirst)
+        {
+            builder.Services.AddOpenApi();
+        }
+
         builder.AddMmcaServiceHost(ServiceHostTestHost.Options());
+        if (!hostAddsOpenApiFirst)
+        {
+            builder.Services.AddOpenApi();
+        }
 
         await using var provider = builder.Services.BuildServiceProvider();
         var openApi = provider.GetRequiredService<IOptionsMonitor<OpenApiOptions>>().Get("v1");

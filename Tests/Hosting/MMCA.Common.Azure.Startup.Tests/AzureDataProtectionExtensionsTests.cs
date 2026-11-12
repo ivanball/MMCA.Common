@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace MMCA.Common.Azure.Tests;
+namespace MMCA.Common.Azure.Startup.Tests;
 
 /// <summary>
 /// Guards the two-stage configuration gate on <c>AddAzureDataProtection</c>: no

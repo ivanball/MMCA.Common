@@ -163,7 +163,7 @@ public sealed class BlazorWebHostExtensionsTests
         razorServices.Should().BeSameAs(builder.Services);
         serverComponentsAdded.Should().BeTrue("AddInteractiveServerComponents runs before the callback");
         boundedCircuitsAdded.Should().BeFalse("the callback runs immediately, before AddBoundedBlazorCircuits");
-        builder.Services.Should().Contain(IsBoundedCircuitHandler);
+        builder.Services.Should().Contain(descriptor => IsBoundedCircuitHandler(descriptor));
     }
 
     /// <summary>Rule 20.5: both pieces of the own-host UI hardening are registered.</summary>
@@ -174,7 +174,7 @@ public sealed class BlazorWebHostExtensionsTests
 
         builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
 
-        builder.Services.Should().Contain(IsBoundedCircuitHandler);
+        builder.Services.Should().Contain(descriptor => IsBoundedCircuitHandler(descriptor));
         await using var app = builder.Build();
         var limiter = app.Services.GetRequiredService<IOptions<RateLimiterOptions>>().Value;
         limiter.RejectionStatusCode.Should().Be((int)HttpStatusCode.TooManyRequests);
@@ -247,7 +247,7 @@ public sealed class BlazorWebHostExtensionsTests
         builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
 
         builder.Services.Last(d => d.ServiceType == typeof(ICspPolicyProvider))
-            .ImplementationType.Should().Be(typeof(BlazorCspPolicyProvider));
+            .ImplementationType.Should().Be<BlazorCspPolicyProvider>();
         await using var app = builder.Build();
         app.Services.GetRequiredService<ICspPolicyProvider>().Should().BeOfType<BlazorCspPolicyProvider>();
     }
@@ -278,9 +278,9 @@ public sealed class BlazorWebHostExtensionsTests
         builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
 
         builder.Services.Last(d => d.ServiceType == typeof(IFormFactor))
-            .ImplementationType.Should().Be(typeof(WebFormFactor));
+            .ImplementationType.Should().Be<WebFormFactor>();
         builder.Services.Last(d => d.ServiceType == typeof(AuthenticationStateProvider))
-            .ImplementationType.Should().Be(typeof(JwtAuthenticationStateProvider));
+            .ImplementationType.Should().Be<JwtAuthenticationStateProvider>();
     }
 
     /// <summary>

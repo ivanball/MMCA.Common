@@ -63,17 +63,17 @@ internal sealed class HostIntegrationTripwire(
         Check(
             ApplicationInsightsKey,
             HostIntegrationNames.AzureMonitorExporter,
-            "no Azure Monitor exporter is registered, so no log, metric or trace reaches Application Insights. Reference MMCA.Common.Azure and call builder.AddAzureMonitorExporter() after AddServiceDefaults()",
+            "no Azure Monitor exporter is registered, so no log, metric or trace reaches Application Insights. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureMonitorExporter() after AddServiceDefaults()",
             failures);
         Check(
             KeyVaultUriKey,
             HostIntegrationNames.AzureKeyVaultConfiguration,
-            "no Key Vault configuration source was added, so every secret the vault holds is missing from configuration. Reference MMCA.Common.Azure and call builder.AddAzureKeyVaultConfiguration() early in Program.cs",
+            "no Key Vault configuration source was added, so every secret the vault holds is missing from configuration. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureKeyVaultConfiguration() early in Program.cs",
             failures);
         Check(
             DataProtectionBlobStorageUriKey,
             HostIntegrationNames.AzureDataProtection,
-            "the Azure DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Azure and call builder.AddAzureDataProtection()",
+            "the Azure DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureDataProtection()",
             failures);
         Check(
             SecretsManagerNamePrefixKey,

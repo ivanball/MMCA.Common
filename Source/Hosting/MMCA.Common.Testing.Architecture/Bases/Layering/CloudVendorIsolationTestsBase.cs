@@ -3,8 +3,9 @@ namespace MMCA.Common.Testing.Architecture;
 /// <summary>
 /// The cloud-vendor fitness function: the assemblies a repo declares cloud-neutral name no Azure,
 /// AWS or Google Cloud SDK type, reference no vendor SDK or broker-transport assembly, and never
-/// reference a vendor adapter package (<c>MMCA.Common.Azure</c>, <c>MMCA.Common.Aws</c>,
-/// <c>MMCA.Common.Gcp</c>, <c>MMCA.Common.Testing.Azure</c>).
+/// reference a vendor adapter package (<c>MMCA.Common.Azure</c>,
+/// <c>MMCA.Common.Azure.Startup</c>, <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>,
+/// <c>MMCA.Common.Testing.Azure</c>).
 /// <para>
 /// The runtime half of <c>EnforceCloudVendorBoundary</c> in
 /// <c>Source/Build/MMCA.Common.LayerEnforcement.targets</c>: the build guard judges the declared

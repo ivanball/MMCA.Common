@@ -3,6 +3,11 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
+    <!-- The test host calls builder.Services.AddOpenApi() itself, as a real service host does (the
+         composed call only pins the version), so the OpenAPI XML-comment source generator, reaching
+         this project through MMCA.Common.API, intercepts those call sites; its interceptor namespace
+         is turned on here, as in MMCA.Common.API.Tests. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
     <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>

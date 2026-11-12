@@ -34,6 +34,18 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**Breaking (MMCA.Common.Aspire.Hosting):** `WithE2eForceServer(bool unlessAlso)`, `WithE2eRegistrationThrottleLift(bool alsoLiftWhen)` and `WithE2eGatewayRateLimitLift(bool alsoLiftWhen)` lose their parameter; the helpers read `E2E_FORCE_WASM` themselves. Fix: delete the argument; replace an inline `E2E_FORCE_WASM` parse with `ui.WithE2eForceWebAssembly()`; make App.razor use `E2eRenderMode.Resolve(Configuration)`.
+
+| Before | After |
+|---|---|
+| `ui.WithE2eForceServer(unlessAlso: forceWasm)` | `ui.WithE2eForceServer()` |
+| `identity.WithE2eRegistrationThrottleLift(alsoLiftWhen: forceWasm)` | `identity.WithE2eRegistrationThrottleLift()` |
+| `gateway.WithE2eGatewayRateLimitLift(alsoLiftWhen: forceWasm)` | `gateway.WithE2eGatewayRateLimitLift()` |
+| `if (forceWasm) { ui.WithEnvironment("E2E__ForceWebAssembly", "true"); }` | `ui.WithE2eForceWebAssembly();` |
+| App.razor render-mode property reading `E2E:ForceWebAssembly` / `E2E:ForceServer` | `E2eRenderMode.Resolve(Configuration)` (` MMCA.Common.UI.Web.Hosting`) |
+
+Each helper now reads `E2E_FORCE_WASM` from the AppHost's environment: the two lifts also fire on it, and the forced-Server switch is not written while it reads `true`. All four are safe to call unconditionally.
+
 **Breaking: two unused components are removed (MMCA.Common.UI).** No namespace or configuration key
 moved, and `ClickableCard` is unchanged. MMCA.ADC, MMCA.Store and MMCA.Helpdesk use neither.
 
