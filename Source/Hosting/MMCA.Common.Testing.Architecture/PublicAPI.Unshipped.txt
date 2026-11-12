@@ -11,3 +11,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ReadOverridesDoNotRede
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_InheritCreatePageBase() -> void
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.InheritsCreatePageBase(string! razorMarkup, string? codeBehind) -> bool
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_DeclareAStableInternalCommandName() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_HaveExactlyOneTimeoutHandler() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutConventionTestsBase() -> void
+abstract MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!

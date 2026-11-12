@@ -90,7 +90,7 @@ public sealed class ProcessTimeoutSchedulerTests
         // The internal command scheduler serializes the command by its runtime type (rule 3), and an
         // explicit interface implementation is not a public property, so the row carries only the
         // command's own public properties.
-        var json = JsonSerializer.Serialize(new ExpireWidgetTimeout(7), typeof(ExpireWidgetTimeout));
+        var json = JsonSerializer.Serialize(new ExpireWidgetTimeout(7));
 
         json.Should().Be("{\"WidgetId\":7}");
     }

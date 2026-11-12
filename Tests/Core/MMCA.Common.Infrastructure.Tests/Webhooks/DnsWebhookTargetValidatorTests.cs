@@ -27,7 +27,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task HostResolvingToPrivate_Fails()
     {
         var resolver = new StubDnsResolver("10.0.0.7");
-        using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, "https://hooks.example.com/in");
 
@@ -39,7 +39,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task OneOfTwoPrivate_Fails()
     {
         var resolver = new StubDnsResolver("8.8.8.8", "192.168.1.10");
-        using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, "https://hooks.example.com/in");
 
@@ -50,7 +50,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task NoAddresses_Fails()
     {
         var resolver = new StubDnsResolver();
-        using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, "https://hooks.example.com/in");
 
@@ -61,7 +61,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task Public_Succeeds()
     {
         var resolver = new StubDnsResolver("8.8.8.8", "2606:4700:4700::1111");
-        using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, "https://hooks.example.com/in");
 
@@ -73,7 +73,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task Http_FailsInProduction()
     {
         var resolver = new StubDnsResolver("8.8.8.8");
-        using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Production, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, "http://hooks.example.com/in");
 
@@ -84,7 +84,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task Http_AllowedInDevelopmentWithFlag()
     {
         var resolver = new StubDnsResolver("10.0.0.7");
-        using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
+        await using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
 
         var result = await ValidateAsync(provider, "http://hooks.example.com/in");
 
@@ -96,7 +96,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task Localhost_AllowedInDevelopmentWithFlag_WithoutResolving()
     {
         var resolver = new StubDnsResolver("127.0.0.1");
-        using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
+        await using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
 
         var result = await ValidateAsync(provider, "http://localhost:5005/hook");
 
@@ -108,7 +108,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task PrivateIpLiteral_AllowedInDevelopmentWithFlag()
     {
         var resolver = new StubDnsResolver();
-        using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
+        await using var provider = Build(resolver, Environments.Development, allowInsecureFlag: true);
 
         var result = await ValidateAsync(provider, "http://10.0.0.5:5005/hook");
 
@@ -123,7 +123,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task DevelopmentWithoutFlag_StillRefusesLocalhost(string target)
     {
         var resolver = new StubDnsResolver("127.0.0.1");
-        using var provider = Build(resolver, Environments.Development, allowInsecureFlag: false);
+        await using var provider = Build(resolver, Environments.Development, allowInsecureFlag: false);
 
         var result = await ValidateAsync(provider, target);
 
@@ -136,7 +136,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task NonDevelopmentWithFlag_FlagIsIgnored(string environmentName)
     {
         var resolver = new StubDnsResolver("127.0.0.1");
-        using var provider = Build(resolver, environmentName, allowInsecureFlag: true);
+        await using var provider = Build(resolver, environmentName, allowInsecureFlag: true);
 
         (await ValidateAsync(provider, "http://localhost:5005/hook")).IsSuccess.Should().BeFalse(
             "the flag is honoured only in a Development host (rule 35.22)");
@@ -148,7 +148,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task NullEnvironment_IsProduction()
     {
         var resolver = new StubDnsResolver("10.0.0.7");
-        using var provider = Build(resolver, environmentName: null, allowInsecureFlag: true);
+        await using var provider = Build(resolver, environmentName: null, allowInsecureFlag: true);
 
         var localhost = await ValidateAsync(provider, "http://localhost:5005/hook");
         var resolvesPrivate = await ValidateAsync(provider, "https://hooks.example.com/in");
@@ -164,7 +164,7 @@ public sealed class DnsWebhookTargetValidatorTests
     public async Task FtpOrUserInfo_RefusedWhateverTheSwitch(bool development)
     {
         var resolver = new StubDnsResolver("8.8.8.8");
-        using var provider = Build(
+        await using var provider = Build(
             resolver,
             development ? Environments.Development : Environments.Production,
             allowInsecureFlag: development);
@@ -179,7 +179,7 @@ public sealed class DnsWebhookTargetValidatorTests
         var logs = new CapturingLoggerProvider();
         var resolver = new StubDnsResolver("8.8.8.8");
         var services = CreateServices(resolver, Environments.Production, allowInsecureFlag: true, logs);
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
 
         services.Should().Contain(
             d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(InsecureWebhookTargetsNoticeService),
@@ -200,7 +200,7 @@ public sealed class DnsWebhookTargetValidatorTests
         var logs = new CapturingLoggerProvider();
         var resolver = new StubDnsResolver("8.8.8.8");
         var services = CreateServices(resolver, environmentName, allowInsecureFlag, logs);
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
 
         await StartWebhookHostedServicesAsync(services, provider);
         await ValidateAsync(provider, "https://hooks.example.com/in");

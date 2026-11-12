@@ -1,1 +1,68 @@
 #nullable enable
+MMCA.Common.Domain.ProcessManagers.ProcessManagerAggregateRoot<TIdentifierType>
+MMCA.Common.Domain.ProcessManagers.ProcessManagerAggregateRoot<TIdentifierType>.GetLastTransitionOn() -> System.DateTime
+MMCA.Common.Domain.ProcessManagers.ProcessManagerAggregateRoot<TIdentifierType>.ProcessManagerAggregateRoot() -> void
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.<Clone>$() -> MMCA.Common.Domain.ProcessManagers.ProcessTimeout!
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.DueAfter(System.DateTime lastTransitionOn) -> System.DateTime
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.Equals(MMCA.Common.Domain.ProcessManagers.ProcessTimeout? other) -> bool
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.Name.get -> string!
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.ProcessTimeout(string! name, System.TimeSpan window) -> void
+MMCA.Common.Domain.ProcessManagers.ProcessTimeout.Window.get -> System.TimeSpan
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.<Clone>$() -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.DueAt.get -> System.DateTime?
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Equals(MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision? other) -> bool
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Outcome.get -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome.Applied = 2 -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome.NotApplicable = 0 -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome.NotYetDue = 1 -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome.Rejected = 3 -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutOutcome
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeout.Equals(object? obj) -> bool
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeout.GetHashCode() -> int
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeout.ToString() -> string!
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Equals(object? obj) -> bool
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.GetHashCode() -> int
+override MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.ToString() -> string!
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeout.operator !=(MMCA.Common.Domain.ProcessManagers.ProcessTimeout? left, MMCA.Common.Domain.ProcessManagers.ProcessTimeout? right) -> bool
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeout.operator ==(MMCA.Common.Domain.ProcessManagers.ProcessTimeout? left, MMCA.Common.Domain.ProcessManagers.ProcessTimeout? right) -> bool
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Applied() -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.NotApplicable() -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.NotYetDue(System.DateTime dueAt) -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.Rejected(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.operator !=(MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision? left, MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision? right) -> bool
+static MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision.operator ==(MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision? left, MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision? right) -> bool
+virtual MMCA.Common.Domain.ProcessManagers.ProcessManagerAggregateRoot<TIdentifierType>.DecideTimeout(MMCA.Common.Domain.ProcessManagers.ProcessTimeout! timeout, System.DateTime utcNow) -> MMCA.Common.Domain.ProcessManagers.ProcessTimeoutDecision!
+MMCA.Common.Domain.Webhooks.WebhookSubscription
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Description.get -> string?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Disable(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Webhooks.WebhookSubscription.DisabledOn.get -> System.DateTime?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Enable() -> void
+MMCA.Common.Domain.Webhooks.WebhookSubscription.EventTypes.get -> string!
+MMCA.Common.Domain.Webhooks.WebhookSubscription.GetEventTypes() -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.Webhooks.WebhookSubscription.GetSigningSecrets(System.DateTime utcNow) -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.Webhooks.WebhookSubscription.IsEnabled() -> bool
+MMCA.Common.Domain.Webhooks.WebhookSubscription.LastDeliveredOn.get -> System.DateTime?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.LastFailedOn.get -> System.DateTime?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.LastFailure.get -> string?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.PreviousProtectedSecret.get -> string?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.PreviousSecretExpiresOn.get -> System.DateTime?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.ProtectedSecret.get -> string!
+MMCA.Common.Domain.Webhooks.WebhookSubscription.RecordDelivered(System.DateTime utcNow) -> void
+MMCA.Common.Domain.Webhooks.WebhookSubscription.RecordFailed(System.DateTime utcNow, string! reason) -> void
+MMCA.Common.Domain.Webhooks.WebhookSubscription.RotateSecret(string! newProtectedSecret, System.DateTime previousSecretExpiresOn) -> void
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Subscribes(string! eventType) -> bool
+MMCA.Common.Domain.Webhooks.WebhookSubscription.TenantId.get -> string?
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Update(string! url, string? description, System.Collections.Generic.IReadOnlyCollection<string!>! eventTypes) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Webhooks.WebhookSubscription.Url.get -> string!
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.AllEventTypes = "*" -> string!
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.DescriptionMaxLength = 200 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.EventTypesMaxLength = 2048 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.LastFailureMaxLength = 500 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.MaxEventTypes = 20 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.ProtectedSecretMaxLength = 1024 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.TenantIdMaxLength = 64 -> int
+const MMCA.Common.Domain.Webhooks.WebhookSubscription.UrlMaxLength = 2048 -> int
+static MMCA.Common.Domain.Webhooks.WebhookSubscription.Create(string! url, string? description, System.Collections.Generic.IReadOnlyCollection<string!>! eventTypes, string? tenantId, string! protectedSecret) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Webhooks.WebhookSubscription!>!

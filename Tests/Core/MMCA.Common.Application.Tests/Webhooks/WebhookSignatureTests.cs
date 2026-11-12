@@ -29,10 +29,7 @@ public sealed class WebhookSignatureTests
     }
 
     [Fact]
-    public void GenerateSecret_IsRandom()
-    {
-        WebhookSignature.GenerateSecret().Should().NotBe(WebhookSignature.GenerateSecret());
-    }
+    public void GenerateSecret_IsRandom() => WebhookSignature.GenerateSecret().Should().NotBe(WebhookSignature.GenerateSecret());
 
     [Fact]
     public void DecodeSecret_ReturnsTheBytesAfterThePrefix()
@@ -63,10 +60,7 @@ public sealed class WebhookSignatureTests
     }
 
     [Fact]
-    public void DecodeSecret_WithInvalidBase64AfterPrefix_Fails()
-    {
-        WebhookSignature.DecodeSecret(WebhookSignature.SecretPrefix + "not*base64!").IsFailure.Should().BeTrue();
-    }
+    public void DecodeSecret_WithInvalidBase64AfterPrefix_Fails() => WebhookSignature.DecodeSecret(WebhookSignature.SecretPrefix + "not*base64!").IsFailure.Should().BeTrue();
 
     [Fact]
     public void Compute_EqualsIndependentHmacOfIdTimestampBody()

@@ -149,7 +149,7 @@ public sealed class WebhookSubscriptionModelGateTests
     {
         var property = entity.FindProperty(propertyName);
         property.Should().NotBeNull(propertyName);
-        property!.GetRelationalTypeMapping().StoreType.Should().Be(storeType, propertyName);
+        property.GetRelationalTypeMapping().StoreType.Should().Be(storeType, propertyName);
         property.IsNullable.Should().Be(nullable, propertyName);
     }
 

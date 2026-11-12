@@ -34,7 +34,7 @@ public sealed class WebhookConnectCallbackTests
     public async Task PrivateResolution_ThrowsBeforeConnect(params string[] addresses)
     {
         var resolver = new StubDnsResolver(addresses);
-        using var provider = Build(resolver, allowInsecure: false);
+        await using var provider = Build(resolver, allowInsecure: false);
         using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
         using var bounded = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         bounded.CancelAfter(TimeSpan.FromSeconds(30));
@@ -61,7 +61,7 @@ public sealed class WebhookConnectCallbackTests
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         var resolver = new StubDnsResolver("127.0.0.1");
-        using var provider = Build(resolver, allowInsecure: true);
+        await using var provider = Build(resolver, allowInsecure: true);
         using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
         using var bounded = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         bounded.CancelAfter(TimeSpan.FromSeconds(30));
@@ -78,7 +78,7 @@ public sealed class WebhookConnectCallbackTests
     public async Task DevelopmentWithoutFlag_StillRefusesLoopback()
     {
         var resolver = new StubDnsResolver("127.0.0.1");
-        using var provider = Build(resolver, allowInsecure: false, environmentName: Environments.Development);
+        await using var provider = Build(resolver, allowInsecure: false, environmentName: Environments.Development);
         using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
 
         var act = async () =>

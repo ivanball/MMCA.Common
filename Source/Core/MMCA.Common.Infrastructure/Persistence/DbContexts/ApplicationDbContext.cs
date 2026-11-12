@@ -24,6 +24,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.MachineClients;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Webhooks;
 using MMCA.Common.Infrastructure.Scheduling;
 using MMCA.Common.Shared.Identifiers;
 using StackExchange.Profiling;
@@ -164,6 +165,13 @@ public abstract class ApplicationDbContext(
     /// migration.
     /// </summary>
     private bool _machineClientTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>WebhookSubscriptions</c> table belongs in THIS context's model: <c>Webhooks:Enabled</c>
+    /// AND this context targeting the source named by <c>Webhooks:DataSourceName</c>, the machine-client
+    /// shape, so a host that never opts in sees no migration.
+    /// </summary>
+    private bool _webhookSubscriptionTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -387,6 +395,7 @@ public abstract class ApplicationDbContext(
         // Same two-condition shape again: see the field's remarks.
         _passkeyTableEnabled = ResolvePasskeyGate();
         _machineClientTableEnabled = ResolveMachineClientGate();
+        _webhookSubscriptionTableEnabled = ResolveWebhookSubscriptionGate();
 
         ConfigureSensitiveDataLogging(optionsBuilder);
 
@@ -475,6 +484,13 @@ public abstract class ApplicationDbContext(
         if (_machineClientTableEnabled)
         {
             modelBuilder.ApplyMachineClientConfiguration();
+        }
+
+        // The outbound webhook subscriptions (used when Webhooks:Enabled, on that setting's data source
+        // only). Mapped first for the same reason: a subscription is an auditable entity.
+        if (_webhookSubscriptionTableEnabled)
+        {
+            modelBuilder.ApplyWebhookSubscriptionConfiguration();
         }
 
         ApplySoftDeleteFilters(modelBuilder);
@@ -1052,6 +1068,20 @@ public abstract class ApplicationDbContext(
     private bool ResolveMachineClientGate()
     {
         var settings = serviceProvider.GetService<IOptions<Application.Auth.MachineClients.MachineClientSettings>>()?.Value;
+        return settings?.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>WebhookSubscriptions</c> table: <c>Webhooks:Enabled</c>
+    /// AND this instance targets the source <c>Webhooks:DataSourceName</c> names. <c>GetService</c>, for
+    /// the reason <see cref="ResolvePermissionGrantGate"/> gives: a host that never calls
+    /// <c>AddWebhooks</c> registers no settings, and that absence reads as disabled.
+    /// </summary>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolveWebhookSubscriptionGate()
+    {
+        var settings = serviceProvider.GetService<IOptions<Application.Webhooks.WebhookSettings>>()?.Value;
         return settings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, settings.DataSourceName, StringComparison.Ordinal);
     }

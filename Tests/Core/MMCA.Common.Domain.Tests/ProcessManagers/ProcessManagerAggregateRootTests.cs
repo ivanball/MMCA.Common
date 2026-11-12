@@ -19,7 +19,7 @@ public sealed class ProcessManagerAggregateRootTests
     public void LastTransition_NeverModified_IsCreatedOn()
     {
         var process = new TestProcess { Id = 1 };
-        Stamp(process, nameof(AuditableBaseEntity<int>.CreatedOn), CreatedOn);
+        Stamp(process, nameof(AuditableBaseEntity<>.CreatedOn), CreatedOn);
 
         process.GetLastTransitionOn().Should().Be(
             CreatedOn,
@@ -30,8 +30,8 @@ public sealed class ProcessManagerAggregateRootTests
     public void LastTransition_Modified_IsLastModifiedOn()
     {
         var process = new TestProcess { Id = 1 };
-        Stamp(process, nameof(AuditableBaseEntity<int>.CreatedOn), CreatedOn);
-        Stamp(process, nameof(AuditableBaseEntity<int>.LastModifiedOn), ModifiedOn);
+        Stamp(process, nameof(AuditableBaseEntity<>.CreatedOn), CreatedOn);
+        Stamp(process, nameof(AuditableBaseEntity<>.LastModifiedOn), ModifiedOn);
 
         process.GetLastTransitionOn().Should().Be(
             ModifiedOn,
@@ -70,9 +70,7 @@ public sealed class ProcessManagerAggregateRootTests
         var type = typeof(ProcessManagerAggregateRoot<int>);
 
         type.IsAbstract.Should().BeTrue();
-        type.BaseType.Should().Be(
-            typeof(AuditableAggregateRootEntity<int>),
-            "the process IS the aggregate, so it keeps the aggregate root's audit fields and domain events");
+        type.BaseType.Should().Be<AuditableAggregateRootEntity<int>>("the process IS the aggregate, so it keeps the aggregate root's audit fields and domain events");
     }
 
     private static void Stamp(TestProcess process, string propertyName, DateTime value) =>

@@ -454,4 +454,40 @@
   <data name="Query.ChangeFeedNotSupported" xml:space="preserve">
     <value>The change feed is not available for this resource.</value>
   </data>
+  <data name="Webhooks.NotFound" xml:space="preserve">
+    <value>No webhook subscription with that id exists.</value>
+  </data>
+  <data name="Webhooks.UrlInvalid" xml:space="preserve">
+    <value>A webhook URL must be an absolute https or http URL of at most 2048 characters, without user info or fragment.</value>
+  </data>
+  <data name="Webhooks.TargetNotAllowed" xml:space="preserve">
+    <value>The webhook target is not allowed: it must be an https URL whose host resolves to public addresses only.</value>
+  </data>
+  <data name="Webhooks.EventTypesRequired" xml:space="preserve">
+    <value>A webhook subscription needs at least one non-blank event type.</value>
+  </data>
+  <data name="Webhooks.TooManyEventTypes" xml:space="preserve">
+    <value>A webhook subscription lists at most 20 event types.</value>
+  </data>
+  <data name="Webhooks.EventTypeUnknown" xml:space="preserve">
+    <value>One or more webhook event types are not published by this service.</value>
+  </data>
+  <data name="Webhooks.DescriptionTooLong" xml:space="preserve">
+    <value>A webhook description is at most 200 characters.</value>
+  </data>
+  <data name="Webhooks.SecretRequired" xml:space="preserve">
+    <value>A webhook subscription needs a signing secret.</value>
+  </data>
+  <data name="Webhooks.LimitReached" xml:space="preserve">
+    <value>The maximum number of webhook subscriptions has been reached.</value>
+  </data>
+  <data name="Webhooks.DeliveryFailed" xml:space="preserve">
+    <value>The webhook delivery failed and will be retried.</value>
+  </data>
+  <data name="Webhooks.SecretUnreadable" xml:space="preserve">
+    <value>The webhook signing secret could not be read.</value>
+  </data>
+  <data name="ProcessManagers.TimeoutNotInFuture" xml:space="preserve">
+    <value>A process timeout must be armed for a delay in the future.</value>
+  </data>
 </root>

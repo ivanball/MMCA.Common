@@ -23,7 +23,7 @@ public sealed class AddWebhookEventTests
 
         var descriptor = services.Should().ContainSingle(d => d.ServiceType == typeof(IIntegrationEventHandler<WebhookRegistrationProbeEvent>)).Which;
         descriptor.Lifetime.Should().Be(ServiceLifetime.Singleton, "integration event handlers are singletons that open their own scope");
-        descriptor.ImplementationType.Should().Be(typeof(WebhookFanOutHandler<WebhookRegistrationProbeEvent>));
+        descriptor.ImplementationType.Should().Be<WebhookFanOutHandler<WebhookRegistrationProbeEvent>>();
     }
 
     [Fact]

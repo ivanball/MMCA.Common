@@ -44,4 +44,12 @@ public static class AdministrationPermissions
     /// audit-history endpoint a host mounts from <c>AuditHistoryControllerBase</c>.
     /// </summary>
     public const string ViewAuditTrail = "audit:view";
+
+    /// <summary>
+    /// Lists outbound webhook subscriptions and creates, updates, rotates, disables, enables and
+    /// deletes them, through the endpoints a host mounts from <c>WebhookSubscriptionsControllerBase</c>.
+    /// A subscription receives the whole payload of every event it subscribes to, so grant it as
+    /// sparingly as the data those events carry.
+    /// </summary>
+    public const string ManageWebhooks = "webhooks:manage";
 }

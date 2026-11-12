@@ -6,11 +6,30 @@ public static partial class ArchitectureRules
     private const string TenantIdPropertyName = "TenantId";
 
     /// <summary>
+    /// Framework entities that carry a nullable <c>TenantId</c> and are scoped by their own store
+    /// instead of by the marker. Each entry is a reviewed decision with its reason beside it; a module
+    /// entity can never be added here, because the list is matched by full name and holds framework
+    /// types only.
+    /// </summary>
+    private static readonly string[] FrameworkEntitiesScopedByTheirStore =
+    [
+        // Opt-in outbound webhooks work in a host that never resolves a tenant, where the marker's
+        // interceptor refuses the insert (an untenanted row from an untenanted scope). The subscription
+        // therefore keeps a nullable tenant and EFWebhookSubscriptionStore filters every read on it,
+        // null matching only null.
+        "MMCA.Common.Domain.Webhooks.WebhookSubscription",
+    ];
+
+    /// <summary>
     /// Every concrete entity in the Domain and Infrastructure layers (framework and module) that
     /// declares or inherits a property named <c>TenantId</c> implements <c>ITenantEntity</c>. The
     /// marker is what applies the named <c>Tenant</c> query filter and the tenant save interceptor, so
     /// an entity carrying a tenant column without it is readable and writable across tenants while
     /// looking scoped (ADR-073).
+    /// <para>
+    /// The framework's own store-scoped entities are the one exception, named in this rule and nowhere
+    /// else: a consumer cannot extend the list.
+    /// </para>
     /// </summary>
     /// <param name="map">The repo's architecture map.</param>
     public static void EntitiesWithTenantIdImplementTenantMarker(IArchitectureMap map)
@@ -19,7 +38,8 @@ public static partial class ArchitectureRules
 
         var violations = TenancyEntities(map.OfLayer(Layer.Domain).Concat(map.Infrastructure()))
             .Where(t => t.GetProperty(TenantIdPropertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is not null
-                && !ImplementsTenantMarker(t))
+                && !ImplementsTenantMarker(t)
+                && !FrameworkEntitiesScopedByTheirStore.Contains(t.FullName ?? t.Name, StringComparer.Ordinal))
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(violations,

@@ -27,10 +27,12 @@ namespace MMCA.Common.Application.Tests.Webhooks;
 /// constructor. Every scoped dependency is a double registered in the container the handler's own
 /// scope is opened from.
 /// </summary>
-public sealed class WebhookFanOutHandlerTests
+public sealed class WebhookFanOutHandlerTests : IDisposable
 {
     private const string EventType = "ticket.opened";
     private const string Tenant = "tenant-a";
+
+    private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly Mock<IWebhookSubscriptionStore> _store = new();
     private readonly Mock<ITenantContext> _tenant = new();
@@ -43,6 +45,12 @@ public sealed class WebhookFanOutHandlerTests
     {
         _scheduler = new RecordingScheduler(_unitOfWork);
         _tenant.SetupGet(t => t.TenantId).Returns(Tenant);
+    }
+
+    public void Dispose()
+    {
+        _logs.Dispose();
+        _unitOfWork.Dispose();
     }
 
     // -- Inert unless enabled (rule 35.5) --
@@ -112,7 +120,7 @@ public sealed class WebhookFanOutHandlerTests
         command.EventId.Should().Be(integrationEvent.MessageId);
         command.OccurredOn.Should().Be(integrationEvent.DateOccurred);
         command.PayloadJson.Should().Be(
-            JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType(), WebJsonOptions));
     }
 
     [Fact]
@@ -199,7 +207,7 @@ public sealed class WebhookFanOutHandlerTests
         SeedSubscriptions(NewSubscription([EventType]));
         await using var provider = BuildProvider(new WebhookSettings { Enabled = true, MaxPayloadBytes = 1024 });
         var integrationEvent = new WebhookFanOutProbeEvent(7, new string('x', 2000));
-        Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(integrationEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web)))
+        Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(integrationEvent, WebJsonOptions))
             .Should().BeGreaterThan(1024, "the precondition of this test");
 
         var act = () => ResolveHandler(provider).HandleAsync(integrationEvent, TestContext.Current.CancellationToken);

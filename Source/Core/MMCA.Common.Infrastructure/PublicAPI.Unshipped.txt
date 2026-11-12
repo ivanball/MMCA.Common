@@ -3,3 +3,16 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOpti
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.AddStronglyTypedIdAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
 MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>
 MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>.EnumerationNameValueConverter() -> void
+MMCA.Common.Infrastructure.Http.OutboundAddressPolicy
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.set -> void
+MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWebhooks(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TableName = "WebhookSubscriptions" -> string!
+const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TenantIndexName = "IX_WebhookSubscriptions_TenantId_IsDeleted" -> string!
+static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsAcceptableTargetUri(System.Uri! target, bool allowInsecure) -> bool
+static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsPublicAddress(System.Net.IPAddress! address) -> bool
+static MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.ApplyWebhookSubscriptionConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+static MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.AddWebhooks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

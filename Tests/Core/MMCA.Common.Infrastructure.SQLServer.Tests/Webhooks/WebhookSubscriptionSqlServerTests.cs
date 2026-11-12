@@ -78,14 +78,8 @@ public sealed class WebhookSubscriptionSqlServerTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
 
         var indexColumns = await context.Database
-            .SqlQuery<string>($"""
-                SELECT STRING_AGG(c.name, ',') WITHIN GROUP (ORDER BY ic.key_ordinal) AS [Value]
-                FROM sys.indexes i
-                JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
-                JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-                WHERE i.object_id = OBJECT_ID({QualifiedTable}) AND i.name = {WebhookSubscriptionModelBuilderExtensions.TenantIndexName}
-                  AND ic.is_included_column = 0
-                """)
+            .SqlQuery<string>(
+                $"SELECT STRING_AGG(c.name, ',') WITHIN GROUP (ORDER BY ic.key_ordinal) AS [Value] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID({QualifiedTable}) AND i.name = {WebhookSubscriptionModelBuilderExtensions.TenantIndexName} AND ic.is_included_column = 0")
             .SingleAsync(ct);
 
         indexColumns.Should().Be("TenantId,IsDeleted", "every store read filters by tenant and the soft-delete flag");
@@ -131,18 +125,15 @@ public sealed class WebhookSubscriptionSqlServerTests : IAsyncLifetime
 
     private static Task<string> ColumnTypeAsync(ApplicationDbContext context, string column, CancellationToken ct) =>
         context.Database
-            .SqlQuery<string>($"""
-                SELECT DATA_TYPE + CASE WHEN CHARACTER_MAXIMUM_LENGTH IS NULL THEN '' ELSE '(' + CAST(CHARACTER_MAXIMUM_LENGTH AS nvarchar(10)) + ')' END AS [Value]
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = {WebhookSubscriptionModelBuilderExtensions.TableName} AND COLUMN_NAME = {column}
-                """)
+            .SqlQuery<string>(
+                $"SELECT DATA_TYPE + CASE WHEN CHARACTER_MAXIMUM_LENGTH IS NULL THEN '' ELSE '(' + CAST(CHARACTER_MAXIMUM_LENGTH AS nvarchar(10)) + ')' END AS [Value] FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = {WebhookSubscriptionModelBuilderExtensions.TableName} AND COLUMN_NAME = {column}")
             .SingleAsync(ct);
 
-    private static async Task FanOutAsync(ServiceProvider provider, ProbeHappened integrationEvent, CancellationToken ct)
+    private static Task FanOutAsync(ServiceProvider provider, ProbeHappened integrationEvent, CancellationToken ct)
     {
         var handler = provider.GetServices<IIntegrationEventHandler<ProbeHappened>>().Should().ContainSingle(
             "AddWebhookEvent registers the fan-out as the event's integration handler").Which;
-        await handler.HandleAsync(integrationEvent, ct);
+        return handler.HandleAsync(integrationEvent, ct);
     }
 
     private async Task SeedSubscriptionsAsync(int count, CancellationToken ct)
@@ -152,7 +143,7 @@ public sealed class WebhookSubscriptionSqlServerTests : IAsyncLifetime
         {
             await using var scope = provider.CreateAsyncScope();
             var subscription = WebhookSubscription.Create(
-                $"https://hooks{index}.example.com/in", null, [EventType], tenantId: null, "protected-secret").Value!;
+                $"https://hooks{index.ToString(System.Globalization.CultureInfo.InvariantCulture)}.example.com/in", null, [EventType], tenantId: null, "protected-secret").Value!;
             await scope.ServiceProvider.GetRequiredService<IWebhookSubscriptionStore>().AddAsync(subscription, ct);
         }
     }

@@ -93,3 +93,78 @@ MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Change
 MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ChangedOn.get -> System.DateTime
 MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.get -> TEntityDTO?
 MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.init -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.<Clone>$() -> MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.CreateWebhookSubscriptionRequest(string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Deconstruct(out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Description.get -> string?
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Description.init -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Equals(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? other) -> bool
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Url.get -> string!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Url.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.<Clone>$() -> MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Deconstruct(out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Description.get -> string?
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Description.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Equals(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? other) -> bool
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.UpdateWebhookSubscriptionRequest(string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Url.get -> string!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Url.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.<Clone>$() -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.CreatedOn.get -> System.DateTime
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.CreatedOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Deconstruct(out System.Guid Id, out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes, out bool IsEnabled, out System.DateTime CreatedOn, out System.DateTime? LastDeliveredOn, out System.DateTime? LastFailedOn, out string? LastFailure) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Description.get -> string?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Description.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Equals(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? other) -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Id.get -> System.Guid
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Id.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.IsEnabled.get -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.IsEnabled.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastDeliveredOn.get -> System.DateTime?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastDeliveredOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailedOn.get -> System.DateTime?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailedOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailure.get -> string?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailure.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Url.get -> string!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Url.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.WebhookSubscriptionResponse(System.Guid Id, string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes, bool IsEnabled, System.DateTime CreatedOn, System.DateTime? LastDeliveredOn, System.DateTime? LastFailedOn, string? LastFailure) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.<Clone>$() -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Deconstruct(out MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse! Subscription, out string! Secret) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Equals(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? other) -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Secret.get -> string!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Secret.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Subscription.get -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Subscription.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.WebhookSubscriptionSecretResponse(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse! Subscription, string! Secret) -> void
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageWebhooks = "webhooks:manage" -> string!
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.ToString() -> string!
+static MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.operator !=(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.operator ==(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.operator !=(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.operator ==(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.operator !=(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.operator ==(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.operator !=(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.operator ==(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? right) -> bool

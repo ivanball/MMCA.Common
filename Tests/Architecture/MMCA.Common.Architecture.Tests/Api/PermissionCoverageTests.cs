@@ -31,6 +31,7 @@ public sealed class PermissionCoverageTests : PermissionCoverageTestsBase
         AdministrationPermissions.ManageFeatures,
         AdministrationPermissions.ManageClients,
         AdministrationPermissions.ViewAuditTrail,
+        AdministrationPermissions.ManageWebhooks,
         NotificationPermissions.Manage,
     ];
 

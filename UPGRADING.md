@@ -173,6 +173,56 @@ declared, the OpenAPI document is identical.
 [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
 ```
 
+**Optional: outbound webhooks (MMCA.Common.Application, MMCA.Common.Infrastructure, MMCA.Common.API).**
+Not breaking: a host that adopts none of it builds the same model and serves the same routes. To
+publish integration events to third-party receivers as signed Standard Webhooks POSTs:
+
+1. `services.AddWebhooks(builder.Configuration)` (outside the pipeline, `using MMCA.Common.Infrastructure.Webhooks;`),
+   `pipeline.AddWebhookDelivery()` inside `AddMmcaApplicationPipeline(...)`, and one
+   `services.AddWebhookEvent<TEvent>("ticket.opened")` per published event, typically in the module's
+   Application DI. Register the TERMINAL contract type of each event.
+2. **The WHOLE integration event is the published payload.** Every public property of the registered
+   contract is serialized (web defaults) into the delivery's `data` member and sent to whoever
+   subscribed, so register only contracts you are willing to send to a third party; publish a
+   dedicated contract when an existing one carries anything internal.
+3. Set `"Webhooks": { "Enabled": true }`. `Webhooks:DataSourceName` (default `Default`) names the
+   database that holds the `WebhookSubscriptions` table; set `DesignTimeDbContextOptions.EnableWebhooks = true`
+   in that database's migrations factory and add a migration (no connection needed). The table is in
+   the model only while `Webhooks:Enabled` is true on that source, so the flag and the migration move
+   together.
+4. Derive `WebhookSubscriptionsControllerBase` with a route and an API version only, and grant
+   `AdministrationPermissions.ManageWebhooks` (`webhooks:manage`) to the operators who manage
+   subscriptions. Every action answers 404 while webhooks are off.
+5. Under broker messaging the fan-out runs only in a host that consumes the event, so a delivering host
+   also calls `x.RegisterIntegrationEventConsumer<TEvent>()` for each webhook event; in-process mode needs
+   nothing extra.
+
+Deliveries are internal-command rows (`MMCA.Webhooks.Deliver.v1`), retried with the host-wide
+`InternalCommands:MaxAttempts` budget and requeued through `IInternalCommandAdministration` once
+dead-lettered. Signing secrets are protected with the data-protection key ring, so a multi-replica host
+needs the shared key ring (ADR-069). `Webhooks:AllowInsecureTargetsInDevelopment` lets a Development
+host target `http://localhost` and private addresses; any other environment ignores it with one startup
+warning.
+
+**Optional: process managers (MMCA.Common.Domain, MMCA.Common.Application, MMCA.Common.Testing.Architecture).**
+Not breaking: no table, no migration and no configuration key. For a long-running flow whose state is
+one aggregate's own columns:
+
+1. Derive the aggregate from `ProcessManagerAggregateRoot<TId>` in place of
+   `AuditableAggregateRootEntity<TId>`. The base declares no property or field, so the EF model and the
+   migration snapshot do not change. Override `DecideTimeout(timeout, utcNow)`: match the timeout by
+   name, check the stored state, answer `NotYetDue(timeout.DueAfter(GetLastTransitionOn()))` while it is
+   early, and otherwise apply the transition (`Applied()`, or `Rejected(errors)`).
+2. Keep each timeout command consumer-owned with a stable `[InternalCommandName]`, implementing
+   `IProcessTimeoutCommand<TId>` (an explicit `ProcessId` implementation keeps the stored payload
+   unchanged), and handle it with one sealed subclass of `ProcessTimeoutHandlerBase<TCommand, TProcess, TId>`.
+   Drive event steps with a subclass of `ProcessDomainEventHandlerBase<TEvent, TProcess, TId>`; the step
+   owns its saves.
+3. Call `services.AddProcessManagers()` in the module's Application DI to register the scoped
+   `IProcessTimeoutScheduler`, and arm a timeout with `ArmAsync(command, after, ct)`.
+4. Subclass `ProcessTimeoutConventionTestsBase` with the repo's architecture map, so a nameless timeout
+   command, or one with no handler or two, fails the build.
+
 ## [1.284.0] - 2026-11-09
 
 **Breaking: one static method removed.** No namespace, type or configuration key moved.

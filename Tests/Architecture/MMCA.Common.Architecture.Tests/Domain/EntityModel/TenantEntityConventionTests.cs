@@ -39,6 +39,25 @@ public sealed class TenantEntityConventionTests
         act.Should().NotThrow("every framework entity carrying a TenantId must implement ITenantEntity");
     }
 
+    /// <summary>
+    /// The rule exempts exactly the framework entities that are scoped by their own store, by full
+    /// name. This pins the population the exemption covers: every framework entity that carries a
+    /// <c>TenantId</c> without the marker is listed here with its reason, so adding a second one, or
+    /// renaming the first, fails until someone decides it on purpose.
+    /// </summary>
+    [Fact]
+    public void FrameworkEntitiesWithTenantIdAndNoMarker_AreExactlyTheStoreScopedOnes()
+    {
+        var unmarked = FrameworkEntities()
+            .Where(static t => t.GetProperty("TenantId", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) is not null
+                && !typeof(ITenantEntity).IsAssignableFrom(t))
+            .Select(static t => t.FullName);
+
+        unmarked.Should().BeEquivalentTo(
+            ["MMCA.Common.Domain.Webhooks.WebhookSubscription"],
+            "a webhook subscription keeps a nullable tenant so the feature works in a host with no tenant, and its store filters every read on it; any other entity must take the marker");
+    }
+
     /// <summary>The concrete framework entities of the Domain and Infrastructure layers.</summary>
     private static List<Type> FrameworkEntities()
     {

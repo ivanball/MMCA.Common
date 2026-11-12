@@ -23,6 +23,8 @@ public sealed class WebhookSubscriptionServiceTests
     private const string Tenant = "tenant-a";
     private const string Url = "https://hooks.example.com/inbound";
 
+    private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 11, 12, 9, 0, 0, TimeSpan.Zero));
     private readonly Mock<IWebhookSubscriptionStore> _store = new();
     private readonly Mock<IWebhookTargetValidator> _targetValidator = new();
@@ -340,7 +342,7 @@ public sealed class WebhookSubscriptionServiceTests
 
     private static CreateWebhookSubscriptionRequest Request(IReadOnlyList<string> eventTypes) => new(Url, "Partner feed", eventTypes);
 
-    private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, WebJsonOptions);
 
     private WebhookSubscription SeedOwn(string protectedSecret)
     {

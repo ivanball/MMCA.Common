@@ -226,6 +226,14 @@ public static class DesignTimeDbContextHelper
                 Enabled = designOptions.EnableMachineClients,
                 DataSourceName = physical.Key.Name,
             }));
+
+        // Same two-part gate for the outbound webhook table, for the same collapse reason.
+        services.AddSingleton<IOptions<Application.Webhooks.WebhookSettings>>(
+            Options.Create(new Application.Webhooks.WebhookSettings
+            {
+                Enabled = designOptions.EnableWebhooks,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

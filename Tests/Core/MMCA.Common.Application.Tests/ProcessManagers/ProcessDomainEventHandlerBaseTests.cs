@@ -111,7 +111,17 @@ public sealed class ProcessDomainEventHandlerBaseTests
         var process = new StepTestProcess { Id = ProcessId };
         ReturnsProcess(process);
         await using var provider = BuildProvider();
-        var handler = new TestStepHandler(provider.GetRequiredService<IServiceScopeFactory>(), _log);
+        // The scope lives only for the duration of the step (the base disposes it when the event is
+        // handled), so what the step can resolve from it is captured while the step runs.
+        IUnitOfWork? resolvedInsideTheStep = null;
+        var handler = new TestStepHandler(provider.GetRequiredService<IServiceScopeFactory>(), _log)
+        {
+            Step = (_, context) =>
+            {
+                resolvedInsideTheStep = context.Services.GetRequiredService<IUnitOfWork>();
+                return Task.FromResult(Result.Success());
+            },
+        };
         var domainEvent = new WidgetShipped(ProcessId);
         using var cts = new CancellationTokenSource();
 
@@ -132,7 +142,7 @@ public sealed class ProcessDomainEventHandlerBaseTests
         step.DomainEvent.Should().BeSameAs(domainEvent);
         step.Context.UnitOfWork.Should().BeSameAs(_unitOfWork.Object, "the step saves through the scope's unit of work");
         step.Context.Services.Should().NotBeSameAs(provider, "the step resolves from the scope the base opened, not the root");
-        step.Context.Services.GetRequiredService<IUnitOfWork>().Should().BeSameAs(step.Context.UnitOfWork);
+        resolvedInsideTheStep.Should().BeSameAs(step.Context.UnitOfWork, "the scope hands out the same unit of work the context carries");
     }
 
     [Fact]

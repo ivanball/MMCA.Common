@@ -454,4 +454,40 @@
   <data name="Query.ChangeFeedNotSupported" xml:space="preserve">
     <value>El flujo de cambios no está disponible para este recurso.</value>
   </data>
+  <data name="Webhooks.NotFound" xml:space="preserve">
+    <value>No existe ninguna suscripción de webhook con ese identificador.</value>
+  </data>
+  <data name="Webhooks.UrlInvalid" xml:space="preserve">
+    <value>La URL de un webhook debe ser una URL https o http absoluta de 2048 caracteres como máximo, sin credenciales ni fragmento.</value>
+  </data>
+  <data name="Webhooks.TargetNotAllowed" xml:space="preserve">
+    <value>El destino del webhook no está permitido: debe ser una URL https cuyo host solo resuelva a direcciones públicas.</value>
+  </data>
+  <data name="Webhooks.EventTypesRequired" xml:space="preserve">
+    <value>Una suscripción de webhook necesita al menos un tipo de evento no vacío.</value>
+  </data>
+  <data name="Webhooks.TooManyEventTypes" xml:space="preserve">
+    <value>Una suscripción de webhook admite como máximo 20 tipos de evento.</value>
+  </data>
+  <data name="Webhooks.EventTypeUnknown" xml:space="preserve">
+    <value>Uno o más tipos de evento de webhook no los publica este servicio.</value>
+  </data>
+  <data name="Webhooks.DescriptionTooLong" xml:space="preserve">
+    <value>La descripción de un webhook admite como máximo 200 caracteres.</value>
+  </data>
+  <data name="Webhooks.SecretRequired" xml:space="preserve">
+    <value>Una suscripción de webhook necesita un secreto de firma.</value>
+  </data>
+  <data name="Webhooks.LimitReached" xml:space="preserve">
+    <value>Se ha alcanzado el número máximo de suscripciones de webhook.</value>
+  </data>
+  <data name="Webhooks.DeliveryFailed" xml:space="preserve">
+    <value>La entrega del webhook ha fallado y se reintentará.</value>
+  </data>
+  <data name="Webhooks.SecretUnreadable" xml:space="preserve">
+    <value>No se ha podido leer el secreto de firma del webhook.</value>
+  </data>
+  <data name="ProcessManagers.TimeoutNotInFuture" xml:space="preserve">
+    <value>El plazo de un proceso debe programarse para un momento futuro.</value>
+  </data>
 </root>

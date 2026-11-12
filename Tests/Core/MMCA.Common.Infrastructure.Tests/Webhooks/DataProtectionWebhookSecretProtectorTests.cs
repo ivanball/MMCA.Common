@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Webhooks;
 using MMCA.Common.Application.Webhooks.Delivery;
-using MMCA.Common.Application.Webhooks.Subscriptions;
 using MMCA.Common.Infrastructure.Webhooks;
 
 namespace MMCA.Common.Infrastructure.Tests.Webhooks;
@@ -87,7 +86,7 @@ public sealed class DataProtectionWebhookSecretProtectorTests
         act.Should().NotThrow().Subject.IsFailure.Should().BeTrue();
     }
 
-    private static IWebhookSecretProtector Create(IDataProtectionProvider provider)
+    private static DataProtectionWebhookSecretProtector Create(IDataProtectionProvider provider)
     {
         var services = new ServiceCollection();
         services.AddLogging();

@@ -21,13 +21,13 @@ namespace MMCA.Common.Application.Tests.Webhooks;
 /// The handler is built with <see cref="ActivatorUtilities"/> over a container of doubles, so these
 /// tests do not depend on its constructor.
 /// </summary>
-public sealed class DeliverWebhookInternalCommandHandlerTests
+public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
 {
     private const string Tenant = "tenant-a";
     private const string EventType = "ticket.opened";
     private const string PayloadJson = """{"ticketId":7}""";
 
-    private static readonly Guid EventId = Guid.Parse("3c1d2e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f");
+    private static readonly Guid EventId = new(0x3c1d2e4f, 0x5a6b, 0x4c7d, 0x8e, 0x9f, 0xa, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f) /* 3c1d2e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f */;
     private static readonly DateTime OccurredOn = new(2026, 11, 12, 8, 59, 30, DateTimeKind.Utc);
 
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 11, 12, 9, 0, 0, TimeSpan.Zero));
@@ -37,10 +37,9 @@ public sealed class DeliverWebhookInternalCommandHandlerTests
     private readonly RecordingLoggerProvider _logs = new();
     private readonly List<WebhookDeliveryRequest> _requests = [];
 
-    public DeliverWebhookInternalCommandHandlerTests()
-    {
-        _tenant.SetupGet(t => t.TenantId).Returns(Tenant);
-    }
+    public DeliverWebhookInternalCommandHandlerTests() => _tenant.SetupGet(t => t.TenantId).Returns(Tenant);
+
+    public void Dispose() => _logs.Dispose();
 
     private DateTime Now => _clock.GetUtcNow().UtcDateTime;
 

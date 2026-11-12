@@ -29,7 +29,7 @@ public sealed class HttpWebhookSenderTests
 
     private static readonly Uri Target = new("https://hooks.example.com/in");
     private static readonly DateTimeOffset Now = new(2026, 11, 12, 9, 30, 0, TimeSpan.Zero);
-    private static readonly string DeliveryId = new Guid("6f1c2b8e-3d4a-4b5c-9e6f-7a8b9c0d1e2f").ToString("D");
+    private static readonly string DeliveryId = new Guid(0x6f1c2b8e, 0x3d4a, 0x4b5c, 0x9e, 0x6f, 0x7a, 0x8b, 0x9c, 0xd, 0x1e, 0x2f) /* 6f1c2b8e-3d4a-4b5c-9e6f-7a8b9c0d1e2f */.ToString("D");
 
     [Fact]
     public async Task SendsPostWithAllHeaders()
@@ -51,7 +51,7 @@ public sealed class HttpWebhookSenderTests
             .Which.Should().StartWith("v1,");
         sent.Header("User-Agent").Should().Be("MMCA-Webhooks/1");
         sent.ContentMediaType.Should().Be("application/json");
-        sent.Body.Should().Be(Body, "the envelope is sent byte for byte as it was built");
+        sent.SentBody.Should().Be(Body, "the envelope is sent byte for byte as it was built");
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public sealed class HttpWebhookSenderTests
         Uri? Uri,
         IReadOnlyDictionary<string, IReadOnlyList<string>> Headers,
         string? ContentMediaType,
-        string Body)
+        string SentBody)
     {
         public string Header(string name) => Headers.TryGetValue(name, out var values) ? string.Join(",", values) : string.Empty;
     }

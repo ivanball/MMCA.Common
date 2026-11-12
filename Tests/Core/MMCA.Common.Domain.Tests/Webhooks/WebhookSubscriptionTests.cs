@@ -16,6 +16,8 @@ public sealed class WebhookSubscriptionTests
 
     private static readonly DateTime Now = new(2026, 11, 12, 9, 0, 0, DateTimeKind.Utc);
 
+    private static readonly string[] UnsortedEventTypes = ["b.x", "a_z", "a.z", "a-z"];
+
     // -- Create: event types (rule 35.11) --
     [Fact]
     public void Create_WithHttpsUrl_SortsAndDedupesEventTypes()
@@ -41,7 +43,7 @@ public sealed class WebhookSubscriptionTests
     {
         var subscription = WebhookSubscription.Create(Url, null, ["b.x", "a_z", "a.z", "a-z"], null, Secret).Value!;
 
-        subscription.GetEventTypes().Should().Equal(new[] { "b.x", "a_z", "a.z", "a-z" }.Order(StringComparer.Ordinal));
+        subscription.GetEventTypes().Should().Equal(UnsortedEventTypes.Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -55,10 +57,7 @@ public sealed class WebhookSubscriptionTests
     }
 
     [Fact]
-    public void Create_WithNullTenant_KeepsTenantNull()
-    {
-        WebhookSubscription.Create(Url, null, ["ticket.opened"], null, Secret).Value!.TenantId.Should().BeNull();
-    }
+    public void Create_WithNullTenant_KeepsTenantNull() => WebhookSubscription.Create(Url, null, ["ticket.opened"], null, Secret).Value!.TenantId.Should().BeNull();
 
     [Fact]
     public void Create_WithWildcard_IsAccepted()
@@ -69,16 +68,13 @@ public sealed class WebhookSubscriptionTests
     }
 
     [Fact]
-    public void Create_WithNoEventTypes_FailsEventTypesRequired()
-    {
-        WebhookSubscription.Create(Url, null, [], null, Secret).Errors
+    public void Create_WithNoEventTypes_FailsEventTypesRequired() => WebhookSubscription.Create(Url, null, [], null, Secret).Errors
             .Should().ContainSingle(e => e.Code == "Webhooks.EventTypesRequired");
-    }
 
     [Fact]
     public void Create_With21EventTypes_FailsTooManyEventTypes()
     {
-        var types = Enumerable.Range(1, WebhookSubscription.MaxEventTypes + 1).Select(i => $"event.n{i}").ToList();
+        var types = Enumerable.Range(1, WebhookSubscription.MaxEventTypes + 1).Select(i => $"event.n{i.ToString(System.Globalization.CultureInfo.InvariantCulture)}").ToList();
 
         WebhookSubscription.Create(Url, null, types, null, Secret).Errors
             .Should().ContainSingle(e => e.Code == "Webhooks.TooManyEventTypes");
@@ -87,7 +83,7 @@ public sealed class WebhookSubscriptionTests
     [Fact]
     public void Create_With20EventTypes_Succeeds()
     {
-        var types = Enumerable.Range(1, WebhookSubscription.MaxEventTypes).Select(i => $"event.n{i}").ToList();
+        var types = Enumerable.Range(1, WebhookSubscription.MaxEventTypes).Select(i => $"event.n{i.ToString(System.Globalization.CultureInfo.InvariantCulture)}").ToList();
 
         WebhookSubscription.Create(Url, null, types, null, Secret).IsSuccess.Should().BeTrue();
     }
@@ -95,45 +91,28 @@ public sealed class WebhookSubscriptionTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithABlankEventType_Fails(string blank)
-    {
+    public void Create_WithABlankEventType_Fails(string blank) =>
         // DESIGN-QUESTION: rule 35.11 says "each non-blank" without naming the code, so only the failure is asserted.
         WebhookSubscription.Create(Url, null, ["ticket.opened", blank], null, Secret).IsFailure.Should().BeTrue();
-    }
 
     // -- Create: URL (rule 35.10) --
     [Fact]
-    public void Create_WithRelativeUrl_FailsUrlInvalid()
-    {
-        AssertUrlInvalid("/hooks/inbound");
-    }
+    public void Create_WithRelativeUrl_FailsUrlInvalid() => AssertUrlInvalid("/hooks/inbound");
 
     [Fact]
-    public void Create_WithUserInfo_FailsUrlInvalid()
-    {
-        AssertUrlInvalid("https://user:pass@hooks.example.com/inbound");
-    }
+    public void Create_WithUserInfo_FailsUrlInvalid() => AssertUrlInvalid("https://user:pass@hooks.example.com/inbound");
 
     [Fact]
-    public void Create_WithFragment_FailsUrlInvalid()
-    {
-        AssertUrlInvalid("https://hooks.example.com/inbound#section");
-    }
+    public void Create_WithFragment_FailsUrlInvalid() => AssertUrlInvalid("https://hooks.example.com/inbound#section");
 
     [Fact]
-    public void Create_WithFtpScheme_FailsUrlInvalid()
-    {
-        AssertUrlInvalid("ftp://hooks.example.com/inbound");
-    }
+    public void Create_WithFtpScheme_FailsUrlInvalid() => AssertUrlInvalid("ftp://hooks.example.com/inbound");
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("not a url")]
-    public void Create_WithBlankOrMalformedUrl_FailsUrlInvalid(string url)
-    {
-        AssertUrlInvalid(url);
-    }
+    public void Create_WithBlankOrMalformedUrl_FailsUrlInvalid(string url) => AssertUrlInvalid(url);
 
     [Fact]
     public void Create_WithUrlOver2048Chars_FailsUrlInvalid()
@@ -144,12 +123,10 @@ public sealed class WebhookSubscriptionTests
     }
 
     [Fact]
-    public void Create_WithHttpUrl_IsLeftToTheTargetValidator()
-    {
+    public void Create_WithHttpUrl_IsLeftToTheTargetValidator() =>
         // Scheme policy beyond https-or-http belongs to the validator (rule 35.10, 35.20).
         WebhookSubscription.Create("http://hooks.example.com/inbound", null, ["ticket.opened"], null, Secret)
             .IsSuccess.Should().BeTrue();
-    }
 
     // -- Create: description and secret --
     [Fact]
@@ -172,11 +149,8 @@ public sealed class WebhookSubscriptionTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithBlankSecret_FailsSecretRequired(string secret)
-    {
-        WebhookSubscription.Create(Url, null, ["ticket.opened"], null, secret).Errors
+    public void Create_WithBlankSecret_FailsSecretRequired(string secret) => WebhookSubscription.Create(Url, null, ["ticket.opened"], null, secret).Errors
             .Should().ContainSingle(e => e.Code == "Webhooks.SecretRequired");
-    }
 
     // -- Update --
     [Fact]
@@ -194,18 +168,12 @@ public sealed class WebhookSubscriptionTests
     }
 
     [Fact]
-    public void Update_WithFtpScheme_FailsUrlInvalid()
-    {
-        NewSubscription().Update("ftp://hooks.example.com/inbound", null, ["ticket.opened"]).Errors
+    public void Update_WithFtpScheme_FailsUrlInvalid() => NewSubscription().Update("ftp://hooks.example.com/inbound", null, ["ticket.opened"]).Errors
             .Should().ContainSingle(e => e.Code == "Webhooks.UrlInvalid");
-    }
 
     [Fact]
-    public void Update_WithNoEventTypes_FailsEventTypesRequired()
-    {
-        NewSubscription().Update(Url, null, []).Errors
+    public void Update_WithNoEventTypes_FailsEventTypesRequired() => NewSubscription().Update(Url, null, []).Errors
             .Should().ContainSingle(e => e.Code == "Webhooks.EventTypesRequired");
-    }
 
     // -- Subscribes --
     [Fact]
@@ -262,10 +230,7 @@ public sealed class WebhookSubscriptionTests
     }
 
     [Fact]
-    public void GetSigningSecrets_WithoutRotation_ReturnsOnlyTheCurrent()
-    {
-        NewSubscription().GetSigningSecrets(Now).Should().Equal(Secret);
-    }
+    public void GetSigningSecrets_WithoutRotation_ReturnsOnlyTheCurrent() => NewSubscription().GetSigningSecrets(Now).Should().Equal(Secret);
 
     [Fact]
     public void GetSigningSecrets_DuringGrace_ReturnsCurrentFirstThenPrevious()
