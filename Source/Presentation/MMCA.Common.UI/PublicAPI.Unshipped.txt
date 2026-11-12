@@ -1,1 +1,32 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CardTemplate.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CurrentPage.get -> int
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CurrentPage.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyIcon.get -> string!
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyIcon.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyMessage.get -> string?
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyMessage.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.IsLoading.get -> bool
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.IsLoading.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.Items.get -> System.Collections.Generic.IReadOnlyList<TItem>!
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.Items.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.MobileCardList() -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnCardClick.get -> Microsoft.AspNetCore.Components.EventCallback<TItem>
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnCardClick.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnPageChanged.get -> Microsoft.AspNetCore.Components.EventCallback<int>
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnPageChanged.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.PageSize.get -> int
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.PageSize.set -> void
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.TotalItems.get -> int
+*REMOVED*MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.TotalItems.set -> void
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope.DisposeAsync() -> System.Threading.Tasks.ValueTask
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope.OnPageRestoredAsync() -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope.OnRestore.get -> Microsoft.AspNetCore.Components.EventCallback
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope.OnRestore.set -> void
+*REMOVED*MMCA.Common.UI.Components.PageState.PageStateScope.PageStateScope() -> void
+*REMOVED*override MMCA.Common.UI.Components.PageState.PageStateScope.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+*REMOVED*~override MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+*REMOVED*~override MMCA.Common.UI.Components.PageState.PageStateScope.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

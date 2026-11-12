@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking:** two unused components are removed from MMCA.Common.UI. `PageStateScope` (`MMCA.Common.UI.Components.PageState`) and the `registerBfcacheHandler`/`unregisterBfcacheHandler` functions of `nav-interop.js` are removed with no replacement; no consumer used them. `MobileCardList<TItem>` (`MMCA.Common.UI.Components.Lists`) is removed; use `MobileInfiniteScrollList<TItem>`. `ClickableCard` is unchanged. See [UPGRADING.md](UPGRADING.md).
+
 ### Added
 
 - **`Error.For<TTarget>(source)`** (MMCA.Common.Shared). Returns a copy of the error with `Source` set to `source` and `Target` set to `typeof(TTarget).Name`, the same result as `WithSource(source).WithTarget(typeof(TTarget).Name)` in one call, with no validation. The generic CRUD handler bases (`MutateEntityHandlerBase`, `ChildEntityHandlerBase`, `DeleteEntityHandler`) now build their not-found errors with it; the `Source` and `Target` they report are unchanged.

@@ -33,22 +33,6 @@
         <DetailLoadStateContent State="DetailLoadState.Failed" />
     </MudPaper>
 
-    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile card list</MudText>
-    <MobileCardList TItem="SampleItem" Items="_items" TotalItems="_items.Count" PageSize="10">
-        <CardTemplate>
-            <MudText Typo="Typo.subtitle2">@context.Name</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Description</MudText>
-        </CardTemplate>
-    </MobileCardList>
-
-    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile card list (empty)</MudText>
-    <MobileCardList TItem="SampleItem" Items="_empty" TotalItems="0" PageSize="10"
-                    EmptyMessage="Nothing to show yet.">
-        <CardTemplate>
-            <MudText>@context.Name</MudText>
-        </CardTemplate>
-    </MobileCardList>
-
     <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Unsaved-changes guard</MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Dirty state: @(_isDirty ? "unsaved changes" : "clean")
@@ -87,12 +71,10 @@
 
     private readonly IReadOnlyList<SampleItem> _items =
     [
-        new("First item", "A sample card rendered by MobileCardList."),
+        new("First item", "A sample card rendered by MobileInfiniteScrollList."),
         new("Second item", "Another sample card with secondary text."),
         new("Third item", "Cards stack vertically on narrow viewports."),
     ];
-
-    private readonly IReadOnlyList<SampleItem> _empty = [];
 
     private bool _isDirty;
     private DeleteConfirmation _deleteConfirmation = null!;

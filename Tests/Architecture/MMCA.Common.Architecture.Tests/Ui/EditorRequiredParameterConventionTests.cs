@@ -19,8 +19,8 @@ namespace MMCA.Common.Architecture.Tests.Ui;
 /// <see cref="ParametersWithInitializerDefaults"/>, each with the default that makes it optional.
 /// Everything else the rule finds is a real gap. An initializer that only guards against null
 /// (<c>string.Empty</c>, <c>[]</c>) on a value the component cannot meaningfully render without is not
-/// a default and is not listed: <c>PageHeader.Title</c> (an empty level-one heading) and
-/// <c>MobileCardList.Items</c> (the list's data) are gaps, not exemptions.
+/// a default and is not listed: <c>PageHeader.Title</c> (an empty level-one heading) is a gap, not an
+/// exemption.
 /// </para>
 /// </summary>
 public sealed class EditorRequiredParameterConventionTests
@@ -51,9 +51,6 @@ public sealed class EditorRequiredParameterConventionTests
 
         // Defaults to MMCATheme.Instance, the framework theme a host overrides only to rebrand.
         "MmcaThemeProviders.Theme",
-
-        // Defaults to the Material SearchOff icon for the empty state.
-        "MobileCardList`1.EmptyIcon",
 
         // Defaults to the Material SearchOff icon for the empty state.
         "MobileInfiniteScrollList`1.EmptyIcon",

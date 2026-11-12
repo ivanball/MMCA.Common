@@ -32,6 +32,27 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking: two unused components are removed (MMCA.Common.UI).** No namespace or configuration key
+moved, and `ClickableCard` is unchanged. MMCA.ADC, MMCA.Store and MMCA.Helpdesk use neither.
+
+| Removed | Replacement |
+|---|---|
+| `PageStateScope` (`MMCA.Common.UI.Components.PageState`), with its `OnRestore` parameter and `OnPageRestoredAsync` callback | none |
+| `registerBfcacheHandler` and `unregisterBfcacheHandler` in `_content/MMCA.Common.UI/nav-interop.js` | none |
+| `MobileCardList<TItem>` (`MMCA.Common.UI.Components.Lists`) | `MobileInfiniteScrollList<TItem>` |
+
+The mechanical fix for `PageStateScope`: delete the `<PageStateScope>` element. If a page needs a
+refresh after back navigation, reload in `OnParametersSetAsync`.
+
+The mechanical fix for `MobileCardList<TItem>`: rename the element to `MobileInfiniteScrollList`.
+`CardTemplate`, `OnCardClick`, `EmptyMessage`, `EmptyIcon` and `PageSize` keep their names. Drop
+`Items`, `TotalItems`, `CurrentPage`, `OnPageChanged` and `IsLoading`, and pass `FetchPageResult`
+instead: a `Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TItem> Items, int
+TotalItems)>>>` that takes the 1-based page number and the page size and returns that page with the
+total count. The list fetches, pages and shows its own loading and load-failure states.
+
 ## [1.284.0] - 2026-11-09
 
 **Breaking: one static method removed.** No namespace, type or configuration key moved.

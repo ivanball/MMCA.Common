@@ -1,5 +1,5 @@
 // Centralised navigation/session interop helpers used by NavigationHistoryService,
-// ListPageStateService (sessionStorage tier), MauiBackNavigationBridge, and PageStateScope.
+// ListPageStateService (sessionStorage tier), and MauiBackNavigationBridge.
 //
 // Every call is wrapped in try/catch so that:
 //   * Safari Private Browsing (which throws on storage writes)
@@ -94,53 +94,4 @@ export function tryGoBack() {
     } catch {
         return { handled: false, atRoot: true };
     }
-}
-
-// ── bfcache handler ─────────────────────────────────────────────────────────
-// Registers a single pageshow listener that fires the supplied .NET callback
-// whenever the page is restored from the back-forward cache. Useful for forcing
-// a state refresh on pages that may otherwise show stale content after browser
-// back navigation.
-
-let bfcacheHandler = null;
-let bfcacheDotNetRef = null;
-
-export function registerBfcacheHandler(dotNetRef) {
-    unregisterBfcacheHandler();
-
-    bfcacheDotNetRef = dotNetRef;
-    bfcacheHandler = (event) => {
-        try {
-            const navEntries = performance.getEntriesByType('navigation');
-            const navType = navEntries.length > 0 ? navEntries[0].type : '';
-            const restored = event.persisted === true || navType === 'back_forward';
-            if (!restored) {
-                return;
-            }
-            dotNetRef.invokeMethodAsync('OnPageRestoredAsync').catch(() => {
-                // Component disposed or circuit torn down — ignore.
-            });
-        } catch {
-            // Defensive: never let a bfcache handler throw into the host.
-        }
-    };
-
-    try {
-        window.addEventListener('pageshow', bfcacheHandler);
-    } catch {
-        bfcacheHandler = null;
-        bfcacheDotNetRef = null;
-    }
-}
-
-export function unregisterBfcacheHandler() {
-    if (bfcacheHandler !== null) {
-        try {
-            window.removeEventListener('pageshow', bfcacheHandler);
-        } catch {
-            // Best-effort cleanup.
-        }
-    }
-    bfcacheHandler = null;
-    bfcacheDotNetRef = null;
 }
