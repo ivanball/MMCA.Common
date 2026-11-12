@@ -24,6 +24,9 @@ public sealed class GoogleCloudTelemetryExportTests
     private const string ProjectId = "mmca-telemetry-tests";
     private const int FlushTimeoutMilliseconds = 10_000;
 
+    /// <summary>How long a flushed signal may take to reach the receiver before the test reports a miss.</summary>
+    private static readonly TimeSpan ArrivalTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ASpanAndALogRecord_ReachTheTelemetryApi_WithTheGoogleHeaders()
     {
@@ -34,6 +37,14 @@ public sealed class GoogleCloudTelemetryExportTests
 
         Emit(host, applicationName);
         Flush(host);
+
+        // A flush that returns true has handed the batch to the exporter; it does not mean the HTTP
+        // round trip is over. On a slow machine the batch processor's flush poll can see its buffer
+        // drained while the request is still in flight, and an assertion made then finds nothing (the
+        // AWS twin of this test failed that way in CI). So wait for the arrivals themselves, while the
+        // host is still up, and let the assertions below report a miss.
+        await receiver.WaitForRequestAsync("/v1/traces", ArrivalTimeout, TestContext.Current.CancellationToken);
+        await receiver.WaitForRequestAsync("/v1/logs", ArrivalTimeout, TestContext.Current.CancellationToken);
         await host.StopAsync(TestContext.Current.CancellationToken);
 
         var requests = receiver.Requests.ToList();
@@ -78,14 +89,20 @@ public sealed class GoogleCloudTelemetryExportTests
     {
         await using var receiver = await OtlpTestReceiver.StartAsync();
         const string applicationName = "mmca-gcp-telemetry-no-credentials";
-        using var host = BuildHost(applicationName, receiver.BaseAddress, ProjectId, token: null);
-        await host.StartAsync(TestContext.Current.CancellationToken);
+        using (var host = BuildHost(applicationName, receiver.BaseAddress, ProjectId, token: null))
+        {
+            await host.StartAsync(TestContext.Current.CancellationToken);
 
-        Emit(host, applicationName);
-        host.Services.GetRequiredService<TracerProvider>().ForceFlush(FlushTimeoutMilliseconds);
-        host.Services.GetRequiredService<LoggerProvider>().ForceFlush(FlushTimeoutMilliseconds);
-        await host.StopAsync(TestContext.Current.CancellationToken);
+            Emit(host, applicationName);
+            host.Services.GetRequiredService<TracerProvider>().ForceFlush(FlushTimeoutMilliseconds);
+            host.Services.GetRequiredService<LoggerProvider>().ForceFlush(FlushTimeoutMilliseconds);
+            await host.StopAsync(TestContext.Current.CancellationToken);
+        }
 
+        // Asserted only after the host is disposed. A flush can return while an export is still in
+        // flight, so a request sent by mistake could land after an assertion made right away and the
+        // test would pass. Disposing the providers shuts their batch processors down, which waits for
+        // the export thread, so whatever was going to arrive has arrived.
         receiver.Requests.Should().BeEmpty("an export without a token is refused before it leaves the process");
     }
 
