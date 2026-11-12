@@ -31,25 +31,37 @@ public static class OutboundAddressPolicy
         ([168, 63, 129, 16], 32),
     ];
 
-    /// <summary>The denied IPv6 ranges, as (first address, prefix length).</summary>
-    private static readonly (byte[] Network, int PrefixLength)[] DeniedIPv6 =
+    /// <summary>
+    /// The only IPv6 space a target may be in: global unicast, <c>2000::/3</c>. IPv6 is an allow-list
+    /// rather than a deny-list because several special formats outside it carry an IPv4 address the
+    /// host's stack may still dial (IPv4-compatible <c>::/96</c>, both NAT64 prefixes), and a range
+    /// added to the address architecture later is refused without anyone listing it.
+    /// </summary>
+    private static readonly (byte[] Network, int PrefixLength) GlobalUnicastIPv6 =
+        ([0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 3);
+
+    /// <summary>
+    /// The ranges inside <see cref="GlobalUnicastIPv6"/> that are still denied, as (first address, prefix
+    /// length): Teredo <c>2001::/32</c> and 6to4 <c>2002::/16</c>, which embed an IPv4 address a tunnel
+    /// interface would reach, and the documentation prefixes <c>2001:db8::/32</c> and <c>3fff::/20</c>.
+    /// </summary>
+    private static readonly (byte[] Network, int PrefixLength)[] DeniedGlobalIPv6 =
     [
-        (new byte[16], 128),
-        ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 128),
-        ([0x00, 0x64, 0xFF, 0x9B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 96),
-        ([0xFC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 7),
-        ([0xFE, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 10),
-        ([0xFE, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 10),
-        ([0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8),
+        ([0x20, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 32),
+        ([0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 32),
+        ([0x20, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 16),
+        ([0x3F, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 20),
     ];
 
     /// <summary>
     /// Whether <paramref name="address"/> is a public address. False for IPv4 <c>0.0.0.0/8</c>,
     /// <c>10/8</c>, <c>100.64/10</c>, <c>127/8</c>, <c>169.254/16</c>, <c>172.16/12</c>,
     /// <c>192.0.0.0/24</c>, <c>192.168/16</c>, <c>198.18/15</c>, <c>224/4</c>, <c>240/4</c> and the single
-    /// address <c>168.63.129.16</c>; for IPv6 <c>::/128</c>, <c>::1</c>, <c>64:ff9b::/96</c>,
-    /// <c>fc00::/7</c>, <c>fe80::/10</c>, <c>fec0::/10</c> and <c>ff00::/8</c>; and for any other address
-    /// family. An IPv4-mapped IPv6 address is judged as its IPv4 form.
+    /// address <c>168.63.129.16</c>; for every IPv6 address outside <c>2000::/3</c> (which covers
+    /// <c>::</c>, <c>::1</c>, IPv4-compatible <c>::/96</c>, both NAT64 prefixes, <c>fc00::/7</c>,
+    /// <c>fe80::/10</c>, <c>fec0::/10</c> and <c>ff00::/8</c>) and inside it for <c>2001::/32</c>,
+    /// <c>2001:db8::/32</c>, <c>2002::/16</c> and <c>3fff::/20</c>; and for any other address family. An IPv4-mapped IPv6
+    /// address is judged as its IPv4 form.
     /// </summary>
     /// <param name="address">The address.</param>
     /// <returns><see langword="true"/> when the address is public.</returns>
@@ -67,8 +79,14 @@ public static class OutboundAddressPolicy
             return !IsInAny(address.GetAddressBytes(), DeniedIPv4);
         }
 
-        return address.AddressFamily == AddressFamily.InterNetworkV6
-            && !IsInAny(address.GetAddressBytes(), DeniedIPv6);
+        if (address.AddressFamily != AddressFamily.InterNetworkV6)
+        {
+            return false;
+        }
+
+        var bytes = address.GetAddressBytes();
+        return IsInRange(bytes, GlobalUnicastIPv6.Network, GlobalUnicastIPv6.PrefixLength)
+            && !IsInAny(bytes, DeniedGlobalIPv6);
     }
 
     /// <summary>

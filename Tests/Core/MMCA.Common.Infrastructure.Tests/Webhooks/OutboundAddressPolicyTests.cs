@@ -64,6 +64,50 @@ public sealed class OutboundAddressPolicyTests
     public void IsPublicAddress_DeniedIPv6Range_IsFalse(string address) =>
         OutboundAddressPolicy.IsPublicAddress(IPAddress.Parse(address)).Should().BeFalse($"{address} is inside a denied IPv6 range");
 
+    // == IPv6 formats that embed an IPv4 address, and space outside global unicast 2000::/3 ==
+    // 169.254.169.254 is a9fe:a9fe; 10.0.0.1 is a00:1.
+    [Theory]
+    [InlineData("::a9fe:a9fe")] // IPv4-compatible ::/96
+    [InlineData("::a00:1")]
+    [InlineData("::ffff")]
+    [InlineData("64:ff9b:1::")] // local-use NAT64 64:ff9b:1::/48
+    [InlineData("64:ff9b:1:a9fe:a9:fe00::")]
+    [InlineData("64:ff9b:1:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2002::")] // 6to4 2002::/16
+    [InlineData("2002:a9fe:a9fe::")]
+    [InlineData("2002:a00:1::1")]
+    [InlineData("2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2001::")] // Teredo 2001::/32
+    [InlineData("2001:0:4136:e378:8000:63bf:3fff:fdd2")]
+    [InlineData("2001:0:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2001:db8::")] // documentation 2001:db8::/32
+    [InlineData("2001:db8:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("3fff::")] // documentation 3fff::/20
+    [InlineData("3fff:fff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("100::")] // discard 100::/64, outside 2000::/3
+    [InlineData("1fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("4000::")]
+    [InlineData("e000::")]
+    public void IsPublicAddress_IPv6OutsidePublicGlobalUnicast_IsFalse(string address) =>
+        OutboundAddressPolicy.IsPublicAddress(IPAddress.Parse(address)).Should().BeFalse(
+            $"{address} is outside 2000::/3 or in a prefix inside it that embeds an IPv4 address");
+
+    // The public neighbours just outside each range denied inside 2000::/3, and both ends of 2000::/3.
+    [Theory]
+    [InlineData("2000::")]
+    [InlineData("2000:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2001:1::")]
+    [InlineData("2001:db7:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2001:db9::")]
+    [InlineData("2001:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("2003::")]
+    [InlineData("2a00:1450:4001::1")]
+    [InlineData("3ffe:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [InlineData("3fff:1000::")]
+    [InlineData("3fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    public void IsPublicAddress_PublicGlobalUnicastIPv6_IsTrue(string address) =>
+        OutboundAddressPolicy.IsPublicAddress(IPAddress.Parse(address)).Should().BeTrue($"{address} is public global unicast");
+
     // == Rule 35.19: the single cloud platform endpoint inside public space (A2) ==
     [Fact]
     public void IsPublicAddress_CloudPlatformEndpoint_IsFalse() =>
