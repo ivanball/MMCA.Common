@@ -409,6 +409,9 @@
   <data name="Passkeys.StepUpRequired" xml:space="preserve">
     <value>Vuelve a iniciar sesión antes de añadir una llave de acceso.</value>
   </data>
+  <data name="MachineClients.EndpointRefused" xml:space="preserve">
+    <value>Este punto de acceso es para personas que participan y no se puede llamar con el token de un cliente de máquina.</value>
+  </data>
   <data name="MachineClients.InvalidClient" xml:space="preserve">
     <value>No se pudo autenticar al cliente.</value>
   </data>

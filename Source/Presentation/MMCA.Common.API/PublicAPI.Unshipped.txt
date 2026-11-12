@@ -76,3 +76,7 @@ virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.
 virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.RotateSecretAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
 virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.UpdateAsync(System.Guid id, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
 const MMCA.Common.API.Controllers.OAuthControllerBase.UIBaseUrlConfigKey = "OAuth:UIBaseUrl" -> string!
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.OnAuthorization(Microsoft.AspNetCore.Mvc.Filters.AuthorizationFilterContext! context) -> void
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.RefuseMachineClientsAttribute() -> void
+const MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.ErrorCode = "MachineClients.EndpointRefused" -> string!

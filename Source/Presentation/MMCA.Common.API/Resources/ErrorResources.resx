@@ -409,6 +409,9 @@
   <data name="Passkeys.StepUpRequired" xml:space="preserve">
     <value>Sign in again before adding a passkey.</value>
   </data>
+  <data name="MachineClients.EndpointRefused" xml:space="preserve">
+    <value>This endpoint is for people taking part and cannot be called with a machine client's token.</value>
+  </data>
   <data name="MachineClients.InvalidClient" xml:space="preserve">
     <value>The client could not be authenticated.</value>
   </data>
