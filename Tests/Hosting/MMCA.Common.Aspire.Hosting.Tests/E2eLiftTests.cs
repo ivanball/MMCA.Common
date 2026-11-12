@@ -20,11 +20,14 @@ namespace MMCA.Common.Aspire.Hosting.Tests;
 /// so the section names are mirrored as constants there; this test project references all three and
 /// is what keeps the mirror honest, so a section or property rename cannot silently orphan the lift.
 /// </para>
+/// <para>
+/// Both lifts also fire on <c>E2E_FORCE_WASM</c> (item 25, rule 2): a forced-WebAssembly run implies
+/// the same request volume, and the helpers now read that variable themselves.
+/// </para>
 /// </summary>
+[Collection(E2eEnvironmentCollection.Name)]
 public sealed class E2eLiftTests
 {
-    private const string TriggerVariable = "E2E_LIFT_REGISTRATION_THROTTLE";
-
     [Fact]
     public async Task WithE2eGatewayRateLimitLift_WhenTheEnvironmentAsks_SetsAllThreeOverrides()
     {
@@ -58,15 +61,23 @@ public sealed class E2eLiftTests
     }
 
     [Fact]
-    public async Task WithE2eGatewayRateLimitLift_WhenOnlyTheCallSiteFlagFires_SetsAllThreeOverrides()
+    public async Task WithE2eGatewayRateLimitLift_WhenOnlyForceWasmIsSet_SetsAllThreeOverrides()
     {
-        // The OR disjunct is what absorbs an AppHost's own E2E switch without a second environment
-        // variable: one consumer passes its forced-render-mode flag here.
-        Dictionary<string, string> environment = await LiftAsync(triggerValue: null, alsoLiftWhen: true);
+        // The OR disjunct that used to be a call-site flag: a forced-WebAssembly run lifts the limits
+        // without a second workflow variable.
+        Dictionary<string, string> environment = await LiftAsync(triggerValue: null, forceWasmValue: "true");
 
         environment.Should().ContainKey("GatewayRateLimiting__PermitLimit");
         environment.Should().ContainKey("GatewayRateLimiting__GlobalConcurrencyLimit");
         environment.Should().ContainKey("MmcaGateway__RateLimiterPolicies__auth-tight__PermitLimit");
+    }
+
+    [Fact]
+    public async Task WithE2eGatewayRateLimitLift_WhenForceWasmSaysFalse_WritesNothing()
+    {
+        Dictionary<string, string> environment = await LiftAsync(triggerValue: null, forceWasmValue: "false");
+
+        environment.Should().NotContainKey("GatewayRateLimiting__PermitLimit");
     }
 
     [Fact]
@@ -86,10 +97,10 @@ public sealed class E2eLiftTests
     [Fact]
     public void WithE2eGatewayRateLimitLift_ReturnsTheSameBuilder_SoItChains()
     {
+        using var scope = new E2eEnvironmentScope(forceWasm: "true");
         var builder = DistributedApplication.CreateBuilder([]);
         var gateway = AddGateway(builder);
 
-        gateway.WithE2eGatewayRateLimitLift(alsoLiftWhen: true).Should().BeSameAs(gateway);
         gateway.WithE2eGatewayRateLimitLift().Should().BeSameAs(gateway);
     }
 
@@ -98,44 +109,50 @@ public sealed class E2eLiftTests
     {
         // Both lifts exist because of the same single-loopback-IP E2E suite, so they must not be able
         // to drift onto different switches: one workflow variable turns both on.
-        var original = Environment.GetEnvironmentVariable(TriggerVariable);
-        try
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, "true");
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: "true", forceWasmValue: null);
 
-            var builder = DistributedApplication.CreateBuilder([]);
-            var identity = builder.AddResource(new ProjectResource("identity"));
-            identity.WithE2eRegistrationThrottleLift();
-
-            Dictionary<string, string> environment = await EnvironmentOf(builder, identity.Resource);
-
-            environment.Should().ContainKey("LoginProtection__MaxRegistrationsPerIpPerHour")
-                .WhoseValue.Should().Be("1000");
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, original);
-        }
+        environment.Should().ContainKey("LoginProtection__MaxRegistrationsPerIpPerHour")
+            .WhoseValue.Should().Be("1000");
     }
 
-    private static async Task<Dictionary<string, string>> LiftAsync(string? triggerValue, bool alsoLiftWhen = false)
+    [Fact]
+    public async Task WithE2eRegistrationThrottleLift_WhenOnlyForceWasmIsSet_Lifts()
     {
-        var original = Environment.GetEnvironmentVariable(TriggerVariable);
-        try
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, triggerValue);
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: null, forceWasmValue: "true");
 
-            var builder = DistributedApplication.CreateBuilder([]);
-            var gateway = AddGateway(builder);
+        environment.Should().ContainKey("LoginProtection__MaxRegistrationsPerIpPerHour")
+            .WhoseValue.Should().Be("1000");
+    }
 
-            gateway.WithE2eGatewayRateLimitLift(alsoLiftWhen);
+    [Fact]
+    public async Task WithE2eRegistrationThrottleLift_WhenNeitherTriggerFires_WritesNothing()
+    {
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: null, forceWasmValue: null);
 
-            return await EnvironmentOf(builder, gateway.Resource);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, original);
-        }
+        environment.Should().NotContainKey("LoginProtection__MaxRegistrationsPerIpPerHour");
+    }
+
+    private static async Task<Dictionary<string, string>> LiftAsync(string? triggerValue, string? forceWasmValue = null)
+    {
+        using var scope = new E2eEnvironmentScope(lift: triggerValue, forceWasm: forceWasmValue);
+
+        var builder = DistributedApplication.CreateBuilder([]);
+        var gateway = AddGateway(builder);
+
+        gateway.WithE2eGatewayRateLimitLift();
+
+        return await EnvironmentOf(builder, gateway.Resource);
+    }
+
+    private static async Task<Dictionary<string, string>> RegistrationLiftAsync(string? liftValue, string? forceWasmValue)
+    {
+        using var scope = new E2eEnvironmentScope(lift: liftValue, forceWasm: forceWasmValue);
+
+        var builder = DistributedApplication.CreateBuilder([]);
+        var identity = builder.AddResource(new ProjectResource("identity"));
+        identity.WithE2eRegistrationThrottleLift();
+
+        return await EnvironmentOf(builder, identity.Resource);
     }
 
     // AddResource rather than AddProject: the extension only needs a ProjectResource in the model, and

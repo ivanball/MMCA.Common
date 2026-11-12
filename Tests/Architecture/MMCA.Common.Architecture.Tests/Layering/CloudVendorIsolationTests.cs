@@ -20,6 +20,7 @@ public sealed class CloudVendorIsolationTests : CloudVendorIsolationTestsBase
     [
         .. new CommonArchitectureMap().Layers.Select(layer => layer.Assembly),
         typeof(Aspire.Extensions).Assembly,
+        typeof(ServiceHost.ServiceHostBuilderExtensions).Assembly,
         typeof(Testing.Fixtures.CrossServiceFixtureBase).Assembly,
         typeof(Testing.Aspire.Fixtures.AppHostFixtureBase).Assembly,
         typeof(CloudVendorIsolationTestsBase).Assembly,

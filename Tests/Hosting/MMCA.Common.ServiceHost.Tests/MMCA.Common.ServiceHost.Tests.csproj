@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <!-- In-memory TestServer for the UseMmcaServiceHostAsync tests: the composed host is started and
+         stopped without a socket, so the ApplicationStopped registration can be observed. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Matches the FrameworkReference on MMCA.Common.ServiceHost, so the ASP.NET Core pieces the
+         composed host touches resolve from the shared framework exactly as they do in a service host. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- API, Aspire and Grpc arrive transitively through the package under test, as they do in a
+         consuming service host. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.ServiceHost\MMCA.Common.ServiceHost.csproj" />
+  </ItemGroup>
+</Project>

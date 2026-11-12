@@ -8,8 +8,10 @@ namespace MMCA.Common.Aspire.Hosting.Tests;
 /// <summary>
 /// Unit tests for the CI/E2E forced-InteractiveServer switch. Like the sibling lifts, they assert the
 /// application MODEL: a triggered call writes <c>E2E__ForceServer=true</c> onto the UI resource, and an
-/// untriggered or vetoed call writes nothing.
+/// untriggered or vetoed call writes nothing. The veto is now the <c>E2E_FORCE_WASM</c> environment
+/// variable itself (item 25, rule 3), not a call-site argument.
 /// </summary>
+[Collection(E2eEnvironmentCollection.Name)]
 public sealed class E2eForceServerTests
 {
     private const string TriggerVariable = "E2E_FORCE_SERVER";
@@ -49,22 +51,31 @@ public sealed class E2eForceServerTests
     }
 
     [Fact]
-    public async Task WithE2eForceServer_WhenUnlessAlsoIsSet_WritesNothingEvenIfTheEnvironmentAsks()
+    public async Task WhenForceWasmIsAlsoSet_WritesNothing()
     {
-        // The veto is how an AppHost lets a competing render-mode switch (forced WebAssembly) win.
-        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "true", unlessAlso: true);
+        // The veto is how forced WebAssembly wins over forced Server; it is read from the environment.
+        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "true", forceWasmValue: "true");
 
         environment.Should().NotContainKey(ForceServerKey);
     }
 
     [Fact]
+    public async Task WhenForceWasmSaysFalse_StillSetsForceServer()
+    {
+        // Only a "true" vetoes: the WASM variable present but false must not suppress the switch.
+        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "true", forceWasmValue: "false");
+
+        environment.Should().ContainKey(ForceServerKey);
+    }
+
+    [Fact]
     public void WithE2eForceServer_ReturnsTheSameBuilder_SoItChains()
     {
+        using var scope = new E2eEnvironmentScope(forceServer: "true");
         var builder = DistributedApplication.CreateBuilder([]);
         var ui = builder.AddResource(new ProjectResource("ui"));
 
         ui.WithE2eForceServer().Should().BeSameAs(ui);
-        ui.WithE2eForceServer(unlessAlso: true).Should().BeSameAs(ui);
     }
 
     [Fact]
@@ -74,26 +85,18 @@ public sealed class E2eForceServerTests
         Extensions.E2eForceServerConfigurationKey.Should().Be(ForceServerKey);
     }
 
-    private static async Task<Dictionary<string, string>> ForceServerAsync(string? triggerValue, bool unlessAlso = false)
+    private static async Task<Dictionary<string, string>> ForceServerAsync(string? triggerValue, string? forceWasmValue = null)
     {
-        var original = Environment.GetEnvironmentVariable(TriggerVariable);
-        try
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, triggerValue);
+        using var scope = new E2eEnvironmentScope(forceServer: triggerValue, forceWasm: forceWasmValue);
 
-            var builder = DistributedApplication.CreateBuilder([]);
+        var builder = DistributedApplication.CreateBuilder([]);
 
-            // AddResource rather than AddProject: AddProject validates that the project file exists.
-            var ui = builder.AddResource(new ProjectResource("ui"));
+        // AddResource rather than AddProject: AddProject validates that the project file exists.
+        var ui = builder.AddResource(new ProjectResource("ui"));
 
-            ui.WithE2eForceServer(unlessAlso);
+        ui.WithE2eForceServer();
 
-            return await EnvironmentOf(builder, ui.Resource);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(TriggerVariable, original);
-        }
+        return await EnvironmentOf(builder, ui.Resource);
     }
 
     private static async Task<Dictionary<string, string>> EnvironmentOf(
