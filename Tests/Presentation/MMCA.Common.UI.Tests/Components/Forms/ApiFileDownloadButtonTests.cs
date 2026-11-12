@@ -92,7 +92,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/42/ics")
-            .Add(c => c.FileName, "session-42.ics")
+            .Add(c => c.FileName, $"session-42-{Tfm}.ics")
             .Add(c => c.ShareTitle, "Intro to Blazor"));
 
         cut.Find("a").GetAttribute("aria-label").Should().Be("Download");
@@ -361,7 +361,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     private IRenderedComponent<ApiFileDownloadButton> RenderButton() =>
         RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/42/ics")
-            .Add(c => c.FileName, "session-42.ics")
+            .Add(c => c.FileName, $"session-42-{Tfm}.ics")
             .Add(c => c.ShareTitle, "Intro to Blazor")
             .Add(c => c.ContentType, "text/calendar")
             .Add(c => c.AriaLabel, "Add to calendar"));

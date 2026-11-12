@@ -336,6 +336,7 @@ internal sealed class LaneDatabaseCommandLog : DbCommandInterceptor
     private readonly TaskCompletionSource _injected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly System.Threading.Lock _gate = new();
     private Guid? _failNextUpdateOf;
+    private (Guid RowId, Action Action)? _beforeNextUpdateOf;
 
     /// <summary>Gets every recorded statement, in execution order.</summary>
     public IReadOnlyList<LaneDatabaseCommand> All => [.. _commands];
@@ -353,6 +354,20 @@ internal sealed class LaneDatabaseCommandLog : DbCommandInterceptor
         lock (_gate)
         {
             _failNextUpdateOf = rowId;
+        }
+    }
+
+    /// <summary>
+    /// Arms a one-shot action that runs as the next UPDATE whose parameters name <paramref name="rowId"/>
+    /// is about to execute (for example, moving the fake clock while a row's failure write is in flight).
+    /// </summary>
+    /// <param name="rowId">The row whose next UPDATE triggers the action.</param>
+    /// <param name="action">The action.</param>
+    public void BeforeNextUpdateOf(Guid rowId, Action action)
+    {
+        lock (_gate)
+        {
+            _beforeNextUpdateOf = (rowId, action);
         }
     }
 
@@ -444,6 +459,18 @@ internal sealed class LaneDatabaseCommandLog : DbCommandInterceptor
         {
             return;
         }
+
+        Action? before = null;
+        lock (_gate)
+        {
+            if (_beforeNextUpdateOf is { } armedAction && recorded.Ids.Contains(armedAction.RowId))
+            {
+                before = armedAction.Action;
+                _beforeNextUpdateOf = null;
+            }
+        }
+
+        before?.Invoke();
 
         Guid failing;
         lock (_gate)

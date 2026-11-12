@@ -35,8 +35,16 @@ internal static class OutageCommands
         {
             // The wait can end a moment before the budget token fires. Cancel it here so a command
             // that was abandoned at the budget is always told to stop, and never outlives this call
-            // holding a token that is disposed without being cancelled.
-            await bounded.CancelAsync().ConfigureAwait(false);
+            // holding a token that is disposed without being cancelled. Best effort too: a callback the
+            // command registered on the token runs here, and its exception must not escape either.
+            try
+            {
+                await bounded.CancelAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // Swallowed for the reason the command's own exception is.
+            }
         }
     }
 }

@@ -485,12 +485,15 @@ internal sealed partial class InternalCommandLaneProcessor(
             batch.SourceName,
             batch.ClaimToken,
             cancellationToken,
-            row.ReceiverKey is null ? null : row.MarkFailedAttempt).ConfigureAwait(false);
+            row.ReceiverKey is null ? null : () => row.MarkFailedAttempt(UtcNow)).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Applies a finished row's outcome to its receiver's cooldown: a failed real attempt opens (or, for a
-    /// trial, reopens) it; any other outcome of a real attempt closes it. A skipped row changes nothing.
+    /// trial, reopens) it from the instant the attempt failed, not from now, so the time the scheduler
+    /// spent before settling the row (charges of other receivers, the failure write) never pushes the
+    /// cooldown's end later than <see cref="EffectiveCooldown"/>'s arithmetic assumes; any other outcome of
+    /// a real attempt closes it. A skipped row changes nothing.
     /// </summary>
     private void ApplyOutcome(LaneRow row)
     {
@@ -499,9 +502,9 @@ internal sealed partial class InternalCommandLaneProcessor(
             return;
         }
 
-        if (row.FailedAttempt)
+        if (row.FailedAt is { } failedAt)
         {
-            OpenCooldown(key);
+            OpenCooldown(key, failedAt);
         }
         else if (row.Execution is { IsCompletedSuccessfully: true })
         {
@@ -550,15 +553,18 @@ internal sealed partial class InternalCommandLaneProcessor(
                 cancellationToken);
     }
 
-    /// <summary>Cools a receiver down after a failed real attempt, counting and logging a new opening.</summary>
-    private void OpenCooldown(string receiverKey)
+    /// <summary>
+    /// Cools a receiver down for one effective cooldown from <paramref name="failedAt"/>, the instant its
+    /// real attempt failed, counting and logging a new opening.
+    /// </summary>
+    private void OpenCooldown(string receiverKey, DateTime failedAt)
     {
         if (_effectiveCooldown <= TimeSpan.Zero)
         {
             return;
         }
 
-        if (_cooldowns.Open(receiverKey, UtcNow))
+        if (_cooldowns.Open(receiverKey, failedAt))
         {
             InternalCommandMetrics.LaneReceiverCooldownsCounter.Add(1, _laneTag);
             LogReceiverCoolingDown(logger, lane.Name, receiverKey, _effectiveCooldown.TotalSeconds);
@@ -761,7 +767,7 @@ internal sealed partial class InternalCommandLaneProcessor(
 
     /// <summary>
     /// One claimed row of a batch. The scheduler owns it; while the row runs, only its running task writes
-    /// <see cref="Ran"/> and <see cref="FailedAttempt"/>, and the scheduler reads them after that task has
+    /// <see cref="Ran"/> and <see cref="FailedAt"/>, and the scheduler reads them after that task has
     /// completed.
     /// </summary>
     /// <param name="row">The claimed row.</param>
@@ -778,10 +784,14 @@ internal sealed partial class InternalCommandLaneProcessor(
         /// <summary>Gets or sets a value indicating whether the renew succeeded and the row was executed for real.</summary>
         public bool Ran { get; set; }
 
-        /// <summary>Gets a value indicating whether the real attempt reached the failure path.</summary>
-        public bool FailedAttempt { get; private set; }
+        /// <summary>
+        /// Gets the instant the real attempt reached the failure path (read when the shared row runner
+        /// reports it, before the failure write), or null when it did not.
+        /// </summary>
+        public DateTime? FailedAt { get; private set; }
 
         /// <summary>The shared row runner's failed-attempt observer.</summary>
-        public void MarkFailedAttempt() => FailedAttempt = true;
+        /// <param name="failedAt">The instant the attempt failed.</param>
+        public void MarkFailedAttempt(DateTime failedAt) => FailedAt = failedAt;
     }
 }

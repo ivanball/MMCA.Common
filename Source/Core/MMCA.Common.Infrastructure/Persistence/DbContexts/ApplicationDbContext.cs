@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -172,6 +173,47 @@ public abstract class ApplicationDbContext(
     /// shape, so a host that never opts in sees no migration.
     /// </summary>
     private bool _webhookSubscriptionTableEnabled;
+
+    /// <summary>
+    /// The model key of each registry instance, computed once: a context is created per scope, the
+    /// registry is a host singleton, and the weak table lets a registry (and its key) be collected with
+    /// the provider that owns it.
+    /// </summary>
+    private static readonly ConditionalWeakTable<StronglyTypedIdRegistry, string> StronglyTypedIdModelKeys = [];
+
+    /// <summary>
+    /// Every model gate above as one bit mask, read by <see cref="DataSourceModelCacheKeyFactory"/> so
+    /// that two contexts of one type on one source but with different gates never share a cached model.
+    /// The bit order is fixed: 0 scheduler, 1 audit trail, 2 refresh sessions, 3 permission grants,
+    /// 4 view-as grants, 5 feature-flag overrides, 6 passkeys, 7 machine clients, 8 webhook
+    /// subscriptions. Meaningful once <see cref="OnConfiguring"/> has run, which EF guarantees before it
+    /// asks for the model.
+    /// <para>
+    /// A NEW GATED TABLE JOINS THIS MASK: give its field the next bit here. A gate missing from the mask
+    /// lets the first-built model decide for every later context that differs only in that gate
+    /// (<c>ModelCacheKeyGateTests</c> fails on a <c>_*TableEnabled</c> field its key theory does not cover).
+    /// </para>
+    /// </summary>
+    internal int ModelGateMask =>
+        (_schedulerTableEnabled ? 1 << 0 : 0)
+        | (_auditTrailTableEnabled ? 1 << 1 : 0)
+        | (_refreshSessionTableEnabled ? 1 << 2 : 0)
+        | (_permissionGrantTableEnabled ? 1 << 3 : 0)
+        | (_viewAsGrantTableEnabled ? 1 << 4 : 0)
+        | (_featureFlagOverrideTableEnabled ? 1 << 5 : 0)
+        | (_passkeyTableEnabled ? 1 << 6 : 0)
+        | (_machineClientTableEnabled ? 1 << 7 : 0)
+        | (_webhookSubscriptionTableEnabled ? 1 << 8 : 0);
+
+    /// <summary>
+    /// Gets the identifier types of the host's <see cref="StronglyTypedIdRegistry"/> as one string of
+    /// assembly-qualified names in the registry's own order (by full name), or empty when the host
+    /// registers none. Resolved in <see cref="OnConfiguring"/> beside the gates and read by
+    /// <see cref="DataSourceModelCacheKeyFactory"/>, because <see cref="ConfigureConventions"/> maps every
+    /// declared wrapper to its primitive, so the declared set changes the model. Content, never the
+    /// registry instance: two registries that declare the same types build the same model and must share it.
+    /// </summary>
+    internal string StronglyTypedIdModelKey { get; private set; } = string.Empty;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -397,11 +439,19 @@ public abstract class ApplicationDbContext(
         _machineClientTableEnabled = ResolveMachineClientGate();
         _webhookSubscriptionTableEnabled = ResolveWebhookSubscriptionGate();
 
+        // The declared wrapper set changes the model too (ConfigureConventions), so it joins the key.
+        StronglyTypedIdModelKey = serviceProvider.GetService<StronglyTypedIdRegistry>() is { } identifiers
+            ? StronglyTypedIdModelKeys.GetValue(
+                identifiers,
+                registry => string.Join('|', registry.IdentifierTypes.Select(type => type.AssemblyQualifiedName)))
+            : string.Empty;
+
         ConfigureSensitiveDataLogging(optionsBuilder);
 
-        // Key EF's model cache by (context type, physical source name): the same context class is
-        // instantiated once per database, each with a different model. Without this, the first
-        // built model would silently be reused for every database.
+        // Key EF's model cache by (context type, physical source name, model gates, declared
+        // identifier wrappers): the same context class is instantiated once per database, each with a
+        // different model, and the gates and wrappers above change that model too. Without this, the
+        // first built model would silently be reused for every database and every gate combination.
         optionsBuilder.ReplaceService<IModelCacheKeyFactory, DataSourceModelCacheKeyFactory>();
 
         base.OnConfiguring(optionsBuilder);

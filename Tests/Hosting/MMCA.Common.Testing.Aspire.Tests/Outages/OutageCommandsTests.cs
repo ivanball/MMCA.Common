@@ -86,6 +86,29 @@ public sealed class OutageCommandsTests
         (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(original);
     }
 
+    // Review L-4: the helper cancels its budget token on the way out, and a callback the command registered
+    // on that token runs then. A callback that throws must not make the helper throw (the budget is long, so
+    // the helper's own cancel, not the budget timer, is what runs the callback).
+    [Fact]
+    public async Task ACallbackTheCommandRegisteredThatThrows_IsSwallowed()
+    {
+        var callbackRan = false;
+        var act = () => OutageCommands.RunBestEffortAsync(
+            token =>
+            {
+                _ = token.Register(() =>
+                {
+                    callbackRan = true;
+                    throw new InvalidOperationException("the command's clean-up callback failed");
+                });
+                return Task.CompletedTask;
+            },
+            TimeSpan.FromSeconds(30));
+
+        await act.Should().NotThrowAsync("a throwing callback must not replace the original failure either");
+        callbackRan.Should().BeTrue("setup: the helper's cancel ran the callback");
+    }
+
     [Fact]
     public async Task ANonPositiveBudget_IsRejected()
     {

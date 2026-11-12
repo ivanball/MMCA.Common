@@ -22,14 +22,16 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.InternalCommands.Processi
 /// <see cref="InternalCommandLaneDatabase"/>, a temp-file SQLite database with a context per scope.
 /// Every handler that must overlap another is HELD on a <see cref="TaskCompletionSource{TResult}"/> and
 /// released by the test; every instant is a <see cref="FakeTimeProvider"/> instant that only the test
-/// moves. No test sleeps on wall time; the 30-second waits below are safety timeouts on awaited states,
-/// never timing assertions.
+/// moves. No test sleeps on wall time to reach a state; the 30-second waits below are safety timeouts on
+/// awaited states, and the one-second observation window two tests give a cycle that must NOT complete is
+/// never a success condition, so neither is a timing assertion.
 /// </para>
 /// </summary>
 public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 {
     private static readonly TimeSpan Budget = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SafetyTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ObservationWindow = TimeSpan.FromSeconds(1);
     private static readonly string[] ThreeEarliest = ["a", "b", "c"];
     private static readonly string[] FirstWaveOfThree = ["x1", "y1", "z1"];
     private static readonly string[] FirstWaveOfTwo = ["x1", "y1"];
@@ -311,6 +313,10 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
     // L2.7: an exception escaping a running row (here the completion stamp of "boom" fails, outside its
     // handler) stops new starts, waits for the rows still running, writes no release for the batch, and is
     // rethrown, so DrainAllAsync logs it for the source. The rows that never started recover at lease expiry.
+    // The await-the-rest half: slow, a sibling row, is held by the test. Once boom's fault is thrown, a lane
+    // that did not wait for slow would settle boom, rethrow and let DrainAllAsync log it inside the
+    // observation window; a lane that waits neither completes nor logs while slow is held, whatever the
+    // window's length.
     [Fact]
     public async Task Cycle_ARowThatThrowsOutsideTheHandler_StopsNewStarts_AwaitsTheRest_AndRethrows()
     {
@@ -330,8 +336,13 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 
         var cycle = RunCycle(lane);
         await Within(_db.Commands.Injected);
+        await ObserveAsync(cycle);
 
         cycle.IsCompleted.Should().BeFalse("the lane waits for slow, which is still running");
+        logger.Entries.Should().NotContain(
+            e => e.Level == LogLevel.Error,
+            "boom's fault is rethrown, and so logged, only after slow has finished");
+        Probes.FinishedValues.Should().NotContain("slow", "setup: slow is still held");
 
         slowGate.SetResult(Result.Success());
         var act = async () => await Within(cycle);
@@ -364,7 +375,10 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
 
     // L2.8: the stopping token reaches every running row, the lane awaits them all before returning, and
     // nothing is released after cancellation, even with the budget already elapsed (which would otherwise
-    // release the row that never started).
+    // release the row that never started). b observes the token at once; a ignores it until the test
+    // releases it (then honours it, so it still ends as a cancelled row). With the stop requested and b
+    // finished, a lane that did not await a would return inside the observation window; a lane that awaits
+    // every running row cannot complete while a is held, whatever the window's length.
     [Fact]
     public async Task Cycle_Shutdown_CancelsEveryRunningRow_AndWritesNoRelease()
     {
@@ -372,25 +386,38 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         var a = _db.Seed("ra", "a", Now.AddSeconds(-3));
         var b = _db.Seed("rb", "b", Now.AddSeconds(-2));
         var c = _db.Seed("rc", "c", Now.AddSeconds(-1));
-        foreach (var value in new[] { "a", "b" })
+        var aGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Probes.Behave("a", async (_, ct) =>
         {
-            Probes.Behave(value, async (_, ct) =>
-            {
-                await Task.Delay(Timeout.InfiniteTimeSpan, TimeProvider.System, ct);
-                return Result.Success();
-            });
-        }
+            await aGate.Task.WaitAsync(SafetyTimeout, TimeProvider.System, CancellationToken.None);
+            ct.ThrowIfCancellationRequested();
+            return Result.Success();
+        });
+        Probes.Behave("b", async (_, ct) =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, TimeProvider.System, ct);
+            return Result.Success();
+        });
 
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         var cycle = Task.Run(() => lane.Lane.ProcessDueCommandsAsync(stopping.Token), Ct);
         await Within(Probes.WhenStartedCountAsync(2));
         _clock.Advance(Budget + TimeSpan.FromSeconds(1));
         await stopping.CancelAsync();
+        await Within(Probes.WhenFinishedAsync("b"));
+        await ObserveAsync(cycle);
 
+        cycle.IsCompleted.Should().BeFalse("the lane awaits every running row, and a is still running");
+
+        aGate.SetResult();
         var act = async () => await Within(cycle);
         await act.Should().ThrowAsync<OperationCanceledException>("shutdown is rethrown, never recorded as a failure");
 
         Probes.FinishedValues.Should().BeEquivalentTo(BothRunningRows, "the lane awaited every running row before it returned");
+
+        // The no-release half pins the outcome, not the guard: a release issued with the already-cancelled
+        // token aborts before it executes, so these assertions hold with or without the guard in
+        // ReleaseUnstartedAsync.
         var storedA = await _db.ReloadAsync(a.Id, Ct);
         storedA.ClaimedBy.Should().NotBeNull("a cancelled row stays leased");
         foreach (var row in new[] { storedA, await _db.ReloadAsync(b.Id, Ct), await _db.ReloadAsync(c.Id, Ct) })
@@ -517,7 +544,58 @@ public sealed class InternalCommandLaneConcurrencyTests : IDisposable
         }
     }
 
+    // L1.8, L1.10 (review L-1): a receiver's cooldown runs from the instant its real attempt failed, not
+    // from the instant the scheduler settled the row. x1 fails at T; its failure write moves the clock 5 s
+    // before the row task returns, so the scheduler settles x1 at T+5 (the shape a run of inline charges
+    // gives on a real clock). The cooldown still ends at T plus the effective cooldown: a row of x whose
+    // turn comes one second before that instant is charged, and one whose turn comes at it is sent.
+    [Fact]
+    public async Task Cycle_ACooldownRunsFromTheFailedAttempt_NotFromTheSettle()
+    {
+        var lane = CreateLane(maxConcurrency: 2, budget: Budget);
+        var effective = InternalCommandLaneProcessor.EffectiveCooldown(TimeSpan.FromSeconds(60), Budget, _settings);
+        var settleDelay = TimeSpan.FromSeconds(5);
+        effective.Should().BeGreaterThan(settleDelay + TimeSpan.FromSeconds(1), "setup: the settle delay falls inside the cooldown");
+
+        var x1 = _db.Seed("x", "x1", Now.AddSeconds(-1));
+        var failedAt = Now;
+        Probes.Behave("x1", (_, _) =>
+        {
+            // Armed after the renew, so the next UPDATE naming x1 is its failure write.
+            _db.Commands.BeforeNextUpdateOf(x1.Id, () => _clock.Advance(settleDelay));
+            return Task.FromResult(ConcurrentProbeLog.FailedDelivery());
+        });
+
+        await lane.Lane.ProcessDueCommandsAsync(Ct);
+
+        (await _db.ReloadAsync(x1.Id, Ct)).Attempts.Should().Be(1, "setup: x1's real attempt failed");
+        Now.Should().Be(failedAt + settleDelay, "setup: x1 was settled after its failure write moved the clock");
+
+        _clock.Advance(failedAt + effective - TimeSpan.FromSeconds(1) - Now);
+        var x2 = _db.Seed("x", "x2", Now.AddSeconds(-1));
+        await lane.Lane.ProcessDueCommandsAsync(Ct);
+
+        Probes.ValuesFor("x").Should().Equal(["x1"], "one second before the cooldown's end, x still cools");
+        (await _db.ReloadAsync(x2.Id, Ct)).LastError.Should().Be(InternalCommandLaneDatabase.CoolingDownError);
+
+        _clock.Advance(TimeSpan.FromSeconds(1));
+        _db.Seed("x", "x3", Now.AddSeconds(-1));
+        await lane.Lane.ProcessDueCommandsAsync(Ct);
+
+        Probes.ValuesFor("x").Should().Equal(
+            ["x1", "x3"],
+            "the cooldown ends at the failure instant plus the effective cooldown, not at the settle instant plus it");
+    }
+
     private static Task Within(Task task) => task.WaitAsync(SafetyTimeout, TimeProvider.System, Ct);
+
+    /// <summary>
+    /// Gives a cycle that should still be running a bounded wall-clock window in which to complete wrongly.
+    /// Never a success condition: a correct lane passes whatever the window's length, and a lane that
+    /// returns early completes well inside it.
+    /// </summary>
+    private static async Task ObserveAsync(Task cycle) =>
+        _ = await Task.WhenAny(cycle, Task.Delay(ObservationWindow, TimeProvider.System, Ct));
 
     private static Task<InternalCommandCycleResult> RunCycle(LaneUnderTest lane) =>
         Task.Run(() => lane.Lane.ProcessDueCommandsAsync(Ct), Ct);
