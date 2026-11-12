@@ -10,12 +10,28 @@ namespace MMCA.Common.Testing.Architecture;
 /// a stable name strands it, and a timeout with no handler (or two) cannot run as intended.
 /// </para>
 /// <para>
-/// Adoption: subclass and supply <see cref="Map"/>.
+/// Adoption: subclass and supply <see cref="Map"/>, only in a repo that uses the primitive: the scan must
+/// find at least <see cref="MinimumTimeoutCommands"/> timeout commands, so the two rules cannot pass
+/// without reading anything.
 /// </para>
 /// </summary>
 public abstract class ProcessTimeoutConventionTestsBase
 {
     protected abstract IArchitectureMap Map { get; }
+
+    /// <summary>
+    /// Minimum number of process timeout commands the scan must find, so a map that omits the module
+    /// declaring them (or a command that loses its <c>IProcessTimeoutCommand&lt;T&gt;</c> in a refactor)
+    /// cannot let both rules pass vacuously. Raise it to the repo's known count to also catch one
+    /// module dropping out of the map.
+    /// </summary>
+    protected virtual int MinimumTimeoutCommands => 1;
+
+    [Fact]
+    public void ProcessTimeoutCommands_AreDiscovered() =>
+        ArchitectureRules.ProcessTimeoutCommandCount(Map).Should().BeGreaterThanOrEqualTo(
+            MinimumTimeoutCommands,
+            because: "the timeout conventions must actually read the repo's timeout commands; finding fewer means the map omits a module Application assembly and both rules pass without reading anything");
 
     [Fact]
     public void ProcessTimeoutCommands_DeclareAStableInternalCommandName() =>

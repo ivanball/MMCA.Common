@@ -95,7 +95,7 @@ public static class WebhookSignature
             return false;
         }
 
-        if (Math.Abs(nowUnixSeconds - timestamp) > (long)tolerance.TotalSeconds)
+        if (!IsWithinTolerance(timestamp, nowUnixSeconds, (long)tolerance.TotalSeconds))
         {
             return false;
         }
@@ -105,6 +105,22 @@ public static class WebhookSignature
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Any(entry => entry.StartsWith(SignatureVersionPrefix, StringComparison.Ordinal)
                 && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entry), expected));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="timestamp"/> lies in [now - tolerance, now + tolerance], with both bounds
+    /// saturated at the <see cref="long"/> range so no hostile value can wrap the comparison or throw.
+    /// </summary>
+    private static bool IsWithinTolerance(long timestamp, long nowUnixSeconds, long toleranceSeconds)
+    {
+        if (toleranceSeconds < 0)
+        {
+            return false;
+        }
+
+        var earliest = nowUnixSeconds < long.MinValue + toleranceSeconds ? long.MinValue : nowUnixSeconds - toleranceSeconds;
+        var latest = nowUnixSeconds > long.MaxValue - toleranceSeconds ? long.MaxValue : nowUnixSeconds + toleranceSeconds;
+        return timestamp >= earliest && timestamp <= latest;
     }
 
     private static Result<byte[]> Unreadable() =>

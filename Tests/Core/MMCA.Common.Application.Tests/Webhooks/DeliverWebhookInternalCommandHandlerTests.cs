@@ -215,9 +215,41 @@ public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
 
         result.IsSuccess.Should().BeTrue("retrying a refused target cannot change the outcome");
         subscription.LastFailedOn.Should().Be(Now);
-        subscription.LastFailure.Should().Contain("10.0.0.5 is not a public address");
+        subscription.LastFailure.Should().Be(
+            "Target refused: not a public address.",
+            "the tenant admin API returns LastFailure, so it carries a fixed reason and never the resolved address (ruling L1)");
         _logs.Entries.Count(e => e.Level == LogLevel.Warning).Should().Be(1);
         _store.Verify(s => s.RecordOutcomeAsync(subscription, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("WebhookTargetRefusedException: The webhook target db01.corp.example resolved to 10.20.3.4, which is not a public address.", "10.20.3.4")]
+    [InlineData("WebhookTargetRefusedException: The webhook target db01.corp.example resolved to fd00::1, which is not a public address.", "fd00::1")]
+    [InlineData("WebhookTargetRefusedException: The webhook target db01.corp.example resolved to ::ffff:192.168.1.1, which is not a public address.", "::ffff:192.168.1.1")]
+    public async Task TargetRefused_RecordsNoAddress_AndLogsItServerSide(string detail, string address)
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.TargetRefused, null, detail);
+
+        await HandleAsync(Command(subscription.Id));
+
+        subscription.LastFailure.Should().Be("Target refused: not a public address.");
+        subscription.LastFailure.Should().NotMatchRegex(@"\d\.\d", "no IPv4 address reaches the subscription");
+        subscription.LastFailure.Should().NotMatchRegex("[0-9A-Fa-f]*:[0-9A-Fa-f]*:", "no IPv6 address reaches the subscription");
+        _logs.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning)
+            .Which.Message.Should().Contain(address, "the resolved address stays in the server-side Warning only");
+    }
+
+    [Fact]
+    public async Task TargetRefused_ForAnHttpTarget_RecordsTheHttpsReason()
+    {
+        var subscription = Seed("http://hooks.example.com/inbound");
+        SendReturns(WebhookSendStatus.TargetRefused, null, "WebhookTargetRefusedException: The webhook target is not an https URL this host accepts.");
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        subscription.LastFailure.Should().Be("Target refused: not an https address.");
     }
 
     [Fact]
@@ -285,12 +317,12 @@ public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
     private static DeliverWebhookInternalCommand Command(Guid subscriptionId) =>
         new(subscriptionId, WebhookDeliveryId.For(EventId, subscriptionId), EventType, EventId, OccurredOn, PayloadJson);
 
-    private static WebhookSubscription NewSubscription(string? tenantId) =>
-        WebhookSubscription.Create("https://hooks.example.com/inbound", null, [EventType], tenantId, "protected-current").Value!;
+    private static WebhookSubscription NewSubscription(string? tenantId, string url = "https://hooks.example.com/inbound") =>
+        WebhookSubscription.Create(url, null, [EventType], tenantId, "protected-current").Value!;
 
-    private WebhookSubscription Seed()
+    private WebhookSubscription Seed(string url = "https://hooks.example.com/inbound")
     {
-        var subscription = NewSubscription(Tenant);
+        var subscription = NewSubscription(Tenant, url);
         _store.Setup(s => s.FindAsync(subscription.Id, Tenant, It.IsAny<CancellationToken>())).ReturnsAsync(subscription);
         return subscription;
     }

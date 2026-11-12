@@ -144,6 +144,28 @@ public sealed class WebhookSignatureTests
             .Should().BeFalse("a timestamp too far in the future is refused too");
     }
 
+    [Theory]
+    [InlineData(long.MinValue, Timestamp)]
+    [InlineData(long.MaxValue, Timestamp)]
+    [InlineData(Timestamp + 301, Timestamp)]
+    [InlineData(Timestamp - 301, Timestamp)]
+    [InlineData(Timestamp + long.MinValue, Timestamp)]
+    [InlineData(long.MinValue, long.MaxValue)]
+    [InlineData(long.MaxValue, long.MinValue)]
+    public void Verify_HostileTimestamp_ReturnsFalseWithoutThrowing(long timestamp, long nowUnixSeconds)
+    {
+        // Ruling L4. The signature is valid for the hostile timestamp, so only the freshness check can
+        // refuse it. Timestamp + long.MinValue makes now - timestamp exactly long.MinValue (Math.Abs threw);
+        // the last two make the difference wrap to a small number (it was accepted as fresh).
+        var key = RandomNumberGenerator.GetBytes(32);
+        var signature = WebhookSignature.Compute(WebhookId, timestamp, Body, key);
+
+        var act = () => WebhookSignature.Verify(WebhookId, timestamp, Body, signature, key, nowUnixSeconds, Tolerance);
+
+        act.Should().NotThrow("a forged timestamp is a refusal at the receiver, never a 500")
+            .Which.Should().BeFalse("the timestamp lies outside the tolerance");
+    }
+
     [Fact]
     public void Verify_AcceptsTimestampExactlyAtTolerance()
     {

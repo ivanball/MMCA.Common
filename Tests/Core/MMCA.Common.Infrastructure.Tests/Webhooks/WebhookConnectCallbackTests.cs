@@ -18,7 +18,8 @@ namespace MMCA.Common.Infrastructure.Tests.Webhooks;
 /// a stub <see cref="IWebhookDnsResolver"/>; when any resolved address is not public the callback throws
 /// <see cref="WebhookTargetRefusedException"/> BEFORE a socket is opened, which is what makes the
 /// connect-time check authoritative over DNS rebinding. With insecure targets allowed (a Development
-/// host with the flag) the check is skipped and the callback connects to the first address.
+/// host with the flag) the check is skipped. Either way the callback tries each checked address in
+/// order and returns the first that connects (rule 35.23 as amended by ruling L6).
 /// </summary>
 public sealed class WebhookConnectCallbackTests
 {
@@ -72,6 +73,55 @@ public sealed class WebhookConnectCallbackTests
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await answered).Should().BeTrue("the connection reached the loopback address the resolver returned first");
         resolver.ResolvedHosts.Should().Contain("hook.test");
+    }
+
+    [Fact]
+    public async Task FirstAddressRefuses_TheNextCheckedAddressIsTried()
+    {
+        // Ruling L6 (rule 35.23 amended): an IPv4-only receiver whose resolver answers AAAA first. Nothing
+        // listens on [::1] at this port, so the first connect fails; the IPv4 loopback listener accepts.
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var resolver = new StubDnsResolver("::1", "127.0.0.1");
+        await using var provider = Build(resolver, allowInsecure: true);
+        using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        bounded.CancelAfter(TimeSpan.FromSeconds(30));
+
+        var answered = AnswerOneRequestAsync(listener, bounded.Token);
+        using var response = await client.GetAsync(new UriBuilder("http", "hook.test", port, "/in").Uri, bounded.Token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await answered).Should().BeTrue("the second checked address is tried when the first refuses the connection");
+    }
+
+    [Fact]
+    public async Task EveryAddressRefuses_TheLastSocketErrorSurfaces()
+    {
+        // A port that was free a moment ago and has no listener now, on both loopback families.
+        int port;
+        using (var probe = new TcpListener(IPAddress.Loopback, 0))
+        {
+            probe.Start();
+            port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+        }
+
+        var resolver = new StubDnsResolver("::1", "127.0.0.1");
+        await using var provider = Build(resolver, allowInsecure: true);
+        using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(ClientName);
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        bounded.CancelAfter(TimeSpan.FromSeconds(30));
+
+        var act = async () =>
+        {
+            using var response = await client.GetAsync(new UriBuilder("http", "hook.test", port, "/in").Uri, bounded.Token);
+        };
+
+        var thrown = await act.Should().ThrowAsync<HttpRequestException>();
+        IsRefusal(thrown.Which).Should().BeFalse("a connection failure is a transport failure the queue retries, not a refusal");
+        thrown.Which.InnerException.Should().BeOfType<SocketException>("the last socket error is what surfaces");
     }
 
     [Fact]

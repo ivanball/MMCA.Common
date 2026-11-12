@@ -63,6 +63,19 @@ public static partial class ArchitectureRules
                 + "subclass: none dead-letters its rows, more than one makes the resolution ambiguous");
     }
 
+    /// <summary>
+    /// The number of process timeout commands the two rules above inspect. Used by
+    /// <see cref="ProcessTimeoutConventionTestsBase"/> as a non-vacuity guard.
+    /// </summary>
+    /// <param name="map">The repo's architecture map.</param>
+    /// <returns>The count of distinct concrete process timeout commands in the map's module Application assemblies.</returns>
+    internal static int ProcessTimeoutCommandCount(IArchitectureMap map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+
+        return ProcessTimeoutCommands(ApplicationTypes(map)).Count;
+    }
+
     /// <summary>The distinct concrete types in scope that implement <c>IProcessTimeoutCommand&lt;T&gt;</c>.</summary>
     private static List<Type> ProcessTimeoutCommands(List<Type> types) =>
         [.. types

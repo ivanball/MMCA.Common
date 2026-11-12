@@ -44,6 +44,20 @@ public static class WebhookServiceCollectionExtensions
         /// host's own network even after its DNS answer changes. A multi-replica host needs the shared
         /// data-protection key ring (ADR-069) to read secrets another replica wrote.
         /// </para>
+        /// <para>
+        /// The client runs its own handler and nothing else: every additional handler a host default adds
+        /// (a resilience pipeline, service discovery, any host-wide delegating handler) is cleared, so the
+        /// internal-command queue is the only retry and the only failure policy; its default loggers are
+        /// removed, so the client stack never logs the target URL, which often carries the receiver's
+        /// token in its path; and it propagates no <c>traceparent</c>, <c>tracestate</c> or
+        /// <c>baggage</c> header to the receiver. The HTTP client trace still records the URL path, so a
+        /// host that exports traces to a shared backend filters the <c>MMCA.Webhooks</c> spans itself.
+        /// </para>
+        /// <para>
+        /// Deliveries are internal commands and a replica runs them one row at a time, so one slow
+        /// receiver delays every other internal command on that replica for up to
+        /// <c>Webhooks:TimeoutSeconds</c> per row; keep the timeout low.
+        /// </para>
         /// </remarks>
         public IServiceCollection AddWebhooks(IConfiguration configuration)
         {
@@ -72,12 +86,15 @@ public static class WebhookServiceCollectionExtensions
                     AllowAutoRedirect = false,
                     UseProxy = false,
                     UseCookies = false,
+                    ActivityHeadersPropagator = null,
                     ConnectCallback = WebhookConnectCallback.Create(
                         provider.GetRequiredService<IWebhookDnsResolver>(),
                         WebhookInsecureTargets.AreAllowed(
                             provider.GetRequiredService<IOptions<WebhookSettings>>().Value,
                             provider.GetService<IHostEnvironment>())),
-                });
+                })
+                .ConfigureAdditionalHttpMessageHandlers((handlers, _) => handlers.Clear())
+                .RemoveAllLoggers();
 
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, InsecureWebhookTargetsNoticeService>());
 

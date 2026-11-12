@@ -8,8 +8,10 @@ namespace MMCA.Common.Infrastructure.Webhooks;
 /// The <see cref="SocketsHttpHandler.ConnectCallback"/> of the <c>MMCA.Webhooks</c> client: it resolves
 /// the host itself and, unless insecure targets are allowed, refuses with
 /// <see cref="WebhookTargetRefusedException"/> BEFORE opening a socket when any resolved address is not
-/// public, then connects to the first address. Checking at connect time is what makes the policy hold
-/// against DNS rebinding and against any handler that rewrites the request URI earlier in the pipeline.
+/// public, then tries each checked address in order and returns the first that connects (the last
+/// socket error surfaces when none does). It never dials an address it did not check. Checking at
+/// connect time is what makes the policy hold against DNS rebinding and against any handler that
+/// rewrites the request URI earlier in the pipeline.
 /// </summary>
 internal static class WebhookConnectCallback
 {
@@ -50,10 +52,30 @@ internal static class WebhookConnectCallback
                 $"The webhook target {host} resolved to {blockedText}, which is not a public address.");
         }
 
+        // Only the addresses checked above are dialled, in the resolver's order; the first that connects
+        // wins, and when none does the last socket error surfaces (a transport failure the queue retries).
+        SocketException? lastError = null;
+        foreach (var address in addresses)
+        {
+            try
+            {
+                return await ConnectToAsync(new IPEndPoint(address, endPoint.Port), cancellationToken).ConfigureAwait(false);
+            }
+            catch (SocketException failed)
+            {
+                lastError = failed;
+            }
+        }
+
+        throw lastError ?? new SocketException((int)SocketError.HostNotFound);
+    }
+
+    private static async ValueTask<Stream> ConnectToAsync(IPEndPoint target, CancellationToken cancellationToken)
+    {
         Socket? socket = new(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         try
         {
-            await socket.ConnectAsync(new IPEndPoint(addresses[0], endPoint.Port), cancellationToken).ConfigureAwait(false);
+            await socket.ConnectAsync(target, cancellationToken).ConfigureAwait(false);
             var stream = new NetworkStream(socket, ownsSocket: true);
             socket = null;
             return stream;

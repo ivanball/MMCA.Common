@@ -22,8 +22,13 @@ public sealed class WebhookSettings
     /// </summary>
     public string DataSourceName { get; init; } = "Default";
 
-    /// <summary>Gets the delivery timeout of one POST, in seconds. Defaults to 10.</summary>
-    [Range(1, 60)]
+    /// <summary>Gets the delivery timeout of one POST, in seconds, from 1 to 30. Defaults to 10.</summary>
+    /// <remarks>
+    /// Deliveries are internal commands and a replica runs them one row at a time, so one slow receiver
+    /// delays every other internal command on that replica for up to this many seconds per row; keep
+    /// the timeout low.
+    /// </remarks>
+    [Range(1, 30)]
     public int TimeoutSeconds { get; init; } = 10;
 
     /// <summary>
@@ -37,7 +42,10 @@ public sealed class WebhookSettings
     [Range(0, 168)]
     public int PreviousSecretGraceHours { get; init; } = 24;
 
-    /// <summary>Gets the most non-deleted subscriptions one tenant may hold. Defaults to 25.</summary>
+    /// <summary>
+    /// Gets the most non-deleted subscriptions one tenant may hold. Defaults to 25. It is a soft limit:
+    /// concurrent creates can exceed it by the number of in-flight requests.
+    /// </summary>
     [Range(1, 500)]
     public int MaxSubscriptionsPerTenant { get; init; } = 25;
 

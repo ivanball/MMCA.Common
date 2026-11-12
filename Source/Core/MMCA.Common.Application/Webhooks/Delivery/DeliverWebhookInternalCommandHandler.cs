@@ -30,6 +30,9 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
     ILogger<DeliverWebhookInternalCommandHandler> logger)
     : ICommandHandler<DeliverWebhookInternalCommand, Result>
 {
+    private const string NotPublicReason = "Target refused: not a public address.";
+    private const string NotHttpsReason = "Target refused: not an https address.";
+
     /// <inheritdoc />
     public async Task<Result> HandleAsync(DeliverWebhookInternalCommand command, CancellationToken cancellationToken = default)
     {
@@ -85,6 +88,15 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
             return Result.Success();
         }
 
+        if (outcome.Status == WebhookSendStatus.TargetRefused)
+        {
+            // The tenant admin API returns LastFailure, so a refusal records a fixed reason; the detail,
+            // which can name the resolved address, goes to the server-side Warning only.
+            subscription.RecordFailed(now, RefusedReason(subscription));
+            LogTargetRefused(logger, command.DeliveryId, command.SubscriptionId, DetailReason(outcome));
+            return Result.Success();
+        }
+
         var reason = outcome.Status is WebhookSendStatus.Rejected or WebhookSendStatus.Gone
             ? HttpReason(outcome)
             : DetailReason(outcome);
@@ -94,12 +106,6 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
         {
             subscription.Disable(now);
             LogGone(logger, command.DeliveryId, command.SubscriptionId);
-            return Result.Success();
-        }
-
-        if (outcome.Status == WebhookSendStatus.TargetRefused)
-        {
-            LogTargetRefused(logger, command.DeliveryId, command.SubscriptionId, reason);
             return Result.Success();
         }
 
@@ -122,6 +128,16 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
             ? string.Create(CultureInfo.InvariantCulture, $"HTTP {code}")
             : DetailReason(outcome);
 
+    /// <summary>
+    /// The fixed reason recorded for a refusal. The sender refuses a target that is not https before it
+    /// sends anything (the scheme rule), and refuses any other at connect time only for an address that is
+    /// not public, so the stored scheme tells the two apart.
+    /// </summary>
+    private static string RefusedReason(WebhookSubscription subscription) =>
+        subscription.Url.StartsWith(Uri.UriSchemeHttps + Uri.SchemeDelimiter, StringComparison.OrdinalIgnoreCase)
+            ? NotPublicReason
+            : NotHttpsReason;
+
     private static string DetailReason(WebhookSendOutcome outcome) =>
         string.IsNullOrWhiteSpace(outcome.Detail) ? outcome.Status.ToString() : outcome.Detail;
 
@@ -134,7 +150,7 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
     [LoggerMessage(Level = LogLevel.Information, Message = "Webhook delivery {DeliveryId}: the receiver answered 410 Gone, so subscription {SubscriptionId} was disabled")]
     private static partial void LogGone(ILogger logger, Guid deliveryId, Guid subscriptionId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Webhook delivery {DeliveryId} to subscription {SubscriptionId} was refused at connect time and will not be retried: {Reason}")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Webhook delivery {DeliveryId} to subscription {SubscriptionId} was refused and will not be retried: {Reason}")]
     private static partial void LogTargetRefused(ILogger logger, Guid deliveryId, Guid subscriptionId, string reason);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Webhook delivery {DeliveryId} to subscription {SubscriptionId} failed and will be retried: {Reason}")]

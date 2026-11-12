@@ -6,11 +6,13 @@ using System.Text;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Webhooks.Delivery;
 using MMCA.Common.Application.Webhooks.Subscriptions;
 using MMCA.Common.Infrastructure.Webhooks;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Webhooks;
 
@@ -28,6 +30,7 @@ public sealed class HttpWebhookSenderTests
     private const string Body = """{"type":"ticket.opened","timestamp":"2026-11-12T09:30:00.0000000Z","data":{"id":7}}""";
 
     private static readonly Uri Target = new("https://hooks.example.com/in");
+    private static readonly Uri HttpTarget = new("http://hooks.example.com/in");
     private static readonly DateTimeOffset Now = new(2026, 11, 12, 9, 30, 0, TimeSpan.Zero);
     private static readonly string DeliveryId = new Guid(0x6f1c2b8e, 0x3d4a, 0x4b5c, 0x9e, 0x6f, 0x7a, 0x8b, 0x9c, 0xd, 0x1e, 0x2f) /* 6f1c2b8e-3d4a-4b5c-9e6f-7a8b9c0d1e2f */.ToString("D");
 
@@ -196,6 +199,31 @@ public sealed class HttpWebhookSenderTests
     }
 
     [Fact]
+    public async Task HttpTarget_InProduction_IsRefusedWithoutSending()
+    {
+        // Ruling L5: a stored http:// row (written in Development, or edited in the database) reaching a
+        // production host is refused at send time, so the signed payload never goes out in plaintext.
+        using var harness = new SenderHarness(_ => Respond(HttpStatusCode.OK));
+
+        var outcome = await harness.Sender.SendAsync(Request(HttpTarget, WebhookSignature.GenerateSecret()), Ct);
+
+        outcome.Status.Should().Be(WebhookSendStatus.TargetRefused);
+        outcome.HttpStatusCode.Should().BeNull();
+        harness.Handler.Requests.Should().BeEmpty("the scheme rule is re-applied before anything is sent");
+    }
+
+    [Fact]
+    public async Task HttpTarget_WithTheDevelopmentSwitch_IsSent()
+    {
+        using var harness = new SenderHarness(_ => Respond(HttpStatusCode.OK), insecureDevelopment: true);
+
+        var outcome = await harness.Sender.SendAsync(Request(HttpTarget, WebhookSignature.GenerateSecret()), Ct);
+
+        outcome.Status.Should().Be(WebhookSendStatus.Delivered);
+        harness.Handler.Requests.Should().ContainSingle().Which.Uri.Should().Be(HttpTarget);
+    }
+
+    [Fact]
     public async Task UnreadableSecret_IsSecretUnreadable()
     {
         using var harness = new SenderHarness(_ => Respond(HttpStatusCode.OK));
@@ -238,8 +266,10 @@ public sealed class HttpWebhookSenderTests
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static WebhookDeliveryRequest Request(params string[] plainSecrets) =>
-        new(Target, DeliveryId, Body, [.. plainSecrets.Select(s => ProtectedPrefix + s)]);
+    private static WebhookDeliveryRequest Request(params string[] plainSecrets) => Request(Target, plainSecrets);
+
+    private static WebhookDeliveryRequest Request(Uri target, params string[] plainSecrets) =>
+        new(target, DeliveryId, Body, [.. plainSecrets.Select(s => ProtectedPrefix + s)]);
 
     private static HttpResponseMessage Respond(HttpStatusCode status) => new(status) { Content = new StringContent(string.Empty) };
 
@@ -255,20 +285,34 @@ public sealed class HttpWebhookSenderTests
         private readonly ServiceProvider _provider;
         private readonly IServiceScope _scope;
 
-        public SenderHarness(Func<HttpRequestMessage, HttpResponseMessage> respond)
-            : this((request, _) => Task.FromResult(respond(request)))
+        public SenderHarness(Func<HttpRequestMessage, HttpResponseMessage> respond, bool insecureDevelopment = false)
+            : this((request, _) => Task.FromResult(respond(request)), insecureDevelopment)
         {
         }
 
-        public SenderHarness(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)
+        /// <param name="respond">Answers each request the stub primary handler receives.</param>
+        /// <param name="insecureDevelopment">
+        /// A Development host with <c>Webhooks:AllowInsecureTargetsInDevelopment</c> set; otherwise no
+        /// host environment is registered, which is production.
+        /// </param>
+        public SenderHarness(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond, bool insecureDevelopment = false)
         {
             Handler = new StubHandler(respond);
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal) { ["Webhooks:Enabled"] = "true" })
+                .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
+                {
+                    ["Webhooks:Enabled"] = "true",
+                    ["Webhooks:AllowInsecureTargetsInDevelopment"] = insecureDevelopment ? "true" : "false",
+                })
                 .Build();
 
             var services = new ServiceCollection();
             services.AddLogging();
+            if (insecureDevelopment)
+            {
+                services.AddSingleton(Mock.Of<IHostEnvironment>(e => e.EnvironmentName == Environments.Development));
+            }
+
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(Now));
             services.AddSingleton<IWebhookSecretProtector>(new PrefixProtector());
             services.AddWebhooks(configuration);

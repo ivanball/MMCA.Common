@@ -16,3 +16,5 @@ MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeou
 MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_HaveExactlyOneTimeoutHandler() -> void
 MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutConventionTestsBase() -> void
 abstract MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_AreDiscovered() -> void
+virtual MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.MinimumTimeoutCommands.get -> int

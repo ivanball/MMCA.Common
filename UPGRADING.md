@@ -204,6 +204,17 @@ needs the shared key ring (ADR-069). `Webhooks:AllowInsecureTargetsInDevelopment
 host target `http://localhost` and private addresses; any other environment ignores it with one startup
 warning.
 
+Deliveries are internal commands and a replica runs them one row at a time, so one slow receiver
+delays every other internal command on that replica for up to `Webhooks:TimeoutSeconds` (1 to 30,
+default 10) per row; keep the timeout low. The `MMCA.Webhooks` client runs its own handler and nothing
+else: host-wide client defaults (the standard resilience handler, service discovery, any delegating
+handler) are cleared from it, its loggers are removed, and it sends no `traceparent`, `tracestate` or
+`baggage` header. The HTTP client trace still records the URL path, so a host that exports traces to a
+shared backend filters the `MMCA.Webhooks` spans itself. A refused delivery records only
+`Target refused: not a public address.` or `Target refused: not an https address.` on the
+subscription; the resolved address stays in the server-side Warning. `Webhooks:MaxSubscriptionsPerTenant`
+is a soft limit: concurrent creates can exceed it by the number of in-flight requests.
+
 **Optional: process managers (MMCA.Common.Domain, MMCA.Common.Application, MMCA.Common.Testing.Architecture).**
 Not breaking: no table, no migration and no configuration key. For a long-running flow whose state is
 one aggregate's own columns:
@@ -219,9 +230,14 @@ one aggregate's own columns:
    Drive event steps with a subclass of `ProcessDomainEventHandlerBase<TEvent, TProcess, TId>`; the step
    owns its saves.
 3. Call `services.AddProcessManagers()` in the module's Application DI to register the scoped
-   `IProcessTimeoutScheduler`, and arm a timeout with `ArmAsync(command, after, ct)`.
+   `IProcessTimeoutScheduler`, and arm a timeout with `ArmAsync(command, after, ct)`. A `NotYetDue`
+   decision completes the row without scheduling another, so every step that moves the process and
+   still wants the timeout schedules it again, and a host keeps a reconciliation sweep for the cases no
+   step covers.
 4. Subclass `ProcessTimeoutConventionTestsBase` with the repo's architecture map, so a nameless timeout
-   command, or one with no handler or two, fails the build.
+   command, or one with no handler or two, fails the build. Its `ProcessTimeoutCommands_AreDiscovered`
+   fact fails when the scan finds fewer than `MinimumTimeoutCommands` (default 1), so subclass it only in
+   a repo that uses the primitive, and raise the minimum to the repo's known count.
 
 ## [1.284.0] - 2026-11-09
 

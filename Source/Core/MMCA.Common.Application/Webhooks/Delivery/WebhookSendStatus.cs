@@ -12,7 +12,10 @@ public enum WebhookSendStatus
     /// <summary>The receiver answered 410 Gone; the subscription is disabled.</summary>
     Gone = 2,
 
-    /// <summary>The target resolved to a non-public address at connect time; retrying cannot change it.</summary>
+    /// <summary>
+    /// The target was refused: an address that is not public at connect time, or a scheme this host does
+    /// not accept at send time. Retrying cannot change it.
+    /// </summary>
     TargetRefused = 3,
 
     /// <summary>The request failed in transport (timeouts included); the delivery is retried.</summary>

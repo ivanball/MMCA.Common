@@ -71,7 +71,7 @@ public sealed class AddWebhooksTests
 
     [Theory]
     [InlineData("TimeoutSeconds", "0")]
-    [InlineData("TimeoutSeconds", "61")]
+    [InlineData("TimeoutSeconds", "31")]
     [InlineData("MaxPayloadBytes", "1023")]
     [InlineData("MaxPayloadBytes", "1048577")]
     [InlineData("PreviousSecretGraceHours", "-1")]
@@ -109,6 +109,7 @@ public sealed class AddWebhooksTests
     [Theory]
     [InlineData(null, 10)]
     [InlineData("7", 7)]
+    [InlineData("30", 30)]
     public void NamedClientTimeout_IsTimeoutSeconds(string? configured, int expectedSeconds)
     {
         var values = new Dictionary<string, string?>(StringComparer.Ordinal) { ["Webhooks:Enabled"] = "true" };

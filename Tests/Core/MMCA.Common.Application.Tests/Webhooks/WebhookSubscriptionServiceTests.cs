@@ -123,6 +123,32 @@ public sealed class WebhookSubscriptionServiceTests
     }
 
     [Fact]
+    public async Task Create_WithNoEventTypesMember_FailsEventTypesRequired()
+    {
+        // A body with no eventTypes member deserializes EventTypes as null (ruling L2): a 400, not a 500.
+        var result = await CreateSut().CreateAsync(
+            new CreateWebhookSubscriptionRequest(Url, null, null!), TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle(e => e.Code == WebhookErrorCodes.EventTypesRequired);
+        result.Errors.Single().Type.Should().Be(ErrorType.Validation);
+        _store.Verify(s => s.AddAsync(It.IsAny<WebhookSubscription>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Update_WithNoEventTypesMember_FailsEventTypesRequired()
+    {
+        var subscription = SeedOwn("protected:s");
+
+        var result = await CreateSut().UpdateAsync(
+            subscription.Id, new UpdateWebhookSubscriptionRequest(Url, null, null!), TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle(e => e.Code == WebhookErrorCodes.EventTypesRequired);
+        result.Errors.Single().Type.Should().Be(ErrorType.Validation);
+        subscription.GetEventTypes().Should().Equal("ticket.opened");
+        _store.Verify(s => s.SaveAsync(It.IsAny<WebhookSubscription>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Create_WildcardAccepted()
     {
         var result = await CreateSut().CreateAsync(Request(["*"]), TestContext.Current.CancellationToken);

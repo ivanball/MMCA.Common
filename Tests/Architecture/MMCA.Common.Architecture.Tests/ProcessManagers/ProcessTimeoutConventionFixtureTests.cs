@@ -73,6 +73,31 @@ public sealed class ProcessTimeoutConventionFixtureTests
                 "one ProcessTimeoutHandlerBase subclass is exactly one handler");
     }
 
+    [Fact]
+    public void TheFixtures_PassTheInventory()
+    {
+        var discovered = new FixtureConventionTests().ProcessTimeoutCommands_AreDiscovered;
+
+        discovered.Should().NotThrow("four timeout commands are compiled into this assembly, above the default minimum of one");
+    }
+
+    [Fact]
+    public void AMapWithNoTimeoutCommand_FailsTheInventory()
+    {
+        var discovered = new EmptyConventionTests().ProcessTimeoutCommands_AreDiscovered;
+
+        discovered.Should().Throw<Exception>(
+            "a map that scans no timeout command would let both rules pass without reading anything (review M3)");
+    }
+
+    [Fact]
+    public void ARaisedMinimum_AboveTheInventory_Fails()
+    {
+        var discovered = new RaisedMinimumConventionTests().ProcessTimeoutCommands_AreDiscovered;
+
+        discovered.Should().Throw<Exception>("a host raises the minimum to its known count to catch a module dropping out of the map");
+    }
+
     /// <summary>
     /// A map registering this test assembly as a module Application layer, where a consumer's timeout
     /// commands and their handlers live.
@@ -87,9 +112,32 @@ public sealed class ProcessTimeoutConventionFixtureTests
         ];
     }
 
+    /// <summary>A map whose only module Application layer is the Shared assembly, which holds no timeout command.</summary>
+    private sealed class EmptyMap : ArchitectureMapBase
+    {
+        public override string RepoToken => "MMCA.Common";
+
+        protected override IEnumerable<LayerRef> DefineLayers() =>
+        [
+            Module("Empty", Layer.Application, typeof(MMCA.Common.Shared.Abstractions.Result).Assembly),
+        ];
+    }
+
     private sealed class FixtureConventionTests : ProcessTimeoutConventionTestsBase
     {
         protected override IArchitectureMap Map { get; } = new FixtureMap();
+    }
+
+    private sealed class EmptyConventionTests : ProcessTimeoutConventionTestsBase
+    {
+        protected override IArchitectureMap Map { get; } = new EmptyMap();
+    }
+
+    private sealed class RaisedMinimumConventionTests : ProcessTimeoutConventionTestsBase
+    {
+        protected override IArchitectureMap Map { get; } = new FixtureMap();
+
+        protected override int MinimumTimeoutCommands => 5;
     }
 }
 

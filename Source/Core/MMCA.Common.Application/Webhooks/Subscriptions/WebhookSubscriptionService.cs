@@ -54,7 +54,10 @@ public sealed class WebhookSubscriptionService(
         ArgumentNullException.ThrowIfNull(request);
 
         var tenantId = tenantContext.TenantId;
-        var check = CheckDefinition(request.Url, request.EventTypes, nameof(CreateAsync));
+
+        // A body with no eventTypes member binds null; it is empty, so the domain answers EventTypesRequired.
+        var eventTypes = request.EventTypes ?? [];
+        var check = CheckDefinition(request.Url, eventTypes, nameof(CreateAsync));
         if (check.IsFailure)
         {
             return Result.Failure<WebhookSubscriptionSecretResponse>(check.Errors);
@@ -79,7 +82,7 @@ public sealed class WebhookSubscriptionService(
         var created = WebhookSubscription.Create(
             request.Url,
             request.Description,
-            [.. request.EventTypes],
+            [.. eventTypes],
             tenantId,
             secretProtector.Protect(secret));
         if (!created.TryGetValue(out var subscription))
@@ -105,7 +108,8 @@ public sealed class WebhookSubscriptionService(
             return Result.Failure<WebhookSubscriptionResponse>(NotFound(nameof(UpdateAsync)));
         }
 
-        var check = CheckDefinition(request.Url, request.EventTypes, nameof(UpdateAsync));
+        var eventTypes = request.EventTypes ?? [];
+        var check = CheckDefinition(request.Url, eventTypes, nameof(UpdateAsync));
         if (check.IsFailure)
         {
             return Result.Failure<WebhookSubscriptionResponse>(check.Errors);
@@ -117,7 +121,7 @@ public sealed class WebhookSubscriptionService(
             return Result.Failure<WebhookSubscriptionResponse>(target.Errors);
         }
 
-        var updated = subscription.Update(request.Url, request.Description, [.. request.EventTypes]);
+        var updated = subscription.Update(request.Url, request.Description, [.. eventTypes]);
         if (updated.IsFailure)
         {
             return Result.Failure<WebhookSubscriptionResponse>(updated.Errors);

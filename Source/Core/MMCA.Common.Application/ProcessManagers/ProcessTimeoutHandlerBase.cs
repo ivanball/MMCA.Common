@@ -18,6 +18,11 @@ namespace MMCA.Common.Application.ProcessManagers;
 /// concurrency race means another writer already moved the process.
 /// </para>
 /// <para>
+/// A <c>NotYetDue</c> decision completes the row without scheduling another, so every step that moves
+/// the process and still wants the timeout schedules it again, and a host keeps a reconciliation sweep
+/// for the cases no step covers.
+/// </para>
+/// <para>
 /// A consumer derives one sealed class per timeout command so the module scan registers it as a
 /// closed <c>ICommandHandler&lt;TCommand, Result&gt;</c> the decorator pipeline wraps.
 /// </para>
