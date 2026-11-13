@@ -414,7 +414,7 @@ dotnet_diagnostic.SA1214.severity = none
 dotnet_diagnostic.SA1309.severity = none
 # SA1313: Parameter names should begin with lower-case — false positives with records/deconstruct
 dotnet_diagnostic.SA1313.severity = none
-# SA1315: Parameter names should match the inherited declaration: domain-named overrides of framework bases (Ticket ticket over TEntity entity); CA1725 is likewise off
+# SA1315: Parameter names should match the inherited declaration: overrides of framework bases name the parameter after the aggregate rather than TEntity entity; CA1725 is likewise off
 dotnet_diagnostic.SA1315.severity = none
 # SA1401: Fields should be private
 dotnet_diagnostic.SA1401.severity = suggestion
