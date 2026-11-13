@@ -29,6 +29,12 @@
                             Xamarin.AndroidX.Biometric. MAUI 10 needs the HELD 1.1.0.30 (see the pin
                             below); MAUI 11's Essentials requires at least 1.1.0.33 (NU1605 on the
                             older one).
+      MmcaExtensionsVersion The dotnet/extensions train (Microsoft.Extensions.Http.Resilience,
+                            ServiceDiscovery, Caching.Hybrid, AI, AI.OpenAI, TimeProvider.Testing).
+                            Its 11.x net10.0 assets floor the runtime Microsoft.Extensions.* packages
+                            at 11.0.0, so the .NET 10 line stays on 10.x and only net11.0 takes 11.x.
+      MmcaAspNetOAuthVersion
+                            AspNet.Security.OAuth.Apple and .GitHub: 11.x ships net11.0 assets only.
   -->
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
@@ -37,6 +43,8 @@
     <MmcaMauiVersion>10.0.130</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>16.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
+    <MmcaExtensionsVersion>10.11.0</MmcaExtensionsVersion>
+    <MmcaAspNetOAuthVersion>10.1.0</MmcaAspNetOAuthVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
@@ -44,6 +52,8 @@
     <MmcaMauiVersion>11.0.10</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>17.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
+    <MmcaExtensionsVersion>11.0.0</MmcaExtensionsVersion>
+    <MmcaAspNetOAuthVersion>11.0.0</MmcaAspNetOAuthVersion>
   </PropertyGroup>
   <!--
     CentralPackageTransitivePinningEnabled is deliberately NOT set in this workspace: CPM pins DIRECT
@@ -57,8 +67,8 @@
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(MmcaFrameworkVersion)" />
     <!-- External OAuth providers for the config-gated AddExternalAuthProviders / OAuthControllerBase (inert without OAuth:*:ClientId). -->
-    <PackageVersion Include="AspNet.Security.OAuth.Apple" Version="10.1.0" />
-    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.1.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.Apple" Version="$(MmcaAspNetOAuthVersion)" />
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="$(MmcaAspNetOAuthVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="$(MmcaFrameworkVersion)" />
     <!-- Generic OIDC providers (OAuth:Oidc:<Name>), registered by the same AddExternalAuthProviders call. -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(MmcaFrameworkVersion)" />
@@ -121,7 +131,7 @@
          train's servicing version. Projects with the framework reference prune those away, but the
          ones without it resolve them as real packages, so a pin ahead of the train quietly moves five
          shared transitives across the graph for no functional gain. -->
-    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="$(MmcaExtensionsVersion)" />
     <!-- Cron expression parsing for the opt-in recurring job scheduler (ScheduledJobRunner). MIT,
          zero-dependency (netstandard2.0, no transitive graph at all), and it does exactly one thing:
          parse a five-field expression and answer "what is the next occurrence after this UTC
@@ -159,7 +169,7 @@
          transitives (Caching/DependencyInjection/Logging Abstractions) at 10.0.12, one servicing
          patch above the 10.0.11 the rest of this file sits on; that lift is confined to
          MMCA.Common.AI's own lock file because no other project references this package. -->
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="$(MmcaExtensionsVersion)" />
     <!-- The OFFICIAL Anthropic .NET SDK (MIT, by Anthropic), taken for one reason: it ships its own
          Microsoft.Extensions.AI adapter (Microsoft.Extensions.AI.AnthropicClientExtensions
          .AsIChatClient), so the provider half of the governed client is a construction rather than a
@@ -171,7 +181,7 @@
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
          the vendor SDK is pinned here like Anthropic is, not floated by the adapter's own floor. -->
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="$(MmcaExtensionsVersion)" />
     <PackageVersion Include="OpenAI" Version="2.15.0" />
     <!-- MCP (MMCA.Common.Mcp): the official Model Context Protocol C# SDK, server half over ASP.NET
          Core. Referenced by MMCA.Common.Mcp alone, so no core package carries it (ADR-134). Pinned
@@ -433,7 +443,7 @@
     <!-- FakeTimeProvider for deterministic clock-driven tests (OutboxCleanupService sweep, session-cookie
          expiry); version matches the Microsoft.Extensions dotnet/extensions family (Http.Resilience,
          ServiceDiscovery) above. -->
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="$(MmcaExtensionsVersion)" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <!-- Test tier only (Tests/Hosting/MMCA.Common.Aspire.Tests): an in-memory metric reader is the
          only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
@@ -480,8 +490,8 @@
          dependency it never uses. -->
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <!-- Aspire / ServiceDefaults -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MmcaExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(MmcaExtensionsVersion)" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
     <PackageVersion Include="OpenTelemetry.Api" Version="1.21.0" />
