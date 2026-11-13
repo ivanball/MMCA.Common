@@ -92,7 +92,9 @@ public sealed class ApiFileDownloadButtonAuthenticatedTests : BunitTestBase
     [Fact]
     public async Task StagingFolder_OnNativeHead_PurgesTheFolderBeforeWritingTheFile()
     {
-        var folder = Path.Combine(Path.GetTempPath(), "mmca-download-button-tests");
+        // Per-runtime folder name: both target frameworks run this class at the same time on one machine.
+        var folderName = "mmca-download-button-tests-net" + Environment.Version.Major.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var folder = Path.Combine(Path.GetTempPath(), folderName);
         Directory.CreateDirectory(folder);
         var stale = Path.Combine(folder, "previous-export.csv");
         await File.WriteAllBytesAsync(stale, "STALE"u8.ToArray(), Xunit.TestContext.Current.CancellationToken);
@@ -108,7 +110,7 @@ public sealed class ApiFileDownloadButtonAuthenticatedTests : BunitTestBase
                 .ReturnsAsync(true);
             Services.AddSingleton(share.Object);
 
-            var cut = RenderButton(requiresAuthentication: true, stagingFolderName: "mmca-download-button-tests");
+            var cut = RenderButton(requiresAuthentication: true, stagingFolderName: folderName);
             await cut.Find("button").ClickAsync(new MouseEventArgs());
 
             sharedPath.Should().Be(Path.Combine(folder, "roster.csv"));

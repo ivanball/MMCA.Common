@@ -38,4 +38,18 @@ public static class AdministrationPermissions
     /// <see cref="ManageUsers"/>.
     /// </summary>
     public const string ManageClients = "clients:manage";
+
+    /// <summary>
+    /// Reads the recorded change history of the audited entities a host serves (ADR-075), through the
+    /// audit-history endpoint a host mounts from <c>AuditHistoryControllerBase</c>.
+    /// </summary>
+    public const string ViewAuditTrail = "audit:view";
+
+    /// <summary>
+    /// Lists outbound webhook subscriptions and creates, updates, rotates, disables, enables and
+    /// deletes them, through the endpoints a host mounts from <c>WebhookSubscriptionsControllerBase</c>.
+    /// A subscription receives the whole payload of every event it subscribes to, so grant it as
+    /// sparingly as the data those events carry.
+    /// </summary>
+    public const string ManageWebhooks = "webhooks:manage";
 }

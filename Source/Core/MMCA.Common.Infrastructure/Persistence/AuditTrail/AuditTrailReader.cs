@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Auditing;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Shared.Auditing;
 
 namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 
@@ -45,7 +45,7 @@ internal sealed class AuditTrailReader(
     private readonly AuditTrailSettings _settings = options.Value;
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<AuditTrailEntryDTO>> GetForEntityAsync(
+    public async Task<IReadOnlyList<AuditHistoryEntryDTO>> GetForEntityAsync(
         string entityType,
         string entityKey,
         int page = 1,
@@ -77,7 +77,7 @@ internal sealed class AuditTrailReader(
             .ThenByDescending(row => row.Id)
             .Skip((int)skip)
             .Take(effectivePageSize)
-            .Select(row => new AuditTrailEntryDTO
+            .Select(row => new AuditHistoryEntryDTO
             {
                 Id = row.Id,
                 EntityType = row.EntityType,

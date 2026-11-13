@@ -41,6 +41,35 @@ public sealed class GatewaySettings
     /// </summary>
     public IReadOnlyDictionary<string, GatewayRoutePolicySettings> RateLimiterPolicies { get; init; }
         = new Dictionary<string, GatewayRoutePolicySettings>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The opt-in connect-failure retry: a body-less GET or HEAD whose attempt never reached the
+    /// destination is tried again. Off by default.
+    /// </summary>
+    public GatewayRetrySettings Retry { get; init; } = new();
+}
+
+/// <summary>
+/// The opt-in connect-failure retry, bound from <c>MmcaGateway:Retry</c>. Only a body-less GET or HEAD
+/// whose attempt failed with a name resolution, connection or TLS failure is retried; never a POST,
+/// never a request with a body, never a response of any status. When the budget is spent the last
+/// failure surfaces unchanged, so YARP still answers 502 and the passive health policy counts it.
+/// </summary>
+public sealed class GatewayRetrySettings
+{
+    /// <summary>
+    /// Whether the retry is installed. When false (the default) YARP's own forwarder client factory
+    /// stays in use. A host that registered its own <c>IForwarderHttpClientFactory</c> must leave this off.
+    /// </summary>
+    public bool Enabled { get; init; }
+
+    /// <summary>Extra attempts after the first one. One to three; defaults to one.</summary>
+    [Range(1, 3)]
+    public int MaxRetryAttempts { get; init; } = 1;
+
+    /// <summary>The wait before each extra attempt. At most five seconds; defaults to 200 milliseconds.</summary>
+    [Range(typeof(TimeSpan), "00:00:00", "00:00:05")]
+    public TimeSpan Delay { get; init; } = TimeSpan.FromMilliseconds(200);
 }
 
 /// <summary>

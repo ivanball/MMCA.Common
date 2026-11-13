@@ -1,0 +1,59 @@
+@* The opt-in "who changed what, and when" panel of a detail page: one table row per recorded change,
+   in the order the endpoint returns them (newest first), paged by "Load more" while a page comes
+   back full. It reads through the page's FetchPage delegate (usually IAuditHistoryUIService) and
+   fetches nothing during prerender. *@
+<MudPaper Outlined="true" Class="pa-4 mt-4">
+    <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-2">@(Title ?? L["AuditHistory.Title"])</MudText>
+
+    @if (_entries.Count > 0)
+    {
+        <MudSimpleTable Dense="true" Hover="true" Bordered="false" Striped="false">
+            <thead>
+                <tr>
+                    <th>@L["AuditHistory.Column.When"]</th>
+                    <th>@L["AuditHistory.Column.Who"]</th>
+                    <th>@L["AuditHistory.Column.Operation"]</th>
+                    <th>@L["AuditHistory.Column.Field"]</th>
+                    <th>@L["AuditHistory.Column.Before"]</th>
+                    <th>@L["AuditHistory.Column.After"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in _entries)
+                {
+                    <tr>
+                        <td>@WhenText(entry)</td>
+                        <td>@WhoText(entry)</td>
+                        <td>@L[$"AuditHistory.Operation.{entry.Operation}"]</td>
+                        <td>@FieldText(entry)</td>
+                        <td>@entry.OldValue</td>
+                        <td>@entry.NewValue</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    @if (_failedPage is not null)
+    {
+        <ListNoRecordsContent LoadFailed="true" OnRetry="RetryAsync" />
+    }
+    else if (_firstPageEmpty)
+    {
+        <EmptyState Message="@L["AuditHistory.Empty"]" />
+    }
+
+    <div role="status">
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" aria-label="@L["Loading.Label"]" Class="my-2" />
+        }
+    </div>
+
+    @if (_hasMore && !_isLoading && _failedPage is null)
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadMoreAsync" Class="mt-2">
+            @L["AuditHistory.LoadMore"]
+        </MudButton>
+    }
+</MudPaper>

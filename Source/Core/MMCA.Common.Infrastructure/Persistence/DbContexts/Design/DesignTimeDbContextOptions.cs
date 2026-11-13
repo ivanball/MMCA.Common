@@ -143,6 +143,20 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableMachineClients { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the outbound webhook table
+    /// (<c>WebhookSubscriptions</c>), mirroring <c>Webhooks:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the migrations project of the database <c>Webhooks:DataSourceName</c> names when the host
+    /// calls <c>AddWebhooks</c> with <c>Webhooks:Enabled</c> true, and only there. The helper points
+    /// <c>Webhooks:DataSourceName</c> at the source this context resolved to, so the flag opens the gate for
+    /// exactly the context <c>--datasource</c> selected. The flag must match the runtime setting, or the
+    /// scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableWebhooks { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>
@@ -157,6 +171,32 @@ public sealed class DesignTimeDbContextOptions
         if (!ConfigurationAssemblies.Contains(assembly))
         {
             ConfigurationAssemblies.Add(assembly);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the assemblies whose strongly typed identifiers (ADR-115) the design-time model maps,
+    /// mirroring the host's <c>AddStronglyTypedIds(assembly)</c> calls. Empty by default, which
+    /// registers no identifier registry and leaves the model exactly as before.
+    /// </summary>
+    /// <remarks>
+    /// List every assembly the host passes to <c>AddStronglyTypedIds</c> whose identifiers this data
+    /// source's entities use: without it the design-time model has no value converter for a wrapped
+    /// key, and building the model fails naming the property.
+    /// </remarks>
+    public IList<Assembly> StronglyTypedIdAssemblies { get; } = [];
+
+    /// <summary>Adds an assembly declaring strongly typed identifiers; adding the same assembly twice keeps one entry.</summary>
+    /// <param name="assembly">The identifier assembly.</param>
+    /// <returns>These options, for chaining.</returns>
+    public DesignTimeDbContextOptions AddStronglyTypedIdAssembly(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+        if (!StronglyTypedIdAssemblies.Contains(assembly))
+        {
+            StronglyTypedIdAssemblies.Add(assembly);
         }
 
         return this;

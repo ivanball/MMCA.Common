@@ -146,6 +146,12 @@ public sealed class ModelBuilderExtensionsTests
                 sp,
                 typeof(ModelBuilderExtensionsTests).Assembly,
                 typeof(IEntityTypeConfigurationSqlite<,>));
+
+            // The assembly-wide scan also finds the design-time fixtures keyed by a strongly typed id.
+            // This plain context registers no identifier registry, so their key has no converter here;
+            // they belong to DesignTimeDbContextHelperTests and are left out of this model.
+            modelBuilder.Ignore<DataSources.DesignTimeDbContextHelperTests.DesignWrappedEntity>();
+            modelBuilder.Ignore<DataSources.DesignTimeDbContextHelperTests.DesignBareWrappedEntity>();
         }
     }
 }

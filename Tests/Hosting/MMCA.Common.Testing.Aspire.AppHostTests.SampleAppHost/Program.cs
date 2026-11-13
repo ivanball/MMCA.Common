@@ -21,9 +21,42 @@
 //                        fixture's per-resource wait means "the service can serve a request" rather
 //                        than "its process started". Liveness, never readiness: a startup gate on
 //                        readiness can deadlock a dependency graph.
+using Microsoft.Extensions.Configuration;
 using MMCA.Common.Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+// The outage scenario (SampleOutageAppHostFixture passes --SampleAppHost:Outage=true): ONLY a SQL
+// Server container with one database, a RabbitMQ broker, and the sample service wired to both with a
+// real outbox, for DependencyOutageTestBase to stop and start. No data volume on SQL Server: a per-run
+// SA password would not open an old volume, and the service keeps its own schema instead. The outbox
+// settings retry fast and often, so 20 attempts outlast a 90-second outage; the health report cache
+// is one second, so a probe sees a state change promptly. Liveness, never readiness, is the gate.
+if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
+{
+    var sql = builder.AddSqlServer("sql");
+    var sampleDb = sql.AddDatabase("sampledb");
+
+    // The broker keeps the orchestrator's proxied endpoint, exactly as a real AppHost wires it. While
+    // the broker is stopped the proxy still accepts connections and holds them; the service's broker
+    // health check is bounded by HealthChecks:CheckTimeoutSeconds, so /health turns 503 anyway.
+    var broker = builder.AddMessageBroker();
+
+    builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-outage")
+        .WithSQLServerDataSource(sampleDb, "Sample")
+        .WithBroker(broker)
+        .WithEnvironment("SampleService__Outage", "true")
+        .WithEnvironment("Outbox__PollingIntervalSeconds", "1")
+        .WithEnvironment("Outbox__ProcessingDelaySeconds", "0")
+        .WithEnvironment("Outbox__MaxRetries", "20")
+        .WithEnvironment("Outbox__RetryBackoffBaseSeconds", "1")
+        .WithEnvironment("Outbox__LeaseSeconds", "10")
+        .WithEnvironment("HealthChecks__CacheSeconds", "1")
+        .WithHttpHealthCheck("/alive");
+
+    await builder.Build().RunAsync().ConfigureAwait(false);
+    return;
+}
 
 var databasePath = Path.Combine(Path.GetTempPath(), "mmca-apphost-testing-sample.db");
 

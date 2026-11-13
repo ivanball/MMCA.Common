@@ -1400,6 +1400,7 @@
           "Aspire.Hosting.Testing": "[13.6.5, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.Testing": "[1.0.0, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -3460,6 +3461,7 @@
           "Aspire.Hosting.Testing": "[13.6.5, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.Testing": "[1.0.0, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },

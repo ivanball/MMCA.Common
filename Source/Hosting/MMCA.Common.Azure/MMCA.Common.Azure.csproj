@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Azure</PackageId>
-    <Description>MMCA framework: the Microsoft Azure adapter. Key Vault configuration, the Blob + Key Vault DataProtection key ring, the Azure Monitor exporter, Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport and the Entra SQL authentication provider; the core packages stay cloud-neutral</Description>
+    <Description>MMCA framework: the Microsoft Azure adapter. Azure Blob file storage, Notification Hubs native push, the Azure Service Bus transport, the Entra SQL authentication provider and Entra token login for Azure Database for PostgreSQL, plus (through MMCA.Common.Azure.Startup) Key Vault configuration, the Azure Monitor exporter and the Blob + Key Vault DataProtection key ring; the core packages stay cloud-neutral</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -11,13 +11,12 @@
     <!-- The adapter's whole job is to hold the Azure SDKs so the core packages do not have to
          (EnforceCloudVendorBoundary in Source/Build/MMCA.Common.LayerEnforcement.targets and
          CloudVendorIsolationTestsBase hold that line). A host references this package only when it
-         runs on Azure, and opts into each capability with one registration call. -->
-    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
-    <!-- DefaultAzureCredential for Key Vault, the DataProtection sinks and Blob storage. -->
+         runs on Azure, and opts into each capability with one registration call. Key Vault
+         configuration, the Azure Monitor exporter and the DataProtection key ring live in
+         MMCA.Common.Azure.Startup (referenced below and type-forwarded from here), so a host that only
+         needs start-up wiring can take that package alone. -->
+    <!-- DefaultAzureCredential for Blob storage. -->
     <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <!-- Native push (ADR-044): Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageReference Include="Microsoft.Azure.NotificationHubs" />
@@ -42,6 +41,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
     <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <ProjectReference Include="..\MMCA.Common.Azure.Startup\MMCA.Common.Azure.Startup.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

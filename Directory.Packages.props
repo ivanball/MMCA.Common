@@ -211,6 +211,11 @@
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.11" />
+    <!-- The AWS telemetry exporter (MMCA.Common.Aws.AddAwsTelemetryExporter) signs its OTLP requests
+         with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
+         signer is guaranteed rather than inherited from whichever service package floors highest.
+         Same AWS SDK v4 line as AWSSDK.S3. -->
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.19" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->

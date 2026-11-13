@@ -84,6 +84,9 @@
          cloud-vendor boundary too: the runtime half of EnforceCloudVendorBoundary. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
+    <!-- The composed service host is cloud-neutral (vendor calls arrive as callbacks), so
+         CloudVendorIsolationTests holds it to the boundary as well. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.ServiceHost\MMCA.Common.ServiceHost.csproj" />
     <!-- AiBoundaryRulesTests (M257): a fixture names a governed MMCA.Common.AI type so the type-level
          governed-AI rule can be shown to bite. The AI package takes no MMCA reference, so nothing else moves. -->
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />

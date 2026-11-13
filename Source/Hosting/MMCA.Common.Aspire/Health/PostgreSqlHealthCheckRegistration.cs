@@ -27,10 +27,11 @@ internal static class PostgreSqlHealthCheckRegistration
     /// <param name="healthChecks">The builder the check is added to.</param>
     /// <param name="connectionString">The PostgreSQL connection string, also the data-source key.</param>
     /// <param name="name">The check name.</param>
-    internal static void Register(IHealthChecksBuilder healthChecks, string connectionString, string name)
+    /// <param name="timeout">How long one probe may run before it is cancelled and reported failed.</param>
+    internal static void Register(IHealthChecksBuilder healthChecks, string connectionString, string name, TimeSpan timeout)
     {
-        var connectionStringCheck = Capture(healthChecks, b => b.AddNpgSql(connectionString, name: name));
-        var dataSourceCheck = Capture(healthChecks, b => b.AddNpgSql(sp => SharedDataSource(sp, connectionString)!, name: name));
+        var connectionStringCheck = Capture(healthChecks, b => b.AddNpgSql(connectionString, name: name, timeout: timeout));
+        var dataSourceCheck = Capture(healthChecks, b => b.AddNpgSql(sp => SharedDataSource(sp, connectionString)!, name: name, timeout: timeout));
 
         var connectionStringFactory = connectionStringCheck.Factory;
         connectionStringCheck.Factory = sp => SharedDataSource(sp, connectionString) is null

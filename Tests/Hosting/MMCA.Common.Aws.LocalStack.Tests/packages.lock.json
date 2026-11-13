@@ -82,11 +82,6 @@
           "StackExchange.Redis": "2.7.4"
         }
       },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
-      },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",
         "resolved": "4.0.3.25",
@@ -740,6 +735,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.Core": "[4.0.102.19, )",
           "AWSSDK.DynamoDBv2": "[4.0.110.2, )",
           "AWSSDK.RDS": "[4.0.108.2, )",
           "AWSSDK.S3": "[4.0.104.11, )",
@@ -860,6 +856,12 @@
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.2"
         }
+      },
+      "AWSSDK.Core": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",
@@ -1365,11 +1367,6 @@
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
         }
-      },
-      "AWSSDK.Core": {
-        "type": "Transitive",
-        "resolved": "4.0.102.19",
-        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.Extensions.NETCore.Setup": {
         "type": "Transitive",
@@ -2023,6 +2020,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
+          "AWSSDK.Core": "[4.0.102.19, )",
           "AWSSDK.DynamoDBv2": "[4.0.110.2, )",
           "AWSSDK.RDS": "[4.0.108.2, )",
           "AWSSDK.S3": "[4.0.104.11, )",
@@ -2142,6 +2140,12 @@
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.2"
         }
+      },
+      "AWSSDK.Core": {
+        "type": "CentralTransitive",
+        "requested": "[4.0.102.19, )",
+        "resolved": "4.0.102.19",
+        "contentHash": "Hb6P2ui6y0U+UNUjcC4ASFFoTLzCijhMzfOCXfoFTXq/o0YWQsO1oSH1NG2GQ9dlIT693xeeih0yAcfeL1dphg=="
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",

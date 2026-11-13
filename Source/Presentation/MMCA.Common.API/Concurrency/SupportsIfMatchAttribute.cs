@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -44,9 +46,16 @@ namespace MMCA.Common.API.Concurrency;
 /// scoped service, so it implements <see cref="IAsyncActionFilter"/> directly and requires no DI
 /// registration by the host.
 /// </para>
+/// <para>
+/// <b>Attribute owns its response metadata.</b> As an action or controller model convention it
+/// documents the two answers it can produce, <c>412 Precondition Failed</c> and
+/// <c>428 Precondition Required</c>, typed as <see cref="ProblemDetails"/> and appended after the
+/// action's own response types. A status the action or its controller already declares is never added
+/// again, so an action that states both by hand is untouched.
+/// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
+public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter, IActionModelConvention, IControllerModelConvention
 {
     /// <summary>
     /// <see cref="HttpContext.Items"/> key holding the decoded <c>If-Match</c> token (a
@@ -55,6 +64,10 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
     /// loosen its immutability to receive one.
     /// </summary>
     public const string TokenItemKey = "MMCA.Common.API.Concurrency.IfMatchToken";
+
+    /// <summary>The statuses the attribute documents, in the order it appends them.</summary>
+    private static readonly int[] PreconditionStatusCodes =
+        [StatusCodes.Status412PreconditionFailed, StatusCodes.Status428PreconditionRequired];
 
     /// <summary>
     /// Reads the token the filter decoded for the current request.
@@ -73,6 +86,42 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
             ? rowVersion
             : throw new InvalidOperationException(
                 $"No If-Match token was decoded for this request. Apply [{nameof(SupportsIfMatchAttribute)}] to the action that reads it.");
+    }
+
+    /// <summary>
+    /// Appends a Problem Details <c>412</c> and <c>428</c> response type to the action, each only when
+    /// neither the action nor its controller declares that status already.
+    /// </summary>
+    /// <param name="action">The action carrying the attribute.</param>
+    public void Apply(ActionModel action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var declared = action.Filters
+            .Concat(action.Controller?.Filters ?? [])
+            .OfType<IApiResponseMetadataProvider>()
+            .Select(provider => provider.StatusCode)
+            .ToHashSet();
+
+        foreach (var statusCode in PreconditionStatusCodes.Where(status => !declared.Contains(status)))
+        {
+            action.Filters.Add(new ProducesResponseTypeAttribute(typeof(ProblemDetails), statusCode));
+        }
+    }
+
+    /// <summary>
+    /// Applies <see cref="Apply(ActionModel)"/> to every action of a controller that carries the
+    /// attribute at class level.
+    /// </summary>
+    /// <param name="controller">The controller carrying the attribute.</param>
+    public void Apply(ControllerModel controller)
+    {
+        ArgumentNullException.ThrowIfNull(controller);
+
+        foreach (var action in controller.Actions)
+        {
+            Apply(action);
+        }
     }
 
     /// <inheritdoc />

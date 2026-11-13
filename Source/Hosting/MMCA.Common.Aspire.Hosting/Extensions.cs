@@ -54,6 +54,20 @@ public static class Extensions
     public const string E2eForceServerConfigurationKey = "E2E__ForceServer";
 
     /// <summary>
+    /// The environment variable a local run sets to pin the UI host to InteractiveWebAssembly (see
+    /// <c>WithE2eForceWebAssembly</c>). It also implies both E2E lifts and vetoes
+    /// <c>WithE2eForceServer</c>, so a forced-WebAssembly run needs no second variable. Absent in CI
+    /// and in production.
+    /// </summary>
+    public const string E2eForceWebAssemblyTriggerVariable = "E2E_FORCE_WASM";
+
+    /// <summary>
+    /// The environment variable <c>WithE2eForceWebAssembly</c> writes onto the UI resource; the UI host
+    /// reads it as the <c>E2E:ForceWebAssembly</c> configuration key.
+    /// </summary>
+    public const string E2eForceWebAssemblyConfigurationKey = "E2E__ForceWebAssembly";
+
+    /// <summary>
     /// Requests per window per client IP the gateway allows while an E2E suite is running (see
     /// <c>WithE2eGatewayRateLimitLift</c>). High enough that no suite can reach it.
     /// </summary>
@@ -390,27 +404,17 @@ public static class Extensions
         /// fixtures use.
         /// <para>
         /// The trigger is the <c>E2E_LIFT_REGISTRATION_THROTTLE</c> environment variable (set by the
-        /// E2E workflow, absent locally and in production, so this is a no-op there),
-        /// OR <paramref name="alsoLiftWhen"/> for an AppHost that implies the lift from another E2E
-        /// switch of its own.
+        /// E2E workflow) OR <see cref="E2eForceWebAssemblyTriggerVariable"/> (a forced-WebAssembly
+        /// run implies the same registration volume). Both are absent locally by default and in
+        /// production, so this is a no-op there and safe to call unconditionally.
         /// </para>
         /// </summary>
-        /// <param name="alsoLiftWhen">
-        /// An extra trigger evaluated at the call site and OR-ed with the environment variable. Pass
-        /// the AppHost's own E2E flag (for example a forced-render-mode switch that implies the same
-        /// registration volume); defaults to <see langword="false"/>, leaving the environment
-        /// variable as the only trigger.
-        /// </param>
         /// <returns>The Identity resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eRegistrationThrottleLift(bool alsoLiftWhen = false)
+        public IResourceBuilder<ProjectResource> WithE2eRegistrationThrottleLift()
         {
             ArgumentNullException.ThrowIfNull(identity);
 
-            var lift = alsoLiftWhen
-                || string.Equals(
-                    Environment.GetEnvironmentVariable(E2eLiftTriggerVariable),
-                    "true",
-                    StringComparison.OrdinalIgnoreCase);
+            var lift = IsTrue(E2eLiftTriggerVariable) || IsTrue(E2eForceWebAssemblyTriggerVariable);
 
             return lift
                 ? identity.WithEnvironment(
@@ -430,27 +434,42 @@ public static class Extensions
         /// <c>E2E:ForceServer</c> itself; this method only forwards the switch.
         /// <para>
         /// The trigger is the <see cref="E2eForceServerTriggerVariable"/> environment variable (set by
-        /// the E2E workflow, absent locally and in production, so this is a no-op there).
+        /// the E2E workflow, absent locally and in production, so this is a no-op there). When
+        /// <see cref="E2eForceWebAssemblyTriggerVariable"/> also reads "true" nothing is written:
+        /// forced WebAssembly wins.
         /// </para>
         /// </summary>
-        /// <param name="unlessAlso">
-        /// A veto evaluated at the call site: when <see langword="true"/> the switch is not forwarded
-        /// even if the environment asks for it. Pass the AppHost's own competing render-mode flag (for
-        /// example a forced-WebAssembly switch that must win); defaults to <see langword="false"/>.
-        /// </param>
         /// <returns>The UI resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eForceServer(bool unlessAlso = false)
+        public IResourceBuilder<ProjectResource> WithE2eForceServer()
         {
             ArgumentNullException.ThrowIfNull(ui);
 
-            var force = !unlessAlso
-                && string.Equals(
-                    Environment.GetEnvironmentVariable(E2eForceServerTriggerVariable),
-                    "true",
-                    StringComparison.OrdinalIgnoreCase);
+            var force = IsTrue(E2eForceServerTriggerVariable) && !IsTrue(E2eForceWebAssemblyTriggerVariable);
 
             return force
                 ? ui.WithEnvironment(E2eForceServerConfigurationKey, "true")
+                : ui;
+        }
+
+        /// <summary>
+        /// Local runs only: pins the UI host to InteractiveWebAssembly by setting
+        /// <c>E2E__ForceWebAssembly=true</c> on the UI resource, so every interactive page boots the
+        /// WebAssembly runtime (the way to exercise the client render path end to end). The UI host
+        /// reads <c>E2E:ForceWebAssembly</c> itself (<c>E2eRenderMode.Resolve</c> in
+        /// MMCA.Common.UI.Web); this method only forwards the switch.
+        /// <para>
+        /// The trigger is the <see cref="E2eForceWebAssemblyTriggerVariable"/> environment variable,
+        /// read case-insensitively. Absent in CI and in production, so this is a no-op there and safe
+        /// to call unconditionally.
+        /// </para>
+        /// </summary>
+        /// <returns>The UI resource builder for chaining.</returns>
+        public IResourceBuilder<ProjectResource> WithE2eForceWebAssembly()
+        {
+            ArgumentNullException.ThrowIfNull(ui);
+
+            return IsTrue(E2eForceWebAssemblyTriggerVariable)
+                ? ui.WithEnvironment(E2eForceWebAssemblyConfigurationKey, "true")
                 : ui;
         }
     }
@@ -472,28 +491,18 @@ public static class Extensions
         /// </para>
         /// <para>
         /// The trigger is the same <c>E2E_LIFT_REGISTRATION_THROTTLE</c> environment variable the Identity
-        /// throttle lift reads (set by the E2E workflow, absent locally and in production, so this is a
-        /// no-op there), OR <paramref name="alsoLiftWhen"/> for an AppHost that implies the lift from
-        /// another E2E switch of its own. A silent regression here surfaces as login/register E2E reds,
-        /// never as a build failure.
+        /// throttle lift reads (set by the E2E workflow) OR <see cref="E2eForceWebAssemblyTriggerVariable"/>
+        /// (a forced-WebAssembly run implies the same request volume). Both are absent locally by default
+        /// and in production, so this is a no-op there and safe to call unconditionally. A silent
+        /// regression here surfaces as login/register E2E reds, never as a build failure.
         /// </para>
         /// </summary>
-        /// <param name="alsoLiftWhen">
-        /// An extra trigger evaluated at the call site and OR-ed with the environment variable. Pass the
-        /// AppHost's own E2E flag (for example a forced-render-mode switch that implies the same request
-        /// volume); defaults to <see langword="false"/>, leaving the environment variable as the only
-        /// trigger.
-        /// </param>
         /// <returns>The gateway resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eGatewayRateLimitLift(bool alsoLiftWhen = false)
+        public IResourceBuilder<ProjectResource> WithE2eGatewayRateLimitLift()
         {
             ArgumentNullException.ThrowIfNull(service);
 
-            var lift = alsoLiftWhen
-                || string.Equals(
-                    Environment.GetEnvironmentVariable(E2eLiftTriggerVariable),
-                    "true",
-                    StringComparison.OrdinalIgnoreCase);
+            var lift = IsTrue(E2eLiftTriggerVariable) || IsTrue(E2eForceWebAssemblyTriggerVariable);
 
             if (!lift)
             {
@@ -625,4 +634,11 @@ public static class Extensions
                 .WithEnvironment($"DataSources__{logicalName}__SqliteConnectionString", connectionString);
         }
     }
+
+    /// <summary>
+    /// Reads one E2E trigger variable from the AppHost's own environment: only "true" (any case)
+    /// switches it on; absent, empty or any other value leaves it off.
+    /// </summary>
+    private static bool IsTrue(string variable) =>
+        string.Equals(Environment.GetEnvironmentVariable(variable), "true", StringComparison.OrdinalIgnoreCase);
 }

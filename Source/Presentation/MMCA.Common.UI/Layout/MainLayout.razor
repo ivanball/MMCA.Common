@@ -79,6 +79,9 @@
             @* Offline awareness (ADR-042 Wave 3): renders nothing while online; the Blazor
                Server fallback is always online, so only MAUI/WASM heads ever show it. *@
             <MMCA.Common.UI.Components.Capabilities.OfflineBanner />
+            @* Offline writes: inert unless the app registered AddOfflineWriteQueue; then it drains
+               writes left by an earlier session and toasts each settled one. Renders no markup. *@
+            <MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier />
             @* Read-only view-as banner (ADR-137): renders nothing unless the principal is a view-as token. *@
             <ViewAsBanner />
             @* Module content headers (IUIModule.ContentHeaderComponentTypes): banners that belong

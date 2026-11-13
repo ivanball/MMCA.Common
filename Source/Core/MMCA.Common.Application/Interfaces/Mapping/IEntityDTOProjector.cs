@@ -17,20 +17,14 @@ namespace MMCA.Common.Application.Interfaces.Mapping;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Implementations are typically a Mapperly <c>[Mapper]</c>-generated static projection wrapped in a
-/// small class, for example:
+/// Implementations are typically the projector class itself made a Mapperly <c>[Mapper]</c>, with
+/// <see cref="ProjectTo"/> declared as a partial method Mapperly generates, for example:
 /// </para>
 /// <code>
 /// [Mapper]
-/// internal static partial class OrderDTOProjection
+/// public sealed partial class OrderDTOProjector : IEntityDTOProjector&lt;Order, OrderDTO, int&gt;
 /// {
-///     internal static partial IQueryable&lt;OrderDTO&gt; ProjectToDTO(IQueryable&lt;Order&gt; source);
-/// }
-///
-/// public sealed class OrderDTOProjector : IEntityDTOProjector&lt;Order, OrderDTO, int&gt;
-/// {
-///     public IQueryable&lt;OrderDTO&gt; ProjectTo(IQueryable&lt;Order&gt; source) =&gt;
-///         OrderDTOProjection.ProjectToDTO(source);
+///     public partial IQueryable&lt;OrderDTO&gt; ProjectTo(IQueryable&lt;Order&gt; source);
 /// }
 /// </code>
 /// <para>

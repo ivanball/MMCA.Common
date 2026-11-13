@@ -728,6 +728,47 @@ public sealed class UserAdminListTests : BunitTestBase
             .WhoseValue.Should().Be(("=", "0"));
     }
 
+    /// <summary>
+    /// The phone list's fetch goes through the base's phone-list helper: the bag carries the search
+    /// box filter and the app's mobile filters (and nothing from the grid's column filters), sorted
+    /// by Email ascending, exactly as the hand-written mobile fetch sent it.
+    /// </summary>
+    [Fact]
+    public async Task MobileList_FetchesWithEmailAsc_SearchAndMobileFilters()
+    {
+        RenderMudProviders();
+        var calls = new List<(Dictionary<string, (string Operator, string Value)> Filters, string? SortColumn, string? SortDirection)>();
+        var cut = RenderAs<UserAdminList<TestUser>>(
+            Anonymous,
+            p =>
+            {
+                p.Add(x => x.DetailHref, u => string.Create(CultureInfo.InvariantCulture, $"/users/{u.Id}"));
+                p.Add(x => x.FetchPage, (filters, _, _, sortColumn, sortDirection, _) =>
+                {
+                    calls.Add((new Dictionary<string, (string Operator, string Value)>(filters, StringComparer.Ordinal), sortColumn, sortDirection));
+                    return Task.FromResult(_page);
+                });
+                p.Add(x => x.InjectMobileFilters, filters => filters["ActiveSessionCount"] = (">", "0"));
+            });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("grace@example.com"));
+
+        await cut.Find("input[placeholder='Search by email...']")
+            .InputAsync(new ChangeEventArgs { Value = "smith" });
+        await cut.WaitForAssertionAsync(
+            () => calls.Should().Contain(c => c.Filters.ContainsKey(nameof(IUserAdminDTO.Email))),
+            TimeSpan.FromSeconds(5));
+
+        await GoToPhoneAsync(cut);
+        await cut.WaitForAssertionAsync(() => calls.Should().Contain(c => c.Filters.ContainsKey("ActiveSessionCount")));
+
+        var mobile = calls.Last(c => c.Filters.ContainsKey("ActiveSessionCount"));
+        mobile.Filters.Should().HaveCount(2, "the phone bag carries the search filter and the mobile filter only");
+        mobile.Filters.Should().ContainKey(nameof(IUserAdminDTO.Email)).WhoseValue.Should().Be(("contains", "smith"));
+        mobile.Filters.Should().ContainKey("ActiveSessionCount").WhoseValue.Should().Be((">", "0"));
+        mobile.SortColumn.Should().Be("Email");
+        mobile.SortDirection.Should().Be("asc");
+    }
+
     // ── Helpers ──
     private void Confirms(bool answer) =>
         _dialogs

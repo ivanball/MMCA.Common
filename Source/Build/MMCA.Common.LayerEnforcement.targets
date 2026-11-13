@@ -101,7 +101,8 @@
 
   <!-- Cloud vendor boundary: the core packages are cloud-neutral. Every Azure, AWS or Google Cloud
        SDK (and every MassTransit transport for one) lives in an adapter package - MMCA.Common.Azure,
-       MMCA.Common.Aws, MMCA.Common.Gcp, MMCA.Common.Testing.Azure - that references the core, never
+       MMCA.Common.Azure.Startup, MMCA.Common.Aws, MMCA.Common.Gcp, MMCA.Common.Testing.Azure - that
+       references the core, never
        the other way round. A vendor reference in a core package would force that cloud's SDK,
        credentials story and advisory stream on every consumer, including the ones that run on
        another cloud or none.
@@ -125,7 +126,7 @@
        The runtime half is CloudVendorIsolationTestsBase (no core assembly names a vendor type or
        references a vendor or adapter assembly). -->
   <PropertyGroup>
-    <_MmcaIsCloudAdapter Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Aws' OR '$(MSBuildProjectName)' == 'MMCA.Common.Gcp' OR '$(MSBuildProjectName)' == 'MMCA.Common.Testing.Azure'">true</_MmcaIsCloudAdapter>
+    <_MmcaIsCloudAdapter Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Aws' OR '$(MSBuildProjectName)' == 'MMCA.Common.Gcp' OR '$(MSBuildProjectName)' == 'MMCA.Common.Testing.Azure' OR '$(MSBuildProjectName)' == 'MMCA.Common.Azure.Startup'">true</_MmcaIsCloudAdapter>
   </PropertyGroup>
   <Target Name="EnforceCloudVendorBoundary"
           BeforeTargets="ResolveProjectReferences"
@@ -146,7 +147,7 @@
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().Contains('.azure.'))
                 OR $([System.String]::new('%(Identity)').ToLowerInvariant().EndsWith('.azure'))" />
       <_ForbiddenCloudAdapterRefs Include="@(ProjectReference)"
-        Condition="'%(Filename)' == 'MMCA.Common.Azure' OR '%(Filename)' == 'MMCA.Common.Aws' OR '%(Filename)' == 'MMCA.Common.Gcp' OR '%(Filename)' == 'MMCA.Common.Testing.Azure'" />
+        Condition="'%(Filename)' == 'MMCA.Common.Azure' OR '%(Filename)' == 'MMCA.Common.Aws' OR '%(Filename)' == 'MMCA.Common.Gcp' OR '%(Filename)' == 'MMCA.Common.Testing.Azure' OR '%(Filename)' == 'MMCA.Common.Azure.Startup'" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenCloudVendorRefs->Count()) &gt; 0"
            Text="Cloud vendor boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenCloudVendorRefs.Identity). The core packages are cloud-neutral; move the dependency into the vendor adapter (MMCA.Common.Azure, MMCA.Common.Aws or MMCA.Common.Gcp) and expose it through a core abstraction." />
@@ -265,6 +266,52 @@
     </ItemGroup>
     <Error Condition="@(_ForbiddenTestingAspireRefs->Count()) &gt; 0"
            Text="Layer violation: MMCA.Common.Testing.Aspire must not reference %(_ForbiddenTestingAspireRefs.Filename) directly. It depends on MMCA.Common.Testing plus the Aspire hosting packages only." />
+  </Target>
+
+  <!-- ServiceHost: the composed service-host start-up (AddMmcaServiceHost / UseMmcaServiceHostAsync).
+       It sits above API, Aspire service defaults and Grpc, the way UI.Web sits above UI, API and
+       Aspire, and it stays a SERVICE host: no UI layer, no gateway, no MCP endpoint, no test
+       infrastructure, no language-model package and no AppHost model. Cloud adapters are already
+       forbidden to it by EnforceCloudVendorBoundary (vendor calls reach it only as callbacks).
+       Judged on the references this project DECLARES (DefiningProjectName, the Passkeys shape), since
+       API legitimately brings Application and Infrastructure along transitively. The runtime half is
+       the CloudNeutralAssemblies entry in CloudVendorIsolationTests. -->
+  <Target Name="EnforceServiceHostLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.ServiceHost'">
+    <ItemGroup>
+      <_ForbiddenServiceHostRefs Include="@(ProjectReference)"
+        Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)'
+               AND ($([System.String]::new('%(Filename)').Contains('MMCA.Common.UI'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Gateway'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Mcp'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Testing'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.AI'))
+                OR '%(Filename)' == 'MMCA.Common.Aspire.Hosting')" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenServiceHostRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.ServiceHost must not reference %(_ForbiddenServiceHostRefs.Filename). The composed service host depends on API, Aspire service defaults and Grpc only." />
+  </Target>
+
+  <!-- Azure.Startup: the Azure start-up adapter (Key Vault configuration, the Azure Monitor exporter,
+       the DataProtection key ring). A gateway or any host that needs only start-up wiring references
+       this package instead of the full MMCA.Common.Azure adapter, so it must carry no persistence,
+       messaging, transport or presentation dependency: that unused weight is why the package exists.
+       It may reference MMCA.Common.Aspire and MMCA.Common.Shared only: an ALLOW-list, so every other
+       framework project (including one added later) is refused. Judged on DECLARED references. The
+       runtime half is AzureStartupPackageBoundaryTests plus the Layering fitness tests. -->
+  <Target Name="EnforceAzureStartupBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Azure.Startup'">
+    <ItemGroup>
+      <_ForbiddenAzureStartupRefs Include="@(ProjectReference)"
+        Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)'
+               AND $([System.String]::new('%(Filename)').StartsWith('MMCA.Common.'))
+               AND '%(Filename)' != 'MMCA.Common.Aspire'
+               AND '%(Filename)' != 'MMCA.Common.Shared'" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenAzureStartupRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Azure.Startup must not reference %(_ForbiddenAzureStartupRefs.Filename). The Azure start-up adapter depends on MMCA.Common.Aspire and MMCA.Common.Shared only, so a host that takes it carries no persistence or messaging dependency." />
   </Target>
 
 </Project>

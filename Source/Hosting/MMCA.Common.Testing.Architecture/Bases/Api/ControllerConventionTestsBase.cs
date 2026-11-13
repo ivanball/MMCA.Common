@@ -22,4 +22,20 @@ public abstract class ControllerConventionTestsBase
 
     [Fact]
     public void Controllers_ShouldInherit_ApiControllerBase() => ArchitectureRules.ControllersInheritApiControllerBase(Map, ControllersExemptFromApiControllerBase);
+
+    /// <summary>
+    /// No module controller overrides a base read action only to add <c>[AllowAnonymous]</c> or
+    /// <c>[OutputCache]</c>: <c>[PublicCachedReads]</c> on the class marks the inherited reads.
+    /// </summary>
+    [Fact]
+    public void ReadOverrides_ShouldNotRedeclare_PublicCaching() =>
+        ArchitectureRules.ReadOverridesDoNotRedeclarePublicCaching(ArchitectureRules.ModuleApiConcreteClasses(Map));
+
+    /// <summary>
+    /// No module action carrying <c>[SupportsIfMatch]</c> declares 412 or 428 by hand: the attribute
+    /// documents both.
+    /// </summary>
+    [Fact]
+    public void ConditionalActions_ShouldNotRedeclare_PreconditionResponses() =>
+        ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(ArchitectureRules.ModuleApiConcreteClasses(Map));
 }

@@ -4,7 +4,8 @@ namespace MMCA.Common.Aspire.Health;
 
 /// <summary>
 /// How long <c>/health</c> and <c>/health/ready</c> reuse one computed health report before running
-/// the dependency probes again. Bound from the <c>HealthChecks</c> configuration section.
+/// the dependency probes again, and how long one dependency probe may run. Bound from the
+/// <c>HealthChecks</c> configuration section.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,6 +28,12 @@ namespace MMCA.Common.Aspire.Health;
 /// </remarks>
 public sealed class HealthReportCacheOptions
 {
+    /// <summary>The smallest accepted <see cref="CheckTimeoutSeconds"/>.</summary>
+    internal const int MinimumCheckTimeoutSeconds = 1;
+
+    /// <summary>The largest accepted <see cref="CheckTimeoutSeconds"/>.</summary>
+    internal const int MaximumCheckTimeoutSeconds = 60;
+
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "HealthChecks";
 
@@ -36,4 +43,14 @@ public sealed class HealthReportCacheOptions
     /// </summary>
     [Range(0, 300)]
     public int CacheSeconds { get; init; } = 5;
+
+    /// <summary>
+    /// Seconds each dependency check that <c>AddInfrastructureHealthChecks</c> registers may run before
+    /// it is cancelled and reported with its failure status, from 1 to 60. A dependency that holds a
+    /// connection without answering then turns <c>/health</c> unhealthy within
+    /// <see cref="CacheSeconds"/> plus this value instead of leaving the last report in place. A host
+    /// whose dependency legitimately needs longer to answer raises it.
+    /// </summary>
+    [Range(MinimumCheckTimeoutSeconds, MaximumCheckTimeoutSeconds)]
+    public int CheckTimeoutSeconds { get; init; } = 5;
 }

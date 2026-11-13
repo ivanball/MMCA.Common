@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.ServiceHost</PackageId>
+    <Description>MMCA framework: the composed service-host start-up (AddMmcaServiceHost / UseMmcaServiceHostAsync) over API, Aspire service defaults and gRPC; cloud-neutral, vendor calls arrive as callbacks</Description>  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.ServiceHost.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- No other PackageReference: OpenAPI, JwtBearer, Serilog and Grpc arrive through the three
+         project references below. -->
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The composed host sits above API (which brings Application and Infrastructure), the Aspire
+         service defaults and gRPC, the way UI.Web sits above UI, API and Aspire. Never a cloud adapter
+         (EnforceCloudVendorBoundary) and never a UI, gateway, MCP, testing, AI or AppHost package
+         (EnforceServiceHostLayerBoundary): vendor calls reach it only as callbacks. -->
+    <ProjectReference Include="..\..\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <ProjectReference Include="..\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <ProjectReference Include="..\..\Presentation\MMCA.Common.Grpc\MMCA.Common.Grpc.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

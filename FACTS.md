@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-11-11 (framework v1.288.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-11-12 (framework v1.288.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
@@ -17,7 +17,7 @@ _As of: 2026-11-11 (framework v1.288.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **28**
+## Published packages — **30**
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.AI`
@@ -39,15 +39,17 @@ Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; t
 17. `MMCA.Common.Aspire.Hosting`
 18. `MMCA.Common.Aws`
 19. `MMCA.Common.Azure`
-20. `MMCA.Common.Gateway`
-21. `MMCA.Common.Gcp`
-22. `MMCA.Common.Testing`
-23. `MMCA.Common.Testing.Architecture`
-24. `MMCA.Common.Testing.Aspire`
-25. `MMCA.Common.Testing.Azure`
-26. `MMCA.Common.Testing.E2E`
-27. `MMCA.Common.Testing.UI`
-28. `MMCA.Common`
+20. `MMCA.Common.Azure.Startup`
+21. `MMCA.Common.Gateway`
+22. `MMCA.Common.Gcp`
+23. `MMCA.Common.ServiceHost`
+24. `MMCA.Common.Testing`
+25. `MMCA.Common.Testing.Architecture`
+26. `MMCA.Common.Testing.Aspire`
+27. `MMCA.Common.Testing.Azure`
+28. `MMCA.Common.Testing.E2E`
+29. `MMCA.Common.Testing.UI`
+30. `MMCA.Common`
 
 ## Package dependency graph
 Which other `MMCA.Common.*` packages each package references directly, read from the `<ProjectReference>`
@@ -74,9 +76,11 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.Aspire` | `MMCA.Common.Shared` |
 | `MMCA.Common.Aspire.Hosting` | (none) |
 | `MMCA.Common.Aws` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
-| `MMCA.Common.Azure` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
+| `MMCA.Common.Azure` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire`, `MMCA.Common.Azure.Startup` |
+| `MMCA.Common.Azure.Startup` | `MMCA.Common.Aspire` |
 | `MMCA.Common.Gateway` | (none) |
 | `MMCA.Common.Gcp` | `MMCA.Common.Infrastructure`, `MMCA.Common.Aspire` |
+| `MMCA.Common.ServiceHost` | `MMCA.Common.API`, `MMCA.Common.Grpc`, `MMCA.Common.Aspire` |
 | `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
 | `MMCA.Common.Testing.Architecture` | (none) |
 | `MMCA.Common.Testing.Aspire` | `MMCA.Common.Testing` |
@@ -91,10 +95,10 @@ The ADRs live in the Website repo (`docs-src/adr/`), published at
 it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
-- **166 test methods across 67 abstract `*TestsBase` classes**, shipped once in the
+- **173 test methods across 69 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **504** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **605** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

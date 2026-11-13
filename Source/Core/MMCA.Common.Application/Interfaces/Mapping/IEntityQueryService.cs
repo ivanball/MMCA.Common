@@ -21,6 +21,18 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     where TEntityDTO : IBaseDTO<TIdentifierType>
     where TIdentifierType : notnull
 {
+    /// <summary>
+    /// Error code of the failure the default <see cref="GetPageByCursorAsync"/> returns: the
+    /// implementation predates the keyset read and cannot serve it.
+    /// </summary>
+    const string CursorPagingNotSupportedErrorCode = "Query.CursorPagingNotSupported";
+
+    /// <summary>
+    /// Error code of the failure the default <see cref="GetChangesSinceAsync"/> returns: the
+    /// implementation predates the change feed and cannot serve it.
+    /// </summary>
+    const string ChangeFeedNotSupportedErrorCode = "Query.ChangeFeedNotSupported";
+
     /// <summary>Gets the DTO mapper for manual entity-to-DTO conversion outside the query pipeline.</summary>
     IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType> DTOMapper { get; }
 
@@ -144,4 +156,63 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
         Expression<Func<TEntity, bool>> where,
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns one keyset ("seek") page of DTOs: the rows after <see cref="KeysetPageRequest.Cursor"/>,
+    /// ordered by the single <see cref="KeysetPageRequest.SortColumn"/> (a DTO name, validated against
+    /// the response contract) with <c>Id</c> as tie-break, plus the cursor of the next page.
+    /// </summary>
+    /// <param name="request">The page size, sort column, direction and cursor.</param>
+    /// <param name="specification">Optional specification whose <c>Criteria</c> scopes the page.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The page, or a failure: a validation failure for an unknown sort column or a malformed cursor;
+    /// <see cref="CursorPagingNotSupportedErrorCode"/> (unexpected, 500) from this default body, which
+    /// an implementation that predates the member inherits.
+    /// </returns>
+    /// <remarks>No includes, field projection or filter dictionary apply: the keyset read takes a specification only.</remarks>
+    Task<Result<KeysetCollectionResult<TEntityDTO>>> GetPageByCursorAsync(
+        KeysetPageRequest request,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Failure<KeysetCollectionResult<TEntityDTO>>(Error.Unexpected(
+            CursorPagingNotSupportedErrorCode,
+            $"The query service for {typeof(TEntity).Name} does not support cursor paging.",
+            nameof(GetPageByCursorAsync),
+            typeof(TEntity).Name)));
+
+    /// <summary>
+    /// Returns one page of the change feed: every row whose <c>LastModifiedOn</c> is at or after
+    /// <paramref name="since"/> (soft-deleted rows included), ordered by <c>(LastModifiedOn, Id)</c>
+    /// ascending, each as an upsert carrying the mapped DTO or as a tombstone carrying no item.
+    /// </summary>
+    /// <param name="since">
+    /// The inclusive lower bound, or <see langword="null"/> for no time bound. A local value is converted
+    /// to UTC and an unspecified one is taken as UTC.
+    /// </param>
+    /// <param name="cursor">The opaque cursor of the previous page, or <see langword="null"/> for the first page.</param>
+    /// <param name="pageSize">The number of changes to return (clamped by the keyset read).</param>
+    /// <param name="specification">Optional scope, ANDed with the time bound.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The page of changes, or a failure: a validation failure for a malformed cursor;
+    /// <see cref="ChangeFeedNotSupportedErrorCode"/> (unexpected, 500) from this default body.
+    /// </returns>
+    /// <remarks>
+    /// The client pages with the same <paramref name="since"/> until the next cursor is null, then keeps
+    /// the largest <c>ChangedOn</c> as its next <paramref name="since"/>. Because the bound is inclusive,
+    /// boundary rows come again and are applied idempotently. A row that left the scope without being
+    /// deleted yields no tombstone.
+    /// </remarks>
+    Task<Result<KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>>> GetChangesSinceAsync(
+        DateTime? since,
+        string? cursor,
+        int pageSize,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Failure<KeysetCollectionResult<EntityChange<TEntityDTO, TIdentifierType>>>(Error.Unexpected(
+            ChangeFeedNotSupportedErrorCode,
+            $"The query service for {typeof(TEntity).Name} does not support the change feed.",
+            nameof(GetChangesSinceAsync),
+            typeof(TEntity).Name)));
 }

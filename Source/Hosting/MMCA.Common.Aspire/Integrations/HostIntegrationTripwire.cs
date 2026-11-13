@@ -45,6 +45,16 @@ internal sealed class HostIntegrationTripwire(
     /// <summary>The configuration key whose presence requires the Google Cloud telemetry exporter.</summary>
     internal const string GoogleCloudTelemetryProjectIdKey = "GoogleCloudTelemetry:ProjectId";
 
+    /// <summary>The configuration key whose presence requires the AWS telemetry exporter.</summary>
+    internal const string AwsTelemetryRegionKey = "AwsTelemetry:Region";
+
+    /// <summary>
+    /// The boolean key that, when it parses true, requires the Azure PostgreSQL Entra token
+    /// configurator. A boolean gate, so an explicit <see langword="false"/> or a blank value never
+    /// trips it; a value that is neither blank nor a boolean always does, naming the accepted values.
+    /// </summary>
+    internal const string AzurePostgreSqlEntraAuthenticationEnabledKey = "AzurePostgreSql:EntraAuthentication:Enabled";
+
     /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
     private static readonly string[] KeyRingKeys =
     [
@@ -63,17 +73,17 @@ internal sealed class HostIntegrationTripwire(
         Check(
             ApplicationInsightsKey,
             HostIntegrationNames.AzureMonitorExporter,
-            "no Azure Monitor exporter is registered, so no log, metric or trace reaches Application Insights. Reference MMCA.Common.Azure and call builder.AddAzureMonitorExporter() after AddServiceDefaults()",
+            "no Azure Monitor exporter is registered, so no log, metric or trace reaches Application Insights. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureMonitorExporter() after AddServiceDefaults()",
             failures);
         Check(
             KeyVaultUriKey,
             HostIntegrationNames.AzureKeyVaultConfiguration,
-            "no Key Vault configuration source was added, so every secret the vault holds is missing from configuration. Reference MMCA.Common.Azure and call builder.AddAzureKeyVaultConfiguration() early in Program.cs",
+            "no Key Vault configuration source was added, so every secret the vault holds is missing from configuration. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureKeyVaultConfiguration() early in Program.cs",
             failures);
         Check(
             DataProtectionBlobStorageUriKey,
             HostIntegrationNames.AzureDataProtection,
-            "the Azure DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Azure and call builder.AddAzureDataProtection()",
+            "the Azure DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Azure.Startup (or MMCA.Common.Azure, which includes it) and call builder.AddAzureDataProtection()",
             failures);
         Check(
             SecretsManagerNamePrefixKey,
@@ -100,6 +110,26 @@ internal sealed class HostIntegrationTripwire(
             HostIntegrationNames.GoogleCloudTelemetryExporter,
             "no Google Cloud telemetry exporter is registered, so no trace or log reaches Cloud Trace or Cloud Logging. Reference MMCA.Common.Gcp and call builder.AddGoogleCloudTelemetryExporter() after AddServiceDefaults()",
             failures);
+        Check(
+            AwsTelemetryRegionKey,
+            HostIntegrationNames.AwsTelemetryExporter,
+            "no AWS telemetry exporter is registered, so no trace or log reaches X-Ray or CloudWatch Logs. Reference MMCA.Common.Aws and call builder.AddAwsTelemetryExporter() after AddServiceDefaults()",
+            failures);
+
+        var entraGate = ReadBooleanGate(AzurePostgreSqlEntraAuthenticationEnabledKey);
+        if (entraGate is null)
+        {
+            // Unreadable is not "off": whoever wrote "yes" or "1" meant on, and the host would
+            // otherwise log in with whatever password the connection string carries.
+            failures.Add(
+                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is \"{configuration[AzurePostgreSqlEntraAuthenticationEnabledKey]}\", which is not a boolean. Set it to true or false (or leave it blank for off).");
+        }
+        else if (entraGate.Value
+            && !_registered.Contains(HostIntegrationNames.AzurePostgreSqlEntraAuthentication))
+        {
+            failures.Add(
+                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is true, but no Entra token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Azure and call services.AddAzurePostgreSqlEntraAuthentication(configuration).");
+        }
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration
         // runs last owns the repository, so services that disagree on the order, or that call only
@@ -123,4 +153,20 @@ internal sealed class HostIntegrationTripwire(
     }
 
     private bool IsSet(string key) => !string.IsNullOrWhiteSpace(configuration[key]);
+
+    /// <summary>
+    /// A boolean gate: <see langword="false"/> when blank or absent, the parsed value when it reads
+    /// <see langword="true"/> or <see langword="false"/> (any case), and <see langword="null"/> when it
+    /// is set to anything else.
+    /// </summary>
+    private bool? ReadBooleanGate(string key)
+    {
+        var value = configuration[key];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return bool.TryParse(value.Trim(), out var enabled) ? enabled : null;
+    }
 }

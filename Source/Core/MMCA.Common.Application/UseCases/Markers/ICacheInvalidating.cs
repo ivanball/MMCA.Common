@@ -21,3 +21,23 @@ public interface ICacheInvalidating
     /// </remarks>
     string CachePrefix { get; }
 }
+
+/// <summary>
+/// Entity-keyed form of <see cref="ICacheInvalidating"/>: a command names the aggregate whose cached
+/// reads it makes stale, and the framework supplies the prefix
+/// (<c>"{typeof(TEntity).FullName}:"</c>, see <see cref="EntityCachePrefix"/>), the same one the
+/// generic CRUD commands evict by default. The
+/// <see cref="Decorators.CachingCommandDecorator{TCommand,TResult}"/> still reads only the
+/// non-generic <see cref="ICacheInvalidating.CachePrefix"/>, which this interface implements.
+/// </summary>
+/// <typeparam name="TEntity">The aggregate whose cached entries the command invalidates on success.</typeparam>
+/// <remarks>
+/// A command that declares a public <c>CachePrefix</c> of its own still compiles and its member wins
+/// over this default, but the shared <c>CacheInvalidationConventionTestsBase</c> fitness rule flags it:
+/// a deliberately custom prefix belongs on the non-generic marker and in that rule's allow-list.
+/// </remarks>
+public interface ICacheInvalidating<TEntity> : ICacheInvalidating
+{
+    /// <summary>Gets the entity prefix <see cref="EntityCachePrefix.For{TEntity}"/> builds for <typeparamref name="TEntity"/>.</summary>
+    string ICacheInvalidating.CachePrefix => EntityCachePrefix.For<TEntity>();
+}

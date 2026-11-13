@@ -59,6 +59,12 @@ public abstract class OAuthControllerBase(
     IConfiguration configuration,
     IDistributedLock? distributedLock) : ControllerBase
 {
+    /// <summary>
+    /// The configuration key that holds the UI base URL the OAuth completion redirects to (the
+    /// AppHost sets it through <c>WithUiLinks</c> as <c>OAuth__UIBaseUrl</c>).
+    /// </summary>
+    public const string UIBaseUrlConfigKey = "OAuth:UIBaseUrl";
+
     private const string ExternalLoginScheme = ExternalAuthExtensions.ExternalLoginScheme;
 
     // Single-use OAuth completion codes: the redirect carries only this opaque code, while the
@@ -200,7 +206,7 @@ public abstract class OAuthControllerBase(
     [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> CompleteAsync()
     {
-        var uiBaseUrl = configuration["OAuth:UIBaseUrl"]?.TrimEnd('/') ?? string.Empty;
+        var uiBaseUrl = configuration[UIBaseUrlConfigKey]?.TrimEnd('/') ?? string.Empty;
         var authenticateResult = await HttpContext.AuthenticateAsync(ExternalLoginScheme).ConfigureAwait(false);
 
         if (!authenticateResult.Succeeded || authenticateResult.Principal is null)

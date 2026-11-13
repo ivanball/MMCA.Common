@@ -46,6 +46,12 @@ public static partial class Extensions
         /// Redis, RabbitMQ) when their connection strings are configured. These are tagged as readiness
         /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
         /// infrastructure outage does not kill the process.
+        /// <para>
+        /// Every check is registered with the timeout <c>HealthChecks:CheckTimeoutSeconds</c> (5 seconds
+        /// by default, 1 to 60): a check still running when it expires is cancelled and reported with
+        /// its failure status, so a dependency that does not answer turns <c>/health</c> unhealthy
+        /// instead of leaving the last report in place.
+        /// </para>
         /// </summary>
         /// <param name="requireDatabase">
         /// When <see langword="true"/>, the host must have SOME relational database configured
@@ -64,13 +70,14 @@ public static partial class Extensions
         /// <returns>The same builder instance for chaining.</returns>
         /// <exception cref="InvalidOperationException">
         /// <paramref name="requireDatabase"/> is <see langword="true"/> and no relational database is
-        /// configured.
+        /// configured, or <c>HealthChecks:CheckTimeoutSeconds</c> is outside 1 to 60.
         /// </exception>
         public TBuilder AddInfrastructureHealthChecks(bool requireDatabase = false)
         {
             var healthChecks = builder.Services.AddHealthChecks();
+            var checkTimeout = CheckTimeout(builder.Configuration);
 
-            AddDatabaseHealthChecks(healthChecks, builder.Configuration, requireDatabase);
+            AddDatabaseHealthChecks(healthChecks, builder.Configuration, requireDatabase, checkTimeout);
 
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
@@ -88,7 +95,8 @@ public static partial class Extensions
                     "redis",
                     sp => sp.GetRequiredService<Health.RedisPingHealthCheck>(),
                     failureStatus: null,
-                    tags: [HealthCheckTags.Optional]));
+                    tags: [HealthCheckTags.Optional],
+                    timeout: checkTimeout));
             }
 
             var rabbitConnectionString = builder.Configuration.GetConnectionString("rabbitmq")
@@ -96,11 +104,22 @@ public static partial class Extensions
             if (!string.IsNullOrWhiteSpace(rabbitConnectionString)
                 && Uri.TryCreate(rabbitConnectionString, UriKind.Absolute, out var rabbitUri))
             {
-                healthChecks.AddRabbitMQ(async _ =>
-                {
-                    var factory = new RabbitMQ.Client.ConnectionFactory { Uri = rabbitUri };
-                    return await factory.CreateConnectionAsync().ConfigureAwait(false);
-                }, name: "rabbitmq", tags: [HealthCheckTags.Optional]);
+                // The registration timeout alone does not bound this check: the package calls the
+                // factory without a token, and a port that accepts the connection but never answers
+                // (a stopped broker behind a proxy, a network black hole) leaves CreateConnectionAsync
+                // waiting for connection.start far beyond it. The factory's own token, on the same
+                // budget, is what ends that wait (RabbitMQ.Client cancels the handshake on it); opening
+                // the channel afterwards gets the check's token. The package never disposes the
+                // connection its factory returns, so the factory hands out ONE connection held by a
+                // singleton (created under that token, replaced only once it is no longer open, closed
+                // when the host stops) instead of opening one per probe round.
+                builder.Services.TryAddSingleton(_ => new Health.RabbitMqHealthConnection(rabbitUri, checkTimeout));
+
+                healthChecks.AddRabbitMQ(
+                    sp => sp.GetRequiredService<Health.RabbitMqHealthConnection>().GetAsync(CancellationToken.None),
+                    name: "rabbitmq",
+                    tags: [HealthCheckTags.Optional],
+                    timeout: checkTimeout);
             }
 
             return builder;
@@ -212,11 +231,13 @@ public static partial class Extensions
     /// <param name="healthChecks">The builder the checks are added to.</param>
     /// <param name="configuration">Configuration carrying the connection strings.</param>
     /// <param name="requireDatabase">Fail when no relational engine at all is configured.</param>
+    /// <param name="checkTimeout">The timeout every check is registered with.</param>
     /// <exception cref="InvalidOperationException">A required connection string is missing.</exception>
     private static void AddDatabaseHealthChecks(
         IHealthChecksBuilder healthChecks,
         IConfiguration configuration,
-        bool requireDatabase)
+        bool requireDatabase,
+        TimeSpan checkTimeout)
     {
         var sqlSources = RelationalSources(configuration, "SQLServerConnectionString");
         var postgresSources = RelationalSources(configuration, "PostgreSQLConnectionString");
@@ -232,20 +253,42 @@ public static partial class Extensions
 
         foreach (var (name, connectionString) in sqlSources)
         {
-            healthChecks.AddSqlServer(connectionString, name: name);
+            healthChecks.AddSqlServer(connectionString, name: name, timeout: checkTimeout);
         }
 
         foreach (var (name, connectionString) in postgresSources)
         {
             // Probes the data source the contexts share when the host registered a configurator
             // (RDS IAM tokens, for one), else the plain connection-string check.
-            PostgreSqlHealthCheckRegistration.Register(healthChecks, connectionString, name);
+            PostgreSqlHealthCheckRegistration.Register(healthChecks, connectionString, name, checkTimeout);
         }
 
         foreach (var (name, connectionString) in sqliteSources)
         {
-            healthChecks.AddSqlite(connectionString, name: name);
+            healthChecks.AddSqlite(connectionString, name: name, timeout: checkTimeout);
         }
+    }
+
+    /// <summary>
+    /// The per-check timeout from <c>HealthChecks:CheckTimeoutSeconds</c> (5 seconds when absent),
+    /// read at registration because every check is registered with it.
+    /// </summary>
+    /// <param name="configuration">The host configuration.</param>
+    /// <returns>The timeout.</returns>
+    /// <exception cref="InvalidOperationException">The value is outside its range.</exception>
+    private static TimeSpan CheckTimeout(IConfiguration configuration)
+    {
+        var options = configuration.GetSection(HealthReportCacheOptions.SectionName).Get<HealthReportCacheOptions>()
+            ?? new HealthReportCacheOptions();
+        var seconds = options.CheckTimeoutSeconds;
+        if (seconds is < HealthReportCacheOptions.MinimumCheckTimeoutSeconds or > HealthReportCacheOptions.MaximumCheckTimeoutSeconds)
+        {
+            throw new InvalidOperationException(
+                $"{HealthReportCacheOptions.SectionName}:{nameof(HealthReportCacheOptions.CheckTimeoutSeconds)} must be between "
+                + $"{HealthReportCacheOptions.MinimumCheckTimeoutSeconds} and {HealthReportCacheOptions.MaximumCheckTimeoutSeconds} seconds, but was {seconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}.");
+        }
+
+        return TimeSpan.FromSeconds(seconds);
     }
 
     /// <summary>

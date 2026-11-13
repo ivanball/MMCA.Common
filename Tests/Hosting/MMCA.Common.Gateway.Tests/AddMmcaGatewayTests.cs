@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Gateway.Configuration;
+using MMCA.Common.Gateway.Forwarding;
 using MMCA.Common.Gateway.Transforms;
 using Yarp.ReverseProxy.Configuration;
+using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms.Builder;
 
 namespace MMCA.Common.Gateway.Tests;
@@ -100,6 +102,63 @@ public sealed class AddMmcaGatewayTests
         GatewaySettings.SectionName.Should().Be("MmcaGateway");
     }
 
+    // Item 31, rule 1: with the retry off (the default) YARP's own forwarder factory stays in use.
+    [Fact]
+    public void RetryDisabled_KeepsYarpsFactory()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddReverseProxy().AddMmcaGateway(new ConfigurationBuilder().Build());
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IForwarderHttpClientFactory>().Should().BeOfType<ForwarderHttpClientFactory>();
+        services.Should().NotContain(d => d.ImplementationType == typeof(GatewayRetryForwarderHttpClientFactory));
+    }
+
+    // Item 31, rule 2: with the retry on, through either overload, the retrying factory wins over the
+    // one AddReverseProxy registered, and a TimeProvider is available to it.
+    [Fact]
+    public void RetryEnabled_RegistersTheRetryingFactory()
+    {
+        var fromConfiguration = new ServiceCollection();
+        fromConfiguration.AddLogging();
+        fromConfiguration.AddReverseProxy().AddMmcaGateway(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["MmcaGateway:Retry:Enabled"] = "true" })
+            .Build());
+
+        var fromSettings = new ServiceCollection();
+        fromSettings.AddLogging();
+        fromSettings.AddReverseProxy().AddMmcaGateway(
+            new GatewaySettings { Retry = new GatewayRetrySettings { Enabled = true } });
+
+        foreach (var services in new[] { fromConfiguration, fromSettings })
+        {
+            using var provider = services.BuildServiceProvider();
+
+            provider.GetRequiredService<IForwarderHttpClientFactory>()
+                .Should().BeOfType<GatewayRetryForwarderHttpClientFactory>();
+            provider.GetRequiredService<TimeProvider>().Should().NotBeNull();
+        }
+    }
+
+    // Item 31, rule 3: a host that already composed its own forwarder factory is told, loudly, rather
+    // than having it silently replaced.
+    [Fact]
+    public void RetryEnabled_WithAForeignFactory_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IForwarderHttpClientFactory, ForeignForwarderHttpClientFactory>();
+
+        var act = () => services.AddReverseProxy().AddMmcaGateway(
+            new GatewaySettings { Retry = new GatewayRetrySettings { Enabled = true } });
+
+        act.Should().Throw<InvalidOperationException>().Which.Message
+            .Should().Contain(nameof(ForeignForwarderHttpClientFactory))
+            .And.Contain("MmcaGateway:Retry:Enabled");
+    }
+
     // The package must stay usable by a gateway that never took AddServiceDefaults, so it may not
     // drag the Aspire graph in behind the consumer's back.
     [Fact]
@@ -107,4 +166,11 @@ public sealed class AddMmcaGatewayTests
         typeof(GatewaySettings).Assembly.GetReferencedAssemblies()
             .Select(a => a.Name)
             .Should().NotContain("MMCA.Common.Aspire");
+
+    /// <summary>A host's own forwarder factory, standing in for any composition the retry must not overwrite.</summary>
+    private sealed class ForeignForwarderHttpClientFactory : IForwarderHttpClientFactory
+    {
+        public HttpMessageInvoker CreateClient(ForwarderHttpClientContext context) =>
+            throw new NotSupportedException("never called by these tests");
+    }
 }

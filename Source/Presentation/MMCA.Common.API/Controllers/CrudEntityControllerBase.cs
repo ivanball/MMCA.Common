@@ -38,9 +38,10 @@ namespace MMCA.Common.API.Controllers;
 /// </para>
 /// <para>
 /// <b>Cache eviction.</b> The command's default <c>CachePrefix</c> evicts the aggregate's cached
-/// reads through the caching decorator. An app that also uses ASP.NET output caching overrides
-/// <see cref="UpdateAsync"/>, awaits <c>base.UpdateAsync</c>, and evicts its own output-cache tags on
-/// success, exactly as it does for the inherited create and delete actions.
+/// reads through the caching decorator. An app that also uses ASP.NET output caching declares
+/// <see cref="Caching.EvictOutputCacheAttribute"/> with its tags on the derived controller: the filter
+/// evicts them after a 2xx result, best effort, for this action and for the inherited create and
+/// delete actions alike, so no action is overridden only to evict.
 /// </para>
 /// </remarks>
 /// <typeparam name="TEntity">The aggregate root entity type.</typeparam>

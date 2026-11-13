@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Gateway.Configuration;
+using MMCA.Common.Gateway.Forwarding;
 using MMCA.Common.Gateway.RateLimiting;
 using MMCA.Common.Gateway.Transforms;
+using Yarp.ReverseProxy.Forwarder;
 
 namespace MMCA.Common.Gateway;
 
@@ -97,9 +99,48 @@ public static class GatewayReverseProxyExtensions
         GatewaySettingsValidator.ThrowIfInvalid(settings);
         builder.Services.AddGatewayRoutePolicies(settings);
 
+        if (settings.Retry.Enabled)
+        {
+            AddConnectRetry(builder.Services);
+        }
+
         return builder
             .AddConfigFilter<GatewayClusterProfileConfigFilter>()
             .AddConfigFilter<GatewayHealthCheckDefaultsConfigFilter>()
             .AddTransforms<GatewayTraceHeaderTransformProvider>();
+    }
+
+    /// <summary>
+    /// Replaces YARP's forwarder client factory with the retrying one. Registered after
+    /// <c>AddReverseProxy</c>'s own <c>TryAdd</c>, so the last registration wins. A factory the host
+    /// composed itself is never silently replaced: that fails registration, naming it.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <exception cref="InvalidOperationException">The host already registered its own forwarder factory.</exception>
+    private static void AddConnectRetry(IServiceCollection services)
+    {
+        var registered = services
+            .Where(static descriptor => descriptor.ServiceType == typeof(IForwarderHttpClientFactory) && !descriptor.IsKeyedService)
+            .Select(static descriptor => descriptor.ImplementationType ?? descriptor.ImplementationInstance?.GetType())
+            .ToList();
+
+        var foreign = registered.Find(static implementation =>
+            implementation != typeof(ForwarderHttpClientFactory)
+            && implementation != typeof(GatewayRetryForwarderHttpClientFactory));
+        if (foreign is not null || registered.Contains(null))
+        {
+            throw new InvalidOperationException(
+                $"{GatewaySettings.SectionName}:Retry:Enabled is true, but an IForwarderHttpClientFactory is already "
+                + $"registered ({foreign?.FullName ?? "a factory delegate"}), which the connect retry would replace. "
+                + $"Keep that factory and set {GatewaySettings.SectionName}:Retry:Enabled to false, or remove it.");
+        }
+
+        if (registered.Contains(typeof(GatewayRetryForwarderHttpClientFactory)))
+        {
+            return;
+        }
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IForwarderHttpClientFactory, GatewayRetryForwarderHttpClientFactory>();
     }
 }

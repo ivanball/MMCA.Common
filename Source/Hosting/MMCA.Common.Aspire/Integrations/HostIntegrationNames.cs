@@ -36,4 +36,10 @@ public static class HostIntegrationNames
 
     /// <summary>Registered by <c>AddGoogleCloudTelemetryExporter()</c> (MMCA.Common.Gcp).</summary>
     public const string GoogleCloudTelemetryExporter = "GoogleCloudTelemetryExporter";
+
+    /// <summary>Registered by <c>AddAwsTelemetryExporter()</c> (MMCA.Common.Aws).</summary>
+    public const string AwsTelemetryExporter = "AwsTelemetryExporter";
+
+    /// <summary>Registered by <c>AddAzurePostgreSqlEntraAuthentication(configuration)</c> (MMCA.Common.Azure).</summary>
+    public const string AzurePostgreSqlEntraAuthentication = "AzurePostgreSqlEntraAuthentication";
 }

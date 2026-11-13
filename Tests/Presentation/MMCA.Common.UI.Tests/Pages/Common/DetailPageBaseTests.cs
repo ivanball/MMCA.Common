@@ -156,6 +156,10 @@ public sealed class DetailPageBaseTests : BunitTestBase
         token.IsCancellationRequested.Should().BeTrue();
     }
 
+    [Fact]
+    public void DetailPageBase_DerivesFromCancellablePageBase() =>
+        typeof(DetailPageBase).BaseType.Should().Be<CancellablePageBase>();
+
     private sealed class ProbePage : DetailPageBase
     {
         private bool _released;

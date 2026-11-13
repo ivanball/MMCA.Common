@@ -46,7 +46,8 @@ public static partial class Extensions
                 ServiceDescriptor.Singleton<IValidateOptions<HostIntegrationTripwireOptions>, HostIntegrationTripwire>());
 
             // HttpClient defaults applied via ConfigureHttpClientDefaults — affects every
-            // HttpClient registered downstream (typed clients, named clients, YARP forwarder).
+            // HttpClient registered downstream (typed clients, named clients). The YARP forwarder
+            // is not one of them: it builds its clients through its own forwarder client factory.
             builder.Services.ConfigureHttpClientDefaults(http =>
             {
                 // Polly resilience pipeline (values from HttpResilienceDefaults, shared with the

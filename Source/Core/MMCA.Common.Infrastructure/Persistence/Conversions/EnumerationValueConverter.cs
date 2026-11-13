@@ -45,6 +45,44 @@ public sealed class EnumerationValueConverter<TEnumeration> : ValueConverter<TEn
 }
 
 /// <summary>
+/// EF Core value converter that stores an <see cref="Enumeration{TEnumeration}"/> member as its
+/// <see cref="Enumeration{TEnumeration}.Name"/> and rebuilds the member on read. It keeps a column
+/// that already holds names (a CLR enum mapped with <c>HasConversion&lt;string&gt;()</c>) a text
+/// column with the same stored values, so replacing that enum with a smart enumeration is neither a
+/// column type change nor a data rewrite. Use <see cref="EnumerationValueConverter{TEnumeration}"/>
+/// for an <see langword="int"/> column.
+/// <para>
+/// <b>Usage:</b>
+/// <code>
+/// builder.Property(t => t.Status)
+///     .HasConversion(new EnumerationNameValueConverter&lt;TicketStatus&gt;())
+///     .HasMaxLength(32)
+///     .IsRequired();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Read-leg contract:</b> the same as <see cref="EnumerationValueConverter{TEnumeration}"/>'s.
+/// <see cref="Enumeration{TEnumeration}.FromName"/> matches case-insensitively and returns a failed
+/// <c>Result</c> for a name no member declares, which the null-forgiving <c>.Value!</c> materializes
+/// as a <see langword="null"/> reference for that row.
+/// </para>
+/// </summary>
+/// <typeparam name="TEnumeration">The concrete enumeration type being mapped.</typeparam>
+public sealed class EnumerationNameValueConverter<TEnumeration> : ValueConverter<TEnumeration, string>
+    where TEnumeration : Enumeration<TEnumeration>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EnumerationNameValueConverter{TEnumeration}"/> class.
+    /// </summary>
+    public EnumerationNameValueConverter()
+        : base(
+            member => member.Name,
+            text => Enumeration<TEnumeration>.FromName(text).Value!)
+    {
+    }
+}
+
+/// <summary>
 /// Nullable counterpart of <see cref="EnumerationValueConverter{TEnumeration}"/> for an optional
 /// enumeration property. Both legs pass <see langword="null"/> straight through, so "no member
 /// selected" stays a NULL column value rather than collapsing onto whichever member happens to

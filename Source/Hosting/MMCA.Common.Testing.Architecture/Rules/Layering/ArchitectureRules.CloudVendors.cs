@@ -9,7 +9,8 @@ public static partial class ArchitectureRules
     /// namespace itself, where <c>GoogleApiException</c> lives; <c>FirebaseAdmin</c> and
     /// <c>Grpc.Auth</c>, the Google credential bridge for gRPC, sit outside it), the MassTransit
     /// transports for their brokers, and the adapters that hold them (<c>MMCA.Common.Azure</c>,
-    /// <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>, <c>MMCA.Common.Testing.Azure</c>).
+    /// <c>MMCA.Common.Azure.Startup</c>, <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>,
+    /// <c>MMCA.Common.Testing.Azure</c>).
     /// <para>
     /// NetArchTest matches these as whole namespace segments: <c>Google</c> matches <c>Google</c> and
     /// every <c>Google.*</c> namespace, while an entry with a trailing dot (<c>Google.</c>) matches

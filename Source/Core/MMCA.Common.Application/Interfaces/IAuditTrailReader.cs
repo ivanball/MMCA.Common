@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Auditing;
+using MMCA.Common.Shared.Auditing;
 
 namespace MMCA.Common.Application.Interfaces;
 
@@ -8,10 +8,10 @@ namespace MMCA.Common.Application.Interfaces;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The framework ships the read, not the exposure: there is no shipped endpoint or page in v1,
-/// because who may see an entity's history is an application decision (an admin screen, a support
-/// tool, a data-subject request) rather than a framework one. Consumers wrap this in whatever query
-/// and authorization their domain calls for.
+/// The framework ships the read and an opt-in exposure: a host mounts the endpoint by deriving a
+/// one-line controller from <c>AuditHistoryControllerBase</c> (MMCA.Common.API), which names the
+/// entity types it serves and is gated by the <c>audit:view</c> permission. A host that derives none
+/// exposes nothing, and a consumer remains free to wrap this reader in its own query instead.
 /// </para>
 /// <para>
 /// Rows come back newest first, so the first page is the most recent activity.
@@ -37,7 +37,7 @@ public interface IAuditTrailReader
     /// <param name="pageSize">The page size, clamped to 1..500.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The recorded changes for that entity, or an empty list when it has no history.</returns>
-    Task<IReadOnlyList<AuditTrailEntryDTO>> GetForEntityAsync(
+    Task<IReadOnlyList<AuditHistoryEntryDTO>> GetForEntityAsync(
         string entityType,
         string entityKey,
         int page = 1,

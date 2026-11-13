@@ -5,8 +5,8 @@ namespace MMCA.Common.Gateway;
 
 /// <summary>
 /// Enforces the data annotations on the objects nested inside <see cref="GatewaySettings"/>:
-/// <see cref="GatewaySettings.TraceHeaders"/> and both halves of
-/// <see cref="GatewaySettings.HealthCheckDefaults"/>. <c>ValidateDataAnnotations</c> reads only the
+/// <see cref="GatewaySettings.TraceHeaders"/>, both halves of
+/// <see cref="GatewaySettings.HealthCheckDefaults"/> and <see cref="GatewaySettings.Retry"/>. <c>ValidateDataAnnotations</c> reads only the
 /// attributes on <see cref="GatewaySettings"/>'s own properties and does not recurse, so without this a
 /// blank trace-header name passed startup and then threw from every proxied request.
 /// <para>
@@ -52,5 +52,6 @@ internal sealed class GatewaySettingsValidator : IValidateOptions<GatewaySetting
         settings.TraceHeaders,
         settings.HealthCheckDefaults.Passive,
         settings.HealthCheckDefaults.Active,
+        settings.Retry,
     ];
 }

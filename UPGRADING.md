@@ -32,6 +32,235 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.Aspire.Hosting):** `WithE2eForceServer(bool unlessAlso)`, `WithE2eRegistrationThrottleLift(bool alsoLiftWhen)` and `WithE2eGatewayRateLimitLift(bool alsoLiftWhen)` lose their parameter; the helpers read `E2E_FORCE_WASM` themselves. Fix: delete the argument; replace an inline `E2E_FORCE_WASM` parse with `ui.WithE2eForceWebAssembly()`; make App.razor use `E2eRenderMode.Resolve(Configuration)`.
+
+| Before | After |
+|---|---|
+| `ui.WithE2eForceServer(unlessAlso: forceWasm)` | `ui.WithE2eForceServer()` |
+| `identity.WithE2eRegistrationThrottleLift(alsoLiftWhen: forceWasm)` | `identity.WithE2eRegistrationThrottleLift()` |
+| `gateway.WithE2eGatewayRateLimitLift(alsoLiftWhen: forceWasm)` | `gateway.WithE2eGatewayRateLimitLift()` |
+| `if (forceWasm) { ui.WithEnvironment("E2E__ForceWebAssembly", "true"); }` | `ui.WithE2eForceWebAssembly();` |
+| App.razor render-mode property reading `E2E:ForceWebAssembly` / `E2E:ForceServer` | `E2eRenderMode.Resolve(Configuration)` (` MMCA.Common.UI.Web.Hosting`) |
+
+Each helper now reads `E2E_FORCE_WASM` from the AppHost's environment: the two lifts also fire on it, and the forced-Server switch is not written while it reads `true`. All four are safe to call unconditionally.
+
+**Breaking: two unused components are removed (MMCA.Common.UI).** No namespace or configuration key
+moved, and `ClickableCard` is unchanged. MMCA.ADC, MMCA.Store and MMCA.Helpdesk use neither.
+
+| Removed | Replacement |
+|---|---|
+| `PageStateScope` (`MMCA.Common.UI.Components.PageState`), with its `OnRestore` parameter and `OnPageRestoredAsync` callback | none |
+| `registerBfcacheHandler` and `unregisterBfcacheHandler` in `_content/MMCA.Common.UI/nav-interop.js` | none |
+| `MobileCardList<TItem>` (`MMCA.Common.UI.Components.Lists`) | `MobileInfiniteScrollList<TItem>` |
+
+The mechanical fix for `PageStateScope`: delete the `<PageStateScope>` element. If a page needs a
+refresh after back navigation, reload in `OnParametersSetAsync`.
+
+The mechanical fix for `MobileCardList<TItem>`: rename the element to `MobileInfiniteScrollList`.
+`CardTemplate`, `OnCardClick`, `EmptyMessage`, `EmptyIcon` and `PageSize` keep their names. Drop
+`Items`, `TotalItems`, `CurrentPage`, `OnPageChanged` and `IsLoading`, and pass `FetchPageResult`
+instead: a `Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TItem> Items, int
+TotalItems)>>>` that takes the 1-based page number and the page size and returns that page with the
+total count. The list fetches, pages and shows its own loading and load-failure states.
+
+**Breaking: the audit-trail DTO moves to Shared and is renamed (MMCA.Common.Application to
+MMCA.Common.Shared).** Members and the `required` set are unchanged. No consumer references the old
+type.
+
+| Old | New |
+|---|---|
+| `MMCA.Common.Application.Auditing.AuditTrailEntryDTO` | `MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO` |
+| `IAuditTrailReader.GetForEntityAsync(...)` returning `Task<IReadOnlyList<AuditTrailEntryDTO>>` | the same method returning `Task<IReadOnlyList<AuditHistoryEntryDTO>>` |
+
+The mechanical fix: replace the using. `using MMCA.Common.Application.Auditing;` becomes
+`using MMCA.Common.Shared.Auditing;`, and every `AuditTrailEntryDTO` becomes `AuditHistoryEntryDTO`.
+
+**Breaking (binary only): `SetConcurrencyETag` moves to `ApiControllerBase` (MMCA.Common.API).** It
+was a protected member of `EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>`; it is now a
+protected member of `ApiControllerBase`, which every entity controller derives from, so every call
+compiles unchanged. Recompile against the new version; nothing else changes. The same release adds
+two narrow-update helpers beside it, which replace the hand-written conditional-write body:
+
+```csharp
+// Before
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+public async Task<IActionResult> RenameAsync(int id, [FromBody] CategoryRenameRequest request, CancellationToken cancellationToken)
+{
+    var rowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext);
+    var result = await renameHandler.HandleAsync(
+        new UpdateEntityCommand<Category, CategoryRenameRequest, CategoryIdentifierType>(id, request, rowVersion),
+        cancellationToken);
+    return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
+}
+
+// After (204; HandleConditionalCommandWithResponseAsync answers 200 with the value and its ETag)
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+public async Task<IActionResult> RenameAsync(int id, [FromBody] CategoryRenameRequest request, CancellationToken cancellationToken) =>
+    await HandleConditionalCommandAsync(
+        renameHandler,
+        token => new UpdateEntityCommand<Category, CategoryRenameRequest, CategoryIdentifierType>(id, request, token),
+        cancellationToken: cancellationToken);
+```
+
+**Breaking: create forms move to `CreatePageBase` (MMCA.Common.Testing.Architecture).**
+`FormsConventionTestsBase.RequiredMarkers` now expects the `CreatePageBase` member names, and the new
+fact `AdminCreateForms_InheritCreatePageBase` requires every `*Create.razor` to derive from
+`CreatePageBase` (an `@inherits CreatePageBase` line in the markup, or `: CreatePageBase` in the
+code-behind class declaration). A consumer subclass is red until its create forms move.
+
+| Old (private member of the page) | New (inherited from `CreatePageBase`) |
+|---|---|
+| `_isDirty` (and `IsDirtyAccessor="() => _isDirty"`) | `IsDirty` (`IsDirtyAccessor="() => IsDirty"`) |
+| `_form` (`@ref="_form"`, `Messages="_form?.Errors"`) | `Form` (`@ref="Form"`, `Messages="Form?.Errors"`) |
+| `_saveResult` (`Result="_saveResult"`) | `SaveResult` (`Result="SaveResult"`) |
+| `_cts.LifetimeToken()` | `PageToken` |
+
+The mechanical fix, per create page: derive from `CreatePageBase` (drop `IDisposable`), delete `_cts`,
+`IsSaving`, `_isDirty`, `MarkDirty`, `_saveResult`, `_form`, the `[Inject] IToastService Toast`
+property (it would hide the base member) and the `Dispose` methods, rename the members in the markup
+as the table says, and replace the hand-written submit body with one `SubmitAsync` call:
+
+```csharp
+// After
+private Task CreateRoomAsync() => SubmitAsync(
+    ct => RoomService.AddAsync(_model.ToNew(_eventId!.Value), ct),
+    created => { Toast.Success(L["Snackbar.Created"]); NavigationManager.NavigateTo(ConferenceRoutePaths.RoomDetails(created.Id)); },
+    new CreateSubmitOptions { Localizer = L, PreCheck = () => _eventId is null ? L["Validation.EventRequired"] : null });
+```
+
+There is no interim setting: overriding `RequiredMarkers` with the previous list does not satisfy
+`AdminCreateForms_InheritCreatePageBase`, so move every create form in the same change as the upgrade.
+
+**Replace attribute-only read overrides with `[PublicCachedReads]` (MMCA.Common.API).** Not breaking
+on its own, but the new `ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching`
+fact fails a module controller that overrides a base read only to add `[AllowAnonymous]` or
+`[OutputCache]`. Put the attribute on the class and delete those overrides; keep an override that has
+a real body and drop its two markers. The by-id route name defaults to `Get{EntityName}ById`, the name
+those overrides already used; pass `ByIdRouteName` when it differs. Allow-lists of
+`AnonymousEndpointTestsBase` stay as they are.
+
+```csharp
+// Before
+[HasPermission(ConferencePermissions.ManageRooms)]
+public sealed class RoomsController(...) : CrudEntityControllerBase<...>(...)
+{
+    [AllowAnonymous]
+    [OutputCache(PolicyName = "RoomsCache")]
+    public override Task<ActionResult<RoomDTO>> GetByIdAsync(...) => base.GetByIdAsync(...);
+
+    // ... the same for GetAllAsync (both overloads) and GetAllForLookupAsync
+}
+
+// After
+[HasPermission(ConferencePermissions.ManageRooms)]
+[PublicCachedReads("RoomsCache")]
+public sealed class RoomsController(...) : CrudEntityControllerBase<...>(...)
+{
+}
+```
+
+**Delete hand-written 412/428 response attributes (MMCA.Common.API).** `[SupportsIfMatch]` now
+documents both, typed as Problem Details, after the action's own response types, and the new
+`ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses` fact fails
+a module action that still declares either by hand. Delete the two lines; when they were the last two
+declared, the OpenAPI document is identical.
+
+```csharp
+// Before
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+[ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+[ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+
+// After
+[HttpPut("{id}/name")]
+[SupportsIfMatch]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+```
+
+**Optional: outbound webhooks (MMCA.Common.Application, MMCA.Common.Infrastructure, MMCA.Common.API).**
+Not breaking: a host that adopts none of it builds the same model and serves the same routes. To
+publish integration events to third-party receivers as signed Standard Webhooks POSTs:
+
+1. `services.AddWebhooks(builder.Configuration)` (outside the pipeline, `using MMCA.Common.Infrastructure.Webhooks;`),
+   `pipeline.AddWebhookDelivery()` inside `AddMmcaApplicationPipeline(...)`, and one
+   `services.AddWebhookEvent<TEvent>("ticket.opened")` per published event, typically in the module's
+   Application DI. Register the TERMINAL contract type of each event.
+2. **The WHOLE integration event is the published payload.** Every public property of the registered
+   contract is serialized (web defaults) into the delivery's `data` member and sent to whoever
+   subscribed, so register only contracts you are willing to send to a third party; publish a
+   dedicated contract when an existing one carries anything internal.
+3. Set `"Webhooks": { "Enabled": true }`. `Webhooks:DataSourceName` (default `Default`) names the
+   database that holds the `WebhookSubscriptions` table; set `DesignTimeDbContextOptions.EnableWebhooks = true`
+   in that database's migrations factory and add a migration (no connection needed). The table is in
+   the model only while `Webhooks:Enabled` is true on that source, so the flag and the migration move
+   together.
+4. Derive `WebhookSubscriptionsControllerBase` with a route and an API version only, and grant
+   `AdministrationPermissions.ManageWebhooks` (`webhooks:manage`) to the operators who manage
+   subscriptions. Every action answers 404 while webhooks are off.
+5. Under broker messaging the fan-out runs only in a host that consumes the event, so a delivering host
+   also calls `x.RegisterIntegrationEventConsumer<TEvent>()` for each webhook event; in-process mode needs
+   nothing extra.
+
+Deliveries are internal-command rows (`MMCA.Webhooks.Deliver.v1`), retried with the host-wide
+`InternalCommands:MaxAttempts` budget and requeued through `IInternalCommandAdministration` once
+dead-lettered. Signing secrets are protected with the data-protection key ring, so a multi-replica host
+needs the shared key ring (ADR-069). `Webhooks:AllowInsecureTargetsInDevelopment` lets a Development
+host target `http://localhost` and private addresses; any other environment ignores it with one startup
+warning.
+
+Deliveries run in a dedicated lane on every replica, so a slow or failing receiver never delays the
+other internal commands; the lane sends up to `Webhooks:DeliveryConcurrency` (1 to 16, default 4)
+deliveries at once per replica, never two to one subscription at once, and no lane batch starts a
+delivery after `Webhooks:TimeoutSeconds` (1 to 30, default 10), so keep the timeout low. A subscription
+whose attempt failed is cooled down for `Webhooks:ReceiverCooldownSeconds` (5 to 120, default 60); its
+deliveries due meanwhile are not sent and each spends one attempt, with `LastError` 'Receiver cooling
+down after a failed delivery.' The cooldown is clamped to leave room for one attempt of
+`Webhooks:TimeoutSeconds` inside the shortest `InternalCommands` retry span, with a start-up warning
+when it is. Set
+`Webhooks:Enabled` the same on every replica. Delivery backlog moves from
+`internal_commands.pending.depth` to `internal_commands.lane.pending.depth`. Many failing subscriptions
+of one tenant can still slow other tenants' deliveries.
+The `MMCA.Webhooks` client runs its own handler and nothing
+else: host-wide client defaults (the standard resilience handler, service discovery, any delegating
+handler) are cleared from it, its loggers are removed, and it sends no `traceparent`, `tracestate` or
+`baggage` header. The HTTP client trace still records the URL path, so a host that exports traces to a
+shared backend filters the `MMCA.Webhooks` spans itself. A refused delivery records only
+`Target refused: not a public address.` or `Target refused: not an https address.` on the
+subscription; the resolved address stays in the server-side Warning. `Webhooks:MaxSubscriptionsPerTenant`
+is a soft limit: concurrent creates can exceed it by the number of in-flight requests.
+
+**Optional: process managers (MMCA.Common.Domain, MMCA.Common.Application, MMCA.Common.Testing.Architecture).**
+Not breaking: no table, no migration and no configuration key. For a long-running flow whose state is
+one aggregate's own columns:
+
+1. Derive the aggregate from `ProcessManagerAggregateRoot<TId>` in place of
+   `AuditableAggregateRootEntity<TId>`. The base declares no property or field, so the EF model and the
+   migration snapshot do not change. Override `DecideTimeout(timeout, utcNow)`: match the timeout by
+   name, check the stored state, answer `NotYetDue(timeout.DueAfter(GetLastTransitionOn()))` while it is
+   early, and otherwise apply the transition (`Applied()`, or `Rejected(errors)`).
+2. Keep each timeout command consumer-owned with a stable `[InternalCommandName]`, implementing
+   `IProcessTimeoutCommand<TId>` (an explicit `ProcessId` implementation keeps the stored payload
+   unchanged), and handle it with one sealed subclass of `ProcessTimeoutHandlerBase<TCommand, TProcess, TId>`.
+   Drive event steps with a subclass of `ProcessDomainEventHandlerBase<TEvent, TProcess, TId>`; the step
+   owns its saves.
+3. Call `services.AddProcessManagers()` in the module's Application DI to register the scoped
+   `IProcessTimeoutScheduler`, and arm a timeout with `ArmAsync(command, after, ct)`. A `NotYetDue`
+   decision completes the row without scheduling another, so every step that moves the process and
+   still wants the timeout schedules it again, and a host keeps a reconciliation sweep for the cases no
+   step covers.
+4. Subclass `ProcessTimeoutConventionTestsBase` with the repo's architecture map, so a nameless timeout
+   command, or one with no handler or two, fails the build. Its `ProcessTimeoutCommands_AreDiscovered`
+   fact fails when the scan finds fewer than `MinimumTimeoutCommands` (default 1), so subclass it only in
+   a repo that uses the primitive, and raise the minimum to the repo's known count.
+
 ## [1.284.0] - 2026-11-09
 
 **Breaking: one static method removed.** No namespace, type or configuration key moved.

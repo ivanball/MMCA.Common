@@ -1,0 +1,77 @@
+@typeparam TItem
+
+@* The rendering half of an admin list page: header with the cancel-loading button, search row, the
+   grid or the phone list, empty and failure content, pager and delete confirmation. It holds no
+   paging, filter, sort, loading or persistence state: every such value arrives as a parameter from
+   the page, whose DataGridListPageBase owns that state. *@
+<PageHeader Title="@Title">
+    @if (IsLoading)
+    {
+        <MudButton Color="Color.Error" OnClick="OnCancelLoading" StartIcon="@Icons.Material.Filled.Cancel"
+                   aria-label="@(CancelAriaLabel ?? L["List.Aria.CancelLoading"])">
+            @(CancelLabel ?? L["Common.Button.Cancel"])
+        </MudButton>
+    }
+    @HeaderActions
+</PageHeader>
+
+@if (ShowSearch || Filters is not null)
+{
+    <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Class="mb-2" Spacing="2">
+        @if (ShowSearch)
+        {
+            <MudTextField T="string" Value="SearchText" ValueChanged="SearchTextChanged"
+                          Placeholder="@(SearchPlaceholder ?? L["List.Search.Placeholder"])"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" DebounceInterval="300" Clearable="true"
+                          Variant="Variant.Outlined" Class="list-search-field" />
+        }
+        @Filters
+    </MudStack>
+}
+
+@if (IsMobile)
+{
+    <MobileInfiniteScrollList TItem="TItem"
+                              @ref="MobileList"
+                              FetchPageResult="MobileFetch"
+                              CardTemplate="CardTemplate"
+                              OnCardClick="OnCardClick"
+                              PageSize="MobilePageSize"
+                              EmptyMessage="@EmptyMessage" />
+}
+else
+{
+    <MudDataGrid T="TItem"
+                 @ref="_grid"
+                 ServerData="ServerData"
+                 CurrentPage="CurrentPage"
+                 CurrentPageChanged="CurrentPageChanged"
+                 RowsPerPage="RowsPerPage"
+                 Loading="IsLoading"
+                 Dense="Dense"
+                 AllowUnsorted="false"
+                 Elevation="1"
+                 Filterable="true"
+                 FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                 HorizontalScrollbar="true"
+                 Hover="true"
+                 Striped="true">
+        <Columns>
+            @Columns
+        </Columns>
+        <NoRecordsContent>
+            <ListNoRecordsContent LoadFailed="LoadFailed" EmptyConfirmed="EmptyConfirmed" EmptyMessage="@EmptyMessage" OnRetry="RetryAsync" />
+        </NoRecordsContent>
+        <PagerContent>
+            <MudStack Row AlignItems="AlignItems.Center">
+                <MudDataGridPager T="TItem" PageSizeOptions="@EffectivePageSizeOptions" />
+            </MudStack>
+        </PagerContent>
+    </MudDataGrid>
+}
+
+@if (ShowDeleteConfirmation)
+{
+    <DeleteConfirmation @ref="DeleteDialog" EntityType="@DeleteEntityType" />
+}

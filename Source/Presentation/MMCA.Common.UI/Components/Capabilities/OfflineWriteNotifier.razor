@@ -1,0 +1,106 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using MMCA.Common.UI.Common
+@using MMCA.Common.UI.Services.Capabilities.DeviceStatus
+@using MMCA.Common.UI.Services.Offline
+@inject IServiceProvider ServiceProvider
+@inject IConnectivityStatusService Connectivity
+@inject IToastService Toast
+@inject IStringLocalizer<SharedResource> Localizer
+@inject ILogger<OfflineWriteNotifier> Logger
+@implements IDisposable
+
+@* Invisible component (ADR-042), rendered once by MainLayout right after OfflineBanner. With an
+   offline write queue registered (AddOfflineWriteQueue) it drains the writes an earlier session left
+   behind on its first interactive render, and turns each settled write into a toast. With no queue
+   registered it does nothing at all, so an app that never opts in is unaffected. *@
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private IOfflineWriteQueue? _queue;
+    private bool _disposed;
+
+    /// <summary>
+    /// Gets or sets the toast text for a settled write; returning <see langword="null"/> falls back to
+    /// the shared <c>OfflineWrites.*</c> text for its outcome.
+    /// </summary>
+    [Parameter] public Func<OfflineWriteSettledEventArgs, string?>? Describe { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether a write that replayed successfully raises a success toast.</summary>
+    [Parameter] public bool ShowCompleted { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        _queue = ServiceProvider.GetService<IOfflineWriteQueue>();
+        if (_queue is null)
+        {
+            return;
+        }
+
+        _queue.WriteSettled += OnWriteSettled;
+        if (!Connectivity.IsOnline)
+        {
+            return;
+        }
+
+        try
+        {
+            await _queue.ReplayAsync(_cts.LifetimeToken());
+        }
+        catch (OperationCanceledException)
+        {
+            // Disposed while the drain ran: nothing left to tell.
+        }
+        catch (Exception ex)
+        {
+            // The queue keeps every entry it did not settle and schedules its own next attempt while online.
+            Logger.LogWarning(ex, "Draining the offline write queue on first render failed.");
+        }
+    }
+
+    /// <summary>Unsubscribes from the queue and cancels a drain in flight.</summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (_queue is not null)
+        {
+            _queue.WriteSettled -= OnWriteSettled;
+        }
+
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+    private void OnWriteSettled(object? sender, OfflineWriteSettledEventArgs args) =>
+        _ = InvokeAsync(() => ShowToast(args));
+
+    private void ShowToast(OfflineWriteSettledEventArgs args)
+    {
+        switch (args.Outcome)
+        {
+            case OfflineWriteOutcome.Conflict:
+                Toast.Warning(Describe?.Invoke(args) ?? Localizer["OfflineWrites.Conflict"].Value);
+                break;
+            case OfflineWriteOutcome.Rejected:
+                Toast.Error(Describe?.Invoke(args) ?? Localizer["OfflineWrites.Rejected"].Value);
+                break;
+            case OfflineWriteOutcome.Expired:
+                Toast.Warning(Describe?.Invoke(args) ?? Localizer["OfflineWrites.Expired"].Value);
+                break;
+            case OfflineWriteOutcome.Completed when ShowCompleted:
+                Toast.Success(Describe?.Invoke(args) ?? Localizer["OfflineWrites.Synced"].Value);
+                break;
+        }
+    }
+}

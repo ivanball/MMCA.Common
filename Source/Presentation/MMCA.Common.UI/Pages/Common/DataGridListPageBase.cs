@@ -776,6 +776,78 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         return NewestPagedResultAsync(load);
     }
 
+    /// <summary>
+    /// Awaited by every loader of this base (<see cref="LoadServerDataAsync"/>,
+    /// <see cref="LoadVirtualizedServerDataAsync"/>, <see cref="LoadMobileDataAsync"/>) and by every
+    /// delegate <see cref="MobilePageFetcher"/> builds, before the filter bag is built. A page overrides
+    /// it to wait for state its filter callback reads (for example a picker's options loading), so the
+    /// wait lives in one place instead of at the top of each fetch method. The default does nothing.
+    /// </summary>
+    /// <param name="cancellationToken">The fetch's token: cancelled when the load is superseded, cancelled or the page is disposed.</param>
+    /// <returns>A task that completes when the fetch may build its filters.</returns>
+    /// <remarks>
+    /// A throw inside a grid loader is reported like a throwing fetch (error toast,
+    /// <see cref="LoadFailed"/>, zero rows); the persisted pre-render shortcut does not call it.
+    /// </remarks>
+    protected virtual Task OnBeforeFetchAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Turns the grid's fetch delegate plus its filter callback into the
+    /// <see cref="MobileInfiniteScrollList{TItem}.FetchPageResult"/> delegate, so one fetch method and
+    /// one filter callback serve both the grid and the phone list.
+    /// </summary>
+    /// <param name="fetchAsync">The same fetch delegate the page passes to <see cref="LoadServerDataAsync"/>.</param>
+    /// <param name="additionalFilters">
+    /// The page's filter callback, run on a fresh ordinal bag at each invocation (grid column filters are
+    /// never included).
+    /// </param>
+    /// <param name="defaultSortColumn">The phone list's sort column; null or white space sends no sort.</param>
+    /// <param name="defaultSortDirection">The sort direction: <c>"desc"</c> for descending, <c>"asc"</c> otherwise.</param>
+    /// <param name="afterFetchAsync">
+    /// An optional step run with the page's items and the delegate's token after a successful fetch (for
+    /// example enriching the rows); it never runs on a failure.
+    /// </param>
+    /// <returns>
+    /// A delegate taking the 1-based page, the page size and a token. It awaits
+    /// <see cref="OnBeforeFetchAsync"/>, builds the bag, calls <paramref name="fetchAsync"/> and returns
+    /// its <see cref="Result"/> unchanged: no toast and no page state change, because the list owns
+    /// retry and error display. Exceptions propagate to the list.
+    /// </returns>
+    protected Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> MobilePageFetcher(
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken,
+            Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null,
+        string? defaultSortColumn = null,
+        SortDirection defaultSortDirection = SortDirection.Ascending,
+        Func<IReadOnlyList<TDto>, CancellationToken, Task>? afterFetchAsync = null)
+    {
+        ArgumentNullException.ThrowIfNull(fetchAsync);
+
+        string? sortColumn = null;
+        string? sortDirection = null;
+        if (!string.IsNullOrWhiteSpace(defaultSortColumn))
+        {
+            sortColumn = defaultSortColumn;
+            sortDirection = defaultSortDirection == SortDirection.Descending ? "desc" : "asc";
+        }
+
+        return async (page, pageSize, cancellationToken) =>
+        {
+            await OnBeforeFetchAsync(cancellationToken);
+
+            var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.Ordinal);
+            additionalFilters?.Invoke(filters);
+
+            var fetched = await fetchAsync(filters, page, pageSize, sortColumn, sortDirection, cancellationToken);
+            if (afterFetchAsync is not null && fetched.TryGetValue(out var fetchedPage))
+            {
+                await afterFetchAsync(fetchedPage.Items, cancellationToken);
+            }
+
+            return fetched;
+        };
+    }
+
     /// <summary>One paged load: the cancellation reset, the pre-render shortcut, then the fetch.</summary>
     private async Task<GridData<TDto>> LoadPagedAsync(
         GridState<TDto> state,
@@ -848,6 +920,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             loadSource,
             async token =>
             {
+                await OnBeforeFetchAsync(token);
+                ThrowIfSuperseded(loadSource);
+
                 var filters = ExtractGridFilters(state.FilterDefinitions);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
@@ -916,6 +991,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             loadSource,
             async token =>
             {
+                await OnBeforeFetchAsync(token);
+                ThrowIfSuperseded(loadSource);
+
                 var filters = ExtractGridFilters(state.FilterDefinitions);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
@@ -1127,6 +1205,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             loadSource,
             async token =>
             {
+                await OnBeforeFetchAsync(token);
+                ThrowIfSuperseded(loadSource);
+
                 var filters = new Dictionary<string, (string Operator, string Value)>();
                 additionalFilters?.Invoke(filters);
 

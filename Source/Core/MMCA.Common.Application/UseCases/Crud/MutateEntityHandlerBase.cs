@@ -286,7 +286,7 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
         var repository = attemptUnitOfWork.GetRepository<TEntity, TIdentifierType>();
         var entity = await LoadAsync(repository, command, context, cancellationToken).ConfigureAwait(false);
         if (entity is null)
-            return Result.Failure<TEntity>(Error.NotFound.WithSource(HandlerName).WithTarget(typeof(TEntity).Name));
+            return Result.Failure<TEntity>(Error.NotFound.For<TEntity>(HandlerName));
 
         // ADR-035 optimistic concurrency: stamp the client's last-seen rowversion back as the
         // original, so an edit decided against a stale view fails the save with a

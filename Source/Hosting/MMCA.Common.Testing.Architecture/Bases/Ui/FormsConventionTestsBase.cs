@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -12,10 +13,12 @@ namespace MMCA.Common.Testing.Architecture;
 /// forms.
 /// <para>
 /// A create form must contain the <c>UnsavedChangesGuard</c> (bound through a live
-/// <c>IsDirtyAccessor</c>, which pre-empts the one-render stale-IsDirty lag, see §19), an
-/// <c>_isDirty</c> tracking field, a <c>MudForm</c> that names its model and runs the model's rules
-/// through the <c>MMCA.Common.UI.Validation</c> bridge, and a per-form <c>ErrorSummary</c> fed both the
-/// failed save <c>Result</c> and the live form errors (<see cref="RequiredMarkers"/>). Requiredness is
+/// <c>IsDirtyAccessor</c>, which pre-empts the one-render stale-IsDirty lag, see §19), a
+/// <c>MudForm</c> that names its model and runs the model's rules through the
+/// <c>MMCA.Common.UI.Validation</c> bridge, and a per-form <c>ErrorSummary</c> fed both the failed save
+/// <c>Result</c> and the live form errors, all bound to the <c>CreatePageBase</c> members
+/// (<see cref="RequiredMarkers"/>); and it must derive from <c>CreatePageBase</c>
+/// (<see cref="AdminCreateForms_InheritCreatePageBase"/>). Requiredness is
 /// declared once as a <c>[Required]</c> attribute on the form model and read back into the markup as
 /// <c>ModelValidation.IsRequired</c>, either in the page or in the sibling <c>*FormFields.razor</c>
 /// component the page renders (<see cref="AdminCreateForms_ReadRequirednessOffTheirModel"/>).
@@ -24,7 +27,7 @@ namespace MMCA.Common.Testing.Architecture;
 /// has its own fact (<see cref="ProfileForm_KeepsErrorSummaryAndPasswordValidation"/>).
 /// </para>
 /// </summary>
-public abstract class FormsConventionTestsBase
+public abstract partial class FormsConventionTestsBase
 {
     /// <summary>The literal that marks a Profile page rendering the shared change-password component.</summary>
     public const string ChangePasswordCardTag = "<ChangePasswordCard";
@@ -69,16 +72,16 @@ public abstract class FormsConventionTestsBase
     /// </summary>
     protected virtual IReadOnlyList<string> RequiredMarkers =>
     [
-        "UnsavedChangesGuard",          // the navigation guard component is present
-        "IsDirtyAccessor",              // bound through the live accessor, not the lagging parameter
-        "_isDirty",                     // dirty-tracking field backing the guard
-        "<MudForm",                     // a validated MudForm wraps the inputs
-        "Model=\"_model\"",             // the form declares the model its rules come from
-        "Validation=\"@_validate\"",    // fields run the model's rules through the bridge
-        "<ErrorSummary",                // per-form error summary inside the form card (shared component)
-        "Result=\"_saveResult\"",       // fed the failed create Result, not just MudForm validation
-        "Messages=\"_form?.Errors\"",   // and the live MudForm error list
-        "Validation.CorrectFollowing",  // localized error-summary heading
+        "UnsavedChangesGuard",                  // the navigation guard component is present
+        "IsDirtyAccessor=\"() => IsDirty\"",    // bound through the live accessor to CreatePageBase.IsDirty
+        "<MudForm",                             // a validated MudForm wraps the inputs
+        "@ref=\"Form\"",                        // bound to CreatePageBase.Form, which SubmitAsync validates
+        "Model=\"_model\"",                     // the form declares the model its rules come from
+        "Validation=\"@_validate\"",            // fields run the model's rules through the bridge
+        "<ErrorSummary",                        // per-form error summary inside the form card (shared component)
+        "Result=\"SaveResult\"",                // fed the failed create Result, not just MudForm validation
+        "Messages=\"Form?.Errors\"",            // and the live MudForm error list
+        "Validation.CorrectFollowing",          // localized error-summary heading
     ];
 
     /// <summary>
@@ -142,6 +145,54 @@ public abstract class FormsConventionTestsBase
 
         var uncommented = StripAllComments(markup);
         return [.. markers.Where(marker => !uncommented.Contains(marker, StringComparison.Ordinal))];
+    }
+
+    /// <summary>
+    /// Whether a create form derives from <c>CreatePageBase</c>: its markup, with Razor and HTML comments
+    /// stripped, has an <c>@inherits</c> line naming the base, or its code-behind, with C# comments
+    /// (<c>//</c> and <c>/* */</c>) stripped, names the base as <c>: CreatePageBase</c> or
+    /// <c>, CreatePageBase</c> in its class declaration. A base named only inside a comment does not count.
+    /// </summary>
+    /// <param name="razorMarkup">The form's <c>.razor</c> markup.</param>
+    /// <param name="codeBehind">The sibling <c>.razor.cs</c> source, or <see langword="null"/> when there is none.</param>
+    /// <returns><see langword="true"/> when either file declares the base.</returns>
+    public static bool InheritsCreatePageBase(string razorMarkup, string? codeBehind)
+    {
+        ArgumentNullException.ThrowIfNull(razorMarkup);
+
+        if (InheritsDirectiveRegex.IsMatch(StripAllComments(razorMarkup)))
+        {
+            return true;
+        }
+
+        return codeBehind is not null && ClassDeclarationRegex.IsMatch(StripCSharpComments(codeBehind));
+    }
+
+    /// <summary>
+    /// Every admin create form derives from <c>CreatePageBase</c>, so the submit pipeline (validate,
+    /// pre-check, save with the page token, clear the dirty flag before navigating, keep the failed
+    /// result for the error summary) lives once in the base instead of being copied into each page.
+    /// The failure lists every <c>*Create.razor</c> whose markup and sibling <c>*Create.razor.cs</c> do
+    /// not declare the base (<see cref="InheritsCreatePageBase"/>).
+    /// </summary>
+    [Fact]
+    public void AdminCreateForms_InheritCreatePageBase()
+    {
+        var createForms = DiscoverCreateForms();
+
+        var violations = new List<string>();
+        foreach (var form in createForms)
+        {
+            var codeBehindPath = form + ".cs";
+            var codeBehind = File.Exists(codeBehindPath) ? File.ReadAllText(codeBehindPath) : null;
+            if (!InheritsCreatePageBase(File.ReadAllText(form), codeBehind))
+            {
+                violations.Add(Path.GetFileName(form));
+            }
+        }
+
+        violations.Should().BeEmpty(
+            because: $"every admin create form must derive from CreatePageBase (an @inherits line or a code-behind class declaration) so the shared submit pipeline cannot be re-implemented page by page; not derived: {string.Join(", ", violations)}");
     }
 
     [Fact]
@@ -283,6 +334,36 @@ public abstract class FormsConventionTestsBase
 
         return builder.ToString();
     }
+
+    private static string StripCSharpComments(string source) =>
+        StripLineComments(StripComments(source, "/*", "*/"));
+
+    private static string StripLineComments(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        var position = 0;
+        while (position < text.Length)
+        {
+            var start = text.IndexOf("//", position, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                builder.Append(text, position, text.Length - position);
+                break;
+            }
+
+            builder.Append(text, position, start - position);
+            var lineEnd = text.AsSpan(start).IndexOf('\n');
+            position = lineEnd < 0 ? text.Length : start + lineEnd;
+        }
+
+        return builder.ToString();
+    }
+
+    [GeneratedRegex(@"^\s*@inherits\s+(global::)?([\w]+\.)*CreatePageBase\b", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex InheritsDirectiveRegex { get; }
+
+    [GeneratedRegex(@"\bclass\s+\w+[^{;]*(: |, )CreatePageBase\b", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex ClassDeclarationRegex { get; }
 
     private static int CountOccurrences(string text, string token)
     {

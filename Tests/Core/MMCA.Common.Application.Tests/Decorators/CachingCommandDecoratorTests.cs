@@ -193,6 +193,32 @@ public sealed class CachingCommandDecoratorTests
             Times.Never);
     }
 
+    // ── A command keyed by ICacheInvalidating<TEntity> evicts the entity prefix it never declared ──
+    [Fact]
+    public async Task HandleAsync_SuccessfulEntityKeyedCommand_EvictsTheEntityFullNamePrefix()
+    {
+        var inner = new Mock<ICommandHandler<EntityKeyedCacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<EntityKeyedCacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
+        var sut = new CachingCommandDecorator<EntityKeyedCacheInvalidatingTestCommand, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<EntityKeyedCacheInvalidatingTestCommand, Result>>.Instance);
+
+        var result = await sut.HandleAsync(new EntityKeyedCacheInvalidatingTestCommand(1));
+
+        result.IsSuccess.Should().BeTrue();
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(typeof(CachingTestEntity).FullName + ":", CancellationToken.None),
+            Times.Once);
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(It.Is<string>(p => p != typeof(CachingTestEntity).FullName + ":"), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the generic marker's default is exactly the entity prefix, nothing broader");
+    }
+
     // ── Delayed re-invalidation closes the read-repopulate race (L2) ──
     [Fact]
     public async Task HandleAsync_SuccessfulCacheInvalidatingCommand_EvictsPrefixASecondTimeAfterTheDelay()
@@ -330,5 +356,7 @@ public sealed record OptedOutCacheInvalidatingTestCommand : ICacheInvalidating
 {
     public string CachePrefix => string.Empty;
 }
+
+public sealed record EntityKeyedCacheInvalidatingTestCommand(int Id) : ICacheInvalidating<CachingTestEntity>;
 
 public sealed class CachingTestEntity : AuditableAggregateRootEntity<int>;

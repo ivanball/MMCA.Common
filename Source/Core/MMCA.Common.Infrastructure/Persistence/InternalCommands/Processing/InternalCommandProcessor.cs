@@ -68,8 +68,18 @@ public sealed partial class InternalCommandProcessor(
 
     private static readonly ActivitySource InternalCommandActivitySource = new(InternalCommandMetrics.MeterName);
 
-    private readonly InternalCommandsSettings _settings = options.Value;
+    /// <summary>The queue settings this loop runs with; a dedicated lane reads the same values.</summary>
+    internal InternalCommandsSettings Settings { get; } = options.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
+
+    /// <summary>
+    /// The command type a registered dedicated lane owns, which the fetch and the count exclude; null
+    /// when no lane is registered. Resolved once, on the first cycle (see <see cref="GetExcludedCommandType"/>).
+    /// </summary>
+    private string? _excludedCommandType;
+
+    /// <summary>Whether <see cref="_excludedCommandType"/> has been resolved.</summary>
+    private bool _exclusionResolved;
 
     /// <inheritdoc />
     /// <remarks>The loop, startup delay and smart wait are the shared <see cref="PollingLoop"/>.</remarks>
@@ -84,8 +94,8 @@ public sealed partial class InternalCommandProcessor(
                 return (cycle.HasMoreDueWork, cycle.EarliestUpcoming);
             },
             ex => LogCycleError(logger, ex),
-            _settings.ProcessingDelaySeconds,
-            _settings.PollingIntervalSeconds,
+            Settings.ProcessingDelaySeconds,
+            Settings.PollingIntervalSeconds,
             signal.WaitAsync,
             stoppingToken);
 
@@ -113,7 +123,7 @@ public sealed partial class InternalCommandProcessor(
     /// queue table nothing else opens.
     /// </summary>
     internal IReadOnlyList<TenantDataSourceTarget> GetTargets() =>
-        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
+        tableTargets.Relational(Settings.DataSource, Settings.DatabaseName);
 
     /// <summary>
     /// Drains every target once and aggregates the per-source results: any source with more due work
@@ -156,7 +166,7 @@ public sealed partial class InternalCommandProcessor(
         var context = scope.ServiceProvider.GetRequiredService<IDbContextFactory>().GetDbContext(target.Source);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var cutoff = now.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
+        var cutoff = now.Subtract(TimeSpan.FromSeconds(Settings.ProcessingDelaySeconds));
 
         var candidates = await FetchCandidatesAsync(context, sourceName, now, cancellationToken).ConfigureAwait(false);
         var pendingDepth = await CountPendingAsync(context, sourceName, candidates.Count, now, cancellationToken)
@@ -214,7 +224,7 @@ public sealed partial class InternalCommandProcessor(
 
         return (
             new InternalCommandCycleResult(
-                HasMoreDueWork: dueCount == _settings.BatchSize && progressed,
+                HasMoreDueWork: dueCount == Settings.BatchSize && progressed,
                 earliestUpcoming),
             pendingDepth);
     }
@@ -233,17 +243,26 @@ public sealed partial class InternalCommandProcessor(
         DateTime now,
         CancellationToken cancellationToken)
     {
+        var excluded = GetExcludedCommandType();
+
         using var pollActivity = InternalCommandActivitySource.StartActivity(PollActivityName);
         pollActivity?.SetTag("messaging.internal_commands.data_source", sourceName);
 
-        return await context.Set<InternalCommandMessage>().AsNoTracking()
+        var pending = context.Set<InternalCommandMessage>().AsNoTracking()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
-                && c.Attempts < _settings.MaxAttempts
-                && (c.ClaimedUntil == null || c.ClaimedUntil < now))
+                && c.Attempts < Settings.MaxAttempts
+                && (c.ClaimedUntil == null || c.ClaimedUntil < now));
+
+        if (excluded is not null)
+        {
+            pending = pending.Where(c => c.CommandType != excluded);
+        }
+
+        return await pending
             .OrderBy(c => c.ScheduledOn)
             .ThenBy(c => c.Id)
-            .Take(_settings.BatchSize)
+            .Take(Settings.BatchSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -261,21 +280,48 @@ public sealed partial class InternalCommandProcessor(
         DateTime now,
         CancellationToken cancellationToken)
     {
-        if (fetchedCount < _settings.BatchSize)
+        if (fetchedCount < Settings.BatchSize)
         {
             return fetchedCount;
         }
 
+        var excluded = GetExcludedCommandType();
+
         using var pollActivity = InternalCommandActivitySource.StartActivity(PollActivityName);
         pollActivity?.SetTag("messaging.internal_commands.data_source", sourceName);
 
-        return await context.Set<InternalCommandMessage>()
+        var pending = context.Set<InternalCommandMessage>()
             .Where(c => c.ProcessedOn == null
                 && c.DeadLetteredOn == null
-                && c.Attempts < _settings.MaxAttempts
-                && (c.ClaimedUntil == null || c.ClaimedUntil < now))
+                && c.Attempts < Settings.MaxAttempts
+                && (c.ClaimedUntil == null || c.ClaimedUntil < now));
+
+        if (excluded is not null)
+        {
+            pending = pending.Where(c => c.CommandType != excluded);
+        }
+
+        return await pending
             .LongCountAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The command type a dedicated lane drains instead of this loop, or null when no lane is
+    /// registered (the default, under which the fetch and the count are exactly the pending
+    /// predicate). Read once, on the first cycle, from a scope, so a lane registered before or after
+    /// this processor is seen either way.
+    /// </summary>
+    private string? GetExcludedCommandType()
+    {
+        if (!_exclusionResolved)
+        {
+            using var scope = scopeFactory.CreateScope();
+            _excludedCommandType = scope.ServiceProvider.GetService<InternalCommandLanes>()?.DedicatedCommandType;
+            _exclusionResolved = true;
+        }
+
+        return _excludedCommandType;
     }
 
     /// <summary>
@@ -284,7 +330,7 @@ public sealed partial class InternalCommandProcessor(
     /// run the same command at the same time. Returns the rows this replica actually owns (empty when
     /// another replica claimed the whole prefix between the fetch and the claim).
     /// </summary>
-    private async Task<List<InternalCommandMessage>> ClaimDueAsync(
+    internal async Task<List<InternalCommandMessage>> ClaimDueAsync(
         ApplicationDbContext context,
         List<InternalCommandMessage> candidates,
         int dueCount,
@@ -293,7 +339,7 @@ public sealed partial class InternalCommandProcessor(
         CancellationToken cancellationToken)
     {
         Guid[] dueIds = [.. candidates.Take(dueCount).Select(c => c.Id)];
-        var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
+        var leaseUntil = now.AddSeconds(Settings.LeaseSeconds);
         var queue = context.Set<InternalCommandMessage>();
 
         var claimedCount = await queue
@@ -332,13 +378,13 @@ public sealed partial class InternalCommandProcessor(
     /// the claim token, so a row another replica has taken over since the batch claim is skipped
     /// rather than run a second time. Returns whether the claim is still this replica's.
     /// </summary>
-    private async Task<bool> RenewClaimAsync(
+    internal async Task<bool> RenewClaimAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
         CancellationToken cancellationToken)
     {
-        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(Settings.LeaseSeconds);
 
         var kept = await context.Set<InternalCommandMessage>()
             .Where(c => c.Id == row.Id && c.ClaimedBy == claimToken)
@@ -353,12 +399,18 @@ public sealed partial class InternalCommandProcessor(
     /// this cycle (completed or dead-lettered), which is what tells the caller a full batch made
     /// progress and is worth re-polling for.
     /// </summary>
-    private async Task<bool> ExecuteClaimedAsync(
+    /// <remarks>
+    /// The optional observer is invoked just before a failed attempt is recorded (a <c>Result.Failure</c>
+    /// or an exception, whether the row then retries or dead-letters). The shared loop passes none; a
+    /// dedicated lane uses it to cool a failing receiver down.
+    /// </remarks>
+    internal async Task<bool> ExecuteClaimedAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         string sourceName,
         Guid claimToken,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action? onFailedAttempt = null)
     {
         using var activity = StartExecutionActivity(row, sourceName);
 
@@ -421,6 +473,7 @@ public sealed partial class InternalCommandProcessor(
             return true;
         }
 
+        onFailedAttempt?.Invoke();
         return await RecordFailedAttemptAsync(
             context, row, claimToken, result, failure, commandTypeTag, activity, cancellationToken)
             .ConfigureAwait(false);
@@ -433,7 +486,7 @@ public sealed partial class InternalCommandProcessor(
     /// the difference an operator cares about is WHY, not which mechanism reported it.
     /// </summary>
     /// <returns><see langword="true"/> when the row was dead-lettered, false when it will retry.</returns>
-    private async Task<bool> RecordFailedAttemptAsync(
+    internal async Task<bool> RecordFailedAttemptAsync(
         ApplicationDbContext context,
         InternalCommandMessage row,
         Guid claimToken,
@@ -457,7 +510,7 @@ public sealed partial class InternalCommandProcessor(
         {
             LogAttemptThrew(logger, row.Id, row.CommandType, attempts, failure);
         }
-        if (attempts >= _settings.MaxAttempts)
+        if (attempts >= Settings.MaxAttempts)
         {
             await DeadLetterAsync(context, row, claimToken, message, "attempts_exhausted", cancellationToken)
                 .ConfigureAwait(false);
@@ -640,7 +693,7 @@ public sealed partial class InternalCommandProcessor(
     /// <param name="attempts">The attempt number that just failed, counting from one.</param>
     /// <returns>The wait, in seconds, before the row becomes claimable again.</returns>
     internal double ComputeRetryBackoffSeconds(int attempts) =>
-        PollingLoop.ComputeRetryBackoffSeconds(attempts, _settings.RetryBackoffBaseSeconds, _settings.MaxRetryBackoffSeconds);
+        PollingLoop.ComputeRetryBackoffSeconds(attempts, Settings.RetryBackoffBaseSeconds, Settings.MaxRetryBackoffSeconds);
 
     /// <summary>
     /// Renders a failed result's errors for the <c>LastError</c> column. Codes and messages only: the
@@ -657,7 +710,7 @@ public sealed partial class InternalCommandProcessor(
     /// execution appears under the request that asked for it. Returns null when no trace context was
     /// captured (a row scheduled outside any activity).
     /// </summary>
-    private static Activity? StartExecutionActivity(InternalCommandMessage row, string sourceName)
+    internal static Activity? StartExecutionActivity(InternalCommandMessage row, string sourceName)
     {
         if (string.IsNullOrEmpty(row.TraceId) || string.IsNullOrEmpty(row.SpanId))
         {

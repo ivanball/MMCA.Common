@@ -1666,6 +1666,14 @@
           "ModelContextProtocol.AspNetCore": "[2.4.0, )"
         }
       },
+      "mmca.common.servicehost": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.API": "[1.0.0, )",
+          "MMCA.Common.Aspire": "[1.0.0, )",
+          "MMCA.Common.Grpc": "[1.0.0, )"
+        }
+      },
       "mmca.common.shared": {
         "type": "Project"
       },
@@ -1705,6 +1713,7 @@
           "Aspire.Hosting.Testing": "[13.6.5, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.Testing": "[1.0.0, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -4162,6 +4171,14 @@
           "ModelContextProtocol.AspNetCore": "[2.4.0, )"
         }
       },
+      "mmca.common.servicehost": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.API": "[1.0.0, )",
+          "MMCA.Common.Aspire": "[1.0.0, )",
+          "MMCA.Common.Grpc": "[1.0.0, )"
+        }
+      },
       "mmca.common.shared": {
         "type": "Project"
       },
@@ -4200,6 +4217,7 @@
           "Aspire.Hosting.Testing": "[13.6.5, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.Testing": "[1.0.0, )",
+          "Microsoft.Data.SqlClient": "[7.1.1, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },

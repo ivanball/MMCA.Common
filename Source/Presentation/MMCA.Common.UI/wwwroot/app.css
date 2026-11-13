@@ -405,7 +405,7 @@ h1:focus:not(:focus-visible) {
         gap: 0.25rem;
     }
 
-    /* Mobile card list items (the 48px touch target on their icon buttons is enforced by the
+    /* Mobile card items (the 48px touch target on their icon buttons is enforced by the
        shared `.mmca-touch-target` rule group above). */
     .mobile-list-card {
         cursor: pointer;

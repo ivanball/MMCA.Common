@@ -13,6 +13,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Shared.Identifiers;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 
@@ -225,9 +226,26 @@ public static class DesignTimeDbContextHelper
                 Enabled = designOptions.EnableMachineClients,
                 DataSourceName = physical.Key.Name,
             }));
+
+        // Same two-part gate for the outbound webhook table, for the same collapse reason.
+        services.AddSingleton<IOptions<Application.Webhooks.WebhookSettings>>(
+            Options.Create(new Application.Webhooks.WebhookSettings
+            {
+                Enabled = designOptions.EnableWebhooks,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);
+
+        // Strongly typed identifiers (ADR-115): the context reads the registry from its provider to
+        // give each wrapped key its value converter, as AddStronglyTypedIds does at runtime. Only
+        // registered when the migrations project lists an identifier assembly, so a model without
+        // wrappers is built exactly as before.
+        if (designOptions.StronglyTypedIdAssemblies.Count > 0)
+        {
+            services.AddSingleton(new StronglyTypedIdRegistry(designOptions.StronglyTypedIdAssemblies.ToArray()));
+        }
 
         return (services, assemblyProvider, physical);
     }

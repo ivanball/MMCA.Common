@@ -126,7 +126,7 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
             .GetByIdAsync(ParentId(command), Includes, AsTracking, cancellationToken)
             .ConfigureAwait(false);
         if (parent is null)
-            return Result.Failure<TChildDTO>(Error.NotFound.WithSource(HandlerName).WithTarget(typeof(TParent).Name));
+            return Result.Failure<TChildDTO>(Error.NotFound.For<TParent>(HandlerName));
 
         var result = Apply(parent, command);
         if (!result.TryGetValue(out var child))

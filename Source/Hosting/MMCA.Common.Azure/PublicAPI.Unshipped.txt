@@ -1,1 +1,29 @@
 #nullable enable
+*REMOVED*MMCA.Common.Azure.AzureDataProtectionExtensions
+*REMOVED*MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder)
+*REMOVED*MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder
+*REMOVED*MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions
+*REMOVED*MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
+*REMOVED*MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder
+*REMOVED*MMCA.Common.Azure.AzureMonitorExporterExtensions
+*REMOVED*MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder)
+*REMOVED*MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder
+*REMOVED*const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string!
+*REMOVED*static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+*REMOVED*static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+*REMOVED*static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder
+MMCA.Common.Azure.AzureDataProtectionExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string! (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzurePostgreSqlEntraAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzurePostgreSqlEntraAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -1,1 +1,20 @@
 #nullable enable
+abstract MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInvalidatingCommands_ShouldUse_EntityKeyedMarker() -> void
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInvalidationConventionTestsBase() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CacheInvalidatingCommandsUseEntityKeyedMarker(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<System.Type!>! allowedCustomPrefixTypes) -> void
+virtual MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.AllowedCustomPrefixTypes.get -> System.Collections.Generic.IReadOnlyCollection<System.Type!>!
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching() -> void
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ReadOverridesDoNotRedeclarePublicCaching(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
+MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_InheritCreatePageBase() -> void
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.InheritsCreatePageBase(string! razorMarkup, string? codeBehind) -> bool
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_DeclareAStableInternalCommandName() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_HaveExactlyOneTimeoutHandler() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutConventionTestsBase() -> void
+abstract MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_AreDiscovered() -> void
+virtual MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.MinimumTimeoutCommands.get -> int

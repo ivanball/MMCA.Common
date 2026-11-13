@@ -28,5 +28,10 @@
          drag in the service-defaults / YARP graphs to spell a configuration key. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Gateway\MMCA.Common.Gateway.csproj" />
+    <!-- Same reason for IdentityLinkExtensionsTests and ServiceTokenExtensionsTests: API (which brings
+         Application and Infrastructure) owns the password-reset, email-confirmation, sign-in-link, JWT
+         and OAuth names, and Grpc owns ServiceTokenSettings. -->
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.Grpc\MMCA.Common.Grpc.csproj" />
   </ItemGroup>
 </Project>
