@@ -314,7 +314,7 @@
          GHSA-6527-9fp8-r4x6 / CVE-2026-118750 (moderate, denial of service); referenced directly in
          MMCA.Common.UI so the pin takes effect (no transitive pinning) and flows to consumers through
          the published package graph. Drop it when Mvc.Core itself depends on 2.3.14 or later. -->
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
