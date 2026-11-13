@@ -5,12 +5,25 @@ MMCA.Common.Shared.Abstractions.CollectionResult<T>.CollectionResult(MMCA.Common
 MMCA.Common.Shared.Abstractions.CollectionResult<T>.CollectionResult(System.Collections.Generic.IReadOnlyCollection<T>! items) -> void
 MMCA.Common.Shared.Abstractions.CollectionResult<T>.Items.get -> System.Collections.Generic.ICollection<T>!
 MMCA.Common.Shared.Abstractions.CollectionResult<T>.Items.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.<Clone>$() -> MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ChangedOn.get -> System.DateTime
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ChangedOn.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.EntityChange() -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Equals(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? other) -> bool
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Id.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.IsDeleted.get -> bool
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.IsDeleted.init -> void
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.get -> TEntityDTO?
+MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Item.init -> void
 MMCA.Common.Shared.Abstractions.Error
 MMCA.Common.Shared.Abstractions.Error.Code.get -> string!
 MMCA.Common.Shared.Abstractions.Error.Code.init -> void
 MMCA.Common.Shared.Abstractions.Error.Deconstruct(out string! Code, out string! Message, out MMCA.Common.Shared.Abstractions.ErrorType Type, out string? Source, out string? Target) -> void
 MMCA.Common.Shared.Abstractions.Error.Error(MMCA.Common.Shared.Abstractions.Error! original) -> void
 MMCA.Common.Shared.Abstractions.Error.Error(string! Code, string! Message, MMCA.Common.Shared.Abstractions.ErrorType Type, string? Source = null, string? Target = null) -> void
+MMCA.Common.Shared.Abstractions.Error.For<TTarget>(string! source) -> MMCA.Common.Shared.Abstractions.Error!
 MMCA.Common.Shared.Abstractions.Error.Message.get -> string!
 MMCA.Common.Shared.Abstractions.Error.Message.init -> void
 MMCA.Common.Shared.Abstractions.Error.Source.get -> string?
@@ -97,6 +110,30 @@ MMCA.Common.Shared.Abstractions.ServiceContractAttribute
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribute() -> void
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribute(string! version) -> void
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute.Version.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.<Clone>$() -> MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.AuditHistoryEntryDTO() -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedBy.get -> int?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedBy.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedOn.get -> System.DateTime
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ChangedOn.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.CorrelationId.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.CorrelationId.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityKey.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityKey.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityType.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.EntityType.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Equals(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? other) -> bool
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Id.get -> System.Guid
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Id.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.NewValue.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.NewValue.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.OldValue.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.OldValue.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Operation.get -> string!
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Operation.init -> void
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.PropertyName.get -> string?
+MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.PropertyName.init -> void
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Email.get -> string!
 MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.IsLocked.get -> bool
@@ -730,6 +767,36 @@ MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.StronglyTypedIdRegistry(p
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.StronglyTypedIdTypeConverter() -> void
 MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters
+MMCA.Common.Shared.Imports.ImportConventions
+MMCA.Common.Shared.Imports.ImportReportDTO
+MMCA.Common.Shared.Imports.ImportReportDTO.Added.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Added.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.DryRun.get -> bool
+MMCA.Common.Shared.Imports.ImportReportDTO.DryRun.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.ImportReportDTO() -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.ImportReportDTO(MMCA.Common.Shared.Imports.ImportReportDTO! original) -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Rejected.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Rejected.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.RowErrors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Imports.ImportRowErrorDTO!>!
+MMCA.Common.Shared.Imports.ImportReportDTO.RowErrors.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.TotalRows.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.TotalRows.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Unchanged.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Unchanged.init -> void
+MMCA.Common.Shared.Imports.ImportReportDTO.Updated.get -> int
+MMCA.Common.Shared.Imports.ImportReportDTO.Updated.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.<Clone>$() -> MMCA.Common.Shared.Imports.ImportRowErrorDTO!
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Code.get -> string!
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Code.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Column.get -> string?
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Column.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Equals(MMCA.Common.Shared.Imports.ImportRowErrorDTO? other) -> bool
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.ImportRowErrorDTO() -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.LineNumber.get -> int
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.LineNumber.init -> void
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Message.get -> string!
+MMCA.Common.Shared.Imports.ImportRowErrorDTO.Message.init -> void
 MMCA.Common.Shared.Legal.AcceptLegalTermsRequest
 MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.AcceptLegalTermsRequest() -> void
 MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.AcceptLegalTermsRequest(string! Version) -> void
@@ -934,6 +1001,60 @@ MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Start.get -> System.DateTime
 MMCA.Common.Shared.ValueObjects.ValueObject
 MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject() -> void
 MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject(MMCA.Common.Shared.ValueObjects.ValueObject! original) -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.<Clone>$() -> MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.CreateWebhookSubscriptionRequest(string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Deconstruct(out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Description.get -> string?
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Description.init -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Equals(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? other) -> bool
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Url.get -> string!
+MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Url.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.<Clone>$() -> MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Deconstruct(out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Description.get -> string?
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Description.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Equals(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? other) -> bool
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.UpdateWebhookSubscriptionRequest(string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes) -> void
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Url.get -> string!
+MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Url.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.<Clone>$() -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.CreatedOn.get -> System.DateTime
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.CreatedOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Deconstruct(out System.Guid Id, out string! Url, out string? Description, out System.Collections.Generic.IReadOnlyList<string!>! EventTypes, out bool IsEnabled, out System.DateTime CreatedOn, out System.DateTime? LastDeliveredOn, out System.DateTime? LastFailedOn, out string? LastFailure) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Description.get -> string?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Description.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Equals(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? other) -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.EventTypes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.EventTypes.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Id.get -> System.Guid
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Id.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.IsEnabled.get -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.IsEnabled.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastDeliveredOn.get -> System.DateTime?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastDeliveredOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailedOn.get -> System.DateTime?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailedOn.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailure.get -> string?
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.LastFailure.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Url.get -> string!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Url.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.WebhookSubscriptionResponse(System.Guid Id, string! Url, string? Description, System.Collections.Generic.IReadOnlyList<string!>! EventTypes, bool IsEnabled, System.DateTime CreatedOn, System.DateTime? LastDeliveredOn, System.DateTime? LastFailedOn, string? LastFailure) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.<Clone>$() -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Deconstruct(out MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse! Subscription, out string! Secret) -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Equals(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? other) -> bool
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Secret.get -> string!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Secret.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Subscription.get -> MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Subscription.init -> void
+MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.WebhookSubscriptionSecretResponse(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse! Subscription, string! Secret) -> void
 abstract MMCA.Common.Shared.ValueObjects.ValueObject.<Clone>$() -> MMCA.Common.Shared.ValueObjects.ValueObject!
 const MMCA.Common.Shared.Abstractions.KeysetPageRequest.MaxPageSize = 1000 -> int
 const MMCA.Common.Shared.Auth.AuthClaimTypes.AuthTime = "auth_time" -> string!
@@ -960,7 +1081,9 @@ const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageClient
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageFeatures = "features:manage" -> string!
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageRoles = "roles:manage" -> string!
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageUsers = "users:manage" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageWebhooks = "webhooks:manage" -> string!
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ViewAsUsers = "users:view-as" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ViewAuditTrail = "audit:view" -> string!
 const MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.DefaultPageSize = 20 -> int
 const MMCA.Common.Shared.Auth.Requests.ViewAsGrantListRequest.MaxPageSize = 100 -> int
 const MMCA.Common.Shared.Auth.Responses.SignInEndReasons.AccountDeleted = "AccountDeleted" -> string!
@@ -984,6 +1107,7 @@ const MMCA.Common.Shared.Http.ProblemDetailsResultReader.MalformedResponseCode =
 const MMCA.Common.Shared.Http.ProblemDetailsResultReader.StatusErrorCodePrefix = "Http." -> string!
 const MMCA.Common.Shared.Http.QueryFilterKeys.AliasSeparator = '~' -> char
 const MMCA.Common.Shared.Http.QueryFilterKeys.SearchTag = "search" -> string!
+const MMCA.Common.Shared.Imports.ImportConventions.DryRunFieldName = "dryRun" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceErrorCodes.VersionNotCurrent = "Legal.VersionNotCurrent" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Action = "me/legal-acceptance" -> string!
 const MMCA.Common.Shared.Legal.LegalAcceptanceRoutes.Path = "Users/me/legal-acceptance" -> string!
@@ -1008,6 +1132,9 @@ const MMCA.Common.Shared.Serialization.CsvReader.MalformedCode = "Csv.Malformed"
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.GetHashCode() -> int
 override MMCA.Common.Shared.Abstractions.CollectionResult<T>.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.ToString() -> string!
 override MMCA.Common.Shared.Abstractions.Error.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Abstractions.Error.GetHashCode() -> int
 override MMCA.Common.Shared.Abstractions.Error.ToString() -> string!
@@ -1025,6 +1152,9 @@ override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.ToString() -> 
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.GetHashCode() -> int
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.ToString() -> string!
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ToString() -> string!
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.ToString() -> string!
@@ -1140,6 +1270,12 @@ override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TVal
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.CanConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Type? destinationType) -> bool
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertFrom(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value) -> object?
 override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value, System.Type? destinationType) -> object?
+override MMCA.Common.Shared.Imports.ImportReportDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Imports.ImportReportDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Imports.ImportReportDTO.ToString() -> string!
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Imports.ImportRowErrorDTO.ToString() -> string!
 override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Legal.LegalAcceptanceDTO.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Legal.LegalAcceptanceDTO.GetHashCode() -> int
@@ -1205,6 +1341,18 @@ override MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.ToString() -> string
 override MMCA.Common.Shared.ValueObjects.ValueObject.Equals(object? obj) -> bool
 override MMCA.Common.Shared.ValueObjects.ValueObject.GetHashCode() -> int
 override MMCA.Common.Shared.ValueObjects.ValueObject.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.ToString() -> string!
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.ToString() -> string!
 override sealed MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
 override sealed MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
 override sealed MMCA.Common.Shared.ValueObjects.Contact.Address.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
@@ -1216,6 +1364,8 @@ override sealed MMCA.Common.Shared.ValueObjects.Time.DateRange.Equals(MMCA.Commo
 override sealed MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
 static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator !=(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
 static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator ==(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.operator !=(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? left, MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? right) -> bool
+static MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>.operator ==(MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? left, MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>? right) -> bool
 static MMCA.Common.Shared.Abstractions.Error.Conflict(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.Failure(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.Forbidden(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -1256,6 +1406,8 @@ static MMCA.Common.Shared.Abstractions.ResultExtensions.BindAsync<T, TOut>(this 
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MapAsync<T, TOut>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TOut>! mapper) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TOut>!>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MatchAsync<T, TResult>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.TapAsync<T>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, System.Threading.Tasks.Task!>! action) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+static MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.operator !=(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? left, MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? right) -> bool
+static MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.operator ==(MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? left, MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO? right) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindAuthTime(this System.Security.Claims.ClaimsPrincipal? principal) -> System.DateTimeOffset?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindMultiFactorMethod(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindSessionId(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Guid?
@@ -1399,6 +1551,11 @@ static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToV
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.GetIdentifierTypes(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IEnumerable<System.Type!>!
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.Register(System.Type! identifierType) -> void
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.RegisterAll(params System.Reflection.Assembly![]! assemblies) -> int
+static MMCA.Common.Shared.Imports.ImportReportDTO.operator !=(MMCA.Common.Shared.Imports.ImportReportDTO? left, MMCA.Common.Shared.Imports.ImportReportDTO? right) -> bool
+static MMCA.Common.Shared.Imports.ImportReportDTO.operator ==(MMCA.Common.Shared.Imports.ImportReportDTO? left, MMCA.Common.Shared.Imports.ImportReportDTO? right) -> bool
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.FromError(MMCA.Common.Shared.Abstractions.Error! error, int lineNumber, string? column = null) -> MMCA.Common.Shared.Imports.ImportRowErrorDTO!
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.operator !=(MMCA.Common.Shared.Imports.ImportRowErrorDTO? left, MMCA.Common.Shared.Imports.ImportRowErrorDTO? right) -> bool
+static MMCA.Common.Shared.Imports.ImportRowErrorDTO.operator ==(MMCA.Common.Shared.Imports.ImportRowErrorDTO? left, MMCA.Common.Shared.Imports.ImportRowErrorDTO? right) -> bool
 static MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.operator !=(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest left, MMCA.Common.Shared.Legal.AcceptLegalTermsRequest right) -> bool
 static MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.operator ==(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest left, MMCA.Common.Shared.Legal.AcceptLegalTermsRequest right) -> bool
 static MMCA.Common.Shared.Legal.LegalAcceptanceDTO.Evaluate(string? currentVersion, string? acceptedVersion, System.DateTime? acceptedOn) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
@@ -1485,6 +1642,14 @@ static MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.operator !=(MMCA.Commo
 static MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.operator ==(MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? right) -> bool
 static MMCA.Common.Shared.ValueObjects.ValueObject.operator !=(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
 static MMCA.Common.Shared.ValueObjects.ValueObject.operator ==(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
+static MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.operator !=(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest.operator ==(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.operator !=(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest.operator ==(MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? left, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.operator !=(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse.operator ==(MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.operator !=(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? right) -> bool
+static MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse.operator ==(MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? left, MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse? right) -> bool
 static readonly MMCA.Common.Shared.Abstractions.Error.AlreadyDeleted -> MMCA.Common.Shared.Abstractions.Error!
 static readonly MMCA.Common.Shared.Abstractions.Error.InvalidEntityField -> MMCA.Common.Shared.Abstractions.Error!
 static readonly MMCA.Common.Shared.Abstractions.Error.NotFound -> MMCA.Common.Shared.Abstractions.Error!
@@ -1516,6 +1681,10 @@ virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.<Clone>$() -> MMCA.C
 virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.EqualityContract.get -> System.Type!
 virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Equals(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? other) -> bool
 virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.<Clone>$() -> MMCA.Common.Shared.Imports.ImportReportDTO!
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.Equals(MMCA.Common.Shared.Imports.ImportReportDTO? other) -> bool
+virtual MMCA.Common.Shared.Imports.ImportReportDTO.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.<Clone>$() -> MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!
 virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.EqualityContract.get -> System.Type!
 virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Equals(MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? other) -> bool

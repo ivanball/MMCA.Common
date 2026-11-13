@@ -1,17 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>
-MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.ServiceHostTestFactory() -> void
-const MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.TestingEnvironmentName = "Testing" -> string!
-override sealed MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
-virtual MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.Audience.get -> string?
-virtual MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.ConfigureHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
-virtual MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.ConfigureTestServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
-virtual MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.RateLimiterPartitionName.get -> string?
-MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions
-MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
-MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ReplaceWithFake<TService, TFake>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ReplaceWithFake<TService, TFake>(Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ReplaceWithFake<TService>(TService! instance) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.ReplaceWithFake<TService, TFake>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.ReplaceWithFake<TService, TFake>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.ReplaceWithFake<TService>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, TService! instance) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

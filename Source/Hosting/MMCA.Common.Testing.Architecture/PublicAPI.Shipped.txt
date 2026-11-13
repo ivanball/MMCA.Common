@@ -38,6 +38,9 @@ MMCA.Common.Testing.Architecture.ArchitectureRules
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.BrandColorTokenTestsBase() -> void
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.LandingPageCss_SourcesBrandColorFromToken_NotHardcodedHex() -> void
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInvalidatingCommands_ShouldUse_EntityKeyedMarker() -> void
+MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.CacheInvalidationConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.AsyncMethods_ShouldDeclare_TrailingCancellationToken() -> void
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.CancellationTokenConventionTestsBase() -> void
@@ -70,11 +73,13 @@ MMCA.Common.Testing.Architecture.ContractImplementationTestsBase
 MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.ContractImplementationTestsBase() -> void
 MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.ServiceContractImplementations_ShouldNotBe_Public() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ConditionalActions_ShouldNotRedeclare_PreconditionResponses() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ControllerConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Controllers_ShouldBe_Sealed() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Controllers_ShouldInherit_ApiControllerBase() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Controllers_ShouldNotDependOn_EntityFrameworkCore() -> void
 MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Controllers_ShouldNotDependOn_Infrastructure() -> void
+MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ReadOverrides_ShouldNotRedeclare_PublicCaching() -> void
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.CostTagConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.EveryContainerApp_CarriesAServiceTag() -> void
@@ -132,6 +137,7 @@ MMCA.Common.Testing.Architecture.FolderWidthTestsBase
 MMCA.Common.Testing.Architecture.FolderWidthTestsBase.FolderWidthTestsBase() -> void
 MMCA.Common.Testing.Architecture.FolderWidthTestsBase.Folders_stay_narrow() -> void
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase
+MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_InheritCreatePageBase() -> void
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_KeepUnsavedChangesGuardAndValidation() -> void
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase.AdminCreateForms_ReadRequirednessOffTheirModel() -> void
 MMCA.Common.Testing.Architecture.FormsConventionTestsBase.FormsConventionTestsBase() -> void
@@ -297,6 +303,11 @@ MMCA.Common.Testing.Architecture.PiiInventoryTestsBase
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.InventoryRows_ShouldMapTo_LivePiiMembers() -> void
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiInventoryTestsBase() -> void
 MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PiiMembers_ShouldHave_CompleteInventoryRows() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_AreDiscovered() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_DeclareAStableInternalCommandName() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutCommands_HaveExactlyOneTimeoutHandler() -> void
+MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.ProcessTimeoutConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContractTestsBase() -> void
 MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContracts_ShouldMatch_TheFrozenSnapshot() -> void
@@ -362,6 +373,7 @@ abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.TargetAssem
 abstract MMCA.Common.Testing.Architecture.ArchitectureMapBase.DefineLayers() -> System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.LayerRef!>!
 abstract MMCA.Common.Testing.Architecture.ArchitectureMapBase.RepoToken.get -> string!
 abstract MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.EmbeddedCssLogicalNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.CascadeSoftDeleteConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ClockReadTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -417,6 +429,7 @@ abstract MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.TargetAsse
 abstract MMCA.Common.Testing.Architecture.PiiConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.Assemblies.get -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.PiiInventoryTestsBase.PrivacyPolicyPath.get -> string!
+abstract MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.FrozenProtoContracts.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.SolutionFileName.get -> string!
@@ -471,6 +484,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.AssertProtoContract(Sy
 static MMCA.Common.Testing.Architecture.ArchitectureRules.AsyncMethodsDeclareTrailingCancellationToken(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? exemptMethods = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.BuildIntegrationEventContract(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> System.Collections.Generic.List<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.BuildProtoContract(System.Collections.Generic.IEnumerable<string!>! absoluteProtoPaths) -> System.Collections.Generic.List<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CacheInvalidatingCommandsUseEntityKeyedMarker(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<System.Type!>! allowedCustomPrefixTypes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CascadingForeignKeysAreExplicitlyOptedIn(object! model) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CloudNeutralAssembliesNameNoVendorType(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyCollection<string!>!>! allowedPrefixes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CloudNeutralAssembliesReferenceNoVendorAssembly(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyCollection<string!>!>! allowedPrefixes) -> void
@@ -479,6 +493,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsAndQueriesAreI
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsHaveCommandOrRequestSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsHaveValidators(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ComponentsReadTheirTokenThroughLifetimeToken(string! scanRoot, int minimumCodeBehindFiles, bool includeAllCodeFiles = false) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ConditionalActionsDoNotRedeclarePreconditionResponses(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersAreSealed(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersDoNotDependOnEntityFrameworkCore(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersDoNotDependOnInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -561,6 +576,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.QueriesHaveQuerySuffix
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersReturnResult(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersUseReadRepositories(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.RazorMarkupCarriesNoInlineStyles(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots, int minimumRazorFiles, System.Collections.Generic.IReadOnlyCollection<string!>? allowedViolations = null) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ReadOverridesDoNotRedeclarePublicCaching(System.Collections.Generic.IEnumerable<System.Type!>! controllerTypes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.RepositoriesHaveRepositorySuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ResourceTranslationsAreComplete(System.Collections.Generic.IReadOnlyCollection<string!>! requiredCultures, int minimumBaseResources = 0) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractImplementationsAreNotPublic(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedPublicImplementations) -> void
@@ -588,6 +604,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsHaveValidato
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsResideInApplicationLayer(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValueObjectsAreImmutableSealedInShared(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ContainsRegionClaim(string! policyText, string! regionClaim) -> bool
+static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.InheritsCreatePageBase(string! razorMarkup, string? codeBehind) -> bool
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingMarkers(string! markup, System.Collections.Generic.IEnumerable<string!>! markers) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingPasswordFormMarkers(string! markup) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.RendersChangePasswordCard(string! markup) -> bool
@@ -608,6 +625,7 @@ static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.TransportDepe
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.EndpointsWithoutAuthorizationAttribute.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.MinimumScannedTypes.get -> int
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision.get -> bool
+virtual MMCA.Common.Testing.Architecture.CacheInvalidationConventionTestsBase.AllowedCustomPrefixTypes.get -> System.Collections.Generic.IReadOnlyCollection<System.Type!>!
 virtual MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.CancellationTokenExemptMethods.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.CascadeSoftDeleteConventionTestsBase.AllowedCascadeExemptTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.ClockReadTestsBase.AllowedClockReaders.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
@@ -667,6 +685,7 @@ virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.Runboo
 virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.AdditionalReferencedPermissions.get -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.MinimumNamedPermissions.get -> int
 virtual MMCA.Common.Testing.Architecture.PiiConventionTestsBase.AnonymizableSamples.get -> System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>!
+virtual MMCA.Common.Testing.Architecture.ProcessTimeoutConventionTestsBase.MinimumTimeoutCommands.get -> int
 virtual MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.AllowedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.ApplicationSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!

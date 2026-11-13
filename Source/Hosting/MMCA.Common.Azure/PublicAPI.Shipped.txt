@@ -1,17 +1,18 @@
 #nullable enable
-MMCA.Common.Azure.AzureDataProtectionExtensions
-MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder
-MMCA.Common.Azure.AzureMonitorExporterExtensions
-MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder
+MMCA.Common.Azure.AzureDataProtectionExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder) (forwarded, contained in MMCA.Common.Azure.Startup)
+MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
 MMCA.Common.Azure.AzureServiceCollectionExtensions
 MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureBlobFileStorage(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureNotificationHubsPush(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzurePostgreSqlEntraAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureServiceBusTransport() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar
 MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar.AzureNotificationHubDeviceRegistrar(Microsoft.Azure.NotificationHubs.INotificationHubClient! hubClient, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Azure.Notifications.AzureNotificationHubDeviceRegistrar!>! logger) -> void
@@ -42,12 +43,13 @@ MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ContainerName.get -> stri
 MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ContainerName.init -> void
 MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ServiceUri.get -> System.Uri?
 MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.ServiceUri.init -> void
-const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string!
-static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
-static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
-static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder
+const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string! (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
+static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder (forwarded, contained in MMCA.Common.Azure.Startup)
 static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureBlobFileStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureNotificationHubsPush(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzurePostgreSqlEntraAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureServiceBusTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.Azure.Notifications.AzureNotificationHubSettings.SectionName -> string!
 static readonly MMCA.Common.Azure.Storage.AzureBlobFileStorageSettings.SectionName -> string!

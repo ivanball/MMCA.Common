@@ -46,6 +46,14 @@ MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Policy.get -> string!
 MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Policy.init -> void
 MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.ReactivationPeriod.get -> System.TimeSpan
 MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.ReactivationPeriod.init -> void
+MMCA.Common.Gateway.GatewayRetrySettings
+MMCA.Common.Gateway.GatewayRetrySettings.Delay.get -> System.TimeSpan
+MMCA.Common.Gateway.GatewayRetrySettings.Delay.init -> void
+MMCA.Common.Gateway.GatewayRetrySettings.Enabled.get -> bool
+MMCA.Common.Gateway.GatewayRetrySettings.Enabled.init -> void
+MMCA.Common.Gateway.GatewayRetrySettings.GatewayRetrySettings() -> void
+MMCA.Common.Gateway.GatewayRetrySettings.MaxRetryAttempts.get -> int
+MMCA.Common.Gateway.GatewayRetrySettings.MaxRetryAttempts.init -> void
 MMCA.Common.Gateway.GatewayReverseProxyExtensions
 MMCA.Common.Gateway.GatewayReverseProxyExtensions.extension(Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!)
 MMCA.Common.Gateway.GatewayReverseProxyExtensions.extension(Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!).AddMmcaGateway(MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
@@ -73,6 +81,8 @@ MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.get -> MMCA.Common.Gatew
 MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.init -> void
 MMCA.Common.Gateway.GatewaySettings.RateLimiterPolicies.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.Gateway.GatewayRoutePolicySettings!>!
 MMCA.Common.Gateway.GatewaySettings.RateLimiterPolicies.init -> void
+MMCA.Common.Gateway.GatewaySettings.Retry.get -> MMCA.Common.Gateway.GatewayRetrySettings!
+MMCA.Common.Gateway.GatewaySettings.Retry.init -> void
 MMCA.Common.Gateway.GatewaySettings.TraceHeaders.get -> MMCA.Common.Gateway.GatewayTraceHeaderSettings!
 MMCA.Common.Gateway.GatewaySettings.TraceHeaders.init -> void
 MMCA.Common.Gateway.GatewayTraceHeaderSettings

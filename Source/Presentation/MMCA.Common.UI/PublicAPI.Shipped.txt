@@ -160,6 +160,22 @@ MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
 MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.AuditHistoryPanel() -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.DisplayTimeZone.get -> System.TimeZoneInfo?
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.DisplayTimeZone.set -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.Dispose() -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.FetchPage.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!>!>!
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.FetchPage.set -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.PageSize.get -> int
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.PageSize.set -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.PropertyLabel.get -> System.Func<string!, string!>?
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.PropertyLabel.set -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.ReloadAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.Title.get -> string?
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.Title.set -> void
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.UserLabel.get -> System.Func<int, string!>?
+MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.UserLabel.set -> void
 MMCA.Common.UI.Components.Auth.ChangePasswordCard
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.get -> Microsoft.AspNetCore.Components.RenderFragment?
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.AdditionalActions.set -> void
@@ -233,6 +249,13 @@ MMCA.Common.UI.Components.Capabilities.ExternalLink.Underline.set -> void
 MMCA.Common.UI.Components.Capabilities.OfflineBanner
 MMCA.Common.UI.Components.Capabilities.OfflineBanner.Dispose() -> void
 MMCA.Common.UI.Components.Capabilities.OfflineBanner.OfflineBanner() -> void
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.Describe.get -> System.Func<MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs!, string?>?
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.Describe.set -> void
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.Dispose() -> void
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.OfflineWriteNotifier() -> void
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.ShowCompleted.get -> bool
+MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.ShowCompleted.set -> void
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.Dispose() -> void
 MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.PushRegistrationListener() -> void
@@ -332,28 +355,69 @@ MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.LoadingLabel.set -> void
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.OnSentinelVisible() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.OnVisible.get -> Microsoft.AspNetCore.Components.EventCallback
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.OnVisible.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CardTemplate.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CurrentPage.get -> int
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.CurrentPage.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyIcon.get -> string!
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyIcon.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyMessage.get -> string?
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.EmptyMessage.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.IsLoading.get -> bool
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.IsLoading.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.Items.get -> System.Collections.Generic.IReadOnlyList<TItem>!
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.Items.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.MobileCardList() -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnCardClick.get -> Microsoft.AspNetCore.Components.EventCallback<TItem>
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnCardClick.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnPageChanged.get -> Microsoft.AspNetCore.Components.EventCallback<int>
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.OnPageChanged.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.PageSize.get -> int
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.PageSize.set -> void
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.TotalItems.get -> int
-MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.TotalItems.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelAriaLabel.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelAriaLabel.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelLabel.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelLabel.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardTemplate.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Columns.get -> Microsoft.AspNetCore.Components.RenderFragment!
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Columns.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CurrentPage.get -> int
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CurrentPage.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CurrentPageChanged.get -> Microsoft.AspNetCore.Components.EventCallback<int>
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CurrentPageChanged.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.DeleteDialog.get -> MMCA.Common.UI.Components.Forms.DeleteConfirmation?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.DeleteEntityType.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.DeleteEntityType.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Dense.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Dense.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.EmptyConfirmed.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.EmptyConfirmed.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.EmptyMessage.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.EmptyMessage.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Filters.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Filters.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Grid.get -> MudBlazor.MudDataGrid<TItem>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.HeaderActions.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.HeaderActions.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLoading.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLoading.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsMobile.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsMobile.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ListPageShell() -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.LoadFailed.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.LoadFailed.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.MobileFetch.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.MobileFetch.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.MobileList.get -> MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.MobilePageSize.get -> int
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.MobilePageSize.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnCancelLoading.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnCancelLoading.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnCardClick.get -> Microsoft.AspNetCore.Components.EventCallback<TItem>
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnCardClick.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnRetry.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.OnRetry.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.PageSizeOptions.get -> System.Collections.Generic.IReadOnlyList<int>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.PageSizeOptions.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.RowsPerPage.get -> int
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.RowsPerPage.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchPlaceholder.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchPlaceholder.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchText.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchText.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchTextChanged.get -> Microsoft.AspNetCore.Components.EventCallback<string!>
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchTextChanged.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ServerData.get -> System.Func<MudBlazor.GridState<TItem>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<MudBlazor.GridData<TItem>!>!>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ServerData.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ShowDeleteConfirmation.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ShowDeleteConfirmation.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ShowSearch.get -> bool
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ShowSearch.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Title.get -> string!
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Title.set -> void
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardTemplate.set -> void
@@ -373,6 +437,12 @@ MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnSentinelVisibl
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.PageSize.get -> int
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.PageSize.set -> void
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.ResetAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Components.Lists.RowLinkCell
+MMCA.Common.UI.Components.Lists.RowLinkCell.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Lists.RowLinkCell.ChildContent.set -> void
+MMCA.Common.UI.Components.Lists.RowLinkCell.Href.get -> string!
+MMCA.Common.UI.Components.Lists.RowLinkCell.Href.set -> void
+MMCA.Common.UI.Components.Lists.RowLinkCell.RowLinkCell() -> void
 MMCA.Common.UI.Components.Notifications.NotificationBell
 MMCA.Common.UI.Components.Notifications.NotificationBell.Dispose() -> void
 MMCA.Common.UI.Components.Notifications.NotificationBell.NotificationBell() -> void
@@ -435,12 +505,6 @@ MMCA.Common.UI.Components.PageState.PageLoadingState
 MMCA.Common.UI.Components.PageState.PageLoadingState.Label.get -> string?
 MMCA.Common.UI.Components.PageState.PageLoadingState.Label.set -> void
 MMCA.Common.UI.Components.PageState.PageLoadingState.PageLoadingState() -> void
-MMCA.Common.UI.Components.PageState.PageStateScope
-MMCA.Common.UI.Components.PageState.PageStateScope.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.UI.Components.PageState.PageStateScope.OnPageRestoredAsync() -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Components.PageState.PageStateScope.OnRestore.get -> Microsoft.AspNetCore.Components.EventCallback
-MMCA.Common.UI.Components.PageState.PageStateScope.OnRestore.set -> void
-MMCA.Common.UI.Components.PageState.PageStateScope.PageStateScope() -> void
 MMCA.Common.UI.Components.Ratings.RatingStars
 MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.get -> string!
 MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.set -> void
@@ -484,10 +548,13 @@ MMCA.Common.UI.Components.Sharing.SharePageButton.ShareTitle.get -> string!
 MMCA.Common.UI.Components.Sharing.SharePageButton.ShareTitle.set -> void
 MMCA.Common.UI.DependencyInjection
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAuditHistoryUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddClientAuthSessionCookieSync() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonUiFacades() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddFeatureFlagAdministrationUI(params string![]! sources) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMachineClientAdministrationUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddOfflineWriteHandler<THandler>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddOfflineWriteQueue(System.Action<MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddRoleAdministrationUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddSupportAccessLogUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUIModule<TModule>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -727,6 +794,31 @@ MMCA.Common.UI.Pages.Auth.Sessions.Sessions() -> void
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.SignInLink() -> void
+MMCA.Common.UI.Pages.Common.CancellablePageBase
+MMCA.Common.UI.Pages.Common.CancellablePageBase.CancellablePageBase() -> void
+MMCA.Common.UI.Pages.Common.CancellablePageBase.Dispose() -> void
+MMCA.Common.UI.Pages.Common.CancellablePageBase.PageToken.get -> System.Threading.CancellationToken
+MMCA.Common.UI.Pages.Common.CreatePageBase
+MMCA.Common.UI.Pages.Common.CreatePageBase.CreatePageBase() -> void
+MMCA.Common.UI.Pages.Common.CreatePageBase.Form.get -> MudBlazor.MudForm?
+MMCA.Common.UI.Pages.Common.CreatePageBase.Form.set -> void
+MMCA.Common.UI.Pages.Common.CreatePageBase.IsDirty.get -> bool
+MMCA.Common.UI.Pages.Common.CreatePageBase.IsSaving.get -> bool
+MMCA.Common.UI.Pages.Common.CreatePageBase.MarkDirty() -> void
+MMCA.Common.UI.Pages.Common.CreatePageBase.SaveResult.get -> MMCA.Common.Shared.Abstractions.Result?
+MMCA.Common.UI.Pages.Common.CreatePageBase.SubmitAsync<TCreated>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TCreated>!>!>! saveAsync, System.Action<TCreated>! onCreated, MMCA.Common.UI.Pages.Common.CreateSubmitOptions? options = null) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Pages.Common.CreatePageBase.Toast.get -> MMCA.Common.UI.Common.Interfaces.IToastService!
+MMCA.Common.UI.Pages.Common.CreatePageBase.Toast.set -> void
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.<Clone>$() -> MMCA.Common.UI.Pages.Common.CreateSubmitOptions!
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.CreateSubmitOptions() -> void
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.Equals(MMCA.Common.UI.Pages.Common.CreateSubmitOptions? other) -> bool
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.Localizer.init -> void
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.PreCheck.get -> System.Func<string?>?
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.PreCheck.init -> void
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.ToastOnFailure.get -> bool
+MMCA.Common.UI.Pages.Common.CreateSubmitOptions.ToastOnFailure.init -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.CancelLoading() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.CurrentPageState.get -> int
@@ -746,6 +838,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerData
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileCurrentPage.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileCurrentPage.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileItems.get -> System.Collections.Generic.IReadOnlyList<TDto>!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageFetcher(System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, string? defaultSortColumn = null, MudBlazor.SortDirection defaultSortDirection = MudBlazor.SortDirection.Ascending, System.Func<System.Collections.Generic.IReadOnlyList<TDto>!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? afterFetchAsync = null) -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageSize.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageSize.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileTotalItems.get -> int
@@ -765,14 +858,12 @@ MMCA.Common.UI.Pages.Common.DetailPageBase.BeginLoad() -> (System.Threading.Canc
 MMCA.Common.UI.Pages.Common.DetailPageBase.ClearDirty() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.CompleteLoad(int generation, MMCA.Common.Shared.Abstractions.Result! result) -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.DetailPageBase() -> void
-MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.EndEdit() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.IsDirty.get -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.IsEditing.get -> bool
 MMCA.Common.UI.Pages.Common.DetailPageBase.LoadGuard.get -> MMCA.Common.UI.Common.LatestLoadGuard!
 MMCA.Common.UI.Pages.Common.DetailPageBase.LoadState.get -> MMCA.Common.UI.Components.PageState.DetailLoadState
 MMCA.Common.UI.Pages.Common.DetailPageBase.MarkDirty() -> void
-MMCA.Common.UI.Pages.Common.DetailPageBase.PageToken.get -> System.Threading.CancellationToken
 MMCA.Common.UI.Pages.Common.ErrorMessages
 MMCA.Common.UI.Pages.Common.ListPageActions
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>
@@ -892,6 +983,11 @@ MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.SendR
 MMCA.Common.UI.Services.Api.HttpResultExecutor
 MMCA.Common.UI.Services.Api.IdempotentReadRetry
 MMCA.Common.UI.Services.Api.PagedReadAll
+MMCA.Common.UI.Services.Auditing.AuditHistoryService
+MMCA.Common.UI.Services.Auditing.AuditHistoryService.AuditHistoryService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Auditing.AuditHistoryService.GetPageAsync(string! routePrefix, string! entityAlias, string! entityKey, int page, int pageSize, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!>!
+MMCA.Common.UI.Services.Auditing.IAuditHistoryUIService
+MMCA.Common.UI.Services.Auditing.IAuditHistoryUIService.GetPageAsync(string! routePrefix, string! entityAlias, string! entityKey, int page, int pageSize, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!>!
 MMCA.Common.UI.Services.Auth.AuthDelegatingHandler
 MMCA.Common.UI.Services.Auth.AuthDelegatingHandler.AuthDelegatingHandler(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Auth.AuthUIService
@@ -1524,6 +1620,79 @@ MMCA.Common.UI.Services.Notifications.PushNotificationService
 MMCA.Common.UI.Services.Notifications.PushNotificationService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
 MMCA.Common.UI.Services.Notifications.PushNotificationService.PushNotificationService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider) -> void
 MMCA.Common.UI.Services.Notifications.PushNotificationService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteHandler
+MMCA.Common.UI.Services.Offline.IOfflineWriteHandler.Kind.get -> string!
+MMCA.Common.UI.Services.Offline.IOfflineWriteHandler.ReplayAsync(MMCA.Common.UI.Services.Offline.PendingWrite! write, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.CancelPendingAsync(string! coalesceKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.EnqueueAsync<TPayload>(string! kind, TPayload payload, MMCA.Common.UI.Services.Offline.OfflineWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.UI.Services.Offline.PendingWrite!>!>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.GetPendingAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Services.Offline.PendingWrite!>!>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.IsAvailable.get -> bool
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.PendingChanged -> System.EventHandler?
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.ReplayAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.UI.Services.Offline.IOfflineWriteQueue.WriteSettled -> System.EventHandler<MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs!>?
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.<Clone>$() -> MMCA.Common.UI.Services.Offline.OfflineWriteOptions!
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.BasedOnRowVersion.get -> byte[]?
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.BasedOnRowVersion.init -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.CoalesceKey.get -> string?
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.CoalesceKey.init -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.Equals(MMCA.Common.UI.Services.Offline.OfflineWriteOptions? other) -> bool
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.IdempotencyKey.get -> string?
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.IdempotencyKey.init -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteOptions.OfflineWriteOptions() -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteOutcome.Completed = 0 -> MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteOutcome.Conflict = 1 -> MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteOutcome.Expired = 3 -> MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteOutcome.Rejected = 2 -> MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.CancelPendingAsync(string! coalesceKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.Dispose() -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.EnqueueAsync<TPayload>(string! kind, TPayload payload, MMCA.Common.UI.Services.Offline.OfflineWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.UI.Services.Offline.PendingWrite!>!>!
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.GetPendingAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Services.Offline.PendingWrite!>!>!
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.IsAvailable.get -> bool
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.OfflineWriteQueue(MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore! store, MMCA.Common.UI.Services.Capabilities.DeviceStatus.IConnectivityStatusService! connectivity, System.Collections.Generic.IEnumerable<MMCA.Common.UI.Services.Offline.IOfflineWriteHandler!>! handlers, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authenticationStateProvider, System.TimeProvider! timeProvider, Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions!>! options, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Offline.OfflineWriteQueue!>! logger) -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.PendingChanged -> System.EventHandler?
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.ReplayAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.UI.Services.Offline.OfflineWriteQueue.WriteSettled -> System.EventHandler<MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs!>?
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.MaxAge.get -> System.TimeSpan
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.MaxAge.set -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.MaxPendingWrites.get -> int
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.MaxPendingWrites.set -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.OfflineWriteQueueOptions() -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.StorageKey.get -> string!
+MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions.StorageKey.set -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs
+MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs.OfflineWriteSettledEventArgs(MMCA.Common.UI.Services.Offline.PendingWrite! write, MMCA.Common.UI.Services.Offline.OfflineWriteOutcome outcome, MMCA.Common.Shared.Abstractions.Result? result) -> void
+MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs.Outcome.get -> MMCA.Common.UI.Services.Offline.OfflineWriteOutcome
+MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs.Result.get -> MMCA.Common.Shared.Abstractions.Result?
+MMCA.Common.UI.Services.Offline.OfflineWriteSettledEventArgs.Write.get -> MMCA.Common.UI.Services.Offline.PendingWrite!
+MMCA.Common.UI.Services.Offline.PendingWrite
+MMCA.Common.UI.Services.Offline.PendingWrite.<Clone>$() -> MMCA.Common.UI.Services.Offline.PendingWrite!
+MMCA.Common.UI.Services.Offline.PendingWrite.Attempts.get -> int
+MMCA.Common.UI.Services.Offline.PendingWrite.Attempts.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.BasedOnRowVersion.get -> byte[]?
+MMCA.Common.UI.Services.Offline.PendingWrite.BasedOnRowVersion.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.CoalesceKey.get -> string?
+MMCA.Common.UI.Services.Offline.PendingWrite.CoalesceKey.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.EnqueuedOn.get -> System.DateTimeOffset
+MMCA.Common.UI.Services.Offline.PendingWrite.EnqueuedOn.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.Equals(MMCA.Common.UI.Services.Offline.PendingWrite? other) -> bool
+MMCA.Common.UI.Services.Offline.PendingWrite.Id.get -> System.Guid
+MMCA.Common.UI.Services.Offline.PendingWrite.Id.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.IdempotencyKey.get -> string!
+MMCA.Common.UI.Services.Offline.PendingWrite.IdempotencyKey.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.IfMatch.get -> string?
+MMCA.Common.UI.Services.Offline.PendingWrite.Kind.get -> string!
+MMCA.Common.UI.Services.Offline.PendingWrite.Kind.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.PayloadJson.get -> string!
+MMCA.Common.UI.Services.Offline.PendingWrite.PayloadJson.init -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.PendingWrite() -> void
+MMCA.Common.UI.Services.Offline.PendingWrite.ReadPayload<TPayload>() -> TPayload?
+MMCA.Common.UI.Services.Offline.PendingWrite.UserScope.get -> string?
+MMCA.Common.UI.Services.Offline.PendingWrite.UserScope.init -> void
 MMCA.Common.UI.Services.Preferences.ApiUserPreferenceReader
 MMCA.Common.UI.Services.Preferences.ApiUserPreferenceReader.ApiUserPreferenceReader(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Preferences.ApiUserPreferenceReader.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Preferences.UserPreferences!>!
@@ -1653,6 +1822,8 @@ override MMCA.Common.UI.Common.NavGroup.ToString() -> string!
 override MMCA.Common.UI.Common.NavItem.Equals(object? obj) -> bool
 override MMCA.Common.UI.Common.NavItem.GetHashCode() -> int
 override MMCA.Common.UI.Common.NavItem.ToString() -> string!
+override MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.OnParametersSet() -> void
 override MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.RedirectToLogin.OnInitialized() -> void
@@ -1665,6 +1836,7 @@ override MMCA.Common.UI.Components.Capabilities.AppLockSettingCard.OnInitialized
 override MMCA.Common.UI.Components.Capabilities.BiometricGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.OnAfterRender(bool firstRender) -> void
 override MMCA.Common.UI.Components.Capabilities.OfflineBanner.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.OnInitialized() -> void
 override MMCA.Common.UI.Components.Forms.ErrorSummary.OnParametersSet() -> void
@@ -1675,7 +1847,6 @@ override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnIniti
 override MMCA.Common.UI.Components.Notifications.NotificationBell.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Notifications.NotificationListener.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Notifications.PendingToastHost.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
-override MMCA.Common.UI.Components.PageState.PageStateScope.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Sharing.QrCodeImage.OnParametersSet() -> void
 override MMCA.Common.UI.Globalization.DocumentLanguage.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Layout.MainLayout.OnInitialized() -> void
@@ -1699,8 +1870,12 @@ override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRe
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
 override MMCA.Common.UI.Pages.Auth.Sessions.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.Equals(object? obj) -> bool
+override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.GetHashCode() -> int
+override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.ToString() -> string!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnInitialized() -> void
+override MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
 override MMCA.Common.UI.Pages.Home.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnInitializedAsync() -> System.Threading.Tasks.Task!
@@ -1731,6 +1906,12 @@ override MMCA.Common.UI.Services.ListPageState.ToString() -> string!
 override MMCA.Common.UI.Services.Navigation.BackNavigationResult.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Navigation.BackNavigationResult.GetHashCode() -> int
 override MMCA.Common.UI.Services.Navigation.BackNavigationResult.ToString() -> string!
+override MMCA.Common.UI.Services.Offline.OfflineWriteOptions.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.Offline.OfflineWriteOptions.GetHashCode() -> int
+override MMCA.Common.UI.Services.Offline.OfflineWriteOptions.ToString() -> string!
+override MMCA.Common.UI.Services.Offline.PendingWrite.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.Offline.PendingWrite.GetHashCode() -> int
+override MMCA.Common.UI.Services.Offline.PendingWrite.ToString() -> string!
 override MMCA.Common.UI.Services.Preferences.UserPreferences.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Preferences.UserPreferences.GetHashCode() -> int
 override MMCA.Common.UI.Services.Preferences.UserPreferences.ToString() -> string!
@@ -1763,10 +1944,13 @@ static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Uri! baseAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IO.Stream!>!
 static MMCA.Common.UI.Common.Settings.UIModuleConfiguration.IsModuleEnabled(Microsoft.Extensions.Configuration.IConfiguration! configuration, string! moduleName) -> bool
 static MMCA.Common.UI.Components.Auth.ViewAsBanner.Remaining(System.Security.Claims.ClaimsPrincipal? user, System.DateTimeOffset now) -> System.TimeSpan?
+static MMCA.Common.UI.DependencyInjection.AddAuditHistoryUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddClientAuthSessionCookieSync(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddFeatureFlagAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params string![]! sources) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddMachineClientAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.DependencyInjection.AddOfflineWriteHandler<THandler>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.DependencyInjection.AddOfflineWriteQueue(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.UI.Services.Offline.OfflineWriteQueueOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddRoleAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddSupportAccessLogUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddUIModule<TModule>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -1779,6 +1963,8 @@ static MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStor
 static MMCA.Common.UI.Globalization.PseudoLocalizer.Transform(string! value) -> string!
 static MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.Plural(this Microsoft.Extensions.Localization.IStringLocalizer! localizer, string! key, int count, params object![]! args) -> Microsoft.Extensions.Localization.LocalizedString!
 static MMCA.Common.UI.Notifications.DependencyInjection.AddNotificationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Pages.Common.CreateSubmitOptions.operator !=(MMCA.Common.UI.Pages.Common.CreateSubmitOptions? left, MMCA.Common.UI.Pages.Common.CreateSubmitOptions? right) -> bool
+static MMCA.Common.UI.Pages.Common.CreateSubmitOptions.operator ==(MMCA.Common.UI.Pages.Common.CreateSubmitOptions? left, MMCA.Common.UI.Pages.Common.CreateSubmitOptions? right) -> bool
 static MMCA.Common.UI.Pages.Common.ErrorMessages.Configure(Microsoft.Extensions.Localization.IStringLocalizer! localizer) -> void
 static MMCA.Common.UI.Pages.Common.ErrorMessages.DeleteError(string! entityName, System.Exception! ex) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.DeleteFailed(string! entityName) -> string!
@@ -1825,6 +2011,10 @@ static MMCA.Common.UI.Services.Navigation.BackNavigationResult.operator !=(MMCA.
 static MMCA.Common.UI.Services.Navigation.BackNavigationResult.operator ==(MMCA.Common.UI.Services.Navigation.BackNavigationResult? left, MMCA.Common.UI.Services.Navigation.BackNavigationResult? right) -> bool
 static MMCA.Common.UI.Services.Navigation.MauiBackNavigationBridge.HandleBackPressedAsync(Microsoft.JSInterop.IJSRuntime! js) -> System.Threading.Tasks.ValueTask<MMCA.Common.UI.Services.Navigation.BackNavigationResult!>
 static MMCA.Common.UI.Services.Navigation.ReturnUrlProtector.Sanitize(string? candidate, string! fallback = "/") -> string!
+static MMCA.Common.UI.Services.Offline.OfflineWriteOptions.operator !=(MMCA.Common.UI.Services.Offline.OfflineWriteOptions? left, MMCA.Common.UI.Services.Offline.OfflineWriteOptions? right) -> bool
+static MMCA.Common.UI.Services.Offline.OfflineWriteOptions.operator ==(MMCA.Common.UI.Services.Offline.OfflineWriteOptions? left, MMCA.Common.UI.Services.Offline.OfflineWriteOptions? right) -> bool
+static MMCA.Common.UI.Services.Offline.PendingWrite.operator !=(MMCA.Common.UI.Services.Offline.PendingWrite? left, MMCA.Common.UI.Services.Offline.PendingWrite? right) -> bool
+static MMCA.Common.UI.Services.Offline.PendingWrite.operator ==(MMCA.Common.UI.Services.Offline.PendingWrite? left, MMCA.Common.UI.Services.Offline.PendingWrite? right) -> bool
 static MMCA.Common.UI.Services.Preferences.UserPreferences.operator !=(MMCA.Common.UI.Services.Preferences.UserPreferences? left, MMCA.Common.UI.Services.Preferences.UserPreferences? right) -> bool
 static MMCA.Common.UI.Services.Preferences.UserPreferences.operator ==(MMCA.Common.UI.Services.Preferences.UserPreferences? left, MMCA.Common.UI.Services.Preferences.UserPreferences? right) -> bool
 static MMCA.Common.UI.Theme.MMCATheme.Instance.get -> MudBlazor.MudTheme!
@@ -1851,6 +2041,7 @@ virtual MMCA.Common.UI.Common.NavItem.<Clone>$() -> MMCA.Common.UI.Common.NavIte
 virtual MMCA.Common.UI.Common.NavItem.EqualityContract.get -> System.Type!
 virtual MMCA.Common.UI.Common.NavItem.Equals(MMCA.Common.UI.Common.NavItem? other) -> bool
 virtual MMCA.Common.UI.Common.NavItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Auth.ChangePasswordCard.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Auth.SignInHistoryTable.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Auth.UserSessionsTable.Dispose(bool disposing) -> void
@@ -1866,8 +2057,10 @@ virtual MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose(bool dispos
 virtual MMCA.Common.UI.Pages.Auth.Login.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Register.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Common.CancellablePageBase.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.GridRef.get -> MudBlazor.MudDataGrid<TDto>?
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnBeforeFetchAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnMobileDataRequestedAsync() -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnRestoredStateAppliedAsync(bool needsReload) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.RestoreFilters(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! filters) -> void
@@ -1875,7 +2068,6 @@ virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.SaveFilters(Syste
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedItemSize.get -> int
-virtual MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Notifications.NotificationInbox.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Notifications.NotificationList.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Notifications.NotificationSend.Dispose(bool disposing) -> void
@@ -1888,6 +2080,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!>!
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.PagedIncludeFKs.get -> bool
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+~override MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.ChangePasswordCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.PasskeySignInButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Auth.PasskeysPanel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
@@ -1901,6 +2094,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.ExternalLink.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.OfflineBanner.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Capabilities.OfflineWriteNotifier.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Diagnostics.InAppDiagnosticsLog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
@@ -1911,8 +2105,9 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.ClickableCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Lists.RowLinkCell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.NotificationBell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.NotificationListener.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Notifications.PendingToastHost.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
@@ -1922,7 +2117,6 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.PageState.PageErrorState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageHeader.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageLoadingState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.PageState.PageStateScope.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Sharing.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Sharing.QrCodeImage.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

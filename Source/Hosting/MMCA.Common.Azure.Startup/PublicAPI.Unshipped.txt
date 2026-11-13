@@ -1,14 +1,1 @@
 #nullable enable
-MMCA.Common.Azure.AzureDataProtectionExtensions
-MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureDataProtectionExtensions.extension<TBuilder>(TBuilder).AddAzureDataProtection() -> TBuilder
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddAzureKeyVaultConfiguration() -> TBuilder
-MMCA.Common.Azure.AzureMonitorExporterExtensions
-MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Azure.AzureMonitorExporterExtensions.extension<TBuilder>(TBuilder).AddAzureMonitorExporter() -> TBuilder
-const MMCA.Common.Azure.AzureMonitorExporterExtensions.ConnectionStringKey = "APPLICATIONINSIGHTS_CONNECTION_STRING" -> string!
-static MMCA.Common.Azure.AzureDataProtectionExtensions.AddAzureDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
-static MMCA.Common.Azure.AzureKeyVaultConfigurationExtensions.AddAzureKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
-static MMCA.Common.Azure.AzureMonitorExporterExtensions.AddAzureMonitorExporter<TBuilder>(this TBuilder builder) -> TBuilder

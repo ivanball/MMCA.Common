@@ -44,6 +44,33 @@ MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.PermitLimit.init -> void
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.UiRateLimitingSettings() -> void
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.get -> int
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.init -> void
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!)
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).GetMmcaRazorComponentAssemblies(System.Reflection.Assembly! clientAssembly) -> System.Reflection.Assembly![]!
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseMmcaBlazorWebPipeline(MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions? options = null) -> Microsoft.AspNetCore.Builder.WebApplication!
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
+MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).AddMmcaBlazorWebHost(MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions! options) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+MMCA.Common.UI.Web.Hosting.E2eRenderMode
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.AfterServiceDefaults.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.AfterServiceDefaults.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureConfigurationSources.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureConfigurationSources.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureFallbackAuthorization.get -> System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureFallbackAuthorization.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureMudServices.get -> System.Action<MudBlazor.Services.MudServicesConfiguration!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureMudServices.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureRazorComponents.get -> System.Action<Microsoft.Extensions.DependencyInjection.IRazorComponentsBuilder!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.ConfigureRazorComponents.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.LogFilePath.get -> string!
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.LogFilePath.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions.MmcaBlazorWebHostOptions() -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions.ClientConfig.get -> System.Action<MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions.ClientConfig.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions.DevelopmentPipeline.get -> System.Action<Microsoft.AspNetCore.Builder.IApplicationBuilder!>?
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions.DevelopmentPipeline.init -> void
+MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions.MmcaBlazorWebPipelineOptions() -> void
 MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions
 MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
 MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonServiceWorker() -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
@@ -91,6 +118,8 @@ MMCA.Common.UI.Web._Imports.Execute() -> void
 MMCA.Common.UI.Web._Imports._Imports() -> void
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ApiSectionName = "Api" -> string!
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ClientConfigPath = "/client-config" -> string!
+const MMCA.Common.UI.Web.Hosting.E2eRenderMode.ForceServerKey = "E2E:ForceServer" -> string!
+const MMCA.Common.UI.Web.Hosting.E2eRenderMode.ForceWebAssemblyKey = "E2E:ForceWebAssembly" -> string!
 const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.EnabledKey = "Pwa:ServiceWorker:Enabled" -> string!
 const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.ServiceWorkerPath = "/service-worker.js" -> string!
 const MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.SectionName = "SameOriginApiProxy" -> string!
@@ -110,6 +139,10 @@ static MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.SectionName.get -
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.AddUiRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.UseUiRateLimiting(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.SectionName.get -> string!
+static MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.AddMmcaBlazorWebHost(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, MMCA.Common.UI.Web.Hosting.MmcaBlazorWebHostOptions! options) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+static MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.GetMmcaRazorComponentAssemblies(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Reflection.Assembly! clientAssembly) -> System.Reflection.Assembly![]!
+static MMCA.Common.UI.Web.Hosting.BlazorWebHostExtensions.UseMmcaBlazorWebPipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, MMCA.Common.UI.Web.Hosting.MmcaBlazorWebPipelineOptions? options = null) -> Microsoft.AspNetCore.Builder.WebApplication!
+static MMCA.Common.UI.Web.Hosting.E2eRenderMode.Resolve(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.AspNetCore.Components.IComponentRenderMode!
 static MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.MapCommonServiceWorker(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
 static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyEndpointExtensions.MapCommonSameOriginApiProxy(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxyServiceExtensions.AddCommonSameOriginApiProxy(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

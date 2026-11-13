@@ -11,6 +11,9 @@ MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.De
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAmazonSqsTransport() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAwsRdsIamAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Aws.AwsServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddS3FileStorage(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aws.AwsTelemetryExporterExtensions
+MMCA.Common.Aws.AwsTelemetryExporterExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aws.AwsTelemetryExporterExtensions.extension<TBuilder>(TBuilder).AddAwsTelemetryExporter() -> TBuilder
 MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings
 MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AccessKeyId.get -> string?
 MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.AccessKeyId.init -> void
@@ -53,5 +56,6 @@ static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAmazonSnsPush(this Micr
 static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAmazonSqsTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddAwsRdsIamAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aws.AwsServiceCollectionExtensions.AddS3FileStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aws.AwsTelemetryExporterExtensions.AddAwsTelemetryExporter<TBuilder>(this TBuilder builder) -> TBuilder
 static readonly MMCA.Common.Aws.Messaging.AmazonSqsTransportSettings.SectionName -> string!
 static readonly MMCA.Common.Aws.Storage.S3FileStorageSettings.SectionName -> string!

@@ -34,6 +34,47 @@ MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.CreateBearerToken(
 MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.CreateHttpClient(string! resourceName, string? endpointName = null) -> System.Net.Http.HttpClient!
 MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.Fixture.get -> TFixture!
 MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.GetConnectionStringAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.<Clone>$() -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Deconstruct(out System.TimeSpan StateChange, out System.TimeSpan Probe, out System.TimeSpan Drain) -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.DependencyOutageBudget(System.TimeSpan StateChange, System.TimeSpan Probe, System.TimeSpan Drain) -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Drain.get -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Drain.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Equals(MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget? other) -> bool
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Probe.get -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Probe.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.StateChange.get -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.StateChange.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Validate() -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind.Broker = 1 -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind.Cache = 2 -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind.Database = 0 -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.<Clone>$() -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.Deconstruct(out string! DependencyResourceName, out MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind Kind, out string! ServiceResourceName) -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.DependencyOutageScenario(string! DependencyResourceName, MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind Kind, string! ServiceResourceName) -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.DependencyResourceName.get -> string!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.DependencyResourceName.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.DuringOutage.get -> System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>?
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.DuringOutage.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.Equals(MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario? other) -> bool
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.Kind.get -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageKind
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.Kind.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.OutboxDatabaseResourceName.get -> string?
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.OutboxDatabaseResourceName.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.ServiceEndpointName.get -> string?
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.ServiceEndpointName.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.ServiceResourceName.get -> string!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.ServiceResourceName.init -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.AssertOutboxDrainedAsync(string! databaseResourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.AssertProbeEventuallyAsync(string! resourceName, string! path, System.Net.HttpStatusCode expected, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.DependencyOutageTestBase(TFixture! fixture) -> void
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.GetProbeStatusAsync(string! resourceName, string! path, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Net.HttpStatusCode?>!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.RunOutageAsync(MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario! scenario, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.StartResourceAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.StopResourceAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentGate
 MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
 MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement.DeveloperCertificate = 4 -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
@@ -71,12 +112,23 @@ override MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>.Create
 override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Equals(object? obj) -> bool
 override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.GetHashCode() -> int
 override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.ToString() -> string!
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.GetHashCode() -> int
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.ToString() -> string!
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.GetHashCode() -> int
+override MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.ToString() -> string!
 override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.Equals(object? obj) -> bool
 override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.GetHashCode() -> int
 override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.ToString() -> string!
 static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Default.get -> MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget!
 static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.operator !=(MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? left, MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? right) -> bool
 static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.operator ==(MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? left, MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? right) -> bool
+static MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.Default.get -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget!
+static MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.operator !=(MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget? left, MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget? right) -> bool
+static MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget.operator ==(MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget? left, MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget? right) -> bool
+static MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.operator !=(MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario? left, MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario? right) -> bool
+static MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario.operator ==(MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario? left, MMCA.Common.Testing.Aspire.Outages.DependencyOutageScenario? right) -> bool
 static MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentGate.Evaluate(MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement requirements) -> string?
 static MMCA.Common.Testing.Aspire.Preconditions.DeveloperCertificateAvailability.IsPresent() -> bool
 static MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability.IsAvailable() -> bool
@@ -93,3 +145,7 @@ virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.RequiredEnvironme
 virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.ResourcesToAwait.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
 virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.SuppliesE2eRsaKeys.get -> bool
 virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>.AppHostArguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.CountPendingOutboxMessagesAsync(string! databaseResourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+virtual MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.OutageBudget.get -> MMCA.Common.Testing.Aspire.Outages.DependencyOutageBudget!
+virtual MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.OutboxTableName.get -> string!
+virtual MMCA.Common.Testing.Aspire.Outages.DependencyOutageTestBase<TFixture>.ProbeInterval.get -> System.TimeSpan
