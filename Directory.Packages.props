@@ -38,7 +38,7 @@
   -->
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
-    <MmcaEfCoreVersion>10.0.15</MmcaEfCoreVersion>
+    <MmcaEfCoreVersion>11.0.0</MmcaEfCoreVersion>
     <MmcaOpenApiVersion>2.13.0</MmcaOpenApiVersion>
     <MmcaMauiVersion>10.0.130</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>16.0.0</MmcaMauiToolkitVersion>
