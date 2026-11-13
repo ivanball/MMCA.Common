@@ -30,7 +30,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// </summary>
     private const int MaxLookupSelectorCacheEntries = 512;
 
-    protected readonly DbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+    protected DbContext Context { get; } = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>
     /// The single global filter <c>ignoreQueryFilters: true</c> is allowed to drop. EF 10 names
@@ -40,7 +40,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// </summary>
     private static readonly string[] SoftDeleteFilterOnly = [DbContexts.ApplicationDbContext.SoftDeleteFilterName];
 
-    protected virtual DbSet<TEntity> Entities => _context.Set<TEntity>();
+    protected virtual DbSet<TEntity> Entities => Context.Set<TEntity>();
 
     /// <inheritdoc />
     public virtual async Task<IReadOnlyCollection<TEntity>> GetAllAsync(
@@ -509,7 +509,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// which is read as a relational engine that sorts nulls first.
     /// </summary>
     private protected DataSourceEngineCapabilities? EngineCapabilities =>
-        (_context as DbContexts.ApplicationDbContext)?.Engine.Capabilities;
+        (Context as DbContexts.ApplicationDbContext)?.Engine.Capabilities;
 
     /// <summary>Gets a value indicating whether the engine's LINQ provider translates a predicated <c>Any</c>.</summary>
     private bool TranslatesAny => EngineCapabilities?.IsRelational ?? true;
