@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -112,7 +112,9 @@ public sealed partial class ScheduledJobRunner(
                 // Normal shutdown — exit gracefully.
                 break;
             }
+#pragma warning disable CA1031 // One bad cycle must not take the scheduler down for the life of the process
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // One bad cycle (an unreachable database, a model mismatch) must not take the
                 // scheduler down for the life of the process: log it and wait out the interval.
@@ -599,7 +601,9 @@ public sealed partial class ScheduledJobRunner(
             {
                 return;
             }
+#pragma warning disable CA1031 // A lease-renewal blip must not cost the job: retry soon, well before the lease runs out
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // A blip must not cost the job, or the lease it may still hold: try again soon, well
                 // before the lease this replica last wrote runs out.
@@ -642,7 +646,9 @@ public sealed partial class ScheduledJobRunner(
             // lost lease the caller stamps nothing, because the row is another replica's.
             throw;
         }
+#pragma warning disable CA1031 // Any job exception is the run's failed outcome, recorded on the job row
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogJobFailed(logger, jobName, ex);
             return (OutcomeFailed, ExceptionChain.Describe(ex));

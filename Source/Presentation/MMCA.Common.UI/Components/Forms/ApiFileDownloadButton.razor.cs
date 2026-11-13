@@ -173,7 +173,9 @@ public partial class ApiFileDownloadButton
             // disposal. Report it rather than swallowing it: the user tapped and got nothing.
             WarnDownloadFailed();
         }
+#pragma warning disable CA1031 // OnClick callback: on the native heads an escaping exception is fatal to the host
         catch (Exception)
+#pragma warning restore CA1031
         {
             // The staging write (IOException, UnauthorizedAccessException), the share sheet and the
             // browser's JS save run here too. This is an OnClick callback on the native heads, where

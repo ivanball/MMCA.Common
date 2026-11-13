@@ -82,7 +82,9 @@ internal sealed partial class GoogleCloudTelemetryAccessToken(
         {
             throw;
         }
+#pragma warning disable CA1031 // A failed token refresh is logged and retried on the failure interval
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogRefreshFailed(logger, ex, FailureRetryInterval.TotalSeconds);
             return false;

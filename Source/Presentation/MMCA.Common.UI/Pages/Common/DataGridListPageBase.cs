@@ -546,7 +546,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         {
             await BrowserViewportService.UnsubscribeAsync(this);
         }
+#pragma warning disable CA1031 // Best-effort: JS interop may fail during teardown
         catch
+#pragma warning restore CA1031
         {
             // Best-effort, as in DisposeAsync: JS interop may fail during teardown.
         }
@@ -1098,12 +1100,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
             return onCancelled();
         }
+#pragma warning disable CA1031 // A superseded load's failure describes a query nobody is showing any more
         catch (Exception) when (!IsCurrentLoad(loadSource))
+#pragma warning restore CA1031
         {
             // A superseded load's failure describes a query nobody is showing any more.
             return onCancelled();
         }
+#pragma warning disable CA1031 // Any load failure becomes a toast and the failed state, never a broken grid
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             Toast.Error(ErrorMessages.LoadError(Title, ex));
             LoadFailed = true;
@@ -1587,7 +1593,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         {
             await BrowserViewportService.UnsubscribeAsync(this);
         }
+#pragma warning disable CA1031 // Best-effort: JS interop may fail during app shutdown
         catch
+#pragma warning restore CA1031
         {
             // Best-effort: JS interop may fail during app shutdown
         }

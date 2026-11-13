@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -125,7 +125,9 @@ public sealed partial class OutboxCleanupService(
             {
                 throw;
             }
+#pragma warning disable CA1031 // One unreachable database must not stop the others from being purged
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // One unreachable database must not stop the others from being purged.
                 LogSourcePurgeError(logger, sourceName, ex);

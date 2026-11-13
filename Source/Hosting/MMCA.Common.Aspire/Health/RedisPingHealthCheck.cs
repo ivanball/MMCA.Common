@@ -61,7 +61,9 @@ internal sealed class RedisPingHealthCheck : IHealthCheck, IAsyncDisposable
         {
             throw;
         }
+#pragma warning disable CA1031 // A health check reports a failure, never throws: this optional check degrades /health instead
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Any failure to reach Redis is reported, never thrown: this check is tagged optional and
             // must degrade the /health payload rather than fault the probe pipeline.

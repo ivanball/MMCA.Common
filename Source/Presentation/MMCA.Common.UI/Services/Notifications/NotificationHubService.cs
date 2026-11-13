@@ -274,7 +274,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 await RejoinChannelsAsync().ConfigureAwait(false);
                 return true;
             }
+#pragma warning disable CA1031 // A failed connect is retried by the reconnect loop; a stop during connect is not a failure
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 if (IsLifetimeOver(lifetime))
                 {
@@ -339,7 +341,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 await connection.InvokeAsync(JoinChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelJoined(channelKey);
             }
+#pragma warning disable CA1031 // A failed channel join is logged; the next reconnect rejoins
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogChannelJoinFailed(ex, channelKey);
             }
@@ -369,7 +373,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 await connection.InvokeAsync(LeaveChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelLeft(channelKey);
             }
+#pragma warning disable CA1031 // A failed channel leave is logged; the server drops membership with the connection
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogChannelLeaveFailed(ex, channelKey);
             }
@@ -735,7 +741,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             {
                 await subscription.Handler.Invoke(eventName, payloadJson).ConfigureAwait(false);
             }
+#pragma warning disable CA1031 // One subscriber's handler failure must not stop delivery to the others
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogChannelHandlerFailed(ex, channelKey, eventName);
             }
@@ -776,7 +784,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             {
                 await subscription.Handler().ConfigureAwait(false);
             }
+#pragma warning disable CA1031 // One connection-restored handler's failure must not stop the others
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogConnectionRestoredHandlerFailed(ex);
             }
@@ -809,7 +819,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 await connection.InvokeAsync(JoinChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelJoined(channelKey);
             }
+#pragma warning disable CA1031 // A failed channel join is logged; the next reconnect rejoins
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogChannelJoinFailed(ex, channelKey);
             }

@@ -122,7 +122,9 @@ public partial class BiometricGate
         {
             // Component no longer attached; same disposition.
         }
+#pragma warning disable CA1031 // Async void event handler: nothing observes what escapes, and on a native head it terminates the process
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Exhaustive by necessity: this is an async void event handler, so anything escaping
             // here has no caller to observe it, and on a native head that terminates the process.
@@ -143,7 +145,9 @@ public partial class BiometricGate
         {
             appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
         }
+#pragma warning disable CA1031 // A failed preference read leaves the gate open (logged)
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             Logger.LogWarning(ex, "Reading the app-lock preference failed; the gate stays open.");
             return false;
@@ -159,7 +163,9 @@ public partial class BiometricGate
             // Nothing to protect without a stored session.
             return await TokenStorage.GetRefreshTokenAsync() is not null;
         }
+#pragma warning disable CA1031 // A failed session read after app lock was enabled locks the gate (logged)
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             Logger.LogWarning(ex, "Reading the stored session failed after app lock was enabled; the gate locks.");
             return true;

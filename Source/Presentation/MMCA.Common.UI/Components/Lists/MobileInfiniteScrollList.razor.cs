@@ -196,7 +196,9 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         {
             // Superseded or disposed; the page counter never advanced, so there is nothing to undo.
         }
+#pragma warning disable CA1031 // A failed page load becomes the list's failed state with retry, never a broken list
         catch (Exception)
+#pragma warning restore CA1031
         {
             if (_disposed || generation != _generation)
             {

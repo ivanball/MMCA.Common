@@ -386,7 +386,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             if (state.HasIntegrationEvents)
                 outboxSignal.Signal();
         }
+#pragma warning disable CA1031 // In-process dispatch must not fail the committed save: the lease is released so the outbox processor retries
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogDispatchError(logger, ex);
 
@@ -422,7 +424,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             {
                 await domainEventDispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
             }
+#pragma warning disable CA1031 // An unbacked domain event's handler failure is logged; the save already committed
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogUnbackedDispatchFailed(logger, domainEvent.GetType().Name, ex);
             }
@@ -445,7 +449,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             await OutboxFinalizer.ReleaseLeaseAsync(context, state.LocalOutboxEntries, leaseToken, CancellationToken.None)
                 .ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Lease release is best-effort: the lease expires on its own
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogLeaseReleaseFailed(logger, ex);
         }

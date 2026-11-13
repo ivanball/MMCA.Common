@@ -45,9 +45,10 @@ public static partial class TokenHydrationWarmup
         {
             await services.GetRequiredService<ITokenStorageService>().GetAccessTokenAsync().ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // A warm-up is a latency optimization: any failure is swallowed by design, the first real call hydrates again with its own handling.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // A warm-up is a latency optimization: any failure is swallowed by design, the first real call hydrates again with its own handling.
             // Debug, not Warning: on the anonymous path a failure here is expected and uninteresting.
             if (logger is not null)
             {

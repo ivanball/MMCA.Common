@@ -68,7 +68,9 @@ internal static class PollingLoop
                 // Normal shutdown: exit gracefully.
                 break;
             }
+#pragma warning disable CA1031 // One failed cycle must not stop the polling loop for the life of the process
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 onCycleError(ex);
             }
@@ -159,7 +161,9 @@ internal static class PollingLoop
             {
                 throw;
             }
+#pragma warning disable CA1031 // One unreachable database must not starve the other sources
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // One unreachable database must not starve the other sources. A failing source
                 // contributes nothing to the wait: its rows are retried on the next signal or interval.

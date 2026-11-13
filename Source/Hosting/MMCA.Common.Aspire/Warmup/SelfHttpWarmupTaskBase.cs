@@ -138,9 +138,10 @@ public abstract partial class SelfHttpWarmupTaskBase(
         {
             throw;
         }
+#pragma warning disable CA1031 // warm-up failures are non-fatal by design: log and fall back to lazy warm-up
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // Warm-up failures are non-fatal by design: log and fall back to lazy warm-up
             LogWarmupFailed(logger, ex, Name);
         }
     }

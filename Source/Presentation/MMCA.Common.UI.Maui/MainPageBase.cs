@@ -147,9 +147,10 @@ public abstract class MainPageBase : ContentPage
                 QuitApp();
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types - the interop failure modes differ per platform and none of them are recoverable here
         catch
+#pragma warning restore CA1031
         {
-            // The interop failure modes differ per platform and none of them are recoverable here
             // BlazorWebView not yet hydrated or interop failed: exit cleanly.
             QuitApp();
         }

@@ -591,7 +591,9 @@ public sealed partial class OutboxProcessor(
                     // restart could dead-letter messages that were never actually attempted.
                     throw;
                 }
+#pragma warning disable CA1031 // Any delivery failure is charged to the message as a retry, never allowed to stop the batch
                 catch (Exception ex)
+#pragma warning restore CA1031
                 {
                     circuitOpenLogged = ApplyDeliveryFailure(message, ex, activity, source.ToString(), circuitOpenLogged);
                 }
@@ -788,7 +790,9 @@ public sealed partial class OutboxProcessor(
         {
             await RecordFailureAsync(context, message, lockToken, budget.Token).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Best-effort stamp at shutdown: the row is retried on the next start
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogShutdownStampFailed(logger, message.Id, ex);
         }
@@ -947,7 +951,9 @@ public sealed partial class OutboxProcessor(
         {
             await FlushDeliveredAsync(context, batch, budget.Token).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Best-effort flush on exit: unstamped rows are redelivered and the inbox deduplicates them
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             LogExitStampFailed(logger, batch.PendingStamps.Count, ex);
         }

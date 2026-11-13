@@ -305,7 +305,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         {
             await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Do not catch general exception types: the persistence exception is not visible from this layer (see below)
         catch (Exception)
+#pragma warning restore CA1031
         {
             // The email lookup above is a check-then-act: two concurrent registrations for the same
             // address both pass it, and the loser only fails here, on the insert. Every consumer

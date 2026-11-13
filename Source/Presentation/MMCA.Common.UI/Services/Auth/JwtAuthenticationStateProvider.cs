@@ -116,7 +116,9 @@ public sealed class JwtAuthenticationStateProvider : AuthenticationStateProvider
             var principal = new ClaimsPrincipal(identity);
             return new AuthenticationState(principal);
         }
+#pragma warning disable CA1031 // An unreadable token is an anonymous user, never a broken authentication state
         catch
+#pragma warning restore CA1031
         {
             return AnonymousState;
         }

@@ -125,9 +125,10 @@ public sealed partial class SendPushNotificationHandler(
             notification.MarkAsSent();
             LogNotificationSent(logger, notification.Id, recipientIds.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types — delivery failure is non-fatal; we record the status
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // Delivery failure is non-fatal; we record the status
             notification.MarkAsFailed();
             LogNotificationFailed(logger, notification.Id, ex);
         }
@@ -180,9 +181,10 @@ public sealed partial class SendPushNotificationHandler(
                 LogNativePushFailed(logger, notification.Id, failure);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types — native delivery is best-effort
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // Native delivery is best-effort
             LogNativePushFailed(logger, notification.Id, ex);
         }
     }

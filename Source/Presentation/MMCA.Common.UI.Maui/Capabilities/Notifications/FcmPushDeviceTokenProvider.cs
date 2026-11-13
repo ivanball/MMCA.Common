@@ -63,9 +63,10 @@ public sealed partial class FcmPushDeviceTokenProvider(
                 ? null
                 : new PushDeviceToken(Platform: "fcmv1", Token: token);
         }
+#pragma warning disable CA1031 // Token minting is best-effort; a throw here would break the registration caller.
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // Token minting is best-effort; a throw here would break the registration caller.
             LogTokenFailed(logger, ex);
             return null;
         }

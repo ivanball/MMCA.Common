@@ -121,9 +121,10 @@ internal sealed partial class RedisDistributedLock(
                     LogLockAlreadyExpired(logger, key.ToString());
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types: the release is best-effort by contract (IDistributedLock) and logs the fault
             catch (Exception ex)
+#pragma warning restore CA1031
             {
-                // The release is best-effort by contract (IDistributedLock) and logs the fault
                 LogLockReleaseFailed(logger, key.ToString(), ex);
             }
         }
