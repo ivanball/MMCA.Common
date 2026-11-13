@@ -119,5 +119,6 @@ public sealed class RedisReadinessSafetyTests
     private static IReadOnlyList<HealthCheckRegistration> Registrations(HostApplicationBuilder builder) =>
         [.. builder.Services.BuildServiceProvider()
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<HealthCheckServiceOptions>>()
-            .Value.Registrations];
+            .Value.Registrations
+        ];
 }

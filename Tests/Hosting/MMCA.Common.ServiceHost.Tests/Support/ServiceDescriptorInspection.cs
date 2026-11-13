@@ -33,7 +33,8 @@ internal static class ServiceDescriptorInspection
     public static IReadOnlyList<Type?> ImplementationTypesOf<TService>(IServiceCollection services) =>
         [.. services
             .Where(d => !d.IsKeyedService && d.ServiceType == typeof(TService))
-            .Select(ImplementationTypeOf)];
+            .Select(ImplementationTypeOf)
+        ];
 
     /// <summary>Whether the core's ServiceDefaultsTelemetry receipt (registered by AddServiceDefaults) is present.</summary>
     /// <param name="services">The collection.</param>

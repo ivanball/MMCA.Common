@@ -277,5 +277,6 @@ internal sealed class StoredPermissionRoleAdministrationService(
     private IReadOnlyList<string> CompiledPermissions(string role) =>
         [.. registry.GetPermissions(role)
             .Except(cache.GetPermissions(role), StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
+            .Order(StringComparer.Ordinal)
+        ];
 }

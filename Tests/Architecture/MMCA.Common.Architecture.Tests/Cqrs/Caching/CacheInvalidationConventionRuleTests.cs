@@ -113,7 +113,8 @@ public sealed class CacheInvalidationConventionRuleTests
     private static List<MethodInfo> BaseFacts() =>
         [.. typeof(CacheInvalidationConventionTestsBase)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(m => m.GetCustomAttribute<FactAttribute>() is not null)];
+            .Where(m => m.GetCustomAttribute<FactAttribute>() is not null)
+        ];
 
     /// <summary>Runs the base's single fact on <paramref name="suite"/> and returns its failure, or null when it passes.</summary>
     private static async Task<Exception?> RunRuleAsync(CacheInvalidationConventionTestsBase suite)

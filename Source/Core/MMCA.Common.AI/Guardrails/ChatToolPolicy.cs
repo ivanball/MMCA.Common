@@ -96,14 +96,16 @@ public static class ChatToolPolicy
                 [.. element.EnumerateArray()
                     .Where(item => item.ValueKind == JsonValueKind.String)
                     .Select(item => item.GetString()!)
-                    .Where(name => name.Length > 0)],
+                    .Where(name => name.Length > 0)
+                ],
 
             // A non-generic sequence (a JSON array bound as object[], say) still names tools.
             System.Collections.IEnumerable sequence =>
                 [.. sequence.Cast<object?>()
                     .Select(item => Convert.ToString(item, CultureInfo.InvariantCulture))
                     .Where(name => !string.IsNullOrEmpty(name))
-                    .Select(name => name!)],
+                    .Select(name => name!)
+                ],
             _ => [],
         };
     }

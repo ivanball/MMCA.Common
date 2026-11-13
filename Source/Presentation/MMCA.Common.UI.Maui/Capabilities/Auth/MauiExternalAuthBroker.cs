@@ -147,8 +147,8 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
         result.Properties.TryGetValue("error", out var error)
             && error is { Length: > 0 and <= 80 }
             && error.All(static c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')
-            ? $"ServerError:{error}"
-            : "CallbackWithoutCode";
+                ? $"ServerError:{error}"
+                : "CallbackWithoutCode";
 
     private bool Exit(string provider, string exit, long started, bool succeeded)
     {

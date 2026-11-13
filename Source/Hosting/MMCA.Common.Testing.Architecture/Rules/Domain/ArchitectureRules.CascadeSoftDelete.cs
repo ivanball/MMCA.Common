@@ -194,7 +194,8 @@ public static partial class ArchitectureRules
             .Where(field => !field.IsStatic && IsChildEntityCollection(field.FieldType, index))
             .Select(field => DeclaredMemberName(field.Name))
             .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
+            .Order(StringComparer.Ordinal)
+        ];
 
     /// <summary>True when the type is a generic collection over an auditable child entity.</summary>
     private static bool IsChildEntityCollection(TypeReference fieldType, CallGraphIndex index)

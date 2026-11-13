@@ -18,5 +18,6 @@ public sealed class DefaultEntityConfigurationAssemblyProvider(
             .Where(a => a.FullName is not null
                 && a.FullName.Contains(".Infrastructure", StringComparison.OrdinalIgnoreCase)
                 && !a.FullName.Contains("Common.Infrastructure", StringComparison.OrdinalIgnoreCase)),
-         .. options.Value.AdditionalAssemblies.Distinct()];
+         .. options.Value.AdditionalAssemblies.Distinct()
+        ];
 }

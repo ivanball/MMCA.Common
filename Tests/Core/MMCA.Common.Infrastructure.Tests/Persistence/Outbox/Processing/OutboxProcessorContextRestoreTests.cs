@@ -361,8 +361,8 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
                 User.FindFirst(MMCA.Common.Shared.Auth.AuthClaimTypes.Subject)?.Value,
                 System.Globalization.CultureInfo.InvariantCulture,
                 out var id)
-                ? id
-                : null;
+                    ? id
+                    : null;
 
         public string? Role => null;
 

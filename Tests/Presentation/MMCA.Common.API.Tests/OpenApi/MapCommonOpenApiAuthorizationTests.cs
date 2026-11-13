@@ -88,5 +88,6 @@ public sealed class MapCommonOpenApiAuthorizationTests
         [.. ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(source => source.Endpoints)
             .OfType<RouteEndpoint>()
-            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("openapi", StringComparison.OrdinalIgnoreCase) == true)];
+            .Where(endpoint => endpoint.RoutePattern.RawText?.Contains("openapi", StringComparison.OrdinalIgnoreCase) == true)
+        ];
 }

@@ -29,7 +29,8 @@ public abstract class ArchitectureMapBase : IArchitectureMap
         [.. Layers.Where(l => l.Module.Length > 0)
             .Select(l => l.Module)
             .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
+            .Order(StringComparer.Ordinal)
+        ];
 
     /// <inheritdoc />
     public IEnumerable<Assembly> OfLayer(Layer layer) =>
@@ -69,7 +70,8 @@ public abstract class ArchitectureMapBase : IArchitectureMap
     public string[] OtherModuleNamespaces(string module, Layer layer) =>
         [.. ModuleNames
             .Where(m => !string.Equals(m, module, StringComparison.Ordinal))
-            .Select(m => RootNamespace(m, layer))];
+            .Select(m => RootNamespace(m, layer))
+        ];
 
     /// <summary>
     /// Walks up from the test assembly's base directory to the repo root (the directory containing

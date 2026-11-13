@@ -74,8 +74,8 @@ public static class E2ETestConfiguration
         float.TryParse(raw, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
             && float.IsFinite(value)
             && value >= minimum
-            ? value
-            : fallback;
+                ? value
+                : fallback;
 
     public static class AdminCredentials
     {

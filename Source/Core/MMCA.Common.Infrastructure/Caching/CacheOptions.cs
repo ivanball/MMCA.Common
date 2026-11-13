@@ -36,7 +36,7 @@ public static class CacheOptions
     /// <param name="expiration">Optional custom expiration duration.</param>
     /// <returns>A configured <see cref="DistributedCacheEntryOptions"/> instance.</returns>
     public static DistributedCacheEntryOptions Create(TimeSpan? expiration) =>
-        expiration is not null ?
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiration } :
-            DefaultExpiration;
+        expiration is not null
+            ? new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiration }
+            : DefaultExpiration;
 }

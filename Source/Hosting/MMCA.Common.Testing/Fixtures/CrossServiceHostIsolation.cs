@@ -121,6 +121,7 @@ public static class CrossServiceHostIsolation
         public IReadOnlyList<Assembly> GetConfigurationAssemblies() =>
             [.. inner.GetConfigurationAssemblies()
                 .Where(a => explicitAssemblies.Contains(a)
-                    || a.GetName().Name is { } name && hostAssemblyNames.Contains(name))];
+                    || a.GetName().Name is { } name && hostAssemblyNames.Contains(name))
+            ];
     }
 }

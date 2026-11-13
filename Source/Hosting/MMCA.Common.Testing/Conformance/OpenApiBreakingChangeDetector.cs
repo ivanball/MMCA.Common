@@ -157,10 +157,10 @@ public static class OpenApiBreakingChangeDetector
             schema.ValueKind == JsonValueKind.Object
                 && schema.TryGetProperty("required", out var required)
                 && required.ValueKind == JsonValueKind.Array
-                ? [.. required.EnumerateArray()
-                    .Where(item => item.ValueKind == JsonValueKind.String)
-                    .Select(item => item.GetString()!)]
-                : [];
+                    ? [.. required.EnumerateArray()
+                        .Where(item => item.ValueKind == JsonValueKind.String)
+                        .Select(item => item.GetString()!)]
+                    : [];
 
         /// <summary>
         /// Follows local <c>$ref</c>s (<c>#/components/schemas/X</c>) to the schema they name, moving the

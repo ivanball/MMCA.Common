@@ -108,7 +108,8 @@ public sealed class RequestRedactionTests
         var redacted = new PiiRedactionGuardrail().Redact(
             [new ChatMessage(
                 ChatRole.Assistant,
-                [new FunctionCallContent("call-2", "email_user", new Dictionary<string, object?> { ["to"] = "jane@example.com", ["count"] = 3 })])]);
+                [new FunctionCallContent("call-2", "email_user", new Dictionary<string, object?> { ["to"] = "jane@example.com", ["count"] = 3 })])
+            ]);
 
         var call = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionCallContent>().Subject;
         call.CallId.Should().Be("call-2");
@@ -146,7 +147,9 @@ public sealed class RequestRedactionTests
                 [new FunctionCallContent(
                     "call-4",
                     "email_user",
-                    new Dictionary<string, object?> { ["to"] = System.Text.Json.JsonSerializer.SerializeToElement("jane@example.com") })])]);
+                    new Dictionary<string, object?> { ["to"] = System.Text.Json.JsonSerializer.SerializeToElement("jane@example.com") })
+                ])
+            ]);
 
         var call = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionCallContent>().Subject;
         call.Arguments!["to"].Should().BeOfType<System.Text.Json.JsonElement>()

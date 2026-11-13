@@ -548,7 +548,8 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
                 {
                     Source = nameof(GetPageByCursorAsync),
                     Target = typeof(TEntity).Name,
-                })]);
+                })
+                ]);
         }
 
         var entityRequest = request;

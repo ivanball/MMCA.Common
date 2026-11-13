@@ -216,8 +216,8 @@ public abstract class AuthenticatedServiceBase(
         TimeProvider timeProvider) =>
         response is { StatusCode: HttpStatusCode.TooManyRequests }
             && RetryAfterHeader.TryGetDelay(response, timeProvider, out var retryAfter)
-            ? retryAfter
-            : backoff(attempt);
+                ? retryAfter
+                : backoff(attempt);
 
     /// <summary>
     /// Builds the retry policy. Internal and backoff-injectable so a test can exercise the disposal

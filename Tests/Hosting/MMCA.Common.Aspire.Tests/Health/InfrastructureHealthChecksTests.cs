@@ -305,7 +305,8 @@ public sealed class InfrastructureHealthChecksTests
     private static IReadOnlyList<HealthCheckRegistration> Registrations(HostApplicationBuilder builder) =>
         [.. builder.Services.BuildServiceProvider()
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<HealthCheckServiceOptions>>()
-            .Value.Registrations];
+            .Value.Registrations
+        ];
 
     private static HostApplicationBuilder BuilderWith(Dictionary<string, string?> settings)
     {
@@ -317,5 +318,6 @@ public sealed class InfrastructureHealthChecksTests
     private static IReadOnlyList<string> RegisteredCheckNames(HostApplicationBuilder builder) =>
         [.. builder.Services.BuildServiceProvider()
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<HealthCheckServiceOptions>>()
-            .Value.Registrations.Select(r => r.Name)];
+            .Value.Registrations.Select(r => r.Name)
+        ];
 }

@@ -57,7 +57,8 @@ public sealed class ConfigurationOAuthUISettings : IOAuthUISettings
             .Select(section => new OidcProviderOption(
                 section.Key,
                 string.IsNullOrWhiteSpace(section["DisplayName"]) ? section.Key : section["DisplayName"]!.Trim(),
-                UsesDomains(section)))];
+                UsesDomains(section)))
+        ];
 
     private static bool IsOidcProviderEnabled(IConfigurationSection section) =>
         bool.TryParse(section["Enabled"], out var flag) && flag || !string.IsNullOrEmpty(section["ClientId"]);
