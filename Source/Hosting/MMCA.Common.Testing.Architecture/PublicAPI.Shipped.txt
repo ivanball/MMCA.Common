@@ -84,6 +84,9 @@ MMCA.Common.Testing.Architecture.CostTagConventionTestsBase
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.CostTagConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.EveryContainerApp_CarriesAServiceTag() -> void
 MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ServiceDatabases_CarryTheServiceTagOfTheOwningApp() -> void
+MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase
+MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.CrossModuleProjectReferences_ShouldMatch_TheAllowlist() -> void
+MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.CrossModuleReferenceTestsBase() -> void
 MMCA.Common.Testing.Architecture.DataResidencyTestsBase
 MMCA.Common.Testing.Architecture.DataResidencyTestsBase.DataResidencyTestsBase() -> void
 MMCA.Common.Testing.Architecture.DataResidencyTestsBase.PrivacyPolicy_DataStorageRegion_MatchesDeployedRegion() -> void
@@ -388,6 +391,9 @@ abstract MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.Map.ge
 abstract MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.DatabaseNamePrefix.get -> string!
 abstract MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.MinimumContainerApps.get -> int
+abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.AllowedCrossModuleReferences.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.RepoRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ExtractDeployedRegion(string! repoRoot) -> string!
 abstract MMCA.Common.Testing.Architecture.DataResidencyTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.Model.get -> object!
@@ -501,6 +507,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ControllersInheritApiC
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ConventionForeignKeysRestrictDeletes(object! model) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CountMcpTools(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CountNamedPermissions(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CrossModuleReferencesMatchAllowlist(string! repoRoot, string! modulesFolder, string! repoToken, System.Collections.Generic.IReadOnlyCollection<string!>! moduleNames, System.Collections.Generic.IReadOnlyCollection<string!>! allowedReferences) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DirectTokenReads(string! relativePath, System.Collections.Generic.IReadOnlyList<string!>! lines) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DistinctErrorCodeCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainAggregateRootsHaveNoPublicConstructors(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -640,6 +647,7 @@ virtual MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.Allowed
 virtual MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ControllersExemptFromApiControllerBase.get -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.BicepResource.get -> string!
 virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
+virtual MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.ModulesFolder.get -> string!
 virtual MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ForbiddenResidencyClaims.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransitPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.AllowedSavingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

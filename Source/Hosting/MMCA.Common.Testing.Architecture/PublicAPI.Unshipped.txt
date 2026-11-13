@@ -1,9 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase
-MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.CrossModuleProjectReferences_ShouldMatch_TheAllowlist() -> void
-MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.CrossModuleReferenceTestsBase() -> void
-abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.AllowedCrossModuleReferences.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
-abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
-abstract MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.RepoRoot.get -> string!
-static MMCA.Common.Testing.Architecture.ArchitectureRules.CrossModuleReferencesMatchAllowlist(string! repoRoot, string! modulesFolder, string! repoToken, System.Collections.Generic.IReadOnlyCollection<string!>! moduleNames, System.Collections.Generic.IReadOnlyCollection<string!>! allowedReferences) -> void
-virtual MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.ModulesFolder.get -> string!

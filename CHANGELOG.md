@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.290.0] - 2026-11-13
+
+The 2026-11-13 NuGet audit plus one new architecture fitness base. No breaking change.
+
+### Added
+
+- **`CrossModuleReferenceTestsBase`** (MMCA.Common.Testing.Architecture) and `ArchitectureRules.CrossModuleReferencesMatchAllowlist`. Reads every `.csproj` under the repo's `Source/Modules` (`ModulesFolder`, overridable) and pins each `ProjectReference` from one module's project to ANOTHER module's project, in both directions, against the subclass's `AllowedCrossModuleReferences` (entries written `"{Module}.{Layer} -> {Module}.{Layer}"`): an undeclared reference fails, and so does an entry that matches no reference. It sees couplings the IL-based isolation rules cannot, such as an inlined `const` or a `global using` alias. The modules found on disk must equal the architecture map's modules, the map must declare at least one, and a module project outside `{RepoToken}.{Module}.{Layer}` is reported, so the fact cannot pass vacuously. A single-module app states an empty allowlist.
+
+### Changed
+
+- **Dependencies.** OpenTelemetry 1.21.0 (Api, OTLP exporter, Extensions.Hosting, Instrumentation.AspNetCore, Http and Runtime, Exporter.InMemory); AWSSDK 4.1.x (Core, DynamoDBv2, RDS, S3, SecretsManager, SNS); Microsoft.Data.SqlClient and Microsoft.Data.SqlClient.Extensions.Azure 7.1.2 (move them together); MudBlazor 9.13.0; StackExchange.Redis 3.4.35; Anthropic 13.8.0; Scalar.AspNetCore 2.21.0; Fido2 4.3.3; FirebaseAdmin 3.7.1; bunit 2.15.2 with AngleSharp 1.10.2.
+- **Per-framework versions for the dotnet/extensions train and the OAuth providers.** Microsoft.Extensions.Http.Resilience, ServiceDiscovery, Caching.Hybrid, AI, AI.OpenAI and TimeProvider.Testing resolve 10.11.0 on `net10.0` and 11.0.0 on `net11.0`; AspNet.Security.OAuth.Apple and AspNet.Security.OAuth.GitHub resolve 10.1.0 and 11.0.0. The 11.x extensions assets would floor a `net10.0` consumer's `Microsoft.Extensions.*` runtime packages at 11.0.0, and OAuth 11.x ships `net11.0` assets only, so the .NET 10 line stays on 10.x.
+- **Analyzers (build-time only, nothing flows to a consumer).** Meziantou.Analyzer 3.0.339, SonarAnalyzer.CSharp 10.36.0.15337 and StyleCop.Analyzers 1.3.180 (a trial of the first stable 1.3 build), with the shared `.editorconfig` baseline tightened where a full build measured zero violations and every catch-all documented with a `CA1031` pragma stating its reason.
+
 ## [1.289.0] - 2026-11-12
 
 **Breaking:** two unused components are removed from MMCA.Common.UI. `PageStateScope` (`MMCA.Common.UI.Components.PageState`) and the `registerBfcacheHandler`/`unregisterBfcacheHandler` functions of `nav-interop.js` are removed with no replacement; no consumer used them. `MobileCardList<TItem>` (`MMCA.Common.UI.Components.Lists`) is removed; use `MobileInfiniteScrollList<TItem>`. `ClickableCard` is unchanged. See [UPGRADING.md](UPGRADING.md).
