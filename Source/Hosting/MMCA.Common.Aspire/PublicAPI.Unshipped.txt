@@ -1,5 +1,1 @@
 #nullable enable
-const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsTelemetryExporter = "AwsTelemetryExporter" -> string!
-const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzurePostgreSqlEntraAuthentication = "AzurePostgreSqlEntraAuthentication" -> string!
-MMCA.Common.Aspire.Health.HealthReportCacheOptions.CheckTimeoutSeconds.get -> int
-MMCA.Common.Aspire.Health.HealthReportCacheOptions.CheckTimeoutSeconds.init -> void

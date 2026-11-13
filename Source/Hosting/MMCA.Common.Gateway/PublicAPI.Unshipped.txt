@@ -1,11 +1,1 @@
 #nullable enable
-MMCA.Common.Gateway.GatewayRetrySettings
-MMCA.Common.Gateway.GatewayRetrySettings.Delay.get -> System.TimeSpan
-MMCA.Common.Gateway.GatewayRetrySettings.Delay.init -> void
-MMCA.Common.Gateway.GatewayRetrySettings.Enabled.get -> bool
-MMCA.Common.Gateway.GatewayRetrySettings.Enabled.init -> void
-MMCA.Common.Gateway.GatewayRetrySettings.GatewayRetrySettings() -> void
-MMCA.Common.Gateway.GatewayRetrySettings.MaxRetryAttempts.get -> int
-MMCA.Common.Gateway.GatewayRetrySettings.MaxRetryAttempts.init -> void
-MMCA.Common.Gateway.GatewaySettings.Retry.get -> MMCA.Common.Gateway.GatewayRetrySettings!
-MMCA.Common.Gateway.GatewaySettings.Retry.init -> void

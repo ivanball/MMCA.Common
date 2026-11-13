@@ -45,6 +45,13 @@ MMCA.Common.API.Authorization.PermissionPolicyProvider.PermissionPolicyProvider(
 MMCA.Common.API.Authorization.PermissionRequirement
 MMCA.Common.API.Authorization.PermissionRequirement.Permission.get -> string!
 MMCA.Common.API.Authorization.PermissionRequirement.PermissionRequirement(string! permission) -> void
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.OnAuthorization(Microsoft.AspNetCore.Mvc.Filters.AuthorizationFilterContext! context) -> void
+MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.RefuseMachineClientsAttribute() -> void
+MMCA.Common.API.Caching.EvictOutputCacheAttribute
+MMCA.Common.API.Caching.EvictOutputCacheAttribute.EvictOutputCacheAttribute(params string![]! tags) -> void
+MMCA.Common.API.Caching.EvictOutputCacheAttribute.OnResultExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ResultExecutingContext! context, Microsoft.AspNetCore.Mvc.Filters.ResultExecutionDelegate! next) -> System.Threading.Tasks.Task!
+MMCA.Common.API.Caching.EvictOutputCacheAttribute.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.API.Caching.OutputCacheEvictionExtensions
 MMCA.Common.API.Caching.OutputCacheEvictionExtensions.extension(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore!)
 MMCA.Common.API.Caching.OutputCacheEvictionExtensions.extension(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore!).EvictTagsAsync(System.Threading.CancellationToken cancellationToken, params string![]! tags) -> System.Threading.Tasks.ValueTask
@@ -58,14 +65,26 @@ MMCA.Common.API.Caching.OutputCacheOptionsExtensions
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions.extension(Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!)
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions.extension(Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!).AddPublicEndpointPolicy(string! name, System.TimeSpan expiration, params string![]! tags) -> void
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions.extension(Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!).AddPublicEndpointPolicy(string! name, System.TimeSpan expiration, string![]! bypassRoles, params string![]! tags) -> void
+MMCA.Common.API.Caching.PublicCachedReadsAttribute
+MMCA.Common.API.Caching.PublicCachedReadsAttribute.Apply(Microsoft.AspNetCore.Mvc.ApplicationModels.ControllerModel! controller) -> void
+MMCA.Common.API.Caching.PublicCachedReadsAttribute.ByIdRouteName.get -> string?
+MMCA.Common.API.Caching.PublicCachedReadsAttribute.ByIdRouteName.init -> void
+MMCA.Common.API.Caching.PublicCachedReadsAttribute.PolicyName.get -> string!
+MMCA.Common.API.Caching.PublicCachedReadsAttribute.PublicCachedReadsAttribute(string! policyName) -> void
 MMCA.Common.API.Caching.PublicEndpointOutputCachePolicy
 MMCA.Common.API.Caching.PublicEndpointOutputCachePolicy.PublicEndpointOutputCachePolicy(System.TimeSpan expiration, params string![]! tags) -> void
 MMCA.Common.API.Caching.PublicEndpointOutputCachePolicy.PublicEndpointOutputCachePolicy(System.TimeSpan expiration, string![]! bypassRoles, string![]! tags) -> void
 MMCA.Common.API.ClassReference
 MMCA.Common.API.ClassReference.ClassReference() -> void
 MMCA.Common.API.Concurrency.SupportsIfMatchAttribute
+MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.Apply(Microsoft.AspNetCore.Mvc.ApplicationModels.ActionModel! action) -> void
+MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.Apply(Microsoft.AspNetCore.Mvc.ApplicationModels.ControllerModel! controller) -> void
 MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.OnActionExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext! context, Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate! next) -> System.Threading.Tasks.Task!
 MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.SupportsIfMatchAttribute() -> void
+MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase
+MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.AuditHistoryControllerBase(MMCA.Common.Application.Interfaces.IAuditTrailReader! reader, params System.Type![]! auditedEntityTypes) -> void
+MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.AuditedEntityTypes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Type!>!
+MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.Reader.get -> MMCA.Common.Application.Interfaces.IAuditTrailReader!
 MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase
 MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.Administration.get -> MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService!
 MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.FeatureFlagsControllerBase(MMCA.Common.Application.FeatureFlags.IFeatureFlagAdministrationService! administration) -> void
@@ -83,6 +102,9 @@ MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDT
 MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest>.CreateHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
 MMCA.Common.API.Controllers.ApiControllerBase
 MMCA.Common.API.Controllers.ApiControllerBase.ApiControllerBase() -> void
+MMCA.Common.API.Controllers.ApiControllerBase.HandleConditionalCommandAsync<TCommand, TResult>(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCommand, TResult!>! handler, System.Func<byte[]!, TCommand>! buildCommand, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onSuccess = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+MMCA.Common.API.Controllers.ApiControllerBase.HandleConditionalCommandWithResponseAsync<TCommand, TResponse>(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCommand, MMCA.Common.Shared.Abstractions.Result<TResponse>!>! handler, System.Func<byte[]!, TCommand>! buildCommand, System.Func<TResponse, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onSuccess = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TResponse>!>!
+MMCA.Common.API.Controllers.ApiControllerBase.SetConcurrencyETag(object? dto) -> void
 MMCA.Common.API.Controllers.AuthControllerBase
 MMCA.Common.API.Controllers.AuthControllerBase.AuthControllerBase(MMCA.Common.Application.Auth.IAuthenticationService! authenticationService, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService) -> void
 MMCA.Common.API.Controllers.AuthControllerBase.AuthenticationService.get -> MMCA.Common.Application.Auth.IAuthenticationService!
@@ -103,7 +125,6 @@ MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifie
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.MaxExportRows.get -> int
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.MaxPageSize.get -> int
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.QueryService.get -> MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>!
-MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.SetConcurrencyETag(object? dto) -> void
 MMCA.Common.API.Controllers.IAggregateRootEntityControllerBase<TEntityDTO, TIdentifierType, TCreateRequest>
 MMCA.Common.API.Controllers.IAggregateRootEntityControllerBase<TEntityDTO, TIdentifierType, TCreateRequest>.CreateAsync(TCreateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
 MMCA.Common.API.Controllers.IAggregateRootEntityControllerBase<TEntityDTO, TIdentifierType, TCreateRequest>.DeleteAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
@@ -192,6 +213,8 @@ MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand
 MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.ChangePreferencesHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TChangePreferencesCommand, MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.GetUserPreferencesHandler.get -> MMCA.Common.Application.UseCases.Contracts.IQueryHandler<MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery!, MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse!>!>!
 MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.UserAccountAuthControllerBase(MMCA.Common.Application.Auth.IAuthenticationService! authenticationService, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TChangePasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! changePasswordHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TChangePreferencesCommand, MMCA.Common.Shared.Abstractions.Result!>! changePreferencesHandler, MMCA.Common.Application.UseCases.Contracts.IQueryHandler<MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery!, MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse!>!>! getUserPreferencesHandler) -> void
+MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase
+MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.WebhookSubscriptionsControllerBase() -> void
 MMCA.Common.API.DependencyInjection
 MMCA.Common.API.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.API.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAPI(MMCA.Common.Application.Settings.ModulesSettings? modulesSettings = null, Microsoft.Extensions.Configuration.IConfiguration? configuration = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -290,6 +313,10 @@ MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer.TransformAsync(Microsof
 MMCA.Common.API.Pagination.PaginationHeaderExtensions
 MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!)
 MMCA.Common.API.Pagination.PaginationHeaderExtensions.extension(Microsoft.AspNetCore.Http.HttpResponse!).AppendPaginationHeader(MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void
+MMCA.Common.API.Pagination.SupportsChangeFeedAttribute
+MMCA.Common.API.Pagination.SupportsChangeFeedAttribute.SupportsChangeFeedAttribute() -> void
+MMCA.Common.API.Pagination.SupportsCursorPagingAttribute
+MMCA.Common.API.Pagination.SupportsCursorPagingAttribute.SupportsCursorPagingAttribute() -> void
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.FixedWindow = 0 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.SlidingWindow = 1 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
@@ -476,6 +503,30 @@ MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline() -> Microsoft.AspNetCore.Builder.WebApplication!
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonRequestLocalization() -> Microsoft.AspNetCore.Builder.WebApplication!
+MMCA.Common.API.Uploads.CsvUpload
+MMCA.Common.API.Uploads.CsvUpload.<Clone>$() -> MMCA.Common.API.Uploads.CsvUpload!
+MMCA.Common.API.Uploads.CsvUpload.CsvUpload(MMCA.Common.API.Uploads.UploadedFileContent! File, MMCA.Common.Shared.Serialization.CsvTable! Table) -> void
+MMCA.Common.API.Uploads.CsvUpload.Deconstruct(out MMCA.Common.API.Uploads.UploadedFileContent! File, out MMCA.Common.Shared.Serialization.CsvTable! Table) -> void
+MMCA.Common.API.Uploads.CsvUpload.Equals(MMCA.Common.API.Uploads.CsvUpload? other) -> bool
+MMCA.Common.API.Uploads.CsvUpload.File.get -> MMCA.Common.API.Uploads.UploadedFileContent!
+MMCA.Common.API.Uploads.CsvUpload.File.init -> void
+MMCA.Common.API.Uploads.CsvUpload.Table.get -> MMCA.Common.Shared.Serialization.CsvTable!
+MMCA.Common.API.Uploads.CsvUpload.Table.init -> void
+MMCA.Common.API.Uploads.FormFileUploadExtensions
+MMCA.Common.API.Uploads.FormFileUploadExtensions.extension(Microsoft.AspNetCore.Http.IFormFile?)
+MMCA.Common.API.Uploads.FormFileUploadExtensions.extension(Microsoft.AspNetCore.Http.IFormFile?).ReadBoundedAsync(long maxBytes, MMCA.Common.Shared.Abstractions.Error! invalidUpload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.API.Uploads.UploadedFileContent!>!>!
+MMCA.Common.API.Uploads.FormFileUploadExtensions.extension(Microsoft.AspNetCore.Http.IFormFile?).ReadCsvAsync(long maxBytes, MMCA.Common.Shared.Abstractions.Error! invalidUpload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.API.Uploads.CsvUpload!>!>!
+MMCA.Common.API.Uploads.UploadedFileContent
+MMCA.Common.API.Uploads.UploadedFileContent.<Clone>$() -> MMCA.Common.API.Uploads.UploadedFileContent!
+MMCA.Common.API.Uploads.UploadedFileContent.Content.get -> byte[]!
+MMCA.Common.API.Uploads.UploadedFileContent.Content.init -> void
+MMCA.Common.API.Uploads.UploadedFileContent.ContentType.get -> string!
+MMCA.Common.API.Uploads.UploadedFileContent.ContentType.init -> void
+MMCA.Common.API.Uploads.UploadedFileContent.Deconstruct(out byte[]! Content, out string! FileName, out string! ContentType) -> void
+MMCA.Common.API.Uploads.UploadedFileContent.Equals(MMCA.Common.API.Uploads.UploadedFileContent? other) -> bool
+MMCA.Common.API.Uploads.UploadedFileContent.FileName.get -> string!
+MMCA.Common.API.Uploads.UploadedFileContent.FileName.init -> void
+MMCA.Common.API.Uploads.UploadedFileContent.UploadedFileContent(byte[]! Content, string! FileName, string! ContentType) -> void
 abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateConfirmCommand(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request) -> TConfirmCommand
 abstract MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.CreateSendCommand(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest request) -> TSendCommand
 abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateForgotPasswordCommand(MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest request) -> TForgotPasswordCommand
@@ -488,11 +539,16 @@ abstract MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswo
 abstract MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.CreateChangePreferencesCommand(int userId, MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest! request) -> TChangePreferencesCommand
 const MMCA.Common.API.Authentication.ExternalAuthExtensions.ExternalLoginScheme = "ExternalLogin" -> string!
 const MMCA.Common.API.Authorization.PermissionPolicy.Prefix = "perm:" -> string!
+const MMCA.Common.API.Authorization.RefuseMachineClientsAttribute.ErrorCode = "MachineClients.EndpointRefused" -> string!
+const MMCA.Common.API.Caching.EvictOutputCacheAttribute.EvictedTagsItemKey = "MMCA.Common.API.Caching.EvictedOutputCacheTags" -> string!
 const MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.TokenItemKey = "MMCA.Common.API.Concurrency.IfMatchToken" -> string!
+const MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.KeyRequiredErrorCode = "AuditHistory.KeyRequired" -> string!
+const MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.UnknownEntityErrorCode = "AuditHistory.UnknownEntity" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.CsvContentType = "text/csv; charset=utf-8" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.DefaultMaxExportRows = 100000 -> int
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowLimitHeaderName = "X-Export-Row-Limit" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowScopeRequiredErrorCode = "Export.RowScopeRequired" -> string!
+const MMCA.Common.API.Controllers.OAuthControllerBase.UIBaseUrlConfigKey = "OAuth:UIBaseUrl" -> string!
 const MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.ExportContentType = "application/json" -> string!
 const MMCA.Common.API.FeatureManagement.CurrentUserTargetingContextAccessor.TenantGroupPrefix = "tenant:" -> string!
 const MMCA.Common.API.Middleware.CorrelationIdMiddleware.HeaderName = "X-Correlation-ID" -> string!
@@ -556,6 +612,12 @@ override MMCA.Common.API.SessionCookies.SessionTokenResult.GetHashCode() -> int
 override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Equals(object? obj) -> bool
 override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.GetHashCode() -> int
 override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.ToString() -> string!
+override MMCA.Common.API.Uploads.CsvUpload.Equals(object? obj) -> bool
+override MMCA.Common.API.Uploads.CsvUpload.GetHashCode() -> int
+override MMCA.Common.API.Uploads.CsvUpload.ToString() -> string!
+override MMCA.Common.API.Uploads.UploadedFileContent.Equals(object? obj) -> bool
+override MMCA.Common.API.Uploads.UploadedFileContent.GetHashCode() -> int
+override MMCA.Common.API.Uploads.UploadedFileContent.ToString() -> string!
 static MMCA.Common.API.Authentication.ExternalAuthExtensions.AddExternalAuthProviders(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Authorization.AuthorizationExtensions.AddAuthorizationPolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Authorization.AuthorizationExtensions.AddAuthorizationPolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>? configureFallback) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -639,11 +701,18 @@ static MMCA.Common.API.Startup.WebApplicationExtensions.MapCultureEndpoint(this 
 static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
 static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
 static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonRequestLocalization(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
+static MMCA.Common.API.Uploads.CsvUpload.operator !=(MMCA.Common.API.Uploads.CsvUpload? left, MMCA.Common.API.Uploads.CsvUpload? right) -> bool
+static MMCA.Common.API.Uploads.CsvUpload.operator ==(MMCA.Common.API.Uploads.CsvUpload? left, MMCA.Common.API.Uploads.CsvUpload? right) -> bool
+static MMCA.Common.API.Uploads.FormFileUploadExtensions.ReadBoundedAsync(this Microsoft.AspNetCore.Http.IFormFile? file, long maxBytes, MMCA.Common.Shared.Abstractions.Error! invalidUpload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.API.Uploads.UploadedFileContent!>!>!
+static MMCA.Common.API.Uploads.FormFileUploadExtensions.ReadCsvAsync(this Microsoft.AspNetCore.Http.IFormFile? file, long maxBytes, MMCA.Common.Shared.Abstractions.Error! invalidUpload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.API.Uploads.CsvUpload!>!>!
+static MMCA.Common.API.Uploads.UploadedFileContent.operator !=(MMCA.Common.API.Uploads.UploadedFileContent? left, MMCA.Common.API.Uploads.UploadedFileContent? right) -> bool
+static MMCA.Common.API.Uploads.UploadedFileContent.operator ==(MMCA.Common.API.Uploads.UploadedFileContent? left, MMCA.Common.API.Uploads.UploadedFileContent? right) -> bool
 static readonly MMCA.Common.API.AssemblyReference.Assembly -> System.Reflection.Assembly!
 static readonly MMCA.Common.API.AssemblyReference.AssemblyName -> string!
 static readonly MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.DefaultExemptPathPrefixes -> System.Collections.Generic.IReadOnlyList<string!>!
 static readonly MMCA.Common.API.Idempotency.IdempotencySettings.SectionName -> string!
 static readonly MMCA.Common.API.RateLimiting.RateLimitingSettings.SectionName -> string!
+virtual MMCA.Common.API.Controllers.Administration.AuditHistoryControllerBase.GetHistoryAsync(string! entity, string! key, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!>!
 virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.ClearOverrideAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!>!
 virtual MMCA.Common.API.Controllers.Administration.FeatureFlagsControllerBase.SetOverrideAsync(string! name, MMCA.Common.Shared.FeatureFlags.SetFeatureFlagOverrideRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.FeatureFlags.FeatureFlagStatusResponse!>!>!
@@ -683,6 +752,8 @@ virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TI
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(string? fields = null, bool includeFKs = false, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Abstractions.CollectionResult<TEntityDTO>!>!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Abstractions.CollectionResult<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeFKs = true, bool includeChildren = false, string? fields = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
+virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetChangesAsync(System.DateTime? since = null, string? cursor = null, int pageSize = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!>!>!>!
+virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetCursorPageAsync(string? sortColumn = null, string? sortDirection = null, string? cursor = null, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntityDTO>!>!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetExportSpecification() -> MMCA.Common.Domain.Specifications.Specification<TEntity!, TIdentifierType>?
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetReadSpecificationAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.Domain.Specifications.Specification<TEntity!, TIdentifierType>?>
 virtual MMCA.Common.API.Controllers.Legal.LegalAcceptanceControllerBase.AcceptLegalTermsAsync(MMCA.Common.Shared.Legal.AcceptLegalTermsRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
@@ -708,5 +779,13 @@ virtual MMCA.Common.API.Controllers.SignInLinks.SignInLinkControllerBase<TSendCo
 virtual MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.ChangePasswordAsync(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.ChangePreferencesAsync(MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.UserAccountAuthControllerBase<TChangePasswordCommand, TChangePreferencesCommand>.GetPreferencesAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.CreateAsync(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.DisableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.EnableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.GetEventTypes() -> Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyCollection<string!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.RotateSecretAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+virtual MMCA.Common.API.Controllers.Webhooks.WebhookSubscriptionsControllerBase.UpdateAsync(System.Guid id, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
 ~override MMCA.Common.API.SessionCookies.SessionTokenResult.Equals(object obj) -> bool
 ~override MMCA.Common.API.SessionCookies.SessionTokenResult.ToString() -> string

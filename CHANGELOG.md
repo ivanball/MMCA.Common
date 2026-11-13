@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.289.0] - 2026-11-12
 
 **Breaking:** two unused components are removed from MMCA.Common.UI. `PageStateScope` (`MMCA.Common.UI.Components.PageState`) and the `registerBfcacheHandler`/`unregisterBfcacheHandler` functions of `nav-interop.js` are removed with no replacement; no consumer used them. `MobileCardList<TItem>` (`MMCA.Common.UI.Components.Lists`) is removed; use `MobileInfiniteScrollList<TItem>`. `ClickableCard` is unchanged. See [UPGRADING.md](UPGRADING.md).
 

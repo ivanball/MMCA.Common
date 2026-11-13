@@ -1,29 +1,5 @@
 ﻿#nullable enable
 MMCA.Common.Application.AssemblyReference
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.<Clone>$() -> MMCA.Common.Application.Auditing.AuditTrailEntryDTO!
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.AuditTrailEntryDTO() -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.get -> int?
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.get -> System.DateTime
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.get -> string?
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.get -> string!
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.get -> string!
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? other) -> bool
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.get -> System.Guid
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.get -> string?
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.get -> string?
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.get -> string!
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.init -> void
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.get -> string?
-MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.init -> void
 MMCA.Common.Application.Auth.Administration.IRoleAdministrationService
 MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.GetCatalogAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse!>!>!
 MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.GetRoleAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
@@ -517,6 +493,8 @@ MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.ViewAsSubject(int UserId, stri
 MMCA.Common.Application.ClassReference
 MMCA.Common.Application.ClassReference.ClassReference() -> void
 MMCA.Common.Application.DependencyInjection
+MMCA.Common.Application.DependencyInjection.extension(MMCA.Common.Application.MmcaApplicationPipelineBuilder!)
+MMCA.Common.Application.DependencyInjection.extension(MMCA.Common.Application.MmcaApplicationPipelineBuilder!).AddWebhookDelivery() -> MMCA.Common.Application.MmcaApplicationPipelineBuilder!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddApplication() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddApplicationDecorators() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -527,7 +505,9 @@ MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.Depen
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddEntityUpdateVerb<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest, TApplier>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddEventUpcaster<TSource, TTarget, TUpcaster>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMmcaApplicationPipeline(System.Action<MMCA.Common.Application.MmcaApplicationPipelineBuilder!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddProcessManagers() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUserDataExportSection<TSection>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWebhookEvent<TEvent>(string! eventType) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ScanModuleApplicationServices(System.Reflection.Assembly! moduleAssembly) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ScanModuleApplicationServices<TAssemblyMarker>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).VerifyDecoratorPipeline() -> void
@@ -583,7 +563,7 @@ MMCA.Common.Application.Interfaces.Events.IEventUpcasterRegistry.UpcastToTermina
 MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TIntegrationEvent>
 MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TIntegrationEvent>.HandleAsync(TIntegrationEvent integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Interfaces.IAuditTrailReader
-MMCA.Common.Application.Interfaces.IAuditTrailReader.GetForEntityAsync(string! entityType, string! entityKey, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Auditing.AuditTrailEntryDTO!>!>!
+MMCA.Common.Application.Interfaces.IAuditTrailReader.GetForEntityAsync(string! entityType, string! entityKey, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO!>!>!
 MMCA.Common.Application.Interfaces.ICacheService
 MMCA.Common.Application.Interfaces.ICacheService.GetAsync<T>(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
 MMCA.Common.Application.Interfaces.ICacheService.GetFromSharedStoreAsync<T>(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
@@ -818,7 +798,9 @@ MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityD
 MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
 MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
 MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<object!>!>!
+MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetChangesSinceAsync(System.DateTime? since, string? cursor, int pageSize, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!>!>!>!
 MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetEntityByIdAsync(string! idValue, string? idField = null, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetPageByCursorAsync(MMCA.Common.Shared.Abstractions.KeysetPageRequest! request, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntityDTO>!>!>!
 MMCA.Common.Application.Interfaces.Mapping.IEntityRequestMapper<TEntity, TCreateRequest, TIdentifierType>
 MMCA.Common.Application.Interfaces.Mapping.IEntityRequestMapper<TEntity, TCreateRequest, TIdentifierType>.CreateEntityAsync(TCreateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
 MMCA.Common.Application.Interfaces.Mapping.IEntityUpdateApplier<TEntity, TUpdateRequest, TIdentifierType>
@@ -1002,6 +984,56 @@ MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNo
 MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler
 MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler.HandleAsync(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand! command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler.MarkNotificationReadHandler(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IQueryableExecutor! queryableExecutor, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.ProcessManagers.IProcessTimeoutCommand<TProcessId>
+MMCA.Common.Application.ProcessManagers.IProcessTimeoutCommand<TProcessId>.ProcessId.get -> TProcessId
+MMCA.Common.Application.ProcessManagers.IProcessTimeoutScheduler
+MMCA.Common.Application.ProcessManagers.IProcessTimeoutScheduler.ArmAsync<TProcessId>(MMCA.Common.Application.ProcessManagers.IProcessTimeoutCommand<TProcessId>! timeout, System.TimeSpan after, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Guid>!>!
+MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>
+MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.HandleAsync(TDomainEvent domainEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.ProcessDomainEventHandlerBase(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! serviceScopeFactory) -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepContext
+MMCA.Common.Application.ProcessManagers.ProcessStepContext.ProcessStepContext(System.IServiceProvider! services, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork) -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepContext.Services.get -> System.IServiceProvider!
+MMCA.Common.Application.ProcessManagers.ProcessStepContext.Timeouts.get -> MMCA.Common.Application.ProcessManagers.IProcessTimeoutScheduler?
+MMCA.Common.Application.ProcessManagers.ProcessStepContext.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessId.get -> string?
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessStepFailedException() -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessStepFailedException(string! message) -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessStepFailedException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessStepFailedException(string! processType, string! processId, System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> void
+MMCA.Common.Application.ProcessManagers.ProcessStepFailedException.ProcessType.get -> string?
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.ProcessTimeoutHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector! concurrencyConflictDetector, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.Applied = 3 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.LostRace = 5 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.NotApplicable = 1 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.NotYetDue = 2 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.ProcessMissing = 0 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling.Rejected = 4 -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.<Clone>$() -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>!
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Deconstruct(out MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling Handling, out TProcessId ProcessId, out string! TimeoutName, out System.DateTime? DueAt, out System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! Errors, out string? StateBefore) -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.DueAt.get -> System.DateTime?
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.DueAt.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Equals(MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>? other) -> bool
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Errors.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Handling.get -> MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Handling.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.ProcessId.get -> TProcessId
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.ProcessId.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.ProcessTimeoutReport(MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandling Handling, TProcessId ProcessId, string! TimeoutName, System.DateTime? DueAt, System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! Errors, string? StateBefore) -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.StateBefore.get -> string?
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.StateBefore.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.TimeoutName.get -> string!
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.TimeoutName.init -> void
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutScheduler
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutScheduler.ArmAsync<TProcessId>(MMCA.Common.Application.ProcessManagers.IProcessTimeoutCommand<TProcessId>! timeout, System.TimeSpan after, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Guid>!>!
+MMCA.Common.Application.ProcessManagers.ProcessTimeoutScheduler.ProcessTimeoutScheduler(MMCA.Common.Application.InternalCommands.IInternalCommandScheduler! internalCommandScheduler, System.TimeProvider! timeProvider) -> void
 MMCA.Common.Application.Services.BestEffort
 MMCA.Common.Application.Services.DomainEventDispatcher
 MMCA.Common.Application.Services.DomainEventDispatcher.DispatchAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IDomainEvent!>! domainEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -1274,8 +1306,10 @@ MMCA.Common.Application.UseCases.Decorators.ValidatingQueryDecorator<TQuery, TRe
 MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>
 MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Application.UseCases.Decorators.ViewAsCommandDecorator<TCommand, TResult>.ViewAsCommandDecorator(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUser) -> void
+MMCA.Common.Application.UseCases.Markers.EntityCachePrefix
 MMCA.Common.Application.UseCases.Markers.ICacheInvalidating
 MMCA.Common.Application.UseCases.Markers.ICacheInvalidating.CachePrefix.get -> string!
+MMCA.Common.Application.UseCases.Markers.ICacheInvalidating<TEntity>
 MMCA.Common.Application.UseCases.Markers.IFeatureGated
 MMCA.Common.Application.UseCases.Markers.IFeatureGated.FeatureName.get -> string!
 MMCA.Common.Application.UseCases.Markers.IHasTimeout
@@ -1432,12 +1466,137 @@ MMCA.Common.Application.Validation.UsZipCodeRules<T>
 MMCA.Common.Application.Validation.UsZipCodeRules<T>.UsZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
 MMCA.Common.Application.Validation.ZipCodeRules<T>
 MMCA.Common.Application.Validation.ZipCodeRules<T>.ZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.<Clone>$() -> MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand!
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.Deconstruct(out System.Guid SubscriptionId, out System.Guid DeliveryId, out string! EventType, out System.Guid EventId, out System.DateTime OccurredOn, out string! PayloadJson) -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.DeliverWebhookInternalCommand(System.Guid SubscriptionId, System.Guid DeliveryId, string! EventType, System.Guid EventId, System.DateTime OccurredOn, string! PayloadJson) -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.DeliveryId.get -> System.Guid
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.DeliveryId.init -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.Equals(MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand? other) -> bool
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.EventId.get -> System.Guid
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.EventId.init -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.EventType.get -> string!
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.EventType.init -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.OccurredOn.get -> System.DateTime
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.OccurredOn.init -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.PayloadJson.get -> string!
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.PayloadJson.init -> void
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.SubscriptionId.get -> System.Guid
+MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.SubscriptionId.init -> void
+MMCA.Common.Application.Webhooks.Delivery.IWebhookSender
+MMCA.Common.Application.Webhooks.Delivery.IWebhookSender.SendAsync(MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome!>!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryId
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.<Clone>$() -> MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Body.get -> string!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Body.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Deconstruct(out System.Uri! Target, out string! WebhookId, out string! Body, out System.Collections.Generic.IReadOnlyList<string!>! ProtectedSecrets) -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Equals(MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest? other) -> bool
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.ProtectedSecrets.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.ProtectedSecrets.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Target.get -> System.Uri!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Target.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.WebhookDeliveryRequest(System.Uri! Target, string! WebhookId, string! Body, System.Collections.Generic.IReadOnlyList<string!>! ProtectedSecrets) -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.WebhookId.get -> string!
+MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.WebhookId.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookEnvelope
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.<Clone>$() -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome!
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Deconstruct(out MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus Status, out int? HttpStatusCode, out string? Detail) -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Detail.get -> string?
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Detail.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Equals(MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome? other) -> bool
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.HttpStatusCode.get -> int?
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.HttpStatusCode.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Status.get -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Status.init -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.WebhookSendOutcome(MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus Status, int? HttpStatusCode, string? Detail) -> void
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.Delivered = 0 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.Gone = 2 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.Rejected = 1 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.SecretUnreadable = 5 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.TargetRefused = 3 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus.TransportFailed = 4 -> MMCA.Common.Application.Webhooks.Delivery.WebhookSendStatus
+MMCA.Common.Application.Webhooks.Delivery.WebhookSignature
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSecretProtector
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSecretProtector.Protect(string! secret) -> string!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSecretProtector.Unprotect(string! protectedSecret) -> MMCA.Common.Shared.Abstractions.Result<string!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.CreateAsync(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.DisableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.EnableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.EventTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.IsEnabled.get -> bool
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.RotateSecretAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionService.UpdateAsync(System.Guid id, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.AddAsync(MMCA.Common.Domain.Webhooks.WebhookSubscription! subscription, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.CountAsync(string? tenantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.FindAsync(System.Guid id, string? tenantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Webhooks.WebhookSubscription?>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.ListAsync(string? tenantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Webhooks.WebhookSubscription!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.ListEnabledAsync(string? tenantId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Webhooks.WebhookSubscription!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.RecordOutcomeAsync(MMCA.Common.Domain.Webhooks.WebhookSubscription! subscription, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore.SaveAsync(MMCA.Common.Domain.Webhooks.WebhookSubscription! subscription, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookTargetValidator
+MMCA.Common.Application.Webhooks.Subscriptions.IWebhookTargetValidator.ValidateAsync(System.Uri! target, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.CreateAsync(MMCA.Common.Shared.Webhooks.CreateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.DisableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.EnableAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.EventTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.IsEnabled.get -> bool
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.RotateSecretAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionSecretResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.UpdateAsync(System.Guid id, MMCA.Common.Shared.Webhooks.UpdateWebhookSubscriptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Webhooks.WebhookSubscriptionResponse!>!>!
+MMCA.Common.Application.Webhooks.Subscriptions.WebhookSubscriptionService.WebhookSubscriptionService(MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSubscriptionStore! store, MMCA.Common.Application.Webhooks.Subscriptions.IWebhookTargetValidator! targetValidator, MMCA.Common.Application.Webhooks.Subscriptions.IWebhookSecretProtector! secretProtector, MMCA.Common.Application.Webhooks.WebhookEventCatalog! catalog, MMCA.Common.Application.Interfaces.ITenantContext! tenantContext, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Webhooks.WebhookSettings!>! settings, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Webhooks.WebhookErrorCodes
+MMCA.Common.Application.Webhooks.WebhookEventCatalog
+MMCA.Common.Application.Webhooks.WebhookEventCatalog.Contains(string! eventType) -> bool
+MMCA.Common.Application.Webhooks.WebhookEventCatalog.EventTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+MMCA.Common.Application.Webhooks.WebhookEventCatalog.TryGetEventType(System.Type! eventClrType, out string? eventType) -> bool
+MMCA.Common.Application.Webhooks.WebhookEventCatalog.WebhookEventCatalog(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Webhooks.WebhookEventRegistration!>! registrations) -> void
+MMCA.Common.Application.Webhooks.WebhookEventRegistration
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.<Clone>$() -> MMCA.Common.Application.Webhooks.WebhookEventRegistration!
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.Deconstruct(out System.Type! EventClrType, out string! EventType) -> void
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.Equals(MMCA.Common.Application.Webhooks.WebhookEventRegistration? other) -> bool
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.EventClrType.get -> System.Type!
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.EventClrType.init -> void
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.EventType.get -> string!
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.EventType.init -> void
+MMCA.Common.Application.Webhooks.WebhookEventRegistration.WebhookEventRegistration(System.Type! EventClrType, string! EventType) -> void
+MMCA.Common.Application.Webhooks.WebhookSettings
+MMCA.Common.Application.Webhooks.WebhookSettings.AllowInsecureTargetsInDevelopment.get -> bool
+MMCA.Common.Application.Webhooks.WebhookSettings.AllowInsecureTargetsInDevelopment.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.DataSourceName.get -> string!
+MMCA.Common.Application.Webhooks.WebhookSettings.DataSourceName.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.DeliveryConcurrency.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.DeliveryConcurrency.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.Enabled.get -> bool
+MMCA.Common.Application.Webhooks.WebhookSettings.Enabled.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.MaxPayloadBytes.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.MaxPayloadBytes.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.MaxSubscriptionsPerTenant.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.MaxSubscriptionsPerTenant.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.PreviousSecretGraceHours.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.PreviousSecretGraceHours.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.ReceiverCooldownSeconds.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.TimeoutSeconds.get -> int
+MMCA.Common.Application.Webhooks.WebhookSettings.TimeoutSeconds.init -> void
+MMCA.Common.Application.Webhooks.WebhookSettings.WebhookSettings() -> void
 abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateAccessToken(TUser! user) -> string!
 abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateUser(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, byte[]! passwordHash, byte[]! passwordSalt) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
 abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.EmailExistsAsync(MMCA.Common.Shared.ValueObjects.Contact.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Contact.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
 abstract MMCA.Common.Application.DomainEvents.SafeDomainEventHandler<TDomainEvent>.HandleSafelyAsync(TDomainEvent! domainEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Application.DomainEvents.ScopedIntegrationEventHandlerBase<TIntegrationEvent>.HandleScopedAsync(TIntegrationEvent integrationEvent, System.IServiceProvider! services, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+abstract MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.CorrelateProcessId(TDomainEvent domainEvent) -> TProcessId
+abstract MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.HandleStepAsync(TProcess! process, TDomainEvent domainEvent, MMCA.Common.Application.ProcessManagers.ProcessStepContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+abstract MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.ResolveTimeout(TCommand command) -> MMCA.Common.Domain.ProcessManagers.ProcessTimeout!
 abstract MMCA.Common.Application.UseCases.Crud.AddChildEntityHandlerBase<TCommand, TParent, TIdentifierType, TChild, TChildDTO>.Apply(TParent! parent, TCommand command) -> MMCA.Common.Shared.Abstractions.Result<TChild>!
 abstract MMCA.Common.Application.UseCases.Crud.AddChildEntityHandlerBase<TCommand, TParent, TIdentifierType, TChild, TChildDTO>.Includes.get -> System.Collections.Generic.IEnumerable<string!>!
 abstract MMCA.Common.Application.UseCases.Crud.AddChildEntityHandlerBase<TCommand, TParent, TIdentifierType, TChild, TChildDTO>.MapChild(TChild child) -> TChildDTO
@@ -1493,13 +1652,28 @@ const MMCA.Common.Application.Auth.ViewAs.ViewAsSettings.SectionName = "ViewAs" 
 const MMCA.Common.Application.Extensions.CurrentUserServiceExtensions.AccessDeniedMessage = "Access denied." -> string!
 const MMCA.Common.Application.FeatureFlags.FeatureFlagOverrideSettings.SectionName = "FeatureFlags" -> string!
 const MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey.DefaultName = "Default" -> string!
+const MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.ChangeFeedNotSupportedErrorCode = "Query.ChangeFeedNotSupported" -> string!
+const MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.CursorPagingNotSupportedErrorCode = "Query.CursorPagingNotSupported" -> string!
 const MMCA.Common.Application.Services.Query.EntityQueryPipeline.MaxUnboundedResultLimit = 1000 -> int
 const MMCA.Common.Application.Services.Query.QueryFieldContract.MaxNavigationDepth = 3 -> int
 const MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.CurrentFormatVersion = "1.0" -> string!
 const MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionDefaults.UnavailableReason = "This section could not be retrieved. The data is unchanged; the export can be requested again later." -> string!
-override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(object? obj) -> bool
-override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.GetHashCode() -> int
-override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ToString() -> string!
+const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.IdHeader = "webhook-id" -> string!
+const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.SecretPrefix = "whsec_" -> string!
+const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.SignatureHeader = "webhook-signature" -> string!
+const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.TimestampHeader = "webhook-timestamp" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.DeliveryFailed = "Webhooks.DeliveryFailed" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.DescriptionTooLong = "Webhooks.DescriptionTooLong" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.EventTypeUnknown = "Webhooks.EventTypeUnknown" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.EventTypesRequired = "Webhooks.EventTypesRequired" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.LimitReached = "Webhooks.LimitReached" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.NotFound = "Webhooks.NotFound" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.SecretRequired = "Webhooks.SecretRequired" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.SecretUnreadable = "Webhooks.SecretUnreadable" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.TargetNotAllowed = "Webhooks.TargetNotAllowed" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.TooManyEventTypes = "Webhooks.TooManyEventTypes" -> string!
+const MMCA.Common.Application.Webhooks.WebhookErrorCodes.UrlInvalid = "Webhooks.UrlInvalid" -> string!
+const MMCA.Common.Application.Webhooks.WebhookSettings.SectionName = "Webhooks" -> string!
 override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.GetHashCode() -> int
 override MMCA.Common.Application.Auth.MachineClients.ServiceAccount.ToString() -> string!
@@ -1563,6 +1737,9 @@ override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAl
 override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.Equals(object? obj) -> bool
 override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.GetHashCode() -> int
 override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.ToString() -> string!
+override MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.Equals(object? obj) -> bool
+override MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.GetHashCode() -> int
+override MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.ToString() -> string!
 override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Equals(object? obj) -> bool
 override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.GetHashCode() -> int
 override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.ToString() -> string!
@@ -1598,10 +1775,20 @@ override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSec
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.Equals(object? obj) -> bool
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.GetHashCode() -> int
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.ToString() -> string!
+override MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.GetHashCode() -> int
+override MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.ToString() -> string!
+override MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.Equals(object? obj) -> bool
+override MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.GetHashCode() -> int
+override MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.ToString() -> string!
+override MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.Equals(object? obj) -> bool
+override MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.GetHashCode() -> int
+override MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.ToString() -> string!
+override MMCA.Common.Application.Webhooks.WebhookEventRegistration.Equals(object? obj) -> bool
+override MMCA.Common.Application.Webhooks.WebhookEventRegistration.GetHashCode() -> int
+override MMCA.Common.Application.Webhooks.WebhookEventRegistration.ToString() -> string!
 override abstract MMCA.Common.Application.UseCases.Crud.RemoveChildEntityHandlerBase<TCommand, TParent, TIdentifierType>.Includes.get -> System.Collections.Generic.IEnumerable<string!>!
 override sealed MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>.Equals(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>? other) -> bool
-static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator !=(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
-static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator ==(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidToken(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAccepted(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -1665,7 +1852,10 @@ static MMCA.Common.Application.DependencyInjection.AddEntityUpdate<TCommand, TEn
 static MMCA.Common.Application.DependencyInjection.AddEntityUpdateVerb<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest, TApplier>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.AddEventUpcaster<TSource, TTarget, TUpcaster>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.AddMmcaApplicationPipeline(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.Application.MmcaApplicationPipelineBuilder!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddProcessManagers(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.AddUserDataExportSection<TSection>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddWebhookDelivery(this MMCA.Common.Application.MmcaApplicationPipelineBuilder! pipeline) -> MMCA.Common.Application.MmcaApplicationPipelineBuilder!
+static MMCA.Common.Application.DependencyInjection.AddWebhookEvent<TEvent>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! eventType) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.ScanModuleApplicationServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Reflection.Assembly! moduleAssembly) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.ScanModuleApplicationServices<TAssemblyMarker>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.DependencyInjection.VerifyDecoratorPipeline(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
@@ -1716,6 +1906,8 @@ static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllR
 static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? right) -> bool
 static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.operator !=(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? right) -> bool
 static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? right) -> bool
+static MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.operator !=(MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>? left, MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>? right) -> bool
+static MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>.operator ==(MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>? left, MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>? right) -> bool
 static MMCA.Common.Application.Services.BestEffort.ExecuteAsync(string! operation, Microsoft.Extensions.Logging.ILogger! logger, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static MMCA.Common.Application.Services.Filtering.QueryFilterService.ApplyFilters<TEntity>(System.Linq.IQueryable<TEntity>! query, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap) -> System.Linq.IQueryable<TEntity>!
 static MMCA.Common.Application.Services.Filtering.QueryFilterService.ApplyFilters<TEntity>(System.Linq.IQueryable<TEntity>! query, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap, MMCA.Common.Application.Services.Query.QueryFieldContract? fieldContract) -> System.Linq.IQueryable<TEntity>!
@@ -1751,6 +1943,8 @@ static MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity, TIdent
 static MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity, TIdentifierType>.operator ==(MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity, TIdentifierType>? left, MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity, TIdentifierType>? right) -> bool
 static MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>.operator !=(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? left, MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? right) -> bool
 static MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>.operator ==(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? left, MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? right) -> bool
+static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For(System.Type! entityType) -> string!
+static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For<TEntity>() -> string!
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Complete(string! sectionName, object? data) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Unavailable(string! sectionName, string? reason = null) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.operator !=(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? right) -> bool
@@ -1758,6 +1952,20 @@ static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSecti
 static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator !=(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
 static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator ==(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
 static MMCA.Common.Application.Users.UserOwnershipRule.CheckOwnership(MMCA.Common.Application.Users.IUserOwnedRequest! request, bool callerHasPrivilegedRole, string! code, string! message, string! source) -> MMCA.Common.Shared.Abstractions.Error?
+static MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.operator !=(MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand? left, MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand.operator ==(MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand? left, MMCA.Common.Application.Webhooks.Delivery.DeliverWebhookInternalCommand? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryId.For(System.Guid eventId, System.Guid subscriptionId) -> System.Guid
+static MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.operator !=(MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest? left, MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest.operator ==(MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest? left, MMCA.Common.Application.Webhooks.Delivery.WebhookDeliveryRequest? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.WebhookEnvelope.Build(string! eventType, System.DateTime occurredOn, string! payloadJson) -> string!
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.operator !=(MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome? left, MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome.operator ==(MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome? left, MMCA.Common.Application.Webhooks.Delivery.WebhookSendOutcome? right) -> bool
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.Compute(string! webhookId, long timestamp, string! body, System.ReadOnlySpan<byte> key) -> string!
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.DecodeSecret(string! secret) -> MMCA.Common.Shared.Abstractions.Result<byte[]!>!
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.GenerateSecret() -> string!
+static MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.Verify(string! webhookId, long timestamp, string! body, string! signatureHeader, System.ReadOnlySpan<byte> key, long nowUnixSeconds, System.TimeSpan tolerance) -> bool
+static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator !=(MMCA.Common.Application.Webhooks.WebhookEventRegistration? left, MMCA.Common.Application.Webhooks.WebhookEventRegistration? right) -> bool
+static MMCA.Common.Application.Webhooks.WebhookEventRegistration.operator ==(MMCA.Common.Application.Webhooks.WebhookEventRegistration? left, MMCA.Common.Application.Webhooks.WebhookEventRegistration? right) -> bool
 static readonly MMCA.Common.Application.AssemblyReference.Assembly -> System.Reflection.Assembly!
 static readonly MMCA.Common.Application.AssemblyReference.AssemblyName -> string!
 static readonly MMCA.Common.Application.Auth.Passkeys.PasskeyChallenges.Lifetime -> System.TimeSpan
@@ -1777,13 +1985,22 @@ virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateLo
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateRefreshCandidateAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 virtual MMCA.Common.Application.DomainEvents.ScopedIntegrationEventHandlerBase<TIntegrationEvent>.LogHandlerFailure(System.Exception! exception, TIntegrationEvent integrationEvent) -> void
 virtual MMCA.Common.Application.InternalCommands.DeleteBlobInternalCommandHandlerBase<TCommand>.BlobKind.get -> string!
+virtual MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.Includes.get -> System.Collections.Generic.IEnumerable<string!>!
+virtual MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.OnProcessMissing(TDomainEvent domainEvent) -> void
+virtual MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.OnStepFailed(TDomainEvent domainEvent, System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> void
+virtual MMCA.Common.Application.ProcessManagers.ProcessDomainEventHandlerBase<TDomainEvent, TProcess, TProcessId>.OnStepStarting(TDomainEvent domainEvent) -> void
+virtual MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.DescribeState(TProcess! process) -> string?
+virtual MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.Includes.get -> System.Collections.Generic.IEnumerable<string!>!
+virtual MMCA.Common.Application.ProcessManagers.ProcessTimeoutHandlerBase<TCommand, TProcess, TProcessId>.OnHandled(TCommand command, MMCA.Common.Application.ProcessManagers.ProcessTimeoutReport<TProcessId>! report) -> void
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.DTOToEntityPropertyMap.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.FieldContract.get -> MMCA.Common.Application.Services.Query.QueryFieldContract?
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters = null, string? sortColumn = null, string? sortDirection = null, string? fields = null, int? pageNumber = null, int? pageSize = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<object!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetChangesSinceAsync(System.DateTime? since, string? cursor, int pageSize, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<MMCA.Common.Shared.Abstractions.EntityChange<TEntityDTO, TIdentifierType>!>!>!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetEntityByIdAsync(string! idValue, string? idField = null, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetPageByCursorAsync(MMCA.Common.Shared.Abstractions.KeysetPageRequest! request, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntityDTO>!>!>!
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.LookupNameContract.get -> MMCA.Common.Application.Services.Query.QueryFieldContract?
 virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.Repository.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IReadRepository<TEntity!, TIdentifierType>!
 virtual MMCA.Common.Application.UseCases.Crud.AddChildEntityHandlerBase<TCommand, TParent, TIdentifierType, TChild, TChildDTO>.AsTracking.get -> bool

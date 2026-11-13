@@ -1,1 +1,40 @@
 #nullable enable
+MMCA.Common.ServiceHost.MmcaServiceHost
+MMCA.Common.ServiceHost.MmcaServiceHost.ModuleHost.get -> MMCA.Common.API.Startup.ModuleHostContext!
+MMCA.Common.ServiceHost.MmcaServiceHostOptions
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.AfterServiceDefaults.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>?
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.AfterServiceDefaults.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.Authentication.get -> MMCA.Common.ServiceHost.ServiceHostAuthentication
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.Authentication.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureConfigurationSources.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>?
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureConfigurationSources.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureOutputCache.get -> System.Action<Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!>?
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureOutputCache.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigurePipeline.get -> System.Action<MMCA.Common.Application.MmcaApplicationPipelineBuilder!, MMCA.Common.API.Startup.ModuleHostContext!>!
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigurePipeline.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureServices.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplicationBuilder!>?
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ConfigureServices.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.LogFilePath.get -> string!
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.LogFilePath.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.MmcaServiceHostOptions() -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ModuleAssemblies.get -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.ModuleAssemblies.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.Protocols.get -> Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.Protocols.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.RedeclareCleartextEndpoint.get -> bool
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.RedeclareCleartextEndpoint.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.RegisterBrokerTransports.get -> System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>?
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.RegisterBrokerTransports.init -> void
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.UseRedisOutputCaching.get -> bool
+MMCA.Common.ServiceHost.MmcaServiceHostOptions.UseRedisOutputCaching.init -> void
+MMCA.Common.ServiceHost.ServiceHostApplicationExtensions
+MMCA.Common.ServiceHost.ServiceHostApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!)
+MMCA.Common.ServiceHost.ServiceHostApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseMmcaServiceHostAsync(MMCA.Common.ServiceHost.MmcaServiceHost! host, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.ServiceHost.ServiceHostAuthentication
+MMCA.Common.ServiceHost.ServiceHostAuthentication.ForwardedJwtBearer = 0 -> MMCA.Common.ServiceHost.ServiceHostAuthentication
+MMCA.Common.ServiceHost.ServiceHostAuthentication.TokenIssuer = 1 -> MMCA.Common.ServiceHost.ServiceHostAuthentication
+MMCA.Common.ServiceHost.ServiceHostBuilderExtensions
+MMCA.Common.ServiceHost.ServiceHostBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
+MMCA.Common.ServiceHost.ServiceHostBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).AddMmcaServiceHost(MMCA.Common.ServiceHost.MmcaServiceHostOptions! options) -> MMCA.Common.ServiceHost.MmcaServiceHost!
+static MMCA.Common.ServiceHost.ServiceHostApplicationExtensions.UseMmcaServiceHostAsync(this Microsoft.AspNetCore.Builder.WebApplication! app, MMCA.Common.ServiceHost.MmcaServiceHost! host, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static MMCA.Common.ServiceHost.ServiceHostBuilderExtensions.AddMmcaServiceHost(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, MMCA.Common.ServiceHost.MmcaServiceHostOptions! options) -> MMCA.Common.ServiceHost.MmcaServiceHost!

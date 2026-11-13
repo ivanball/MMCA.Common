@@ -158,6 +158,7 @@ MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService
 MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.PeriodicBackgroundService(System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Infrastructure.Http.JwtForwardingDelegatingHandler
 MMCA.Common.Infrastructure.Http.JwtForwardingDelegatingHandler.JwtForwardingDelegatingHandler(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor) -> void
+MMCA.Common.Infrastructure.Http.OutboundAddressPolicy
 MMCA.Common.Infrastructure.Mail.SmtpEmailSender
 MMCA.Common.Infrastructure.Mail.SmtpEmailSender.SendAsync(string! subject, string! body, bool isHtml = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Mail.SmtpEmailSender.SendAsync(string! to, string! subject, string! body, bool isHtml = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -368,6 +369,8 @@ MMCA.Common.Infrastructure.Persistence.Conventions.SoftDeleteUniqueIndexConventi
 MMCA.Common.Infrastructure.Persistence.Conventions.StronglyTypedIdModelConfiguration
 MMCA.Common.Infrastructure.Persistence.Conversions.EmailValueConverter
 MMCA.Common.Infrastructure.Persistence.Conversions.EmailValueConverter.EmailValueConverter() -> void
+MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>
+MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationNameValueConverter<TEnumeration>.EnumerationNameValueConverter() -> void
 MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationValueConverter<TEnumeration>
 MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationValueConverter<TEnumeration>.EnumerationValueConverter() -> void
 MMCA.Common.Infrastructure.Persistence.Conversions.NullableEmailValueConverter
@@ -494,6 +497,7 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.DataSourceModelCacheKeyFactory
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.AddConfigurationAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.AddStronglyTypedIdAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.ConfigurationAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.ConnectionStrings.get -> MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.ConnectionStrings.set -> void
@@ -517,6 +521,9 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOpti
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableStoredPermissionGrants.set -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableViewAsGrants.set -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.set -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.StronglyTypedIdAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.BeginTransaction() -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.CommitTransaction() -> void
@@ -872,6 +879,7 @@ MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy.Header =
 MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy.Host = 2 -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy
 MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator
 MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.CosmosIntIdValueGenerator() -> void
+MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobEntry
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobEntry.CronExpression.get -> string!
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobEntry.CronExpression.set -> void
@@ -921,6 +929,9 @@ MMCA.Common.Infrastructure.UseDataSourceAttribute.UseDataSourceAttribute(MMCA.Co
 MMCA.Common.Infrastructure.UseDatabaseAttribute
 MMCA.Common.Infrastructure.UseDatabaseAttribute.Name.get -> string!
 MMCA.Common.Infrastructure.UseDatabaseAttribute.UseDatabaseAttribute(string! name) -> void
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWebhooks(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteCycleAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.Interval.get -> System.TimeSpan
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.SeedAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
@@ -959,6 +970,8 @@ const MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideMod
 const MMCA.Common.Infrastructure.Persistence.FeatureFlags.FeatureFlagOverrideModelBuilderExtensions.TableName = "FeatureFlagOverrides" -> string!
 const MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions.ServiceAccountIndexName = "IX_MachineClients_ServiceAccountUserId" -> string!
 const MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderExtensions.TableName = "MachineClients" -> string!
+const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TableName = "WebhookSubscriptions" -> string!
+const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TenantIndexName = "IX_WebhookSubscriptions_TenantId_IsDeleted" -> string!
 override MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnConnectedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnDisconnectedAsync(System.Exception? exception) -> System.Threading.Tasks.Task!
@@ -1021,6 +1034,8 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddSignInLinks(this Micros
 static MMCA.Common.Infrastructure.DependencyInjection.AddStoredPermissionGrants(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddStronglyTypedIds(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params System.Reflection.Assembly![]! identifierAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddTwoFactorAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsAcceptableTargetUri(System.Uri! target, bool allowInsecure) -> bool
+static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsPublicAddress(System.Net.IPAddress! address) -> bool
 static MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.Resolve(MMCA.Common.Infrastructure.Mail.SmtpSettings! settings, Microsoft.Extensions.Configuration.IConfiguration? configuration, Microsoft.Extensions.Hosting.IHostEnvironment? environment, Microsoft.Extensions.Logging.ILogger? logger) -> bool
 static MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.Resolve(Microsoft.Extensions.Configuration.IConfiguration? configuration, Microsoft.Extensions.Hosting.IHostEnvironment? environment) -> bool
 static MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.RegisterIntegrationEventConsumer<TEvent>(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true, System.Action<MassTransit.IEndpointRegistrationConfigurator!>? configureEndpoint = null) -> MassTransit.IBusRegistrationConfigurator!
@@ -1065,6 +1080,8 @@ static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.FromDomainEve
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator !=(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator ==(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool
 static MMCA.Common.Infrastructure.Persistence.SensitiveDataLoggingGate.IsEnabled(MMCA.Common.Infrastructure.Persistence.PersistenceSettings? settings, Microsoft.Extensions.Hosting.IHostEnvironment? environment) -> bool
+static MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.ApplyWebhookSubscriptionConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+static MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.AddWebhooks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.Infrastructure.AssemblyReference.Assembly -> System.Reflection.Assembly!
 static readonly MMCA.Common.Infrastructure.AssemblyReference.AssemblyName -> string!
 static readonly MMCA.Common.Infrastructure.Auth.JwksSettings.SectionName -> string!

@@ -1,5 +1,1 @@
 #nullable enable
-MMCA.Common.Aws.AwsTelemetryExporterExtensions
-MMCA.Common.Aws.AwsTelemetryExporterExtensions.extension<TBuilder>(TBuilder)
-MMCA.Common.Aws.AwsTelemetryExporterExtensions.extension<TBuilder>(TBuilder).AddAwsTelemetryExporter() -> TBuilder
-static MMCA.Common.Aws.AwsTelemetryExporterExtensions.AddAwsTelemetryExporter<TBuilder>(this TBuilder builder) -> TBuilder
