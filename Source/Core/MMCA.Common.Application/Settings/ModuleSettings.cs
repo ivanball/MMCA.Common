@@ -34,7 +34,5 @@ public sealed class ModuleSettings
     /// </code>
     /// </para>
     /// </summary>
-#pragma warning disable CA2227 // Collection properties should be read only - required for IConfiguration binding
     public List<string> RemoteDependencies { get; set; } = [];
-#pragma warning restore CA2227
 }

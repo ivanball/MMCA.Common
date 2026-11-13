@@ -80,10 +80,9 @@ internal sealed partial class WarmupHostedService(
             // opens, and the dependency is retried lazily on first use.
             LogTaskTimedOut(logger, ex, task.Name, sw.ElapsedMilliseconds, _taskTimeout.TotalSeconds);
         }
-#pragma warning disable CA1031 // warm-up failures must never crash the host
         catch (Exception ex)
-#pragma warning restore CA1031
         {
+            // Warm-up failures must never crash the host
             LogTaskFailed(logger, ex, task.Name, sw.ElapsedMilliseconds);
         }
     }

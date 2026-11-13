@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -477,9 +477,8 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
                 if (!IsSuccess(objectStatus))
                     return null;
 
-#pragma warning disable VSTHRD103 // JsonSerializer.Serialize to a string is correctly synchronous; SerializeAsync is only for writing to a stream.
+                // JsonSerializer.Serialize to a string is correctly synchronous; SerializeAsync is only for writing to a stream.
                 var body = objectResult.Value is null ? string.Empty : JsonSerializer.Serialize(objectResult.Value, json);
-#pragma warning restore VSTHRD103
                 return new IdempotencyRecord(
                     objectStatus,
                     body,

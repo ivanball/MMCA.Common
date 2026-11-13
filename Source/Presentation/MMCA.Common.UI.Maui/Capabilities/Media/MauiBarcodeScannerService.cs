@@ -64,10 +64,9 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
         {
             return await MainThread.InvokeOnMainThreadAsync(RequestCameraAsync).ConfigureAwait(false);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - a head that never declared the permission throws here, and that must read as "no camera access"
         catch
-#pragma warning restore CA1031
         {
+            // A head that never declared the permission throws here, and that must read as "no camera access"
             return false;
         }
     }
@@ -88,10 +87,9 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
                 .InvokeOnMainThreadAsync(() => ScanOnMainThreadAsync(_cancelText(), _cameraDescription(), cancellationToken))
                 .ConfigureAwait(false);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - scanning is best-effort; a missing window, a denied camera, and a handler-less platform must all read as "no scan"
         catch
-#pragma warning restore CA1031
         {
+            // Scanning is best-effort; a missing window, a denied camera, and a handler-less platform must all read as "no scan"
             return null;
         }
     }

@@ -26,9 +26,6 @@ public static class OidcDiscoveryEndpointExtensions
     /// </summary>
     public const string DefaultOidcDiscoveryPath = "/.well-known/openid-configuration";
 
-    // IDE0052 false positive: these fields ARE read inside the extension block below,
-    // but the analyzer does not look into C# 14 extension blocks for field usage.
-#pragma warning disable IDE0052
     private static readonly string[] ResponseTypesSupported = ["token"];
     private static readonly string[] SubjectTypesSupported = ["public"];
     private static readonly string[] SigningAlgsSupported = ["RS256"];
@@ -44,7 +41,6 @@ public static class OidcDiscoveryEndpointExtensions
     {
         PropertyNamingPolicy = null,
     };
-#pragma warning restore IDE0052
 
     extension(IEndpointRouteBuilder endpoints)
     {

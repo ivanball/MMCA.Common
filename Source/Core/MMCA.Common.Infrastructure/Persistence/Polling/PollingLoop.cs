@@ -205,7 +205,7 @@ internal static class PollingLoop
     internal static double ComputeCircuitOpenBackoffSeconds(TimeSpan breakDuration, int capSeconds) =>
         Math.Min(breakDuration.TotalSeconds * (1 + NextJitter() * 0.25), capSeconds);
 
-#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
+#pragma warning disable CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
     private static double NextJitter() => Random.Shared.NextDouble();
-#pragma warning restore S2245, CA5394
+#pragma warning restore CA5394
 }

@@ -81,10 +81,9 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
                 LogMisconfiguredCachePrefix(logger, cachePrefix, typeof(TCommand).Name, ex);
                 return result;
             }
-#pragma warning disable CA1031 // Do not catch general exception types: invalidation is best-effort and must never fail a committed command
             catch (Exception ex)
-#pragma warning restore CA1031
             {
+                // Invalidation is best-effort and must never fail a committed command
                 LogCacheInvalidationFailed(logger, cachePrefix, typeof(TCommand).Name, ex);
             }
 
@@ -111,10 +110,9 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
             await Task.Delay(ReInvalidationDelay, CancellationToken.None).ConfigureAwait(false);
             await cacheService.RemoveByPrefixAsync(cachePrefix, CancellationToken.None).ConfigureAwait(false);
         }
-#pragma warning disable CA1031 // Do not catch general exception types: re-invalidation is best-effort and runs detached from the request
         catch (Exception ex)
-#pragma warning restore CA1031
         {
+            // Re-invalidation is best-effort and runs detached from the request
             LogCacheInvalidationFailed(logger, cachePrefix, typeof(TCommand).Name, ex);
         }
     }

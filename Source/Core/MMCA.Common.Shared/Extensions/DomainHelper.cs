@@ -75,10 +75,8 @@ public static class DomainHelper
         }
     }
 
-    // Called from extension(string? id).Parse<T>(): IDE0051 false positive with preview extension types
-#pragma warning disable IDE0051
+    // Called from extension(string? id).Parse<T>().
     private static TIdentifier ParseNonEmpty<TIdentifier>(string id, Type type)
-#pragma warning restore IDE0051
     {
         if (type == typeof(Guid))
             return Guid.TryParse(id, out var g) ? (TIdentifier)(object)g : (TIdentifier)(object)Guid.Empty;
@@ -106,10 +104,8 @@ public static class DomainHelper
         throw new FormatException($"Unsupported identifier type: {type.FullName}");
     }
 
-    // Called from extension(string? id).TryParse<T>(out T): IDE0051 false positive with preview extension types
-#pragma warning disable IDE0051
+    // Called from extension(string? id).TryParse<T>(out T).
     private static bool TryParseNonEmpty<TIdentifier>(string id, Type type, out TIdentifier result)
-#pragma warning restore IDE0051
     {
         if (type == typeof(Guid))
         {

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Passkeys;
@@ -115,10 +115,9 @@ public sealed class AuthUIService(
         {
             using var response = await httpClient.PostAsync(new Uri("auth/revoke", UriKind.Relative), content: null, cancellationToken);
         }
-#pragma warning disable CA1031 // Do not catch general exception types: the revoke is best-effort
         catch
-#pragma warning restore CA1031
         {
+            // The revoke is best-effort
             // Ignore errors: the caller clears local state whatever the server answered.
         }
     }
@@ -464,10 +463,9 @@ public sealed class AuthUIService(
         {
             await pushRegistration.UnregisterAsync();
         }
-#pragma warning disable CA1031 // Do not catch general exception types: unregistration is best-effort
         catch
-#pragma warning restore CA1031
         {
+            // Unregistration is best-effort
             // Ignore errors - we still want to sign out locally.
         }
     }

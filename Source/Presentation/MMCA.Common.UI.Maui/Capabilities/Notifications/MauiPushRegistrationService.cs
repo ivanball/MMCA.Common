@@ -50,10 +50,9 @@ public sealed partial class MauiPushRegistrationService(
                 _registration.Release();
             }
         }
-#pragma warning disable CA1031 // Do not catch general exception types — registration is best-effort
         catch (Exception ex)
-#pragma warning restore CA1031
         {
+            // Registration is best-effort
             LogRegistrationFailed(logger, ex);
             return false;
         }
@@ -121,10 +120,9 @@ public sealed partial class MauiPushRegistrationService(
                 new Uri($"Notifications/Devices/{Uri.EscapeDataString(installationId)}", UriKind.Relative),
                 cancellationToken).ConfigureAwait(false);
         }
-#pragma warning disable CA1031 // Do not catch general exception types — unregistration is best-effort
         catch (Exception ex)
-#pragma warning restore CA1031
         {
+            // Unregistration is best-effort
             LogUnregistrationFailed(logger, ex);
         }
     }

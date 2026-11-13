@@ -79,7 +79,6 @@ public abstract class GoldenReplayTestsBase
 
         // The assertion body is arbitrary consumer code, so every exception it can raise is a
         // failure of THAT case and has to be reported against its id rather than ending the run.
-#pragma warning disable CA1031, S2221 // A failing case must be reported, not end the run.
         try
         {
             var path = Path.Combine(AppContext.BaseDirectory, testCase.ResponsePath);
@@ -94,6 +93,5 @@ public abstract class GoldenReplayTestsBase
         {
             return $"  - {testCase.Id} ({testCase.Description}): {ex.Message}";
         }
-#pragma warning restore CA1031, S2221
     }
 }

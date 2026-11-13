@@ -420,7 +420,7 @@ public sealed class DbContextFactory(
             // dropped from any retried save).
             try
             {
-#pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and the toggle statement cannot take a parameterized identifier
+                // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and the toggle statement cannot take a parameterized identifier
                 await context.Database.ExecuteSqlRawAsync(
                     dialect.BuildToggleSql(group.Schema, group.Table, enable: true),
                     cancellationToken).ConfigureAwait(false);
@@ -442,7 +442,6 @@ public sealed class DbContextFactory(
 
                 await context.Database.ExecuteSqlRawAsync(toggleOffSql, CancellationToken.None).ConfigureAwait(false);
                 result += saved;
-#pragma warning restore S2077
             }
             finally
             {

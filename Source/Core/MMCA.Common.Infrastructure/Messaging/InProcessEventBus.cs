@@ -93,9 +93,8 @@ public sealed class InProcessEventBus(
         foreach (var integrationEvent in events)
             outboxEntries.Add(OutboxMessage.FromDomainEvent(integrationEvent, origin));
 
-#pragma warning disable VSTHRD103 // EF DbSet.AddRange is intentionally synchronous (in-memory); AddRangeAsync is only for special value generators (EF guidance).
+        // EF DbSet.AddRange is intentionally synchronous (in-memory); AddRangeAsync is only for special value generators (EF guidance).
         context.Set<OutboxMessage>().AddRange(outboxEntries);
-#pragma warning restore VSTHRD103
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);

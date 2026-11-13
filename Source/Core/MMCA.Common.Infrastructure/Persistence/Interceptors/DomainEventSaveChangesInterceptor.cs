@@ -284,9 +284,8 @@ public sealed partial class DomainEventSaveChangesInterceptor(
                     localOutboxEntries.Add(entry);
                 }
 
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
+                // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
                 context.Set<OutboxMessage>().Add(entry);
-#pragma warning restore VSTHRD103
             }
 
             localEvents = [.. locals];

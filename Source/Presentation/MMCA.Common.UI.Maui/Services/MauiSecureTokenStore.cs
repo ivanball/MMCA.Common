@@ -42,10 +42,9 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
             await SetAsync(RefreshTokenKey, refreshToken);
             await SetAsync(AccessTokenKey, accessToken);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; rethrown after the cleanup
         catch
-#pragma warning restore CA1031
         {
+            // See GetAsync; rethrown after the cleanup
             TryRemove(AccessTokenKey);
             TryRemove(RefreshTokenKey);
             throw;
@@ -72,10 +71,9 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
         {
             return await SecureStorage.Default.GetAsync(key);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - the platform exception type differs per OS and none of them are recoverable here
         catch
-#pragma warning restore CA1031
         {
+            // The platform exception type differs per OS and none of them are recoverable here
             // No logging facility exists in this host (nothing in the MAUI head takes an ILogger),
             // so the swallow is documented here rather than reported: the user sees the normal
             // signed-out state and logs in again.
@@ -94,10 +92,9 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
         {
             await SecureStorage.Default.SetAsync(key, value);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; the retry below is the recovery
         catch
-#pragma warning restore CA1031
         {
+            // See GetAsync; the retry below is the recovery
             TryRemove(key);
             await SecureStorage.Default.SetAsync(key, value);
         }
@@ -110,10 +107,9 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
         {
             SecureStorage.Default.Remove(key);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync
         catch
-#pragma warning restore CA1031
         {
+            // See GetAsync
             // Nothing left to do: the entry is unreadable and undeletable, and the next
             // SetAsync overwrites it anyway.
         }

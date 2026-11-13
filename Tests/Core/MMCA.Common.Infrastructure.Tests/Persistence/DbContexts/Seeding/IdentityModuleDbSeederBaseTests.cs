@@ -203,11 +203,9 @@ public sealed class TestSeedUser : AuditableAggregateRootEntity<UserIdentifierTy
 {
     public required string Role { get; init; }
 
-#pragma warning disable CA1819 // Properties should not return arrays: mirrors IAuthUser's byte[] credential material.
     public required byte[] PasswordHash { get; init; }
 
     public required byte[] PasswordSalt { get; init; }
-#pragma warning restore CA1819
 }
 
 /// <summary>Concrete subclass standing in for an app's <c>IdentityModuleDbSeeder</c>.</summary>

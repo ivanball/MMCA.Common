@@ -84,10 +84,9 @@ public sealed partial class MauiErrorHandlingInitializer : IMauiInitializeServic
 
             Report(exception, AppDomainSource);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - a crash reporter that throws replaces one crash with a worse one
         catch
-#pragma warning restore CA1031
         {
+            // A crash reporter that throws replaces one crash with a worse one
             // Deliberately silent. This is the CLR's last-chance path: there is no outer handler
             // left to tell, and the logger is the very thing that may have just failed.
         }
@@ -105,10 +104,9 @@ public sealed partial class MauiErrorHandlingInitializer : IMauiInitializeServic
             Exception? faulted = e.Exception;
             Report(faulted ?? new InvalidOperationException("A faulted task carried no exception detail."), TaskSchedulerSource);
         }
-#pragma warning disable CA1031 // Do not catch general exception types - see above
         catch
-#pragma warning restore CA1031
         {
+            // See above
             // Same reasoning: the observation above already happened, which is the part that
             // matters for keeping the process alive.
         }
