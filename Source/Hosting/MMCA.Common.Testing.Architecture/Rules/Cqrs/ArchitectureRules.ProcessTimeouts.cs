@@ -81,7 +81,8 @@ public static partial class ArchitectureRules
         [.. types
             .Where(t => !t.IsAbstract && !t.IsInterface && !t.ContainsGenericParameters
                 && ClosedGenericArguments(ProcessTimeoutCommandInterfaceFullName)(t).Any())
-            .Distinct()];
+            .Distinct()
+        ];
 
     /// <summary>
     /// The timeout command a handler type closes <c>ProcessTimeoutHandlerBase</c> over, found on its

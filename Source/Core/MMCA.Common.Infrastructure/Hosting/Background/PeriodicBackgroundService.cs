@@ -78,7 +78,9 @@ public abstract partial class PeriodicBackgroundService(
                 // Normal shutdown mid-cycle.
                 break;
             }
+#pragma warning disable CA1031 // One failed cycle must not stop the background service for the life of the process
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 LogCycleFailure(ex);
             }

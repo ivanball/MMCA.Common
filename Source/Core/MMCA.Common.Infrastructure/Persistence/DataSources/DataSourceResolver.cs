@@ -175,7 +175,8 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         DataSourcesSettings dataSources) =>
         [.. DataSourceEngines.All
             .Select(registered => registered.Engine)
-            .Where(engine => HasAnyConnectionString(engine, connectionStrings, dataSources))];
+            .Where(engine => HasAnyConnectionString(engine, connectionStrings, dataSources))
+        ];
 
     /// <summary>
     /// The most preferred configured engine (see <see cref="EnginePreference"/>), or

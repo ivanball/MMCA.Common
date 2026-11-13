@@ -139,14 +139,13 @@ public sealed partial class EfInboxStore(
     private EntityEntry<InboxMessage> Stage(Guid messageId, string eventType)
     {
         var context = ResolveContext();
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
+        // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
         return context.Set<InboxMessage>().Add(new InboxMessage
         {
             MessageId = messageId,
             EventType = eventType,
             ProcessedOn = timeProvider.GetUtcNow().UtcDateTime,
         });
-#pragma warning restore VSTHRD103
     }
 
     private async Task SaveStagedAsync(

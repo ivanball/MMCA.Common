@@ -387,7 +387,9 @@ internal sealed partial class InternalCommandLaneProcessor(
             await ChargeAsync(batch, row.Row, cancellationToken).ConfigureAwait(false);
             state.ChargedCount++;
         }
+#pragma warning disable CA1031 // A row that throws is recorded as a stop for its batch, never allowed to fault the lane
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             RecordStop(batch, state, row, ex, cancellationToken);
         }
@@ -408,7 +410,9 @@ internal sealed partial class InternalCommandLaneProcessor(
         {
             state.Progressed |= await finished.ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // A row that throws is recorded as a stop for its batch, never allowed to fault the lane
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             RecordStop(batch, state, row, ex, cancellationToken);
         }

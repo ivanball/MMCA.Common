@@ -238,7 +238,9 @@ public sealed partial class TokenService : ITokenService, IDisposable
             // a client presenting a bad token is not an event worth a log line.
             return null;
         }
+#pragma warning disable CA1031 // Fail closed: an unexpected validation fault is a refusal, logged so it does not hide behind an ordinary 401
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Anything else is a fault in the validation path rather than a bad token. Still a
             // refusal (fail closed), but logged so it does not hide behind an ordinary 401.

@@ -73,7 +73,8 @@ public sealed class CrossServiceHostIsolationTests
     // scan is compared by simple name.
     private static string[] ScannedNames(ServiceProvider provider) =>
         [.. provider.GetRequiredService<IEntityConfigurationAssemblyProvider>().GetConfigurationAssemblies()
-            .Select(static a => a.GetName().Name ?? string.Empty)];
+            .Select(static a => a.GetName().Name ?? string.Empty)
+        ];
 
     private static ServiceProvider BuildDefaultScan(bool isolate)
     {

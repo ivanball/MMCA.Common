@@ -466,9 +466,8 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
     /// </summary>
     private static AuditTrailEntry AddRow(ApplicationDbContext context, AuditTrailEntry row)
     {
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
+        // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
         context.Set<AuditTrailEntry>().Add(row);
-#pragma warning restore VSTHRD103
         return row;
     }
 

@@ -191,13 +191,13 @@ public abstract class AuthenticatedServiceBase(
             or HttpRequestError.ConnectionError
             or HttpRequestError.SecureConnectionError;
 
-#pragma warning disable S2245, CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
+#pragma warning disable CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
 
     /// <summary>The shipped backoff: 2s, 4s, 8s plus up to one second of jitter.</summary>
     private static TimeSpan DefaultBackoff(int attempt) =>
         TimeSpan.FromSeconds(Math.Pow(2, attempt))
             + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
-#pragma warning restore S2245, CA5394
+#pragma warning restore CA5394
 
     /// <summary>
     /// The wait before retry <paramref name="attempt"/>: the delay a 429's <c>Retry-After</c> names
@@ -216,8 +216,8 @@ public abstract class AuthenticatedServiceBase(
         TimeProvider timeProvider) =>
         response is { StatusCode: HttpStatusCode.TooManyRequests }
             && RetryAfterHeader.TryGetDelay(response, timeProvider, out var retryAfter)
-            ? retryAfter
-            : backoff(attempt);
+                ? retryAfter
+                : backoff(attempt);
 
     /// <summary>
     /// Builds the retry policy. Internal and backoff-injectable so a test can exercise the disposal

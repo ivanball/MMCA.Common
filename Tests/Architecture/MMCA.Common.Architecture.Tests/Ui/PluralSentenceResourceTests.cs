@@ -74,7 +74,8 @@ public sealed partial class PluralSentenceResourceTests
             .Elements("data")
             .Select(d => new ResourceEntry(
                 (string?)d.Attribute("name") ?? string.Empty,
-                (string?)d.Element("value") ?? string.Empty))];
+                (string?)d.Element("value") ?? string.Empty))
+        ];
 
     /// <summary>
     /// Returns one line per entry rendering a count inside a fixed plural sentence: a placeholder

@@ -99,14 +99,16 @@ public static partial class ArchitectureRules
             .SelectMany(ClosedGenericArguments(CommandHandlerInterfaceFullName))
             .Select(arguments => arguments[0])
             .Where(command => !command.ContainsGenericParameters && HasSettablePublicProperty(command))
-            .Distinct()];
+            .Distinct()
+        ];
 
     /// <summary>The types some concrete <c>IValidator&lt;T&gt;</c> in scope validates.</summary>
     private static HashSet<Type> ValidatedTypes(List<Type> types) =>
         [.. types
             .Where(t => t is { IsClass: true, IsAbstract: false })
             .SelectMany(ClosedGenericArguments(ValidatorInterfaceFullName))
-            .Select(arguments => arguments[0])];
+            .Select(arguments => arguments[0])
+        ];
 
     /// <summary>True when the command has a validator of its own, or a validated embedded request.</summary>
     private static bool IsCovered(Type command, HashSet<Type> validated) =>

@@ -566,7 +566,9 @@ public sealed partial class InternalCommandProcessor(
             // attempt for work the host never let finish.
             throw;
         }
+#pragma warning disable CA1031 // Any handler exception is the row's failed outcome, recorded and retried by the processor
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             return (null, ex);
         }

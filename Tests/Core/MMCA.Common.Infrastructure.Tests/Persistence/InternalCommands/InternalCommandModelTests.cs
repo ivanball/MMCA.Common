@@ -125,7 +125,8 @@ public sealed class InternalCommandModelTests
         [.. context.Model.FindEntityType(typeof(InternalCommandMessage))!
             .GetIndexes()
             .Select(index => index.GetFilter())
-            .Where(filter => filter is not null)];
+            .Where(filter => filter is not null)
+        ];
 
     /// <summary>
     /// A context that runs the real <see cref="ApplicationDbContext.OnModelCreating"/> against a

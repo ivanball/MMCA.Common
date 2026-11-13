@@ -268,7 +268,8 @@ public sealed class ApplicationPipelineCompositionTests
                 : d.ImplementationType?.FullName;
 
             return $"{d.ServiceType.FullName}|{d.Lifetime}|{implementation ?? "-"}|{d.IsKeyedService}";
-        })];
+        })
+        ];
 
     private static List<string> UnwrapChain(object outermost, Type handlerServiceType)
     {

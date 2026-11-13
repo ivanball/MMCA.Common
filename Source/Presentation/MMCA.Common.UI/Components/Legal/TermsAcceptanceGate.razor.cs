@@ -263,7 +263,9 @@ public partial class TermsAcceptanceGate : IDisposable
         {
             // Component no longer attached; same disposition.
         }
+#pragma warning disable CA1031 // Discarded event-handler task: nothing would observe what escapes it
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Exhaustive by necessity (the BiometricGate precedent): the task is discarded by the
             // event handler, so nothing would observe what escapes it.

@@ -62,7 +62,8 @@ public partial class NavMenu
                     description?.Order ?? 0,
                     [.. group.OrderBy(item => item.Order)]);
             })
-            .OrderBy(unit => unit.Order)];
+            .OrderBy(unit => unit.Order)
+        ];
 
     private async Task HandleLogoutAsync()
     {

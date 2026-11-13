@@ -127,7 +127,9 @@ public sealed partial class InternalCommandCleanupService(
             {
                 throw;
             }
+#pragma warning disable CA1031 // One unreachable database must not stop the others from being purged
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // One unreachable database must not stop the others from being purged.
                 LogSourcePurgeError(logger, sourceName, ex);

@@ -86,7 +86,9 @@ public sealed partial class ModuleLoader
                     LogAssemblyPartiallyLoaded(Logger, a.FullName ?? a.GetName().Name ?? "unknown", loaderErrors, ex);
                     return [.. ex.Types.OfType<Type>()];
                 }
+#pragma warning disable CA1031 // One unloadable assembly must not stop module discovery: it is logged and skipped
                 catch (Exception ex)
+#pragma warning restore CA1031
                 {
                     LogAssemblyScanFailed(Logger, a.FullName ?? a.GetName().Name ?? "unknown", ex.Message, ex);
                     return [];

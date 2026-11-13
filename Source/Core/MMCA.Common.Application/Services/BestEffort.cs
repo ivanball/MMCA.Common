@@ -62,9 +62,11 @@ public static class BestEffort
             // rather than being recorded as a best-effort failure.
             throw;
         }
+#pragma warning disable CA1031 // The helper's whole contract is that nothing the side effect throws reaches the caller
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            // Deliberately broad (CA1031/S2221 are suggestions here): the whole contract of this
+            // Deliberately broad (CA1031 carries the pragma above): the whole contract of this
             // helper is that NOTHING the side effect throws reaches the caller.
             BestEffortMetrics.RecordFailure(operation);
             BestEffortLog.DispatchFailed(logger, operation, ex);

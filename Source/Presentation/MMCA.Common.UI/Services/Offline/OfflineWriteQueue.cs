@@ -331,7 +331,9 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
             {
                 throw;
             }
+#pragma warning disable CA1031 // A handler failure counts an attempt and leaves the write queued for retry
             catch (Exception exception)
+#pragma warning restore CA1031
             {
                 LogHandlerFailed(exception, write.Kind, write.Id);
                 await CountAttemptAsync(write, cancellationToken);
@@ -523,7 +525,9 @@ public sealed partial class OfflineWriteQueue : IOfflineWriteQueue, IDisposable
         {
             await ReplayAsync(CancellationToken.None);
         }
+#pragma warning disable CA1031 // A failed background replay is retried by the timer, never surfaced to an unobserved task
         catch (Exception exception)
+#pragma warning restore CA1031
         {
             // A queue disposed while the replay ran (the scope ended) has nobody left to tell.
             if (_disposed)

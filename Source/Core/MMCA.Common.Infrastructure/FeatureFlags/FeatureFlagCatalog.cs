@@ -18,7 +18,8 @@ internal sealed class FeatureFlagCatalog(IEnumerable<FeatureFlagAssembly> assemb
 {
     private readonly Lazy<IReadOnlyList<FeatureFlagDescriptor>> _flags = new(() =>
         [.. FeatureFlagRegistry.Describe(assemblies.Select(a => a.Assembly).Distinct())
-            .DistinctBy(flag => flag.FlagName, StringComparer.OrdinalIgnoreCase)]);
+            .DistinctBy(flag => flag.FlagName, StringComparer.OrdinalIgnoreCase)
+        ]);
 
     /// <summary>Gets the declared flags, ordered by name.</summary>
     public IReadOnlyList<FeatureFlagDescriptor> Flags => _flags.Value;

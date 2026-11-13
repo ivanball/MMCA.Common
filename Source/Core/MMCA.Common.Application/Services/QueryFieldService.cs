@@ -274,8 +274,8 @@ public sealed class QueryFieldService
 
         return string.IsNullOrWhiteSpace(tieBreakProperty)
             || string.Equals(sortExpr, tieBreakProperty, StringComparison.OrdinalIgnoreCase)
-            ? ordering
-            : $"{ordering}, {tieBreakProperty} ascending";
+                ? ordering
+                : $"{ordering}, {tieBreakProperty} ascending";
     }
 
     /// <summary>

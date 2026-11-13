@@ -334,8 +334,8 @@ public static partial class Extensions
                 string.Equals(instrument.Meter.Name, PollyMeterName, StringComparison.Ordinal)
                 && (string.Equals(instrument.Name, PollyAttemptDurationInstrument, StringComparison.Ordinal)
                     || string.Equals(instrument.Name, PollyPipelineDurationInstrument, StringComparison.Ordinal))
-                    ? MetricStreamConfiguration.Drop
-                    : null);
+                        ? MetricStreamConfiguration.Drop
+                        : null);
         }
     }
 

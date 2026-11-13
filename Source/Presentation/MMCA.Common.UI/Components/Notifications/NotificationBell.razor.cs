@@ -283,7 +283,9 @@ public partial class NotificationBell : IDisposable
         {
             // Component was disposed during the async gap
         }
+#pragma warning disable CA1031 // Network or deserialization error: the badge keeps its current value
         catch
+#pragma warning restore CA1031
         {
             // Network or deserialization error - badge stays at current value
         }

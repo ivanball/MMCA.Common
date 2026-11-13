@@ -63,7 +63,8 @@ public sealed partial class ButtonFocusIndicatorTests
             .Where(rule => rule.Groups["selectors"].Value
                 .Split(',')
                 .Any(selector => selectorMatches(selector.Trim())))
-            .Select(rule => rule.Groups["body"].Value)];
+            .Select(rule => rule.Groups["body"].Value)
+        ];
 
     /// <summary>
     /// True when the declarations resolve to a drawn outline: a style other than none/hidden (from the

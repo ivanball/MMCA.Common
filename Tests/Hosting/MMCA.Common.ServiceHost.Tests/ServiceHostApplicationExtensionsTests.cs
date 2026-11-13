@@ -160,5 +160,6 @@ public sealed class ServiceHostApplicationExtensionsTests
         [.. ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(source => source.Endpoints)
             .OfType<RouteEndpoint>()
-            .Select(endpoint => endpoint.RoutePattern.RawText ?? string.Empty)];
+            .Select(endpoint => endpoint.RoutePattern.RawText ?? string.Empty)
+        ];
 }

@@ -1,11 +1,6 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-// Runtime Regex is deliberate in this tiny build tool; source-generated [GeneratedRegex] is overkill.
-// Suppressed in the shared file so it's clean both in the isolated build/facts project and when this
-// file is linked into the workspace Tools/invtool (which runs analyzers).
-#pragma warning disable SYSLIB1045
-
 /// <summary>
 /// Computes MMCA.Common/FACTS.md from source so the framework-wide facts (version, package count,
 /// fitness-method/base counts) stop being hand-maintained and cannot drift. (The ADR count/range

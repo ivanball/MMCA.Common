@@ -17,9 +17,9 @@ public sealed class DomainEventDispatcherAdditionalTests
     {
         public List<TestIntegrationEvent> HandledEvents { get; } = [];
 
-        public Task HandleAsync(TestIntegrationEvent domainEvent, CancellationToken cancellationToken = default)
+        public Task HandleAsync(TestIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
         {
-            HandledEvents.Add(domainEvent);
+            HandledEvents.Add(integrationEvent);
             return Task.CompletedTask;
         }
     }

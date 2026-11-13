@@ -101,9 +101,8 @@ internal sealed partial class InternalCommandScheduler(
         var context = dbContextFactory.GetDbContext(
             dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
 
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
+        // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
         context.Set<InternalCommandMessage>().Add(row);
-#pragma warning restore VSTHRD103
 
         if (context.Database.CurrentTransaction is not null)
         {

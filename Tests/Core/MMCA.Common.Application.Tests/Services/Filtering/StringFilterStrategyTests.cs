@@ -93,7 +93,8 @@ public sealed class StringFilterStrategyTests
                 PresenceValues.Select(v => new LabelledItem { Label = v }).AsQueryable(),
                 new Dictionary<string, (string, string)> { ["Label"] = (op, string.Empty) },
                 EmptyMap)
-            .Select(i => i.Label)];
+            .Select(i => i.Label)
+        ];
 
     [Fact]
     public void IsEmpty_MatchesNullAndEmptyOnly() =>

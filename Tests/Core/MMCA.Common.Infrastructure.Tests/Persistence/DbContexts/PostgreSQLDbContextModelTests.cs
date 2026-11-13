@@ -178,7 +178,8 @@ public sealed class PostgreSQLDbContextModelTests
         [.. context.Model.FindEntityType(typeof(OutboxMessage))!
             .GetIndexes()
             .Select(i => i.GetFilter())
-            .Where(f => f is not null)];
+            .Where(f => f is not null)
+        ];
 
     private static ApplicationDbContext CreatePostgreSQLContext() =>
         CreateContext(DataSource.PostgreSQL, "PostgresModel");

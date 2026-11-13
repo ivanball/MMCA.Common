@@ -51,7 +51,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentNullException.ThrowIfNull(rowVersion);
 
-        _context.Entry(entity)
+        Context.Entry(entity)
             .Property(nameof(AuditableBaseEntity<>.RowVersion))
             .OriginalValue = rowVersion;
     }
@@ -62,7 +62,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(childEntity);
         ArgumentNullException.ThrowIfNull(rowVersion);
 
-        _context.Entry((object)childEntity)
+        Context.Entry((object)childEntity)
             .Property(nameof(AuditableBaseEntity<>.RowVersion))
             .OriginalValue = rowVersion;
     }
@@ -72,7 +72,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(entity);
 
-        var entry = _context.Entry(entity);
+        var entry = Context.Entry(entity);
 
         // Only an UNCHANGED root needs the nudge. A root the applier already modified emits its own
         // UPDATE, which already carries the concurrency predicate, and marking a property modified on
@@ -142,7 +142,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     {
         if (EngineCapabilities?.RowVersion == RowVersionStrategy.ClientStamped
             && !builder.SetsProperty(nameof(IRowVersioned.RowVersion))
-            && _context.Model.FindEntityType(typeof(TEntity))?.FindProperty(nameof(IRowVersioned.RowVersion)) is not null)
+            && Context.Model.FindEntityType(typeof(TEntity))?.FindProperty(nameof(IRowVersioned.RowVersion)) is not null)
         {
             builder.Set(e => e.RowVersion, Guid.NewGuid().ToByteArray());
         }

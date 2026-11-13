@@ -70,7 +70,8 @@ internal static class ErrorHttpMapping
             Type = e.Type.ToString(),
             e.Source,
             e.Target
-        })];
+        })
+        ];
 
     /// <summary>
     /// Localizes one error's message. A translated text may carry a <c>{0}</c> placeholder filled with

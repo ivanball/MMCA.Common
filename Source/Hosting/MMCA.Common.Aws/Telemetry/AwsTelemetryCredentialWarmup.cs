@@ -38,7 +38,9 @@ internal sealed partial class AwsTelemetryCredentialWarmup(
         {
             // The host is stopping before it started; the next export resolves the chain itself.
         }
+#pragma warning disable CA1031 // A warm-up is a latency optimization: the next export resolves the credential chain itself
         catch (Exception exception)
+#pragma warning restore CA1031
         {
             LogWarmupFailed(logger, exception.GetType().FullName, exception.Message, exception);
         }

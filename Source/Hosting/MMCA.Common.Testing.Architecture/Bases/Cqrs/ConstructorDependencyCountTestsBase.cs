@@ -241,7 +241,8 @@ public abstract class ConstructorDependencyCountTestsBase
         [.. assemblies
             .SelectMany(static a => a.ConcreteClasses)
             .Where(static t => !t.IsNested && !t.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false))
-            .Where(isInPopulation)];
+            .Where(isInPopulation)
+        ];
 
     /// <summary>Formats the types whose widest measured constructor exceeds the ceiling.</summary>
     private List<string> Offenders(IEnumerable<Type> types, int ceiling) =>
@@ -252,7 +253,8 @@ public abstract class ConstructorDependencyCountTestsBase
                 MaxParameters = WidestConstructor(t),
             })
             .Where(x => x.MaxParameters > ceiling)
-            .Select(static x => $"{x.Type.FullName} ({x.MaxParameters} ctor dependencies)")];
+            .Select(static x => $"{x.Type.FullName} ({x.MaxParameters} ctor dependencies)")
+        ];
 
     private static bool IsController(Type type) =>
         type.HasBaseTypeStartingWith(ControllerBaseFullName);

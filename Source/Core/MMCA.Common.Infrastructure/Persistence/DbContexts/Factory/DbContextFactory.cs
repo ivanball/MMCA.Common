@@ -420,7 +420,7 @@ public sealed class DbContextFactory(
             // dropped from any retried save).
             try
             {
-#pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and the toggle statement cannot take a parameterized identifier
+                // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and the toggle statement cannot take a parameterized identifier
                 await context.Database.ExecuteSqlRawAsync(
                     dialect.BuildToggleSql(group.Schema, group.Table, enable: true),
                     cancellationToken).ConfigureAwait(false);
@@ -442,7 +442,6 @@ public sealed class DbContextFactory(
 
                 await context.Database.ExecuteSqlRawAsync(toggleOffSql, CancellationToken.None).ConfigureAwait(false);
                 result += saved;
-#pragma warning restore S2077
             }
             finally
             {
@@ -466,7 +465,9 @@ public sealed class DbContextFactory(
         {
             await context.Database.ExecuteSqlRawAsync(toggleOffSql, CancellationToken.None).ConfigureAwait(false);
         }
+#pragma warning disable CA1031 // Best-effort toggle-off on the failure path: the save's own failure is the one reported
         catch
+#pragma warning restore CA1031
         {
             // Swallowed so the save's failure is the one reported; disposal releases the session.
         }
@@ -692,7 +693,9 @@ public sealed class DbContextFactory(
         {
             RollbackTransaction();
         }
+#pragma warning disable CA1031 // A failed rollback leaves nothing to recover: the transaction is marked inactive and its deferred work dropped
         catch
+#pragma warning restore CA1031
         {
             _transactionActive = false;
             foreach (var abortedContext in _dbContexts.Values.ToArray())
@@ -769,7 +772,9 @@ public sealed class DbContextFactory(
             {
                 context.Database.CommitTransaction();
             }
+#pragma warning disable CA1031 // Any commit failure becomes a TransactionCommitAmbiguousException naming what committed and what rolled back
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 var rolledBack = enlisted[(index + 1)..].Select(entry => entry.Source).ToArray();
                 AbandonAfterCommitFailure();
@@ -804,7 +809,9 @@ public sealed class DbContextFactory(
             {
                 context.Database.RollbackTransaction();
             }
+#pragma warning disable CA1031 // The transaction is already zombied or the connection gone; the commit ambiguity stays the reported failure
             catch
+#pragma warning restore CA1031
             {
                 // The transaction is already zombied or the connection is gone. Swallowing keeps
                 // the commit ambiguity as the reported failure; disposal releases what is left.

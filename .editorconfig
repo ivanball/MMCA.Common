@@ -85,10 +85,10 @@ dotnet_style_prefer_conditional_expression_over_return = true:error
 dotnet_style_prefer_inferred_anonymous_type_member_names = true:error
 dotnet_style_prefer_inferred_tuple_names = true:error
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
-dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
-dotnet_style_prefer_simplified_interpolation = true:suggestion
+dotnet_style_prefer_simplified_boolean_expressions = true:error
+dotnet_style_prefer_simplified_interpolation = true:error
 dotnet_style_namespace_match_folder = true:warning
-dotnet_style_prefer_foreach_explicit_cast_in_source = when_strongly_typed:suggestion
+dotnet_style_prefer_foreach_explicit_cast_in_source = when_strongly_typed:error
 
 # Field preferences
 dotnet_style_readonly_field = true:error
@@ -101,9 +101,10 @@ dotnet_code_quality_unused_parameters = all:error
 # Namespace preferences
 csharp_style_namespace_declarations = file_scoped:error
 
-# var preferences
-csharp_style_var_elsewhere = false:error
-csharp_style_var_for_built_in_types = false:error
+# var preferences: var is the convention. Enforced where the type is apparent; preferred but not
+# enforced elsewhere and for built-in types, so the explicit types already in the code stay legal
+csharp_style_var_elsewhere = true:silent
+csharp_style_var_for_built_in_types = true:silent
 csharp_style_var_when_type_is_apparent = true:error
 
 # Expression-bodied members
@@ -123,7 +124,7 @@ csharp_style_prefer_switch_expression = true:error
 csharp_style_prefer_null_check_over_type_check = true:warning
 csharp_style_prefer_not_pattern = true:warning
 csharp_style_prefer_pattern_matching = true:suggestion
-csharp_style_prefer_extended_property_pattern = true:suggestion
+csharp_style_prefer_extended_property_pattern = true:error
 
 # Null-checking preferences
 csharp_style_conditional_delegate_call = true:error
@@ -143,15 +144,15 @@ csharp_prefer_simple_default_expression = true:error
 csharp_style_deconstructed_variable_declaration = true:suggestion
 csharp_style_inlined_variable_declaration = true:error
 csharp_style_pattern_local_over_anonymous_function = true:error
-csharp_style_prefer_index_operator = true:suggestion
-csharp_style_prefer_range_operator = true:suggestion
-csharp_style_throw_expression = true:suggestion
-csharp_style_unused_value_assignment_preference = discard_variable:silent
+csharp_style_prefer_index_operator = true:error
+csharp_style_prefer_range_operator = true:error
+csharp_style_throw_expression = true:error
+csharp_style_unused_value_assignment_preference = discard_variable:error
 csharp_style_unused_value_expression_statement_preference = discard_variable:silent
 csharp_style_prefer_method_group_conversion = true:silent
-csharp_style_prefer_top_level_statements = true:silent
+csharp_style_prefer_top_level_statements = true:error
 csharp_style_prefer_primary_constructors = true:suggestion
-csharp_style_prefer_tuple_swap = true:suggestion
+csharp_style_prefer_tuple_swap = true:error
 csharp_style_prefer_utf8_string_literals = true:suggestion
 
 # 'using' directive preferences
@@ -257,7 +258,7 @@ dotnet_naming_symbols.private_static_readonly_symbols.applicable_kinds = field
 dotnet_naming_symbols.private_static_readonly_symbols.applicable_accessibilities = private, internal, private_protected
 dotnet_naming_symbols.private_static_readonly_symbols.required_modifiers = static, readonly
 
-# Rule 7: Private/internal instance fields must use _camelCase
+# Rule 6: Private/internal instance fields must use _camelCase
 dotnet_naming_rule.private_fields_should_be_underscore_camel.severity = warning
 dotnet_naming_rule.private_fields_should_be_underscore_camel.symbols = private_field_symbols
 dotnet_naming_rule.private_fields_should_be_underscore_camel.style = underscore_camel_style
@@ -268,7 +269,7 @@ dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private
 dotnet_naming_style.underscore_camel_style.required_prefix = _
 dotnet_naming_style.underscore_camel_style.capitalization = camel_case
 
-# Rule 6: Local variables must be camelCase
+# Rule 7: Local variables must be camelCase
 dotnet_naming_rule.locals_should_be_camel_case.severity = warning
 dotnet_naming_rule.locals_should_be_camel_case.symbols = local_symbols
 dotnet_naming_rule.locals_should_be_camel_case.style = camel_case_style
@@ -278,7 +279,7 @@ dotnet_naming_symbols.local_symbols.applicable_accessibilities = local
 
 dotnet_naming_style.camel_case_style.capitalization = camel_case
 
-# Rule 7: Parameters must be camelCase
+# Rule 8: Parameters must be camelCase
 dotnet_naming_rule.parameters_should_be_camel_case.severity = warning
 dotnet_naming_rule.parameters_should_be_camel_case.symbols = parameter_symbols
 dotnet_naming_rule.parameters_should_be_camel_case.style = camel_case_style
@@ -286,7 +287,7 @@ dotnet_naming_rule.parameters_should_be_camel_case.style = camel_case_style
 dotnet_naming_symbols.parameter_symbols.applicable_kinds = parameter
 dotnet_naming_symbols.parameter_symbols.applicable_accessibilities = *
 
-# Rule 8: Types must be PascalCase
+# Rule 9: Types must be PascalCase
 dotnet_naming_rule.types_should_be_pascal_case.severity = warning
 dotnet_naming_rule.types_should_be_pascal_case.symbols = type_symbols
 dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case_style
@@ -296,7 +297,7 @@ dotnet_naming_symbols.type_symbols.applicable_accessibilities = *
 
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
-# Rule 9: Non-field members must be PascalCase
+# Rule 10: Non-field members must be PascalCase
 dotnet_naming_rule.non_field_members_should_be_pascal_case.severity = warning
 dotnet_naming_rule.non_field_members_should_be_pascal_case.symbols = non_field_member_symbols
 dotnet_naming_rule.non_field_members_should_be_pascal_case.style = pascal_case_style
@@ -319,11 +320,10 @@ dotnet_analyzer_diagnostic.severity = error
 dotnet_diagnostic.CA1002.severity = none
 # CA1019: Define accessors for attribute arguments
 dotnet_diagnostic.CA1019.severity = none
-# CA1031: Do not catch general exception types: allowed at best-effort boundaries
-# (top-level handlers, background services that must never crash the host). Kept
-# at suggestion so new catch-alls stay visible in the IDE; justified sites carry
-# a documented #pragma.
-dotnet_diagnostic.CA1031.severity = suggestion
+# CA1031 (do not catch general exception types) stays at the global error severity in Source.
+# A catch-all is legal at a best-effort boundary (top-level handlers, background services that
+# must never crash the host), and each one says so: #pragma warning disable CA1031 // <reason>
+# around the catch clause. Tests turn it off (below).
 # CA1034: Do not nest types — DDD uses nested domain events/value objects
 dotnet_diagnostic.CA1034.severity = none
 # CA1040: Avoid empty interfaces — marker interfaces are intentional
@@ -359,7 +359,7 @@ dotnet_diagnostic.CA2227.severity = none
 # identifier-alias files (flagged in projects that do not use the alias) are
 # excluded via the [*GlobalUsings*.cs] section below.
 dotnet_diagnostic.IDE0005.severity = warning
-# IDE0008: Use explicit type — conflicts with var preferences already configured
+# IDE0008: Use explicit type: the opposite of the var convention above
 dotnet_diagnostic.IDE0008.severity = none
 # IDE0011: Add braces — handled by csharp_prefer_braces
 dotnet_diagnostic.IDE0011.severity = none
@@ -374,14 +374,8 @@ dotnet_diagnostic.IDE0058.severity = suggestion
 
 # SA0001: XML comment analysis disabled
 dotnet_diagnostic.SA0001.severity = none
-# SA1000: Keyword spacing — false positives with modern C# syntax
-dotnet_diagnostic.SA1000.severity = none
 # SA1009: Closing parenthesis spacing — false positives with modern syntax
 dotnet_diagnostic.SA1009.severity = none
-# SA1010: Opening square brackets spacing — false positives with collection expressions
-dotnet_diagnostic.SA1010.severity = none
-# SA1011: Closing square bracket spacing
-dotnet_diagnostic.SA1011.severity = none
 # SA1100: Do not prefix calls with base
 dotnet_diagnostic.SA1100.severity = none
 # SA1101: Prefix local calls with this — conflicts with dotnet_style_qualification preference
@@ -406,16 +400,14 @@ dotnet_diagnostic.SA1201.severity = none
 dotnet_diagnostic.SA1202.severity = none
 # SA1204: Static before non-static
 dotnet_diagnostic.SA1204.severity = none
-# SA1206: Modifier ordering — false positives with 'required' modifier
-dotnet_diagnostic.SA1206.severity = none
 # SA1214: Readonly fields before non-readonly
 dotnet_diagnostic.SA1214.severity = none
 # SA1309: Field names should not begin with underscore — project uses _camelCase convention
 dotnet_diagnostic.SA1309.severity = none
 # SA1313: Parameter names should begin with lower-case — false positives with records/deconstruct
 dotnet_diagnostic.SA1313.severity = none
-# SA1401: Fields should be private
-dotnet_diagnostic.SA1401.severity = suggestion
+# SA1315: Parameter names should match the inherited declaration: overrides of framework bases name the parameter after the aggregate rather than TEntity entity; CA1725 is likewise off
+dotnet_diagnostic.SA1315.severity = none
 # SA1407: Arithmetic expressions should declare precedence — conflicts with parentheses preference
 dotnet_diagnostic.SA1407.severity = none
 # SA1408: Conditional expressions should declare precedence — conflicts with parentheses preference
@@ -502,8 +494,6 @@ dotnet_diagnostic.S1451.severity = none
 dotnet_diagnostic.S1541.severity = warning
 # S2094: Empty class — placeholder modules exist
 dotnet_diagnostic.S2094.severity = none
-# S2139: Log or rethrow exceptions — flag for awareness
-dotnet_diagnostic.S2139.severity = suggestion
 # S2221: Catch specific exceptions — flag for awareness
 dotnet_diagnostic.S2221.severity = suggestion
 # S2325: Methods that could be static
@@ -526,8 +516,6 @@ dotnet_diagnostic.S4581.severity = suggestion
 # Global severity (error) applies. Suppress/downgrade noisy or overlapping rules.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# MA0001: StringComparison should be specified
-dotnet_diagnostic.MA0001.severity = suggestion
 # MA0002: IEqualityComparer<string> or IComparer<string> is missing
 dotnet_diagnostic.MA0002.severity = suggestion
 # MA0003: Add argument name — too noisy
@@ -536,7 +524,7 @@ dotnet_diagnostic.MA0003.severity = none
 dotnet_diagnostic.MA0004.severity = none
 # MA0006: Use String.Equals instead of ==
 dotnet_diagnostic.MA0006.severity = suggestion
-# MA0007: Add trailing comma — conflicts with SA1413 preference
+# MA0007: Add trailing comma — trailing commas are not enforced (SA1413 is off too)
 dotnet_diagnostic.MA0007.severity = none
 # MA0011: IFormatProvider is missing — too noisy for logging/internal code
 dotnet_diagnostic.MA0011.severity = none
@@ -550,8 +538,6 @@ dotnet_diagnostic.MA0018.severity = none
 dotnet_diagnostic.MA0025.severity = suggestion
 # MA0026: Fix TODO comment — normal during development
 dotnet_diagnostic.MA0026.severity = suggestion
-# MA0028: Optimize StringBuilder usage
-dotnet_diagnostic.MA0028.severity = suggestion
 # MA0029: Combine LINQ methods
 dotnet_diagnostic.MA0029.severity = suggestion
 # MA0036: Make class static — overlaps CA1052
@@ -566,16 +552,12 @@ dotnet_diagnostic.MA0042.severity = suggestion
 dotnet_diagnostic.MA0040.severity = suggestion
 # MA0041: Make property static — overlaps
 dotnet_diagnostic.MA0041.severity = none
-# MA0046: Use EventHandler<T>
-dotnet_diagnostic.MA0046.severity = suggestion
 # MA0048: File name must match type name — false positives with partial/extension types
 dotnet_diagnostic.MA0048.severity = none
 # MA0049: Type name should not match containing namespace — overlaps CA1724
 dotnet_diagnostic.MA0049.severity = none
 # MA0051: Method is too long — overlaps S138/S1541
 dotnet_diagnostic.MA0051.severity = none
-# MA0052: Replace constant Enum.ToString with nameof
-dotnet_diagnostic.MA0052.severity = suggestion
 # MA0053: Make class sealed — DDD entities use inheritance
 dotnet_diagnostic.MA0053.severity = none
 # MA0056: Do not call overridable members in constructor
@@ -584,8 +566,6 @@ dotnet_diagnostic.MA0056.severity = none
 dotnet_diagnostic.MA0058.severity = none
 # MA0069: Non-constant static fields should not be visible
 dotnet_diagnostic.MA0069.severity = none
-# MA0073: Avoid comparison with bool constant
-dotnet_diagnostic.MA0073.severity = suggestion
 # MA0076: Do not use implicit culture-sensitive ToString in interpolation
 # Enforced (ADR-027): culture-less formatting hygiene is a build gate, not advisory. Use an explicit
 # IFormatProvider (CultureInfo.InvariantCulture at machine boundaries, CurrentCulture for UI display).
@@ -623,10 +603,6 @@ dotnet_diagnostic.MA0219.severity = none
 dotnet_diagnostic.RCS1021.severity = none
 # RCS1071: Remove redundant base constructor call — minor, allow explicit base() calls
 dotnet_diagnostic.RCS1071.severity = suggestion
-# RCS1036: Remove unnecessary blank line
-dotnet_diagnostic.RCS1036.severity = suggestion
-# RCS1037: Remove trailing whitespace
-dotnet_diagnostic.RCS1037.severity = suggestion
 # RCS1058: Use compound assignment — overlaps dotnet_style_prefer_compound_assignment
 dotnet_diagnostic.RCS1058.severity = none
 # RCS1077: Optimize LINQ method call
@@ -635,8 +611,6 @@ dotnet_diagnostic.RCS1077.severity = suggestion
 dotnet_diagnostic.RCS1090.severity = none
 # RCS1123: Add parentheses when necessary — conflicts with parentheses preferences
 dotnet_diagnostic.RCS1123.severity = none
-# RCS1096: Convert HasFlag to bitwise operation
-dotnet_diagnostic.RCS1096.severity = suggestion
 # RCS1118: Mark local variable as const
 dotnet_diagnostic.RCS1118.severity = suggestion
 # RCS1124: Inline local variable — stylistic preference
@@ -673,8 +647,6 @@ dotnet_diagnostic.RCS1202.severity = warning
 dotnet_diagnostic.RCS1210.severity = warning
 # RCS1241: Implement non-generic counterpart
 dotnet_diagnostic.RCS1241.severity = none
-# RCS1015: Use nameof operator
-dotnet_diagnostic.RCS1015.severity = suggestion
 # RCS1047: Remove non-async Async suffix — naming convention enforcement
 dotnet_diagnostic.RCS1047.severity = suggestion
 # RCS1069: Remove unnecessary case label
@@ -740,18 +712,10 @@ dotnet_diagnostic.IDE0005.severity = none
 ###############################################################################
 [Tests/**/*.cs]
 
-# Naming: test methods use underscores and descriptive names
-dotnet_diagnostic.CA1707.severity = none
-dotnet_diagnostic.S100.severity = none
-dotnet_diagnostic.S101.severity = none
-
 # Complexity: test methods can be longer and more complex
 dotnet_diagnostic.S107.severity = none
-dotnet_diagnostic.S109.severity = none
 dotnet_diagnostic.S134.severity = none
 dotnet_diagnostic.S1200.severity = none
-dotnet_diagnostic.S1541.severity = none
-dotnet_diagnostic.MA0051.severity = none
 
 # Test classes are instantiated by test framework
 dotnet_diagnostic.CA1812.severity = none
@@ -760,9 +724,6 @@ dotnet_diagnostic.CA1812.severity = none
 dotnet_diagnostic.CA1031.severity = none
 dotnet_diagnostic.S2139.severity = none
 dotnet_diagnostic.S2221.severity = none
-
-# Magic numbers are normal in test assertions
-dotnet_diagnostic.CA1805.severity = none
 
 # Test helper methods don't need to be static
 dotnet_diagnostic.S2325.severity = none
@@ -783,8 +744,8 @@ dotnet_diagnostic.MA0006.severity = none
 dotnet_diagnostic.CA2000.severity = none
 dotnet_diagnostic.CA2025.severity = none
 dotnet_diagnostic.S2339.severity = none
-dotnet_diagnostic.CA1873.severity = none
 dotnet_diagnostic.CA2100.severity = none
+dotnet_diagnostic.CA1873.severity = none
 dotnet_diagnostic.CA1819.severity = none
 dotnet_diagnostic.CA1054.severity = none
 dotnet_diagnostic.CA1056.severity = none
@@ -796,26 +757,41 @@ dotnet_diagnostic.CA1056.severity = none
 dotnet_diagnostic.IDE0028.severity = none
 dotnet_diagnostic.IDE0300.severity = none
 dotnet_diagnostic.IDE0301.severity = none
-dotnet_diagnostic.IDE0302.severity = none
-dotnet_diagnostic.IDE0303.severity = none
-dotnet_diagnostic.IDE0304.severity = none
 dotnet_diagnostic.IDE0305.severity = none
 
 # EF Core's DbSet.Add used to seed entities in arrange blocks is not sync-over-async
 # (Add is in-memory; AddAsync exists only for special value generators). VSTHRD103's
-# Add->AddAsync heuristic flags every seeding call, so relax it in tests. It stays at
-# error in Source, where the few genuine EF/serialize sites carry documented per-line
-# #pragma suppressions.
+# Add->AddAsync heuristic flags seeding calls, so relax it in tests. It stays at
+# error in Source, where the analyzer does not flag the in-memory EF Add and
+# string Serialize calls.
 dotnet_diagnostic.VSTHRD103.severity = suggestion
 
 ###############################################################################
-# Razor/Blazor files
+# Exemptions every repo shares (formerly repeated in the repo deltas)
 ###############################################################################
-[*.razor]
-indent_size = 4
 
-[*.cshtml]
-indent_size = 4
+# S8969 / S8970 (SonarAnalyzer 10.30+): "remove this null-forgiving operator". Both produce false
+# positives that the compiler contradicts (CS8602/CS8620/CS8625/CS8629), and under
+# TreatWarningsAsErrors a false positive is a broken build rather than a nudge. S8969 stays a
+# suggestion so genuine redundancies still surface; S8970 is wrong at every measured site and is off
+# through NoWarn in Directory.Build.props (an .editorconfig severity does not reach Razor-generated
+# code). The compiler is the authority on nullability, not the analyzer.
+[*.{cs,razor}]
+dotnet_diagnostic.S8969.severity = suggestion
+
+# BL0016 (JS interop call not guarded with try/catch) ships with the ASP.NET Core 11 Blazor
+# analyzers, so it fires on net11.0 builds only. In tests it flags Moq Setup/Verify lambdas over
+# IJSRuntime and hand-written IJSRuntime fakes: expressions that describe an interop call, never
+# one made against a live circuit. Product code keeps the rule.
+[Tests/**.cs]
+dotnet_diagnostic.BL0016.severity = none
+
+# IDE0130 (namespace must match folder): a MAUI head's Platforms/ bootstrap files (MainActivity,
+# MainApplication, AppDelegate, Program, widget providers) carry the app root namespace per the
+# .NET MAUI template convention. The folder is a per-TFM build-target split, not namespace
+# structure, and renaming the Android types would change their generated manifest component names.
+[Source/Hosts/UI/*/Platforms/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
 
 ###############################################################################
 # REPO-SPECIFIC DELTAS
@@ -836,26 +812,6 @@ dotnet_diagnostic.CA2007.severity = warning
 
 [Source/Presentation/MMCA.Common.UI*/**.cs]
 dotnet_diagnostic.CA2007.severity = none
-
-# S8969 / S8970 (new in SonarAnalyzer 10.30): "remove this null-forgiving operator".
-# Downgraded from the baseline error severity because both produce FALSE POSITIVES here, and
-# under TreatWarningsAsErrors a false positive is a broken build rather than a nudge. Measured
-# on the 10.29 -> 10.30 bump: 41 sites flagged, 7 of them wrong.
-#
-#   S8970 was wrong at ALL 3 of its sites (suppressed via NoWarn in Directory.Build.props, since
-#   an .editorconfig severity does not reach Razor-generated code). It claims nullable warnings are disabled and the
-#   operator is therefore pointless, but the flagged code is the deliberate `null!` / `default!`
-#   initializer pattern in .razor components, where removing the operator immediately fails with
-#   CS8625/CS8604. Disabled outright.
-#
-#   S8969 was wrong at 4 of 38. It claims the compiler already knows the expression is non-null,
-#   and at those four the compiler disagreed with CS8602/CS8629. The other 34 were genuine and
-#   have been fixed. Kept as a suggestion so real redundancies still surface without gating CI.
-#
-# Revisit when Sonar tightens these rules; the compiler is the authority on nullability, not the
-# analyzer.
-[*.{cs,razor}]
-dotnet_diagnostic.S8969.severity = suggestion
 
 # IDE0130 (namespace must match folder structure): warning in the shared baseline. The
 # locations below diverge DELIBERATELY, so the rule is disabled for them:
@@ -904,10 +860,3 @@ dotnet_diagnostic.RS0053.severity = none
 dotnet_diagnostic.RS0054.severity = none
 dotnet_diagnostic.RS0055.severity = none
 dotnet_diagnostic.RS0056.severity = none
-
-# BL0016 (JS interop call not guarded with try/catch) ships with the ASP.NET Core 11 Blazor
-# analyzers, so it fires on the net11.0 build only. In tests it flags Moq Setup/Verify lambdas over
-# IJSRuntime and hand-written IJSRuntime fakes: expressions that describe an interop call, never
-# one made against a live circuit. Product code under Source/ keeps the rule at its default.
-[Tests/**.cs]
-dotnet_diagnostic.BL0016.severity = none

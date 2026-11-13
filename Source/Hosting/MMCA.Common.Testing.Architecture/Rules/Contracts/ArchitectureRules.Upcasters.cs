@@ -95,7 +95,8 @@ public static partial class ArchitectureRules
     /// </summary>
     private static IReadOnlyList<Type> UpcasterContracts(Type type) =>
         [.. type.GetInterfaces().Where(i =>
-            i.IsGenericType && string.Equals(i.Name, "IEventUpcaster`2", StringComparison.Ordinal))];
+            i.IsGenericType && string.Equals(i.Name, "IEventUpcaster`2", StringComparison.Ordinal))
+        ];
 
     /// <summary>
     /// Reads the declared <c>SchemaVersion</c> off an event contract without running a constructor:

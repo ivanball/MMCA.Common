@@ -104,7 +104,8 @@ public sealed class EditorRequiredParameterConventionTests
             .SelectMany(static t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             .Where(static p => p.IsDefined(typeof(ParameterAttribute), inherit: false)
                 && !p.IsDefined(typeof(CascadingParameterAttribute), inherit: false)
-                && !p.IsDefined(typeof(SupplyParameterFromQueryAttribute), inherit: false))];
+                && !p.IsDefined(typeof(SupplyParameterFromQueryAttribute), inherit: false))
+        ];
 
     private static bool IsNonNullableReference(PropertyInfo property, NullabilityInfoContext nullability)
     {

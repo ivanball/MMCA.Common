@@ -44,8 +44,8 @@ internal static class ConsumerOriginRestore
                 headers.Get<string>(MessageHeaders.UserId, null),
                 CultureInfo.InvariantCulture,
                 out var parsedUserId)
-                ? parsedUserId
-                : null;
+                    ? parsedUserId
+                    : null;
 
         return AmbientOrigin.Restore(
             services,
