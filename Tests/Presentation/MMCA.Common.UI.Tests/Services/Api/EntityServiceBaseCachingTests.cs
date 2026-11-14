@@ -227,7 +227,7 @@ public sealed class EntityServiceBaseCachingTests
     public async Task AFailedRead_IsNotCached()
     {
         // Caching a failure would pin the error in front of the user for the whole TTL. A 4xx rather
-        // than a 5xx so the class-level Polly retry stays out of the way (2s/4s/8s of backoff).
+        // than a 5xx so the class-level Polly retry stays out of the way (0.5s/1s/2s of backoff).
         var responses = new Queue<HttpResponseMessage>(
         [
             new HttpResponseMessage(HttpStatusCode.BadRequest),

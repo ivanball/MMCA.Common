@@ -94,6 +94,50 @@ public sealed class SupportAccessLogTests : BunitTestBase
             Times.Once()));
     }
 
+    // O-93: the picked days are the VIEWER's days. New York is UTC-5 in mid-November, so the local
+    // day 2026-11-13 runs from 05:00Z to the next day's 05:00Z (To stays inclusive of its day).
+    [Fact]
+    public async Task TheDateFilters_SendTheViewersLocalDayBoundsInUtc()
+    {
+        JSInterop.SetupModule("./_content/MMCA.Common.UI/time-zone.js")
+            .Setup<string?>("getTimeZone")
+            .SetResult("America/New_York");
+        var cut = RenderLog();
+        await cut.WaitForAssertionAsync(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        await ApplyDateFiltersAsync(cut, from: "2026-11-13", to: "2026-11-13");
+
+        await cut.WaitForAssertionAsync(() => _grants.Verify(
+            g => g.GetPageAsync(
+                It.Is<ViewAsGrantListRequest>(r =>
+                    r.From == new DateTime(2026, 11, 13, 5, 0, 0, DateTimeKind.Utc)
+                    && r.To == new DateTime(2026, 11, 14, 5, 0, 0, DateTimeKind.Utc)
+                    && r.PageNumber == 1),
+                It.IsAny<CancellationToken>()),
+            Times.Once()));
+    }
+
+    // Until the browser reports a zone (here it answers with none), the days fall back to UTC.
+    [Fact]
+    public async Task TheDateFilters_WhenTheViewerZoneIsUnknown_FallBackToUtcDays()
+    {
+        JSInterop.SetupModule("./_content/MMCA.Common.UI/time-zone.js")
+            .Setup<string?>("getTimeZone")
+            .SetResult(null);
+        var cut = RenderLog();
+        await cut.WaitForAssertionAsync(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        await ApplyDateFiltersAsync(cut, from: "2026-11-13", to: "2026-11-13");
+
+        await cut.WaitForAssertionAsync(() => _grants.Verify(
+            g => g.GetPageAsync(
+                It.Is<ViewAsGrantListRequest>(r =>
+                    r.From == new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Utc)
+                    && r.To == new DateTime(2026, 11, 14, 0, 0, 0, DateTimeKind.Utc)),
+                It.IsAny<CancellationToken>()),
+            Times.Once()));
+    }
+
     [Fact]
     public Task WithNoGrants_RendersTheEmptyState()
     {
@@ -143,6 +187,13 @@ public sealed class SupportAccessLogTests : BunitTestBase
 
     private static Result<PagedCollectionResult<ViewAsGrantSummaryResponse>> Page(int page, int pageSize, int total, params ViewAsGrantSummaryResponse[] rows) =>
         Result.Success(new PagedCollectionResult<ViewAsGrantSummaryResponse>(rows, new PaginationMetadata(total, pageSize, page)));
+
+    private static async Task ApplyDateFiltersAsync(IRenderedComponent<SupportAccessLog> cut, string from, string to)
+    {
+        await cut.Find("[data-testid=\"filter-from\"] input").ChangeAsync(new ChangeEventArgs { Value = from });
+        await cut.Find("[data-testid=\"filter-to\"] input").ChangeAsync(new ChangeEventArgs { Value = to });
+        await cut.Find("[data-testid=\"apply-filters\"]").ClickAsync(new MouseEventArgs());
+    }
 
     private IRenderedComponent<SupportAccessLog> RenderLog()
     {

@@ -9,7 +9,7 @@ namespace MMCA.Common.UI.Services.Api;
 /// <para>
 /// <b>Idempotent reads only.</b> The policy re-sends the request on a transient failure (an
 /// <see cref="HttpRequestException"/>, a 5xx other than 501/505, 408 or 429) up to three times with
-/// exponential backoff (2s, 4s, 8s) plus jitter. Re-sending is only safe when doing the operation
+/// exponential backoff (0.5s, 1s, 2s) plus up to 250 ms of jitter. Re-sending is only safe when doing the operation
 /// twice is the same as doing it once, which is why the only entry point is a GET. A write that needs
 /// retries goes through <see cref="EntityServiceBase{TEntityDTO, TIdentifierType}"/>, whose writes
 /// carry an <c>Idempotency-Key</c> the server deduplicates on.
