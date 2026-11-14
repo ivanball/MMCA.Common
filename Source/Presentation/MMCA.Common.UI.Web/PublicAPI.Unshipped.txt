@@ -1,1 +1,2 @@
 #nullable enable
+static MMCA.Common.UI.Web.Hosting.E2eRenderMode.Resolve(Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.AspNetCore.Http.HttpContext! httpContext) -> Microsoft.AspNetCore.Components.IComponentRenderMode?

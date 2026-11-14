@@ -50,6 +50,29 @@ public sealed class PasskeysPanelTests : BunitTestBase
         cut.Markup.Should().Contain("Phone").And.Contain("Work laptop");
     }
 
+    // -- Run 17 U-60: the dates are the viewer's local date, not the UTC date --
+    [Fact]
+    public void AddedAndLastUsed_ShowTheViewersLocalDate()
+    {
+        // 03:20 UTC on 11/14 is 22:20 on 11/13 in New York (EST, UTC-5).
+        var lateEvening = new DateTime(2026, 11, 14, 3, 20, 0, DateTimeKind.Utc);
+        _rows.Clear();
+        _rows.Add(new PasskeyResponse(Guid.NewGuid(), "Phone", lateEvening, lateEvening));
+        JSInterop.SetupModule("./_content/MMCA.Common.UI/time-zone.js")
+            .Setup<string?>("getTimeZone").SetResult("America/New_York");
+        var localDate = new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Unspecified).ToString("d", System.Globalization.CultureInfo.CurrentCulture);
+        var utcDate = new DateTime(2026, 11, 14, 0, 0, 0, DateTimeKind.Unspecified).ToString("d", System.Globalization.CultureInfo.CurrentCulture);
+
+        var cut = RenderUnderTest<PasskeysPanel>(_ => { });
+
+        cut.WaitForAssertion(() =>
+        {
+            var cells = cut.Find("[data-testid='passkeys-row']").ParentElement!.QuerySelectorAll("td").Select(td => td.TextContent.Trim()).ToList();
+            cells.Count(text => text == localDate).Should().Be(2, "both the added and the last-used cell show the local date, cells: " + string.Join(" | ", cells));
+            cells.Should().NotContain(utcDate);
+        });
+    }
+
     [Fact]
     public void TheAddButton_IsHidden_WhenTheCapabilityIsUnavailable()
     {

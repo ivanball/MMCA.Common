@@ -10,6 +10,6 @@ public sealed class UnavailableExternalAuthBroker : IExternalAuthBroker
     public bool IsAvailable => false;
 
     /// <inheritdoc />
-    public Task<bool> SignInAsync(string provider, CancellationToken cancellationToken = default) =>
-        Task.FromResult(false);
+    public Task<ExternalSignInResult> SignInAsync(string provider, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ExternalSignInResult.Failed());
 }

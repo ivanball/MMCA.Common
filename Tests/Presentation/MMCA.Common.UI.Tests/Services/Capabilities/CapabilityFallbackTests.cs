@@ -123,7 +123,9 @@ public sealed class CapabilityFallbackTests
         var sut = new UnavailableExternalAuthBroker();
 
         sut.IsAvailable.Should().BeFalse();
-        (await sut.SignInAsync("google")).Should().BeFalse();
+        var result = await sut.SignInAsync("google");
+        result.Succeeded.Should().BeFalse();
+        result.ErrorCode.Should().BeNull();
     }
 
     [Fact]

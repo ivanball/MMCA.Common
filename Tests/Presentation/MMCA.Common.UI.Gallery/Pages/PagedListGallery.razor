@@ -1,0 +1,63 @@
+@page "/grid/paged"
+@using MMCA.Common.Shared.Abstractions
+@using MMCA.Common.UI.Pages.Common
+@inherits DataGridListPageBase<GalleryUser>
+
+@* A paged list built the way an app's admin list is (ListPageShell over DataGridListPageBase, a
+   default-sorted column, the phone card list), over 60 canned rows, so the paging E2E tests can
+   restore a page from the URL and widen from the phone cards back to the grid against the real
+   prerender and interactive passes. *@
+<PageTitle>@Title</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <ListPageShell TItem="GalleryUser" @ref="_shell" Title="@Title"
+                   IsLoading="IsLoading" OnCancelLoading="CancelLoading"
+                   IsMobile="IsMobile" MobileFetch="FetchMobilePage"
+                   ServerData="LoadServerData" @bind-CurrentPage="CurrentPageState" RowsPerPage="RowsPerPageState"
+                   LoadFailed="LoadFailed" EmptyConfirmed="EmptyConfirmed" EmptyMessage="No rows."
+                   SearchText="@_searchString" SearchTextChanged="OnSearchChanged">
+        <CardTemplate Context="item">
+            <MudText Typo="Typo.subtitle2" Class="paged-card">@item.Email</MudText>
+        </CardTemplate>
+        <Columns>
+            <PropertyColumn T="GalleryUser" TProperty="string" Property="x => x.Email" Title="Email" Sortable="true"
+                            Filterable="false" InitialDirection="SortDirection.Ascending" />
+            <PropertyColumn T="GalleryUser" TProperty="int" Property="x => x.Id" Title="Id" Sortable="true" Filterable="false" />
+        </Columns>
+    </ListPageShell>
+</MudContainer>
+
+@code {
+    private ListPageShell<GalleryUser>? _shell;
+    private string _searchString = string.Empty;
+
+    protected override string Title => "Paged list";
+
+    protected override MudDataGrid<GalleryUser>? GridRef => _shell?.Grid;
+
+    protected override void SaveFilters(Dictionary<string, string> filters) => filters["search"] = _searchString;
+
+    protected override void RestoreFilters(IReadOnlyDictionary<string, string> filters) =>
+        _searchString = filters.GetValueOrDefault("search") ?? string.Empty;
+
+    private Task OnSearchChanged(string value)
+    {
+        _searchString = value;
+        return ReloadActiveLayoutAsync(_shell?.MobileList);
+    }
+
+    private static Task<Result<(IReadOnlyList<GalleryUser> Items, int TotalItems)>> FetchAsync(
+        Dictionary<string, (string Operator, string Value)> filters,
+        int page,
+        int size,
+        string? sortColumn,
+        string? sortDirection,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(GalleryUser.Page(page, size));
+
+    private Task<GridData<GalleryUser>> LoadServerData(GridState<GalleryUser> state, CancellationToken cancellationToken) =>
+        LoadServerDataAsync(state, FetchAsync);
+
+    private Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<GalleryUser> Items, int TotalItems)>>> FetchMobilePage =>
+        MobilePageFetcher(FetchAsync, null, "Email");
+}

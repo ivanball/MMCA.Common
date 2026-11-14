@@ -10,7 +10,7 @@ else
        sessions only. role="region" names the table's wrapper div, which MudTable splats unmatched
        attributes onto. *@
     <MudTable Items="SignIns" T="SignInSummaryResponse" Hover="true" Elevation="1"
-              Breakpoint="Breakpoint.Sm"
+              Breakpoint="Breakpoint.Sm" Class="mmca-auth-table"
               role="region" aria-label="@L["Auth.SignIns.TableLabel"]">
         <HeaderContent>
             <MudTh>@L["Auth.Sessions.Column.Device"]</MudTh>

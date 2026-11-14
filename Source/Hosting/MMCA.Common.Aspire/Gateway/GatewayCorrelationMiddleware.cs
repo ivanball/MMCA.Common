@@ -20,9 +20,10 @@ namespace MMCA.Common.Aspire.Gateway;
 /// proxied request carries it downstream and the service-side <c>CorrelationIdMiddleware</c> adopts
 /// the same ID instead of minting a second one. A caller-supplied value follows the service's rule
 /// exactly: cut to <see cref="MaxLength"/> (the stored width), and replaced by a generated id when
-/// it has a non-ASCII or control character (Kestrel refuses to echo one). The response echo runs from
-/// <see cref="HttpResponse.OnStarting(Func{Task})"/>, so it survives a proxied response whose
-/// headers are written by the forwarder.
+/// it has a non-ASCII or control character (Kestrel refuses to echo one; <c>AddMmcaGateway</c> has
+/// Kestrel read this one header as Latin-1, so such a value reaches here instead of an empty 400).
+/// The response echo runs from <see cref="HttpResponse.OnStarting(Func{Task})"/>, so it survives a
+/// proxied response whose headers are written by the forwarder.
 /// </para>
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>

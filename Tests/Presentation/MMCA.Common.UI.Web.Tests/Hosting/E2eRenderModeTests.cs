@@ -1,5 +1,8 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Endpoints;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using MMCA.Common.UI.Web.Hosting;
 
@@ -91,8 +94,43 @@ public sealed class E2eRenderModeTests
         E2eRenderMode.ForceServerKey.Should().Be("E2E:ForceServer");
     }
 
+    // -- Run 17 U-58: /Error stays static after the interactive router takes over --
+    [Fact]
+    public void ForRequest_APageExcludedFromInteractiveRouting_RendersStatically()
+    {
+        var mode = E2eRenderMode.Resolve(Configuration(), RequestFor(typeof(Components.Pages.Error)));
+
+        mode.Should().BeNull("the interactive router does not know the framework error page");
+    }
+
+    [Fact]
+    public void ForRequest_AnInteractivePage_KeepsTheHeadsRenderMode()
+    {
+        var mode = E2eRenderMode.Resolve(Configuration((E2eRenderMode.ForceServerKey, "true")), RequestFor(typeof(InteractivePage)));
+
+        mode.Should().BeOfType<InteractiveServerRenderMode>();
+    }
+
+    [Fact]
+    public void ErrorPage_IsExcludedFromInteractiveRouting() =>
+        typeof(Components.Pages.Error)
+            .GetCustomAttributes(typeof(ExcludeFromInteractiveRoutingAttribute), inherit: false)
+            .Should().ContainSingle();
+
+    // The endpoint carries the page type as metadata, as MapRazorComponents builds it.
+    private static DefaultHttpContext RequestFor(Type pageType)
+    {
+        var metadata = new EndpointMetadataCollection(new ComponentTypeMetadata(pageType));
+        var httpContext = new DefaultHttpContext();
+        httpContext.SetEndpoint(new Endpoint(_ => Task.CompletedTask, metadata, "page"));
+        return httpContext;
+    }
+
     private static IConfiguration Configuration(params (string Key, string Value)[] settings) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(settings.Select(setting => new KeyValuePair<string, string?>(setting.Key, setting.Value)))
             .Build();
+
+    /// <summary>A page with no routing opt-out.</summary>
+    private sealed class InteractivePage : ComponentBase;
 }

@@ -1,6 +1,11 @@
 @page "/Error"
 @using Microsoft.AspNetCore.Authorization
 @attribute [AllowAnonymous]
+@* Static-rendered even in a host whose router is interactive: the interactive router knows only the
+   IUIModule assemblies, not this one, so after it took over it answered /Error with the not-found page
+   (Run 17 U-58). The host renders Routes with no render mode when HttpContext.AcceptsInteractiveRouting()
+   is false. *@
+@attribute [Microsoft.AspNetCore.Components.ExcludeFromInteractiveRouting]
 @using System.Diagnostics
 @using Microsoft.Extensions.Hosting
 @using Microsoft.Extensions.Localization
