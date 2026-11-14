@@ -285,10 +285,13 @@
         _errorMessage = null;
 
         // On success the broker hands off to the shared completion page, which finishes the
-        // sign-in. A false result covers dismissal and provider failure alike.
-        if (!await ExternalAuthBroker.SignInAsync(provider))
+        // sign-in. A refusal the server named (an unverified provider email, a locked account) shows
+        // the same mapped words the web flow shows (Run 17 U-15); dismissal and an unnamed provider
+        // failure keep the generic retry message.
+        var result = await ExternalAuthBroker.SignInAsync(provider);
+        if (!result.Succeeded)
         {
-            _errorMessage = L["Auth.Login.ExternalSignInFailed"].Value;
+            _errorMessage = ExternalSignInErrorMessage(result.ErrorCode) ?? L["Auth.Login.ExternalSignInFailed"].Value;
             StateHasChanged();
         }
     }

@@ -139,6 +139,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     // The grid's own sort when the restored sort began overriding it (see ResolveSortParameters).
     private (string? Column, string? Direction)? _shadowedGridSort;
+    // Set when the viewport widens from the phone card list back to the grid: the grid is created anew
+    // there, so the pager, page size and sort are restored onto it once it has rendered (Run 17 O-73).
+    private bool _restoreGridAfterWidening;
     private bool _suppressNextLocationChanged;
     private bool _locationHandlerRegistered;
     private bool _deferSessionPersist;
@@ -366,9 +369,38 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 MobileCurrentPage = 1;
                 await OnMobileDataRequestedAsync();
             }
+            else if (!IsMobile && wasMobile)
+            {
+                PrepareGridRestoreAfterWidening();
+            }
 
             StateHasChanged();
         });
+
+    /// <summary>
+    /// The phone card list replaced the grid, and widening renders a NEW grid that starts on page 1 at
+    /// the default page size and sort. The saved state still holds the pager the user left (the card
+    /// list saves its filters and keeps the pager), so seed the new grid's parameters from it and let
+    /// the next render put the page size, page and sort back on the grid.
+    /// </summary>
+    private void PrepareGridRestoreAfterWidening()
+    {
+        if (VirtualizeGrid || ListPageStateService.GetState(GetRoutePath()) is not { } saved)
+        {
+            return;
+        }
+
+        _savedPage = saved.Page;
+        _savedPageSize = saved.PageSize;
+        CurrentPageState = saved.Page;
+        if (saved.PageSize > 0)
+        {
+            RowsPerPageState = saved.PageSize;
+        }
+
+        RestoreSort(saved);
+        _restoreGridAfterWidening = true;
+    }
 
     /// <summary>
     /// Subscribes to viewport changes after the first render (JS interop requires a rendered DOM),
@@ -381,6 +413,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (firstRender)
         {
             await RunFirstRenderSetupAsync();
+        }
+        else if (_restoreGridAfterWidening && GridRef is not null)
+        {
+            // The grid created on widening has rendered: put the saved pager and sort back on it.
+            _restoreGridAfterWidening = false;
+            await RestoreGridStateAsync(needsReload: false);
         }
 
         // Restore scroll only after the grid has finished its first data load and rendered rows.
@@ -602,17 +640,27 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// Re-restores the grid's <c>CurrentPage</c> from <see cref="_savedPage"/> after the
     /// <c>RowsPerPage</c> parameter setter has fired and clobbered it to 0 as a side effect.
     /// Setting <c>CurrentPage</c> from outside the component is normally flagged by the Blazor
-    /// analyzer (BL0005), but the setter is well-behaved (updates the field, fires the change
-    /// callback, and triggers a re-fetch) and this is the only mechanism MudDataGrid v9 exposes
-    /// for programmatically navigating to an arbitrary page.
+    /// analyzer (BL0005), but it is the only mechanism MudDataGrid v9 exposes for programmatically
+    /// navigating to an arbitrary page.
+    /// <para>
+    /// The setter starts a load only once the grid's FIRST load has completed (MudDataGrid sets its
+    /// first-rendered flag after that load). A page whose first load is still running here (one that
+    /// awaits lookups in <see cref="OnBeforeFetchAsync"/>, or a slow network) got the restored pager
+    /// over the first page's rows, and that load saved <c>p=0</c> over the URL (Run 17 O-85). So the
+    /// caller reloads whenever this moved the page; the reload cancels the stale first load.
+    /// </para>
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism and is well-behaved.")]
-    private void RestoreCurrentPageAfterRowsPerPageReset()
+    /// <returns><see langword="true"/> when the grid's page was moved, so the caller reloads it.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism.")]
+    private bool RestoreCurrentPageAfterRowsPerPageReset()
     {
         if (_savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
         {
             grid.CurrentPage = _savedPage;
+            return true;
         }
+
+        return false;
     }
 
     private static bool HasListPageState(ListPageState state) =>
@@ -667,20 +715,33 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // The buggy RowsPerPage parameter setter in MudDataGrid v9 (it always uses
         // resetPage: true) clobbers CurrentPage to 0 as a side effect when CurrentPage was
         // non-zero. We re-restore CurrentPage here using the cached _savedPage so
-        // page-number restoration still works alongside rows-per-page restoration.
-        RestoreCurrentPageAfterRowsPerPageReset();
+        // page-number restoration still works alongside rows-per-page restoration. Moving the page
+        // reloads: the setter does not while the grid's first load is still running.
+        needsReload |= RestoreCurrentPageAfterRowsPerPageReset();
 
-        // A URL or saved sort the grid's default column sort shadowed: put it on the header (which
-        // reloads the grid). Otherwise, session restore changed pagination state after the grid's
-        // initial ServerData call already returned defaults: reload with the correct parameters.
+        // A URL or saved sort the grid's default column sort shadowed: put it on the header. Then reload
+        // when the restored page or a session restore changed what the grid's first load asked for.
         await ApplyRestoredSortOrReloadAsync(needsReload);
     }
 
-    /// <summary>Applies a pending restored sort to the grid, or reloads it when <paramref name="needsReload"/> asks.</summary>
+    /// <summary>Applies a pending restored sort to the grid, then reloads it when <paramref name="needsReload"/> asks.</summary>
     /// <param name="needsReload">Whether restored state changed after the grid's first fetch.</param>
+    /// <remarks>
+    /// Applying the sort does not stand in for the reload: MudDataGrid's <c>SetSortAsync</c>, like its
+    /// <c>CurrentPage</c> setter, loads only once the grid's first load has completed, and this runs
+    /// while that load is often still in flight. Counting the sort as the reload left a restored page
+    /// unloaded whenever the URL also carried a sort (Run 17 O-85). The in-flight load already sends the
+    /// restored sort (see <c>ResolveSortParameters</c>), so a sort alone needs no reload.
+    /// </remarks>
     private async Task ApplyRestoredSortOrReloadAsync(bool needsReload)
     {
-        if (GridRef is { } grid && !await ApplyRestoredSortToGridAsync(grid) && needsReload)
+        if (GridRef is not { } grid)
+        {
+            return;
+        }
+
+        await ApplyRestoredSortToGridAsync(grid);
+        if (needsReload)
         {
             await grid.ReloadServerData();
         }

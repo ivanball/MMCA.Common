@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
 namespace MMCA.Common.UI.Web.Hosting;
@@ -42,5 +44,24 @@ public static class E2eRenderMode
         return configuration.GetValue<bool>(ForceServerKey)
             ? RenderMode.InteractiveServer
             : RenderMode.InteractiveAuto;
+    }
+
+    /// <summary>
+    /// Resolves the render mode for the current request: <see langword="null"/> (static server
+    /// rendering) when the matched page opts out of interactive routing with
+    /// <see cref="ExcludeFromInteractiveRoutingAttribute"/>, as the framework <c>/Error</c> page does,
+    /// otherwise <see cref="Resolve(IConfiguration)"/>. A head that applies this to its routes and head
+    /// outlet keeps such a page static instead of handing it to an interactive router that does not
+    /// know it (which answered it with the not-found page).
+    /// </summary>
+    /// <param name="configuration">The head's configuration.</param>
+    /// <param name="httpContext">The current request: the <c>App</c> component's cascading <see cref="HttpContext"/>.</param>
+    /// <returns>The render mode to apply, or <see langword="null"/> to render the request statically.</returns>
+    public static IComponentRenderMode? Resolve(IConfiguration configuration, HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        return httpContext.AcceptsInteractiveRouting() ? Resolve(configuration) : null;
     }
 }

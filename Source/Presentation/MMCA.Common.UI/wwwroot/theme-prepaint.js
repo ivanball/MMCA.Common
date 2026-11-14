@@ -15,12 +15,30 @@
     var key = 'mmca_theme';
     var theme = null;
 
-    // localStorage first, then the cookie, in step with theme.js get(): the Android WebView flushes its
-    // cookie store lazily, so after a quick kill the cookie can still hold the previous theme.
+    // On a MAUI head's cold launch the NATIVE copy wins: MainPageBase (MMCA.Common.UI.Maui) appends the
+    // mode NativeThemeSync saved to device preferences on every change as MmcaTheme/<dark|light>. The
+    // WebView flushes localStorage and its cookies lazily, so a relaunch right after a switch still read
+    // the previous theme from them and painted it (Run 17 X-27). Only the first page of a WebView session
+    // takes the token (sessionStorage marks it): the token is fixed for the session, so a later reload
+    // reads the live localStorage value instead, which by then is the newer one.
     try {
-        theme = localStorage.getItem(key);
+        var nativeTheme = /MmcaTheme\/(dark|light)/.exec(navigator.userAgent);
+        if (nativeTheme && !sessionStorage.getItem('mmca_theme_prepainted')) {
+            theme = nativeTheme[1];
+        }
+        sessionStorage.setItem('mmca_theme_prepainted', '1');
     } catch (e) {
         theme = null;
+    }
+
+    // Then localStorage, then the cookie, in step with theme.js get(): the Android WebView flushes its
+    // cookie store lazily, so after a quick kill the cookie can still hold the previous theme.
+    if (theme === null) {
+        try {
+            theme = localStorage.getItem(key);
+        } catch (e) {
+            theme = null;
+        }
     }
 
     if (theme !== 'dark' && theme !== 'light') {

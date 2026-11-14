@@ -13,6 +13,7 @@ using MMCA.Common.API.Localization;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Resources;
 using MMCA.Common.API.SessionCookies;
+using MMCA.Common.API.Uploads;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Shared.Identifiers;
@@ -48,6 +49,9 @@ public static class DependencyInjection
                 {
                     options.ReturnHttpNotAcceptable = false;
                     options.Filters.Add<UnhandledResultFailureFilter>();
+
+                    // An oversize form body answers 413, not model binding's 400 (Run 17 A-64).
+                    options.Filters.Add<OversizeFormResourceFilter>(OversizeFormResourceFilter.FilterOrder);
                 })
                 .AddJsonOptions(options =>
                 {

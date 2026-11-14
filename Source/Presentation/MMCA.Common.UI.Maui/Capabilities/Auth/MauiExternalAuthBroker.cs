@@ -54,7 +54,7 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
     public bool IsAvailable => !string.IsNullOrWhiteSpace(_callbackScheme);
 
     /// <inheritdoc />
-    public async Task<bool> SignInAsync(string provider, CancellationToken cancellationToken = default)
+    public async Task<ExternalSignInResult> SignInAsync(string provider, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(provider);
 
@@ -63,13 +63,13 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
 
         if (!IsAvailable)
         {
-            return Exit(provider, "NoCallbackScheme", started, succeeded: false);
+            return Exit(provider, "NoCallbackScheme", started, ExternalSignInResult.Failed());
         }
 
         var apiBase = _apiSettings.Value.ApiEndpoint?.TrimEnd('/');
         if (string.IsNullOrWhiteSpace(apiBase))
         {
-            return Exit(provider, "NoApiEndpoint", started, succeeded: false);
+            return Exit(provider, "NoApiEndpoint", started, ExternalSignInResult.Failed());
         }
 
         var callbackUrl = new Uri($"{_callbackScheme}://oauth-complete");
@@ -102,11 +102,11 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
             // platform's launch activity resumed with no callback. The elapsed time tells a sheet
             // the user closed from one that never appeared.
             var exit = cancellationToken.IsCancellationRequested ? "CancelledByCaller" : "CancelledWithoutCallback";
-            return Exit(provider, exit, started, succeeded: false);
+            return Exit(provider, exit, started, ExternalSignInResult.Failed());
         }
         catch (FeatureNotSupportedException)
         {
-            return Exit(provider, "NotSupported", started, succeeded: false);
+            return Exit(provider, "NotSupported", started, ExternalSignInResult.Failed());
         }
         catch (Exception ex) when (LogUnexpectedExit(provider, ex, started))
         {
@@ -114,16 +114,17 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
         }
     }
 
-    private bool CompleteSignIn(string provider, WebAuthenticatorResult? result, long started)
+    private ExternalSignInResult CompleteSignIn(string provider, WebAuthenticatorResult? result, long started)
     {
         if (result?.Properties is null)
         {
-            return Exit(provider, "CallbackWithoutResult", started, succeeded: false);
+            return Exit(provider, "CallbackWithoutResult", started, ExternalSignInResult.Failed());
         }
 
         if (!result.Properties.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
         {
-            return Exit(provider, DescribeMissingCode(result), started, succeeded: false);
+            var serverError = ServerErrorCode(result);
+            return Exit(provider, serverError is null ? "CallbackWithoutCode" : $"ServerError:{serverError}", started, ExternalSignInResult.Failed(serverError));
         }
 
         result.Properties.TryGetValue("state", out var returnedState);
@@ -135,32 +136,35 @@ public sealed partial class MauiExternalAuthBroker : IExternalAuthBroker
             : $"&state={Uri.EscapeDataString(returnedState)}";
         _navigationManager.NavigateTo(
             $"/auth/oauth-complete?code={Uri.EscapeDataString(code)}{returnedStateQuery}");
-        return Exit(provider, "CodeReceived", started, succeeded: true);
+        return Exit(provider, "CodeReceived", started, ExternalSignInResult.Success);
     }
 
     /// <summary>
     /// A completion the server could not finish comes back as <c>error=&lt;code&gt;</c>. The server's
     /// code is a fixed name and safe to log; anything else in that parameter is dropped, because a
-    /// custom-scheme callback can be sent by another app.
+    /// custom-scheme callback can be sent by another app. The same shape check makes it safe to hand
+    /// to the Login page, which maps it to words (an unknown code reads as the generic refusal) and
+    /// never shows it raw.
     /// </summary>
-    private static string DescribeMissingCode(WebAuthenticatorResult result) =>
+    /// <returns>The server's error code, or <see langword="null"/> when the callback carried none it recognizes.</returns>
+    private static string? ServerErrorCode(WebAuthenticatorResult result) =>
         result.Properties.TryGetValue("error", out var error)
             && error is { Length: > 0 and <= 80 }
             && error.All(static c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')
-                ? $"ServerError:{error}"
-                : "CallbackWithoutCode";
+                ? error
+                : null;
 
-    private bool Exit(string provider, string exit, long started, bool succeeded)
+    private ExternalSignInResult Exit(string provider, string exit, long started, ExternalSignInResult result)
     {
         var elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         LogExit(_logger, provider, exit, elapsedMilliseconds);
-        return succeeded;
+        return result;
     }
 
     // The type name only: this exception's message can quote the callback URI, code included.
     private bool LogUnexpectedExit(string provider, Exception exception, long started)
     {
-        Exit(provider, exception.GetType().Name, started, succeeded: false);
+        _ = Exit(provider, exception.GetType().Name, started, ExternalSignInResult.Failed());
         return false;
     }
 

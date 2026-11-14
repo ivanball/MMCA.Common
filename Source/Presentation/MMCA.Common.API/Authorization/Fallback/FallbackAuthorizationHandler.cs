@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+#if NET11_0_OR_GREATER
+using Microsoft.AspNetCore.SignalR;
+#endif
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -71,8 +74,8 @@ public sealed class FallbackAuthorizationHandler(IOptions<FallbackAuthorizationO
             StringComparison.Ordinal);
 
     // Under endpoint routing the authorization resource IS the HttpContext, so no
-    // IHttpContextAccessor is needed; a non-HTTP resource (a SignalR hub invocation) simply has no
-    // exempt path and falls through to the authenticated-user rule.
+    // IHttpContextAccessor is needed; a non-HTTP resource (a SignalR hub invocation) is never an
+    // unmatched request and falls through to the exempt-path and authenticated-user rules.
     private static bool IsUnmatchedRequest(object? resource)
     {
         if (resource is not HttpContext httpContext || httpContext.GetEndpoint() is not null)
@@ -92,6 +95,26 @@ public sealed class FallbackAuthorizationHandler(IOptions<FallbackAuthorizationO
         return !webRoot.GetFileInfo(path).Exists && !webRoot.GetDirectoryContents(path).Exists;
     }
 
+#if NET11_0_OR_GREATER
+    // .NET 11 SignalR authorizes a hub method whenever the method carries ANY attribute (a compiler
+    // NullableContextAttribute is enough), so the fallback policy now also runs per invocation, with a
+    // HubInvocationContext as the resource. Blazor's circuit hub is one such case: StartCircuit has no
+    // attribute but ConnectCircuit does, so without this a signed-out visitor's first connect worked and
+    // every reconnect after a connection drop was refused "because user is unauthorized". An invocation
+    // is decided by the path of the connection's own request, the same path the connection itself was
+    // admitted on. .NET 10 never ran the fallback for a hub invocation, so that line is unchanged.
+    private bool IsExemptPath(object? resource)
+    {
+        var httpContext = resource switch
+        {
+            HttpContext http => http,
+            HubInvocationContext invocation => invocation.Context.GetHttpContext(),
+            _ => null,
+        };
+
+        return httpContext is not null && IsExemptRequestPath(httpContext.Request.Path);
+    }
+#else
     private bool IsExemptPath(object? resource)
     {
         if (resource is not HttpContext httpContext)
@@ -99,10 +122,12 @@ public sealed class FallbackAuthorizationHandler(IOptions<FallbackAuthorizationO
             return false;
         }
 
-        var path = httpContext.Request.Path;
+        return IsExemptRequestPath(httpContext.Request.Path);
+    }
+#endif
 
-        return options.Value.ExemptPathPrefixes
+    private bool IsExemptRequestPath(PathString path) =>
+        options.Value.ExemptPathPrefixes
             .Where(prefix => !string.IsNullOrEmpty(prefix))
             .Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
-    }
 }

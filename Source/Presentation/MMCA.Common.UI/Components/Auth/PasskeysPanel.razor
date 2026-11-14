@@ -37,7 +37,7 @@
                         @context.Name
                     }
                 </MudTd>
-                <MudTd DataLabel="@L["Passkeys.Column.Created"]">@context.CreatedOn.ToString("d", System.Globalization.CultureInfo.CurrentCulture)</MudTd>
+                <MudTd DataLabel="@L["Passkeys.Column.Created"]">@ViewerTime.Format(context.CreatedOn, "d")</MudTd>
                 <MudTd DataLabel="@L["Passkeys.Column.LastUsed"]">@DescribeLastUsed(context)</MudTd>
                 <MudTd>
                     @if (_renamingId == context.Id)

@@ -1,1 +1,11 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+*REMOVED*MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.ErrorCode.get -> string?
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Succeeded.get -> bool
+MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!>!
+static MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Failed(string? errorCode = null) -> MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!
+static MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Success.get -> MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!
+override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!

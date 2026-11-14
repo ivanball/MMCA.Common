@@ -32,6 +32,19 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking:** `IExternalAuthBroker.SignInAsync` (MMCA.Common.UI, `MMCA.Common.UI.Services.Capabilities.Auth`) returns `Task<ExternalSignInResult>` instead of `Task<bool>`, so a provider sign-in the server refused carries the server's error code to the Login page. `UnavailableExternalAuthBroker` and `MauiExternalAuthBroker` change with it. Only a consumer that implements or calls the broker is affected (none of ADC, Store or Helpdesk does): return `ExternalSignInResult.Success` or `ExternalSignInResult.Failed(errorCode)`, and read `Succeeded` where the `bool` was read.
+
+| Old | New |
+|---|---|
+| `Task<bool> SignInAsync(string provider, CancellationToken)` | `Task<ExternalSignInResult> SignInAsync(string provider, CancellationToken)` |
+| `return true;` (signed in) | `return ExternalSignInResult.Success;` |
+| `return false;` (not signed in) | `return ExternalSignInResult.Failed(serverErrorCodeOrNull);` |
+| `if (await broker.SignInAsync(p))` | `if ((await broker.SignInAsync(p)).Succeeded)` |
+
+**Not breaking, but adopt it:** to keep `/Error` static after the interactive router takes over, render `Routes` and `HeadOutlet` in `App.razor` with `E2eRenderMode.Resolve(Configuration, HttpContext)` (a `[CascadingParameter] HttpContext`) instead of `E2eRenderMode.Resolve(Configuration)`.
+
 ## [1.289.0] - 2026-11-12
 
 **Breaking (MMCA.Common.Aspire.Hosting):** `WithE2eForceServer(bool unlessAlso)`, `WithE2eRegistrationThrottleLift(bool alsoLiftWhen)` and `WithE2eGatewayRateLimitLift(bool alsoLiftWhen)` lose their parameter; the helpers read `E2E_FORCE_WASM` themselves. Fix: delete the argument; replace an inline `E2E_FORCE_WASM` parse with `ui.WithE2eForceWebAssembly()`; make App.razor use `E2eRenderMode.Resolve(Configuration)`.

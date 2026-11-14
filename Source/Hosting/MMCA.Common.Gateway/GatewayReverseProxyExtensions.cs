@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -103,6 +104,9 @@ public static class GatewayReverseProxyExtensions
         {
             AddConnectRetry(builder.Services);
         }
+
+        // Post-configured, so it wraps whatever selector the host's own ConfigureKestrel set.
+        builder.Services.AddOptions<KestrelServerOptions>().PostConfigure(GatewayHeaderEncoding.Apply);
 
         return builder
             .AddConfigFilter<GatewayClusterProfileConfigFilter>()
