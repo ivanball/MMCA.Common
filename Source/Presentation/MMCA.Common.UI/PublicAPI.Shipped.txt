@@ -1157,12 +1157,15 @@ MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.GetAsync(Syst
 MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.IsAutofillAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.IsAvailable.get -> bool
 MMCA.Common.UI.Services.Capabilities.Auth.BrowserPasskeyCapability.StartAutofillAsync(System.Text.Json.JsonElement options, System.Func<System.Text.Json.JsonElement, System.Threading.Tasks.Task!>! onCredential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.ErrorCode.get -> string?
+MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Succeeded.get -> bool
 MMCA.Common.UI.Services.Capabilities.Auth.IBiometricAuthenticator
 MMCA.Common.UI.Services.Capabilities.Auth.IBiometricAuthenticator.AuthenticateAsync(string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.IBiometricAuthenticator.IsAvailableAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker
 MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.IsAvailable.get -> bool
-MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!>!
 MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability
 MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.CancelAutofillAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Auth.IPasskeyCapability.CreateAsync(System.Text.Json.JsonElement options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement?>!
@@ -1176,7 +1179,7 @@ MMCA.Common.UI.Services.Capabilities.Auth.NullBiometricAuthenticator.IsAvailable
 MMCA.Common.UI.Services.Capabilities.Auth.NullBiometricAuthenticator.NullBiometricAuthenticator() -> void
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.IsAvailable.get -> bool
-MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!>!
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.UnavailableExternalAuthBroker() -> void
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailablePasskeyCapability.CancelAutofillAsync() -> System.Threading.Tasks.Task!
@@ -1825,6 +1828,7 @@ override MMCA.Common.UI.Common.NavItem.ToString() -> string!
 override MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auditing.AuditHistoryPanel.OnParametersSet() -> void
 override MMCA.Common.UI.Components.Auth.PasskeySignInButton.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.PasskeysPanel.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Auth.RedirectToLogin.OnInitialized() -> void
 override MMCA.Common.UI.Components.Auth.SignInHistoryTable.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
@@ -1988,6 +1992,8 @@ static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Acquired(string! acc
 static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.NoSession.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
 static MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition.Unavailable.get -> MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!
 static MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup.WarmAsync(System.IServiceProvider! services) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Failed(string? errorCode = null) -> MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!
+static MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult.Success.get -> MMCA.Common.UI.Services.Capabilities.Auth.ExternalSignInResult!
 static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddBrowserDeviceCapabilities(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabilityDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.operator !=(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? right) -> bool
