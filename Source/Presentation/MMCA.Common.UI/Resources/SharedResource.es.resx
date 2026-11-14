@@ -184,6 +184,9 @@
   <data name="Page.Forbidden.Message" xml:space="preserve">
     <value>Ha iniciado sesión, pero no tiene permiso para ver esta página. Si cree que es un error, contacte con un administrador.</value>
   </data>
+  <data name="Page.Forbidden.SignedOutMessage" xml:space="preserve">
+    <value>Es necesario iniciar sesión para ver esta página.</value>
+  </data>
   <data name="Reconnect.RetrySuffix" xml:space="preserve">
     <value>segundos.</value>
   </data>

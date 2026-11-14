@@ -5,10 +5,21 @@
     protected override void OnInitialized()
     {
         var current = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
-        var safeReturnUrl = ReturnUrlProtector.Sanitize(current, "/");
-        var target = string.Equals(safeReturnUrl, "/", StringComparison.Ordinal)
+        Navigation.NavigateTo(LoginPathFor(current), forceLoad: true);
+    }
+
+    /// <summary>
+    /// The login route that returns to <paramref name="returnUrl"/> after sign-in: the bare
+    /// <c>/login</c> when the target is home, missing or unsafe (see <see cref="ReturnUrlProtector"/>).
+    /// Shared with the signed-out view of <c>Forbidden</c> so both build the link one way.
+    /// </summary>
+    /// <param name="returnUrl">The base-relative path to come back to, or <see langword="null"/>.</param>
+    /// <returns>The login path, with an escaped <c>returnUrl</c> query when there is one.</returns>
+    internal static string LoginPathFor(string? returnUrl)
+    {
+        var safeReturnUrl = ReturnUrlProtector.Sanitize(returnUrl, "/");
+        return string.Equals(safeReturnUrl, "/", StringComparison.Ordinal)
             ? "/login"
             : $"/login?returnUrl={Uri.EscapeDataString(safeReturnUrl)}";
-        Navigation.NavigateTo(target, forceLoad: true);
     }
 }
