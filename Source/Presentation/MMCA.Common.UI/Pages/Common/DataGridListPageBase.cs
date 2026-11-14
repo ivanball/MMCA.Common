@@ -121,14 +121,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private IJSObjectReference? _scrollModule;
     private PersistingComponentStateSubscription? _persistenceSubscription;
     private GridData<TDto>? _persistedGridData;
-
-    // The page and size the prerender fetched the persisted rows for: they are handed back only to an
-    // interactive load asking for that same page, never under another page's pager (Run 17 O-85).
-    private (int Page, int PageSize) _persistedGridPage;
     private GridData<TDto>? _lastSuccessfulGridData;
-
-    // The page and size of the rows the grid holds now (the latest successful paged load).
-    private (int Page, int PageSize) _lastLoadedPage = (-1, 0);
 
     // The newest paged load; a superseded LoadServerDataAsync call returns this load's result.
     private Task<GridData<TDto>>? _newestPagedLoad;
@@ -222,7 +215,6 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (ApplicationState.TryTakeFromJson<PersistedGridState>(persistKey, out var restored) && restored is not null)
         {
             _persistedGridData = new GridData<TDto> { Items = restored.Items, TotalItems = restored.TotalItems };
-            _persistedGridPage = (restored.Page, restored.PageSize);
         }
 
         // An explicit render mode is required: this page inherits its render mode from
@@ -240,9 +232,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 // persisted and the first interactive load fetches, as it does without a prerender.
                 if (_lastSuccessfulGridData is not null)
                 {
-                    ApplicationState.TryPersistAsJsonWithinBudget(
-                        persistKey,
-                        new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems, _lastLoadedPage.Page, _lastLoadedPage.PageSize));
+                    ApplicationState.TryPersistAsJsonWithinBudget(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
                 }
 
                 return Task.CompletedTask;
@@ -650,17 +640,27 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// Re-restores the grid's <c>CurrentPage</c> from <see cref="_savedPage"/> after the
     /// <c>RowsPerPage</c> parameter setter has fired and clobbered it to 0 as a side effect.
     /// Setting <c>CurrentPage</c> from outside the component is normally flagged by the Blazor
-    /// analyzer (BL0005), but the setter is well-behaved (updates the field, fires the change
-    /// callback, and triggers a re-fetch) and this is the only mechanism MudDataGrid v9 exposes
-    /// for programmatically navigating to an arbitrary page.
+    /// analyzer (BL0005), but it is the only mechanism MudDataGrid v9 exposes for programmatically
+    /// navigating to an arbitrary page.
+    /// <para>
+    /// The setter starts a load only once the grid's FIRST load has completed (MudDataGrid sets its
+    /// first-rendered flag after that load). A page whose first load is still running here (one that
+    /// awaits lookups in <see cref="OnBeforeFetchAsync"/>, or a slow network) got the restored pager
+    /// over the first page's rows, and that load saved <c>p=0</c> over the URL (Run 17 O-85). So the
+    /// caller reloads whenever this moved the page; the reload cancels the stale first load.
+    /// </para>
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism and is well-behaved.")]
-    private void RestoreCurrentPageAfterRowsPerPageReset()
+    /// <returns><see langword="true"/> when the grid's page was moved, so the caller reloads it.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism.")]
+    private bool RestoreCurrentPageAfterRowsPerPageReset()
     {
         if (_savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
         {
             grid.CurrentPage = _savedPage;
+            return true;
         }
+
+        return false;
     }
 
     private static bool HasListPageState(ListPageState state) =>
@@ -715,28 +715,33 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // The buggy RowsPerPage parameter setter in MudDataGrid v9 (it always uses
         // resetPage: true) clobbers CurrentPage to 0 as a side effect when CurrentPage was
         // non-zero. We re-restore CurrentPage here using the cached _savedPage so
-        // page-number restoration still works alongside rows-per-page restoration.
-        RestoreCurrentPageAfterRowsPerPageReset();
+        // page-number restoration still works alongside rows-per-page restoration. Moving the page
+        // reloads: the setter does not while the grid's first load is still running.
+        needsReload |= RestoreCurrentPageAfterRowsPerPageReset();
 
-        // The pager shows the restored page while the grid holds another page's rows (Run 17 O-85:
-        // page 1's rows under a page-2 pager, and that load had saved p=0 over the URL's page). Reload
-        // so the rows, and the saved p, match the pager.
-        needsReload |= _savedPage > 0
-            && GridRef is { } pagedGrid
-            && pagedGrid.CurrentPage == _savedPage
-            && _lastLoadedPage.Page != _savedPage;
-
-        // A URL or saved sort the grid's default column sort shadowed: put it on the header (which
-        // reloads the grid). Otherwise, session restore changed pagination state after the grid's
-        // initial ServerData call already returned defaults: reload with the correct parameters.
+        // A URL or saved sort the grid's default column sort shadowed: put it on the header. Then reload
+        // when the restored page or a session restore changed what the grid's first load asked for.
         await ApplyRestoredSortOrReloadAsync(needsReload);
     }
 
-    /// <summary>Applies a pending restored sort to the grid, or reloads it when <paramref name="needsReload"/> asks.</summary>
+    /// <summary>Applies a pending restored sort to the grid, then reloads it when <paramref name="needsReload"/> asks.</summary>
     /// <param name="needsReload">Whether restored state changed after the grid's first fetch.</param>
+    /// <remarks>
+    /// Applying the sort does not stand in for the reload: MudDataGrid's <c>SetSortAsync</c>, like its
+    /// <c>CurrentPage</c> setter, loads only once the grid's first load has completed, and this runs
+    /// while that load is often still in flight. Counting the sort as the reload left a restored page
+    /// unloaded whenever the URL also carried a sort (Run 17 O-85). The in-flight load already sends the
+    /// restored sort (see <c>ResolveSortParameters</c>), so a sort alone needs no reload.
+    /// </remarks>
     private async Task ApplyRestoredSortOrReloadAsync(bool needsReload)
     {
-        if (GridRef is { } grid && !await ApplyRestoredSortToGridAsync(grid) && needsReload)
+        if (GridRef is not { } grid)
+        {
+            return;
+        }
+
+        await ApplyRestoredSortToGridAsync(grid);
+        if (needsReload)
         {
             await grid.ReloadServerData();
         }
@@ -924,16 +929,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         // Return SSR-persisted data on the first interactive call, avoiding a redundant
         // API round-trip that would be immediately canceled by the MudDataGrid pager init.
-        // Only for the page and size it was fetched for: the prerender can load a different page than
-        // the interactive grid asks for, and those rows under this pager showed one page's rows under
-        // another page's numbers.
-        var persisted = _persistedGridData;
-        _persistedGridData = null;
-        if (persisted is not null && _persistedGridPage == (state.Page, state.PageSize))
+        if (_persistedGridData is not null)
         {
-            var cached = persisted;
+            var cached = _persistedGridData;
+            _persistedGridData = null;
             _lastSuccessfulGridData = cached;
-            _lastLoadedPage = (state.Page, state.PageSize);
 
             // This call is now the latest load and it is already finished; a load it superseded
             // leaves the loading state to its successor (see RunFetchAsync).
@@ -1000,7 +1000,6 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
-                _lastLoadedPage = (state.Page, state.PageSize);
                 EmptyConfirmed = page.TotalItems == 0;
                 SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
                 return gridData;
@@ -1702,5 +1701,5 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// Serializable snapshot of grid data for <see cref="PersistentComponentState"/>
     /// transfer from server pre-render to interactive mode.
     /// </summary>
-    private sealed record PersistedGridState(List<TDto> Items, int TotalItems, int Page, int PageSize);
+    private sealed record PersistedGridState(List<TDto> Items, int TotalItems);
 }

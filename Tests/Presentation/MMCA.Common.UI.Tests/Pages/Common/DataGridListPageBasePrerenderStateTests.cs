@@ -119,7 +119,7 @@ public sealed class DataGridListPageBasePrerenderStateTests : BunitTestBase
     [Fact]
     public async Task FirstInteractiveLoad_WithPersistedStateWithinTheBudget_ReturnsItWithoutFetching()
     {
-        _state.Persist(PersistKey, new { Items = new[] { new WidgetRow(7, "Restored") }, TotalItems = 42, Page = 0, PageSize = 100 });
+        _state.Persist(PersistKey, new { Items = new[] { new WidgetRow(7, "Restored") }, TotalItems = 42 });
 
         var cut = Render<TestGridPage>();
         var data = await cut.InvokeAsync(cut.Instance.LoadAsync);
@@ -127,22 +127,5 @@ public sealed class DataGridListPageBasePrerenderStateTests : BunitTestBase
         cut.Instance.Fetches.Should().Be(0, "the restored prerender page answers the first interactive load");
         data.TotalItems.Should().Be(42);
         data.Items.Should().Equal(new WidgetRow(7, "Restored"));
-    }
-
-    /// <summary>
-    /// Run 17 O-85: rows the prerender fetched for one page never answer an interactive load for
-    /// another, which showed page 1's rows under a page-2 pager.
-    /// </summary>
-    [Fact]
-    public async Task FirstInteractiveLoad_ForAnotherPageThanThePersistedOne_Fetches()
-    {
-        _state.Persist(PersistKey, new { Items = new[] { new WidgetRow(7, "Page one") }, TotalItems = 42, Page = 1, PageSize = 100 });
-
-        var cut = Render<TestGridPage>();
-        cut.Instance.Rows = [new WidgetRow(1, "Fetched")];
-        var data = await cut.InvokeAsync(cut.Instance.LoadAsync);
-
-        cut.Instance.Fetches.Should().Be(1, "the persisted rows belong to another page");
-        data.Items.Should().Equal(new WidgetRow(1, "Fetched"));
     }
 }

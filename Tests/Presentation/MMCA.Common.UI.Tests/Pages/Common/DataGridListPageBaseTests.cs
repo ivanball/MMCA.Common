@@ -1134,6 +1134,45 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.VirtualizedItemSizeNow.Should().Be(52);
     }
 
+    // -- Run 17 O-85: a page restored while the grid's first load is still running is loaded --
+    // MudDataGrid's CurrentPage setter starts a load only after its first load completes, so restoring
+    // ?p=1 under a slow first load (a page awaiting lookups) left page 1's rows under the page-2 pager.
+    // SetSortAsync is gated the same way, so a URL that also carries a sort (the shape that failed) must
+    // still reload: applying the sort does not load the restored page.
+    [Theory]
+    [InlineData("/widgets?p=1&ps=10")]
+    [InlineData("/widgets?p=1&ps=10&s=Name&sd=desc")]
+    public async Task RestoringAPage_WhileTheGridsFirstLoadIsStillRunning_LoadsThatPage(string url)
+    {
+        Services.GetRequiredService<NavigationManager>().NavigateTo(url);
+        var requestedPages = new List<int>();
+        var firstLoad = new TaskCompletionSource<GridData<WidgetRow>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var gridCut = Render<MudDataGrid<WidgetRow>>(ps => ps
+            .Add(g => g.Columns, builder =>
+            {
+                builder.OpenComponent<PropertyColumn<WidgetRow, string>>(0);
+                builder.AddAttribute(1, nameof(PropertyColumn<,>.Property), (System.Linq.Expressions.Expression<Func<WidgetRow, string>>)(row => row.Name));
+                builder.AddAttribute(2, nameof(PropertyColumn<,>.Sortable), true);
+                builder.CloseComponent();
+            })
+            .Add(
+            g => g.ServerData,
+            (state, _) =>
+            {
+                requestedPages.Add(state.Page);
+                return requestedPages.Count == 1
+                    ? firstLoad.Task
+                    : Task.FromResult(new GridData<WidgetRow> { Items = [], TotalItems = 30 });
+            }));
+        var grid = gridCut.Instance;
+
+        Render<GridBackedTestPage>(ps => ps.Add(p => p.Grid, grid));
+        firstLoad.SetResult(new GridData<WidgetRow> { Items = [], TotalItems = 30 });
+
+        await gridCut.WaitForAssertionAsync(() => requestedPages.Should().Equal(0, 1));
+        grid.CurrentPage.Should().Be(1);
+    }
+
     [Fact]
     public void RestoreGridState_WhenPaged_RestoresRowsPerPageOntoTheGrid()
     {
