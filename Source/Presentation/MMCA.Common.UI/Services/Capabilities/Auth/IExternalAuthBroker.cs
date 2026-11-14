@@ -15,7 +15,8 @@ public interface IExternalAuthBroker
     /// <summary>
     /// Runs the full brokered flow for <paramref name="provider"/> (e.g. <c>google</c>,
     /// <c>github</c>): system-browser challenge, callback capture, code exchange, token
-    /// storage. Returns whether the user ended up authenticated.
+    /// storage. Returns whether the user ended up authenticated and, when the server refused the
+    /// sign-in, its error code.
     /// </summary>
-    Task<bool> SignInAsync(string provider, CancellationToken cancellationToken = default);
+    Task<ExternalSignInResult> SignInAsync(string provider, CancellationToken cancellationToken = default);
 }

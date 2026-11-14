@@ -395,6 +395,23 @@ h1:focus:not(:focus-visible) {
         overflow-y: visible;
     }
 
+    /* The account tables (signed-in devices, sign-in history) stack into label/value rows on a
+       phone. A stacked row is one flex line, so the nowrap "this sign-in" chip and a long Spanish
+       label pushed the row past a 288 px card into an in-card sideways scroll (Run 17 A-54). Let the
+       value wrap under its label instead, and let the chip and long values break. */
+    .mmca-auth-table .mud-table-cell {
+        flex-wrap: wrap;
+        column-gap: 0.5rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .mmca-auth-table .mud-chip {
+        max-width: 100%;
+        height: auto;
+        white-space: normal;
+    }
+
     /* Let pager controls wrap on narrow screens */
     /* !important kept on the padding: MudBlazor's narrow-screen pager rule
        (.mud-table .mud-table-pagination .mud-table-pagination-toolbar) sets its own padding at a

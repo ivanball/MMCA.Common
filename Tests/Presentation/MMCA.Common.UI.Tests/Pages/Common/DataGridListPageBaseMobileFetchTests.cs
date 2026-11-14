@@ -672,7 +672,7 @@ public sealed class DataGridListPageBaseMobileFetchTests : BunitTestBase
     [Fact]
     public async Task GridLoad_PersistedPrerenderData_DoesNotRunBeforeFetch()
     {
-        _state.Persist(PersistKey, new { Items = new[] { new WidgetRow(7, "Restored") }, TotalItems = 42 });
+        _state.Persist(PersistKey, new { Items = new[] { new WidgetRow(7, "Restored") }, TotalItems = 42, Page = 0, PageSize = 10 });
         var cut = Render<TestGridPage>();
         var calls = new List<FetchCall>();
         cut.Instance.Fetch = Recording(calls);

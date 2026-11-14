@@ -44,20 +44,45 @@ async function retry() {
         // - false to mean we reached the server, but it rejected the connection (e.g., unknown circuit ID)
         // - exception to mean we didn't reach the server (this can be sync or async)
         const successful = await Blazor.reconnect();
-        if (!successful) {
-            // We have been able to reach the server, but the circuit is no longer available.
-            // We'll reload the page so the user can continue using the app as quickly as possible.
-            const resumeSuccessful = await Blazor.resumeCircuit();
-            if (!resumeSuccessful) {
-                location.reload();
-            } else {
-                reconnectModal.close();
-            }
+
+        // A true that leaves the dialog open is not a rejoin either: once the server has refused
+        // the circuit on a connection that stayed up, reconnect() answers true without rejoining
+        // anything (the "hide" state only arrives when the circuit really comes back). In both
+        // cases we reached the server but the circuit is no longer available, so resume it or
+        // reload the page so the user can continue as quickly as possible.
+        if (!successful || reconnectModal.open) {
+            await resumeOrReload();
         }
     } catch (err) {
-        // We got an exception, server is currently unavailable
-        document.addEventListener("visibilitychange", retryWhenDocumentBecomesVisible);
+        if (isRefusedByServer(err)) {
+            // The server answered and refused the rejoin (for example "because user is
+            // unauthorized"). Retrying would ask the same question again, so resume or reload.
+            await resumeOrReload();
+        } else {
+            // We got an exception, server is currently unavailable
+            document.addEventListener("visibilitychange", retryWhenDocumentBecomesVisible);
+        }
     }
+}
+
+// A server that refused a hub invocation answers with an error naming it ("Failed to invoke
+// 'ConnectCircuit' because user is unauthorized"); a transport failure (server unreachable) never does.
+function isRefusedByServer(err) {
+    const message = err && err.message ? String(err.message) : String(err ?? "");
+    return /Failed to invoke|unauthorized/i.test(message);
+}
+
+async function resumeOrReload() {
+    try {
+        if (await Blazor.resumeCircuit()) {
+            reconnectModal.close();
+            return;
+        }
+    } catch {
+        // A refused or failed resume leaves a reload as the way back.
+    }
+
+    location.reload();
 }
 
 async function resume() {

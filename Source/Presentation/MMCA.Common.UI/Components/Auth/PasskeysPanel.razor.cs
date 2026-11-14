@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
@@ -7,6 +6,7 @@ using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Culture;
 
 namespace MMCA.Common.UI.Components.Auth;
 
@@ -44,6 +44,10 @@ public partial class PasskeysPanel
 
     [Inject] private IToastService Toast { get; set; } = default!;
 
+    // Added and last-used dates render as the VIEWER's local date, like the sign-in history, not the
+    // UTC date (Run 17 U-60: 11/14 shown at 22:20 EST on 11/13).
+    [Inject] private ViewerTimeZone ViewerTime { get; set; } = default!;
+
     [Inject] private IStringLocalizer<PasskeysPanel> L { get; set; } = default!;
 
     /// <inheritdoc />
@@ -62,6 +66,16 @@ public partial class PasskeysPanel
 
     /// <inheritdoc />
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The dates render on the viewer's clock; the zone is only readable once JS is available.
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.LifetimeToken()))
+        {
+            StateHasChanged();
+        }
+    }
 
     private async Task LoadAsync()
     {
@@ -227,6 +241,6 @@ public partial class PasskeysPanel
 
     private string DescribeLastUsed(PasskeyResponse passkey) =>
         passkey.LastUsedOn is { } lastUsed
-            ? lastUsed.ToString("d", CultureInfo.CurrentCulture)
+            ? ViewerTime.Format(lastUsed, "d")
             : L["Passkeys.NeverUsed"].Value;
 }

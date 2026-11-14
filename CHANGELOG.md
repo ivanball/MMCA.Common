@@ -4,6 +4,31 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+The ten defects of ADC manual test Run 17.
+
+**Breaking:** `IExternalAuthBroker.SignInAsync` (MMCA.Common.UI, `MMCA.Common.UI.Services.Capabilities.Auth`) returns `Task<ExternalSignInResult>` instead of `Task<bool>`, so a provider sign-in the server refused carries the server's error code to the Login page. `UnavailableExternalAuthBroker` and `MauiExternalAuthBroker` change with it. Only a consumer that implements or calls the broker is affected (none of ADC, Store or Helpdesk does): return `ExternalSignInResult.Success` or `ExternalSignInResult.Failed(errorCode)`, and read `Succeeded` where the `bool` was read. See [UPGRADING.md](UPGRADING.md).
+
+### Added
+
+- **`ExternalSignInResult`** (MMCA.Common.UI): `Succeeded`, `ErrorCode`, `Success` and `Failed(errorCode)`.
+- **`E2eRenderMode.Resolve(IConfiguration, HttpContext)`** (MMCA.Common.UI.Web): `null` (static rendering) for a page marked `[ExcludeFromInteractiveRouting]`, otherwise the head's render mode. Apply it to `Routes` and `HeadOutlet` in `App.razor` (with a cascading `HttpContext`) so such a page stays static.
+
+### Fixed
+
+- **A signed-out visitor in Server mode reconnects after a connection drop on .NET 11** (MMCA.Common.API). .NET 11 SignalR runs the fallback authorization policy for a hub method that carries any attribute, with a `HubInvocationContext` resource, so Blazor's `ConnectCircuit` was refused "because user is unauthorized" and the reconnect dialog froze. `FallbackAuthorizationHandler` now exempts a hub invocation whose connection path is under an exempt prefix (`/_blazor`), exactly as it exempts the connection itself. The .NET 10 line is unchanged (it never ran the fallback per invocation).
+- **The reconnect dialog falls back to resume, then reload, when the server refuses a rejoin** (MMCA.Common.UI `ReconnectModal.razor.js`) instead of freezing; a server it cannot reach still waits for the next retry.
+- **`/Error` stays static after the interactive router takes over** (MMCA.Common.UI.Web): the page is `[ExcludeFromInteractiveRouting]`, so it keeps "Error." instead of flipping to "Page Not Found" (needs the `E2eRenderMode.Resolve` overload above in the host's `App.razor`).
+- **A form body over the endpoint's request size limit answers 413** (MMCA.Common.API): a global resource filter, ordered after `[RequestSizeLimit]` and `[RequestFormLimits]`, reads the form before model binding for an action that binds a form or a form file, so the server's oversize refusal reaches `GlobalExceptionHandler` ("Payload Too Large") instead of becoming the 400 model-state error "Failed to read the request form". A malformed form still gets the 400 it got, and an action that binds no form is not touched.
+- **List pages keep the page restored from a URL or the saved state** (MMCA.Common.UI `DataGridListPageBase`): prerendered rows answer only the interactive load for the page and size they were fetched for, and a grid whose pager shows the restored page while it holds another page's rows reloads, so `p` stays in the URL.
+- **Widening from the phone cards back to the grid keeps the page, the page size and the sort** (MMCA.Common.UI `DataGridListPageBase`), and the URL keeps `p` and `ps`.
+- **The gateway accepts a non-ASCII `X-Correlation-ID`** (MMCA.Common.Gateway): `AddMmcaGateway` makes Kestrel read that one header as Latin-1 (chained in front of any selector the host set), so the correlation middleware replaces it with a generated id instead of Kestrel answering an empty 400.
+- **The sign-in history and signed-in devices tables fit a phone card** (MMCA.Common.UI): their stacked rows wrap the value and the "this sign-in" chip, so Spanish at 320 px has no sideways scroll inside the card.
+- **Passkey "Added" and "Last used" show the viewer's local date** (MMCA.Common.UI `PasskeysPanel`), through `ViewerTimeZone` like the sign-in history, not the UTC date.
+- **A MAUI relaunch right after a theme switch paints the new theme from the first frame** (MMCA.Common.UI.Maui, MMCA.Common.UI): `MainPageBase` hands the natively saved mode to the WebView as a `MmcaTheme/dark|light` user agent token on Android, and `theme-prepaint.js` prefers it on the session's first page over the lazily flushed WebView storage.
+- **A MAUI provider sign-in the server refuses shows the mapped refusal text** (MMCA.Common.UI, MMCA.Common.UI.Maui), for example the unverified-email wording, as the web flow does, instead of the generic "External sign-in did not complete".
+
 ## [1.290.0] - 2026-11-13
 
 The 2026-11-13 NuGet audit plus one new architecture fitness base. No breaking change.

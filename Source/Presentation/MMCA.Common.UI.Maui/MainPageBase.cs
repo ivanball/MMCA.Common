@@ -77,12 +77,26 @@ public abstract class MainPageBase : ContentPage
 
         var tokens = string.Concat(
             SystemBarToken(resources, "status_bar_height", "MmcaStatusBar"),
-            SystemBarToken(resources, "navigation_bar_height", "MmcaNavigationBar"));
+            SystemBarToken(resources, "navigation_bar_height", "MmcaNavigationBar"),
+            ThemeToken());
         if (tokens.Length > 0)
         {
             webView.Settings.UserAgentString = webView.Settings.UserAgentString + tokens;
         }
     }
+
+    /// <summary>
+    /// The user agent token for the Day/Dark mode saved natively (<c>MmcaTheme/dark|light</c>), or empty
+    /// on a first launch. <c>NativeThemeSync</c> saves it on every change, while the WebView flushes its
+    /// own storage lazily, so after a quick kill this is the value saved last: <c>theme-prepaint.js</c>
+    /// paints the relaunch's first frame from it (Run 17 X-27).
+    /// </summary>
+    private static string ThemeToken() => MauiThemeStore.ReadStoredIsDarkMode() switch
+    {
+        true => " MmcaTheme/dark",
+        false => " MmcaTheme/light",
+        null => string.Empty,
+    };
 
     /// <summary>The user agent token for one system bar, or empty when the platform has no such dimension.</summary>
     private static string SystemBarToken(Android.Content.Res.Resources resources, string dimensionName, string tokenName)
