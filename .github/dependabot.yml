@@ -84,6 +84,21 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Xamarin.AndroidX.Biometric"
         versions: [">= 1.1.0.31"]
+      # EF Core majors are taken by hand, per framework. Every EF Core package reads one
+      # MmcaEfCoreVersion property whose default group feeds the net10.0 line, and a new EF Core
+      # major supports only the matching new framework (EF Core 11 is net11.0 only), so the bump
+      # Dependabot proposes fails net10.0 restore with NU1202 (#713). Adopting a new major means
+      # setting MmcaEfCoreVersion in the net11.0 group of Directory.Packages.props, in its own
+      # release.
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      # WebUtilities is a security floor on the 2.3.x line, not a free-standing dependency: it lifts
+      # the transitive pulled by Microsoft.AspNetCore.Mvc.Core 2.3.14 past GHSA-6527-9fp8-r4x6. A
+      # current-line major would mix into that 2.3.x ASP.NET Core closure in MMCA.Common.UI for no
+      # gain (#712). The pin is dropped when Mvc.Core itself depends on 2.3.14 or later. See
+      # Directory.Packages.props.
+      - dependency-name: "Microsoft.AspNetCore.WebUtilities"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
