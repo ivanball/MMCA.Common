@@ -1880,6 +1880,7 @@ override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.ToString() -> string!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
+override MMCA.Common.UI.Pages.Forbidden.OnParametersSetAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Home.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnInitializedAsync() -> System.Threading.Tasks.Task!
