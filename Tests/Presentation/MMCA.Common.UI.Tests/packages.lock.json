@@ -4,9 +4,9 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.10.2, )",
-        "resolved": "1.10.2",
-        "contentHash": "f/5wfCkGt6eDs2CEJSXZWKmuvOd58mSkN/fyZ88X9btackH2AhXxR6DrTRdak7pK5/pP0EZhHDE8EupnNJgawg=="
+        "requested": "[1.10.3, )",
+        "resolved": "1.10.3",
+        "contentHash": "HF2owdhRhy84PJ7dk6e7Olc8D3S8RhU+BSXgCpTcafODrHzUUqUquCUWrM81/PeKHKlFA86LCdZBAQCQRK2y7w=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -737,7 +737,7 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.10.2, )",
+          "AngleSharp": "[1.10.3, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Moq": "[4.21.0, )",
@@ -966,9 +966,9 @@
     "net11.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.10.2, )",
-        "resolved": "1.10.2",
-        "contentHash": "f/5wfCkGt6eDs2CEJSXZWKmuvOd58mSkN/fyZ88X9btackH2AhXxR6DrTRdak7pK5/pP0EZhHDE8EupnNJgawg=="
+        "requested": "[1.10.3, )",
+        "resolved": "1.10.3",
+        "contentHash": "HF2owdhRhy84PJ7dk6e7Olc8D3S8RhU+BSXgCpTcafODrHzUUqUquCUWrM81/PeKHKlFA86LCdZBAQCQRK2y7w=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -1593,7 +1593,7 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.10.2, )",
+          "AngleSharp": "[1.10.3, )",
           "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Moq": "[4.21.0, )",

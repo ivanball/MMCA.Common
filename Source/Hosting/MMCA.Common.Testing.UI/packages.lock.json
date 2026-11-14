@@ -4,9 +4,9 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.10.2, )",
-        "resolved": "1.10.2",
-        "contentHash": "f/5wfCkGt6eDs2CEJSXZWKmuvOd58mSkN/fyZ88X9btackH2AhXxR6DrTRdak7pK5/pP0EZhHDE8EupnNJgawg=="
+        "requested": "[1.10.3, )",
+        "resolved": "1.10.3",
+        "contentHash": "HF2owdhRhy84PJ7dk6e7Olc8D3S8RhU+BSXgCpTcafODrHzUUqUquCUWrM81/PeKHKlFA86LCdZBAQCQRK2y7w=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -288,9 +288,9 @@
     "net11.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.10.2, )",
-        "resolved": "1.10.2",
-        "contentHash": "f/5wfCkGt6eDs2CEJSXZWKmuvOd58mSkN/fyZ88X9btackH2AhXxR6DrTRdak7pK5/pP0EZhHDE8EupnNJgawg=="
+        "requested": "[1.10.3, )",
+        "resolved": "1.10.3",
+        "contentHash": "HF2owdhRhy84PJ7dk6e7Olc8D3S8RhU+BSXgCpTcafODrHzUUqUquCUWrM81/PeKHKlFA86LCdZBAQCQRK2y7w=="
       },
       "AwesomeAssertions": {
         "type": "Direct",

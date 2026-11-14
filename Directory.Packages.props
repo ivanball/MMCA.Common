@@ -389,7 +389,7 @@
          1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
          does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
          only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
-    <PackageVersion Include="AngleSharp" Version="1.10.2" />
+    <PackageVersion Include="AngleSharp" Version="1.10.3" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
