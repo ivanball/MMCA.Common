@@ -16,9 +16,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.339, )",
-        "resolved": "3.0.339",
-        "contentHash": "oB0KVTYO0CkqscgCp2Fce6Q4G9gIVvVy39ULQLU2eOJfTNWS63Lk7VZbgerx6XMdUxPC4bprv87r8f7EZfp6gQ=="
+        "requested": "[3.0.340, )",
+        "resolved": "3.0.340",
+        "contentHash": "0Dj49/kQSH0UgitHPNUH9o76+2Awo0TEvnOnSKaYG11vWdu85zmutX3es7ltfPeDddIzPx8mhjBVFq5LfrRmAQ=="
       },
       "Microsoft.Extensions.TimeProvider.Testing": {
         "type": "Direct",
@@ -677,7 +677,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, )",
+          "AWSSDK.Core": "[4.1.0.1, )",
           "AWSSDK.DynamoDBv2": "[4.1.0, )",
           "AWSSDK.RDS": "[4.1.0, )",
           "AWSSDK.S3": "[4.1.0, )",
@@ -809,9 +809,9 @@
       },
       "AWSSDK.Core": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "7a4eOI65Mn4dzc9kmRiI+y3EiS80NCMnu/j3ZR9H2dyO3d597eVPVV+ClzSFXnQkA0r8n2iig+Vg/Q/mozh5MQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "uihRnwZ5cljEk1g+SV6Bj7esrdZTS05sV5oKpKzAzja79hqqvfi8r6rP9UNt+cUvsT3VHu8YfKuK1fgGEIcs9Q==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
@@ -1256,9 +1256,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.339, )",
-        "resolved": "3.0.339",
-        "contentHash": "oB0KVTYO0CkqscgCp2Fce6Q4G9gIVvVy39ULQLU2eOJfTNWS63Lk7VZbgerx6XMdUxPC4bprv87r8f7EZfp6gQ=="
+        "requested": "[3.0.340, )",
+        "resolved": "3.0.340",
+        "contentHash": "0Dj49/kQSH0UgitHPNUH9o76+2Awo0TEvnOnSKaYG11vWdu85zmutX3es7ltfPeDddIzPx8mhjBVFq5LfrRmAQ=="
       },
       "Microsoft.Extensions.TimeProvider.Testing": {
         "type": "Direct",
@@ -1920,7 +1920,7 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, )",
+          "AWSSDK.Core": "[4.1.0.1, )",
           "AWSSDK.DynamoDBv2": "[4.1.0, )",
           "AWSSDK.RDS": "[4.1.0, )",
           "AWSSDK.S3": "[4.1.0, )",
@@ -2051,9 +2051,9 @@
       },
       "AWSSDK.Core": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "7a4eOI65Mn4dzc9kmRiI+y3EiS80NCMnu/j3ZR9H2dyO3d597eVPVV+ClzSFXnQkA0r8n2iig+Vg/Q/mozh5MQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "uihRnwZ5cljEk1g+SV6Bj7esrdZTS05sV5oKpKzAzja79hqqvfi8r6rP9UNt+cUvsT3VHu8YfKuK1fgGEIcs9Q==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
