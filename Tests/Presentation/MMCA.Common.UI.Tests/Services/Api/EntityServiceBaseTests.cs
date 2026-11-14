@@ -20,7 +20,7 @@ namespace MMCA.Common.UI.Tests.Services.Api;
 /// <para>
 /// Nothing here throws for a server answer: every outcome arrives as a <see cref="Result"/>, and the
 /// only exception that still escapes is the caller's own cancellation. Failure responses use 4xx
-/// codes only; 5xx would engage the class-level Polly retry backoff (2s/4s/8s).
+/// codes only; 5xx would engage the class-level Polly retry backoff (0.5s/1s/2s).
 /// </para>
 /// </summary>
 public sealed class EntityServiceBaseTests

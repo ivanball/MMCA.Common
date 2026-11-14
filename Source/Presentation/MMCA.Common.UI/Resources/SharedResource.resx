@@ -184,6 +184,9 @@
   <data name="Page.Forbidden.Message" xml:space="preserve">
     <value>You are signed in, but you do not have permission to view this page. If you believe this is a mistake, contact an administrator.</value>
   </data>
+  <data name="Page.Forbidden.SignedOutMessage" xml:space="preserve">
+    <value>You need to sign in to view this page.</value>
+  </data>
   <data name="Reconnect.RetrySuffix" xml:space="preserve">
     <value>seconds.</value>
   </data>

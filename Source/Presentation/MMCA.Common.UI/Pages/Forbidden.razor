@@ -1,7 +1,9 @@
 ﻿@page "/forbidden"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @layout MainLayout
 @inject IStringLocalizer<SharedResource> L
+@inject NavigationManager Navigation
 @attribute [AllowAnonymous]
 
 <PageTitle>@L["Page.Forbidden.Title"]</PageTitle>
@@ -13,12 +15,56 @@
        one, so the h1 was announcing as an alert and the page lost its level-one heading in the
        accessibility tree. *@
     <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2">@L["Page.Forbidden.Title"]</MudText>
-    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6" role="alert">
-        @L["Page.Forbidden.Message"]
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Home"
-               Href="/" Size="Size.Large">
-        @L["Page.BackToHome"]
-    </MudButton>
+    @if (_signedIn == true)
+    {
+        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6" role="alert">
+            @L["Page.Forbidden.Message"]
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Home"
+                   Href="/" Size="Size.Large">
+            @L["Page.BackToHome"]
+        </MudButton>
+    }
+    else if (_signedIn == false)
+    {
+        @* A signed-out visitor is not refused, only unidentified: say so and offer the sign-in that
+           brings them back, instead of telling them they are signed in. *@
+        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6" role="alert">
+            @L["Page.Forbidden.SignedOutMessage"]
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Login"
+                   Href="@_loginPath" Size="Size.Large">
+            @L["Auth.Login.SignIn"]
+        </MudButton>
+    }
 </MudContainer>
+
+@code {
+    private bool? _signedIn;
+    private string _loginPath = "/login";
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        // No cascading state means a host that renders this page outside its auth tree: keep the
+        // signed-in view, the case Routes and NotFound render this page for.
+        _signedIn = AuthenticationState is null
+            || (await AuthenticationState).User.Identity?.IsAuthenticated == true;
+
+        if (_signedIn == false)
+        {
+            // The route the 403 was re-executed from (NotFound renders this page under the original
+            // URL) is where sign-in should return; the bare /forbidden route itself is not.
+            var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var current = "/" + relative;
+            var pathEnd = relative.IndexOfAny(['?', '#']);
+            var path = pathEnd < 0 ? relative : relative[..pathEnd];
+            var isThisRoute = string.Equals(path.TrimEnd('/'), "forbidden", StringComparison.OrdinalIgnoreCase);
+            _loginPath = RedirectToLogin.LoginPathFor(isThisRoute ? null : current);
+        }
+    }
+}

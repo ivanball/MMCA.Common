@@ -240,7 +240,24 @@ public sealed class AuthenticatedServiceBaseRetryTests
             .Should().Be(TimeSpan.FromSeconds(20));
     }
 
-    // A 429 that names no delay keeps today's 2s/4s/8s backoff and all three retries.
+    // The shipped schedule: 0.5s, 1s, 2s plus under 250 ms of jitter each, so a blocked read waits
+    // under four seconds in all before it surfaces.
+    [Theory]
+    [InlineData(1, 500)]
+    [InlineData(2, 1000)]
+    [InlineData(3, 2000)]
+    public void DefaultBackoff_IsHalfASecondDoubling_PlusUnderAQuarterSecondOfJitter(int attempt, int baseMilliseconds)
+    {
+        for (var i = 0; i < 200; i++)
+        {
+            var delay = AuthenticatedServiceBase.DefaultBackoff(attempt);
+
+            delay.Should().BeGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(baseMilliseconds));
+            delay.Should().BeLessThan(TimeSpan.FromMilliseconds(baseMilliseconds + 250));
+        }
+    }
+
+    // A 429 that names no delay keeps the 0.5s/1s/2s backoff and all three retries.
     [Fact]
     public async Task RetryPolicy_A429WithoutRetryAfter_KeepsTheBackoff()
     {

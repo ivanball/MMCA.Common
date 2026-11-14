@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **`/forbidden` tells a signed-out visitor to sign in** (MMCA.Common.UI `Forbidden`): it reads the cascading authentication state, so a signed-out visitor sees "You need to sign in to view this page." and a Sign In button to `/login` (with a `returnUrl` back to the original page on a 403 re-execution) instead of "You are signed in, but you do not have permission". A signed-in visitor keeps the permission message and the home button.
+- **The support access log date filters use the viewer's days** (MMCA.Common.UI `SupportAccessLog`): From and To send the start of the picked day, and of the day after To, on the viewer's clock (`ViewerTimeZone`) converted to UTC, rather than UTC midnight; until the browser zone is known they stay UTC days.
+- **A blocked read gives up sooner** (MMCA.Common.UI `AuthenticatedServiceBase`, `IdempotentReadRetry`): the retry backoff is 0.5s, 1s, 2s plus up to 250 ms of jitter (three retries, under four seconds of waiting), so a failing lookup surfaces in seconds rather than spinning about 16. A 429 `Retry-After` is still waited out as before.
+
 ## [1.291.0] - 2026-11-14
 
 The ten defects of ADC manual test Run 17.

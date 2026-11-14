@@ -20,8 +20,9 @@ public abstract class AuthenticatedServiceBase(
 {
     /// <summary>
     /// Polly retry policy: 3 retries on <see cref="HttpRequestException"/> or a retryable response
-    /// status (see <c>IsRetryableResponse</c>), with exponential backoff (2s, 4s, 8s) plus up to
-    /// one second of random jitter so a fleet of clients does not re-converge on the same instant.
+    /// status (see <c>IsRetryableResponse</c>), with exponential backoff (0.5s, 1s, 2s) plus up to
+    /// 250 ms of random jitter so a fleet of clients does not re-converge on the same instant. The
+    /// schedule is short on purpose: a blocked read spins under four seconds before it surfaces.
     /// A 429 that names a <c>Retry-After</c> is waited out for exactly that long instead, and is not
     /// retried at all when it asks for more than <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/>.
     /// Every retried response is disposed; the caller owns the final one. A POST or PATCH response is
@@ -193,10 +194,15 @@ public abstract class AuthenticatedServiceBase(
 
 #pragma warning disable CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
 
-    /// <summary>The shipped backoff: 2s, 4s, 8s plus up to one second of jitter.</summary>
-    private static TimeSpan DefaultBackoff(int attempt) =>
-        TimeSpan.FromSeconds(Math.Pow(2, attempt))
-            + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+    /// <summary>
+    /// The shipped backoff: 0.5s, 1s, 2s for retries 1, 2 and 3, plus up to 250 ms of jitter.
+    /// Internal so a test can pin the schedule.
+    /// </summary>
+    /// <param name="attempt">The 1-based retry attempt.</param>
+    /// <returns>How long to wait before the next attempt.</returns>
+    internal static TimeSpan DefaultBackoff(int attempt) =>
+        TimeSpan.FromMilliseconds(500 * Math.Pow(2, attempt - 1))
+            + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250));
 #pragma warning restore CA5394
 
     /// <summary>

@@ -25,8 +25,9 @@ namespace MMCA.Common.UI.Pages.Administration;
 /// <para>
 /// Every string it renders is looked up in <see cref="Localizer"/> FIRST and falls back to
 /// <see cref="SupportAccessLogResources"/>, the <see cref="RoleAdminList"/> contract. The date filters
-/// are whole UTC days: From includes its day, To includes its day too (the request sends the next
-/// midnight as the exclusive bound).
+/// are whole days on the VIEWER's clock (<see cref="ViewerTimeZone"/>): From sends the start of its
+/// local day converted to UTC, and To includes its day too (the request sends the start of the next
+/// local day, in UTC, as the exclusive bound). Until the browser's zone is known the days are UTC.
 /// </para>
 /// </remarks>
 public partial class SupportAccessLog : ComponentBase, IDisposable
@@ -120,8 +121,25 @@ public partial class SupportAccessLog : ComponentBase, IDisposable
         _ => Color.Default,
     };
 
-    private static DateTime? StartOfUtcDay(DateTime? date) =>
-        date is { } d ? DateTime.SpecifyKind(d.Date, DateTimeKind.Utc) : null;
+    /// <summary>
+    /// The UTC instant the viewer's local day <paramref name="date"/> starts at, shifted by
+    /// <paramref name="addDays"/> whole local days first (so To's exclusive bound is the start of the
+    /// NEXT local day, which is not always 24 hours later across a daylight-saving change).
+    /// <see cref="ViewerTimeZone.Zone"/> is UTC until the browser answers, which keeps the UTC-day
+    /// behaviour then. <see cref="TimeZoneInfo.GetUtcOffset(DateTime)"/> never throws on a local
+    /// midnight a spring-forward skips: it returns the standard offset, which lands on the first
+    /// instant of that day.
+    /// </summary>
+    private DateTime? StartOfViewerDayUtc(DateTime? date, int addDays = 0)
+    {
+        if (date is not { } d)
+        {
+            return null;
+        }
+
+        var localMidnight = DateTime.SpecifyKind(d.Date.AddDays(addDays), DateTimeKind.Unspecified);
+        return new DateTimeOffset(localMidnight, ViewerTime.Zone.GetUtcOffset(localMidnight)).UtcDateTime;
+    }
 
     /// <summary>
     /// Resolves one key: the app's own localizer when it carries the key, otherwise this component's
@@ -156,8 +174,8 @@ public partial class SupportAccessLog : ComponentBase, IDisposable
         {
             Staff = string.IsNullOrWhiteSpace(_staffFilter) ? null : _staffFilter.Trim(),
             Viewed = string.IsNullOrWhiteSpace(_viewedFilter) ? null : _viewedFilter.Trim(),
-            From = StartOfUtcDay(_fromFilter),
-            To = StartOfUtcDay(_toFilter)?.AddDays(1),
+            From = StartOfViewerDayUtc(_fromFilter),
+            To = StartOfViewerDayUtc(_toFilter, addDays: 1),
             Status = _statusFilter,
         };
         _currentPage = 1;

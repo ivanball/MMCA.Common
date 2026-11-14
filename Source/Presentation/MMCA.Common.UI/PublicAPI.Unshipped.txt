@@ -1,1 +1,2 @@
 ﻿#nullable enable
+override MMCA.Common.UI.Pages.Forbidden.OnParametersSetAsync() -> System.Threading.Tasks.Task!
