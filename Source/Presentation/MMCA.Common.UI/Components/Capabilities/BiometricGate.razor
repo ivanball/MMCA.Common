@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject IAppLifecycleNotifier AppLifecycle
 @inject ILogger<BiometricGate> Logger
+@inject IJSRuntime JS
 @implements IDisposable
 @inject IStringLocalizer<BiometricGate> L
 
@@ -24,19 +25,23 @@
        walks straight out of the panel and onto the page underneath, which is still fully focusable
        behind the dark backdrop (WCAG 2.4.3, and a genuine app-lock defect rather than a cosmetic
        one). DefaultFocus.FirstChild lands on Unlock, the only action this panel exists to offer;
-       the explicit focus below restores it after a declined platform prompt. *@
-    <MudOverlay Visible="true" DarkBackground="true" Class="mmca-app-lock-overlay">
-        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
-            <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
-                <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">@L["Title"]</MudText>
-                <MudButton @ref="_unlockButton" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAsync">
-                    @L["Button.Unlock"]
-                </MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOutAsync">
-                    @L["Button.SignOut"]
-                </MudButton>
-            </MudPaper>
-        </MudFocusTrap>
-    </MudOverlay>
+       the explicit focus below moves it there on every lock and again after a declined prompt. *@
+    @* The wrapper is the boundary app-lock.js keeps live: everything outside it is made inert while
+       locked, so a pointer, a screen reader or a programmatic focus cannot reach the page behind. *@
+    <div @ref="_lockRoot" class="mmca-app-lock-root">
+        <MudOverlay Visible="true" DarkBackground="true" Class="mmca-app-lock-overlay">
+            <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+                <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
+                    <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">@L["Title"]</MudText>
+                    <MudButton @ref="_unlockButton" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAsync">
+                        @L["Button.Unlock"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOutAsync">
+                        @L["Button.SignOut"]
+                    </MudButton>
+                </MudPaper>
+            </MudFocusTrap>
+        </MudOverlay>
+    </div>
 }

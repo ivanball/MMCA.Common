@@ -27,7 +27,7 @@ else
     <MudStack Spacing="2">
         @foreach (var item in _items)
         {
-            <ClickableCard @key="item" OnActivate="@CardCallback(item)">
+            <ClickableCard @key="item" OnActivate="@CardCallback(item)" Actions="@CardActions(item)">
                 @CardTemplate(item)
             </ClickableCard>
         }

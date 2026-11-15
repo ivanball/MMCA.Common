@@ -28,6 +28,14 @@ public record Error(
     /// <summary>Validation error for an unrecognized or unsupported entity field name (e.g. in field projection or sorting).</summary>
     public static readonly Error InvalidEntityField = Validation("Error.InvalidEntityField", "The provided entity field isn't valid");
 
+    /// <summary>
+    /// Gets how long the caller should wait before trying again, when the producer knows it: set on a
+    /// <see cref="ErrorType.TooManyRequests"/> error (a sign-in lockout, for one) with
+    /// <c>with { RetryAfter = ... }</c>. <c>ApiControllerBase.HandleFailure</c> answers it as the
+    /// <c>Retry-After</c> header of a 429. <see langword="null"/> (the default) sends no header.
+    /// </summary>
+    public TimeSpan? RetryAfter { get; init; }
+
     /// <summary>Creates a <see cref="ErrorType.Validation"/> error for input/request validation failures.</summary>
     /// <param name="code">Machine-readable error code.</param>
     /// <param name="message">Human-readable error message.</param>

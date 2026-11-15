@@ -28,13 +28,24 @@ public partial class BiometricGate
     private bool _locked;
     private bool _subscribed;
     private MudButton? _unlockButton;
+    private ElementReference _lockRoot;
+    private AppLockInertBackground? _inertBackground;
 
     /// <summary>
-    /// Set when the panel has just become the only thing the user can act on (the platform prompt
-    /// was declined or unavailable). Acted on from <see cref="OnAfterRenderAsync"/> because the
-    /// button reference only exists once the locked branch has actually rendered.
+    /// Set when the panel has just become the only thing the user can act on: on every lock (so
+    /// focus is on Unlock while the platform prompt is still open, not left on the page behind) and
+    /// again after a declined or unavailable prompt. Acted on from <see cref="OnAfterRenderAsync"/>
+    /// because the button reference only exists once the locked branch has actually rendered.
     /// </summary>
     private bool _focusUnlockPending;
+
+    /// <summary>
+    /// Set on every lock; acted on from <see cref="OnAfterRenderAsync"/>, once the overlay wrapper the
+    /// inert boundary is measured from has rendered.
+    /// </summary>
+    private bool _inertPending;
+
+    private AppLockInertBackground InertBackground => _inertBackground ??= new AppLockInertBackground(JS);
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -43,6 +54,18 @@ public partial class BiometricGate
         {
             _focusUnlockPending = false;
             await FocusUnlockAsync();
+        }
+
+        if (_inertPending && _locked)
+        {
+            _inertPending = false;
+            await InertBackground.ApplyAsync(_lockRoot);
+
+            // An unlock that landed while the call was in flight found nothing applied to release.
+            if (!_locked)
+            {
+                await InertBackground.ReleaseAsync();
+            }
         }
 
         if (!firstRender)
@@ -60,7 +83,7 @@ public partial class BiometricGate
             return;
         }
 
-        _locked = true;
+        EngageLock();
         StateHasChanged();
         await UnlockAsync();
     }
@@ -76,6 +99,14 @@ public partial class BiometricGate
 
         AppLifecycle.Resumed -= OnResumed;
         _subscribed = false;
+
+        // Fire and forget: IDisposable cannot await, and the helper never throws (each call is best
+        // effort). A gate torn down while locked must not leave the page behind it inert.
+        if (_inertBackground is { } inertBackground)
+        {
+            _inertBackground = null;
+            _ = inertBackground.DisposeAsync().AsTask();
+        }
     }
 
     /// <inheritdoc />
@@ -109,7 +140,7 @@ public partial class BiometricGate
                     return;
                 }
 
-                _locked = true;
+                EngageLock();
                 StateHasChanged();
                 await UnlockAsync();
             });
@@ -172,11 +203,25 @@ public partial class BiometricGate
         }
     }
 
+    /// <summary>
+    /// Engages the gate: every lock queues focus onto Unlock and the inert background, whichever
+    /// path locked it (start-up or resume), so focus never stays on the page behind the overlay.
+    /// </summary>
+    private void EngageLock()
+    {
+        _locked = true;
+        _focusUnlockPending = true;
+        _inertPending = true;
+    }
+
     private async Task UnlockAsync()
     {
         if (await Biometrics.AuthenticateAsync(L["Prompt.Reason"].Value))
         {
             _locked = false;
+            _focusUnlockPending = false;
+            _inertPending = false;
+            await ReleaseBackgroundAsync();
 #pragma warning disable BL0012 // UnlockAsync also runs from OnAfterRenderAsync and ReLockAsync, where nothing re-renders automatically
             StateHasChanged();
 #pragma warning restore BL0012
@@ -220,6 +265,13 @@ public partial class BiometricGate
     {
         await AuthService.LogoutAsync();
         _locked = false;
+        _focusUnlockPending = false;
+        _inertPending = false;
+        await ReleaseBackgroundAsync();
         Navigation.NavigateTo("/login");
     }
+
+    /// <summary>Lifts the inert background, when a lock applied one.</summary>
+    private Task ReleaseBackgroundAsync() =>
+        _inertBackground is { } inertBackground ? inertBackground.ReleaseAsync() : Task.CompletedTask;
 }

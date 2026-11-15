@@ -6,7 +6,7 @@
    loss. The live accessor is what the guard reads, which avoids the one-render lag after a save. *@
 <UnsavedChangesGuard IsDirty="_isDirty" IsDirtyAccessor="() => _isDirty" />
 
-<MudLink Href="@ListHref" Class="d-inline-flex align-center mb-2">
+<MudLink Href="@ListHref" Underline="Underline.Always" Class="d-inline-flex align-center mb-2">
     <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-1" />
     @T("Action.Back")
 </MudLink>

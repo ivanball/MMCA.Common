@@ -27,6 +27,16 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     public RenderFragment<TItem> CardTemplate { get; set; } = default!;
 
     /// <summary>
+    /// Optional per-card controls (a delete or edit button). They render beside the card body, not
+    /// inside the element that carries the card's button role, so a card that is both clickable and
+    /// holds actions is not axe nested-interactive and a tap on an action does not raise
+    /// <see cref="OnCardClick"/>. Put interactive children here rather than in
+    /// <see cref="CardTemplate"/> whenever <see cref="OnCardClick"/> is bound.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TItem>? CardActionsTemplate { get; set; }
+
+    /// <summary>
     /// The page fetcher, in the shape every Result-returning UI service already has
     /// (<c>IEntityService.GetPagedAsync</c> without the filter/sort arguments): page number
     /// (1-based), page size, cancellation token. Required. A failure <see cref="Result"/> renders
@@ -290,6 +300,12 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         OnCardClick.HasDelegate
             ? EventCallback.Factory.Create(this, () => OnCardClick.InvokeAsync(item))
             : default;
+
+    /// <summary>
+    /// Binds one row to the actions template, or <see langword="null"/> when the consumer supplied
+    /// none, which keeps <see cref="ClickableCard"/> on its original one-element markup.
+    /// </summary>
+    private RenderFragment? CardActions(TItem item) => CardActionsTemplate?.Invoke(item);
 
     private Task RetryAsync() => LoadNextPageAsync(isInitial: false);
 

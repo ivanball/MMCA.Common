@@ -286,6 +286,67 @@ public sealed class ApiControllerBaseTests
         entryType.GetProperty("Source")!.GetValue(entry).Should().Be("CreateOrder");
         entryType.GetProperty("Target")!.GetValue(entry).Should().Be("Name");
     }
+
+    // ── Retry-After on a 429 (Store manual test Run 4, O6b) ──
+    [Fact]
+    public void HandleFailure_TooManyRequestsWithRetryAfter_SetsTheHeaderInWholeSecondsRoundedUp()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.TooManyRequests("Auth.TooManyAttempts", "Locked") with { RetryAfter = TimeSpan.FromSeconds(21.2) },
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status429TooManyRequests);
+        sut.Response.Headers.RetryAfter.ToString().Should().Be("22");
+    }
+
+    [Fact]
+    public void HandleFailure_TooManyRequestsWithoutRetryAfter_SendsNoHeader()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors = [Error.TooManyRequests("Auth.TooManyAttempts", "Locked")];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status429TooManyRequests);
+        sut.Response.Headers.ContainsKey("Retry-After").Should().BeFalse();
+    }
+
+    [Fact]
+    public void HandleFailure_SeveralHints_SendsTheLongest()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.TooManyRequests("A", "Locked") with { RetryAfter = TimeSpan.FromSeconds(5) },
+            Error.TooManyRequests("B", "Locked") with { RetryAfter = TimeSpan.FromSeconds(40) },
+            Error.TooManyRequests("C", "Locked"),
+        ];
+
+        sut.InvokeHandleFailure(errors);
+
+        sut.Response.Headers.RetryAfter.ToString().Should().Be("40");
+    }
+
+    [Fact]
+    public void HandleFailure_MoreSevereStatusThan429_SendsNoRetryAfter()
+    {
+        // A 500 travelling with a throttled error answers 500, and a Retry-After on it would mislead.
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.TooManyRequests("Auth.TooManyAttempts", "Locked") with { RetryAfter = TimeSpan.FromSeconds(30) },
+            Error.Unexpected("Boom", "Failed"),
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        sut.Response.Headers.ContainsKey("Retry-After").Should().BeFalse();
+    }
 }
 
 internal sealed class TestApiController : ApiControllerBase

@@ -26,17 +26,27 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// so an unreachable cache suspends the limits instead of failing every sign-in and registration.
 /// Cancellation of the caller's own token still propagates.
 /// </para>
+/// <para>
+/// <b>The lockout carries its remaining time.</b> Beside the boolean lockout flag, a lockout also
+/// stores the instant it ends (Unix milliseconds, under a key of its own with the same lifetime), and
+/// the <c>Auth.TooManyAttempts</c> error carries the time left as <see cref="Error.RetryAfter"/>, which
+/// the API answers as a <c>Retry-After</c> header. The flag stays the authority on whether the account
+/// is locked, so a flag written before the expiry key existed still reads as locked, just without a
+/// retry hint.
+/// </para>
 /// </summary>
 public sealed partial class LoginProtectionService(
     ICacheService cacheService,
     IOptions<LoginProtectionSettings> settings,
-    ILogger<LoginProtectionService>? logger = null) : ILoginProtectionService
+    ILogger<LoginProtectionService>? logger = null,
+    TimeProvider? timeProvider = null) : ILoginProtectionService
 {
     /// <summary>How many hex characters of the key's hash a lockout log line carries (48 bits).</summary>
     private const int LogKeyHashLength = 12;
 
     private readonly LoginProtectionSettings _settings = settings.Value;
     private readonly ILogger _logger = logger ?? NullLogger<LoginProtectionService>.Instance;
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
     /// Normalizes the supplied address the same way <see cref="Email"/> does before it is used in a
@@ -51,17 +61,33 @@ public sealed partial class LoginProtectionService(
 
     private static string AttemptsKey(string email) => $"login:attempts:{EmailIdentity.KeySegment(email)}";
 
+    /// <summary>
+    /// When the lockout ends, as Unix milliseconds. A separate key rather than a richer value under
+    /// <see cref="LockoutKey"/>: a lockout flag already cached as <see langword="true"/> must keep reading as
+    /// locked, and the shared-store read drops an entry it cannot deserialize as the requested type.
+    /// </summary>
+    private static string LockoutUntilKey(string email) => $"login:lockout-until:{EmailIdentity.KeySegment(email)}";
+
     /// <inheritdoc />
     public async Task<Result> CheckLockoutAsync(string email, CancellationToken cancellationToken = default)
     {
         var lockoutKey = LockoutKey(email);
         bool isLockedOut;
+        TimeSpan? retryAfter = null;
         try
         {
             // Read from the shared store, never from this replica's L1 copy: a reset clears only the
             // resetting replica's L1, so a local read would keep another replica locking the account
             // out for up to the local cache duration after the lockout was lifted.
             isLockedOut = await cacheService.GetFromSharedStoreAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
+
+            // The expiry is read only for an account that is locked, so an unlocked sign-in costs
+            // the same single read as before.
+            if (isLockedOut)
+            {
+                var lockedUntil = await cacheService.GetFromSharedStoreAsync<long?>(LockoutUntilKey(email), cancellationToken).ConfigureAwait(false);
+                retryAfter = RemainingLockout(lockedUntil);
+            }
         }
         catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
         {
@@ -69,12 +95,32 @@ public sealed partial class LoginProtectionService(
             return Result.Success();
         }
 
-        return isLockedOut
-            ? Result.Failure(Error.TooManyRequests(
-                "Auth.TooManyAttempts",
-                "Too many failed login attempts. Please try again later.",
-                nameof(CheckLockoutAsync)))
-            : Result.Success();
+        if (!isLockedOut)
+        {
+            return Result.Success();
+        }
+
+        var lockedOut = Error.TooManyRequests(
+            "Auth.TooManyAttempts",
+            "Too many failed login attempts. Please try again later.",
+            nameof(CheckLockoutAsync));
+        return Result.Failure(lockedOut with { RetryAfter = retryAfter });
+    }
+
+    /// <summary>
+    /// The time left until <paramref name="lockedUntilUnixMilliseconds"/>, or <see langword="null"/>
+    /// when no expiry was stored (a lockout written before the expiry key existed) or it has already
+    /// passed while the flag lives on. A zero hint would tell the client to retry into the lockout.
+    /// </summary>
+    private TimeSpan? RemainingLockout(long? lockedUntilUnixMilliseconds)
+    {
+        if (lockedUntilUnixMilliseconds is not { } until)
+        {
+            return null;
+        }
+
+        var remaining = DateTimeOffset.FromUnixTimeMilliseconds(until) - _timeProvider.GetUtcNow();
+        return remaining > TimeSpan.Zero ? remaining : null;
     }
 
     /// <inheritdoc />
@@ -105,7 +151,13 @@ public sealed partial class LoginProtectionService(
                 // sufficiently persistent attacker. 1 << 30 already exceeds any permitted
                 // MaxLockoutSeconds (range caps at 3600), so deep excess always lands on the cap.
                 var lockoutSeconds = Math.Min(1 << Math.Min(excessAttempts, 30), _settings.MaxLockoutSeconds);
-                await cacheService.SetAsync(LockoutKey(email), true, TimeSpan.FromSeconds(lockoutSeconds), cancellationToken).ConfigureAwait(false);
+                var lockoutDuration = TimeSpan.FromSeconds(lockoutSeconds);
+                await cacheService.SetAsync(LockoutKey(email), true, lockoutDuration, cancellationToken).ConfigureAwait(false);
+                await cacheService.SetAsync(
+                    LockoutUntilKey(email),
+                    _timeProvider.GetUtcNow().Add(lockoutDuration).ToUnixTimeMilliseconds(),
+                    lockoutDuration,
+                    cancellationToken).ConfigureAwait(false);
 
                 // Only the attempt that first reaches the threshold logs, so a credential-stuffing run
                 // that keeps guessing past it cannot flood the log (one line per locked account).
@@ -128,6 +180,7 @@ public sealed partial class LoginProtectionService(
         {
             await cacheService.RemoveAsync(AttemptsKey(email), cancellationToken).ConfigureAwait(false);
             await cacheService.RemoveAsync(LockoutKey(email), cancellationToken).ConfigureAwait(false);
+            await cacheService.RemoveAsync(LockoutUntilKey(email), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (IsCacheOutage(ex, cancellationToken))
         {

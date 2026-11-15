@@ -336,6 +336,8 @@ MMCA.Common.UI.Components.Legal.TermsAcceptanceGate
 MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose() -> void
 MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.TermsAcceptanceGate() -> void
 MMCA.Common.UI.Components.Lists.ClickableCard
+MMCA.Common.UI.Components.Lists.ClickableCard.Actions.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Lists.ClickableCard.Actions.set -> void
 MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
 MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.set -> void
 MMCA.Common.UI.Components.Lists.ClickableCard.Class.get -> string!
@@ -360,6 +362,8 @@ MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelAriaLabel.get -> stri
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelAriaLabel.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelLabel.get -> string?
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CancelLabel.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardActionsTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardActionsTemplate.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.CardTemplate.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Columns.get -> Microsoft.AspNetCore.Components.RenderFragment!
@@ -419,6 +423,8 @@ MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.ShowSearch.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Title.get -> string!
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Title.set -> void
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>
+MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardActionsTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>?
+MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardActionsTemplate.set -> void
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardTemplate.get -> Microsoft.AspNetCore.Components.RenderFragment<TItem>!
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.CardTemplate.set -> void
 MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.DisposeAsync() -> System.Threading.Tasks.ValueTask
@@ -1773,6 +1779,7 @@ MMCA.Common.UI._Imports._Imports() -> void
 abstract MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Title.get -> string!
 const MMCA.Common.UI.Authorization.PagePermissionPolicy.Prefix = "page-perm:" -> string!
 const MMCA.Common.UI.Common.PrerenderStateBudget.MaxJsonBytes = 14336 -> int
+const MMCA.Common.UI.Common.PrerenderStateBudget.MaxTotalJsonBytes = 16384 -> int
 const MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.ClientConfigPath = "client-config" -> string!
 const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
 const MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.OneSuffix = ".One" -> string!

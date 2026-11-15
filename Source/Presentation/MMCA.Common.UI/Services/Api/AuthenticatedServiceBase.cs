@@ -22,9 +22,13 @@ public abstract class AuthenticatedServiceBase(
     /// Polly retry policy: 3 retries on <see cref="HttpRequestException"/> or a retryable response
     /// status (see <c>IsRetryableResponse</c>), with exponential backoff (0.5s, 1s, 2s) plus up to
     /// 250 ms of random jitter so a fleet of clients does not re-converge on the same instant. The
-    /// schedule is short on purpose: a blocked read spins under four seconds before it surfaces.
-    /// A 429 that names a <c>Retry-After</c> is waited out for exactly that long instead, and is not
-    /// retried at all when it asks for more than <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/>.
+    /// schedule is short on purpose: a read that fails fast (a refused connection or a retryable
+    /// status) spends under four seconds waiting between attempts before it surfaces. That bound
+    /// covers only the waits: a backend that accepts the request and then hangs is cut off by the
+    /// client's own timeout (<see cref="HttpResilienceDefaults.TotalRequestTimeout"/>, 90 seconds,
+    /// set where the API client is registered), and the resulting cancellation is not retried. A 429
+    /// that names a <c>Retry-After</c> is waited out for exactly that long instead, and is not retried
+    /// at all when it asks for more than <see cref="HttpResilienceDefaults.MaxRetryAfterWait"/>.
     /// Every retried response is disposed; the caller owns the final one. A POST or PATCH response is
     /// retried only when its request carried an <c>Idempotency-Key</c> (see <c>IsReplaySafe</c>).
     /// </summary>

@@ -3,6 +3,7 @@ using System.Text;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
@@ -25,6 +26,7 @@ public sealed class LoginProtectionServiceTests
 
     private static readonly string AttemptsKey = $"login:attempts:{EmailIdentity.KeySegment(TestEmail)}";
     private static readonly string LockoutKey = $"login:lockout:{EmailIdentity.KeySegment(TestEmail)}";
+    private static readonly string LockoutUntilKey = $"login:lockout-until:{EmailIdentity.KeySegment(TestEmail)}";
 
     // ── Lockout check ──
     [Fact]
@@ -115,6 +117,90 @@ public sealed class LoginProtectionServiceTests
 
         cache.Values[LockoutKey].Should().Be(true);
         cache.Ttls[LockoutKey].Should().Be(TimeSpan.FromSeconds(1));
+    }
+
+    // ── Lockout expiry and the retry hint (Store manual test Run 4, O6b) ──
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_PastThreshold_StoresWhenTheLockoutEnds()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 15, 12, 0, 0, TimeSpan.Zero));
+        var (sut, cache) = CreateSut(maxFailedAttempts: 5, maxLockoutSeconds: 300, timeProvider: time);
+        cache.Seed(AttemptsKey, 6L);
+
+        await sut.IncrementFailedAttemptsAsync(TestEmail);
+
+        // Two past the threshold: 1 << 2 = 4 seconds.
+        cache.Values[LockoutUntilKey].Should().Be(time.GetUtcNow().AddSeconds(4).ToUnixTimeMilliseconds());
+        cache.Ttls[LockoutUntilKey].Should().Be(TimeSpan.FromSeconds(4), "the expiry lives exactly as long as the lockout");
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_WithAStoredExpiry_CarriesTheTimeLeftAsRetryAfter()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 15, 12, 0, 0, TimeSpan.Zero));
+        var (sut, cache) = CreateSut(maxFailedAttempts: 5, maxLockoutSeconds: 300, timeProvider: time);
+        cache.Seed(AttemptsKey, 9L);
+        await sut.IncrementFailedAttemptsAsync(TestEmail);
+        time.Advance(TimeSpan.FromSeconds(10));
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        // Five past the threshold: 1 << 5 = 32 seconds, ten of them gone.
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Auth.TooManyAttempts");
+        error.RetryAfter.Should().Be(TimeSpan.FromSeconds(22));
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_LegacyFlagWithNoExpiry_StillLocksOut_WithNoRetryAfter()
+    {
+        // A lockout cached as a bare `true` before the expiry key existed.
+        var (sut, cache) = CreateSut();
+        cache.Seed(LockoutKey, true);
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsFailure.Should().BeTrue("the flag, not the expiry, decides whether the account is locked");
+        result.Errors.Should().ContainSingle().Which.RetryAfter.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_ExpiryAlreadyPassed_StillLocksOut_WithNoRetryAfter()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 15, 12, 0, 0, TimeSpan.Zero));
+        var (sut, cache) = CreateSut(timeProvider: time);
+        cache.Seed(LockoutKey, true);
+        cache.Seed(LockoutUntilKey, time.GetUtcNow().AddSeconds(-1).ToUnixTimeMilliseconds());
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.RetryAfter.Should().BeNull("a zero hint would send the client straight back into the lockout");
+    }
+
+    [Fact]
+    public async Task CheckLockoutAsync_NotLocked_NeverReadsTheExpiry()
+    {
+        var cache = new Mock<ICacheService>();
+        cache.Setup(c => c.GetFromSharedStoreAsync<bool?>(LockoutKey, It.IsAny<CancellationToken>())).ReturnsAsync((bool?)null);
+        var sut = new LoginProtectionService(cache.Object, Options.Create(new LoginProtectionSettings()));
+
+        Result result = await sut.CheckLockoutAsync(TestEmail);
+
+        result.IsSuccess.Should().BeTrue();
+        cache.Verify(c => c.GetFromSharedStoreAsync<long?>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetFailedAttemptsAsync_AlsoClearsTheLockoutExpiry()
+    {
+        var (sut, cache) = CreateSut();
+        cache.Seed(LockoutKey, true);
+        cache.Seed(LockoutUntilKey, 1L);
+
+        await sut.ResetFailedAttemptsAsync(TestEmail);
+
+        cache.Values.Should().NotContainKey(LockoutUntilKey);
     }
 
     [Theory]
@@ -477,7 +563,8 @@ public sealed class LoginProtectionServiceTests
         int maxLockoutSeconds = 300,
         int failedAttemptWindowMinutes = 30,
         int maxRegistrationsPerIpPerHour = 10,
-        int registrationRateLimitWindowMinutes = 60)
+        int registrationRateLimitWindowMinutes = 60,
+        TimeProvider? timeProvider = null)
     {
         var cache = new FakeCacheService();
         var settings = new LoginProtectionSettings
@@ -488,7 +575,7 @@ public sealed class LoginProtectionServiceTests
             MaxRegistrationsPerIpPerHour = maxRegistrationsPerIpPerHour,
             RegistrationRateLimitWindowMinutes = registrationRateLimitWindowMinutes,
         };
-        var sut = new LoginProtectionService(cache, Options.Create(settings));
+        var sut = new LoginProtectionService(cache, Options.Create(settings), timeProvider: timeProvider);
 
         return (sut, cache);
     }

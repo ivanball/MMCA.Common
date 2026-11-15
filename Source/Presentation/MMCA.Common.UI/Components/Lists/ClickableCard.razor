@@ -14,8 +14,26 @@
 
    The card is always named by its own content: there is deliberately no aria-label override, since
    any label that replaced the visible text would fail WCAG 2.5.3 (Label in Name, axe
-   label-content-name-mismatch). *@
-@if (IsInteractive)
+   label-content-name-mismatch).
+
+   Actions (a delete or edit button) go in the Actions slot, never in ChildContent: a control
+   nested inside a role="button" element is axe nested-interactive. With Actions supplied, the
+   button role, tabindex and the click and key handlers move from the card onto a wrapper around
+   the body alone, and the actions render after it as its sibling, so a tap on an action never
+   activates the card. Without Actions the markup is the original one-element card. *@
+@if (IsInteractive && Actions is not null)
+{
+    <MudCard Elevation="@Elevation" Class="@Class">
+        <MudCardContent Class="pa-3">
+            <div class="mobile-list-card-activator" tabindex="0" role="button"
+                 @onclick="ActivateAsync" @onkeydown="OnKeyDownAsync">
+                <div class="mobile-list-card-body" @onkeydown:stopPropagation>@ChildContent</div>
+            </div>
+            <div class="mobile-list-card-actions">@Actions</div>
+        </MudCardContent>
+    </MudCard>
+}
+else if (IsInteractive)
 {
     <MudCard Elevation="@Elevation" Class="@Class" tabindex="0" role="button"
              @onclick="ActivateAsync" @onkeydown="OnKeyDownAsync">
@@ -29,6 +47,10 @@ else
     <MudCard Elevation="@Elevation" Class="@Class">
         <MudCardContent Class="pa-3">
             @ChildContent
+            @if (Actions is not null)
+            {
+                <div class="mobile-list-card-actions">@Actions</div>
+            }
         </MudCardContent>
     </MudCard>
 }
@@ -36,6 +58,13 @@ else
 @code {
     /// <summary>The card body.</summary>
     [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Optional interactive controls for the card (a delete or edit button). They render after the
+    /// body and outside the element that carries the card's button role, so they are never nested
+    /// inside it (axe nested-interactive) and activating one does not activate the card.
+    /// </summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
 
     /// <summary>
     /// Raised when the card is activated by click, Enter or Space. Leave it unset to render a

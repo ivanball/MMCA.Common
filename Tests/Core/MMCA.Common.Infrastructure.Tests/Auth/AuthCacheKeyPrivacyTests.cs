@@ -30,7 +30,7 @@ public sealed class AuthCacheKeyPrivacyTests
     private const string LocalPart = "Privacy.Probe";
     private const UserIdentifierType TestUserId = 42;
 
-    private static readonly string[] LoginPrefixes = ["login:lockout:", "login:attempts:"];
+    private static readonly string[] LoginPrefixes = ["login:lockout:", "login:lockout-until:", "login:attempts:"];
     private static readonly string[] PasswordResetPrefixes = ["pwdreset:token:", "pwdreset:req:"];
     private static readonly string[] EmailConfirmationPrefixes = ["emailconfirm:token:", "emailconfirm:req:"];
 
