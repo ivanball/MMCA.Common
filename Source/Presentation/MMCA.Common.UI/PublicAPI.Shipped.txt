@@ -1455,6 +1455,15 @@ MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.Platform.init
 MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.PushDeviceToken(string! Platform, string! Token) -> void
 MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.Token.get -> string!
 MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.Token.init -> void
+MMCA.Common.UI.Services.ColumnFilterState
+MMCA.Common.UI.Services.ColumnFilterState.<Clone>$() -> MMCA.Common.UI.Services.ColumnFilterState!
+MMCA.Common.UI.Services.ColumnFilterState.ColumnFilterState(string! Operator, string? Value) -> void
+MMCA.Common.UI.Services.ColumnFilterState.Deconstruct(out string! Operator, out string? Value) -> void
+MMCA.Common.UI.Services.ColumnFilterState.Equals(MMCA.Common.UI.Services.ColumnFilterState? other) -> bool
+MMCA.Common.UI.Services.ColumnFilterState.Operator.get -> string!
+MMCA.Common.UI.Services.ColumnFilterState.Operator.init -> void
+MMCA.Common.UI.Services.ColumnFilterState.Value.get -> string?
+MMCA.Common.UI.Services.ColumnFilterState.Value.init -> void
 MMCA.Common.UI.Services.Culture.CultureDelegatingHandler
 MMCA.Common.UI.Services.Culture.CultureDelegatingHandler.CultureDelegatingHandler() -> void
 MMCA.Common.UI.Services.Culture.EndpointCultureApplier
@@ -1523,6 +1532,8 @@ MMCA.Common.UI.Services.ListPageQueryStateService.ReadCurrent() -> MMCA.Common.U
 MMCA.Common.UI.Services.ListPageQueryStateService.ReplaceState(string! basePath, MMCA.Common.UI.Services.ListPageState! state) -> void
 MMCA.Common.UI.Services.ListPageState
 MMCA.Common.UI.Services.ListPageState.<Clone>$() -> MMCA.Common.UI.Services.ListPageState!
+MMCA.Common.UI.Services.ListPageState.ColumnFilters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.UI.Services.ColumnFilterState!>!
+MMCA.Common.UI.Services.ListPageState.ColumnFilters.init -> void
 MMCA.Common.UI.Services.ListPageState.DenseGrid.get -> bool
 MMCA.Common.UI.Services.ListPageState.DenseGrid.init -> void
 MMCA.Common.UI.Services.ListPageState.Equals(MMCA.Common.UI.Services.ListPageState? other) -> bool
@@ -1902,6 +1913,9 @@ override MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationReq
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.GetHashCode() -> int
 override MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.ToString() -> string!
+override MMCA.Common.UI.Services.ColumnFilterState.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.ColumnFilterState.GetHashCode() -> int
+override MMCA.Common.UI.Services.ColumnFilterState.ToString() -> string!
 override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.GetHashCode() -> int
 override MMCA.Common.UI.Services.Diagnostics.InAppLogEntry.ToString() -> string!
@@ -2005,6 +2019,8 @@ static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationReque
 static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.operator ==(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? left, MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operator !=(MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? left, MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operator ==(MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? left, MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? right) -> bool
+static MMCA.Common.UI.Services.ColumnFilterState.operator !=(MMCA.Common.UI.Services.ColumnFilterState? left, MMCA.Common.UI.Services.ColumnFilterState? right) -> bool
+static MMCA.Common.UI.Services.ColumnFilterState.operator ==(MMCA.Common.UI.Services.ColumnFilterState? left, MMCA.Common.UI.Services.ColumnFilterState? right) -> bool
 static MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap.SetBrowserCultureAsync(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap.SetBrowserCultureAsync(Microsoft.JSInterop.IJSRuntime! jsRuntime, bool allowPseudoLocale) -> System.Threading.Tasks.Task!
 static MMCA.Common.UI.Services.Diagnostics.DependencyInjection.AddInAppDiagnostics(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.UI.Services.Diagnostics.InAppDiagnosticsOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
