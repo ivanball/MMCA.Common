@@ -5,6 +5,11 @@ MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.Accessibi
 MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.AccessibilityViolationException(string! message, System.Exception! innerException) -> void
 MMCA.Common.Testing.E2E.Infrastructure.AxeOptions
 MMCA.Common.Testing.E2E.Infrastructure.E2EPolling
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.Attach(Microsoft.Playwright.IPage! page, Microsoft.Playwright.IBrowserContext! context) -> void
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.E2ERouteRecorder(string! directory, string! testName, System.Collections.Generic.IReadOnlyCollection<System.Uri!>! origins) -> void
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.FlushAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.Record(string! kind, string! method, System.Uri! url) -> void
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptTermsIfPromptedAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
@@ -261,6 +266,8 @@ static MMCA.Common.Testing.E2E.Infrastructure.AxeOptions.Wcag21Aa.get -> Deque.A
 static MMCA.Common.Testing.E2E.Infrastructure.AxeOptions.Wcag21AaExceptMudPagerCombobox.get -> Deque.AxeCore.Commons.AxeRunOptions!
 static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync(System.Func<System.Threading.Tasks.Task<bool>!>! probe, System.TimeSpan? timeout = null, System.TimeSpan? interval = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! probe, System.Func<T, bool>! isSatisfied, System.TimeSpan? timeout = null, System.TimeSpan? interval = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.AttachIfEnabled(string! baseUrl, Microsoft.Playwright.IPage! page, Microsoft.Playwright.IBrowserContext! context) -> MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder?
+static MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.FromEnvironment(string! testName, System.Collections.Generic.IReadOnlyCollection<System.Uri!>! origins) -> MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder?
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.BaseUrl.get -> string!
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.FillFieldAsync(Microsoft.Playwright.ILocator! field, string! value) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.UniqueId() -> string!
