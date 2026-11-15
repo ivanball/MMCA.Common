@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 
-namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories.Keyset;
 
 /// <summary>
 /// The seek predicate's comparison has three shapes: <see cref="string.Compare(string, string)"/> for

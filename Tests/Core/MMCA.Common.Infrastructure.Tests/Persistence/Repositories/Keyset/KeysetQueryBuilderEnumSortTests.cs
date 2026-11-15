@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 
-namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories.Keyset;
 
 /// <summary>
 /// Keyset paging over an ENUM sort property. An enum has no relational operator of its own in an
