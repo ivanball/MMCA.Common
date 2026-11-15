@@ -1,0 +1,63 @@
+name: Coverage ratchet (new-risk and untested-entry-point gate)
+description: >-
+  Reads one or more Cobertura reports and fails on NEW risk only (ADR-147). check: crap fails when a
+  method not in the committed baseline exceeds the CRAP threshold (cx^2 * (1 - cov)^3 + cx), or a
+  baselined method's CRAP rises past its recorded value plus 0.5. check: entrypoints fails when an
+  entry-point method (class name matching entrypoint-classes) has no line coverage in any report and
+  is not in the baseline. Stale baseline entries are warnings, never failures, so improving coverage
+  never turns a build red. Fails CLOSED on a missing report, an unreadable report, a missing baseline
+  in check mode, or zero matched methods. mode: write-baseline creates the baseline file. Needs pwsh
+  (present on GitHub-hosted runners). Shared by Common, ADC and Store so the gate has one
+  implementation; its self-test is test/Test-Ratchet.ps1.
+
+inputs:
+  check:
+    description: crap or entrypoints.
+    required: true
+  reports:
+    description: Cobertura files or folders (folders are searched for *.cobertura.xml), separated by commas, spaces or newlines. Several reports are merged by each method's best line rate.
+    required: true
+  include:
+    description: Regex over assembly (package) names to measure, e.g. '^MMCA\.ADC\.'.
+    required: true
+  exclude:
+    description: Regex over assembly names to skip.
+    required: false
+    default: '(\.Tests$|\.IntegrationTests$|\.Testing|Migrations)'
+  baseline:
+    description: Path to the committed baseline file (one 'Class::Method<TAB>value' per line).
+    required: true
+  threshold:
+    description: CRAP threshold for check crap.
+    required: false
+    default: '30'
+  entrypoint-classes:
+    description: Regex over short class names that are entry points, for check entrypoints.
+    required: false
+    default: 'Controller$'
+  mode:
+    description: check (default) or write-baseline.
+    required: false
+    default: check
+
+runs:
+  using: composite
+  steps:
+    - name: Coverage ratchet (${{ inputs.check }})
+      shell: pwsh
+      # Every input reaches the script through env, never spliced into the script text.
+      env:
+        CR_CHECK: ${{ inputs.check }}
+        CR_REPORTS: ${{ inputs.reports }}
+        CR_INCLUDE: ${{ inputs.include }}
+        CR_EXCLUDE: ${{ inputs.exclude }}
+        CR_BASELINE: ${{ inputs.baseline }}
+        CR_THRESHOLD: ${{ inputs.threshold }}
+        CR_ENTRYPOINTS: ${{ inputs.entrypoint-classes }}
+        CR_MODE: ${{ inputs.mode }}
+      run: |
+        & (Join-Path $env:GITHUB_ACTION_PATH 'ratchet.ps1') `
+          -Check $env:CR_CHECK -Reports $env:CR_REPORTS -Include $env:CR_INCLUDE -Exclude $env:CR_EXCLUDE `
+          -Baseline $env:CR_BASELINE -Threshold ([double]::Parse($env:CR_THRESHOLD, [Globalization.CultureInfo]::InvariantCulture)) `
+          -EntrypointClasses $env:CR_ENTRYPOINTS -Mode $env:CR_MODE
+        exit $LASTEXITCODE

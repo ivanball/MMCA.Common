@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.E2ERouteRecorder(string! directory, string! testName, System.Collections.Generic.IReadOnlyCollection<System.Uri!>! origins) -> void
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.FlushAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.Record(string! kind, string! method, System.Uri! url) -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder.FromEnvironment(string! testName, System.Collections.Generic.IReadOnlyCollection<System.Uri!>! origins) -> MMCA.Common.Testing.E2E.Infrastructure.E2ERouteRecorder?
