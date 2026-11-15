@@ -592,6 +592,58 @@ public sealed class NotificationHubServiceTests
         sut.IsConnected.Should().BeFalse();
     }
 
+    // -- ReceiveChannelEvent: delivery to the channel's subscribers --
+    [Fact]
+    public async Task ChannelEvent_IsDeliveredToEverySubscriberOfItsChannel_EvenWhenOneThrows()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+        var delivered = new TaskCompletionSource<(string EventName, string Payload)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var otherChannel = 0;
+        using var failing = sut.OnChannelEvent("event:1", (_, _) => throw new InvalidOperationException("subscriber bug"));
+        using var healthy = sut.OnChannelEvent("event:1", (name, payload) =>
+        {
+            delivered.TrySetResult((name, payload));
+            return Task.CompletedTask;
+        });
+        using var other = sut.OnChannelEvent("event:2", (_, _) => CountAsync(ref otherChannel));
+        await sut.JoinChannelAsync("event:1");
+
+        await server.SendChannelEventAsync("event:1", "SessionStarted", """{"id":7}""");
+
+        var received = await delivered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        received.Should().Be(("SessionStarted", """{"id":7}"""));
+        Volatile.Read(ref otherChannel).Should().Be(0, "an event reaches only its own channel's subscribers");
+        sut.IsConnected.Should().BeTrue("a throwing subscriber must not fault the connection");
+    }
+
+    [Fact]
+    public async Task ChannelEvent_ForAChannelWithNoSubscriber_IsDropped()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+        var unsubscribed = 0;
+        var gone = sut.OnChannelEvent("event:gone", (_, _) => CountAsync(ref unsubscribed));
+        gone.Dispose();
+        var delivered = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var marker = sut.OnChannelEvent("event:marker", (name, _) =>
+        {
+            delivered.TrySetResult(name);
+            return Task.CompletedTask;
+        });
+        await sut.StartAsync();
+
+        // The connection dispatches invocations in order, so once the marker arrives the earlier
+        // events have been handled.
+        await server.SendChannelEventAsync("event:gone", "Ignored", "{}");
+        await server.SendChannelEventAsync("event:never-subscribed", "Ignored", "{}");
+        await server.SendChannelEventAsync("event:marker", "Marker", "{}");
+
+        (await delivered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).Should().Be("Marker");
+        Volatile.Read(ref unsubscribed).Should().Be(0, "a disposed subscription receives nothing");
+        sut.IsConnected.Should().BeTrue();
+    }
+
     private static NotificationHubService CreateInMemorySut(
         InMemoryHubServer server,
         Action onBuild,

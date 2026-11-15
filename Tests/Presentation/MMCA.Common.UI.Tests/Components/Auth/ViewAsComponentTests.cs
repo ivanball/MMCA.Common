@@ -4,6 +4,7 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.UI.Components.Auth;
@@ -78,6 +79,145 @@ public sealed class ViewAsComponentTests : BunitTestBase
             p => p.Add(c => c.UserId, 7));
 
         cut.FindAll(".mmca-view-as-button").Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("123456789", false)]
+    [InlineData("   12345678   ", false)]
+    [InlineData("1234567890", true)]
+    [InlineData("  1234567890  ", true)]
+    public void Button_StartIsEnabledOnlyOnceTheTrimmedReasonHasTenCharacters(string reason, bool enabled)
+    {
+        var cut = OpenViewAsForm();
+
+        cut.Find("textarea").Input(reason);
+
+        StartButton(cut).HasAttribute("disabled").Should().Be(!enabled);
+    }
+
+    [Theory]
+    [InlineData(500, true)]
+    [InlineData(501, false)]
+    public void Button_StartIsDisabledForAReasonLongerThanFiveHundredCharacters(int length, bool enabled)
+    {
+        var cut = OpenViewAsForm();
+
+        cut.Find("textarea").Input(new string('r', length));
+
+        StartButton(cut).HasAttribute("disabled").Should().Be(!enabled);
+    }
+
+    [Fact]
+    public void Button_WithNoReasonTyped_KeepsStartDisabled()
+    {
+        var cut = OpenViewAsForm();
+
+        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Button_Start_PostsTheTrimmedReasonToTheDefaultProxyRoute_AndShowsNoErrorOnSuccess()
+    {
+        var start = JSInterop.Setup<int>("mmcaViewAs.start", _ => true);
+        start.SetResult(204);
+        var cut = OpenViewAsForm();
+        cut.Find("textarea").Input("  Customer ticket 4711  ");
+
+        StartButton(cut).Click();
+
+        var invocation = start.VerifyInvoke("mmcaViewAs.start");
+        invocation.Arguments.Should().Equal("/api/Admin/Users/7/view-as", "Customer ticket 4711");
+        cut.FindAll("[role=alert]").Should().BeEmpty("a 2xx means the script reloads the app, nothing failed");
+        StartButton(cut).HasAttribute("disabled").Should().BeFalse("the start is no longer in flight");
+    }
+
+    [Fact]
+    public void Button_Start_UsesTheConfiguredPrefixAndRoute_TrimmingTheirSlashes()
+    {
+        var start = JSInterop.Setup<int>("mmcaViewAs.start", _ => true);
+        start.SetResult(200);
+        var cut = OpenViewAsForm(p => p
+            .Add(c => c.ApiPathPrefix, "/gateway/")
+            .Add(c => c.UsersRoute, "/Admin/People/"));
+        cut.Find("textarea").Input("Customer ticket 4711");
+
+        StartButton(cut).Click();
+
+        start.VerifyInvoke("mmcaViewAs.start").Arguments[0].Should().Be("/gateway/Admin/People/7/view-as");
+    }
+
+    [Theory]
+    [InlineData(199)]
+    [InlineData(300)]
+    [InlineData(403)]
+    public void Button_Start_WhenTheGrantIsRefused_ShowsTheRefusal(int status)
+    {
+        JSInterop.Setup<int>("mmcaViewAs.start", _ => true).SetResult(status);
+        var cut = OpenViewAsForm();
+        cut.Find("textarea").Input("Customer ticket 4711");
+
+        StartButton(cut).Click();
+
+        cut.Find("[role=alert]").TextContent.Should().Be("Viewing as this user was refused.");
+        StartButton(cut).HasAttribute("disabled").Should().BeFalse("a refused start can be retried");
+    }
+
+    [Fact]
+    public void Button_Start_WhenTheScriptThrows_ShowsTheRefusal()
+    {
+        JSInterop.Setup<int>("mmcaViewAs.start", _ => true).SetException(new JSException("script failed"));
+        var cut = OpenViewAsForm();
+        cut.Find("textarea").Input("Customer ticket 4711");
+
+        StartButton(cut).Click();
+
+        cut.Find("[role=alert]").TextContent.Should().Be("Viewing as this user was refused.");
+    }
+
+    [Fact]
+    public void Button_Start_WhileTheGrantIsInFlight_DisablesStart()
+    {
+        // No result set: the script call stays pending, as it does while the request is out.
+        JSInterop.Setup<int>("mmcaViewAs.start", _ => true);
+        var cut = OpenViewAsForm();
+        cut.Find("textarea").Input("Customer ticket 4711");
+
+        StartButton(cut).Click();
+
+        StartButton(cut).HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Button_Start_AfterARefusal_ClearsThePreviousErrorOnTheNextSuccess()
+    {
+        var start = JSInterop.Setup<int>("mmcaViewAs.start", _ => true);
+        start.SetResult(403);
+        var cut = OpenViewAsForm();
+        cut.Find("textarea").Input("Customer ticket 4711");
+        StartButton(cut).Click();
+        cut.FindAll("[role=alert]").Should().ContainSingle();
+
+        start.SetResult(204);
+        StartButton(cut).Click();
+
+        cut.FindAll("[role=alert]").Should().BeEmpty();
+    }
+
+    private static AngleSharp.Dom.IElement StartButton(IRenderedComponent<ViewAsButton> cut) =>
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Start viewing");
+
+    private IRenderedComponent<ViewAsButton> OpenViewAsForm(
+        Action<ComponentParameterCollectionBuilder<ViewAsButton>>? parameters = null)
+    {
+        var cut = RenderWith<ViewAsButton>(
+            Principal(new Claim(AuthClaimTypes.Permission, AdministrationPermissions.ViewAsUsers)),
+            p =>
+            {
+                p.Add(c => c.UserId, 7);
+                parameters?.Invoke(p);
+            });
+        cut.Find(".mmca-view-as-button").Click();
+        return cut;
     }
 
     private static ClaimsPrincipal Principal(params Claim[] claims) =>
