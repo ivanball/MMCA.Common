@@ -15,7 +15,6 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     private readonly PlaywrightFixture _fixture;
     private IBrowserContext _context = null!;
-    private E2ERouteRecorder? _routeRecorder;
 
     protected IPage Page { get; private set; } = null!;
     protected static string BaseUrl => E2ETestConfiguration.BaseUrl;
@@ -41,46 +40,15 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
 
         Page = await _context.NewPageAsync().ConfigureAwait(false);
-        AttachRouteRecorder();
-    }
 
-    // Optional route log (E2E_ROUTE_LOG_DIR=<dir>, ADR-147): which pages and API paths this test
-    // reached, for the test-gap report. Navigations come from the main frame's FrameNavigated, which
-    // also fires for Blazor's client-side (history API) navigations that issue no request; API calls
-    // come from the context's non-navigation requests, so nothing is logged twice. Off unless set.
-    private void AttachRouteRecorder()
-    {
-        var testName = TestContext.Current.Test?.TestDisplayName ?? GetType().Name;
-        if (E2ERouteRecorder.FromEnvironment(testName, [new Uri(BaseUrl)]) is not { } recorder)
-        {
-            return;
-        }
-
-        _routeRecorder = recorder;
-        Page.FrameNavigated += (_, frame) =>
-        {
-            if (frame.ParentFrame is null && Uri.TryCreate(frame.Url, UriKind.Absolute, out var url))
-            {
-                recorder.Record("navigation", "GET", url);
-            }
-        };
-        _context.Request += (_, request) =>
-        {
-            if (!request.IsNavigationRequest && Uri.TryCreate(request.Url, UriKind.Absolute, out var url))
-            {
-                recorder.Record("request", request.Method, url);
-            }
-        };
+        // Optional route log (E2E_ROUTE_LOG_DIR=<dir>, ADR-147): which pages and API paths this test
+        // reached, for the test-gap report. Off unless set; the recorder flushes when the page closes.
+        E2ERouteRecorder.AttachIfEnabled(BaseUrl, Page, _context);
     }
 
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-
-        if (_routeRecorder is not null)
-        {
-            await _routeRecorder.FlushAsync().ConfigureAwait(false);
-        }
 
         // A failed InitializeAsync (context or page creation threw) leaves these null despite the
         // null! declarations, and the NullReferenceException from disposal then replaced the real
