@@ -11,9 +11,19 @@
 // rules in app.css then paint the host surface in that mode until MmcaThemeProviders marks the page
 // interactive (data-mmca-interactive). Not an ES module and no modern syntax on purpose: it must run
 // before anything else on the page, on every WebView the MAUI heads target.
+//
+// A head whose own stylesheet keys its dark roles on data-mmca-color-mode (Layout:StampColorModeOnDocument)
+// adds data-stamp-color-mode to the script tag, and this also stamps that attribute before the first
+// paint. Without it the attribute arrives only after the first interactive render, so that head's first
+// frame used its light roles even when everything else was dark (Store Run 4 X-30). ColorModeStamp then
+// keeps it in step from the interactive render on.
+//
+//     <script src="_content/MMCA.Common.UI/theme-prepaint.js" data-stamp-color-mode></script>
 (function () {
     var key = 'mmca_theme';
     var theme = null;
+    var script = document.currentScript;
+    var stampColorMode = !!(script && script.hasAttribute('data-stamp-color-mode'));
 
     // On a MAUI head's cold launch the NATIVE copy wins: MainPageBase (MMCA.Common.UI.Maui) appends the
     // mode NativeThemeSync saved to device preferences on every change as MmcaTheme/<dark|light>. The
@@ -61,6 +71,9 @@
     }
 
     document.documentElement.setAttribute('data-mmca-theme', theme);
+    if (stampColorMode) {
+        document.documentElement.setAttribute('data-mmca-color-mode', theme);
+    }
 })();
 
 // Status bar fallback for an edge-to-edge MAUI head. On Android, MainPageBase (MMCA.Common.UI.Maui)

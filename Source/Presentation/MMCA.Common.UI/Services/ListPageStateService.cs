@@ -50,6 +50,13 @@ public sealed record ListPageState
     /// Keys are page-specific; each page decides what to save/restore.
     /// </summary>
     public IReadOnlyDictionary<string, string> Filters { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// The grid's own column filters, keyed by the column's property name. The base list page saves
+    /// and restores these itself (unlike <see cref="Filters"/>), so a column filter survives opening a
+    /// row and coming back, a refresh and a shared link.
+    /// </summary>
+    public IReadOnlyDictionary<string, ColumnFilterState> ColumnFilters { get; init; } = new Dictionary<string, ColumnFilterState>();
 }
 
 /// <summary>

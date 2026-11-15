@@ -141,6 +141,109 @@ public sealed class DataGridListPageBaseFilterStateTests : BunitTestBase
         await act.Should().NotThrowAsync();
     }
 
+    // Grid column filters (Store Run 4 AI-31): saved to the URL and state, restored onto the grid.
+    [Fact]
+    public async Task ColumnFilter_TheUserSets_IsWrittenToTheUrlAndTheSavedState()
+    {
+        Navigation.NavigateTo(Route);
+        var (grid, _, seen) = RenderGridPage();
+
+        grid.Instance.FilterDefinitions.Add(new FilterDefinition<GridRow> { Column = Column(grid, "Name"), Operator = "contains", Value = "Zed" });
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+
+        seen[^1].Should().ContainKey("Name").WhoseValue.Should().Be(("contains", "Zed"));
+        State.GetState(Route)!.ColumnFilters["Name"].Should().Be(new ColumnFilterState("contains", "Zed"));
+        Uri.UnescapeDataString(new Uri(Navigation.Uri).Query).Should().Contain("c:Name=contains:Zed");
+    }
+
+    [Fact]
+    public async Task ColumnFilterInTheUrl_IsSentByTheFirstLoadAndPutBackOnTheGrid()
+    {
+        Navigation.NavigateTo(Route + "?c:Name=contains%3AAnn&c:Id=%3E%3D%3A5");
+        var (grid, _, seen) = RenderGridPage();
+
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+
+        seen[^1].Should().ContainKey("Name").WhoseValue.Should().Be(("contains", "Ann"));
+        grid.Instance.FilterDefinitions.Should().HaveCount(2);
+        var id = grid.Instance.FilterDefinitions.Single(f => f.Column!.PropertyName == "Id");
+        id.Operator.Should().Be(">=");
+        id.Value.Should().Be(5, "the value is parsed back to the column's type");
+        Uri.UnescapeDataString(new Uri(Navigation.Uri).Query).Should().Contain("c:Name=contains:Ann", "the restored filter stays in the URL");
+    }
+
+    [Fact]
+    public async Task ColumnFilterOnAColumnTheGridDoesNotRender_IsDropped()
+    {
+        Navigation.NavigateTo(Route + "?c:Bogus=contains%3Ax&c:Name=equals%3AAnn");
+        var (grid, _, seen) = RenderGridPage();
+
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+
+        seen[^1].Should().NotContainKey("Bogus");
+        grid.Instance.FilterDefinitions.Should().ContainSingle().Which.Column!.PropertyName.Should().Be("Name");
+        State.GetState(Route)!.ColumnFilters.Should().NotContainKey("Bogus");
+    }
+
+    [Fact]
+    public async Task BackToAnUnfilteredUrl_ClearsTheGridsColumnFilters()
+    {
+        Navigation.NavigateTo(Route + "?c:Name=contains%3AAnn");
+        var (grid, _, seen) = RenderGridPage();
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+        grid.Instance.FilterDefinitions.Should().ContainSingle();
+
+        await grid.InvokeAsync(() => Navigation.NavigateTo(Route));
+
+        await grid.WaitForAssertionAsync(() => grid.Instance.FilterDefinitions.Should().BeEmpty());
+        await grid.WaitForAssertionAsync(() => seen[^1].Should().NotContainKey("Name"));
+    }
+
+    public sealed record GridRow(int Id, string Name);
+
+    private sealed class GridPage : DataGridListPageBase<GridRow>
+    {
+        [Parameter] public MudDataGrid<GridRow>? Grid { get; set; }
+
+        protected override string Title => "Rows";
+
+        protected override MudDataGrid<GridRow>? GridRef => Grid;
+
+        public Task<GridData<GridRow>> LoadAsync(GridState<GridRow> state, List<Dictionary<string, (string Operator, string Value)>> seen) =>
+            LoadServerDataAsync(state, (filters, _, _, _, _, _) =>
+            {
+                seen.Add(new Dictionary<string, (string Operator, string Value)>(filters, StringComparer.Ordinal));
+                return Task.FromResult(Result.Success<(IReadOnlyList<GridRow> Items, int TotalItems)>(([], 0)));
+            });
+    }
+
+    private (IRenderedComponent<MudDataGrid<GridRow>> Grid, IRenderedComponent<GridPage> Page, List<Dictionary<string, (string Operator, string Value)>> Seen) RenderGridPage()
+    {
+        var seen = new List<Dictionary<string, (string Operator, string Value)>>();
+        GridPage? page = null;
+        var grid = Render<MudDataGrid<GridRow>>(ps => ps
+            .Add(p => p.Filterable, true)
+            .Add(p => p.ServerData, (state, _) => page is null
+                ? Task.FromResult(new GridData<GridRow> { Items = [], TotalItems = 0 })
+                : page.LoadAsync(state, seen))
+            .Add(p => p.Columns, builder =>
+            {
+                builder.OpenComponent<PropertyColumn<GridRow, string>>(0);
+                builder.AddAttribute(1, nameof(PropertyColumn<,>.Property), (System.Linq.Expressions.Expression<Func<GridRow, string>>)(row => row.Name));
+                builder.CloseComponent();
+                builder.OpenComponent<PropertyColumn<GridRow, int>>(2);
+                builder.AddAttribute(3, nameof(PropertyColumn<,>.Property), (System.Linq.Expressions.Expression<Func<GridRow, int>>)(row => row.Id));
+                builder.CloseComponent();
+            }));
+
+        var cut = Render<GridPage>(ps => ps.Add(p => p.Grid, grid.Instance));
+        page = cut.Instance;
+        return (grid, cut, seen);
+    }
+
+    private static Column<GridRow> Column(IRenderedComponent<MudDataGrid<GridRow>> grid, string property) =>
+        grid.Instance.RenderedColumns.Single(c => c.PropertyName == property);
+
     private static Task GoToPhoneAsync(IRenderedComponent<FilteredPage> cut) =>
         cut.InvokeAsync(() => cut.Instance.NotifyBrowserViewportChangeAsync(
             new BrowserViewportEventArgs(Guid.NewGuid(), PhoneViewport, Breakpoint.Xs)));

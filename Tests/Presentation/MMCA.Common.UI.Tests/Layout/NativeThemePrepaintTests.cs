@@ -31,6 +31,30 @@ public sealed class NativeThemePrepaintTests
                 "the native value is read before the lazily flushed WebView storage");
     }
 
+    [Fact]
+    public void MainPage_SendsTheThemeTokenOnIosAndMacCatalystToo()
+    {
+        var page = ReadEmbedded("MainPageBase.cs");
+
+        page.Should().Contain("#if IOS || MACCATALYST");
+        page.Should().Contain("ApplicationNameForUserAgent", "WKWebView fixes its user agent at creation, so the token rides the configuration");
+        page.Should().Contain("#if ANDROID || IOS || MACCATALYST", "ThemeToken is shared by both platform hooks");
+    }
+
+    [Fact]
+    public void PrepaintScript_StampsTheColorModeOnlyWhenTheScriptTagOptsIn()
+    {
+        var script = ReadEmbedded("theme-prepaint.js");
+
+        // Store Run 4 X-30: a head keying its own dark roles on data-mmca-color-mode got them only after
+        // the first interactive render, so its first frame was light.
+        script.Should().Contain("script.hasAttribute('data-stamp-color-mode')");
+        script.Should().Contain("setAttribute('data-mmca-color-mode', theme)");
+        script.IndexOf("setAttribute('data-mmca-color-mode', theme)", StringComparison.Ordinal)
+            .Should().BeGreaterThan(script.IndexOf("setAttribute('data-mmca-theme', theme)", StringComparison.Ordinal),
+                "both attributes carry the one resolved theme");
+    }
+
     private static string ReadEmbedded(string logicalName)
     {
         using var stream = typeof(NativeThemePrepaintTests).Assembly.GetManifestResourceStream(logicalName)

@@ -22,6 +22,7 @@ namespace MMCA.Common.UI.Services;
 ///   <item><description><c>d</c> = dense grid density (<c>1</c> only — comfortable is the default and omitted)</description></item>
 ///   <item><description><c>q</c> = free-text search (extracted from <see cref="ListPageState.Filters"/> by convention)</description></item>
 ///   <item><description><c>f:&lt;name&gt;</c> = any other named filter</description></item>
+///   <item><description><c>c:&lt;property&gt;</c> = a grid column filter, written <c>&lt;operator&gt;:&lt;value&gt;</c> (MudDataGrid operators never contain a colon)</description></item>
 /// </list>
 /// <para>Default values are omitted from the URL so pristine list pages have clean URLs.</para>
 /// </remarks>
@@ -35,6 +36,8 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
     private const string DenseKey = "d";
     private const string SearchKey = "q";
     private const string FilterPrefix = "f:";
+    private const string ColumnFilterPrefix = "c:";
+    private const char ColumnFilterSeparator = ':';
     private const string SearchFilterName = "search";
     private const string DescendingMarker = "desc";
     private const string DenseMarker = "1";
@@ -90,24 +93,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             denseGrid = string.Equals(denseValues.ToString(), DenseMarker, StringComparison.Ordinal);
         }
 
-        var filters = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var (key, valuesAcrossDuplicates) in parsed)
-        {
-            var value = valuesAcrossDuplicates.ToString();
-            if (string.IsNullOrEmpty(value))
-            {
-                continue;
-            }
-
-            if (string.Equals(key, SearchKey, StringComparison.Ordinal))
-            {
-                filters[SearchFilterName] = value;
-            }
-            else if (key.StartsWith(FilterPrefix, StringComparison.Ordinal) && key.Length > FilterPrefix.Length)
-            {
-                filters[key[FilterPrefix.Length..]] = value;
-            }
-        }
+        var (filters, columnFilters) = ParseFilters(parsed);
 
         return new ListPageState
         {
@@ -118,6 +104,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             SortDescending = sortDescending,
             DenseGrid = denseGrid,
             Filters = filters,
+            ColumnFilters = columnFilters,
         };
     }
 
@@ -162,22 +149,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             parameters[DenseKey] = DenseMarker;
         }
 
-        foreach (var (name, value) in state.Filters)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                continue;
-            }
-
-            if (string.Equals(name, SearchFilterName, StringComparison.Ordinal))
-            {
-                parameters[SearchKey] = value;
-            }
-            else
-            {
-                parameters[FilterPrefix + name] = value;
-            }
-        }
+        AddFilterParameters(parameters, state);
 
         return parameters.Count == 0
             ? basePath
@@ -214,6 +186,86 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
 
         var target = BuildPath(basePath, state);
         navigation.NavigateTo(target, new NavigationOptions { ReplaceHistoryEntry = true });
+    }
+
+    /// <summary>Reads the search term, the <c>f:</c> named filters and the <c>c:</c> column filters.</summary>
+    private static (Dictionary<string, string> Filters, Dictionary<string, ColumnFilterState> ColumnFilters) ParseFilters(
+        Dictionary<string, StringValues> parsed)
+    {
+        var filters = new Dictionary<string, string>(StringComparer.Ordinal);
+        var columnFilters = new Dictionary<string, ColumnFilterState>(StringComparer.Ordinal);
+        foreach (var (key, valuesAcrossDuplicates) in parsed)
+        {
+            var value = valuesAcrossDuplicates.ToString();
+            if (string.IsNullOrEmpty(value))
+            {
+                continue;
+            }
+
+            if (string.Equals(key, SearchKey, StringComparison.Ordinal))
+            {
+                filters[SearchFilterName] = value;
+            }
+            else if (key.StartsWith(FilterPrefix, StringComparison.Ordinal) && key.Length > FilterPrefix.Length)
+            {
+                filters[key[FilterPrefix.Length..]] = value;
+            }
+            else if (key.StartsWith(ColumnFilterPrefix, StringComparison.Ordinal) && key.Length > ColumnFilterPrefix.Length
+                && TryParseColumnFilter(value, out var columnFilter))
+            {
+                columnFilters[key[ColumnFilterPrefix.Length..]] = columnFilter;
+            }
+        }
+
+        return (filters, columnFilters);
+    }
+
+    /// <summary>Writes the search term, the named filters and the column filters as query parameters.</summary>
+    private static void AddFilterParameters(Dictionary<string, string?> parameters, ListPageState state)
+    {
+        foreach (var (name, value) in state.Filters)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                continue;
+            }
+
+            if (string.Equals(name, SearchFilterName, StringComparison.Ordinal))
+            {
+                parameters[SearchKey] = value;
+            }
+            else
+            {
+                parameters[FilterPrefix + name] = value;
+            }
+        }
+
+        foreach (var (property, columnFilter) in state.ColumnFilters)
+        {
+            if (!string.IsNullOrEmpty(columnFilter.Operator))
+            {
+                parameters[ColumnFilterPrefix + property] = columnFilter.Operator + ColumnFilterSeparator + columnFilter.Value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Splits a <c>c:</c> value at its first colon into operator and value. A value with no colon or
+    /// no operator is a hand-edited link and is ignored; an empty value after the colon is an
+    /// operator that takes none (<c>is empty</c>).
+    /// </summary>
+    private static bool TryParseColumnFilter(string raw, out ColumnFilterState columnFilter)
+    {
+        var separator = raw.IndexOf(ColumnFilterSeparator, StringComparison.Ordinal);
+        if (separator <= 0)
+        {
+            columnFilter = null!;
+            return false;
+        }
+
+        var value = raw[(separator + 1)..];
+        columnFilter = new ColumnFilterState(raw[..separator], value.Length == 0 ? null : value);
+        return true;
     }
 
     /// <summary>A page size outside 1..<see cref="MaxPageSize"/> falls back to 0 (the page default).</summary>

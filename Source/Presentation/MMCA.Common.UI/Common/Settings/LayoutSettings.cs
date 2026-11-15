@@ -62,8 +62,10 @@ public sealed class LayoutSettings
     /// <c>data-mmca-color-mode="light|dark"</c>, kept in step with the Day/Dark toggle, so an app's own
     /// stylesheet can follow the mode (MudThemeProvider only swaps its palette variables, which gives
     /// CSS nothing to select on). Set once the page is interactive, so a prerendered page has no value
-    /// until then. <see langword="false"/> (the default) sets nothing. The attribute is distinct from
-    /// the MAUI head's pre-paint <c>data-mmca-theme</c>, whose rules it does not trigger.
+    /// until then; a MAUI head that loads <c>theme-prepaint.js</c> with <c>data-stamp-color-mode</c> on
+    /// its script tag gets the value before the first paint instead. <see langword="false"/> (the
+    /// default) sets nothing. The attribute is distinct from the MAUI head's pre-paint
+    /// <c>data-mmca-theme</c>, whose rules it does not trigger.
     /// </summary>
     public bool StampColorModeOnDocument { get; init; }
 }
