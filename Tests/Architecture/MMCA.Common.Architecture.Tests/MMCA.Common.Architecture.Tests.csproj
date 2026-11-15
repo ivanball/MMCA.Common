@@ -36,6 +36,20 @@
     <EmbeddedResource Include="Fixtures\backpressure-appsettings.json">
       <LogicalName>services.Fixture.appsettings.json</LogicalName>
     </EmbeddedResource>
+    <!-- Landing-page stylesheet fixtures for BrandColorTokenTestsBaseTests (rubric section 20): read
+         as manifest resources of the subclass's assembly, exactly as a consumer embeds its own. -->
+    <EmbeddedResource Include="Fixtures\brand-token.css">
+      <LogicalName>fixtures.brand-token.css</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\brand-hardcoded.css">
+      <LogicalName>fixtures.brand-hardcoded.css</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\brand-untokenized.css">
+      <LogicalName>fixtures.brand-untokenized.css</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\brand-blank.css">
+      <LogicalName>fixtures.brand-blank.css</LogicalName>
+    </EmbeddedResource>
     <!-- The deployment sample's own IaC pair (rubric section 13): SampleDeploymentObservabilityTests
          runs the shipped pairing gate over samples/deployment, so the sample consumers copy cannot
          gain, lose or re-tier an alert without its runbook section moving in the same change. -->

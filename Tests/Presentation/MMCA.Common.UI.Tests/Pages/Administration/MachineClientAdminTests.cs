@@ -1,6 +1,7 @@
 using AngleSharp.Dom;
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -113,6 +114,75 @@ public sealed class MachineClientAdminTests : BunitTestBase
             alert => alert.TextContent.Contains(message, StringComparison.Ordinal),
             "any other failure keeps the generic inline summary");
         cut.FindAll("[data-testid=\"machine-clients-not-enabled\"]").Should().BeEmpty("only a 404 means the feature is off");
+    }
+
+    [Fact]
+    public async Task Creating_SendsTheTypedNameAndRole_ShowsTheSecretOnce_AddsTheRow_AndClearsTheForm()
+    {
+        var created = new MachineClientResponse(Guid.NewGuid(), "Report export", 5003, DateTime.UtcNow, null, null, null, HasSecondarySecret: false);
+        _clients.Setup(x => x.CreateAsync(It.IsAny<CreateMachineClientRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new MachineClientSecretResponse(created, "new-secret")));
+        var cut = RenderUnderTest<MachineClientAdmin>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.FindAll("[data-testid=\"client-row-name\"]").Should().HaveCount(2));
+
+        await cut.Find("input[data-testid='client-name']").InputAsync(new ChangeEventArgs { Value = "Report export" });
+        await cut.Find("input[data-testid='client-role']").InputAsync(new ChangeEventArgs { Value = "Reporter" });
+        await cut.Find("[data-testid=\"create-client-submit\"]").ClickAsync(new MouseEventArgs());
+
+        _clients.Verify(
+            x => x.CreateAsync(new CreateMachineClientRequest("Report export", "Reporter"), It.IsAny<CancellationToken>()),
+            Times.Once());
+        await cut.WaitForAssertionAsync(() =>
+            cut.Find("[data-testid=\"issued-client-secret\"]").TextContent.Should().Be("new-secret"));
+        cut.FindAll("[data-testid=\"client-row-name\"]").Select(cell => cell.TextContent.Trim())
+            .Should().Equal("Nightly sync", "Old exporter", "Report export");
+        cut.Find("input[data-testid='client-name']").GetAttribute("value").Should().BeNullOrEmpty("a created client clears the form");
+        cut.Find("input[data-testid='client-role']").GetAttribute("value").Should().BeNullOrEmpty();
+        cut.Find("[data-testid=\"create-client-submit\"]").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Creating_WithNothingTyped_SendsEmptyValues_AndShowsTheRefusalInTheForm()
+    {
+        const string message = "Name is required.";
+        _clients.Setup(x => x.CreateAsync(It.IsAny<CreateMachineClientRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<MachineClientSecretResponse>(Error.Validation("MachineClients.NameRequired", message)));
+        var cut = RenderUnderTest<MachineClientAdmin>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.FindAll("[data-testid=\"client-row-name\"]").Should().HaveCount(2));
+
+        await cut.Find("[data-testid=\"create-client-submit\"]").ClickAsync(new MouseEventArgs());
+
+        _clients.Verify(
+            x => x.CreateAsync(new CreateMachineClientRequest(string.Empty, string.Empty), It.IsAny<CancellationToken>()),
+            Times.Once());
+        await cut.WaitForAssertionAsync(() =>
+            cut.Find("[data-testid=\"create-client\"]").TextContent.Should().Contain(message));
+        cut.FindAll("[data-testid=\"issued-secret\"]").Should().BeEmpty("a refused create issues no secret");
+        cut.FindAll("[data-testid=\"client-row-name\"]").Should().HaveCount(2);
+        cut.Find("[data-testid=\"create-client-submit\"]").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Creating_AfterARefusal_ClearsTheRefusalOnSuccess_AndKeepsNoTypedValues()
+    {
+        const string message = "Role is unknown.";
+        var created = new MachineClientResponse(Guid.NewGuid(), "Report export", 5003, DateTime.UtcNow, null, null, null, HasSecondarySecret: false);
+        _clients.SetupSequence(x => x.CreateAsync(It.IsAny<CreateMachineClientRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<MachineClientSecretResponse>(Error.Validation("MachineClients.RoleUnknown", message)))
+            .ReturnsAsync(Result.Success(new MachineClientSecretResponse(created, "second-try")));
+        var cut = RenderUnderTest<MachineClientAdmin>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.FindAll("[data-testid=\"client-row-name\"]").Should().HaveCount(2));
+        await cut.Find("input[data-testid='client-name']").InputAsync(new ChangeEventArgs { Value = "Report export" });
+        await cut.Find("input[data-testid='client-role']").InputAsync(new ChangeEventArgs { Value = "Nope" });
+        await cut.Find("[data-testid=\"create-client-submit\"]").ClickAsync(new MouseEventArgs());
+        await cut.WaitForAssertionAsync(() => cut.Find("[data-testid=\"create-client\"]").TextContent.Should().Contain(message));
+        cut.Find("input[data-testid='client-name']").GetAttribute("value").Should().Be("Report export", "a refusal keeps what was typed");
+
+        await cut.Find("[data-testid=\"create-client-submit\"]").ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() =>
+            cut.Find("[data-testid=\"issued-client-secret\"]").TextContent.Should().Be("second-try"));
+        cut.Find("[data-testid=\"create-client\"]").TextContent.Should().NotContain(message);
     }
 
     /// <summary>The component's own retry buttons, found by their localized label.</summary>

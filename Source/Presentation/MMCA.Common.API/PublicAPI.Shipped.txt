@@ -320,6 +320,7 @@ MMCA.Common.API.Pagination.SupportsCursorPagingAttribute.SupportsCursorPagingAtt
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.FixedWindow = 0 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitAlgorithm.SlidingWindow = 1 -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
+MMCA.Common.API.RateLimiting.RateLimitPartitions
 MMCA.Common.API.RateLimiting.RateLimitingSettings
 MMCA.Common.API.RateLimiting.RateLimitingSettings.Algorithm.get -> MMCA.Common.API.RateLimiting.RateLimitAlgorithm
 MMCA.Common.API.RateLimiting.RateLimitingSettings.Algorithm.init -> void
@@ -651,6 +652,7 @@ static MMCA.Common.API.Idempotency.IdempotencyRecord.operator !=(MMCA.Common.API
 static MMCA.Common.API.Idempotency.IdempotencyRecord.operator ==(MMCA.Common.API.Idempotency.IdempotencyRecord? left, MMCA.Common.API.Idempotency.IdempotencyRecord? right) -> bool
 static MMCA.Common.API.Notifications.DependencyInjection.AddNotificationControllers(this Microsoft.Extensions.DependencyInjection.IMvcBuilder! builder) -> Microsoft.Extensions.DependencyInjection.IMvcBuilder!
 static MMCA.Common.API.Pagination.PaginationHeaderExtensions.AppendPaginationHeader(this Microsoft.AspNetCore.Http.HttpResponse! response, MMCA.Common.Shared.Abstractions.PaginationMetadata! metadata) -> void
+static MMCA.Common.API.RateLimiting.RateLimitPartitions.FixedWindowWithRemainingRetryAfter<TKey>(TKey partitionKey, int permitLimit, System.TimeSpan window) -> System.Threading.RateLimiting.RateLimitPartition<TKey>
 static MMCA.Common.API.SessionCookies.CookieSessionRefreshMiddlewareExtensions.UseCookieSessionRefresh(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.API.SessionCookies.SessionClaimsToken.Create(string? accessToken) -> string?
 static MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions.AddSessionCookieAuthentication(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
@@ -740,6 +742,7 @@ virtual MMCA.Common.API.Controllers.AuthControllerBase.LoginAsync(MMCA.Common.Sh
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RefreshAsync(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RegisterAsync(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeCurrentSessionAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateAsync(TIdentifierType id, TUpdateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
 virtual MMCA.Common.API.Controllers.EmailConfirmationControllerBase<TSendCommand, TConfirmCommand>.ConfirmEmailAsync(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!

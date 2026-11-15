@@ -74,6 +74,13 @@ public partial class ListPageShell<TItem>
     [EditorRequired]
     public RenderFragment<TItem> CardTemplate { get; set; } = default!;
 
+    /// <summary>
+    /// Gets or sets the phone card's controls (a delete or edit button), rendered beside the card
+    /// body rather than inside the clickable area; see
+    /// <see cref="MobileInfiniteScrollList{TItem}.CardActionsTemplate"/>.
+    /// </summary>
+    [Parameter] public RenderFragment<TItem>? CardActionsTemplate { get; set; }
+
     /// <summary>Gets or sets the callback a phone card click invokes.</summary>
     [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
 

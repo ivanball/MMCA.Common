@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 
@@ -33,9 +34,34 @@ public static class PrerenderStateBudget
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// Serializes <paramref name="instance"/> once and persists that JSON under <paramref name="key"/>
-    /// when it fits <paramref name="maxJsonBytes"/>; otherwise persists nothing.
+    /// The largest UTF-8 JSON payload all keys persisted through this class into one
+    /// <see cref="PersistentComponentState"/> may add up to: 16 KB, about 28 KB on the wire at the
+    /// 16/9 re-encoding <see cref="MaxJsonBytes"/> describes. The per-key cap alone did not bound the
+    /// circuit-start message: two components persisting just under it each (a catalog page and a grid
+    /// beside it) reached 28.5 KB of the 32 KB limit (Store manual test Run 4, O8). A key that would
+    /// take the running total past this budget is skipped, and its component fetches on the interactive
+    /// pass, exactly as a key over <see cref="MaxJsonBytes"/> does.
     /// </summary>
+    public const int MaxTotalJsonBytes = 16 * 1024;
+
+    /// <summary>
+    /// The JSON bytes persisted so far into each state instance. Keyed weakly by the state object, so a
+    /// tally lives exactly as long as the scope that owns the state, and no DI registration is needed.
+    /// </summary>
+    private static readonly ConditionalWeakTable<PersistentComponentState, PersistedTally> Tallies = [];
+
+    /// <summary>
+    /// Serializes <paramref name="instance"/> once and persists that JSON under <paramref name="key"/>
+    /// when it fits <paramref name="maxJsonBytes"/> and also fits what is left of
+    /// <see cref="MaxTotalJsonBytes"/> for this <paramref name="state"/>; otherwise persists nothing.
+    /// </summary>
+    /// <remarks>
+    /// The page-wide total counts only the keys persisted through this method; a small fixed-size value
+    /// persisted with <c>PersistAsJson</c> directly is outside it, which the headroom between 28 KB and
+    /// the 32 KB limit absorbs. A larger <paramref name="maxJsonBytes"/> does not raise the page-wide
+    /// budget. Persisting a key the tally has already counted starts a new tally: one persistence pass
+    /// cannot persist a key twice, so the repeat marks a later pass over the same state instance.
+    /// </remarks>
     /// <typeparam name="TValue">The persisted type; restore it with <c>TryTakeFromJson&lt;TValue&gt;</c>.</typeparam>
     /// <param name="state">The component's persistent state.</param>
     /// <param name="key">The persistence key.</param>
@@ -48,16 +74,57 @@ public static class PrerenderStateBudget
         TValue instance,
         int maxJsonBytes = MaxJsonBytes)
     {
+        ArgumentNullException.ThrowIfNull(state);
+
         var json = JsonSerializer.SerializeToUtf8Bytes(instance, SerializerOptions);
         if (json.Length > maxJsonBytes)
         {
             return false;
         }
 
-        // PersistentComponentState takes no raw bytes publicly, so the measured JSON goes in as a
-        // JsonElement: PersistAsJson writes it out token for token, without serializing TValue again.
-        using var document = JsonDocument.Parse(json);
-        state.PersistAsJson(key, document.RootElement);
-        return true;
+        var tally = Tallies.GetValue(state, static _ => new PersistedTally());
+        lock (tally)
+        {
+            if (!tally.Fits(key, json.Length, MaxTotalJsonBytes))
+            {
+                return false;
+            }
+
+            // PersistentComponentState takes no raw bytes publicly, so the measured JSON goes in as a
+            // JsonElement: PersistAsJson writes it out token for token, without serializing TValue again.
+            // Counted only once PersistAsJson has accepted it, so a throw leaves the tally untouched.
+            using var document = JsonDocument.Parse(json);
+            state.PersistAsJson(key, document.RootElement);
+            tally.Add(key, json.Length);
+            return true;
+        }
+    }
+
+    /// <summary>The keys and JSON bytes one state instance has taken so far.</summary>
+    private sealed class PersistedTally
+    {
+        private readonly HashSet<string> _keys = [with(StringComparer.Ordinal)];
+        private int _totalBytes;
+
+        /// <summary>
+        /// Whether <paramref name="bytes"/> more fit under <paramref name="budget"/>. A key already
+        /// counted means a new persistence pass, so the tally restarts from zero first.
+        /// </summary>
+        public bool Fits(string key, int bytes, int budget)
+        {
+            if (_keys.Contains(key))
+            {
+                _keys.Clear();
+                _totalBytes = 0;
+            }
+
+            return _totalBytes + bytes <= budget;
+        }
+
+        public void Add(string key, int bytes)
+        {
+            _keys.Add(key);
+            _totalBytes += bytes;
+        }
     }
 }

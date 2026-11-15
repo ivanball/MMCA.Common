@@ -9,6 +9,7 @@ using MMCA.Common.API.Middleware;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
+using MMCA.Common.Shared.Resilience;
 
 namespace MMCA.Common.API.Controllers;
 
@@ -70,7 +71,33 @@ public abstract class ApiControllerBase : ControllerBase
         var localizer = HttpContext.RequestServices?.GetService<IErrorLocalizer>();
         problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(errorList, localizer);
 
+        SetRetryAfter(statusCode, errorList);
+
         return StatusCode(statusCode, problemDetails);
+    }
+
+    /// <summary>
+    /// A 429 whose <see cref="ErrorType.TooManyRequests"/> errors know how long the refusal lasts
+    /// (<see cref="Error.RetryAfter"/>) answers with a <c>Retry-After</c> header, in the same whole,
+    /// rounded-up seconds the rate limiters send (<see cref="RetryAfterHeader.Format"/>), so a client
+    /// waits out a sign-in lockout instead of guessing. With several, the longest wins: retrying
+    /// before it would only be refused again. Any other status, or a 429 that carries no hint, sends
+    /// no header.
+    /// </summary>
+    private void SetRetryAfter(int statusCode, List<Error> errors)
+    {
+        if (statusCode != StatusCodes.Status429TooManyRequests)
+        {
+            return;
+        }
+
+        var retryAfter = errors
+            .Where(static e => e.Type == ErrorType.TooManyRequests && e.RetryAfter is not null)
+            .Max(static e => e.RetryAfter);
+        if (retryAfter is { } delay && delay > TimeSpan.Zero)
+        {
+            Response.Headers.RetryAfter = RetryAfterHeader.Format(delay);
+        }
     }
 
     /// <summary>

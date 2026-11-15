@@ -513,6 +513,50 @@ jobs:
           test -n "$line" || { echo "::error::could not parse unit line coverage"; exit 1; }
           awk -v l="$line" -v m="68.3" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
 
+  # Coverage risk ratchet (ADR-147). NOT a required check, and deliberately separate from the required
+  # `coverage` job above: that job's `needs` must stay [changes, build-and-test], because a failed
+  # non-required integration job in its `needs` would SKIP it, and a skipped required check posts
+  # green, silently passing the line floor. This job merges the unit report with the five Testcontainers
+  # tiers' reports and fails only on NEW risk: a method not in .github/coverage-baselines/crap.txt
+  # above CRAP 30, or a baselined method whose CRAP rose. Promote it to required after about ten green
+  # runs. Regenerate the baseline by running the action with mode: write-baseline on a downloaded set.
+  coverage-risk:
+    needs: [changes, build-and-test, redis-integration, postgresql-integration, sqlserver-integration, aws-integration, gcp-integration]
+    if: always() && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Ratchet self-test
+        run: pwsh -NoProfile -File .github/actions/coverage-ratchet/test/Test-Ratchet.ps1
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: coverage-unit
+          path: coverage-risk
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: integration-coverage-*
+          path: coverage-risk
+          merge-multiple: true
+
+      - name: CRAP ratchet (unit + integration tiers)
+        uses: ./.github/actions/coverage-ratchet
+        with:
+          check: crap
+          reports: coverage-risk
+          include: '^MMCA\.Common\.'
+          # The shipped Testing.* packages ARE measured here; only test projects, the migrations
+          # fixture, benchmarks and the deployment sample are excluded.
+          exclude: '(\.Tests$|\.Tests\.|\.IntegrationTests$|Migrations|Benchmarks|Sample)'
+          baseline: .github/coverage-baselines/crap.txt
+
   # Cross-repo pre-merge canary: build a real consumer (MMCA.Helpdesk) against THIS PR's framework
   # source, so a breaking public-API change fails here instead of surfacing only after a release +
   # lockstep sweep. Helpdesk is the ideal canary: minimal single-module app, no database and no
@@ -881,7 +925,23 @@ jobs:
         # Floor = the exact [Fact] count in the project (11 HybridCacheService + 2 cross-instance
         # invalidation + 1 rate limiter, 2026-11-04): a tier that silently discovers fewer tests
         # fails here. Adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release --minimum-expected-tests 14
+        # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
+        # the cobertura file feeds the non-required coverage-risk job (ADR-147).
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-redis.cobertura.xml \
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release --minimum-expected-tests 14"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-redis
+          path: coverage.integration-redis.cobertura.xml
+          if-no-files-found: warn
 
   postgresql-integration:
     name: PostgreSQL integration (Testcontainers)
@@ -925,7 +985,23 @@ jobs:
         # PostgreSqlBrokerTransportTests.cs (3: the built-in PostgreSql broker's header round trip,
         # delayed redelivery and shared data-source authentication), 12 on 2026-11-08; adding a test
         # means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 12
+        # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
+        # the cobertura file feeds the non-required coverage-risk job (ADR-147).
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-postgresql.cobertura.xml \
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 12"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-postgresql
+          path: coverage.integration-postgresql.cobertura.xml
+          if-no-files-found: warn
 
   sqlserver-integration:
     name: SQL Server integration (Testcontainers)
@@ -969,7 +1045,23 @@ jobs:
         # loop must not require), so build/run this project directly by path, like
         # postgresql-integration. Floor = the exact [Fact] count in SQLServerPersistenceTests.cs (5,
         # 2026-11-08); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 5
+        # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
+        # the cobertura file feeds the non-required coverage-risk job (ADR-147).
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-sqlserver.cobertura.xml \
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 5"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-sqlserver
+          path: coverage.integration-sqlserver.cobertura.xml
+          if-no-files-found: warn
 
   aws-integration:
     name: AWS integration (Testcontainers LocalStack)
@@ -1013,7 +1105,23 @@ jobs:
         # redis-integration. Floor = the exact [Fact] count in the project (3 S3 + 2 SQS + 2 Secrets
         # Manager + 1 DataProtection + 5 SNS push, 2026-11-07: the broadcast-topic test went with
         # BroadcastAsync); adding a test means raising this number in the same PR.
-        run: dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 13
+        # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
+        # the cobertura file feeds the non-required coverage-risk job (ADR-147).
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-aws.cobertura.xml \
+            "dotnet test Tests/Hosting/MMCA.Common.Aws.LocalStack.Tests/MMCA.Common.Aws.LocalStack.Tests.csproj -c Release --minimum-expected-tests 13"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-aws
+          path: coverage.integration-aws.cobertura.xml
+          if-no-files-found: warn
 
   gcp-integration:
     name: Google Cloud integration (Testcontainers fake-gcs-server + Firestore emulator)
@@ -1064,7 +1172,23 @@ jobs:
         # aws-integration. Floor = the exact [Fact] count in the project (3 Cloud Storage + 3
         # DataProtection key ring + 8 FCM installation registry, 2026-10-25); adding a test means
         # raising this number in the same PR.
-        run: dotnet test Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests/MMCA.Common.Gcp.Emulator.Tests.csproj -c Release --minimum-expected-tests 14
+        # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
+        # the cobertura file feeds the non-required coverage-risk job (ADR-147).
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-gcp.cobertura.xml \
+            "dotnet test Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests/MMCA.Common.Gcp.Emulator.Tests.csproj -c Release --minimum-expected-tests 14"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-gcp
+          path: coverage.integration-gcp.cobertura.xml
+          if-no-files-found: warn
 
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)

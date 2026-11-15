@@ -54,4 +54,30 @@ public sealed class DockerAvailabilityTests
 
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void WindowsEnginePipeProbe_AnswersFromThePipeFilesystem_AndNeverThrows()
+    {
+        // The public probe only reaches the pipe enumeration on Windows, so on the Linux CI runner it is
+        // invoked directly: there the pipe root does not exist, and the IO failure must read as "no
+        // runtime" rather than escape and fail the collection gate.
+        var probe = typeof(DockerAvailability).GetMethod(
+            "WindowsEnginePipeExists",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        probe.Should().NotBeNull("the pipe probe is the delegate IsAvailable() hands the Windows branch");
+
+        var exists = (bool)probe!.Invoke(null, null)!;
+
+        if (OperatingSystem.IsWindows())
+        {
+            var listed = new DirectoryInfo(@"\\.\pipe\")
+                .GetFiles()
+                .Any(file => string.Equals(file.Name, DockerAvailability.WindowsEnginePipeName, StringComparison.OrdinalIgnoreCase));
+            exists.Should().Be(listed, "the probe reports exactly whether the engine pipe is listed");
+        }
+        else
+        {
+            exists.Should().BeFalse("there is no named-pipe filesystem off Windows");
+        }
+    }
 }

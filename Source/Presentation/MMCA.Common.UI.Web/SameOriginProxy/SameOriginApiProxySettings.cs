@@ -91,6 +91,14 @@ public sealed class SameOriginApiProxySettings
     public string RevokePath { get; set; } = "auth/revoke";
 
     /// <summary>
+    /// Gets or sets the this-device sign-out endpoint relative to the gateway root (default
+    /// <c>auth/revoke/current</c>), the one the everyday Logout calls. The proxy treats it exactly like
+    /// <see cref="RevokePath"/>: it forwards the POST with the session's bearer and then clears the
+    /// session cookies, whatever the upstream answered.
+    /// </summary>
+    public string RevokeCurrentPath { get; set; } = "auth/revoke/current";
+
+    /// <summary>
     /// Gets or sets the end-view-as endpoint relative to the gateway root (default
     /// <c>auth/view-as/end</c>, ADR-137). A browser POST to it is forwarded with the view-as overlay's
     /// bearer and then deletes the overlay cookie, whatever the upstream answered. A POST to any path

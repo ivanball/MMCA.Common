@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 
-namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories.Keyset;
 
 /// <summary>
 /// L122: a keyset cursor's date and time sort values must round-trip with their kind and offset,

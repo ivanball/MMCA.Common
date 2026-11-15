@@ -132,7 +132,7 @@ internal sealed class FakeGateway : IAsyncDisposable
                 return;
             }
 
-            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path == "/auth/revoke")
+            if (HttpMethods.IsPost(context.Request.Method) && (context.Request.Path == "/auth/revoke" || context.Request.Path == "/auth/revoke/current"))
             {
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;

@@ -40,6 +40,10 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
 
         Page = await _context.NewPageAsync().ConfigureAwait(false);
+
+        // Optional route log (E2E_ROUTE_LOG_DIR=<dir>, ADR-147): which pages and API paths this test
+        // reached, for the test-gap report. Off unless set; the recorder flushes when the page closes.
+        E2ERouteRecorder.AttachIfEnabled(BaseUrl, Page, _context);
     }
 
     public async ValueTask DisposeAsync()

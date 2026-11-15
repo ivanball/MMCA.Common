@@ -31,10 +31,11 @@ public interface IAuthUIService
     Task<Result<AuthenticationResponse>> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Signs out everywhere: revokes the user's server-side refresh sessions and clears local token
-    /// storage. Deliberately returns no <see cref="Result"/>: the local sign-out happens whatever
-    /// the server answered, because a user who asked to leave must never be kept signed in by a
-    /// failed network call.
+    /// Signs out this device: revokes this device's server-side refresh session through
+    /// <c>auth/revoke/current</c> and clears local token storage, leaving the account signed in on its
+    /// other devices (<see cref="RevokeAllSessionsAsync"/> is the sign-out everywhere). Deliberately
+    /// returns no <see cref="Result"/>: the local sign-out happens whatever the server answered,
+    /// because a user who asked to leave must never be kept signed in by a failed network call.
     /// </summary>
     Task LogoutAsync();
 

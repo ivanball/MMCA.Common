@@ -1,0 +1,15 @@
+AppHostFixtureBase::WaitForResourcesAsync	72
+ArchitectureRules::ScanFile	77.3
+DateTimeFilterStrategy::Apply	47
+DecimalFilterStrategy::Apply	46
+E2ETestBase::RegisterNewUserAsync	42
+IntFilterStrategy::Apply	46
+KeyboardOperabilityTestsBase::CheckFocusIndicatorAsync	72
+LogoutTestsBase::Logout_ShouldPreventAccessToProtectedPages	42
+LongFilterStrategy::Apply	46
+MarkupSnapshot::BuildDiffMessage	72
+MiddlewarePipelineBuilder::CreateDefault	38
+ModuleLoader::TopologicalSort	34
+PageExtensions::AssertNoAccessibilityViolationsAsync	42
+PageExtensions::DescribeChecks	156
+RuleHelpers::InheritsGeneric	42

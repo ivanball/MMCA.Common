@@ -29,6 +29,9 @@ namespace MMCA.Common.UI.Tests.Components.Capabilities;
 /// </summary>
 public sealed class BiometricGateTests : BunitTestBase
 {
+    /// <summary>The interop call <c>ElementReference.FocusAsync</c> makes.</summary>
+    private const string FocusIdentifier = "Blazor._internal.domWrapper.focus";
+
     private readonly FakeBiometricAuthenticator _biometrics = new();
     private readonly FakeDevicePreferences _preferences = new();
     private readonly StubTokenStorageService _tokenStorage = new();
@@ -257,10 +260,97 @@ public sealed class BiometricGateTests : BunitTestBase
         Services.GetRequiredService<NavigationManager>().Uri.Should().EndWith("/login");
     }
 
+    // ── Focus and the inert background (Store manual test Run 4, O13) ──
+    [Fact]
+    public async Task OnTheStartUpLock_FocusMovesToUnlock_WhileThePromptIsStillOpen()
+    {
+        // Before the fix focus moved only after a declined prompt, so while the platform prompt was
+        // up (or if it never answered) focus stayed on the page behind the overlay.
+        await EnableAppLockAsync();
+        _biometrics.PendingPrompt = new TaskCompletionSource<bool>();
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => JSInterop.Invocations
+            .Should().Contain(i => i.Identifier == FocusIdentifier, "every lock moves focus onto Unlock"));
+        cut.Markup.Should().Contain("mud-overlay");
+    }
+
+    [Fact]
+    public async Task OnAResumeLock_FocusMovesToUnlock_WhileThePromptIsStillOpen()
+    {
+        await EnableAppLockAsync();
+        _biometrics.NextResult = true;
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty());
+        var focusCallsBefore = JSInterop.Invocations.Count(i => i.Identifier == FocusIdentifier);
+        _biometrics.PendingPrompt = new TaskCompletionSource<bool>();
+
+        _lifecycle.NotifyEnteredBackground();
+        _time.Advance(TimeSpan.FromMinutes(5));
+        _lifecycle.NotifyResumed();
+
+        await cut.WaitForAssertionAsync(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusIdentifier).Should().BeGreaterThan(focusCallsBefore, "the resume lock moves focus too"));
+    }
+
+    [Fact]
+    public async Task Locking_MakesTheBackgroundInert_AndUnlocking_ReleasesIt()
+    {
+        var module = JSInterop.SetupModule(AppLockInertBackground.ModulePath);
+        await EnableAppLockAsync();
+        _biometrics.NextResult = false;
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => module.Invocations
+            .Should().Contain(i => i.Identifier == "inertOutside", "a lock makes the page behind the overlay inert"));
+        module.Invocations.Should().NotContain(i => i.Identifier == "release");
+
+        _biometrics.NextResult = true;
+        await cut.FindAll("button")
+            .Single(b => string.Equals(b.TextContent.Trim(), "Unlock", StringComparison.Ordinal))
+            .ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty());
+        module.Invocations.Should().Contain(i => i.Identifier == "release", "unlocking gives the page back");
+    }
+
+    [Fact]
+    public async Task SigningOut_ReleasesTheInertBackground()
+    {
+        var module = JSInterop.SetupModule(AppLockInertBackground.ModulePath);
+        await EnableAppLockAsync();
+        _biometrics.NextResult = false;
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+        await cut.WaitForAssertionAsync(() => module.Invocations.Should().Contain(i => i.Identifier == "inertOutside"));
+
+        await cut.FindAll("button")
+            .Single(b => b.TextContent.Contains("Sign out instead", StringComparison.Ordinal))
+            .ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => module.Invocations.Should().Contain(i => i.Identifier == "release"));
+    }
+
+    [Fact]
+    public async Task AnUnlockAtStartUp_BeforeTheOverlayRenders_NeverTouchesTheInertModule()
+    {
+        var module = JSInterop.SetupModule(AppLockInertBackground.ModulePath);
+        await EnableAppLockAsync();
+        _biometrics.NextResult = true;
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty());
+        module.Invocations.Should().BeEmpty("nothing was made inert, so there is nothing to release");
+    }
+
     // ── Fakes ──
     private sealed class FakeBiometricAuthenticator : IBiometricAuthenticator
     {
         public bool NextResult { get; set; }
+
+        /// <summary>When set, the prompt stays open until the test completes this source.</summary>
+        public TaskCompletionSource<bool>? PendingPrompt { get; set; }
 
         public List<string> PromptReasons { get; } = [];
 
@@ -270,7 +360,7 @@ public sealed class BiometricGateTests : BunitTestBase
         public Task<bool> AuthenticateAsync(string reason, CancellationToken cancellationToken = default)
         {
             PromptReasons.Add(reason);
-            return Task.FromResult(NextResult);
+            return PendingPrompt?.Task ?? Task.FromResult(NextResult);
         }
     }
 

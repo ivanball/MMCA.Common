@@ -110,26 +110,19 @@ internal sealed class InMemoryHubServer : IConnectionFactory
     /// <param name="body">The notification body.</param>
     /// <param name="metadata">The live metadata (null sends a JSON null, as an unscoped send does).</param>
     /// <returns>A task that completes once the record has been written to every live connection.</returns>
-    public async Task SendNotificationAsync(string title, string body, Dictionary<string, string>? metadata)
-    {
-        IDuplexPipe[] live;
-        lock (_sync)
-        {
-            live = [.. _live];
-        }
+    public Task SendNotificationAsync(string title, string body, Dictionary<string, string>? metadata) =>
+        SendToAllAsync("ReceiveNotification", [title, body, metadata]);
 
-        var invocation = JsonSerializer.Serialize(new
-        {
-            type = 1,
-            target = "ReceiveNotification",
-            arguments = new object?[] { title, body, metadata },
-        }) + "\u001e";
-        var bytes = Encoding.UTF8.GetBytes(invocation);
-        foreach (var application in live)
-        {
-            await application.Output.WriteAsync(bytes).ConfigureAwait(false);
-        }
-    }
+    /// <summary>
+    /// Pushes a <c>ReceiveChannelEvent(channelKey, eventName, payloadJson)</c> invocation to every live
+    /// connection, the shape the hub's channel broadcast sends.
+    /// </summary>
+    /// <param name="channelKey">The channel the event belongs to.</param>
+    /// <param name="eventName">The event name.</param>
+    /// <param name="payloadJson">The serialized payload.</param>
+    /// <returns>A task that completes once the record has been written to every live connection.</returns>
+    public Task SendChannelEventAsync(string channelKey, string eventName, string payloadJson) =>
+        SendToAllAsync("ReceiveChannelEvent", [channelKey, eventName, payloadJson]);
 
     public ValueTask<ConnectionContext> ConnectAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
     {
@@ -152,6 +145,27 @@ internal sealed class InMemoryHubServer : IConnectionFactory
         _ = RunServerAsync(application);
         return ValueTask.FromResult<ConnectionContext>(
             new DefaultConnectionContext(Guid.NewGuid().ToString("N"), transport, application));
+    }
+
+    private async Task SendToAllAsync(string target, object?[] arguments)
+    {
+        IDuplexPipe[] live;
+        lock (_sync)
+        {
+            live = [.. _live];
+        }
+
+        var invocation = JsonSerializer.Serialize(new
+        {
+            type = 1,
+            target,
+            arguments,
+        }) + "\u001e";
+        var bytes = Encoding.UTF8.GetBytes(invocation);
+        foreach (var application in live)
+        {
+            await application.Output.WriteAsync(bytes).ConfigureAwait(false);
+        }
     }
 
     private async Task RunServerAsync(IDuplexPipe application)

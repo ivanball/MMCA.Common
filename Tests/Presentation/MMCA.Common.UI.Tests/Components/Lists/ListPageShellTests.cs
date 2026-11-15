@@ -122,6 +122,38 @@ public sealed class ListPageShellTests : BunitTestBase
         clicked.Should().Be(TwoRows[1]);
     }
 
+    [Fact]
+    public void Mobile_CardActionsTemplate_RendersBesideTheClickableBody()
+    {
+        // Store Run 4 O2: the shell threads the actions slot down to every card, outside its button role.
+        Row? clicked = null;
+        Row? deleted = null;
+        RenderFragment DeleteAction(Row row) => builder =>
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "class", "probe-delete");
+            builder.AddAttribute(2, "type", "button");
+            builder.AddAttribute(3, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => deleted = row));
+            builder.AddContent(4, "Delete");
+            builder.CloseElement();
+        };
+
+        var cut = RenderShell(p => p
+            .Add(s => s.IsMobile, true)
+            .Add(s => s.OnCardClick, row => clicked = row)
+            .Add(s => s.CardActionsTemplate, DeleteAction));
+
+        cut.WaitForAssertion(() => cut.FindAll(".probe-delete").Should().HaveCount(2));
+        cut.FindAll("[role=button] .probe-delete").Should().BeEmpty("an action never sits inside the clickable area");
+
+        cut.FindAll(".probe-delete")[1].Click();
+        deleted.Should().Be(TwoRows[1]);
+        clicked.Should().BeNull("a tap on an action is not a tap on the card");
+
+        cut.FindAll("[role=button]")[0].Click();
+        clicked.Should().Be(TwoRows[0]);
+    }
+
     // Header (rule 1)
     [Fact]
     public void IsLoading_ShowsCancelButtonWithAriaLabel_ClickInvokesOnCancelLoading()

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -143,6 +144,64 @@ public sealed class InvariantMudLocalizationInterceptorTests
         {
             CultureInfo.CurrentUICulture = original;
         }
+    }
+
+    // The built-in localizer is what MudBlazor's interceptor base hands its own lookups to; the base
+    // exposes it only to subclasses, so the test reads it the way a subclass would see it.
+    private static IStringLocalizer BuiltInLocalizer(ILocalizationInterceptor interceptor) =>
+        (IStringLocalizer)typeof(AbstractLocalizationInterceptor)
+            .GetProperty("Localizer", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(interceptor)!;
+
+    [Fact]
+    public void BuiltInStrings_GetAllStrings_EnumeratesMudBlazorsEnglishResource()
+    {
+        using var provider = BuildProvider();
+        var builtIn = BuiltInLocalizer(provider.GetRequiredService<ILocalizationInterceptor>());
+
+        var all = builtIn.GetAllStrings(includeParentCultures: true).ToList();
+
+        Assert.NotEmpty(all);
+        Assert.All(all, s => Assert.False(s.ResourceNotFound));
+        Assert.All(all, s => Assert.False(string.IsNullOrEmpty(s.Name)));
+        var rowsPerPage = Assert.Single(all, s => s.Name == BuiltInKey);
+        Assert.Equal("Rows per page:", rowsPerPage.Value);
+        Assert.Equal(all.Count, all.Select(s => s.Name).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void BuiltInStrings_GetAllStrings_IsTheSameEnglishSetUnderANonEnglishCulture()
+    {
+        using var provider = BuildProvider();
+        var builtIn = BuiltInLocalizer(provider.GetRequiredService<ILocalizationInterceptor>());
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("es");
+
+            var all = builtIn.GetAllStrings(includeParentCultures: false).ToList();
+
+            Assert.Equal("Rows per page:", Assert.Single(all, s => s.Name == BuiltInKey).Value);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [Fact]
+    public void BuiltInStrings_Indexer_ReportsAnUnknownKeyAsNotFound_WithOrWithoutArguments()
+    {
+        using var provider = BuildProvider();
+        var builtIn = BuiltInLocalizer(provider.GetRequiredService<ILocalizationInterceptor>());
+
+        var plain = builtIn["NotARealMudBlazorKey"];
+        var formatted = builtIn["NotARealMudBlazorKey", 1];
+
+        Assert.True(plain.ResourceNotFound);
+        Assert.Equal("NotARealMudBlazorKey", plain.Value);
+        Assert.True(formatted.ResourceNotFound);
+        Assert.Equal("NotARealMudBlazorKey", formatted.Value);
     }
 
     [Fact]

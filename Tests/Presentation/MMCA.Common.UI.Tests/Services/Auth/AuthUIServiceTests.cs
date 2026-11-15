@@ -245,13 +245,13 @@ public sealed class AuthUIServiceTests : IDisposable
             .Setup(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new InvalidOperationException("JS interop is not available"));
         var jwt = Jwt();
-        var sut = CreateSut(request => request.RequestUri!.AbsolutePath == "/auth/revoke"
+        var sut = CreateSut(request => request.RequestUri!.AbsolutePath == "/auth/revoke/current"
             ? StubHttpMessageHandler.CreateResponse(HttpStatusCode.NoContent)
             : AuthResponse(jwt));
 
         await sut.LoginAsync(Credentials(), Ct);
 
-        _handler.Requests.Should().ContainSingle(r => r.Uri!.AbsolutePath == "/auth/revoke" && r.Method == HttpMethod.Post)
+        _handler.Requests.Should().ContainSingle(r => r.Uri!.AbsolutePath == "/auth/revoke/current" && r.Method == HttpMethod.Post)
             .Which.Authorization!.Parameter.Should().Be(jwt);
         _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Once);
     }
@@ -497,7 +497,7 @@ public sealed class AuthUIServiceTests : IDisposable
 
         _handler.CallCount.Should().Be(1);
         _handler.LastRequest.Method.Should().Be(HttpMethod.Post);
-        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/revoke");
+        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/revoke/current", "Logout ends this device only; RevokeAllSessionsAsync is the sign-out everywhere");
         _handler.LastRequest.Authorization!.Scheme.Should().Be("Bearer");
         _handler.LastRequest.Authorization.Parameter.Should().Be(StoredAccessToken);
         _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Once);

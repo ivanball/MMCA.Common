@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Tests.Persistence.Specifications;
 
-namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories.Keyset;
 
 /// <summary>
 /// Where the null sort keys fall in a keyset page depends on the engine (M112): SQL Server and

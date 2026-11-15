@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Tests.Persistence.Specifications;
 
-namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories.Keyset;
 
 /// <summary>
 /// Generated-SQL learning tests for <c>KeysetQueryBuilder</c>. Keyset paging is correct only because

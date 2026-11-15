@@ -26,6 +26,8 @@ MMCA.Common.Shared.Abstractions.Error.Error(string! Code, string! Message, MMCA.
 MMCA.Common.Shared.Abstractions.Error.For<TTarget>(string! source) -> MMCA.Common.Shared.Abstractions.Error!
 MMCA.Common.Shared.Abstractions.Error.Message.get -> string!
 MMCA.Common.Shared.Abstractions.Error.Message.init -> void
+MMCA.Common.Shared.Abstractions.Error.RetryAfter.get -> System.TimeSpan?
+MMCA.Common.Shared.Abstractions.Error.RetryAfter.init -> void
 MMCA.Common.Shared.Abstractions.Error.Source.get -> string?
 MMCA.Common.Shared.Abstractions.Error.Source.init -> void
 MMCA.Common.Shared.Abstractions.Error.Target.get -> string?

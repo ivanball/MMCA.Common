@@ -34,8 +34,68 @@ public abstract class MainPageBase : ContentPage
     /// </summary>
     protected abstract BlazorWebView HostWebView { get; }
 
+    /// <summary>
+    /// Whether the Android status bar draws dark icons (<see langword="true"/>, for a light app bar),
+    /// light icons (<see langword="false"/>, for a dark one), or is left as the platform theme sets it
+    /// (<see langword="null"/>, the default). Read when the page is attached to its window and again
+    /// whenever the app theme changes (<c>NativeThemeSync</c> sets it on every Day/Dark toggle), so an
+    /// override may answer from <see cref="Application.RequestedTheme"/> when the head's chrome changes
+    /// colour with the theme. Without an override, a light app bar (Store's pink chrome) kept the white
+    /// icons of the dark platform default. The other platforms ignore it.
+    /// </summary>
+    protected virtual bool? UseDarkStatusBarIcons => null;
+
 #if ANDROID
     private bool _statusBarHookAttached;
+    private bool _statusBarAppearanceHooked;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The page's handler, and with it the activity window, exists from here, so the status bar icon
+    /// appearance is applied now and re-applied on every app theme change.
+    /// </remarks>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+        if (Handler is null)
+        {
+            return;
+        }
+
+        ApplyStatusBarIconAppearance();
+        if (!_statusBarAppearanceHooked && Application.Current is { } app)
+        {
+            _statusBarAppearanceHooked = true;
+            app.RequestedThemeChanged += OnRequestedThemeChanged;
+        }
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e) =>
+        MainThread.BeginInvokeOnMainThread(ApplyStatusBarIconAppearance);
+
+    /// <summary>
+    /// Applies <see cref="UseDarkStatusBarIcons"/> through the window's insets controller
+    /// (<c>AppearanceLightStatusBars</c>: a light status bar is one drawn with dark icons). Does
+    /// nothing when the override answers <see langword="null"/> or no activity window exists yet.
+    /// </summary>
+    private void ApplyStatusBarIconAppearance()
+    {
+        if (UseDarkStatusBarIcons is not { } darkIcons)
+        {
+            return;
+        }
+
+        var window = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity?.Window;
+        if (window?.DecorView is not { } decorView)
+        {
+            return;
+        }
+
+        if (AndroidX.Core.View.WindowCompat.GetInsetsController(window, decorView) is { } insetsController)
+        {
+            insetsController.AppearanceLightStatusBars = darkIcons;
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>

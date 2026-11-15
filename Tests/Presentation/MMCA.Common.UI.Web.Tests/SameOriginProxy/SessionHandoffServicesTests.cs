@@ -76,4 +76,52 @@ public sealed class SessionHandoffServicesTests
 
         cleared.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(typeof(InvalidOperationException))]
+    [InlineData(typeof(JSDisconnectedException))]
+    [InlineData(typeof(JSException))]
+    [InlineData(typeof(OperationCanceledException))]
+    [InlineData(typeof(TaskCanceledException))]
+    public async Task CookieSync_SyncWithInteropUnavailable_ReportsNotWritten(Type exceptionType)
+    {
+        var unavailable = (Exception)Activator.CreateInstance(exceptionType, "interop unavailable")!;
+        _js.Setup(j => j.InvokeAsync<bool>("mmcaAuthHandoff.setCookie", It.IsAny<object?[]?>())).ThrowsAsync(unavailable);
+
+        var written = await new HandoffSessionCookieSync(_js.Object, _protector).SyncAsync("access-1", "refresh-1");
+
+        written.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidOperationException))]
+    [InlineData(typeof(JSDisconnectedException))]
+    [InlineData(typeof(JSException))]
+    [InlineData(typeof(OperationCanceledException))]
+    [InlineData(typeof(TaskCanceledException))]
+    public async Task CookieSync_ClearWithInteropUnavailable_ReportsNotCleared(Type exceptionType)
+    {
+        var unavailable = (Exception)Activator.CreateInstance(exceptionType, "interop unavailable")!;
+        _js.Setup(j => j.InvokeAsync<bool>("mmcaAuthCookie.clear", It.IsAny<object?[]?>())).ThrowsAsync(unavailable);
+
+        var cleared = await new HandoffSessionCookieSync(_js.Object, _protector).ClearAsync();
+
+        cleared.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CookieSync_AnyOtherFailure_IsNotSwallowed()
+    {
+        _js.Setup(j => j.InvokeAsync<bool>("mmcaAuthHandoff.setCookie", It.IsAny<object?[]?>()))
+            .ThrowsAsync(new ArgumentException("not an interop failure"));
+        _js.Setup(j => j.InvokeAsync<bool>("mmcaAuthCookie.clear", It.IsAny<object?[]?>()))
+            .ThrowsAsync(new FormatException("not an interop failure"));
+        var sut = new HandoffSessionCookieSync(_js.Object, _protector);
+
+        var sync = () => sut.SyncAsync("access-1", "refresh-1");
+        var clear = () => sut.ClearAsync();
+
+        await sync.Should().ThrowAsync<ArgumentException>();
+        await clear.Should().ThrowAsync<FormatException>();
+    }
 }
