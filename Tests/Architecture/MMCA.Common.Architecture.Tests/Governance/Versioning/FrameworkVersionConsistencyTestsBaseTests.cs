@@ -4,6 +4,18 @@ using Xunit.Sdk;
 namespace MMCA.Common.Architecture.Tests.Governance.Versioning;
 
 /// <summary>
+/// Runs the lockstep fixture cases alone: they write a <c>Directory.Packages.props</c> into the test
+/// output folder, which every rule that walks up from <c>AppContext.BaseDirectory</c> for that file
+/// (the dependency-version pins, the localization scan) would otherwise read mid-run.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class PackagesPropsFixtureCollection
+{
+    /// <summary>The collection name the props-writing tests share.</summary>
+    public const string Name = "Directory.Packages.props fixture";
+}
+
+/// <summary>
 /// Adversarial coverage for <see cref="FrameworkVersionConsistencyTestsBase"/> (ADR-016 lockstep), the
 /// gate Store and ADC subclass over their <c>Directory.Packages.props</c>. The base locates the props
 /// file beside the repo's <c>{RepoToken}.slnx</c>, walking up from the test output folder, so each case
@@ -11,6 +23,7 @@ namespace MMCA.Common.Architecture.Tests.Governance.Versioning;
 /// cases of one class run one at a time, so they never share the file). The guard subclass is private
 /// so xUnit does not collect its inherited fact as a test of its own.
 /// </summary>
+[Collection(PackagesPropsFixtureCollection.Name)]
 public sealed class FrameworkVersionConsistencyTestsBaseTests : IDisposable
 {
     private const string FixtureToken = "FrameworkVersionFixture";
