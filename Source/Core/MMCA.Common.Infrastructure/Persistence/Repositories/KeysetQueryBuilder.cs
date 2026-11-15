@@ -301,7 +301,9 @@ internal static class KeysetQueryBuilder
     /// <see cref="Expression.GreaterThan(Expression, Expression)"/> only exists for types with the
     /// operator, which excludes <see cref="string"/>. Strings therefore compare through
     /// <see cref="string.Compare(string, string)"/>, which EF Core translates to a native
-    /// <c>&gt;</c> / <c>&lt;</c>. Anything else with no operator but an
+    /// <c>&gt;</c> / <c>&lt;</c>. Expression trees define no relational operator on an enum either, so
+    /// an enum (or nullable enum) compares through its underlying integral value, which is the column
+    /// an enum maps to by default. Anything else with no operator but an
     /// <see cref="IComparable{T}"/> implementation (a <see cref="Guid"/> key, for instance) compares
     /// through <c>CompareTo</c>, whose translation is provider-specific.
     /// </remarks>
@@ -315,6 +317,13 @@ internal static class KeysetQueryBuilder
             return greaterThan
                 ? Expression.GreaterThan(compare, ZeroConstant)
                 : Expression.LessThan(compare, ZeroConstant);
+        }
+
+        if (type.IsEnum)
+        {
+            var integral = Enum.GetUnderlyingType(type);
+            var target = left.Type == type ? integral : typeof(Nullable<>).MakeGenericType(integral);
+            return Compare(Expression.Convert(left, target), Expression.Convert(right, target), greaterThan);
         }
 
         if (SupportsRelationalOperator(type))
@@ -343,7 +352,6 @@ internal static class KeysetQueryBuilder
 
     private static bool SupportsRelationalOperator(Type type)
         => type.IsPrimitive
-            || type.IsEnum
             || type == typeof(decimal)
             || type == typeof(DateTime)
             || type == typeof(DateTimeOffset)
