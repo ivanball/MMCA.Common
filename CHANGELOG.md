@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- **`POST auth/revoke/current`** (MMCA.Common.API `AuthControllerBase.RevokeCurrentSessionAsync`): signs out the calling device only, revoking the refresh session named by the access token's `sid` claim. A token with no `sid` (minted before the claim shipped) revokes every session, as `auth/revoke` does. An already-revoked or missing session answers 204. A host that serves `AuthControllerBase` regenerates its committed OpenAPI document for the new route.
+- **`SameOriginApiProxySettings.RevokeCurrentPath`** (MMCA.Common.UI.Web, default `auth/revoke/current`): the proxy treats it like `RevokePath`, clearing the session cookies whatever the upstream answers.
+
+### Changed
+
+- **Logout signs out this device, not every device** (MMCA.Common.UI `IAuthUIService.LogoutAsync`, Store manual test Run 4 C-64 / AI-27): it calls `auth/revoke/current`, so the account stays signed in on its other devices. Signing out everywhere stays the explicit "sign out of all devices" action on `/profile/sessions` (`RevokeAllSessionsAsync`, `auth/revoke`), and locking an account or changing its role still revokes every session. The login path that discards a session it could not store also revokes only that session now.
+
 ## [1.294.0] - 2026-11-15
 
 The last frame of Store manual test Run 4's X-30.

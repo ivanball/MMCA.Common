@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.RevokeCurrentPath.get -> string!
+MMCA.Common.UI.Web.SameOriginProxy.SameOriginApiProxySettings.RevokeCurrentPath.set -> void

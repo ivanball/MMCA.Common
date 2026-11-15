@@ -1,1 +1,2 @@
 ﻿#nullable enable
+virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeCurrentSessionAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!

@@ -145,13 +145,10 @@ public abstract class AuthControllerBase(
     }
 
     /// <summary>
-    /// Revokes the current user's refresh sessions, effectively logging them out.
-    /// <para>
-    /// The endpoint carries no body, so it cannot name the device it is being called from: it signs
-    /// the user out everywhere, which is what the single-token predecessor did and what a caller with
-    /// no way to identify its own session should get. Per-device sign-out is
-    /// <see cref="RevokeSessionAsync"/>, which names the session in the route.
-    /// </para>
+    /// Signs the current user out everywhere: revokes every one of their refresh sessions. This is the
+    /// explicit "sign out of all devices" action; the everyday sign-out is
+    /// <see cref="RevokeCurrentSessionAsync"/>, which ends only the calling device, and
+    /// <see cref="RevokeSessionAsync"/> ends one named device from the device list.
     /// </summary>
     [HttpPost("revoke")]
     [NonIdempotent("Revocation must reach the store on every call. Replaying a cached 204 would report success for a revoke that never ran, leaving a refresh token live after the user asked for it to be killed.")]
@@ -169,6 +166,36 @@ public abstract class AuthControllerBase(
             .ConfigureAwait(false);
 
         return result.IsFailure
+            ? HandleFailure(result.Errors)
+            : NoContent();
+    }
+
+    /// <summary>
+    /// Signs out the calling device only: revokes the refresh session named by the access token's own
+    /// <c>sid</c> claim, so the same account stays signed in on its other devices. A token minted before
+    /// <c>sid</c> shipped names no session, and then every session is revoked as before.
+    /// </summary>
+    /// <remarks>
+    /// A session that is already revoked, or no longer exists, answers 204 like a fresh revoke: the
+    /// device is signed out either way, and a sign-out is never a failure to show the user.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("revoke/current")]
+    [NonIdempotent("Revocation must reach the store on every call. Replaying a cached 204 would report success for a revoke that never ran, leaving this device's refresh token live after the user signed out.")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public virtual async Task<ActionResult> RevokeCurrentSessionAsync(CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var result = User.FindSessionId() is { } sessionId
+            ? await AuthenticationService.RevokeSessionByIdAsync(userId.Value, sessionId, cancellationToken).ConfigureAwait(false)
+            : await AuthenticationService.RevokeAllSessionsAsync(userId.Value, cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure && result.Errors.Any(e => e.Type != ErrorType.NotFound)
             ? HandleFailure(result.Errors)
             : NoContent();
     }

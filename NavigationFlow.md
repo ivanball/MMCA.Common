@@ -94,12 +94,14 @@ flowchart LR
     end
 ```
 
-- **Two sign-out paths, and they differ.** A row's button on `/profile/sessions` revokes one OTHER
-  session (`POST auth/revoke/{sessionId}`) and leaves this device signed in; the page-level button is
-  the account-wide `POST auth/revoke`, which also ends the caller's own session, so it is followed by
-  the local sign-out and a redirect to `/login`. The current device's row therefore offers no revoke
-  button at all: revoking it from a row would leave the app on a dead session until the access token
-  expired.
+- **Three sign-out paths, and they differ.** The everyday Logout in the menu revokes only this
+  device's session (`POST auth/revoke/current`, named by the access token's `sid`) and signs out
+  locally; the account stays signed in on its other devices. A row's button on `/profile/sessions`
+  revokes one OTHER session (`POST auth/revoke/{sessionId}`) and leaves this device signed in; the
+  page-level button is the account-wide `POST auth/revoke`, which also ends the caller's own session,
+  so it is followed by the local sign-out and a redirect to `/login`. The current device's row
+  therefore offers no revoke button at all: revoking it from a row would leave the app on a dead
+  session until the access token expired.
 
 ## Role/claim model
 

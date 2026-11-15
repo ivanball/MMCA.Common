@@ -107,13 +107,18 @@ public sealed class SameOriginApiProxyAuthFlowTests : IAsyncLifetime
         ProxyHost.SetCookies(response).Should().Contain(c => c.Contains(FakeGateway.RotatedRefreshToken, StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task Revoke_ForwardsTheBearer_ThenClearsTheCookies()
+    // Both sign-outs end this browser's session: the everyday Logout (auth/revoke/current, this device
+    // only) and the sign-out everywhere (auth/revoke). A this-device Logout that left the cookies in
+    // place would keep the browser signed in after the user signed out.
+    [Theory]
+    [InlineData("/api/auth/revoke")]
+    [InlineData("/api/auth/revoke/current")]
+    public async Task Revoke_ForwardsTheBearer_ThenClearsTheCookies(string path)
     {
         var access = Jwt.Create(DateTime.UtcNow.AddMinutes(10));
         using var host = await ProxyHost.StartAsync(_gateway);
         using var client = host.GetTestClient();
-        using var request = ProxyHost.Request(HttpMethod.Post, "/api/auth/revoke", access, "refresh-1", csrf: true);
+        using var request = ProxyHost.Request(HttpMethod.Post, path, access, "refresh-1", csrf: true);
 
         using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 

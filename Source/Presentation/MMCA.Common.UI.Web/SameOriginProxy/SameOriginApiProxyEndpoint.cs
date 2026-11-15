@@ -327,7 +327,9 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             return ProxyResponseMode.TokenIssuing;
         }
 
-        if (string.Equals(relativePath, Normalize(_settings.RevokePath), StringComparison.OrdinalIgnoreCase))
+        // Both sign-outs, everywhere and this device only, end this browser's session.
+        if (string.Equals(relativePath, Normalize(_settings.RevokePath), StringComparison.OrdinalIgnoreCase)
+            || string.Equals(relativePath, Normalize(_settings.RevokeCurrentPath), StringComparison.OrdinalIgnoreCase))
         {
             return ProxyResponseMode.Revoke;
         }

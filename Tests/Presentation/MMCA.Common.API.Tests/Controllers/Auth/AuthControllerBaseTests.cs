@@ -372,11 +372,104 @@ public sealed class AuthControllerBaseTests
         objectResult.Value.Should().BeOfType<ProblemDetails>();
     }
 
+    // ── RevokeCurrentSessionAsync (Store Run 4 C-64 / AI-27: Logout ends this device only) ──
+    [Fact]
+    public async Task RevokeCurrentSessionAsync_WhenUserIdNull_ReturnsUnauthorized()
+    {
+        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
+        TestAuthController sut = CreateController();
+
+        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
+
+        result.Should().BeOfType<UnauthorizedResult>();
+    }
+
+    [Fact]
+    public async Task RevokeCurrentSessionAsync_WithASessionClaim_RevokesOnlyThatSession()
+    {
+        const int userId = 42;
+        var sessionId = Guid.NewGuid();
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _authServiceMock
+            .Setup(x => x.RevokeSessionByIdAsync(userId, sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        TestAuthController sut = CreateController();
+        sut.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D"))],
+            "Test"));
+
+        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
+
+        result.Should().BeOfType<NoContentResult>();
+        _authServiceMock.Verify(x => x.RevokeSessionByIdAsync(userId, sessionId, It.IsAny<CancellationToken>()), Times.Once);
+        _authServiceMock.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the account's other devices stay signed in");
+    }
+
+    [Fact]
+    public async Task RevokeCurrentSessionAsync_WhenTheSessionIsAlreadyGone_StillReturnsNoContent()
+    {
+        const int userId = 42;
+        var sessionId = Guid.NewGuid();
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _authServiceMock
+            .Setup(x => x.RevokeSessionByIdAsync(userId, sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.NotFoundError("Auth.SessionAlreadyRevoked", "The session was already revoked.")));
+        TestAuthController sut = CreateController();
+        sut.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D"))],
+            "Test"));
+
+        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
+
+        result.Should().BeOfType<NoContentResult>("the device is signed out either way");
+    }
+
+    [Fact]
+    public async Task RevokeCurrentSessionAsync_WithoutASessionClaim_RevokesEverySession()
+    {
+        const int userId = 42;
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _authServiceMock.Setup(x => x.RevokeAllSessionsAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        TestAuthController sut = CreateController();
+
+        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
+
+        result.Should().BeOfType<NoContentResult>();
+        _authServiceMock.Verify(
+            x => x.RevokeAllSessionsAsync(userId, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "a token minted before sid shipped names no session, so it falls back to the old sign-out");
+    }
+
+    [Fact]
+    public async Task RevokeCurrentSessionAsync_OnAFailureOtherThanNotFound_ReturnsTheError()
+    {
+        const int userId = 42;
+        var sessionId = Guid.NewGuid();
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _authServiceMock
+            .Setup(x => x.RevokeSessionByIdAsync(userId, sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("Auth.StoreUnavailable", "The session store is unavailable.")));
+        TestAuthController sut = CreateController();
+        sut.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D"))],
+            "Test"));
+
+        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
+
+        result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().NotBe(StatusCodes.Status204NoContent);
+    }
+
     // ── Route + authorization contract ──
     [Theory]
     [InlineData(nameof(AuthControllerBase.GetMySessionsAsync), "my-sessions")]
     [InlineData(nameof(AuthControllerBase.GetMySignInsAsync), "my-sign-ins")]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync), "revoke/{sessionId:guid}")]
+    [InlineData(nameof(AuthControllerBase.RevokeCurrentSessionAsync), "revoke/current")]
     public void SessionActions_CarryTheirDocumentedRoute(string actionName, string expectedTemplate)
     {
         MethodInfo action = typeof(AuthControllerBase).GetMethod(actionName)!;
@@ -388,6 +481,7 @@ public sealed class AuthControllerBaseTests
     [InlineData(nameof(AuthControllerBase.GetMySessionsAsync))]
     [InlineData(nameof(AuthControllerBase.GetMySignInsAsync))]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync))]
+    [InlineData(nameof(AuthControllerBase.RevokeCurrentSessionAsync))]
     public void SessionActions_RequireAuthentication(string actionName)
     {
         MethodInfo action = typeof(AuthControllerBase).GetMethod(actionName)!;
@@ -397,10 +491,12 @@ public sealed class AuthControllerBaseTests
         action.GetCustomAttribute<AllowAnonymousAttribute>().Should().BeNull();
     }
 
-    [Fact]
-    public void RevokeSessionAsync_DeclaresItselfNonIdempotent()
+    [Theory]
+    [InlineData(nameof(AuthControllerBase.RevokeSessionAsync))]
+    [InlineData(nameof(AuthControllerBase.RevokeCurrentSessionAsync))]
+    public void RevokeActions_DeclareThemselvesNonIdempotent(string actionName)
     {
-        MethodInfo action = typeof(AuthControllerBase).GetMethod(nameof(AuthControllerBase.RevokeSessionAsync))!;
+        MethodInfo action = typeof(AuthControllerBase).GetMethod(actionName)!;
 
         action.GetCustomAttribute<NonIdempotentAttribute>().Should().NotBeNull(
             "a replayed 204 would report success for a revoke that never reached the store");

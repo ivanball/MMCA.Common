@@ -102,9 +102,10 @@ public sealed class AuthUIService(
     }
 
     /// <summary>
-    /// Best-effort <c>POST auth/revoke</c> with <paramref name="accessToken"/> set by hand, never
-    /// failing the caller. Shared by sign-out and by the login path that cannot store the session it
-    /// was just issued, so the two revokes cannot drift.
+    /// Best-effort <c>POST auth/revoke/current</c> with <paramref name="accessToken"/> set by hand,
+    /// never failing the caller: it ends only the session that token belongs to, so the account stays
+    /// signed in on its other devices. Shared by sign-out and by the login path that cannot store the
+    /// session it was just issued, so the two revokes cannot drift.
     /// </summary>
     private async Task TryRevokeAsync(string accessToken, CancellationToken cancellationToken)
     {
@@ -113,7 +114,7 @@ public sealed class AuthUIService(
 
         try
         {
-            using var response = await httpClient.PostAsync(new Uri("auth/revoke", UriKind.Relative), content: null, cancellationToken);
+            using var response = await httpClient.PostAsync(new Uri("auth/revoke/current", UriKind.Relative), content: null, cancellationToken);
         }
 #pragma warning disable CA1031 // Do not catch general exception types: the revoke is best-effort
         catch
