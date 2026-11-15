@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Theme;
+using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Theme;
 
@@ -55,6 +56,35 @@ public sealed class ThemeToggleTests : BunitTestBase
             "the scoped ThemeService outlives the component, so Dispose must unsubscribe");
     }
 
+    // Store Run 4 X-30: on a MAUI cold launch the page painted dark from the native store, but the
+    // toggle read a ThemeService still at its light default until initialization, so its first frame
+    // showed the moon ("switch to dark mode").
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void FirstRender_WithANativeMode_ShowsThatModeBeforeInitialization(bool nativeIsDark)
+    {
+        Services.AddSingleton<IInitialThemeModeSource>(new FixedInitialThemeModeSource(nativeIsDark));
+        var themeService = Services.GetRequiredService<ThemeService>();
+
+        var cut = RenderUnderTest<ThemeToggle>(_ => { });
+
+        themeService.IsInitialized.Should().BeFalse("the precondition is the frame before JS interop resolves the mode");
+        themeService.IsDarkMode.Should().Be(nativeIsDark);
+        var icon = nativeIsDark ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode;
+        cut.Markup.Should().Contain(icon, "the icon offers the opposite of the mode the page is painted in");
+    }
+
+    [Fact]
+    public void FirstRender_WithoutANativeSource_StartsLight()
+    {
+        var themeService = Services.GetRequiredService<ThemeService>();
+
+        RenderUnderTest<ThemeToggle>(_ => { });
+
+        themeService.IsDarkMode.Should().BeFalse("a web head registers no native source, so the default is unchanged");
+    }
+
     [Fact]
     public async Task ThemeChangeRaisedAfterDisposal_DoesNotThrow()
     {
@@ -74,5 +104,10 @@ public sealed class ThemeToggleTests : BunitTestBase
         raise.Should().NotThrow(
             "a rerender dispatched onto a disposed component must not surface to the publisher "
             + "and cut off the subscribers queued behind it");
+    }
+
+    private sealed class FixedInitialThemeModeSource(bool? isDarkMode) : IInitialThemeModeSource
+    {
+        public bool? IsDarkMode { get; } = isDarkMode;
     }
 }

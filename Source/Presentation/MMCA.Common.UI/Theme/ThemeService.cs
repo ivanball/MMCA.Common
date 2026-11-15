@@ -14,13 +14,22 @@ namespace MMCA.Common.UI.Theme;
 /// </para>
 /// </summary>
 /// <param name="jsRuntime">The host's JS runtime used to read/write the preference.</param>
-public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
+/// <param name="initialModeSource">
+/// The head's native store of the preference (MAUI registers one), or <see langword="null"/> on a web
+/// head. A known value seeds <see cref="IsDarkMode"/> before the first render, so every reader of the
+/// service (the app-bar toggle's icon and label among them) starts in the mode the page is painted in
+/// rather than light until <see cref="InitializeAsync"/> runs (Store Run 4 X-30).
+/// </param>
+public sealed class ThemeService(IJSRuntime jsRuntime, IInitialThemeModeSource? initialModeSource = null) : IAsyncDisposable
 {
     private const string ModulePath = "./_content/MMCA.Common.UI/theme.js";
     private readonly LazyJsModule _module = new(jsRuntime, ModulePath);
 
-    /// <summary>Whether dark mode is currently active.</summary>
-    public bool IsDarkMode { get; private set; }
+    /// <summary>
+    /// Whether dark mode is currently active. Before initialization it holds the native store's mode
+    /// when the head has one, and <see langword="false"/> otherwise.
+    /// </summary>
+    public bool IsDarkMode { get; private set; } = initialModeSource?.IsDarkMode ?? false;
 
     /// <summary>Whether <see cref="InitializeAsync"/> has resolved the stored/system preference yet.</summary>
     public bool IsInitialized { get; private set; }
