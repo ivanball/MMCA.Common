@@ -164,6 +164,10 @@ MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.ApplicationLay
 MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.CommandHandlers_Return_ResultTypes() -> void
 MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.HandlerResultConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.QueryHandlers_Return_ResultTypes() -> void
+MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase
+MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.HandlerInventory_ShouldNotBe_Empty() -> void
+MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.HandlerTestCoverageTestsBase() -> void
+MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.Handlers_ShouldBe_NamedByATest() -> void
 MMCA.Common.Testing.Architecture.IArchitectureMap
 MMCA.Common.Testing.Architecture.IArchitectureMap.Api() -> System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>!
 MMCA.Common.Testing.Architecture.IArchitectureMap.For(string! module, MMCA.Common.Testing.Architecture.Layer layer) -> System.Reflection.Assembly?
@@ -247,6 +251,10 @@ MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.Translations_AreC
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.LocalizedTextConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.UserVisibleText_IsLocalized() -> void
+MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase
+MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.CaseTraits_ShouldName_ExistingCases() -> void
+MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.LinkedCases_ShouldNotDrop() -> void
+MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.ManualCaseTraitTestsBase() -> void
 MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase
 MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.EveryMcpTool_ShouldDeclare_WhoMayCallIt() -> void
 MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.McpToolAccessDeclarationTestsBase() -> void
@@ -293,6 +301,10 @@ MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.EveryRunbookAl
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.MonitoringWorkbookOrDashboard_IsProvisioned_WhenRequired() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ObservabilityConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_AreDiscovered_GateIsNotVacuous() -> void
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.PageE2ECoverageTestsBase() -> void
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.Pages_ShouldBe_ReachedByAnE2ETest() -> void
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.RouteInventory_ShouldNotBe_Empty() -> void
 MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase
 MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.NamedPermissions_ShouldBe_GrantedToARole() -> void
 MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.PermissionCoverageTestsBase() -> void
@@ -411,6 +423,8 @@ abstract MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.MinimumF
 abstract MMCA.Common.Testing.Architecture.FrameworkVersionConsistencyTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.HandlerConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.RepoRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.IdempotencyConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ImmutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.InlineStyleTestsBase.MinimumRazorFiles.get -> int
@@ -423,6 +437,7 @@ abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.Minim
 abstract MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.RequiredCultures.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 abstract MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.RepoRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.Services.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.MicroserviceExtractionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -430,6 +445,7 @@ abstract MMCA.Common.Testing.Architecture.ModuleConformanceTestsBase<TModule>.Ex
 abstract MMCA.Common.Testing.Architecture.ModuleIsolationTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.NamespaceCycleTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.NamingConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.RepoRoot.get -> string!
 abstract MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.DeclaredPermissions.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 abstract MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.PiiConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -540,9 +556,11 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.FoldersStayNarrow(stri
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ForwardedJwtBearerAudienceIsFailClosed(System.Collections.Generic.IReadOnlyCollection<string!>! sourceRoots, int minimumCalls) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageStaysBehindInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandledCommandCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlerCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersAreCoLocatedWithTheirContracts(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersAreSealedWithHandlerSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersDoNotInjectOtherHandlers(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersHaveTests(MMCA.Common.Testing.Architecture.IArchitectureMap! map, string! repoRoot, System.Collections.Generic.IReadOnlyCollection<string!>! testsRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedHandlers) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersResideInApplicationLayer(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HardDeletesOnlyInAllowedTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.InfrastructureDoesNotDependOnApi(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -557,6 +575,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsResid
 static MMCA.Common.Testing.Architecture.ArchitectureRules.InvariantClassesAreStatic(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelSdksStayAtTheModelBoundary(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.LayerMapDeclaresLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.LinkedManualCaseCount(string! repoRoot, string! testsRoot, string! suiteFolder) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ManualCaseTraitsResolve(string! repoRoot, string! testsRoot, string! suiteFolder) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.McpToolsDeclareAccess(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApisAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleApplicationsAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -573,6 +593,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(M
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamedPermissionsAreGranted(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyCollection<string!>! declaredPermissions, System.Collections.Generic.IEnumerable<string!>? additionalReferencedPermissions = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamespacesHaveNoDependencyCycles(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? allowedCycleNamespaces = null) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PageRouteCount(string! repoRoot, string! sourceRoot) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PagesHaveE2ETests(string! repoRoot, string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! e2eSourceRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedRoutes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToPiiMembers(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiMembersHaveInventoryRows(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! packageId, int exclusiveMajorCeiling, string! reason) -> void
@@ -668,6 +690,9 @@ virtual MMCA.Common.Testing.Architecture.FormsConventionTestsBase.RequiredMarker
 virtual MMCA.Common.Testing.Architecture.ForwardedJwtAudienceTestsBase.SourceRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.FrameworkVersionConsistencyTestsBase.MinimumCommonPackageCount.get -> int
 virtual MMCA.Common.Testing.Architecture.HandlerConventionTestsBase.MaxServiceConstructorParameters.get -> int
+virtual MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.AllowedUntestedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.MinimumHandlers.get -> int
+virtual MMCA.Common.Testing.Architecture.HandlerTestCoverageTestsBase.TestsRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.AllowedInlineStyles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.InlineStyleTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.ModuleRequiredLayerOverrides.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>!
@@ -677,6 +702,9 @@ virtual MMCA.Common.Testing.Architecture.LifetimeTokenConventionTestsBase.ScanAl
 virtual MMCA.Common.Testing.Architecture.LocalizationResourceTestsBase.MinimumBaseResources.get -> int
 virtual MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.LocalizedTextConventionTestsBase.MinimumScannedFiles.get -> int
+virtual MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.MinimumLinkedCases.get -> int
+virtual MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.SuiteFolder.get -> string!
+virtual MMCA.Common.Testing.Architecture.ManualCaseTraitTestsBase.TestsRoot.get -> string!
 virtual MMCA.Common.Testing.Architecture.McpToolAccessDeclarationTestsBase.MinimumMcpTools.get -> int
 virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.AppSettingsResource(string! service) -> string!
 virtual MMCA.Common.Testing.Architecture.MessageBusBackpressureTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
@@ -690,6 +718,10 @@ virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.Minimu
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RequireWorkbook.get -> bool
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RunbookResource.get -> string!
+virtual MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.AllowedUntestedRoutes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.E2ESourceRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.MinimumRoutes.get -> int
+virtual MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.SourceRoot.get -> string!
 virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.AdditionalReferencedPermissions.get -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.PermissionCoverageTestsBase.MinimumNamedPermissions.get -> int
 virtual MMCA.Common.Testing.Architecture.PiiConventionTestsBase.AnonymizableSamples.get -> System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>!
