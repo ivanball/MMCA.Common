@@ -1746,7 +1746,7 @@ MMCA.Common.UI.Theme.ThemeService.IsDarkMode.get -> bool
 MMCA.Common.UI.Theme.ThemeService.IsInitialized.get -> bool
 MMCA.Common.UI.Theme.ThemeService.OnChange -> System.EventHandler?
 MMCA.Common.UI.Theme.ThemeService.SetDarkModeAsync(bool isDarkMode) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Theme.ThemeService.ThemeService(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+MMCA.Common.UI.Theme.ThemeService.ThemeService(Microsoft.JSInterop.IJSRuntime! jsRuntime, MMCA.Common.UI.Theme.IInitialThemeModeSource? initialModeSource = null) -> void
 MMCA.Common.UI.Theme.ThemeService.ToggleAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Theme.ThemeToggle
 MMCA.Common.UI.Theme.ThemeToggle.Dispose() -> void

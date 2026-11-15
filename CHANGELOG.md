@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.294.0] - 2026-11-15
+
+The last frame of Store manual test Run 4's X-30.
+
+### Fixed
+
+- **The theme toggle shows the right icon on a MAUI head's first frame** (MMCA.Common.UI `ThemeService`): the service takes the head's optional `IInitialThemeModeSource` and seeds `IsDarkMode` from it at construction, so the app-bar toggle's icon and label match the dark page from the first render instead of showing "switch to dark mode" until initialization. A web head registers no source and starts light as before.
+
+### Changed
+
+- **`ThemeService`'s constructor** (MMCA.Common.UI) gains an optional `IInitialThemeModeSource? initialModeSource = null` parameter. The service is resolved from DI, so no consumer code changes.
+
 ## [1.293.0] - 2026-11-15
 
 Two defects of Store manual test Run 4.
