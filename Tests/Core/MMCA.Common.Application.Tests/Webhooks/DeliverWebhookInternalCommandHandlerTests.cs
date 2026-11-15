@@ -36,6 +36,7 @@ public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
     private readonly Mock<ITenantContext> _tenant = new();
     private readonly RecordingLoggerProvider _logs = new();
     private readonly List<WebhookDeliveryRequest> _requests = [];
+    private bool _webhooksEnabled = true;
 
     public DeliverWebhookInternalCommandHandlerTests() => _tenant.SetupGet(t => t.TenantId).Returns(Tenant);
 
@@ -299,6 +300,124 @@ public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
         _store.Verify(s => s.RecordOutcomeAsync(subscription, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // -- Webhooks switched off in this host --
+    [Fact]
+    public async Task WebhooksDisabled_FailsWithoutReadingOrSending()
+    {
+        var subscription = Seed();
+        _webhooksEnabled = false;
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsFailure.Should().BeTrue("a row queued before webhooks were switched off retries and dead-letters, staying requeue-able");
+        result.Errors.Should().ContainSingle(e => e.Code == WebhookErrorCodes.DeliveryFailed)
+            .Which.Message.Should().Contain("Webhooks:Enabled is false");
+        _store.Verify(s => s.FindAsync(It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sender.Verify(s => s.SendAsync(It.IsAny<WebhookDeliveryRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        _logs.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task NullCommand_Throws()
+    {
+        var act = () => HandleAsync(null!);
+
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // -- Reasons when the outcome carries no status code or no detail --
+    [Fact]
+    public async Task RejectedWithoutAStatusCode_RecordsTheDetail()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.Rejected, null, "HttpRequestException: response ended early");
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsFailure.Should().BeTrue();
+        subscription.LastFailure.Should().Be("HttpRequestException: response ended early");
+        result.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("The webhook delivery failed: HttpRequestException: response ended early.");
+    }
+
+    [Fact]
+    public async Task RejectedWithNeitherStatusCodeNorDetail_RecordsTheStatusName()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.Rejected, null, "   ");
+
+        await HandleAsync(Command(subscription.Id));
+
+        subscription.LastFailure.Should().Be(nameof(WebhookSendStatus.Rejected));
+    }
+
+    [Fact]
+    public async Task TransportFailedWithoutDetail_RecordsTheStatusName()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.TransportFailed, null);
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsFailure.Should().BeTrue();
+        subscription.LastFailure.Should().Be(nameof(WebhookSendStatus.TransportFailed));
+        result.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("The webhook delivery failed: TransportFailed.");
+    }
+
+    [Fact]
+    public async Task GoneWithoutAStatusCode_StillDisables_AndRecordsTheDetail()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.Gone, null, "receiver said gone");
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        subscription.IsEnabled().Should().BeFalse();
+        subscription.LastFailure.Should().Be("receiver said gone");
+        _logs.Entries.Should().Contain(e => e.Level == LogLevel.Information && e.Message.Contains("410 Gone", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DeliveredWithoutAStatusCode_SucceedsAndLogsZero()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.Delivered, null);
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        subscription.LastDeliveredOn.Should().Be(Now);
+        subscription.LastFailedOn.Should().BeNull();
+        _logs.Entries.Should().Contain(e => e.Level == LogLevel.Information && e.Message.Contains("(HTTP 0)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task TargetRefusedWithoutDetail_LogsTheStatusName()
+    {
+        var subscription = Seed();
+        SendReturns(WebhookSendStatus.TargetRefused, null);
+
+        var result = await HandleAsync(Command(subscription.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        subscription.LastFailure.Should().Be("Target refused: not a public address.");
+        _logs.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning)
+            .Which.Message.Should().EndWith(nameof(WebhookSendStatus.TargetRefused));
+    }
+
+    [Fact]
+    public async Task TargetRefused_ForAnUppercaseHttpsScheme_RecordsThePublicAddressReason()
+    {
+        var subscription = Seed("HTTPS://hooks.example.com/inbound");
+        SendReturns(WebhookSendStatus.TargetRefused, null, "refused");
+
+        await HandleAsync(Command(subscription.Id));
+
+        subscription.LastFailure.Should().Be("Target refused: not a public address.", "the scheme comparison ignores case");
+    }
+
     // -- Shutdown is not a failure (rule 35.35) --
     [Fact]
     public async Task Cancellation_PropagatesWithoutRecording()
@@ -336,7 +455,7 @@ public sealed class DeliverWebhookInternalCommandHandlerTests : IDisposable
     {
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddProvider(_logs));
-        services.AddSingleton(Options.Create(new WebhookSettings { Enabled = true }));
+        services.AddSingleton(Options.Create(new WebhookSettings { Enabled = _webhooksEnabled }));
         services.AddSingleton<TimeProvider>(_clock);
         services.AddSingleton(_store.Object);
         services.AddSingleton(_sender.Object);

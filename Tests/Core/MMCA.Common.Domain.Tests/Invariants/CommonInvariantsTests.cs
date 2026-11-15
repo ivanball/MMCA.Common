@@ -423,6 +423,25 @@ public sealed class CommonInvariantsTests
     }
 
     [Fact]
+    public void EnsureOptionalStringMaxLength_WhenExactlyAtLimit_ReturnsSuccess()
+    {
+        // The bound is inclusive: a value of exactly maxLength characters is allowed.
+        Result result = CommonInvariants.EnsureOptionalStringMaxLength(
+            "12345", 5, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnsureOptionalStringMaxLength_WhenOneOverLimit_ReturnsFailure()
+    {
+        Result result = CommonInvariants.EnsureOptionalStringMaxLength(
+            "123456", 5, "Code", "Message", "Source", "Target");
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
     public void EnsureOptionalStringMaxLength_WhenExceedsLimit_ReturnsFailure()
     {
         Result result = CommonInvariants.EnsureOptionalStringMaxLength(
