@@ -85,19 +85,6 @@ public abstract class MainPageBase : ContentPage
         }
     }
 
-    /// <summary>
-    /// The user agent token for the Day/Dark mode saved natively (<c>MmcaTheme/dark|light</c>), or empty
-    /// on a first launch. <c>NativeThemeSync</c> saves it on every change, while the WebView flushes its
-    /// own storage lazily, so after a quick kill this is the value saved last: <c>theme-prepaint.js</c>
-    /// paints the relaunch's first frame from it (Run 17 X-27).
-    /// </summary>
-    private static string ThemeToken() => MauiThemeStore.ReadStoredIsDarkMode() switch
-    {
-        true => " MmcaTheme/dark",
-        false => " MmcaTheme/light",
-        null => string.Empty,
-    };
-
     /// <summary>The user agent token for one system bar, or empty when the platform has no such dimension.</summary>
     private static string SystemBarToken(Android.Content.Res.Resources resources, string dimensionName, string tokenName)
     {
@@ -113,6 +100,56 @@ public abstract class MainPageBase : ContentPage
             ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" {tokenName}/{cssPixels}")
             : string.Empty;
     }
+#endif
+
+#if IOS || MACCATALYST
+    private bool _themeHookAttached;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Runs before the web view handler exists, so the hook below sees the web view's configuration
+    /// while it can still change: WKWebView fixes its user agent when it is created.
+    /// </remarks>
+    protected override void OnHandlerChanging(HandlerChangingEventArgs args)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        base.OnHandlerChanging(args);
+        if (args.NewHandler is not null && !_themeHookAttached)
+        {
+            _themeHookAttached = true;
+            HostWebView.BlazorWebViewInitializing += OnHostWebViewInitializing;
+        }
+    }
+
+    /// <summary>
+    /// Hands the natively saved Day/Dark mode to the page as the same <c>MmcaTheme/dark|light</c> user
+    /// agent token Android sends, appended to WKWebView's application name (the documented way to extend
+    /// its default user agent). Without it an iOS relaunch right after a theme switch painted the mode
+    /// the WebView had last flushed to its own storage (Store Run 4 X-30).
+    /// </summary>
+    private static void OnHostWebViewInitializing(object? sender, Microsoft.AspNetCore.Components.WebView.BlazorWebViewInitializingEventArgs e)
+    {
+        var token = ThemeToken();
+        if (token.Length > 0 && e.Configuration is { } configuration)
+        {
+            configuration.ApplicationNameForUserAgent = (configuration.ApplicationNameForUserAgent ?? string.Empty) + token;
+        }
+    }
+#endif
+
+#if ANDROID || IOS || MACCATALYST
+    /// <summary>
+    /// The user agent token for the Day/Dark mode saved natively (<c>MmcaTheme/dark|light</c>), or empty
+    /// on a first launch. <c>NativeThemeSync</c> saves it on every change, while the WebView flushes its
+    /// own storage lazily, so after a quick kill this is the value saved last: <c>theme-prepaint.js</c>
+    /// paints the relaunch's first frame from it (Run 17 X-27, Store Run 4 X-30).
+    /// </summary>
+    private static string ThemeToken() => MauiThemeStore.ReadStoredIsDarkMode() switch
+    {
+        true => " MmcaTheme/dark",
+        false => " MmcaTheme/light",
+        null => string.Empty,
+    };
 #endif
 
     /// <inheritdoc />

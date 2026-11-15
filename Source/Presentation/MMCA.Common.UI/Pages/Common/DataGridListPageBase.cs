@@ -21,7 +21,7 @@ namespace MMCA.Common.UI.Pages.Common;
 /// <see cref="IAsyncDisposable"/> pattern that is otherwise repeated across every list page.
 /// </summary>
 /// <typeparam name="TDto">The DTO type displayed in the grid.</typeparam>
-public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IAsyncDisposable, IDisposable
+public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IAsyncDisposable, IDisposable
 {
     [Inject] protected IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> Localizer { get; set; } = default!;
@@ -269,6 +269,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         MobileCurrentPage = effectiveState.MobilePage;
         RestoreSort(effectiveState);
+        RestoreColumnFilters(effectiveState);
         DenseGrid = effectiveState.DenseGrid;
         RestoreFilters(effectiveState.Filters);
 
@@ -323,6 +324,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             RowsPerPageState = urlState.PageSize;
         }
         RestoreSort(urlState);
+        RestoreColumnFilters(urlState);
         DenseGrid = urlState.DenseGrid;
         MobileCurrentPage = urlState.MobilePage;
         RestoreFilters(urlState.Filters);
@@ -337,6 +339,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 {
                     ApplyCurrentPageFromUrl(grid, urlState.Page);
                 }
+
+                // The URL's column filters replace the grid's before the reload below reads them.
+                ApplyRestoredColumnFiltersToGrid(grid);
 
                 // Applying a restored sort reloads the grid itself; otherwise reload here.
                 if (!await ApplyRestoredSortToGridAsync(grid))
@@ -399,6 +404,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         RestoreSort(saved);
+        RestoreColumnFilters(saved);
         _restoreGridAfterWidening = true;
     }
 
@@ -665,7 +671,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     private static bool HasListPageState(ListPageState state) =>
         state.Page > 0 || state.PageSize > 0 || state.MobilePage > 1
-        || !string.IsNullOrEmpty(state.SortColumn) || state.Filters.Count > 0;
+        || !string.IsNullOrEmpty(state.SortColumn) || state.Filters.Count > 0 || state.ColumnFilters.Count > 0;
 
     private void ApplyRestoredState(ListPageState state)
     {
@@ -679,6 +685,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         MobileCurrentPage = state.MobilePage;
         RestoreSort(state);
+        RestoreColumnFilters(state);
         DenseGrid = state.DenseGrid;
         RestoreFilters(state.Filters);
     }
@@ -740,6 +747,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return;
         }
 
+        // The in-flight first load already sends the restored column filters (ResolveColumnFilters),
+        // so putting them on the grid needs no reload of its own.
+        ApplyRestoredColumnFiltersToGrid(grid);
         await ApplyRestoredSortToGridAsync(grid);
         if (needsReload)
         {
@@ -941,7 +951,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             EmptyConfirmed = cached.TotalItems == 0;
 
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
-            SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
+            var (_, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+            SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
             return cached;
         }
 
@@ -986,7 +997,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 await OnBeforeFetchAsync(token);
                 ThrowIfSuperseded(loadSource);
 
-                var filters = ExtractGridFilters(state.FilterDefinitions);
+                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+                var filters = ExtractGridFilters(columnFilters);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
@@ -1001,7 +1013,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
                 EmptyConfirmed = page.TotalItems == 0;
-                SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
+                SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
                 return gridData;
             },
             onCancelled: EmptyGridData,
@@ -1057,7 +1069,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 await OnBeforeFetchAsync(token);
                 ThrowIfSuperseded(loadSource);
 
-                var filters = ExtractGridFilters(state.FilterDefinitions);
+                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+                var filters = ExtractGridFilters(columnFilters);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
@@ -1086,7 +1099,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 // Trim to exactly the requested window; the tail of the data set legitimately yields fewer.
                 var slice = items.Skip(window.Offset).Take(Math.Max(state.Count, 0)).ToList();
                 EmptyConfirmed = page.TotalItems == 0;
-                SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
+                SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
                 return new GridData<TDto> { Items = slice, TotalItems = page.TotalItems };
             },
             onCancelled: EmptyGridData,
@@ -1484,7 +1497,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <param name="pageSize">The grid RowsPerPage, or <see langword="null"/> to keep it as it is.</param>
     /// <param name="sortColumn">The sort column.</param>
     /// <param name="sortDescending">Whether the sort is descending.</param>
-    private void SaveCurrentState(int? page, int? pageSize, string? sortColumn, bool sortDescending)
+    /// <param name="columnFilters">
+    /// The grid's column filters, or <see langword="null"/> to keep the saved ones (the phone card
+    /// list and a filter-only save have no grid filters of their own).
+    /// </param>
+    private void SaveCurrentState(int? page, int? pageSize, string? sortColumn, bool sortDescending, IReadOnlyDictionary<string, ColumnFilterState>? columnFilters = null)
     {
         // Drop stale writes outright: a debounced/late save landing after navigation must
         // neither persist under a foreign route key nor mirror grid params onto that page's URL.
@@ -1507,6 +1524,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             SortDescending = sortDescending,
             DenseGrid = DenseGrid,
             Filters = filters,
+            ColumnFilters = columnFilters ?? existing?.ColumnFilters ?? _savedColumnFilters,
             ScrollPosition = existing?.ScrollPosition ?? 0,
         };
         ListPageStateService.SaveState(routePath, state);

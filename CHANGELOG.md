@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Two defects of Store manual test Run 4.
+
+### Added
+
+- **`ColumnFilterState` and `ListPageState.ColumnFilters`** (MMCA.Common.UI): the grid's own column filters as a list page saves them (operator plus an invariant-culture value), with the URL key `c:<property>=<operator>:<value>`.
+
+### Fixed
+
+- **List pages keep their column filters** (MMCA.Common.UI `DataGridListPageBase`): a MudDataGrid column filter is saved with the rest of the list state (URL, in-memory state, `sessionStorage`) and put back on the grid when the page is restored, so it survives opening a row and pressing Back, a refresh and a shared link. The first load after a restore already sends the restored filters; a filter on a column the grid does not render, or whose value no longer parses, is dropped. Every list page on the shared base gets this with no change of its own.
+- **A MAUI relaunch right after a theme switch paints the right colour mode from the first frame**: `theme-prepaint.js` also stamps `data-mmca-color-mode` before the first paint when its script tag carries `data-stamp-color-mode` (for a head that keys its own dark roles on that attribute through `Layout:StampColorModeOnDocument`), and iOS and Mac Catalyst now hand the natively saved mode to the page as the `MmcaTheme/dark|light` user agent token that Android already sends (MMCA.Common.UI.Maui `MainPageBase`).
+
+### Changed
+
+- **Out-of-solution lock files** regenerated for the #720 dependency bumps (build-time only).
+
 ## [1.292.0] - 2026-11-14
 
 Observations from ADC manual test Run 17.

@@ -1,1 +1,17 @@
 ﻿#nullable enable
+MMCA.Common.UI.Services.ColumnFilterState
+MMCA.Common.UI.Services.ColumnFilterState.ColumnFilterState(string! Operator, string? Value) -> void
+MMCA.Common.UI.Services.ColumnFilterState.Deconstruct(out string! Operator, out string? Value) -> void
+MMCA.Common.UI.Services.ColumnFilterState.Equals(MMCA.Common.UI.Services.ColumnFilterState? other) -> bool
+MMCA.Common.UI.Services.ColumnFilterState.Operator.get -> string!
+MMCA.Common.UI.Services.ColumnFilterState.Operator.init -> void
+MMCA.Common.UI.Services.ColumnFilterState.Value.get -> string?
+MMCA.Common.UI.Services.ColumnFilterState.Value.init -> void
+MMCA.Common.UI.Services.ColumnFilterState.<Clone>$() -> MMCA.Common.UI.Services.ColumnFilterState!
+MMCA.Common.UI.Services.ListPageState.ColumnFilters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.UI.Services.ColumnFilterState!>!
+MMCA.Common.UI.Services.ListPageState.ColumnFilters.init -> void
+override MMCA.Common.UI.Services.ColumnFilterState.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.ColumnFilterState.GetHashCode() -> int
+override MMCA.Common.UI.Services.ColumnFilterState.ToString() -> string!
+static MMCA.Common.UI.Services.ColumnFilterState.operator !=(MMCA.Common.UI.Services.ColumnFilterState? left, MMCA.Common.UI.Services.ColumnFilterState? right) -> bool
+static MMCA.Common.UI.Services.ColumnFilterState.operator ==(MMCA.Common.UI.Services.ColumnFilterState? left, MMCA.Common.UI.Services.ColumnFilterState? right) -> bool

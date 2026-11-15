@@ -45,6 +45,49 @@ public class ListPageQueryStateServiceTests
     }
 
     [Fact]
+    public void ParseQueryString_ColumnFilterKeys_SplitOperatorAndValueAtTheFirstColon()
+    {
+        var state = ListPageQueryStateService.ParseQueryString("?c:FirstName=contains%3AAnn%3ALee&c:Total=%3E%3D%3A5&c:Email=is%20empty%3A");
+
+        state.ColumnFilters.Should().HaveCount(3);
+        state.ColumnFilters["FirstName"].Should().Be(new ColumnFilterState("contains", "Ann:Lee"));
+        state.ColumnFilters["Total"].Should().Be(new ColumnFilterState(">=", "5"));
+        state.ColumnFilters["Email"].Should().Be(new ColumnFilterState("is empty", null), "an operator that takes no value keeps no value");
+        state.Filters.Should().BeEmpty("column filters are not named filters");
+    }
+
+    [Theory]
+    [InlineData("?c:FirstName=contains")]
+    [InlineData("?c:FirstName=%3AAnn")]
+    [InlineData("?c:=contains%3AAnn")]
+    public void ParseQueryString_MalformedColumnFilter_IsIgnored(string query)
+    {
+        var state = ListPageQueryStateService.ParseQueryString(query);
+
+        state.ColumnFilters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildPath_ColumnFilters_RoundTripThroughParse()
+    {
+        var original = new ListPageState
+        {
+            Filters = new Dictionary<string, string> { ["search"] = "ring" },
+            ColumnFilters = new Dictionary<string, ColumnFilterState>
+            {
+                ["FirstName"] = new("starts with", "An"),
+                ["Email"] = new("is not empty", null),
+            },
+        };
+
+        var path = ListPageQueryStateService.BuildPath("/customers", original);
+        var parsed = ListPageQueryStateService.ParseQueryString(new Uri(new Uri("https://host"), path).Query);
+
+        parsed.ColumnFilters.Should().BeEquivalentTo(original.ColumnFilters);
+        parsed.Filters.Should().ContainKey("search").WhoseValue.Should().Be("ring");
+    }
+
+    [Fact]
     public void ParseQueryString_NoDenseKey_DefaultsToFalse()
     {
         var state = ListPageQueryStateService.ParseQueryString("?p=2");
