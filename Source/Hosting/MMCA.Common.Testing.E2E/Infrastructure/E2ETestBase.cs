@@ -144,6 +144,14 @@ public abstract class E2ETestBase : IAsyncLifetime
         // from /login. On failure it stays at /login and shows an error alert.
         await WaitForAuthResultAsync("/login", "Login").ConfigureAwait(false);
 
+        // The verdict above can come from the logout button while the URL still shows /login: the
+        // auth state flips (and the button renders on the login page itself) before the Login page
+        // starts its forceLoad NavigateTo("/"), and when another account was already signed in that
+        // happens at once. Without this wait the interactivity check below is satisfied by the OLD
+        // /login page, LoginAsync returns, and the pending reload of "/" then lands on top of the
+        // caller's next navigation.
+        await WaitForPendingNavigationAwayFromAsync("/login").ConfigureAwait(false);
+
         // Wait for the post-login "/" page to become interactive before returning (symmetric with
         // RegisterNewUserAsync). The forceLoad reload re-boots the runtime, and under WebAssembly the
         // client auth state (role claims parsed from the stored token) only populates once that boot
@@ -474,6 +482,32 @@ public abstract class E2ETestBase : IAsyncLifetime
         throw new InvalidOperationException(
             $"{operation} produced neither a navigation away from {authPagePath}, a signed-in state, "
             + $"nor an error alert within {budget} ms (url: {Page.Url}).");
+    }
+
+    // After a successful auth verdict reached while the page is still on the auth page, waits (up to
+    // AuthTimeout) for the post-auth full navigation away from it to commit AND fire its load event
+    // (WaitForURLAsync's default WaitUntil is Load), so the caller's interactivity wait runs against
+    // the new page rather than the old one. Returns at once when the URL has already left the auth
+    // page. A success that renders in place with no navigation keeps its old behavior: the timeout
+    // is swallowed and the caller carries on, so this wait cannot fail a sign-in that used to pass.
+    private async Task WaitForPendingNavigationAwayFromAsync(string authPagePath)
+    {
+        if (!Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        try
+        {
+            await Page.WaitForURLAsync(
+                url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
+                new() { Timeout = E2ETestConfiguration.AuthTimeout }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
+        {
+            // No navigation came: the signed-in state rendered in place, which the result wait has
+            // already accepted. Fall through to the interactivity wait as before.
+        }
     }
 
     // The two losing waits of the three-way race always fault on timeout. Observing them keeps a

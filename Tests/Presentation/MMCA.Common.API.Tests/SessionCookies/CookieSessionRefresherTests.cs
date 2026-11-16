@@ -556,6 +556,83 @@ public sealed class CookieSessionRefresherTests
         outcome.Session!.Value.AccessToken.Should().Be("new-access");
     }
 
+    // -- Silent refresh across access-token expiry (Store manual case X-17) --
+    // Store manual case X-17 ("Session survives access-token expiry through silent refresh") cannot
+    // be automated end to end: the access token lives 15 minutes and its expiry is judged on the
+    // server clock. These tests cover it here instead, moving the refresher's injected clock with
+    // FakeTimeProvider across the 30-second skew threshold before the token's expiry.
+    private static readonly DateTimeOffset X17Start = new(2026, 1, 5, 9, 0, 0, TimeSpan.Zero);
+    private static readonly TimeSpan X17AccessTokenLifetime = TimeSpan.FromMinutes(15);
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_AsTheClockReachesTheExpiryThreshold_RefreshesOnceAndReplacesBothCookies()
+    {
+        var clock = new FakeTimeProvider(X17Start);
+        DateTime firstExpiry = X17Start.UtcDateTime.Add(X17AccessTokenLifetime);
+        string firstAccess = CreateJwt(firstExpiry);
+        DateTime rotatedExpiry = firstExpiry.Add(X17AccessTokenLifetime);
+        string rotatedAccess = CreateJwt(rotatedExpiry);
+        using var harness = CreateSut(RespondWithTokens(rotatedAccess, "refresh-2", rotatedExpiry), clock);
+
+        // Well before expiry: the access cookie is returned as-is, nothing is called or written.
+        var fresh = CreateContext(accessToken: firstAccess, refreshToken: "refresh-1");
+        SessionRefreshOutcome early = await harness.Sut.ValidateOrRefreshAsync(fresh);
+        early.Status.Should().Be(SessionRefreshStatus.Refreshed);
+        early.Session!.Value.AccessToken.Should().Be(firstAccess);
+        harness.Handler.CallCount.Should().Be(0);
+        fresh.Response.Headers.SetCookie.Count.Should().Be(0);
+
+        // One second outside the skew window: still valid, still no refresh.
+        clock.Advance(X17AccessTokenLifetime - TimeSpan.FromSeconds(31));
+        var almost = CreateContext(accessToken: firstAccess, refreshToken: "refresh-1");
+        (await harness.Sut.ValidateOrRefreshAsync(almost)).Session!.Value.AccessToken.Should().Be(firstAccess);
+        harness.Handler.CallCount.Should().Be(0, "31 seconds of life left is outside the 30-second skew");
+
+        // Exactly at the threshold (30 seconds of life left counts as expired): one silent refresh.
+        clock.Advance(TimeSpan.FromSeconds(1));
+        var atThreshold = CreateContext(accessToken: firstAccess, refreshToken: "refresh-1");
+        SessionRefreshOutcome refreshed = await harness.Sut.ValidateOrRefreshAsync(atThreshold);
+
+        refreshed.Status.Should().Be(SessionRefreshStatus.Refreshed);
+        refreshed.Session!.Value.AccessToken.Should().Be(rotatedAccess);
+        refreshed.Session.Value.AccessTokenExpiry.Should().Be(rotatedExpiry);
+        harness.Handler.CallCount.Should().Be(1);
+        harness.Handler.LastRequestBody.Should().Contain("refresh-1", "the old refresh cookie is what gets exchanged");
+        string setCookies = atThreshold.Response.Headers.SetCookie.ToString();
+        setCookies.Should().Contain($"{SessionCookieEndpoints.AccessTokenCookieName}={rotatedAccess}")
+            .And.Contain($"{SessionCookieEndpoints.RefreshTokenCookieName}=refresh-2");
+        atThreshold.Items[CookieTokenReader.FreshAccessTokenItemKey].Should().Be(rotatedAccess);
+
+        // The browser's next navigation carries the rotated cookies: valid again, no second refresh.
+        clock.Advance(TimeSpan.FromMinutes(1));
+        var next = CreateContext(accessToken: rotatedAccess, refreshToken: "refresh-2");
+        SessionRefreshOutcome after = await harness.Sut.ValidateOrRefreshAsync(next);
+        after.Session!.Value.AccessToken.Should().Be(rotatedAccess);
+        harness.Handler.CallCount.Should().Be(1, "the session survived expiry through exactly one refresh");
+        next.Response.Headers.SetCookie.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_PastExpiryWhenTheRefreshIsRefused_EndsTheSession()
+    {
+        // The refused path of X-17: the refresher reports Rejected with no session, writes no cookie
+        // and stashes no token, so the request renders signed out. Deleting the dead cookies is the
+        // caller's job (the same-origin proxy clears them only on Rejected).
+        var clock = new FakeTimeProvider(X17Start);
+        string access = CreateJwt(X17Start.UtcDateTime.Add(X17AccessTokenLifetime));
+        using var harness = CreateSut(RespondWith(HttpStatusCode.Unauthorized), clock);
+
+        clock.Advance(X17AccessTokenLifetime + TimeSpan.FromMinutes(1));
+        var context = CreateContext(accessToken: access, refreshToken: "revoked-refresh");
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(context);
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Rejected);
+        outcome.Session.Should().BeNull();
+        harness.Handler.CallCount.Should().Be(1);
+        context.Response.Headers.SetCookie.Count.Should().Be(0);
+        context.Items.Should().NotContainKey(CookieTokenReader.FreshAccessTokenItemKey);
+    }
+
     // ── Helpers ──
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
 

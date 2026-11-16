@@ -149,6 +149,15 @@ public static class Extensions
     /// </summary>
     public const int MailDevSmtpPort = 1025;
 
+    /// <summary>
+    /// MailDev image tag (<c>maildev/maildev</c>). Pinned because the untagged image drifts: a fresh
+    /// pull (CI) took 3.0.0 while a developer's persistent container stayed on 2.2.1, and the REST
+    /// path tests read the inbox from moved between the two. 3.x serves the message list at
+    /// <c>/api/email</c> (the 2.x <c>/email</c> path returns 404). Move the tag deliberately,
+    /// together with any test that reads the MailDev REST API.
+    /// </summary>
+    public const string MailDevImageTag = "3.0.0";
+
     extension(IDistributedApplicationBuilder builder)
     {
         /// <summary>
@@ -161,6 +170,12 @@ public static class Extensions
         /// names. The container lifetime is persistent so the captured inbox survives an AppHost
         /// restart.
         /// </para>
+        /// <para>
+        /// The image is pinned to <see cref="MailDevImageTag"/> (3.0.0) so every machine runs the same
+        /// MailDev: 3.x serves its REST message list at <c>/api/email</c>, not the 2.x <c>/email</c>.
+        /// A persistent container created earlier from another image keeps running until it is removed
+        /// (<c>docker rm -f</c> it with the AppHost stopped), so remove it once after a tag change.
+        /// </para>
         /// </summary>
         /// <param name="name">The resource name (defaults to <see cref="DefaultMailDevResourceName"/>).</param>
         /// <returns>The MailDev container resource builder, for <c>WaitFor</c> wiring.</returns>
@@ -169,7 +184,7 @@ public static class Extensions
         {
             ArgumentNullException.ThrowIfNull(builder);
 
-            return builder.AddContainer(name, "maildev/maildev")
+            return builder.AddContainer(name, "maildev/maildev", MailDevImageTag)
                 .WithLifetime(ContainerLifetime.Persistent)
                 .WithHttpEndpoint(targetPort: MailDevHttpPort, port: MailDevHttpPort, name: "http")
                 .WithEndpoint(targetPort: MailDevSmtpPort, port: MailDevSmtpPort, name: "smtp", scheme: "tcp");
