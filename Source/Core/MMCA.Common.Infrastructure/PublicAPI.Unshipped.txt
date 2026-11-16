@@ -1,2 +1,1 @@
 #nullable enable
-MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.UseSqlServerServiceDatabase(string! dataSourceName, string! connectionStringVariable, string! localDatabaseName, System.Reflection.Assembly! migrationsAssembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
