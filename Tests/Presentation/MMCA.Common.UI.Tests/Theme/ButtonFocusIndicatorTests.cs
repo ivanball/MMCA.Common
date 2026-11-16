@@ -11,7 +11,9 @@ namespace MMCA.Common.UI.Tests.Theme;
 /// and the DESKTOP app bar (<c>MainLayout.razor.css</c>, scoped to <c>.appbar-container</c>), which leaves
 /// two gaps: in-content buttons at every width, and the phone-width top-row icon buttons in
 /// <c>div.toprow-actions</c> (the app bar is hidden below 1024px). Same regex-on-the-stylesheet approach
-/// as <see cref="LinkFocusIndicatorTests"/>; the ring colour is deliberately not asserted.
+/// as <see cref="LinkFocusIndicatorTests"/>. The global ring colour is deliberately not asserted; the
+/// dark-chrome rings (the nav brand and the desktop app bar) are, because their escaped defect was a
+/// primary-coloured ring on the primary-coloured chrome (ADC Run 6, X-03).
 /// </summary>
 public sealed partial class ButtonFocusIndicatorTests
 {
@@ -56,6 +58,28 @@ public sealed partial class ButtonFocusIndicatorTests
             body => DrawsAVisibleOutline(body),
             "X-03 (WCAG 2.4.7): the `.toprow-actions` button :focus-visible rule must declare an outline whose style is "
             + "not none/hidden and whose width is at least 2px");
+    }
+
+    [Theory]
+    [InlineData("NavMenu.razor.css", ".nav-brand", ".nav-brand:focus-visible")]
+    [InlineData("MainLayout.razor.css", ".appbar-container", ".mud-button-root:focus-visible")]
+    [InlineData("MainLayout.razor.css", ".appbar-container", ".mud-menu-activator:focus-visible")]
+    public void DarkChromeCss_DrawsAWhiteKeyboardFocusRing(string stylesheet, string scope, string focusSelector)
+    {
+        var css = CssComment.Replace(ReadEmbedded(stylesheet), string.Empty);
+
+        var bodies = RuleBodies(
+            css,
+            selector => selector.StartsWith(scope, StringComparison.Ordinal)
+                && selector.EndsWith(focusSelector, StringComparison.Ordinal));
+
+        bodies.Should().NotBeEmpty(
+            $"X-03 (WCAG 2.4.7): {stylesheet} must declare a `{scope} ... {focusSelector}` rule; without it the only ring "
+            + "is the primary-coloured one in app.css, which is invisible on the dark nav brand row and app bar");
+        bodies.Should().Contain(
+            body => DrawsAVisibleOutline(body) && DrawsAWhiteOutline(body),
+            $"X-03 (WCAG 2.4.7): the `{focusSelector}` rule in {stylesheet} must draw an outline at least 2px wide in white "
+            + "(white, #fff or #ffffff), not the palette primary, so the ring reads on the dark chrome both palettes share");
     }
 
     private static List<string> RuleBodies(string css, Func<string, bool> selectorMatches) =>
@@ -104,6 +128,37 @@ public sealed partial class ButtonFocusIndicatorTests
             && !string.Equals(style, "none", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(style, "hidden", StringComparison.OrdinalIgnoreCase)
             && width >= MinimumOutlineWidthPx;
+    }
+
+    /// <summary>
+    /// True when the declarations resolve to a white outline colour: the colour token of the
+    /// <c>outline</c> shorthand (the one that is neither a style nor a width) or <c>outline-color</c>,
+    /// the last declaration winning.
+    /// </summary>
+    private static bool DrawsAWhiteOutline(string body)
+    {
+        string? color = null;
+
+        foreach (Match declaration in Declaration.Matches(body))
+        {
+            var property = declaration.Groups["property"].Value.Trim().ToUpperInvariant();
+            var value = Important.Replace(declaration.Groups["value"].Value, string.Empty).Trim();
+            var tokens = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            switch (property)
+            {
+                case "OUTLINE":
+                    color = tokens.FirstOrDefault(token => !IsOutlineStyle(token) && ParseWidth(token) is null);
+                    break;
+                case "OUTLINE-COLOR":
+                    color = value;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return color is not null && WhiteColor.IsMatch(color);
     }
 
     private static bool IsOutlineStyle(string token) =>
@@ -164,6 +219,9 @@ public sealed partial class ButtonFocusIndicatorTests
 
     [GeneratedRegex(@"^(?<number>\d+(\.\d+)?)(?<unit>px|rem|em)$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Length { get; }
+
+    [GeneratedRegex(@"^(white|#fff|#ffffff)$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex WhiteColor { get; }
 
     // The top-row actions are MudIconButtons (and MudMenu activators wrapping them).
     [GeneratedRegex(@"\.mud-button-root|\.mud-icon-button|\.mud-menu-activator|\bbutton\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
