@@ -86,6 +86,21 @@ public static class Extensions
     internal const int E2eAuthTightPermitLimit = 100000;
 
     /// <summary>
+    /// Requests per window per client IP the Identity service's auth-ip limiter allows while an E2E
+    /// suite is running (see <c>WithE2eRegistrationThrottleLift</c>). High enough that no suite can
+    /// reach it.
+    /// </summary>
+    internal const int E2eAuthIpPermitLimit = 100000;
+
+    /// <summary>
+    /// Configuration section a service's own rate limiter binds from. Mirrors
+    /// <c>MMCA.Common.API</c>'s <c>RateLimitingSettings.SectionName</c> rather than referencing it,
+    /// for the same reason as <see cref="GatewayRateLimitingSection"/>; a unit test cross-asserts the
+    /// two are equal.
+    /// </summary>
+    internal const string RateLimitingSection = "RateLimiting";
+
+    /// <summary>
     /// Configuration section the gateway's edge rate limiter binds from. Mirrors
     /// <c>MMCA.Common.Aspire</c>'s <c>GatewayRateLimitingSettings.SectionName</c> rather than
     /// referencing it: this AppHost-tier package must not pull in the service-defaults graph (Azure
@@ -418,6 +433,15 @@ public static class Extensions
         /// rather than the anti-abuse control doing its job. Mirrors the value the integration
         /// fixtures use.
         /// <para>
+        /// The same trigger also lifts the service's per-IP auth limiter
+        /// (<c>RateLimitingSettings.AuthIpPermitLimit</c>, default 30 a minute) to
+        /// <see cref="E2eAuthIpPermitLimit"/>. The whole suite arrives from one loopback IP, and with
+        /// passkeys offered every visit to the login page spends one auth-ip permit on the passkey
+        /// autofill options call before the login itself spends another, so the suite runs out of
+        /// permits and its logins fail with 429. Production keeps the limit from the service's own
+        /// configuration.
+        /// </para>
+        /// <para>
         /// The trigger is the <c>E2E_LIFT_REGISTRATION_THROTTLE</c> environment variable (set by the
         /// E2E workflow) OR <see cref="E2eForceWebAssemblyTriggerVariable"/> (a forced-WebAssembly
         /// run implies the same registration volume). Both are absent locally by default and in
@@ -432,9 +456,13 @@ public static class Extensions
             var lift = IsTrue(E2eLiftTriggerVariable) || IsTrue(E2eForceWebAssemblyTriggerVariable);
 
             return lift
-                ? identity.WithEnvironment(
-                    "LoginProtection__MaxRegistrationsPerIpPerHour",
-                    E2eRegistrationsPerIpPerHour.ToString(CultureInfo.InvariantCulture))
+                ? identity
+                    .WithEnvironment(
+                        "LoginProtection__MaxRegistrationsPerIpPerHour",
+                        E2eRegistrationsPerIpPerHour.ToString(CultureInfo.InvariantCulture))
+                    .WithEnvironment(
+                        $"{RateLimitingSection}__AuthIpPermitLimit",
+                        E2eAuthIpPermitLimit.ToString(CultureInfo.InvariantCulture))
                 : identity;
         }
     }
