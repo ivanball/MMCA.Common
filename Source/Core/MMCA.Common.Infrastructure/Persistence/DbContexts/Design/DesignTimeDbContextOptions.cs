@@ -177,6 +177,53 @@ public sealed class DesignTimeDbContextOptions
     }
 
     /// <summary>
+    /// Points the design-time context at one service's own SQL Server database (database per service,
+    /// ADR-006): sets <see cref="DataSourceName"/> to <paramref name="dataSourceName"/> and declares the
+    /// ONE named <see cref="DataSources"/> entry for it, with the connection string read from the
+    /// <paramref name="connectionStringVariable"/> environment variable (falling back to a trusted
+    /// local connection to <paramref name="localDatabaseName"/> when the variable is unset) and the
+    /// migrations assembly set to <paramref name="migrationsAssembly"/>.
+    /// </summary>
+    /// <remarks>
+    /// The one named entry is also the <c>Default</c> seed: with no top-level connection string,
+    /// <c>DataSourceResolver</c> promotes the single named source to <c>Default</c> exactly as it does
+    /// in the running service host (whose configuration declares the same single entry), so the
+    /// host-scoped tables gated on the <c>Default</c> source (<c>ScheduledJobs</c>,
+    /// <c>RefreshSessions</c> and the like) stay in the scaffolded model. The migrations assembly rides
+    /// on the entry, where the collapsed <c>Default</c> source picks it up. Only an unset variable
+    /// falls back to the local database; a variable set to an empty string is used as-is.
+    /// </remarks>
+    /// <param name="dataSourceName">The module's logical data source name (for example <c>"Catalog"</c>).</param>
+    /// <param name="connectionStringVariable">The environment variable that may carry the connection string.</param>
+    /// <param name="localDatabaseName">The local database to connect to when the variable is unset.</param>
+    /// <param name="migrationsAssembly">The assembly holding this database's migrations.</param>
+    /// <returns>These options, for chaining.</returns>
+    public DesignTimeDbContextOptions UseSqlServerServiceDatabase(
+        string dataSourceName,
+        string connectionStringVariable,
+        string localDatabaseName,
+        Assembly migrationsAssembly)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionStringVariable);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localDatabaseName);
+        ArgumentNullException.ThrowIfNull(migrationsAssembly);
+
+        var migrationsAssemblyName = migrationsAssembly.GetName().Name
+            ?? throw new ArgumentException("The migrations assembly has no name.", nameof(migrationsAssembly));
+
+        DataSourceName = dataSourceName;
+        DataSources[dataSourceName] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = Environment.GetEnvironmentVariable(connectionStringVariable)
+                ?? $"Server=localhost;Database={localDatabaseName};Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True",
+            SQLServerMigrationsAssembly = migrationsAssemblyName,
+        };
+
+        return this;
+    }
+
+    /// <summary>
     /// Gets the assemblies whose strongly typed identifiers (ADR-115) the design-time model maps,
     /// mirroring the host's <c>AddStronglyTypedIds(assembly)</c> calls. Empty by default, which
     /// registers no identifier registry and leaves the model exactly as before.

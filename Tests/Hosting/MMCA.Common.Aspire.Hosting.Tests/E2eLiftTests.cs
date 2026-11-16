@@ -2,6 +2,7 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.API.RateLimiting;
 using MMCA.Common.Aspire.Gateway;
 using MMCA.Common.Gateway;
 
@@ -130,6 +131,39 @@ public sealed class E2eLiftTests
         Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: null, forceWasmValue: null);
 
         environment.Should().NotContainKey("LoginProtection__MaxRegistrationsPerIpPerHour");
+        environment.Should().NotContainKey("RateLimiting__AuthIpPermitLimit");
+    }
+
+    [Theory]
+    [InlineData("true", null)]
+    [InlineData(null, "true")]
+    public async Task WithE2eRegistrationThrottleLift_WhenEitherTriggerFires_LiftsTheAuthIpLimiter(
+        string? liftValue,
+        string? forceWasmValue)
+    {
+        // The suite arrives from one loopback IP and the passkey autofill options call spends an
+        // auth-ip permit on every login-page visit, so the same trigger lifts that limiter too.
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue, forceWasmValue);
+
+        environment.Should().ContainKey("RateLimiting__AuthIpPermitLimit")
+            .WhoseValue.Should().Be("100000");
+    }
+
+    [Fact]
+    public async Task WithE2eRegistrationThrottleLift_WhenTheEnvironmentSaysFalse_LeavesTheAuthIpLimiter()
+    {
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: "false", forceWasmValue: "false");
+
+        environment.Should().NotContainKey("RateLimiting__AuthIpPermitLimit");
+    }
+
+    [Fact]
+    public async Task WithE2eRegistrationThrottleLift_EmitsTheAuthIpKeyDerivedFromTheCommonOwnedSettings()
+    {
+        Dictionary<string, string> environment = await RegistrationLiftAsync(liftValue: "true", forceWasmValue: null);
+
+        environment.Should().ContainKey(
+            $"{RateLimitingSettings.SectionName}__{nameof(RateLimitingSettings.AuthIpPermitLimit)}");
     }
 
     private static async Task<Dictionary<string, string>> LiftAsync(string? triggerValue, string? forceWasmValue = null)
