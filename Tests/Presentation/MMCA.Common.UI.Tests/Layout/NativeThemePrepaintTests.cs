@@ -20,6 +20,23 @@ public sealed class NativeThemePrepaintTests
     }
 
     [Fact]
+    public void MainPage_AppliesTheStoredThemeBeforeTheWebViewPaints()
+    {
+        var page = ReadEmbedded("MainPageBase.cs");
+
+        // Store Run 1 C8: the native page behind the BlazorWebView showed the OS theme until Blazor's
+        // first render. The constructor applies the persisted Day/Dark mode first, so the page starts in
+        // it; a call moved to a later lifecycle hook brings the flash back.
+        var constructor = page.IndexOf("protected MainPageBase()", StringComparison.Ordinal);
+        constructor.Should().BeGreaterThanOrEqualTo(0, "MainPageBase keeps its parameterless constructor");
+        var constructorBody = page[constructor..page.IndexOf("protected abstract", constructor, StringComparison.Ordinal)];
+
+        constructorBody.Should().Contain(
+            "MauiThemeStore.ApplyStoredTheme()",
+            "Store Run 1 C8: the stored theme is applied in the constructor, before the WebView paints");
+    }
+
+    [Fact]
     public void PrepaintScript_PrefersTheNativeTokenOnTheSessionsFirstPage()
     {
         var script = ReadEmbedded("theme-prepaint.js");
