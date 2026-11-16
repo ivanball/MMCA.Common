@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **`AddMailDev` pins the MailDev image to 3.0.0** (MMCA.Common.Aspire.Hosting; new const `Extensions.MailDevImageTag`). The untagged `maildev/maildev` let a fresh pull (CI) take 3.0.0 while a developer's persistent container stayed on 2.2.1, and the REST path moved between the two: 3.x serves the message list at `/api/email`, where `/email` is 404. A test that reads MailDev's REST API targets `/api/email`. A persistent MailDev container created from an older image keeps running until it is removed (`docker rm -f` with the AppHost stopped).
+- **`CookieSessionRefresher` is covered across access-token expiry on a fake clock** (tests only, no package change; Store manual case X-17). With `FakeTimeProvider`, a token is not refreshed while more than the 30-second skew remains, is refreshed exactly once at the threshold with both session cookies replaced, and a refused refresh past expiry is `Rejected` with no cookie written.
+
+### Fixed
+
+- **`E2ETestBase.LoginAsync` returns only after its own post-login reload** (MMCA.Common.Testing.E2E). When the sign-in verdict came from the logout button while the page was still on `/login` (immediately so when another account was already signed in), the interactivity wait was satisfied by the old login page, and the Login page's pending `forceLoad` reload of `/` then overrode the caller's next navigation. It now waits for the navigation away from `/login` to load before waiting for Blazor interactivity; a sign-in that renders in place with no navigation behaves as before.
+
 ## [1.295.0] - 2026-11-15
 
 ### Added

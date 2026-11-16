@@ -1,1 +1,2 @@
 #nullable enable
+const MMCA.Common.Aspire.Hosting.Extensions.MailDevImageTag = "3.0.0" -> string!
