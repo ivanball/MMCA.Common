@@ -3,7 +3,7 @@ using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MMCA.Common.Aspire.Hosting.Tests;
+namespace MMCA.Common.Aspire.Hosting.Tests.Topology;
 
 /// <summary>
 /// Unit tests for the front-door helpers <c>WithMmcaGateway</c>, <c>WithMmcaUi</c> and

@@ -4,7 +4,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.RateLimiting;
 
-namespace MMCA.Common.Aspire.Hosting.Tests;
+namespace MMCA.Common.Aspire.Hosting.Tests.Topology;
 
 /// <summary>
 /// Unit tests for the multi-replica opt-in: <c>MmcaReplicas.FromEnvironment</c> (every value that is
