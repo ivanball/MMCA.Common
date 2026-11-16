@@ -524,6 +524,7 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOpti
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableWebhooks.set -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.StronglyTypedIdAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.UseSqlServerServiceDatabase(string! dataSourceName, string! connectionStringVariable, string! localDatabaseName, System.Reflection.Assembly! migrationsAssembly) -> MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.BeginTransaction() -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.CommitTransaction() -> void
