@@ -1,11 +1,13 @@
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Components.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using Moq;
 using MudBlazor;
+using MudBlazor.Extensions;
 
 namespace MMCA.Common.UI.Tests.Components.Capabilities;
 
@@ -70,6 +72,20 @@ public sealed class AppLockSettingCardTests : BunitTestBase
         await cut.InvokeAsync(() => cut.FindComponent<MudSwitch<bool>>().Instance.ValueChanged.InvokeAsync(true));
 
         _stored.Should().NotContainKey(DevicePreferenceKeys.AppLockEnabled);
+    }
+
+    [Fact]
+    public async Task ARefusedCheck_RepaintsTheSwitchOff()
+    {
+        _biometrics.Setup(b => b.AuthenticateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        var cut = RenderUnderTest<AppLockSettingCard>(_ => { });
+
+        await cut.Find("input[type=checkbox]").ChangeAsync(new ChangeEventArgs { Value = true });
+
+        cut.FindComponent<MudSwitch<bool>>().Instance.GetState(x => x.Value).Should().BeFalse(
+            "ADC A-43: the switch flips its own state on the click, so a refused check must recreate it from the real value");
+        cut.Find("input[type=checkbox]").HasAttribute("checked").Should().BeFalse(
+            "the rendered switch must not show the lock as on when it is off");
     }
 
     [Fact]
