@@ -43,7 +43,16 @@
          declaration of a component that implements IDisposable (the *_razor.decl.g.cs file the
          .NET 11 SDK Razor compiler emits), on both target frameworks. Same reasoning as S8970 and
          RS0041 above: an .editorconfig severity does not reach generated code. -->
-    <NoWarn>$(NoWarn);RMG020;S8970;RS0041;S3881</NoWarn>
+    <NoWarn>$(NoWarn);S8970;RS0041;S3881</NoWarn>
+  </PropertyGroup>
+
+  <!-- RMG020 ("source member is not mapped to any target member") is a Riok.Mapperly GENERATOR
+       diagnostic, so it can only fire where a [Mapper] partial class compiles: MMCA.Common.Application
+       and its test project, the only two that reference Mapperly. Scoped here rather than on the
+       global NoWarn line so the exemption is stated where the generator runs (the same scoping
+       MMCA.ADC and MMCA.Store use). -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MMCA.Common.Application' Or '$(MSBuildProjectName)' == 'MMCA.Common.Application.Tests'">
+    <NoWarn>$(NoWarn);RMG020</NoWarn>
   </PropertyGroup>
 
   <!-- System.Net.Http.Json is an implicit using on net11.0 and not on net10.0. Declared here for
@@ -53,10 +62,11 @@
     <Using Include="System.Net.Http.Json" />
   </ItemGroup>
 
-  <!-- Accepted NuGet advisories: none today. Add each as
+  <!-- NuGet advisory suppressions: each is a
        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." /> in an ItemGroup here,
        with its reachability argument in a comment; the CI audit step
-       (.github/actions/nuget-vulnerability-audit) re-applies exactly this list. -->
+       (.github/actions/nuget-vulnerability-audit) re-applies exactly this list. The only entries
+       today are the two net11.0 false positives below. -->
 
   <!-- net11.0 ONLY, and a false positive rather than an accepted risk. The two
        System.Security.Cryptography.Pkcs advisories are fixed by the direct pin in
