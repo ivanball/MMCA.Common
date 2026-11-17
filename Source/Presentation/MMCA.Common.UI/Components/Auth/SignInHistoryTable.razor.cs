@@ -14,7 +14,7 @@ namespace MMCA.Common.UI.Components.Auth;
 /// caller's own history and by an app's administrator user page for another account's.
 /// <para>
 /// The device label and the viewer-clock instants match <see cref="UserSessionsTable"/>
-/// (<see cref="UserAgentSummary.Describe"/>, <see cref="ViewerTimeZone"/>). The status cell reads
+/// (<see cref="UserAgentSummary.Describe(MMCA.Common.Shared.Auth.DeviceMetadata?, string?, IStringLocalizer)"/>, <see cref="ViewerTimeZone"/>). The status cell reads
 /// <see cref="SignInSummaryResponse.EndReason"/> through <see cref="SignInEndReasons"/>; a reason this
 /// version does not know renders as a plain "ended" rather than the raw value.
 /// </para>
@@ -71,7 +71,7 @@ public partial class SignInHistoryTable : IDisposable
     private string DescribeDevice(SignInSummaryResponse signIn) =>
         signIn.Kind == SignInHistoryEntryKind.ViewAs
             ? L["Auth.SignIns.ViewedBySupport"].Value
-            : UserAgentSummary.Describe(signIn.UserAgent, L);
+            : UserAgentSummary.Describe(signIn.Device, signIn.UserAgent, L);
 
     private string DescribeIpAddress(SignInSummaryResponse signIn) =>
         string.IsNullOrWhiteSpace(signIn.IpAddress) ? L["Auth.Sessions.IpUnknown"].Value : signIn.IpAddress;

@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Application.Auth.Sessions.AuthSessionIssuer.RecordDeviceAsync(int userId, System.Guid sessionId, MMCA.Common.Shared.Auth.DeviceMetadata! device, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer.RecordDeviceAsync(int userId, System.Guid sessionId, MMCA.Common.Shared.Auth.DeviceMetadata! device, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!

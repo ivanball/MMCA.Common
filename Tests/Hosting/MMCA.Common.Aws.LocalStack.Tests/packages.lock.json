@@ -34,9 +34,9 @@
       },
       "SSH.NET": {
         "type": "Direct",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -49,11 +49,11 @@
       },
       "Testcontainers.LocalStack": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "0vvKBRWNW0mzMt1SFnRB4ocEuMQgttLA9TwaQwp2qeLDdNLVGoD1sPxmLD2hT00SJ81Mj4uiJwr2GmOaLSdyHA==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "BtrVMrLKLS5+c2VxCbHRu6/skTK5tzEY3DKHZyQgZ+ZEE3iEE0z45mPSeXfwdPF7QxFY3FS0Aj6Um/izOvFTlA==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {
@@ -731,12 +731,12 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0.1, )",
-          "AWSSDK.DynamoDBv2": "[4.1.0, )",
-          "AWSSDK.RDS": "[4.1.0, )",
-          "AWSSDK.S3": "[4.1.0, )",
-          "AWSSDK.SecretsManager": "[4.1.1, )",
-          "AWSSDK.SimpleNotificationService": "[4.1.0, )",
+          "AWSSDK.Core": "[4.1.1, )",
+          "AWSSDK.DynamoDBv2": "[4.1.0.1, )",
+          "AWSSDK.RDS": "[4.1.0.1, )",
+          "AWSSDK.S3": "[4.1.0.1, )",
+          "AWSSDK.SecretsManager": "[4.1.1.1, )",
+          "AWSSDK.SimpleNotificationService": "[4.1.0.1, )",
           "Amazon.AspNetCore.DataProtection.SSM": "[4.0.3, )",
           "MMCA.Common.Aspire": "[1.0.0, )",
           "MMCA.Common.Infrastructure": "[1.0.0, )",
@@ -855,9 +855,9 @@
       },
       "AWSSDK.Core": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "uihRnwZ5cljEk1g+SV6Bj7esrdZTS05sV5oKpKzAzja79hqqvfi8r6rP9UNt+cUvsT3VHu8YfKuK1fgGEIcs9Q==",
+        "requested": "[4.1.1, )",
+        "resolved": "4.1.1",
+        "contentHash": "MGURtuvtalMXUaRKCTJv4f3XrwLTcZgrIGfthnOt1Qqol6rTtNKoF0ZusQc12+Z7V9e/UsarZ7AXhh8vMIm76A==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
@@ -865,47 +865,47 @@
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "YRAc7ImchS4Xtc4ML1Kpm9xe0nDpR6nLHWyiuLbG/q56HhUSrJ8cb2BcSCwJgokcquUdaVMxP5bLNzz0ho+I6A==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "XhVcunhVnCH8v8SL1tjg+aBkso/yeeCjvZEaH/1nHtBvCcalhEhUFQMY/GdctN+mHRDq1SHkUaNtJ7HH+Rznlg==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.RDS": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "CorcRHPJynGje/yuxNPbMcnifSpDK4hsvjOg5PLbqOEp30KH9RJWd93XatMYUXTXxhdLu51Dof+xHqv6xYo0gQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "STfx1EhARY5y029H6OXLssyEtR1aNhFOUVWRIunSfg/fkGRkxr2//dfuAMr7Up7pb9b10X42ShKhZyqsyVVQuw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.S3": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "uV//Txuga5jW6wIE5UXi6RaqAvc0eg76i7vmUDgK2H4yOtrSG4BxF+IdXYOu4sbPG/L6q/k2UbK5L6ptysj9oA==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "ZgNjIc7GwxRvkKbbZVjzEm7Q2H5ZDCAWxsryGahq1/xF292U4UTUEwoiqsSAAPG2kvfmejI1cuVj3VMkKnXJKg==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SecretsManager": {
         "type": "CentralTransitive",
-        "requested": "[4.1.1, )",
-        "resolved": "4.1.1",
-        "contentHash": "6RVPdCJwR93Urw4tOK9xQS8+00KcHMazObzeiAOoTuaoYf/1qF2tJquuuN9wwrs8tshljydQbQQtZYO7IxoShw==",
+        "requested": "[4.1.1.1, )",
+        "resolved": "4.1.1.1",
+        "contentHash": "ZqX6pq0AeHnvUfsPAXcd0sVgQN68CCTgNYL4nnrApYshAH6cva8511tsRLLu5IAyN6TZfJLClChiU0kDZ3VSnw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SimpleNotificationService": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "muvPr2QP4uIiQnu8eaIFXSrIvuzqiJJd4UaOjFcB/QicDJXbQFllUakD8BpXlmKqcWl70/cfw3mWIWHDTUZsfQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "ZkLhhi8lE8mkW5PFY/70EeC90UKUzV9BA924gdfWIOFM9XGFuk+U4HFGZCJrm0cgcJJCsHoPxDqyRURMHxIsEw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "Cronos": {
@@ -1270,9 +1270,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -1323,9 +1323,9 @@
       },
       "SSH.NET": {
         "type": "Direct",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -1338,11 +1338,11 @@
       },
       "Testcontainers.LocalStack": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "0vvKBRWNW0mzMt1SFnRB4ocEuMQgttLA9TwaQwp2qeLDdNLVGoD1sPxmLD2hT00SJ81Mj4uiJwr2GmOaLSdyHA==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "BtrVMrLKLS5+c2VxCbHRu6/skTK5tzEY3DKHZyQgZ+ZEE3iEE0z45mPSeXfwdPF7QxFY3FS0Aj6Um/izOvFTlA==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {
@@ -2023,12 +2023,12 @@
       "mmca.common.aws": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0.1, )",
-          "AWSSDK.DynamoDBv2": "[4.1.0, )",
-          "AWSSDK.RDS": "[4.1.0, )",
-          "AWSSDK.S3": "[4.1.0, )",
-          "AWSSDK.SecretsManager": "[4.1.1, )",
-          "AWSSDK.SimpleNotificationService": "[4.1.0, )",
+          "AWSSDK.Core": "[4.1.1, )",
+          "AWSSDK.DynamoDBv2": "[4.1.0.1, )",
+          "AWSSDK.RDS": "[4.1.0.1, )",
+          "AWSSDK.S3": "[4.1.0.1, )",
+          "AWSSDK.SecretsManager": "[4.1.1.1, )",
+          "AWSSDK.SimpleNotificationService": "[4.1.0.1, )",
           "Amazon.AspNetCore.DataProtection.SSM": "[4.0.3, )",
           "MMCA.Common.Aspire": "[1.0.0, )",
           "MMCA.Common.Infrastructure": "[1.0.0, )",
@@ -2146,9 +2146,9 @@
       },
       "AWSSDK.Core": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "uihRnwZ5cljEk1g+SV6Bj7esrdZTS05sV5oKpKzAzja79hqqvfi8r6rP9UNt+cUvsT3VHu8YfKuK1fgGEIcs9Q==",
+        "requested": "[4.1.1, )",
+        "resolved": "4.1.1",
+        "contentHash": "MGURtuvtalMXUaRKCTJv4f3XrwLTcZgrIGfthnOt1Qqol6rTtNKoF0ZusQc12+Z7V9e/UsarZ7AXhh8vMIm76A==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
@@ -2156,47 +2156,47 @@
       },
       "AWSSDK.DynamoDBv2": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "YRAc7ImchS4Xtc4ML1Kpm9xe0nDpR6nLHWyiuLbG/q56HhUSrJ8cb2BcSCwJgokcquUdaVMxP5bLNzz0ho+I6A==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "XhVcunhVnCH8v8SL1tjg+aBkso/yeeCjvZEaH/1nHtBvCcalhEhUFQMY/GdctN+mHRDq1SHkUaNtJ7HH+Rznlg==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.RDS": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "CorcRHPJynGje/yuxNPbMcnifSpDK4hsvjOg5PLbqOEp30KH9RJWd93XatMYUXTXxhdLu51Dof+xHqv6xYo0gQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "STfx1EhARY5y029H6OXLssyEtR1aNhFOUVWRIunSfg/fkGRkxr2//dfuAMr7Up7pb9b10X42ShKhZyqsyVVQuw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.S3": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "uV//Txuga5jW6wIE5UXi6RaqAvc0eg76i7vmUDgK2H4yOtrSG4BxF+IdXYOu4sbPG/L6q/k2UbK5L6ptysj9oA==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "ZgNjIc7GwxRvkKbbZVjzEm7Q2H5ZDCAWxsryGahq1/xF292U4UTUEwoiqsSAAPG2kvfmejI1cuVj3VMkKnXJKg==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SecretsManager": {
         "type": "CentralTransitive",
-        "requested": "[4.1.1, )",
-        "resolved": "4.1.1",
-        "contentHash": "6RVPdCJwR93Urw4tOK9xQS8+00KcHMazObzeiAOoTuaoYf/1qF2tJquuuN9wwrs8tshljydQbQQtZYO7IxoShw==",
+        "requested": "[4.1.1.1, )",
+        "resolved": "4.1.1.1",
+        "contentHash": "ZqX6pq0AeHnvUfsPAXcd0sVgQN68CCTgNYL4nnrApYshAH6cva8511tsRLLu5IAyN6TZfJLClChiU0kDZ3VSnw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SimpleNotificationService": {
         "type": "CentralTransitive",
-        "requested": "[4.1.0, )",
-        "resolved": "4.1.0",
-        "contentHash": "muvPr2QP4uIiQnu8eaIFXSrIvuzqiJJd4UaOjFcB/QicDJXbQFllUakD8BpXlmKqcWl70/cfw3mWIWHDTUZsfQ==",
+        "requested": "[4.1.0.1, )",
+        "resolved": "4.1.0.1",
+        "contentHash": "ZkLhhi8lE8mkW5PFY/70EeC90UKUzV9BA924gdfWIOFM9XGFuk+U4HFGZCJrm0cgcJJCsHoPxDqyRURMHxIsEw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.0, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1, 5.0.0)"
         }
       },
       "Cronos": {
@@ -2550,9 +2550,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",

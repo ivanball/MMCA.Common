@@ -7,6 +7,7 @@ using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
@@ -229,6 +230,57 @@ public abstract class AuthControllerBase(
         return result.IsFailure
             ? HandleFailure(result.Errors)
             : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Records the device metadata a native client reports for the calling device: the refresh session
+    /// named by the access token's own <c>sid</c> claim. A native app sends it once after each sign-in;
+    /// rotation carries it to every successor session, so a refresh never has to send it again. The
+    /// signed-in devices list and the sign-in history then name the device instead of describing its
+    /// user-agent.
+    /// </summary>
+    /// <remarks>
+    /// A PUT, so a retried call simply records the same values again. 404 when the token carries no
+    /// <c>sid</c> (minted before <c>sid</c> shipped, so no session can be named) or names a session
+    /// that is not this user's live session (revoked, expired, or gone).
+    /// </remarks>
+    /// <param name="device">The reported metadata.</param>
+    /// <param name="sessionIssuer">The session issuer, resolved per action.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content, or a Problem Details failure.</returns>
+    [HttpPut("sessions/current/device")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult> RecordCurrentSessionDeviceAsync(
+        [FromBody] DeviceMetadata device,
+        [FromServices] IAuthSessionIssuer sessionIssuer,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+        ArgumentNullException.ThrowIfNull(sessionIssuer);
+
+        var userId = CurrentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        if (User.FindSessionId() is not { } sessionId)
+        {
+            return HandleFailure([Error.NotFoundError(
+                "Auth.SessionNotFound",
+                "The session was not found.",
+                nameof(RecordCurrentSessionDeviceAsync),
+                nameof(MMCA.Common.Domain.Auth.RefreshSession))]);
+        }
+
+        var result = await sessionIssuer
+            .RecordDeviceAsync(userId.Value, sessionId, device, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.IsFailure
+            ? HandleFailure(result.Errors)
+            : NoContent();
     }
 
     /// <summary>

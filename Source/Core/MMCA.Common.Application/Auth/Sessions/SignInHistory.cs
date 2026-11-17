@@ -159,7 +159,8 @@ internal static class SignInHistory
             head.UserAgent,
             endedAt,
             endReason,
-            IsCurrent: currentSignInId is { } current && signIn.SignInId == current);
+            IsCurrent: currentSignInId is { } current && signIn.SignInId == current,
+            Device: head.ToDeviceMetadata());
     }
 
     private static (DateTime? EndedAt, string? EndReason) DescribeEnd(RefreshSession head, DateTime now)

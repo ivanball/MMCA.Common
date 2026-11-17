@@ -12,7 +12,7 @@ namespace MMCA.Common.UI.Components.Auth;
 /// A read-only table of one account's signed-in devices (live refresh sessions) for an administrator:
 /// device, IP address, signed in and expires, with an empty state. It offers no sign-out.
 /// <para>
-/// The device label is the one the signed-in devices page shows (<see cref="UserAgentSummary.Describe"/>),
+/// The device label is the one the signed-in devices page shows (<see cref="UserAgentSummary.Describe(MMCA.Common.Shared.Auth.DeviceMetadata?, string?, IStringLocalizer)"/>),
 /// and the instants render on the VIEWER's clock through <see cref="ViewerTimeZone"/>, exactly as on
 /// that page. No row is ever marked as the current device: an administrator is never on the viewed
 /// user's device.
@@ -66,7 +66,7 @@ public partial class UserSessionsTable : IDisposable
         _disposed = true;
     }
 
-    private string DescribeDevice(RefreshSessionSummaryResponse session) => UserAgentSummary.Describe(session.UserAgent, L);
+    private string DescribeDevice(RefreshSessionSummaryResponse session) => UserAgentSummary.Describe(session.Device, session.UserAgent, L);
 
     private string DescribeIpAddress(RefreshSessionSummaryResponse session) =>
         string.IsNullOrWhiteSpace(session.IpAddress) ? L["Auth.Sessions.IpUnknown"].Value : session.IpAddress;

@@ -134,11 +134,9 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         // The account's refresh sessions are revoked and anonymized further down, after the user's own
         // anonymization and before the save (see RevokeAndAnonymizeAllAsync), not left to the app.
         //
-        // Called through IErasableUser deliberately, and the cast is load-bearing: member lookup on a
-        // type parameter prefers the members of its CLASS constraint, so a bare user.Delete() would
-        // bind to AuditableBaseEntity<TId>.Delete() and a User that HIDES that method
-        // (public new Result Delete(), as ADC's does) would have its own version skipped. Interface
-        // dispatch resolves to the member the app type actually maps onto IErasableUser.
+        // Called through IErasableUser deliberately: interface dispatch runs the Delete() the app type
+        // maps onto IErasableUser (an app override included), and a User that forgets the interface
+        // fails the TUser constraint at compile time.
         IErasableUser erasable = user;
         var deleteResult = erasable.Delete();
         if (deleteResult.IsFailure)

@@ -48,7 +48,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
-    <MmcaOpenApiVersion>3.11.0</MmcaOpenApiVersion>
+    <MmcaOpenApiVersion>3.11.1</MmcaOpenApiVersion>
     <MmcaMauiVersion>11.0.10</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>17.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
@@ -90,7 +90,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.21.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -176,7 +176,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="13.8.0" />
+    <PackageVersion Include="Anthropic" Version="13.9.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -220,16 +220,16 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.1.0" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.1.0.1" />
     <!-- The AWS telemetry exporter (MMCA.Common.Aws.AddAwsTelemetryExporter) signs its OTLP requests
          with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
          signer is guaranteed rather than inherited from whichever service package floors highest.
          Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.Core" Version="4.1.0.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.1.1" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
-    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1" />
+    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1.1" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
          SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
          AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
@@ -237,16 +237,16 @@
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.RDS" Version="4.1.0" />
+    <PackageVersion Include="AWSSDK.RDS" Version="4.1.0.1" />
     <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
          per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.1.0" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.1.0.1" />
     <!-- The native push installation registry (MMCA.Common.Aws.AddAmazonSnsPush): one DynamoDB item
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0.1" />
     <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
@@ -319,7 +319,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MmcaFrameworkVersion)" />
-    <PackageVersion Include="MudBlazor" Version="9.13.0" />
+    <PackageVersion Include="MudBlazor" Version="9.14.0" />
     <PackageVersion Include="Polly" Version="8.9.1" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
          rather than the Polly meta-package: Core carries the v8 resilience-pipeline API on its own,
@@ -389,7 +389,7 @@
          1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
          does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
          only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
-    <PackageVersion Include="AngleSharp" Version="1.10.3" />
+    <PackageVersion Include="AngleSharp" Version="1.10.4" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -400,31 +400,31 @@
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
          Microsoft.Extensions.Caching.StackExchangeRedis supplies the concrete RedisCache the shipped
          code only sees as IDistributedCache. -->
-    <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.17.0" />
     <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
     <!-- PostgreSQL integration tier only (Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests,
          outside the .slnx, own CI job): the SQL a provider actually emits (partial-index predicates,
          boolean comparisons, timestamp kinds) is the class of thing only a real server can reject,
          and no in-memory or SQLite substitute reproduces it. Same Testcontainers family version as
          the Redis and MsSql pins. -->
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
-    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.17.0" />
     <!-- Service Bus emulator fixture base in MMCA.Common.Testing.Azure: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
          tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
-    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.17.0" />
     <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
          .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.LocalStack" Version="4.17.0" />
     <!-- Google Cloud emulator tier only (Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests, outside the
          .slnx, own CI job): fake-gcs-server has no Testcontainers module, so the tier runs it as a
          generic container on the core package. Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <!-- Google Cloud emulator tier only: the Firestore emulator for the FCM installation registry.
          Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers.Firestore" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Firestore" Version="4.17.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
@@ -432,7 +432,7 @@
          projects that pull Testcontainers add a direct PackageReference (same pattern as the
          MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
          MMCA.Common.Testing package through the published package graph. -->
-    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <PackageVersion Include="SSH.NET" Version="2026.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />

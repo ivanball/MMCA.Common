@@ -253,7 +253,8 @@ public sealed partial class AuthSessionIssuer(
                     s.ExpiresAt,
                     s.IpAddress,
                     s.UserAgent,
-                    currentSessionId is { } current && s.Id == current))
+                    currentSessionId is { } current && s.Id == current,
+                    s.ToDeviceMetadata()))
         ];
     }
 
@@ -314,6 +315,42 @@ public sealed partial class AuthSessionIssuer(
         }
 
         session.Revoke(timeProvider.GetUtcNow().UtcDateTime, RefreshSession.ReasonSignedOut);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The lookup is user-scoped (<see cref="IRefreshSessionStore.FindByIdAsync"/>), so another
+    /// account's session id is indistinguishable from a nonexistent one. A revoked or expired session
+    /// answers the same not-found failure: a device list never shows it, and a client reporting on a
+    /// dead session has nothing left to describe.
+    /// </remarks>
+    public async Task<Result> RecordDeviceAsync(
+        UserIdentifierType userId,
+        Guid sessionId,
+        DeviceMetadata device,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+
+        var session = await refreshSessions.FindByIdAsync(sessionId, userId, cancellationToken).ConfigureAwait(false);
+        if (session is null || !session.IsActiveAt(timeProvider.GetUtcNow().UtcDateTime))
+        {
+            return Result.Failure(Error.NotFoundError(
+                "Auth.SessionNotFound",
+                "The session was not found.",
+                nameof(RecordDeviceAsync),
+                nameof(RefreshSession)));
+        }
+
+        var recorded = session.RecordDevice(device);
+        if (recorded.IsFailure)
+        {
+            return recorded;
+        }
+
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success();

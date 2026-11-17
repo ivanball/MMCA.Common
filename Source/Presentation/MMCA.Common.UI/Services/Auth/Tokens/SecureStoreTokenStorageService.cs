@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using MMCA.Common.UI.Services.Auth.Devices;
+
 namespace MMCA.Common.UI.Services.Auth.Tokens;
 
 /// <summary>
@@ -34,12 +37,26 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// session per process, so one slot is the correct scope. Each instance removes the handlers it added
 /// to the shared event when its scope disposes it.
 /// </para>
+/// <para>
+/// <b>Device backfill.</b> After a refresh that produced a token, the device is reported for the
+/// session that token names (<see cref="IDeviceMetadataReporter"/>), until one report in the process
+/// succeeds. This is where a native head actually refreshes, so a session that began before the server
+/// stored device metadata is described within one access-token lifetime, with no new sign-in. The
+/// report runs after the refresh single-flight has completed and its slot is cleared, so the report's
+/// own bearer read finds the fresh token instead of joining the refresh it follows. It is bounded and
+/// never throws (<see cref="DeviceMetadataReporting"/>); a failed report is retried on the next
+/// successful refresh only, and a sign-in that reported successfully closes the backfill too.
+/// </para>
 /// </summary>
 /// <param name="store">The persistent store holding both tokens.</param>
 /// <param name="tokenRefresher">Acquires a fresh access token from the stored refresh token.</param>
+/// <param name="deviceMetadataReporter">Optional per-session device reporter for the refresh backfill.</param>
+/// <param name="logger">Optional logger for a failed device report.</param>
 public sealed class SecureStoreTokenStorageService(
     ISecureTokenStore store,
-    ITokenRefresher tokenRefresher) : ISessionAwareTokenStorage, IDisposable
+    ITokenRefresher tokenRefresher,
+    IDeviceMetadataReporter? deviceMetadataReporter = null,
+    ILogger<SecureStoreTokenStorageService>? logger = null) : ISessionAwareTokenStorage, IDisposable
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
@@ -109,14 +126,24 @@ public sealed class SecureStoreTokenStorageService(
         // lock.
         Task<string?> inFlight = JoinOrStartHydrate(HydrateAsync);
 
+        string? refreshed;
         try
         {
-            return await inFlight.ConfigureAwait(false);
+            refreshed = await inFlight.ConfigureAwait(false);
         }
         finally
         {
             ClearHydrateIfCurrent(inFlight);
         }
+
+        // After the slot is cleared, never inside the hydrate: the report authenticates through the
+        // APIClient pipeline, whose bearer read comes back here and must find the fresh token.
+        if (refreshed is not null && deviceMetadataReporter is not null)
+        {
+            await DeviceMetadataReporting.ReportOncePerProcessAsync(deviceMetadataReporter, logger).ConfigureAwait(false);
+        }
+
+        return refreshed;
     }
 
     /// <inheritdoc />

@@ -34,9 +34,9 @@
       },
       "SSH.NET": {
         "type": "Direct",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -49,9 +49,9 @@
       },
       "Testcontainers": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -61,11 +61,11 @@
       },
       "Testcontainers.Firestore": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "Kl1+PI0soKcRWKudS0t1zOvGaKZHnRqNr8uQAyqm99LCwegITCbUvfPg8nuHP9HzAHsRf6BwVUpm4+X7emZE3w==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "teN4PSSFxA4nq2QXVICU8z45jvSVkRIQNuVl4SAyAFzn/Th6FbZybjL7R37eI8P0+EyOHe4i+1YVhXgEFQwfhg==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {
@@ -1427,9 +1427,9 @@
       },
       "SSH.NET": {
         "type": "Direct",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -1442,9 +1442,9 @@
       },
       "Testcontainers": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -1454,11 +1454,11 @@
       },
       "Testcontainers.Firestore": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "Kl1+PI0soKcRWKudS0t1zOvGaKZHnRqNr8uQAyqm99LCwegITCbUvfPg8nuHP9HzAHsRf6BwVUpm4+X7emZE3w==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "teN4PSSFxA4nq2QXVICU8z45jvSVkRIQNuVl4SAyAFzn/Th6FbZybjL7R37eI8P0+EyOHe4i+1YVhXgEFQwfhg==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {

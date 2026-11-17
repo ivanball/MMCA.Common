@@ -10,6 +10,7 @@ using MMCA.Common.UI.Maui.Capabilities.Notifications;
 using MMCA.Common.UI.Maui.Services;
 using MMCA.Common.UI.Maui.Theme;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Auth.Devices;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using MMCA.Common.UI.Services.Capabilities.Auth;
@@ -71,6 +72,12 @@ public static class DependencyInjection
             // register a credentialed IPushDeviceTokenProvider; the shared default yields no
             // token, so this stays wired-but-inert until push credentials exist.
             services.AddSingleton<IPushRegistrationService, MauiPushRegistrationService>();
+
+            // Per-session device metadata: DeviceInfo plus a per-install id, sent after each sign-in
+            // (AuthUIService) and, until one report succeeds, after a token refresh
+            // (SecureStoreTokenStorageService), so the signed-in devices list names this device.
+            // Singleton by contract: the once-per-process backfill is tracked per reporter instance.
+            services.AddSingleton<IDeviceMetadataReporter, MauiDeviceMetadataReporter>();
 
             // Photo pick/capture for avatar upload (ADR-045). Capture prompts for the camera
             // permission; the head must declare it (Android CAMERA + iOS usage strings).

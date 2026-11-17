@@ -2207,7 +2207,7 @@
           "Microsoft.Extensions.Localization": "[10.0.15, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -2347,9 +2347,9 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
           "Microsoft.AspNetCore.Components": "10.0.1",
           "Microsoft.AspNetCore.Components.Web": "10.0.1",
@@ -3103,7 +3103,7 @@
           "Microsoft.Extensions.Localization": "[10.0.15, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -3243,9 +3243,9 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
           "Microsoft.AspNetCore.Components": "10.0.1",
           "Microsoft.AspNetCore.Components.Web": "10.0.1",
@@ -3999,7 +3999,7 @@
           "Microsoft.Extensions.Localization": "[10.0.15, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -4139,9 +4139,9 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
           "Microsoft.AspNetCore.Components": "10.0.1",
           "Microsoft.AspNetCore.Components.Web": "10.0.1",
@@ -5066,7 +5066,7 @@
           "Microsoft.Extensions.Localization": "[10.0.15, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -5206,9 +5206,9 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
           "Microsoft.AspNetCore.Components": "10.0.1",
           "Microsoft.AspNetCore.Components.Web": "10.0.1",
@@ -7462,7 +7462,7 @@
           "Microsoft.Extensions.Localization": "[11.0.0, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -7577,13 +7577,13 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
-          "Microsoft.AspNetCore.Components": "10.0.1",
-          "Microsoft.AspNetCore.Components.Web": "10.0.1",
-          "Microsoft.Extensions.Localization": "10.0.1"
+          "Microsoft.AspNetCore.Components": "11.0.0",
+          "Microsoft.AspNetCore.Components.Web": "11.0.0",
+          "Microsoft.Extensions.Localization": "11.0.0"
         }
       },
       "Polly": {
@@ -8206,7 +8206,7 @@
           "Microsoft.Extensions.Localization": "[11.0.0, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -8321,13 +8321,13 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
-          "Microsoft.AspNetCore.Components": "10.0.1",
-          "Microsoft.AspNetCore.Components.Web": "10.0.1",
-          "Microsoft.Extensions.Localization": "10.0.1"
+          "Microsoft.AspNetCore.Components": "11.0.0",
+          "Microsoft.AspNetCore.Components.Web": "11.0.0",
+          "Microsoft.Extensions.Localization": "11.0.0"
         }
       },
       "Polly": {
@@ -8950,7 +8950,7 @@
           "Microsoft.Extensions.Localization": "[11.0.0, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -9065,13 +9065,13 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
-          "Microsoft.AspNetCore.Components": "10.0.1",
-          "Microsoft.AspNetCore.Components.Web": "10.0.1",
-          "Microsoft.Extensions.Localization": "10.0.1"
+          "Microsoft.AspNetCore.Components": "11.0.0",
+          "Microsoft.AspNetCore.Components.Web": "11.0.0",
+          "Microsoft.Extensions.Localization": "11.0.0"
         }
       },
       "Polly": {
@@ -9871,7 +9871,7 @@
           "Microsoft.Extensions.Localization": "[11.0.0, )",
           "Microsoft.Extensions.Options.DataAnnotations": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
-          "MudBlazor": "[9.13.0, )",
+          "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
           "QRCoder": "[1.8.1, )",
           "Scrutor": "[7.0.0, )",
@@ -9986,13 +9986,13 @@
       },
       "MudBlazor": {
         "type": "CentralTransitive",
-        "requested": "[9.13.0, )",
-        "resolved": "9.13.0",
-        "contentHash": "li89Y1afb7LAbdh6I/3PAoXx1zUtyjhA6LuVQC8hGAItRCu4tpITAmL7o3KhK2b7PTlzl8PMZ43lAZgXJOVfzw==",
+        "requested": "[9.14.0, )",
+        "resolved": "9.14.0",
+        "contentHash": "VmMM/u4upqpc0lJoXmo30Zj1d/Zq3BjdS11+q/eB/+p20pV1WXbLS0C17WbV4xqLM1i9Kpco6emt6M4s2R/BUA==",
         "dependencies": {
-          "Microsoft.AspNetCore.Components": "10.0.1",
-          "Microsoft.AspNetCore.Components.Web": "10.0.1",
-          "Microsoft.Extensions.Localization": "10.0.1"
+          "Microsoft.AspNetCore.Components": "11.0.0",
+          "Microsoft.AspNetCore.Components.Web": "11.0.0",
+          "Microsoft.Extensions.Localization": "11.0.0"
         }
       },
       "Polly": {

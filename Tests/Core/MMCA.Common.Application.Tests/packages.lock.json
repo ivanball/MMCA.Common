@@ -980,7 +980,7 @@
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[2.13.0, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[2.21.0, )",
+          "Scalar.AspNetCore": "[3.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -1044,11 +1044,11 @@
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "Moq": "[4.21.0, )",
           "Respawn": "[7.0.0, )",
-          "SSH.NET": "[2026.0.0, )",
+          "SSH.NET": "[2026.0.1, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.15, )",
-          "Testcontainers.MsSql": "[4.16.0, )",
-          "Testcontainers.RabbitMq": "[4.16.0, )",
+          "Testcontainers.MsSql": "[4.17.0, )",
+          "Testcontainers.RabbitMq": "[4.17.0, )",
           "Yarp.ReverseProxy": "[2.3.0, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
@@ -1428,9 +1428,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.21.0, )",
-        "resolved": "2.21.0",
-        "contentHash": "pDaxW7B1HqQIU5T64Jn1Txn2JKyVqoOvskCAqTb/lffZyUS8hBxhxmOkJum4wbzFmhc2LsKULVQ/4GDHLb7yjQ=="
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "UvDaK9ZRfGrdOUUcEqZNZ/YnVPcn2C4GiwRxYnsyhsdlTKH9Zqr8/jCOLSNBxhZQ7Te8ldm5a5zbr/reL0WhYg=="
       },
       "Scrutor": {
         "type": "CentralTransitive",
@@ -1454,9 +1454,9 @@
       },
       "SSH.NET": {
         "type": "CentralTransitive",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.3"
@@ -1497,9 +1497,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -1510,20 +1510,20 @@
       },
       "Testcontainers.MsSql": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "UVLYLyq9CDSfLZUeu+CyDmwV7wo2LMNlpBLP8ZO9HG42WT3KTMI/p7qYesiCAZmo6GUeWH/Z6SOIw66Y4qnWuw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "OOy8z14wc0g2ay4LE6i7I82RwNVlwx7Sa2n2gPPTXMt/Q3xl2CvAjloXYmmBOHKtFH3JzvK7hRrFxqdy8EA0ow==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "Testcontainers.RabbitMq": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "aKMDJmB1xXDcspTyohGhe/nSBV/TY0VYN/gsLJyGoGUQGirUDff+wHvEJt+C0w1WIWAwwkLd7GGIQjy3RnowRw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "Zwv0VLdwDTVfu0BiWOnFtTsRi//8NyJXKgBa5SHXJ+j+FF1Qo6eEcS8bEns/5Enj2CGx4bICEiQlOjVEvUGOHg==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3.extensibility.core": {
@@ -2396,9 +2396,9 @@
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
-          "Microsoft.OpenApi": "[3.11.0, )",
+          "Microsoft.OpenApi": "[3.11.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[2.21.0, )",
+          "Scalar.AspNetCore": "[3.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -2461,10 +2461,10 @@
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "Moq": "[4.21.0, )",
           "Respawn": "[7.0.0, )",
-          "SSH.NET": "[2026.0.0, )",
+          "SSH.NET": "[2026.0.1, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
-          "Testcontainers.MsSql": "[4.16.0, )",
-          "Testcontainers.RabbitMq": "[4.16.0, )",
+          "Testcontainers.MsSql": "[4.17.0, )",
+          "Testcontainers.RabbitMq": "[4.17.0, )",
           "Yarp.ReverseProxy": "[2.3.0, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
@@ -2755,9 +2755,9 @@
       },
       "Microsoft.OpenApi": {
         "type": "CentralTransitive",
-        "requested": "[3.11.0, )",
-        "resolved": "3.11.0",
-        "contentHash": "kvQz+mL/fnDw2VaE8zMyQhbMv7FmOYUydIhCVNKxQdrLu9XiMT/07DHwJ5YkRO2uzcxTFvMAKFKKywxoyLKHcA=="
+        "requested": "[3.11.1, )",
+        "resolved": "3.11.1",
+        "contentHash": "WZL9g2+9NPICW4Es6zjIBj4mmKxAnI8RCru3gAZUliCMZPnuaxRynXq4cXoU+IYvI7kXY4ydSrrJ1R9EEHr+Lw=="
       },
       "MiniProfiler.AspNetCore.Mvc": {
         "type": "CentralTransitive",
@@ -2821,9 +2821,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.21.0, )",
-        "resolved": "2.21.0",
-        "contentHash": "pDaxW7B1HqQIU5T64Jn1Txn2JKyVqoOvskCAqTb/lffZyUS8hBxhxmOkJum4wbzFmhc2LsKULVQ/4GDHLb7yjQ=="
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "UvDaK9ZRfGrdOUUcEqZNZ/YnVPcn2C4GiwRxYnsyhsdlTKH9Zqr8/jCOLSNBxhZQ7Te8ldm5a5zbr/reL0WhYg=="
       },
       "Scrutor": {
         "type": "CentralTransitive",
@@ -2846,9 +2846,9 @@
       },
       "SSH.NET": {
         "type": "CentralTransitive",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -2881,9 +2881,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -2893,20 +2893,20 @@
       },
       "Testcontainers.MsSql": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "UVLYLyq9CDSfLZUeu+CyDmwV7wo2LMNlpBLP8ZO9HG42WT3KTMI/p7qYesiCAZmo6GUeWH/Z6SOIw66Y4qnWuw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "OOy8z14wc0g2ay4LE6i7I82RwNVlwx7Sa2n2gPPTXMt/Q3xl2CvAjloXYmmBOHKtFH3JzvK7hRrFxqdy8EA0ow==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "Testcontainers.RabbitMq": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "aKMDJmB1xXDcspTyohGhe/nSBV/TY0VYN/gsLJyGoGUQGirUDff+wHvEJt+C0w1WIWAwwkLd7GGIQjy3RnowRw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "Zwv0VLdwDTVfu0BiWOnFtTsRi//8NyJXKgBa5SHXJ+j+FF1Qo6eEcS8bEns/5Enj2CGx4bICEiQlOjVEvUGOHg==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3.extensibility.core": {

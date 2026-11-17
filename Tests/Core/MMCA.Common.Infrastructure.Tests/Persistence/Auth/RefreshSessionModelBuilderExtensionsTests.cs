@@ -50,9 +50,36 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
             nameof(RefreshSession.ReasonRevoked),
             nameof(RefreshSession.IpAddress),
             nameof(RefreshSession.UserAgent),
-            nameof(RefreshSession.SignInId));
+            nameof(RefreshSession.SignInId),
+            nameof(RefreshSession.DeviceId),
+            nameof(RefreshSession.DeviceName),
+            nameof(RefreshSession.DeviceModel),
+            nameof(RefreshSession.DeviceManufacturer),
+            nameof(RefreshSession.DevicePlatform),
+            nameof(RefreshSession.DeviceFormFactor),
+            nameof(RefreshSession.DeviceType));
     }
 
+    // The device columns a native client fills (RecordDevice): one width for all seven, non-unicode for
+    // the machine identifiers and unicode for the free text a person or vendor chose.
+    [Theory]
+    [InlineData(nameof(RefreshSession.DeviceId), false)]
+    [InlineData(nameof(RefreshSession.DevicePlatform), false)]
+    [InlineData(nameof(RefreshSession.DeviceFormFactor), false)]
+    [InlineData(nameof(RefreshSession.DeviceType), false)]
+    [InlineData(nameof(RefreshSession.DeviceName), true)]
+    [InlineData(nameof(RefreshSession.DeviceModel), true)]
+    [InlineData(nameof(RefreshSession.DeviceManufacturer), true)]
+    public void ApplyRefreshSessionConfiguration_MapsEachDeviceColumnOptionalAtTheDeviceWidth(string column, bool unicode)
+    {
+        using var context = new RefreshSessionOnlyContext();
+
+        var property = context.Model.FindEntityType(typeof(RefreshSession))!.FindProperty(column)!;
+
+        property.IsNullable.Should().BeTrue("a browser session reports no device");
+        property.GetMaxLength().Should().Be(RefreshSession.DeviceFieldMaxLength);
+        (property.IsUnicode() ?? true).Should().Be(unicode);
+    }
     [Fact]
     public void ApplyRefreshSessionConfiguration_MakesTheTokenHashAFixedWidthNonUnicodeRequiredColumn()
     {
