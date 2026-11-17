@@ -1,1 +1,3 @@
 #nullable enable
+*REMOVED*virtual MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.ShouldSeed.get -> bool
+static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.SaveToleratingConcurrentSeedAsync(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!

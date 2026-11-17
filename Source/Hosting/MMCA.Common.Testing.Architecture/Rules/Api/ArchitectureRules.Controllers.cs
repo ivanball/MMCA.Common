@@ -60,21 +60,45 @@ public static partial class ArchitectureRules
     /// <paramref name="exemptFullNames"/> lists controllers that legitimately bypass it (e.g. a payment
     /// webhook endpoint that owns its own response semantics).
     /// </summary>
+    /// <remarks>
+    /// An exemption entry must earn its place: one that names no module controller (renamed or deleted)
+    /// or names a controller that already inherits the framework base fails the rule as stale, so the
+    /// list cannot silently pre-approve a future controller that reuses the name.
+    /// </remarks>
     public static void ControllersInheritApiControllerBase(IArchitectureMap map, IEnumerable<string>? exemptFullNames = null)
     {
+        ArgumentNullException.ThrowIfNull(map);
+
         var exempt = exemptFullNames is null ? [] : exemptFullNames.ToHashSet(StringComparer.Ordinal);
-        var offenders = map.Layers
+        var controllers = map.Layers
             .Where(l => l.Layer == Layer.Api && l.Module.Length > 0)
             .SelectMany(l => l.Assembly.ConcreteClasses)
             .Where(IsController)
+            .Where(t => !InheritsFrameworkControllerBase(t))
+            .ToList();
+
+        var needingExemption = controllers.Select(t => t.FullName ?? t.Name).ToHashSet(StringComparer.Ordinal);
+        var stale = exempt
+            .Where(entry => !needingExemption.Contains(entry))
+            .Order(StringComparer.Ordinal)
+            .Select(entry => $"  - {entry}");
+
+        ArchitectureAssert.NoViolations(stale,
+            "every ControllersExemptFromApiControllerBase entry must name a module controller that bypasses ApiControllerBase/EntityControllerBase; "
+            + "delete an entry that names no controller or one that already inherits the framework base");
+
+        var offenders = controllers
             .Where(t => !exempt.Contains(t.FullName ?? t.Name))
-            .Where(t => !t.HasBaseTypeStartingWith("MMCA.Common.API.Controllers.ApiControllerBase")
-                && !t.HasBaseTypeStartingWith("MMCA.Common.API.Controllers.EntityControllerBase"))
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(offenders,
             "controllers must inherit ApiControllerBase/EntityControllerBase (consistent Result → HTTP mapping), not raw ControllerBase");
     }
+
+    /// <summary>Whether the controller inherits <c>ApiControllerBase</c> or <c>EntityControllerBase</c>.</summary>
+    private static bool InheritsFrameworkControllerBase(Type controllerType) =>
+        controllerType.HasBaseTypeStartingWith("MMCA.Common.API.Controllers.ApiControllerBase")
+        || controllerType.HasBaseTypeStartingWith("MMCA.Common.API.Controllers.EntityControllerBase");
 
     /// <summary>
     /// No controller overrides a base read action of <c>EntityControllerBase</c> (both

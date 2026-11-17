@@ -70,26 +70,6 @@ public sealed class RateLimitAlgorithmSelectionTests
         limiter.Should().BeOfType<RemainingWindowFixedWindowRateLimiter>();
     }
 
-    [Fact]
-    public void UserPolicyPartition_PartitionsByNameAndHonorsTheAlgorithm()
-    {
-        var partition = WebApplicationBuilderExtensions.UserPolicyRateLimitPartition(
-            AuthenticatedContext(),
-            new RateLimitingSettings { Algorithm = RateLimitAlgorithm.SlidingWindow });
-
-        partition.PartitionKey.Should().Be("alice");
-
-        using var limiter = ResolveLimiter(partition);
-
-        limiter.Should().BeOfType<SlidingWindowRateLimiter>();
-    }
-
-    [Fact]
-    public void UserPolicyPartition_WhenNoIdentity_FallsBackToTheAnonymousBucket() =>
-        WebApplicationBuilderExtensions.UserPolicyRateLimitPartition(
-                new DefaultHttpContext(), new RateLimitingSettings())
-            .PartitionKey.Should().Be("anonymous");
-
     // The login throttle stays per-instance even with the distributed flag on: per-account lockout
     // already backs it, and a login throttle that fails open on a Redis outage is a worse trade
     // than one that stays local.

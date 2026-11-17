@@ -1,12 +1,17 @@
+using System.Globalization;
 using System.Reflection;
+using System.Security.Claims;
+using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Controllers.Administration;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Auth.Administration;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
@@ -82,6 +87,50 @@ public sealed class AdministrationControllerBaseTests
         _users.Verify(
             x => x.SetRolesAsync(TargetUserId, It.Is<IReadOnlyList<string>>(r => r.Count == 2), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // Users: an administrator never locks, unlocks or re-roles their own account.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task LockAndUnlock_OnTheCallersOwnAccount_AreForbiddenAndNeverReachTheService(bool locked)
+    {
+        var sut = CreateUsersController(CallerPrincipal(TargetUserId));
+
+        ActionResult result = locked
+            ? await sut.LockAsync(TargetUserId)
+            : await sut.UnlockAsync(TargetUserId);
+
+        AssertSelfRefusal(result);
+        _users.Verify(
+            x => x.SetLockedAsync(It.IsAny<UserIdentifierType>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task SetRolesAsync_OnTheCallersOwnAccount_IsForbiddenAndNeverReachesTheService()
+    {
+        var sut = CreateUsersController(CallerPrincipal(TargetUserId));
+
+        ActionResult result = await sut.SetRolesAsync(TargetUserId, new SetUserRolesRequest(["Member"]));
+
+        AssertSelfRefusal(result);
+        _users.Verify(
+            x => x.SetRolesAsync(It.IsAny<UserIdentifierType>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LockAsync_BySignedInCallerOnAnotherAccount_StillLocks()
+    {
+        _users.Setup(x => x.SetLockedAsync(TargetUserId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        var sut = CreateUsersController(CallerPrincipal(7));
+
+        ActionResult result = await sut.LockAsync(TargetUserId);
+
+        result.Should().BeOfType<NoContentResult>();
+        _users.Verify(x => x.SetLockedAsync(TargetUserId, true, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── Roles ──
@@ -200,6 +249,19 @@ public sealed class AdministrationControllerBaseTests
                 AdministrationPermissions.ManageUsers,
                 "the capability attribute is the whole protection on a surface that reads and edits every account");
 
+    /// <summary>
+    /// The base declares the idempotency intent of its two POST actions, so an app controller that only
+    /// inherits them satisfies the POST-intent fitness rule without an override.
+    /// </summary>
+    /// <param name="action">The base action name.</param>
+    [Theory]
+    [InlineData(nameof(UsersAdminControllerBase<>.LockAsync))]
+    [InlineData(nameof(UsersAdminControllerBase<>.UnlockAsync))]
+    public void LockAndUnlock_DeclareNonIdempotentOnTheBase(string action) =>
+        typeof(TestUsersAdminController).GetMethod(action)!
+            .GetCustomAttribute<NonIdempotentAttribute>(inherit: true)!.Justification
+            .Should().NotBeNullOrWhiteSpace();
+
     [Fact]
     public void RolesAdminControllerBase_RequiresTheManageRolesPermission() =>
         typeof(RolesAdminControllerBase)
@@ -212,8 +274,27 @@ public sealed class AdministrationControllerBaseTests
             AdministrationPermissions.ManageRoles,
             "granting a role editor the user surface, or the reverse, must be a separate decision");
 
+    private static ClaimsPrincipal CallerPrincipal(UserIdentifierType userId) =>
+        new(new ClaimsIdentity(
+            [new Claim(AuthClaimTypes.Subject, userId.ToString(CultureInfo.InvariantCulture))],
+            "Bearer"));
+
+    private static void AssertSelfRefusal(ActionResult result)
+    {
+        var refusal = result.Should().BeAssignableTo<ObjectResult>().Which;
+        refusal.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        var problem = refusal.Value.Should().BeOfType<ProblemDetails>().Which;
+        JsonSerializer.Serialize(problem.Extensions["errors"]).Should().Contain("UserAdministration.Self");
+    }
+
     private TestUsersAdminController CreateUsersController() =>
         new(_users.Object) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+
+    private TestUsersAdminController CreateUsersController(ClaimsPrincipal user) =>
+        new(_users.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } }
+        };
 
     private TestRolesAdminController CreateRolesController() =>
         new(_roles.Object, _currentUser.Object)

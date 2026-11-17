@@ -69,13 +69,6 @@ public sealed class RateLimitPartitionTests
             .PartitionKey.Should().Be("u-42");
 
     [Fact]
-    public void UserPolicyRateLimitPartition_WithNameAndSubject_PartitionsBySubject() =>
-        WebApplicationBuilderExtensions.UserPolicyRateLimitPartition(
-                Ctx(path: "/api/events", authenticated: true, name: "John Smith", userId: "u-42"),
-                new MMCA.Common.API.RateLimiting.RateLimitingSettings())
-            .PartitionKey.Should().Be("u-42");
-
-    [Fact]
     public void GlobalRateLimitPartition_WhenNameMissing_FallsBackToUserIdClaim() =>
         WebApplicationBuilderExtensions.GlobalRateLimitPartition(
                 Ctx(path: "/api/events", authenticated: true, userId: "u-42"), 300)

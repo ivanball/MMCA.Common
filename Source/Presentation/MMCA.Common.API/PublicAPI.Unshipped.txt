@@ -1,1 +1,13 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.PerUserPermitLimit.get -> int
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.PerUserPermitLimit.init -> void
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.PermitLimit.get -> int
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.PermitLimit.init -> void
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.QueueLimit.get -> int
+*REMOVED*MMCA.Common.API.RateLimiting.RateLimitingSettings.QueueLimit.init -> void
+*REMOVED*MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCommonScalarUi() -> Microsoft.AspNetCore.Builder.WebApplication!
+*REMOVED*MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+*REMOVED*static MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.MapCommonScalarUi(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
+*REMOVED*static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

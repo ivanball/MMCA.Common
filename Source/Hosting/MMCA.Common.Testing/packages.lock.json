@@ -623,7 +623,6 @@
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[2.13.0, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[3.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -924,12 +923,6 @@
         "requested": "[8.9.1, )",
         "resolved": "8.9.1",
         "contentHash": "L0vfggkkI2nDAW9lCFYSqX9g/+3TkVXhAq+sh6owBq656X9XW0kE2NG+dPYGNQGeK66HS1rKHRPWMm1bMv91kw=="
-      },
-      "Scalar.AspNetCore": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.0, )",
-        "resolved": "3.0.0",
-        "contentHash": "UvDaK9ZRfGrdOUUcEqZNZ/YnVPcn2C4GiwRxYnsyhsdlTKH9Zqr8/jCOLSNBxhZQ7Te8ldm5a5zbr/reL0WhYg=="
       },
       "Scrutor": {
         "type": "CentralTransitive",
@@ -1609,7 +1602,6 @@
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[3.11.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[3.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -1908,12 +1900,6 @@
         "requested": "[8.9.1, )",
         "resolved": "8.9.1",
         "contentHash": "L0vfggkkI2nDAW9lCFYSqX9g/+3TkVXhAq+sh6owBq656X9XW0kE2NG+dPYGNQGeK66HS1rKHRPWMm1bMv91kw=="
-      },
-      "Scalar.AspNetCore": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.0, )",
-        "resolved": "3.0.0",
-        "contentHash": "UvDaK9ZRfGrdOUUcEqZNZ/YnVPcn2C4GiwRxYnsyhsdlTKH9Zqr8/jCOLSNBxhZQ7Te8ldm5a5zbr/reL0WhYg=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

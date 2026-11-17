@@ -5,9 +5,10 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding;
 /// </summary>
 /// <remarks>
 /// <strong>Security notice:</strong> seed credentials are plaintext by construction, so the list an
-/// app supplies is development-only data. Gate it (see
-/// <see cref="IdentityModuleDbSeederBase{TUser}.ShouldSeed"/>) or replace it with
-/// environment-sourced secrets before running a seeder in a deployed environment.
+/// app supplies is development-only data. Gate it in the app's <c>IModuleSeeder</c> (the caller of
+/// <see cref="IdentityModuleDbSeederBase{TUser}.SeedAsync"/>, typically on a configuration flag that
+/// defaults to false) or replace it with environment-sourced secrets before running a seeder in a
+/// deployed environment.
 /// </remarks>
 /// <param name="Email">The account email; also the idempotency key ("already seeded?" check).</param>
 /// <param name="Password">The plaintext password, hashed by the seeder before persistence.</param>

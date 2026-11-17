@@ -5,6 +5,7 @@ using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Auth.Administration;
 using MMCA.Common.Application.Auth.ViewAs;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.Auth.Requests;
@@ -171,17 +172,25 @@ public abstract class UsersAdminControllerBase<TUserDto>(
     }
 
     /// <summary>
-    /// Locks an account, so it can no longer sign in.
+    /// Locks an account, so it can no longer sign in. Refused with 403 for the caller's own account.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Locking does not by itself invalidate an access token the account already holds; a service
     /// implementation should revoke the account's live refresh sessions too, which is what makes the
     /// lock take effect within one access-token lifetime rather than at the next sign-in.
+    /// </para>
+    /// <para>
+    /// An administrator who locks their own account revokes their own sessions and can no longer sign
+    /// in to undo it, so the self case is refused before the service runs, with the
+    /// <c>UserAdministration.Self</c> error code.
+    /// </para>
     /// </remarks>
     /// <param name="userId">The account to lock.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content, or a Problem Details failure.</returns>
     [HttpPost("{userId}/lock")]
+    [NonIdempotent("Locking is a state setter, not a create: a second lock re-evaluates the account's current state, and a cached 204 would answer a later unlock-then-lock cycle with a state the account is not in.")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
@@ -190,18 +199,24 @@ public abstract class UsersAdminControllerBase<TUserDto>(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
+        if (IsCaller(userId))
+        {
+            return HandleFailure([SelfAdministrationRefused()]);
+        }
+
         var result = await Administration.SetLockedAsync(userId, locked: true, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
     /// <summary>
-    /// Unlocks an account.
+    /// Unlocks an account. Refused with 403 for the caller's own account, as <see cref="LockAsync"/> is.
     /// </summary>
     /// <param name="userId">The account to unlock.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content, or a Problem Details failure.</returns>
     [HttpPost("{userId}/unlock")]
+    [NonIdempotent("Unlocking is a state setter, not a create: a second unlock re-evaluates the account's current state, and a cached 204 would answer a later lock-then-unlock cycle with a state the account is not in.")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
@@ -210,13 +225,19 @@ public abstract class UsersAdminControllerBase<TUserDto>(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
+        if (IsCaller(userId))
+        {
+            return HandleFailure([SelfAdministrationRefused()]);
+        }
+
         var result = await Administration.SetLockedAsync(userId, locked: false, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
     /// <summary>
-    /// Replaces the set of roles an account holds.
+    /// Replaces the set of roles an account holds. Refused with 403 for the caller's own account, so an
+    /// administrator cannot drop the permissions that let them manage users and roles.
     /// </summary>
     /// <param name="userId">The account to re-role.</param>
     /// <param name="request">The complete set of roles the account should hold afterwards.</param>
@@ -235,10 +256,33 @@ public abstract class UsersAdminControllerBase<TUserDto>(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (IsCaller(userId))
+        {
+            return HandleFailure([SelfAdministrationRefused()]);
+        }
+
         var result = await Administration
             .SetRolesAsync(userId, request.Roles, cancellationToken)
             .ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
+
+    /// <summary>
+    /// The refusal the lock, unlock and role actions return for the caller's own account: a
+    /// <see cref="ErrorType.Forbidden"/> error, so it maps to 403 like the other administration refusals.
+    /// </summary>
+    /// <returns>The <c>UserAdministration.Self</c> error.</returns>
+    private static Error SelfAdministrationRefused() =>
+        Error.Forbidden(
+            "UserAdministration.Self",
+            "You cannot lock, unlock or change the roles of your own account.",
+            "userId");
+
+    /// <summary>Whether <paramref name="userId"/> is the signed-in caller's own account.</summary>
+    /// <param name="userId">The account the request targets.</param>
+    /// <returns><see langword="true"/> when the caller's subject resolves to the same id.</returns>
+    private bool IsCaller(UserIdentifierType userId) =>
+        User.GetUserId() is { } callerId
+        && EqualityComparer<UserIdentifierType>.Default.Equals(callerId, userId);
 }

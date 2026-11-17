@@ -196,31 +196,6 @@ public static partial class WebApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Partition selector for the opt-in "UserPolicy" limiter: one bucket per authenticated user
-    /// (subject claim, then name), falling back to the client IP and then to a shared anonymous bucket.
-    /// </summary>
-    /// <remarks>
-    /// Extracted from the inline lambda it used to be so the key selection is unit-testable via
-    /// <c>InternalsVisibleTo</c>, exactly like <see cref="GlobalRateLimitPartition(HttpContext, RateLimitingSettings)"/>.
-    /// </remarks>
-    internal static RateLimitPartition<string> UserPolicyRateLimitPartition(HttpContext httpContext, RateLimitingSettings settings)
-    {
-        var partitionKey = httpContext.User?.FindUserIdValue()
-            ?? httpContext.User?.Identity?.Name
-            ?? httpContext.Connection.RemoteIpAddress?.ToString()
-            ?? "anonymous";
-
-        return CreateLimitedPartition(
-            httpContext,
-            partitionKey,
-            redisScope: "user",
-            permitLimit: settings.PerUserPermitLimit,
-            queueLimit: settings.QueueLimit,
-            settings,
-            allowDistributed: true);
-    }
-
-    /// <summary>
     /// Partition selector for <see cref="RateLimitPolicyMcp"/>: one bucket per authenticated user
     /// (subject claim, then name), else per client IP, else no limiter.
     /// </summary>
@@ -269,8 +244,8 @@ public static partial class WebApplicationBuilderExtensions
     /// <param name="httpContext">The request, used only to resolve services.</param>
     /// <param name="partitionKey">The partition key, unchanged from what the caller computed.</param>
     /// <param name="redisScope">
-    /// Prefix applied to the Redis key only, so the global limiter and "UserPolicy" never share a
-    /// counter for the same user while both keep their original partition keys.
+    /// Prefix applied to the Redis key only, so two limiters keyed on the same user or IP never share
+    /// a counter while both keep their original partition keys.
     /// </param>
     /// <param name="permitLimit">Permits per one-minute window for this partition.</param>
     /// <param name="queueLimit">Queued requests allowed once the partition is saturated.</param>
@@ -389,18 +364,15 @@ public static partial class WebApplicationBuilderExtensions
         /// the UI host's IP, so an IP partition would throttle legitimate public browsing at scale.
         /// Health/liveness (<c>/health</c>, <c>/alive</c>), JWKS discovery (<c>/.well-known/*</c>) and
         /// gRPC inter-service traffic (<c>application/grpc</c>) are bypassed — they legitimately run
-        /// at high frequency. The named "FixedPolicy"/"UserPolicy" limiters remain for opt-in
-        /// <c>[EnableRateLimiting]</c> use, as does <see cref="RateLimitPolicyAuthIp"/>, the per-IP
-        /// anonymous-authentication throttle described on <paramref name="authIpPermitLimit"/>.
+        /// at high frequency. The named policies <see cref="RateLimitPolicyAuthIp"/>
+        /// (the per-IP anonymous-authentication throttle described on <paramref name="authIpPermitLimit"/>)
+        /// and <see cref="RateLimitPolicyMcp"/> are for opt-in <c>[EnableRateLimiting]</c> use.
         /// <para>
         /// This overload keeps every other knob at its default. To reach the sliding-window
         /// algorithm or the shared Redis counter, use the <see cref="IConfiguration"/> overload and
         /// a <c>RateLimiting</c> configuration section (<see cref="RateLimitingSettings"/>).
         /// </para>
         /// </summary>
-        /// <param name="permitLimit">Requests per minute for the opt-in "FixedPolicy" limiter.</param>
-        /// <param name="queueLimit">Queued requests allowed once "FixedPolicy"/"UserPolicy" are saturated.</param>
-        /// <param name="perUserPermitLimit">Requests per minute per user for the opt-in "UserPolicy" limiter.</param>
         /// <param name="globalPermitLimit">Requests per minute per authenticated user for the always-on global limiter.</param>
         /// <param name="authIpPermitLimit">
         /// Requests per minute per client IP for the <see cref="RateLimitPolicyAuthIp"/> policy.
@@ -410,12 +382,9 @@ public static partial class WebApplicationBuilderExtensions
         /// drops from unlimited to roughly 43K attempts/day/IP with per-account lockout intact on
         /// top. Tighten toward 10 only once real client IPs are forwarded end to end.
         /// </param>
-        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) =>
+        public IServiceCollection AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30) =>
             services.AddCommonRateLimiting(new RateLimitingSettings
             {
-                PermitLimit = permitLimit,
-                QueueLimit = queueLimit,
-                PerUserPermitLimit = perUserPermitLimit,
                 GlobalPermitLimit = globalPermitLimit,
                 AuthIpPermitLimit = authIpPermitLimit,
             });
@@ -444,8 +413,7 @@ public static partial class WebApplicationBuilderExtensions
 
         /// <summary>
         /// Registers rate limiting from an already-built <see cref="RateLimitingSettings"/>. The
-        /// policy names ("FixedPolicy", "UserPolicy", <see cref="RateLimitPolicyAuthIp"/>,
-        /// <see cref="RateLimitPolicyMcp"/>), the
+        /// policy names (<see cref="RateLimitPolicyAuthIp"/>, <see cref="RateLimitPolicyMcp"/>), the
         /// bypass list and every partition key are identical whatever the settings say; only the
         /// permit counts, the algorithm and the counter's location change.
         /// </summary>
@@ -466,21 +434,7 @@ public static partial class WebApplicationBuilderExtensions
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
                     httpContext => GlobalRateLimitPartition(httpContext, settings));
 
-                // "FixedPolicy" keeps its name whichever algorithm is configured: it is an opt-in
-                // policy referenced by name from [EnableRateLimiting] attributes in three repos, so
-                // renaming it on a settings change would silently unlimit every endpoint using it.
-                options.AddPolicy("FixedPolicy", httpContext => CreateLimitedPartition(
-                    httpContext,
-                    partitionKey: "__fixed",
-                    redisScope: "fixed",
-                    permitLimit: settings.PermitLimit,
-                    queueLimit: settings.QueueLimit,
-                    settings,
-                    allowDistributed: false));
-
-                options.AddPolicy("UserPolicy", httpContext => UserPolicyRateLimitPartition(httpContext, settings));
-
-                // The MCP endpoint's policy, registered here beside "UserPolicy" so a host that maps
+                // The MCP endpoint's policy, registered here so a host that maps
                 // MapCommonMcp needs no second rate-limiting call. Inert until an endpoint names it.
                 options.AddPolicy(RateLimitPolicyMcp, httpContext => McpRateLimitPartition(httpContext, settings));
 

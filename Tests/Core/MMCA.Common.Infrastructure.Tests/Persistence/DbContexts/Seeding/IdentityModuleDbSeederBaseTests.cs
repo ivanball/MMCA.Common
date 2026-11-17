@@ -11,7 +11,7 @@ using Moq;
 namespace MMCA.Common.Infrastructure.Tests.Persistence.DbContexts.Seeding;
 
 /// <summary>
-/// Exercises the shared Identity seeding loop: the opt-in gate, the per-account
+/// Exercises the shared Identity seeding loop: the per-account
 /// exists-then-hash-then-create-then-save idiom, the per-account save boundary, and the delegation of
 /// aggregate construction to the app (the two apps' <c>User.Create</c> factories take their arguments
 /// in different orders).
@@ -25,21 +25,7 @@ public sealed class IdentityModuleDbSeederBaseTests
     ];
 
     [Fact]
-    public async Task SeedAsync_WhenGateIsClosed_SeedsNothing()
-    {
-        var (sut, mocks) = CreateSut(TwoAccounts, shouldSeed: false);
-
-        await sut.SeedAsync(CancellationToken.None);
-
-        sut.CreateUserCalls.Should().Be(0);
-        mocks.Repository.Verify(
-            x => x.AddAsync(It.IsAny<TestSeedUser>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SeedAsync_WhenGateIsOpen_AddsAndSavesEachAccountIndividually()
+    public async Task SeedAsync_AddsAndSavesEachAccountIndividually()
     {
         var (sut, mocks) = CreateSut(TwoAccounts);
 
@@ -167,8 +153,7 @@ public sealed class IdentityModuleDbSeederBaseTests
         Mock<IPasswordHasher> PasswordHasher);
 
     private static (TestIdentityModuleDbSeeder Sut, SeederMocks Mocks) CreateSut(
-        IReadOnlyList<SeedAccount> accounts,
-        bool shouldSeed = true)
+        IReadOnlyList<SeedAccount> accounts)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestSeedUser, UserIdentifierType>>();
@@ -178,7 +163,7 @@ public sealed class IdentityModuleDbSeederBaseTests
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
         passwordHasher.Setup(x => x.HashPassword(It.IsAny<string>())).Returns((new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }));
 
-        var sut = new TestIdentityModuleDbSeeder(unitOfWork.Object, passwordHasher.Object, accounts, shouldSeed);
+        var sut = new TestIdentityModuleDbSeeder(unitOfWork.Object, passwordHasher.Object, accounts);
         return (sut, new SeederMocks(unitOfWork, repository, passwordHasher));
     }
 
@@ -212,8 +197,7 @@ public sealed class TestSeedUser : AuditableAggregateRootEntity<UserIdentifierTy
 public sealed class TestIdentityModuleDbSeeder(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
-    IReadOnlyList<SeedAccount> accounts,
-    bool shouldSeed) : IdentityModuleDbSeederBase<TestSeedUser>(unitOfWork, passwordHasher)
+    IReadOnlyList<SeedAccount> accounts) : IdentityModuleDbSeederBase<TestSeedUser>(unitOfWork, passwordHasher)
 {
     public HashSet<string> ExistingEmails { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -226,8 +210,6 @@ public sealed class TestIdentityModuleDbSeeder(
     public int CreateUserCalls { get; private set; }
 
     protected override IReadOnlyList<SeedAccount> Accounts => accounts;
-
-    protected override bool ShouldSeed => shouldSeed;
 
     protected override Task<bool> EmailExistsAsync(Email? email, CancellationToken cancellationToken)
     {

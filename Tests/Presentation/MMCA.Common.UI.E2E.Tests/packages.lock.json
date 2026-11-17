@@ -1094,7 +1094,6 @@
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
           "Microsoft.OpenApi": "[3.11.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
-          "Scalar.AspNetCore": "[3.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -1814,12 +1813,6 @@
         "dependencies": {
           "System.Drawing.Common": "6.0.0"
         }
-      },
-      "Scalar.AspNetCore": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.0, )",
-        "resolved": "3.0.0",
-        "contentHash": "UvDaK9ZRfGrdOUUcEqZNZ/YnVPcn2C4GiwRxYnsyhsdlTKH9Zqr8/jCOLSNBxhZQ7Te8ldm5a5zbr/reL0WhYg=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

@@ -79,6 +79,23 @@ public sealed class ControllerShapeRuleTests
     }
 
     [Fact]
+    public void StaleExemptions_NamingNoControllerOrAControllerOnTheFrameworkBase_AreFlagged()
+    {
+        const string ghost = "MMCA.Common.Shapes.Api.GhostController";
+        var act = () => ArchitectureRules.ControllersInheritApiControllerBase(
+            Map(Module(Layer.Api, Fixtures)),
+            [typeof(ShapeWebhookController).FullName!, ghost, typeof(ShapeOrdersController).FullName!]);
+
+        var message = act.Should().Throw<XunitException>().Which.Message;
+        message.Should().Contain("ControllersExemptFromApiControllerBase");
+        message.Should().Contain($"  - {ghost}", "an entry that names no controller is stale");
+        message.Should().Contain(
+            $"  - {typeof(ShapeOrdersController).FullName}",
+            "an entry for a controller already on ApiControllerBase needs no exemption");
+        message.Should().NotContain(nameof(ShapeWebhookController), "a raw-base controller is a real exemption");
+    }
+
+    [Fact]
     public void ControllerBase_IgnoresFrameworkApiLayers()
     {
         var act = () => ArchitectureRules.ControllersInheritApiControllerBase(Map(Framework(Layer.Api, Fixtures)));
