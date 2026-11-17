@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **MMCA.Common.UI.Maui no longer breaks iOS and Mac Catalyst app builds**: the Razor SDK puts `Components/NativeThemeSync.razor` in `Content`, and the Apple SDK embedded it in the ios and maccatalyst assemblies as a bundle resource under the pack runner's absolute path (`__monotouch_content_D:_sa_s...`), which every consuming app build refused to extract ("would extract to ... which is outside of the target directory"). The `.razor` Content items now carry `PublishFolderType="None"`, so no bundle content ships (1.295.0 and 1.296.0 were affected). CI's build-maui job now fails on any `__monotouch_content_` resource in those assemblies.
+
 ## [1.296.0] - 2026-11-16
 
 ### Added

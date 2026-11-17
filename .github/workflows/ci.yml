@@ -223,6 +223,29 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release
 
+      # A library's Content items become embedded __monotouch_content_ resources on ios and
+      # maccatalyst. This package ships no bundle content, and on this runner (source on D:, SDK on
+      # C:) such a resource is embedded under its ABSOLUTE path with no warning, which every consuming
+      # iOS/Mac Catalyst app build then refuses to extract (1.295.0 and 1.296.0 shipped
+      # NativeThemeSync.razor that way). The build cannot see it, so the bytes are checked here.
+      - name: No bundled content in the ios/maccatalyst assemblies
+        if: needs.changes.outputs.code == 'true'
+        shell: pwsh
+        run: |
+          $dlls = Get-ChildItem Source/Presentation/MMCA.Common.UI.Maui/bin/Release -Directory |
+            Where-Object { $_.Name -match '-(ios|maccatalyst)' } |
+            ForEach-Object { Join-Path $_.FullName 'MMCA.Common.UI.Maui.dll' } |
+            Where-Object { Test-Path $_ }
+          if (-not $dlls) { Write-Error 'No ios/maccatalyst MMCA.Common.UI.Maui.dll found to check. Failing closed.'; exit 1 }
+          $found = $false
+          foreach ($dll in $dlls) {
+            $text = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($dll))
+            $hits = [regex]::Matches($text, '__monotouch_content_[A-Za-z0-9_:.\-]+') | ForEach-Object Value | Sort-Object -Unique
+            if ($hits) { $found = $true; $hits | ForEach-Object { Write-Host "::error file=${dll}::embedded bundle content $_" } }
+            else { Write-Host "OK: $dll" }
+          }
+          if ($found) { exit 1 }
+
   # Real-browser axe (WCAG 2.1 AA) + render-smoke gate for the shared MMCA.Common.UI. A backend-less
   # gallery host (Tests/Presentation/MMCA.Common.UI.Gallery) renders the real Login/Register pages and a
   # primitives showcase; MMCA.Common.UI.E2E.Tests self-hosts it in-process and scans it with Playwright.
