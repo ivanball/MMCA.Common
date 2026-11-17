@@ -55,7 +55,7 @@ public sealed class SessionsTests : BunitTestBase
         // Both revoke paths ask first. The double confirms by default so the revoke tests below
         // exercise the action itself; the confirm tests decline explicitly.
         Services.AddSingleton<IAppDialogService>(_dialogs.Object);
-        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         _auth.Setup(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()))
@@ -382,14 +382,15 @@ public sealed class SessionsTests : BunitTestBase
                 "Sign out this device?",
                 "Firefox on macOS will be signed out and will have to sign in again.",
                 "Sign out",
-                "Cancel"),
+                "Cancel",
+                true),
             Times.Once()));
     }
 
     [Fact]
     public void WhenARowsRevokeIsCancelled_NothingIsRevoked()
     {
-        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
             .ReturnsAsync(false);
 
         var cut = RenderSessions();
@@ -398,7 +399,7 @@ public sealed class SessionsTests : BunitTestBase
         cut.Find(OtherDeviceButtonSelector).Click();
 
         cut.WaitForAssertion(() => _dialogs.Verify(
-            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Once()));
         _auth.Verify(a => a.RevokeSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never());
         _auth.Verify(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()), Times.Once());
@@ -419,14 +420,15 @@ public sealed class SessionsTests : BunitTestBase
                 "Sign out everywhere?",
                 "Every device will be signed out, including this one, and you will have to sign in again.",
                 "Sign out everywhere",
-                "Cancel"),
+                "Cancel",
+                true),
             Times.Once()));
     }
 
     [Fact]
     public void WhenSignOutEverywhereIsCancelled_NothingIsRevokedAndThePageStays()
     {
-        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
             .ReturnsAsync(false);
         var navigation = Services.GetRequiredService<NavigationManager>();
 
@@ -437,7 +439,7 @@ public sealed class SessionsTests : BunitTestBase
         SignOutEverywhere(cut).Click();
 
         cut.WaitForAssertion(() => _dialogs.Verify(
-            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Once()));
         _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Never());
         navigation.Uri.Should().Be(uriBefore);
@@ -501,7 +503,7 @@ public sealed class SessionsTests : BunitTestBase
     private TaskCompletionSource<bool> ArrangePendingConfirm()
     {
         var confirm = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
             .Returns(confirm.Task);
         return confirm;
     }

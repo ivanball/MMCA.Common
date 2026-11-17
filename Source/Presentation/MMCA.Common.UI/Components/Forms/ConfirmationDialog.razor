@@ -1,0 +1,98 @@
+@* The one confirmation dialog shape: IAppDialogService.ConfirmAsync and DeleteConfirmation.ShowAsync
+   both open it through ShowAsync below. Not MudMessageBox: its action row wraps the buttons in its own
+   focus trap pinned to the Yes button, so the confirming button always took initial focus and a stray
+   Enter confirmed. Here Cancel comes first and the dialog's focus trap starts on the first child,
+   Escape answers Cancel, and the mud-message-box classes keep existing selectors working. *@
+<MudDialog Class="mud-message-box" DefaultFocus="DefaultFocus.FirstChild">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        @Message
+    </DialogContent>
+    <DialogActions>
+        <MudButton Class="mud-message-box__cancel-button" OnClick="Cancel">@CancelText</MudButton>
+        <MudButton Class="mud-message-box__yes-button" Color="@(Destructive ? Color.Error : Color.Primary)" Variant="Variant.Filled" OnClick="Confirm" data-testid="@(ConfirmTestId ?? DefaultConfirmTestId)">@ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>The <c>data-testid</c> of the confirm button when the caller names none.</summary>
+    internal const string DefaultConfirmTestId = "confirm-action";
+
+    // Escape backs out: MudBlazor resolves it as Cancel, exactly like the Cancel button.
+    private static readonly DialogOptions ConfirmationDialogOptions = new()
+    {
+        CloseOnEscapeKey = true
+    };
+
+    [CascadingParameter]
+    private IMudDialogInstance Dialog { get; set; } = null!;
+
+    /// <summary>The already-localized dialog title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>The already-localized question or explanation.</summary>
+    [Parameter, EditorRequired] public string Message { get; set; } = string.Empty;
+
+    /// <summary>The already-localized label of the confirming button.</summary>
+    [Parameter, EditorRequired] public string ConfirmText { get; set; } = string.Empty;
+
+    /// <summary>The already-localized label of the declining button, rendered first.</summary>
+    [Parameter, EditorRequired] public string CancelText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether confirming destroys or ends something (a delete, a lock, a sign-out): the confirm button
+    /// is then the error color instead of the primary one.
+    /// </summary>
+    [Parameter] public bool Destructive { get; set; }
+
+    /// <summary>The <c>data-testid</c> of the confirm button; <c>confirm-action</c> when not set.</summary>
+    [Parameter] public string? ConfirmTestId { get; set; }
+
+    /// <summary>
+    /// Opens the dialog and resolves once the user answers. Cancel, Escape and a backdrop dismissal
+    /// all answer <see langword="false"/>.
+    /// </summary>
+    /// <param name="dialogService">The MudBlazor dialog service to open it through.</param>
+    /// <param name="title">The already-localized dialog title.</param>
+    /// <param name="message">The already-localized question or explanation.</param>
+    /// <param name="confirmText">The already-localized label of the confirming button.</param>
+    /// <param name="cancelText">The already-localized label of the declining button.</param>
+    /// <param name="destructive">Renders the confirm button in the error color.</param>
+    /// <param name="confirmTestId">The <c>data-testid</c> of the confirm button.</param>
+    /// <returns><see langword="true"/> only when the user actively confirmed.</returns>
+    internal static async Task<bool> ShowAsync(
+        IDialogService dialogService,
+        string title,
+        string message,
+        string confirmText,
+        string cancelText,
+        bool destructive,
+        string confirmTestId = DefaultConfirmTestId)
+    {
+        ArgumentNullException.ThrowIfNull(dialogService);
+
+        var parameters = new DialogParameters<ConfirmationDialog>
+        {
+            { dialog => dialog.Title, title },
+            { dialog => dialog.Message, message },
+            { dialog => dialog.ConfirmText, confirmText },
+            { dialog => dialog.CancelText, cancelText },
+            { dialog => dialog.Destructive, destructive },
+            { dialog => dialog.ConfirmTestId, confirmTestId },
+        };
+
+        var reference = await dialogService.ShowAsync<ConfirmationDialog>(
+            title: null,
+            parameters,
+            ConfirmationDialogOptions);
+        var result = await reference.Result;
+
+        return result is { Canceled: false, Data: true };
+    }
+
+    private void Cancel() => Dialog.Cancel();
+
+    private void Confirm() => Dialog.Close(DialogResult.Ok(true));
+}

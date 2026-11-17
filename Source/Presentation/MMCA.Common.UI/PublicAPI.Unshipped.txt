@@ -1,1 +1,55 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.UI.Common.Settings.LayoutSettings.ClearToastsOnNavigation.get -> bool
+*REMOVED*MMCA.Common.UI.Common.Settings.LayoutSettings.ClearToastsOnNavigation.init -> void
+*REMOVED*MMCA.Common.UI.Common.Settings.LayoutSettings.HideNotificationPagesWhenUnregistered.get -> bool
+*REMOVED*MMCA.Common.UI.Common.Settings.LayoutSettings.HideNotificationPagesWhenUnregistered.init -> void
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.get -> System.TimeSpan
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.init -> void
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
+*REMOVED*MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.DeleteConfirmationDialog() -> void
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityName.get -> string?
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityName.set -> void
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityType.get -> string!
+*REMOVED*MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.EntityType.set -> void
+*REMOVED*MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
+*REMOVED*MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.GetCachedAsync<T>(string! url, System.Threading.CancellationToken cancellationToken, bool bypassCache = false) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+*REMOVED*MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.ReadCache.get -> MMCA.Common.UI.Services.Caching.IUiReadCache?
+*REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null, MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore? localCache = null, MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter? deviceMetadataReporter = null, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Auth.AuthUIService!>? logger = null) -> void
+*REMOVED*MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+*REMOVED*MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache) -> void
+*REMOVED*MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache, MMCA.Common.UI.Services.ListPageStateService? listPageState) -> void
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.Clear() -> void
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.Generation.get -> long
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.InvalidatePrefix(string! routePrefix) -> void
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.Set<T>(string! url, T value) -> void
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.Set<T>(string! url, T value, long generation) -> void
+*REMOVED*MMCA.Common.UI.Services.Caching.IUiReadCache.TryGetFresh<T>(string! url, out T? value) -> bool
+*REMOVED*static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
+*REMOVED*~override MMCA.Common.UI.Components.Forms.DeleteConfirmationDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Common.Interfaces.IAppDialogService.ConfirmAsync(string! title, string! message, string! confirmText, string! cancelText, bool destructive) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Components.Forms.ConfirmationDialog
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.CancelText.get -> string!
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.CancelText.set -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.ConfirmTestId.get -> string?
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.ConfirmTestId.set -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.ConfirmText.get -> string!
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.ConfirmText.set -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.ConfirmationDialog() -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Destructive.get -> bool
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Destructive.set -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Message.get -> string!
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Message.set -> void
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Title.get -> string!
+MMCA.Common.UI.Components.Forms.ConfirmationDialog.Title.set -> void
+MMCA.Common.UI.Layout.MainLayout.Dispose() -> void
+MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.SendGetAsync<T>(string! url, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore? localCache = null, MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter? deviceMetadataReporter = null, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Auth.AuthUIService!>? logger = null) -> void
+MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.JwtAuthenticationStateProvider(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.ListPageStateService? listPageState = null) -> void
+~override MMCA.Common.UI.Components.Forms.ConfirmationDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

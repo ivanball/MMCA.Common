@@ -6,8 +6,8 @@ namespace MMCA.Common.UI.Components.Notifications;
 
 /// <summary>
 /// Removes toasts left over from the page being left, so a toast about that page ("Item added")
-/// does not follow the user onto the next one. Rendered by <c>MainLayout</c> only when
-/// <c>Layout:ClearToastsOnNavigation</c> is on; renders nothing itself.
+/// does not follow the user onto the next one. Rendered by <c>MainLayout</c> on every head; renders
+/// nothing itself.
 /// </summary>
 /// <remarks>
 /// A toast raised in the same moment as the navigation (an action that reports its outcome and then

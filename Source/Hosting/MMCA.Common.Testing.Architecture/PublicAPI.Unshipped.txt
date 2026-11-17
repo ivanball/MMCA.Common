@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.AllowList_HasNoStaleEntries() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PageE2EAllowlistHasNoStaleEntries(string! repoRoot, string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! e2eSourceRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedRoutes) -> void

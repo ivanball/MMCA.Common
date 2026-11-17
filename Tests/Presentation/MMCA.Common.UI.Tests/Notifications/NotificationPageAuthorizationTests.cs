@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Notifications;
+using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Notifications;
 using MMCA.Common.UI.Pages.Notifications;
 
 namespace MMCA.Common.UI.Tests.Notifications;
@@ -17,8 +19,9 @@ namespace MMCA.Common.UI.Tests.Notifications;
 /// <see cref="NotificationSend"/>) only work for a caller holding <c>notifications:manage</c>, so a
 /// signed-in caller without it must be refused there (403, the in-shell Access Denied) rather than
 /// served a 200 that renders Forbidden inside the page. The personal inbox
-/// (<see cref="NotificationInbox"/>) stays open to every signed-in caller, and a host that hides the
-/// notification pages keeps letting every caller through to the router's not-found answer.
+/// (<see cref="NotificationInbox"/>) stays open to every signed-in caller, and a host without the
+/// notification UI (no <c>AddNotificationUI()</c>) keeps letting every caller through to the router's
+/// not-found answer.
 /// <para>
 /// The tests read the attributes off the page types rather than naming a policy, so the
 /// implementation is free to choose how the permission requirement is expressed.
@@ -91,13 +94,19 @@ public sealed class NotificationPageAuthorizationTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApiSettings:ApiEndpoint"] = "https://api.example.test/",
-                ["Layout:HideNotificationPagesWhenUnregistered"] = hideNotificationPages ? "true" : "false",
             })
             .Build();
 
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddUIShared(configuration);
+
+        // A host hides the notification pages exactly when it registered no notification UI.
+        if (!hideNotificationPages)
+        {
+            services.AddSingleton<IUIModule, NotificationUIModule>();
+        }
+
         await using var provider = services.BuildServiceProvider();
 
         var authorizeData = page.GetCustomAttributes(inherit: true).OfType<IAuthorizeData>().ToList();

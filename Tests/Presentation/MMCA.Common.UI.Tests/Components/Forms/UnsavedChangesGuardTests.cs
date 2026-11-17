@@ -63,7 +63,7 @@ public sealed class UnsavedChangesGuardTests : BunitTestBase
 
         CurrentPath().Should().Be("/elsewhere");
         dialog.Verify(
-            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Never());
     }
 
@@ -81,7 +81,8 @@ public sealed class UnsavedChangesGuardTests : BunitTestBase
                 "Unsaved changes",
                 "You have unsaved changes. Leave this page anyway?",
                 "Leave",
-                "Stay"),
+                "Stay",
+                true),
             Times.Once());
     }
 
@@ -100,7 +101,7 @@ public sealed class UnsavedChangesGuardTests : BunitTestBase
 
         CurrentPath().Should().Be("/elsewhere");
         dialog.Verify(
-            d => d.ConfirmAsync("Discard order?", "The cart edits are lost.", "Discard", "Keep editing"),
+            d => d.ConfirmAsync("Discard order?", "The cart edits are lost.", "Discard", "Keep editing", true),
             Times.Once());
     }
 
@@ -116,14 +117,14 @@ public sealed class UnsavedChangesGuardTests : BunitTestBase
 
         CurrentPath().Should().Be("/elsewhere", "the form saved, so the live state is clean");
         dialog.Verify(
-            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Never());
     }
 
     private Mock<IAppDialogService> UseDialog(bool answer)
     {
         var dialog = new Mock<IAppDialogService>();
-        dialog.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        dialog.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
             .ReturnsAsync(answer);
         Services.AddSingleton(dialog.Object);
         return dialog;

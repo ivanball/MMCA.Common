@@ -16,7 +16,6 @@ using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auditing;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.OAuth;
-using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Services.Legal;
@@ -67,27 +66,19 @@ public static class DependencyInjection
             services.AddOptions<SignInSettings>()
                 .Bind(configuration.GetSection(SignInSettings.SectionName));
 
-            // Client-side staleness policy (§19). Both sections are optional: an absent section leaves
-            // the compiled-in defaults, which is the behaviour a host gets without configuring anything.
-            services.AddOptions<UiReadCacheOptions>()
-                .Bind(configuration.GetSection(UiReadCacheOptions.SectionName));
-
+            // Optional: an absent section leaves the compiled-in defaults.
             services.AddOptions<NotificationBellOptions>()
                 .Bind(configuration.GetSection(NotificationBellOptions.SectionName));
 
-            // The clock the staleness policy is measured against. TryAdd, because a host that already
-            // registered one (AddInfrastructure does) keeps it, and a test substitutes a FakeTimeProvider.
+            // The clock the notification bell and the stale-toast sweep measure against. TryAdd, because
+            // a host that already registered one (AddInfrastructure does) keeps it, and a test
+            // substitutes a FakeTimeProvider.
             services.TryAddSingleton(TimeProvider.System);
 
-            // Read-through cache over the API client, scoped so it is per-circuit on Blazor Server.
-            // On WebAssembly and MAUI the scope is the app lifetime, which is why the sign-out path
-            // clears it (AuthUIService.LogoutAsync): otherwise one account's reads outlive its session.
-            services.TryAddScoped<IUiReadCache, UiReadCache>();
-
             // The notification pages' authorization policies: [Authorize] semantics (plus
-            // notifications:manage for the history and compose pages), except that a host hiding
-            // those pages (Layout:HideNotificationPagesWhenUnregistered) lets the request reach the
-            // router, which answers 404 instead of the sign-in challenge or Access Denied.
+            // notifications:manage for the history and compose pages), except that a host without the
+            // notification UI (no AddNotificationUI) lets the request reach the router, which answers
+            // 404 instead of the sign-in challenge or Access Denied.
             services.AddAuthorizationCore(options =>
             {
                 options.AddPolicy(

@@ -41,7 +41,7 @@ public sealed class SameOriginApiProxyOptInTests : IAsyncLifetime
 
         proxied.StatusCode.Should().Be(HttpStatusCode.NotFound);
         _gateway.Seen.Should().BeEmpty();
-        config.Should().Be("{\"api\":{\"apiEndpoint\":\"" + ProxyHost.WasmApiEndpoint + "\"}}");
+        config.Should().Be("{\"api\":{\"apiEndpoint\":\"" + ProxyHost.WasmApiEndpoint + "\"},\"modules\":{}}");
         ProxyHost.SetCookies(cookieWrite).Should().HaveCount(2).And.OnlyContain(c => c.Contains("samesite=lax", StringComparison.OrdinalIgnoreCase));
         host.Services.GetRequiredService<IOptions<SessionCookieSettings>>().Value.ClaimsOnlyBrowserTokens.Should().BeFalse();
     }
@@ -54,7 +54,7 @@ public sealed class SameOriginApiProxyOptInTests : IAsyncLifetime
 
         var config = await client.GetStringAsync(new Uri("/client-config", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        config.Should().Be("{\"api\":{\"apiEndpoint\":\"" + ProxyHost.WasmApiEndpoint + "\",\"sameOriginApiEndpoint\":\"/api/\"}}");
+        config.Should().Be("{\"api\":{\"apiEndpoint\":\"" + ProxyHost.WasmApiEndpoint + "\",\"sameOriginApiEndpoint\":\"/api/\"},\"modules\":{}}");
     }
 
     [Fact]

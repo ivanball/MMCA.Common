@@ -10,7 +10,6 @@ using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Components.Capabilities;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
-using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
@@ -218,7 +217,7 @@ public sealed class BiometricGateTests : BunitTestBase
 
     // ── Sign-out goes through the app's own logout path (A-22) ──
     // Clearing the tokens alone leaves Blazor's auth state signed in (no NotifyUserLogout) and leaves
-    // the previous session's read cache and offline snapshots on the device. The gate's escape must
+    // the previous session's offline snapshots on the device. The gate's escape must
     // run the same local sign-out the app's logout does. The real AuthUIService is registered, so
     // the test pins the user-visible outcome rather than which member the gate calls.
     [Fact]
@@ -226,7 +225,6 @@ public sealed class BiometricGateTests : BunitTestBase
     {
         await EnableAppLockAsync();
         _biometrics.NextResult = false;
-        var readCache = new Mock<IUiReadCache>();
         var localCache = new Mock<ILocalCacheStore>();
         var authStateProvider = new JwtAuthenticationStateProvider(_tokenStorage);
         var notifications = new List<Task<AuthenticationState>>();
@@ -238,8 +236,7 @@ public sealed class BiometricGateTests : BunitTestBase
             Mock.Of<ITokenRefresher>(),
             authStateProvider,
             Mock.Of<IPushRegistrationService>(),
-            readCache.Object,
-            localCache.Object));
+            localCache: localCache.Object));
         var cut = RenderUnderTest<BiometricGate>(_ => { });
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Sign out instead"));
 
@@ -252,7 +249,6 @@ public sealed class BiometricGateTests : BunitTestBase
             "signing out from the lock screen must tell Blazor's auth state, exactly as the app's logout does");
         var state = await notifications[0];
         state.User.Identity!.IsAuthenticated.Should().BeFalse();
-        readCache.Verify(c => c.Clear(), Times.Once, "the previous session's cached reads must not survive the sign-out");
         localCache.Verify(
             c => c.ClearAsync(It.IsAny<CancellationToken>()),
             Times.Once,

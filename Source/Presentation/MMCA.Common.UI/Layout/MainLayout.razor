@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Common.Interfaces
 @using MMCA.Common.UI.Pages.Common
@@ -90,7 +91,22 @@
             {
                 <DynamicComponent Type="componentType" />
             }
-            @Body
+            @* A page that throws while rendering shows this in place of itself instead of ending the
+               whole circuit (unsaved forms included). Navigating away recovers it (OnLocationChanged);
+               #blazor-error-ui below still reports an error outside the boundary. *@
+            <ErrorBoundary @ref="_pageErrorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    <div data-testid="page-error">
+                        <PageErrorState Message="@L["Layout.PageError"].Value" />
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RecoverPage">@L["Common.Button.Retry"]</MudButton>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
         </article>
     </main>
     @* The contentinfo (footer) landmark must be top-level, not nested inside <main> (axe landmark-contentinfo-is-top-level). *@
@@ -133,11 +149,8 @@
             }
         </footer>
     }
-    @* Opt-in (Layout:ClearToastsOnNavigation): removes toasts left over from the page being left. *@
-    @if (LayoutSettingsOptions.Value.ClearToastsOnNavigation)
-    {
-        <MMCA.Common.UI.Components.Notifications.StaleToastSweeper />
-    }
+    @* Removes toasts left over from the page being left, so they do not follow the user. *@
+    <MMCA.Common.UI.Components.Notifications.StaleToastSweeper />
     @foreach (var componentType in _layoutComponents)
     {
         <DynamicComponent Type="componentType" />
@@ -160,6 +173,7 @@
     private List<Type> _contentHeaderComponents = [];
     private List<Type> _footerComponents = [];
     private ElementReference _mainContent;
+    private ErrorBoundary? _pageErrorBoundary;
 
     // Base-relative path and query of the page being shown, plus the fragment. The router re-renders
     // the layout on every location change, so a list page's own URL rewrite is picked up too.
@@ -184,9 +198,21 @@
         // Back the static ErrorMessages helper with the shared localizer (ADR-027). The layout renders for
         // every page in both Server and WASM, so this configures it once per circuit/host.
         ErrorMessages.Configure(L);
+
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
     private Task SkipToMainContentAsync() => _mainContent.FocusAsync().AsTask();
+
+    // The router keeps this layout instance across navigations, so a page error would otherwise stay
+    // on screen for every page after it. A new location renders a different page, which deserves a
+    // fresh attempt.
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => RecoverPage();
+
+    private void RecoverPage() => _pageErrorBoundary?.Recover();
+
+    /// <inheritdoc />
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 
     private async Task HandleLogoutAsync()
     {

@@ -5,7 +5,6 @@ using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services.Auth.Tokens;
-using MMCA.Common.UI.Services.Caching;
 
 namespace MMCA.Common.UI.Services.Api;
 
@@ -14,7 +13,7 @@ namespace MMCA.Common.UI.Services.Api;
 /// Provides CRUD operations over the WebAPI with:
 /// <list type="bullet">
 ///   <item>Polly exponential-backoff-with-jitter retry (3 retries) for transient/server errors</item>
-///   <item>An <c>Idempotency-Key</c> on creates, held constant across every retry attempt</item>
+///   <item>An <c>Idempotency-Key</c> on creates and updates, held constant across every retry attempt</item>
 ///   <item>Every outcome returned as a <see cref="Result"/>: the API's own errors are read back
 ///   through <see cref="ProblemDetailsResultReader"/> with their <see cref="ErrorType"/> intact,
 ///   and transport faults become failures via <see cref="HttpResultExecutor"/></item>
@@ -33,28 +32,14 @@ namespace MMCA.Common.UI.Services.Api;
 /// <param name="endpoint">The service's relative endpoint, e.g. <c>products</c>.</param>
 /// <param name="httpClientFactory">Factory for the named <c>"APIClient"</c> HttpClient.</param>
 /// <param name="tokenStorageService">Circuit-scoped store the bearer token is read from.</param>
-/// <param name="readCache">
-/// Optional per-circuit read cache (ADR-040's client half). Supplied, the four read methods become
-/// read-through with the TTL policy in <c>UiReadCacheOptions</c>, and every successful write
-/// invalidates this endpoint's entries. Left <see langword="null"/>, every read goes to the API and
-/// the class behaves exactly as it did before the cache existed.
-/// </param>
 public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     string endpoint,
     IHttpClientFactory httpClientFactory,
-    ITokenStorageService tokenStorageService,
-    IUiReadCache? readCache = null) : AuthenticatedServiceBase(httpClientFactory, tokenStorageService), IEntityService<TEntityDTO, TIdentifierType>
+    ITokenStorageService tokenStorageService) : AuthenticatedServiceBase(httpClientFactory, tokenStorageService), IEntityService<TEntityDTO, TIdentifierType>
     where TEntityDTO : IBaseDTO<TIdentifierType>
     where TIdentifierType : notnull
 {
     protected string Endpoint { get; } = endpoint;
-
-    /// <summary>
-    /// The read cache this service reads through, or <see langword="null"/> when the host registered
-    /// none. A derived service reaches for it directly only to invalidate a route prefix its own
-    /// custom write touches; the CRUD verbs below already invalidate <see cref="Endpoint"/>.
-    /// </summary>
-    protected IUiReadCache? ReadCache { get; } = readCache;
 
     /// <summary>
     /// Gets a value indicating whether <see cref="GetPagedAsync"/> asks the API to include foreign-key
@@ -76,7 +61,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         };
 
         var url = $"{Endpoint}?{string.Join("&", queryParams)}";
-        var wrapper = await GetCachedAsync<PagedCollectionResult<TEntityDTO>>(url, cancellationToken);
+        var wrapper = await SendGetAsync<PagedCollectionResult<TEntityDTO>>(url, cancellationToken);
 
         return wrapper.Map(page => AsReadOnlyList(page.Items));
     }
@@ -119,7 +104,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         }
 
         var url = $"{Endpoint}/paged?{string.Join("&", queryParams)}";
-        var result = await GetCachedAsync<PagedCollectionResult<TEntityDTO>>(url, cancellationToken);
+        var result = await SendGetAsync<PagedCollectionResult<TEntityDTO>>(url, cancellationToken);
 
         // The pagination metadata still travels with the page; only its shape is flattened, so a
         // grid keeps binding to (Items, TotalItems) exactly as before.
@@ -133,7 +118,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}/lookup?nameProperty={Uri.EscapeDataString(nameProperty)}";
-        var result = await GetCachedAsync<CollectionResult<BaseLookup<TIdentifierType>>>(url, cancellationToken);
+        var result = await SendGetAsync<CollectionResult<BaseLookup<TIdentifierType>>>(url, cancellationToken);
 
         return result.Map(collection => AsReadOnlyList(collection.Items));
     }
@@ -153,28 +138,25 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
 
         // A missing entity is a NotFound failure rather than a null value: the caller can tell it
         // apart from a transport failure (ResultUiExtensions.IsNotFound) instead of both arriving
-        // as the same null. A failure is never cached, so a 404 is re-asked every time.
-        return GetCachedAsync<TEntityDTO>(url, cancellationToken);
+        // as the same null.
+        return SendGetAsync<TEntityDTO>(url, cancellationToken);
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<TEntityDTO>> AddAsync(
+    public virtual Task<Result<TEntityDTO>> AddAsync(
         TEntityDTO entity,
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}";
 
-        // Creates are the one CRUD verb that is not naturally idempotent: a retried POST whose
-        // first attempt actually reached the server would create a second record. The key makes the
-        // server collapse the duplicate; reads, updates (full PUT) and deletes need no key.
-        var result = await SendRequestAsync<TEntityDTO>(
+        // A retried POST whose first attempt actually reached the server would create a second
+        // record. The key makes the server collapse the duplicate into one execution plus a replayed
+        // response.
+        return SendRequestAsync<TEntityDTO>(
             httpClient => httpClient.PostAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
             cancellationToken,
             idempotencyKey: NewIdempotencyKey()
         );
-
-        InvalidateAfterWrite(result);
-        return result;
     }
 
     /// <inheritdoc />
@@ -184,19 +166,22 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// sends no header, and the server refuses the write with <c>428 Precondition Required</c> rather
     /// than overwriting another editor's change.
     /// </remarks>
-    public virtual async Task<Result> UpdateAsync(
+    public virtual Task<Result> UpdateAsync(
         TEntityDTO entity,
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}/{GetEntityId(entity)}";
-        var result = await SendRequestAsync(
+
+        // The key is minted once, outside the retry, so every attempt carries the same one. A PUT
+        // whose first attempt landed and only lost its response is then replayed by the server's
+        // idempotency filter (the stored 204) instead of being re-run against the version it just
+        // replaced, which would answer 412 and tell the user someone else changed the item.
+        return SendRequestAsync(
             httpClient => httpClient.PutAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
             cancellationToken,
+            idempotencyKey: NewIdempotencyKey(),
             ifMatch: ConcurrencyTagOf(entity)
         );
-
-        InvalidateAfterWrite(result);
-        return result;
     }
 
     /// <summary>
@@ -211,106 +196,41 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             : null;
 
     /// <inheritdoc />
-    public virtual async Task<Result> DeleteAsync(
+    public virtual Task<Result> DeleteAsync(
         TIdentifierType id,
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}/{id}";
-        var result = await SendRequestAsync(
+        return SendRequestAsync(
             httpClient => httpClient.DeleteAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken
         );
-
-        InvalidateAfterWrite(result);
-        return result;
     }
 
     protected virtual TIdentifierType GetEntityId(TEntityDTO entity)
         => entity.Id;
 
     /// <summary>
-    /// A read that goes through <see cref="ReadCache"/> when the host registered one: a fresh entry
-    /// answers without a round trip, a miss fetches and stores, and a failure is returned without
-    /// being stored. With no cache registered (or with <paramref name="bypassCache"/> set) this is
-    /// exactly the plain GET the read methods used to issue.
+    /// A GET through the retry pipeline, read back into a <see cref="Result{T}"/>: the read the CRUD
+    /// methods above issue, exposed so a derived service's own read (a storefront page, a filtered
+    /// lookup) takes the same path.
     /// </summary>
-    /// <typeparam name="T">The type to deserialize the response body into, and the cached type.</typeparam>
-    /// <param name="url">The relative URL, path plus the full query string. It IS the cache key, so
-    /// two reads that differ by a single query parameter are two entries, matching the server-side
-    /// output cache's <c>QueryKeys = "*"</c> rule (ADR-040).</param>
+    /// <typeparam name="T">The type to deserialize the response body into.</typeparam>
+    /// <param name="url">The relative URL, path plus the full query string.</param>
     /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
-    /// <param name="bypassCache">
-    /// Forces a round trip and leaves the cache untouched. For a read the user explicitly asked to be
-    /// current (a refresh button, a re-poll after a push), where serving a fresh-by-the-clock entry
-    /// would answer a question the user did not ask.
-    /// </param>
-    /// <returns>The value, from cache or from the API, or the failure the API described.</returns>
+    /// <returns>The value, or the failure the API described.</returns>
     [SuppressMessage(
         "Design",
         "CA1054:URI-like parameters should not be strings",
-        Justification = "The string IS the cache key as well as the request path: it must be stored and compared verbatim so it matches the server-side output-cache key shape (path + full query, ADR-040), and a System.Uri round trip would re-encode it. The read methods above already build this exact string, and the sibling SendRequestAsync overloads take the same shape.")]
-    protected async Task<Result<T>> GetCachedAsync<T>(
-        string url,
-        CancellationToken cancellationToken,
-        bool bypassCache = false)
+        Justification = "The read methods above already build this exact relative string (path plus escaped query), and the sibling SendRequestAsync overloads take the same shape; a System.Uri round trip would only re-encode it.")]
+    protected Task<Result<T>> SendGetAsync<T>(string url, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
 
-        if (ReadCache is null || bypassCache)
-        {
-            return await SendGetAsync<T>(url, cancellationToken);
-        }
-
-        if (ReadCache.TryGetFresh<T>(url, out var cached) && cached is not null)
-        {
-            return Result.Success(cached);
-        }
-
-        // Captured before the GET: a write that invalidates this endpoint while the read is in flight
-        // moves the generation, and the late Set below is then dropped instead of re-caching the
-        // value the write just made stale.
-        var generation = ReadCache.Generation;
-        var result = await SendGetAsync<T>(url, cancellationToken);
-
-        // Only a success is stored: caching a failure would pin a transient outage in front of the
-        // user for the whole TTL, and a 404 would survive the create that fixed it.
-        if (result is { IsSuccess: true, Value: not null })
-        {
-            ReadCache.Set(url, result.Value, generation);
-        }
-
-        return result;
-    }
-
-    private Task<Result<T>> SendGetAsync<T>(string url, CancellationToken cancellationToken) =>
-        SendRequestAsync<T>(
+        return SendRequestAsync<T>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken);
-
-    /// <summary>
-    /// Drops this endpoint's cached reads after a write, unless the server refused it BEFORE
-    /// touching state (validation, unprocessable, unauthorized, forbidden, rate limited): those
-    /// changed nothing, and invalidating would throw away entries that are still accurate. Every
-    /// other outcome invalidates, because the server state is changed or unknown: a 412, 404 or 409
-    /// can answer the retry of a write whose first attempt landed and only lost its response, and a
-    /// 5xx or transport failure says nothing about whether it landed.
-    /// </summary>
-    /// <param name="result">The write's outcome.</param>
-    private void InvalidateAfterWrite(Result result)
-    {
-        if (result.IsSuccess || !result.Errors.All(error => IsRejectedBeforeWrite(error.Type)))
-        {
-            ReadCache?.InvalidatePrefix(Endpoint);
-        }
     }
-
-    /// <summary>Whether a failure of this type means the server refused the write before changing state.</summary>
-    private static bool IsRejectedBeforeWrite(ErrorType type) =>
-        type is ErrorType.Validation
-            or ErrorType.UnprocessableEntity
-            or ErrorType.Unauthorized
-            or ErrorType.Forbidden
-            or ErrorType.TooManyRequests;
 
     /// <summary>
     /// Presents a deserialized <c>Items</c> collection as an <see cref="IReadOnlyList{T}"/> without
@@ -335,7 +255,8 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <param name="idempotencyKey">
     /// Optional idempotency key sent as the <c>Idempotency-Key</c> header (see
     /// <see cref="AuthenticatedServiceBase.NewIdempotencyKey"/>). Supply one for non-idempotent
-    /// writes (creates); leave <see langword="null"/> for reads and naturally idempotent writes.
+    /// writes (creates, and updates so a replayed attempt is answered from the stored outcome); leave
+    /// <see langword="null"/> for reads and naturally idempotent writes.
     /// </param>
     /// <param name="ifMatch">
     /// Optional entity tag sent as the <c>If-Match</c> header, stating the version the write is
@@ -416,10 +337,10 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         {
             // Same reasoning as the idempotency key: every retry states the same precondition, so a
             // write that lost the race fails the precondition on each attempt instead of succeeding
-            // on a later one against a version the caller never saw. The same holds when the first
-            // attempt landed and only its response was lost: the retry then answers 412 (or 404 for a
-            // soft-deleted row) for a write that happened, which is why such an outcome still
-            // invalidates the cached reads (InvalidateAfterWrite) so the user's reload is fresh.
+            // on a later one against a version the caller never saw. When the first attempt landed
+            // and only its response was lost, the idempotency key UpdateAsync sends beside this header
+            // lets the server replay the stored outcome instead of re-checking the precondition
+            // against the version that attempt just wrote.
             httpClient.DefaultRequestHeaders.Add(ConcurrencyETag.IfMatchHeaderName, ifMatch);
         }
 

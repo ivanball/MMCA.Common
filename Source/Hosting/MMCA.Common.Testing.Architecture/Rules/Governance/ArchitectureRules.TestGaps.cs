@@ -108,21 +108,11 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(e2eSourceRoots);
         ArgumentNullException.ThrowIfNull(allowedUntestedRoutes);
 
-        var literals = e2eSourceRoots
-            .SelectMany(root => ScanFiles(repoRoot, root, "*.cs"))
-            .SelectMany(file => StringLiteralRegex.Matches(File.ReadAllText(file)).Select(m => NormalizeLiteral(m.Groups["text"].Value)))
-            .Where(path => path is not null)
-            .Select(path => path!)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+        var literals = E2EPathLiterals(repoRoot, e2eSourceRoots);
 
         var violations = PageRoutes(repoRoot, sourceRoot)
             .Where(page => !allowedUntestedRoutes.Contains(page.Template, StringComparer.Ordinal))
-            .Where(page =>
-            {
-                var pattern = RouteTemplatePattern(page.Template);
-                return !literals.Exists(pattern.IsMatch);
-            })
+            .Where(page => !IsReachedByALiteral(page.Template, literals))
             .Select(page => $"  - {page.Template} ({page.File}) is reached by no E2E test literal")
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
@@ -131,6 +121,50 @@ public static partial class ArchitectureRules
         ArchitectureAssert.NoViolations(violations,
             "every page ships with an end-to-end test that opens it (ADR-147): add one, or allowlist the "
                 + "route with the reason an E2E run cannot reach it");
+    }
+
+    /// <summary>
+    /// Every entry of a page E2E-coverage allowlist must still earn its place: it names a route
+    /// template some <c>@page</c> directive under <paramref name="sourceRoot"/> still declares, AND that
+    /// route is still reached by no E2E literal. An entry for a renamed or deleted page, or for a page
+    /// a test now opens, is stale: it would silently exempt whatever reuses the template next.
+    /// </summary>
+    /// <param name="repoRoot">The repository root.</param>
+    /// <param name="sourceRoot">The repo-relative folder holding the <c>.razor</c> pages.</param>
+    /// <param name="e2eSourceRoots">Repo-relative folders holding the E2E tests and page objects.</param>
+    /// <param name="allowedUntestedRoutes">Route templates exempt from the rule, spelled as in their directive.</param>
+    public static void PageE2EAllowlistHasNoStaleEntries(
+        string repoRoot,
+        string sourceRoot,
+        IReadOnlyCollection<string> e2eSourceRoots,
+        IReadOnlyCollection<string> allowedUntestedRoutes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repoRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
+        ArgumentNullException.ThrowIfNull(e2eSourceRoots);
+        ArgumentNullException.ThrowIfNull(allowedUntestedRoutes);
+
+        var templates = PageRoutes(repoRoot, sourceRoot)
+            .Select(page => page.Template)
+            .ToHashSet(StringComparer.Ordinal);
+        var literals = E2EPathLiterals(repoRoot, e2eSourceRoots);
+
+        var missing = allowedUntestedRoutes
+            .Where(route => !templates.Contains(route))
+            .Select(route => $"  - {route} is allowlisted but no @page directive under {sourceRoot} declares it");
+        var nowCovered = allowedUntestedRoutes
+            .Where(route => templates.Contains(route) && IsReachedByALiteral(route, literals))
+            .Select(route => $"  - {route} is allowlisted but an E2E test now reaches it");
+
+        var violations = missing
+            .Concat(nowCovered)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        ArchitectureAssert.NoViolations(violations,
+            "every allowlisted route still names an existing page that no E2E test reaches (ADR-147): "
+                + "remove the stale entry");
     }
 
     /// <summary>The number of <c>@page</c> routes under the source root, for the non-vacuity floor.</summary>
@@ -228,6 +262,27 @@ public static partial class ArchitectureRules
         ];
 
     /// <summary>A literal reduced to the path it navigates to, or null when it is not a path.</summary>
+    /// <summary>
+    /// Every string literal in the E2E sources that reads as an app path (normalized: query, fragment
+    /// and leading interpolation holes removed), distinct.
+    /// </summary>
+    private static List<string> E2EPathLiterals(string repoRoot, IReadOnlyCollection<string> e2eSourceRoots) =>
+    [
+        .. e2eSourceRoots
+            .SelectMany(root => ScanFiles(repoRoot, root, "*.cs"))
+            .SelectMany(file => StringLiteralRegex.Matches(File.ReadAllText(file)).Select(m => NormalizeLiteral(m.Groups["text"].Value)))
+            .Where(path => path is not null)
+            .Select(path => path!)
+            .Distinct(StringComparer.Ordinal),
+    ];
+
+    /// <summary>Whether some E2E path literal matches the route template.</summary>
+    private static bool IsReachedByALiteral(string template, List<string> literals)
+    {
+        var pattern = RouteTemplatePattern(template);
+        return literals.Exists(pattern.IsMatch);
+    }
+
     private static string? NormalizeLiteral(string literal)
     {
         var path = LeadingInterpolationRegex.Replace(literal, string.Empty);

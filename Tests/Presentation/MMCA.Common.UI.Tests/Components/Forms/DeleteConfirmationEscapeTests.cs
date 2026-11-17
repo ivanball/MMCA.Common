@@ -34,7 +34,7 @@ public sealed class DeleteConfirmationEscapeTests : BunitTestBase
         await cut.InvokeAsync(() => { show = cut.Instance.ShowAsync("Jane Doe"); });
         await providers.Dialog.WaitForAssertionAsync(() => providers.Dialog.HasText("Jane Doe").Should().BeTrue());
 
-        await PressEscapeInTheDialogAsync(providers.Dialog);
+        await PressEscapeInTheDialogAsync(JSInterop, providers.Dialog);
 
         var finished = await Task.WhenAny(show!, Task.Delay(TimeSpan.FromSeconds(3), Xunit.TestContext.Current.CancellationToken));
         finished.Should().BeSameAs(show, "Escape must close the delete confirmation instead of being ignored");
@@ -42,11 +42,16 @@ public sealed class DeleteConfirmationEscapeTests : BunitTestBase
         providers.Dialog.FindAll("[data-testid=confirm-delete]").Should().BeEmpty("the dialog is gone");
     }
 
-    private Task PressEscapeInTheDialogAsync(IRenderedComponent<MudBlazor.MudDialogProvider> dialog)
+    /// <summary>
+    /// Delivers an Escape key-down to the open dialog the way the browser would, through the callback
+    /// MudBlazor's key interceptor registered for the dialog container. Shared with
+    /// <see cref="ConfirmationDialogTests"/>.
+    /// </summary>
+    internal static Task PressEscapeInTheDialogAsync(BunitJSInterop jsInterop, IRenderedComponent<MudBlazor.MudDialogProvider> dialog)
     {
         // The dialog container subscribes its own element id with the key interceptor when it opens.
         var containerId = dialog.Find(".mud-dialog-container").Id;
-        var connect = JSInterop.Invocations
+        var connect = jsInterop.Invocations
             .Where(i => i.Identifier == KeyInterceptorConnect)
             .LastOrDefault(i => i.Arguments.Count > 1 && Equals(i.Arguments[1], containerId));
         connect.Identifier.Should().Be(

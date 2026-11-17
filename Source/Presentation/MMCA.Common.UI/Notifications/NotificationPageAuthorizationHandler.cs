@@ -1,21 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Common.Interfaces;
-using MMCA.Common.UI.Common.Settings;
 
 namespace MMCA.Common.UI.Notifications;
 
 /// <summary>
 /// Evaluates <see cref="NotificationPageRequirement"/>: an authenticated caller passes when it also
 /// holds the requirement's permission (if any), and every caller passes while the host hides the
-/// notification pages (the router then answers 404).
+/// notification pages because it never registered the notification UI (the router then answers 404).
 /// </summary>
-/// <param name="layoutOptions">The host's layout settings.</param>
 /// <param name="modules">The UI modules the host registered.</param>
-internal sealed class NotificationPageAuthorizationHandler(
-    IOptions<LayoutSettings> layoutOptions,
-    IEnumerable<IUIModule> modules)
+internal sealed class NotificationPageAuthorizationHandler(IEnumerable<IUIModule> modules)
     : AuthorizationHandler<NotificationPageRequirement>
 {
     /// <inheritdoc />
@@ -26,7 +21,7 @@ internal sealed class NotificationPageAuthorizationHandler(
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(requirement);
 
-        if (NotificationPageGate.HidesNotificationPages(layoutOptions.Value, modules)
+        if (NotificationPageGate.HidesNotificationPages(modules)
             || IsSignedInWithPermission(context, requirement))
         {
             context.Succeed(requirement);

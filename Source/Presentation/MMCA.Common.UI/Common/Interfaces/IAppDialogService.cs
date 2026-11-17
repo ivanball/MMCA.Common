@@ -6,6 +6,10 @@ namespace MMCA.Common.UI.Common.Interfaces;
 /// irreversible (or lossy) happens, so that is all this contract exposes; richer, entity-specific
 /// dialogs stay component-side (<c>DeleteConfirmation</c>).
 /// <para>
+/// Every prompt opens with Cancel rendered first and focused, so a stray Enter declines rather than
+/// confirms, and Escape declines too.
+/// </para>
+/// <para>
 /// Registered by <c>AddUIShared</c> over the MudBlazor dialog service. As with
 /// <see cref="IToastService"/>, the vendor type appears in exactly one implementation, so a test
 /// can answer the prompt with a stub instead of driving a rendered dialog.
@@ -14,9 +18,9 @@ namespace MMCA.Common.UI.Common.Interfaces;
 public interface IAppDialogService
 {
     /// <summary>
-    /// Asks the user to confirm, and resolves once they answer. Dismissing the dialog without
-    /// choosing (backdrop click, escape) counts as declining, so a caller only ever has to branch
-    /// on <see langword="true"/>.
+    /// Asks the user to confirm a non-destructive action, and resolves once they answer. Dismissing
+    /// the dialog without choosing (backdrop click, escape) counts as declining, so a caller only
+    /// ever has to branch on <see langword="true"/>.
     /// </summary>
     /// <param name="title">The already-localized dialog title.</param>
     /// <param name="message">The already-localized question or explanation.</param>
@@ -24,4 +28,19 @@ public interface IAppDialogService
     /// <param name="cancelText">The already-localized label of the declining button.</param>
     /// <returns><see langword="true"/> only when the user actively confirmed.</returns>
     Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText);
+
+    /// <summary>
+    /// Asks the user to confirm, and resolves once they answer. Dismissing the dialog without
+    /// choosing (backdrop click, escape) counts as declining.
+    /// </summary>
+    /// <param name="title">The already-localized dialog title.</param>
+    /// <param name="message">The already-localized question or explanation.</param>
+    /// <param name="confirmText">The already-localized label of the confirming button.</param>
+    /// <param name="cancelText">The already-localized label of the declining button.</param>
+    /// <param name="destructive">
+    /// <see langword="true"/> when confirming destroys or ends something (a delete, a lock, a
+    /// sign-out): the confirming button is drawn in the error color instead of the primary one.
+    /// </param>
+    /// <returns><see langword="true"/> only when the user actively confirmed.</returns>
+    Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText, bool destructive);
 }

@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.UserNotifications
 @* The notification-page policy, not a bare [Authorize]: it lets the request through to the router's
-   not-found answer when the host hides these pages (Layout:HideNotificationPagesWhenUnregistered). *@
+   not-found answer when the host never registered the notification UI. *@
 @attribute [Authorize(Policy = MMCA.Common.UI.Notifications.NotificationPageRequirement.PolicyName)]
 
 <PageTitle>@Title</PageTitle>

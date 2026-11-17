@@ -6,7 +6,7 @@ namespace MMCA.Common.UI.Web.ClientConfig;
 
 /// <summary>
 /// Collects the app-specific sections a host adds to the <c>/client-config</c> document on top of
-/// the framework's <c>Api</c> section (see <see cref="ClientConfigEndpointExtensions"/>). Built
+/// the framework's <c>Api</c> and <c>Modules</c> sections (see <see cref="ClientConfigEndpointExtensions"/>). Built
 /// once per request, so a section can read request-scoped services and current configuration.
 /// </summary>
 /// <remarks>
@@ -36,20 +36,21 @@ public sealed class ClientConfigBuilder
     /// defaults (camelCase members), and the WASM client reads it back through configuration binding,
     /// which is case-insensitive.
     /// </summary>
-    /// <param name="name">The section name, for example <c>OAuth</c>. <c>Api</c> is reserved.</param>
+    /// <param name="name">The section name, for example <c>OAuth</c>. <c>Api</c> and <c>Modules</c> are reserved.</param>
     /// <param name="value">The section's value, typically an anonymous object.</param>
     /// <returns>This builder, for chaining.</returns>
     /// <exception cref="ArgumentException">
-    /// <paramref name="name"/> is blank, is the reserved <c>Api</c> section, or was already added.
+    /// <paramref name="name"/> is blank, is a reserved framework section (<c>Api</c>, <c>Modules</c>), or was already added.
     /// </exception>
     public ClientConfigBuilder Add(string name, object? value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (string.Equals(name, ClientConfigEndpointExtensions.ApiSectionName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(name, ClientConfigEndpointExtensions.ApiSectionName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, ClientConfigEndpointExtensions.ModulesSectionName, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
-                $"The '{ClientConfigEndpointExtensions.ApiSectionName}' section is written by the framework and cannot be replaced.",
+                $"The '{name}' section is written by the framework and cannot be replaced.",
                 nameof(name));
         }
 

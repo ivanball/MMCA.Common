@@ -12,8 +12,9 @@ namespace MMCA.Common.UI.Tests.Services.Api;
 
 /// <summary>
 /// Pins the write-safety half of <see cref="EntityServiceBase{TEntityDTO, TId}"/>: the
-/// <c>Idempotency-Key</c> emitted on creates (and only on creates), the key staying identical
-/// across every retry attempt of one logical operation, and the shape of the retry predicate
+/// <c>Idempotency-Key</c> emitted on creates and updates (never on reads or deletes), the key
+/// staying identical across every retry attempt of one logical operation (with the update's
+/// <c>If-Match</c> beside it), and the shape of the retry predicate
 /// (5xx yes, 501 no, 429 yes) plus cancellation aborting the pipeline. The retried cases pay the
 /// real Polly backoff (2s, then 4s), so each one is driven through the smallest attempt count that
 /// proves the behavior and asserts on the handler's captured attempts, never on wall-clock timing.
@@ -36,18 +37,34 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     private sealed class WidgetService(IHttpClientFactory httpClientFactory, ITokenStorageService tokenStorageService)
         : EntityServiceBase<WidgetDto, int>("widgets", httpClientFactory, tokenStorageService);
 
+    /// <summary>A DTO carrying a concurrency token, so its update sends <c>If-Match</c>.</summary>
+    private sealed record VersionedWidgetDto : IBaseDTO<int>, IConcurrencyAware
+    {
+        public required int Id { get; init; }
+
+        public string? Name { get; init; }
+
+        public byte[] RowVersion { get; init; } = [];
+    }
+
+    private sealed class VersionedWidgetService(IHttpClientFactory httpClientFactory, ITokenStorageService tokenStorageService)
+        : EntityServiceBase<VersionedWidgetDto, int>("widgets", httpClientFactory, tokenStorageService);
+
     /// <summary>
-    /// Records the <c>Idempotency-Key</c> header of every attempt (null when absent) and answers
-    /// with a scripted status sequence; the last scripted status repeats if the policy asks for
+    /// Records the <c>Idempotency-Key</c> and <c>If-Match</c> headers of every attempt (null when
+    /// absent) and answers with a scripted status sequence, where a null status throws a transport
+    /// failure (the response never arrived); the last scripted status repeats if the policy asks for
     /// more attempts than the script supplies. A fresh response is built per attempt so a retry
     /// never reuses a consumed <see cref="HttpContent"/>. The local double exists because the
     /// shared capturing handlers record only the Authorization header.
     /// </summary>
-    private sealed class ScriptedHandler(string? json, params HttpStatusCode[] statuses) : HttpMessageHandler
+    private sealed class ScriptedHandler(string? json, params HttpStatusCode?[] statuses) : HttpMessageHandler
     {
         private int _attempt;
 
         public List<string?> CapturedKeys { get; } = [];
+
+        public List<string?> CapturedIfMatch { get; } = [];
 
         public int AttemptCount => CapturedKeys.Count;
 
@@ -57,11 +74,20 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
                 request.Headers.TryGetValues(IdempotencyHeaders.IdempotencyKey, out var values)
                     ? string.Join(",", values)
                     : null);
+            CapturedIfMatch.Add(
+                request.Headers.TryGetValues(ConcurrencyETag.IfMatchHeaderName, out var tags)
+                    ? string.Join(",", tags)
+                    : null);
 
             var status = statuses[Math.Min(_attempt, statuses.Length - 1)];
             _attempt++;
 
-            var response = new HttpResponseMessage(status);
+            if (status is null)
+            {
+                throw new HttpRequestException("The connection dropped before the response arrived.");
+            }
+
+            var response = new HttpResponseMessage(status.Value);
             if (json is not null)
             {
                 response.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -71,7 +97,7 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
         }
     }
 
-    private static (WidgetService Sut, ScriptedHandler Handler) CreateSut(string? json, params HttpStatusCode[] statuses)
+    private static (WidgetService Sut, ScriptedHandler Handler) CreateSut(string? json, params HttpStatusCode?[] statuses)
     {
         var handler = new ScriptedHandler(json, statuses);
         var factory = new FreshApiClientFactory(handler, new Uri("http://localhost/"));
@@ -126,8 +152,9 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
         handler.CapturedKeys[0].Should().BeNull("a read changes nothing, so it needs no dedup key");
     }
 
+    // == Idempotency key on updates (C1) ==
     [Fact]
-    public async Task UpdateAsync_SendsNoIdempotencyKey()
+    public async Task UpdateAsync_SendsAnIdempotencyKeyHeader()
     {
         var (sut, handler) = CreateSut(null, HttpStatusCode.NoContent);
 
@@ -136,7 +163,34 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
 
         result.IsSuccess.Should().BeTrue();
         handler.AttemptCount.Should().Be(1);
-        handler.CapturedKeys[0].Should().BeNull("a full PUT is already idempotent");
+        handler.CapturedKeys[0].Should().MatchRegex(
+            "^[0-9a-f]{32}$",
+            "a PUT whose response is lost must be replayable by the server instead of re-checked against the version it wrote");
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(null)]
+    public async Task UpdateAsync_WhenTheFirstAttemptFails_ReusesTheSameKeyAndIfMatchOnEveryRetry(HttpStatusCode? firstAttempt)
+    {
+        var handler = new ScriptedHandler(null, firstAttempt, HttpStatusCode.NoContent);
+        var sut = new VersionedWidgetService(
+            new FreshApiClientFactory(handler, new Uri("http://localhost/")), new StubTokenStorageService());
+        var widget = new VersionedWidgetDto { Id = 7, Name = "Renamed", RowVersion = [1, 2, 3, 4, 5, 6, 7, 8] };
+
+        var result = await sut.UpdateAsync(widget, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue("the retry after a 5xx or a dropped connection lands");
+        handler.AttemptCount.Should().Be(2);
+        var firstKey = handler.CapturedKeys[0];
+        firstKey.Should().MatchRegex("^[0-9a-f]{32}$");
+        handler.CapturedKeys.Should().OnlyContain(
+            capturedKey => capturedKey == firstKey,
+            "the key is minted once per update, so the server can replay an attempt that landed and lost its response");
+        var expectedTag = ConcurrencyETag.Format(widget.RowVersion);
+        handler.CapturedIfMatch.Should().OnlyContain(
+            tag => tag == expectedTag,
+            "every attempt states the same precondition as the first");
     }
 
     [Fact]

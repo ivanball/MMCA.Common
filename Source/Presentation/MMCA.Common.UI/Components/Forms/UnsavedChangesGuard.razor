@@ -58,7 +58,8 @@
             Title ?? L["UnsavedChanges.Title"],
             Message ?? L["UnsavedChanges.Message"],
             LeaveButtonText ?? L["UnsavedChanges.Leave"],
-            StayButtonText ?? L["UnsavedChanges.Stay"]);
+            StayButtonText ?? L["UnsavedChanges.Stay"],
+            destructive: true);
 
         if (!confirmed)
         {
