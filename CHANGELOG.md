@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **`SoftDeleteEnforcementTestsBase` always allows MMCA.Common's own row-erasing types** (MMCA.Common.Testing.Architecture): `EFRepository<TEntity, TIdentifierType>`, `BatchedDelete`, `InternalCommandAdministration`, `EFPermissionGrantStore`, `EFViewAsGrantStore` and `EFPasskeyCredentialStore` are allowed by the base itself, each still named individually so a new framework eraser fails Common's own architecture run. `AllowedHardDeleteTypes` stays the extension point for a repo's own purge and erasure types and still defaults to empty. A consumer that re-lists those six framework types in its override can delete them; leaving them in place changes nothing.
+- **Dependencies.** Scalar.AspNetCore 3.0.0 (major; MMCA.Common.API `MapCommonScalarUi`); Microsoft.OpenApi 3.11.1 on `net11.0`; Anthropic 13.9.0; AWSSDK.Core 4.1.1, AWSSDK.S3, AWSSDK.RDS, AWSSDK.SimpleNotificationService and AWSSDK.DynamoDBv2 4.1.0.1, AWSSDK.SecretsManager 4.1.1.1; MudBlazor 9.14.0; Testcontainers.MsSql, Testcontainers.RabbitMq and Testcontainers.ServiceBus 4.17.0; SSH.NET 2026.0.1; AngleSharp 1.10.4 (test projects).
+
 ## [1.297.0] - 2026-11-17
 
 ### Added

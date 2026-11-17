@@ -394,8 +394,8 @@
         "dependencies": {
           "Azure.Messaging.ServiceBus": "[7.21.0, )",
           "MassTransit.Azure.ServiceBus.Core": "[8.5.12, )",
-          "SSH.NET": "[2026.0.0, )",
-          "Testcontainers.ServiceBus": "[4.16.0, )",
+          "SSH.NET": "[2026.0.1, )",
+          "Testcontainers.ServiceBus": "[4.17.0, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -464,9 +464,9 @@
       },
       "SSH.NET": {
         "type": "CentralTransitive",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.3"
@@ -475,8 +475,8 @@
       "Testcontainers": {
         "type": "CentralTransitive",
         "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -487,21 +487,21 @@
       },
       "Testcontainers.MsSql": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "UVLYLyq9CDSfLZUeu+CyDmwV7wo2LMNlpBLP8ZO9HG42WT3KTMI/p7qYesiCAZmo6GUeWH/Z6SOIw66Y4qnWuw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "OOy8z14wc0g2ay4LE6i7I82RwNVlwx7Sa2n2gPPTXMt/Q3xl2CvAjloXYmmBOHKtFH3JzvK7hRrFxqdy8EA0ow==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "Testcontainers.ServiceBus": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "+/J+aXtHZCZW+58jg0ZtCxyr5+VMS2kZZNMuWoCJeJKfc/e7C6YbKi/jXevR6E0cd73jFK1K4BGXoaYwNvtPIw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "st5oISvIrOgwVT9d/84ohjzDH1WGZfTlH1HF8wYCtS6OkAy0WdTFKk+VgNgp4bd9sIFDs9kRAcpFCBrpjz/pAg==",
         "dependencies": {
-          "Testcontainers": "4.16.0",
-          "Testcontainers.MsSql": "4.16.0"
+          "Testcontainers": "4.17.0",
+          "Testcontainers.MsSql": "4.17.0"
         }
       },
       "xunit.v3.extensibility.core": {
@@ -839,8 +839,8 @@
         "dependencies": {
           "Azure.Messaging.ServiceBus": "[7.21.0, )",
           "MassTransit.Azure.ServiceBus.Core": "[8.5.12, )",
-          "SSH.NET": "[2026.0.0, )",
-          "Testcontainers.ServiceBus": "[4.16.0, )",
+          "SSH.NET": "[2026.0.1, )",
+          "Testcontainers.ServiceBus": "[4.17.0, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -896,9 +896,9 @@
       },
       "SSH.NET": {
         "type": "CentralTransitive",
-        "requested": "[2026.0.0, )",
-        "resolved": "2026.0.0",
-        "contentHash": "Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
+        "requested": "[2026.0.1, )",
+        "resolved": "2026.0.1",
+        "contentHash": "74/nnq/n7EZLGLsUTt4aEE+/iet3B6ahi2iFfXgRXb6rNAvxsxLwbhLZ6lzITfAEB1vkmuAI3gXxOp2HcUMa2g==",
         "dependencies": {
           "BouncyCastle.Cryptography": "2.7.0"
         }
@@ -906,8 +906,8 @@
       "Testcontainers": {
         "type": "CentralTransitive",
         "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -917,21 +917,21 @@
       },
       "Testcontainers.MsSql": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "UVLYLyq9CDSfLZUeu+CyDmwV7wo2LMNlpBLP8ZO9HG42WT3KTMI/p7qYesiCAZmo6GUeWH/Z6SOIw66Y4qnWuw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "OOy8z14wc0g2ay4LE6i7I82RwNVlwx7Sa2n2gPPTXMt/Q3xl2CvAjloXYmmBOHKtFH3JzvK7hRrFxqdy8EA0ow==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "Testcontainers.ServiceBus": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "+/J+aXtHZCZW+58jg0ZtCxyr5+VMS2kZZNMuWoCJeJKfc/e7C6YbKi/jXevR6E0cd73jFK1K4BGXoaYwNvtPIw==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "st5oISvIrOgwVT9d/84ohjzDH1WGZfTlH1HF8wYCtS6OkAy0WdTFKk+VgNgp4bd9sIFDs9kRAcpFCBrpjz/pAg==",
         "dependencies": {
-          "Testcontainers": "4.16.0",
-          "Testcontainers.MsSql": "4.16.0"
+          "Testcontainers": "4.17.0",
+          "Testcontainers.MsSql": "4.17.0"
         }
       },
       "xunit.v3.extensibility.core": {
