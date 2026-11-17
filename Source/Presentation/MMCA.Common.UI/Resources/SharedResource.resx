@@ -616,6 +616,9 @@
   <data name="Auth.Sessions.Device.AppFormat" xml:space="preserve">
     <value>{0} app on {1}</value>
   </data>
+  <data name="Auth.Sessions.Device.NamedFormat" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
   <data name="Auth.Sessions.Admin.Empty" xml:space="preserve">
     <value>Not signed in on any device</value>
   </data>

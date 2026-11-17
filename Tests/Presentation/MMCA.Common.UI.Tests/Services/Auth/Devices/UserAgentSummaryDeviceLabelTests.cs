@@ -3,13 +3,14 @@ using System.Resources;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth.Devices;
 
 namespace MMCA.Common.UI.Tests.Services.Auth.Devices;
 
 /// <summary>
-/// Pins <see cref="UserAgentSummary.Describe"/>, the device label shared by the signed-in devices page
+/// Pins <see cref="UserAgentSummary.Describe(string?, IStringLocalizer)"/> and its device-metadata overload, the device label shared by the signed-in devices page
 /// and the administrator's sessions table. A native MMCA app (its user agent carries the
 /// <c>MmcaApp</c> marker, see <see cref="AppUserAgent"/>) reads as "{AppName} app on {Platform}",
 /// and the marker wins over any browser token; plain browser headers and an empty header keep the
@@ -116,5 +117,45 @@ public sealed class UserAgentSummaryDeviceLabelTests : IDisposable
 
         label.ResourceNotFound.Should().BeFalse();
         label.Value.Should().Be("AtlDevCon app on Android");
+    }
+
+    // == The device metadata a native client reported ==
+    [Fact]
+    public void Describe_WithAReportedNameModelAndPlatform_IsTheNameWithItsModelOnThePlatform() =>
+        UserAgentSummary.Describe(
+                new DeviceMetadata("install-1", "Ana's phone", "Pixel 8", "Google", "Android", "Phone", "Physical"),
+                "AtlDevCon/1.9.2 (Android 15; MmcaApp)",
+                _localizer)
+            .Should().Be("Ana's phone (Pixel 8 on Android)");
+
+    [Fact]
+    public void Describe_WithAReportedModelButNoName_IsTheModelOnThePlatform() =>
+        UserAgentSummary.Describe(
+                new DeviceMetadata("install-1", "  ", "iPhone 15", "Apple", "iOS", "Phone", "Physical"),
+                userAgent: null,
+                _localizer)
+            .Should().Be("iPhone 15 on iOS");
+
+    [Fact]
+    public void Describe_WithAReportedNameOnly_IsTheName() =>
+        UserAgentSummary.Describe(new DeviceMetadata(null, "Work tablet", null, null, null, null, null), userAgent: null, _localizer)
+            .Should().Be("Work tablet");
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Describe_WithNoUsableDeviceMetadata_FallsBackToTheUserAgentLabel(bool reportedButBlank)
+    {
+        DeviceMetadata? device = reportedButBlank ? new DeviceMetadata("install-1", " ", null, "Google", null, "Phone", "Physical") : null;
+
+        UserAgentSummary.Describe(device, ChromeOnWindows, _localizer)
+            .Should().Be(UserAgentSummary.Describe(ChromeOnWindows, _localizer));
+    }
+
+    [Fact]
+    public void NamedFormatResource_InBothCultures_KeepsTheNameFirst()
+    {
+        SharedResources.GetString("Auth.Sessions.Device.NamedFormat", CultureInfo.InvariantCulture).Should().Be("{0} ({1})");
+        SharedResources.GetString("Auth.Sessions.Device.NamedFormat", CultureInfo.GetCultureInfo("es")).Should().Be("{0} ({1})");
     }
 }

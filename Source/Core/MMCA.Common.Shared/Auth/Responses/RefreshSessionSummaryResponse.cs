@@ -20,10 +20,16 @@ namespace MMCA.Common.Shared.Auth.Responses;
 /// Always <see langword="false"/> for a caller whose token predates the <c>sid</c> claim, since
 /// nothing then identifies the caller's own device.
 /// </param>
+/// <param name="Device">
+/// The device metadata the native client reported for this session (<c>PUT auth/sessions/current/device</c>),
+/// or <see langword="null"/> when none was reported (every browser session). Informational, like
+/// <paramref name="UserAgent"/>, which stays the fallback description.
+/// </param>
 public sealed record RefreshSessionSummaryResponse(
     Guid SessionId,
     DateTime CreatedAt,
     DateTime ExpiresAt,
     string? IpAddress,
     string? UserAgent,
-    bool IsCurrent);
+    bool IsCurrent,
+    DeviceMetadata? Device = null);

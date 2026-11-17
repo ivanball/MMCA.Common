@@ -257,10 +257,11 @@ public partial class Sessions : IDisposable
     }
 
     /// <summary>
-    /// The device label (the native app, or browser and platform), shared with the administrator's
-    /// sessions table through <see cref="UserAgentSummary.Describe"/>.
+    /// The device label (the reported device name and model, else the native app, or browser and
+    /// platform), shared with the administrator's sessions table through
+    /// <see cref="UserAgentSummary.Describe(MMCA.Common.Shared.Auth.DeviceMetadata?, string?, IStringLocalizer)"/>.
     /// </summary>
-    private string DescribeDevice(RefreshSessionSummaryResponse session) => UserAgentSummary.Describe(session.UserAgent, L);
+    private string DescribeDevice(RefreshSessionSummaryResponse session) => UserAgentSummary.Describe(session.Device, session.UserAgent, L);
 
     /// <summary>
     /// Formats a UTC instant in the VIEWER's browser time zone and current culture: the sessions

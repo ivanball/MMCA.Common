@@ -60,6 +60,17 @@ public static class RefreshSessionModelBuilderExtensions
             entity.Property(e => e.IpAddress).HasMaxLength(RefreshSession.IpAddressMaxLength).IsUnicode(false);
             entity.Property(e => e.UserAgent).HasMaxLength(RefreshSession.UserAgentMaxLength);
 
+            // Device metadata a native client reports for its session. The machine identifiers (the
+            // per-install id, platform, form factor, physical/virtual) are non-unicode; the model,
+            // manufacturer and owner-chosen device name are free text, so unicode.
+            entity.Property(e => e.DeviceId).HasMaxLength(RefreshSession.DeviceFieldMaxLength).IsUnicode(false);
+            entity.Property(e => e.DeviceName).HasMaxLength(RefreshSession.DeviceFieldMaxLength);
+            entity.Property(e => e.DeviceModel).HasMaxLength(RefreshSession.DeviceFieldMaxLength);
+            entity.Property(e => e.DeviceManufacturer).HasMaxLength(RefreshSession.DeviceFieldMaxLength);
+            entity.Property(e => e.DevicePlatform).HasMaxLength(RefreshSession.DeviceFieldMaxLength).IsUnicode(false);
+            entity.Property(e => e.DeviceFormFactor).HasMaxLength(RefreshSession.DeviceFieldMaxLength).IsUnicode(false);
+            entity.Property(e => e.DeviceType).HasMaxLength(RefreshSession.DeviceFieldMaxLength).IsUnicode(false);
+
             // Validation path: every refresh presents a token and is answered by exactly one row.
             // Unique because a hash collision across users would let one account's token be validated
             // against another's session, and because it makes a double-insert of the same token a

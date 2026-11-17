@@ -32,6 +32,10 @@ namespace MMCA.Common.Shared.Auth.Responses;
 /// What the row records. Every row is a <see cref="SignInHistoryEntryKind.SignIn"/> today; the kind is
 /// the extension point for other account-access events that belong in the same history.
 /// </param>
+/// <param name="Device">
+/// The device metadata the native client reported, as recorded on the newest session, or
+/// <see langword="null"/> when none was reported (every browser sign-in, and every view-as entry).
+/// </param>
 public sealed record SignInSummaryResponse(
     Guid SignInId,
     DateTime StartedAt,
@@ -41,4 +45,5 @@ public sealed record SignInSummaryResponse(
     DateTime? EndedAt,
     string? EndReason,
     bool IsCurrent,
-    SignInHistoryEntryKind Kind = SignInHistoryEntryKind.SignIn);
+    SignInHistoryEntryKind Kind = SignInHistoryEntryKind.SignIn,
+    DeviceMetadata? Device = null);

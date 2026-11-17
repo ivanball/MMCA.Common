@@ -1,5 +1,6 @@
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Responses;
 
 namespace MMCA.Common.Application.Auth.Sessions;
@@ -159,4 +160,22 @@ public interface IAuthSessionIssuer
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success result, or the not-found failure.</returns>
     Task<Result> RevokeSessionAsync(UserIdentifierType userId, Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records the device metadata a native client reported on one of the user's sessions (the
+    /// caller's own, named by its access token's <c>sid</c> claim), replacing what was recorded before,
+    /// and saves. Rotation carries it to every successor. A session id of another account, one that
+    /// never existed, and one that is revoked or expired all answer <c>Auth.SessionNotFound</c> and write
+    /// nothing: only a live session can be described.
+    /// </summary>
+    /// <param name="userId">The signed-in user.</param>
+    /// <param name="sessionId">The session to describe.</param>
+    /// <param name="device">The reported metadata.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, or the not-found failure.</returns>
+    Task<Result> RecordDeviceAsync(
+        UserIdentifierType userId,
+        Guid sessionId,
+        DeviceMetadata device,
+        CancellationToken cancellationToken);
 }

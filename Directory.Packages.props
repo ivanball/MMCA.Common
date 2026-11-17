@@ -400,7 +400,7 @@
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
          Microsoft.Extensions.Caching.StackExchangeRedis supplies the concrete RedisCache the shipped
          code only sees as IDistributedCache. -->
-    <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.17.0" />
     <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
@@ -409,7 +409,7 @@
          boolean comparisons, timestamp kinds) is the class of thing only a real server can reject,
          and no in-memory or SQLite substitute reproduces it. Same Testcontainers family version as
          the Redis and MsSql pins. -->
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.17.0" />
     <!-- Service Bus emulator fixture base in MMCA.Common.Testing.Azure: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
@@ -417,14 +417,14 @@
     <PackageVersion Include="Testcontainers.ServiceBus" Version="4.17.0" />
     <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
          .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.LocalStack" Version="4.17.0" />
     <!-- Google Cloud emulator tier only (Tests/Hosting/MMCA.Common.Gcp.Emulator.Tests, outside the
          .slnx, own CI job): fake-gcs-server has no Testcontainers module, so the tier runs it as a
          generic container on the core package. Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <!-- Google Cloud emulator tier only: the Firestore emulator for the FCM installation registry.
          Same Testcontainers family version. -->
-    <PackageVersion Include="Testcontainers.Firestore" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Firestore" Version="4.17.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via

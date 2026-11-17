@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.UI.Services.Auth.Devices;
 
@@ -123,6 +124,43 @@ internal static class UserAgentSummary
             _ => localizer["Auth.Sessions.Device.Unknown"].Value,
         };
     }
+
+    /// <summary>
+    /// The device label for a session that may carry device metadata a native client reported: the
+    /// device name with its model (or platform) when reported, otherwise the user-agent description
+    /// (<see cref="Describe(string?, IStringLocalizer)"/>).
+    /// </summary>
+    /// <param name="device">The reported device metadata, or <see langword="null"/> (every browser session).</param>
+    /// <param name="userAgent">The raw header, the fallback when the metadata names nothing.</param>
+    /// <param name="localizer">The localizer the label's resource formats are read through.</param>
+    /// <returns>The localized device label.</returns>
+    public static string Describe(DeviceMetadata? device, string? userAgent, IStringLocalizer localizer)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
+
+        var name = Blank(device?.DeviceName);
+        var detail = DescribeHardware(Blank(device?.DeviceModel), Blank(device?.DevicePlatform), localizer);
+
+        return (name, detail) switch
+        {
+            (not null, not null) => localizer["Auth.Sessions.Device.NamedFormat", name, detail].Value,
+            (not null, null) => name,
+            (null, not null) => detail,
+            _ => Describe(userAgent, localizer),
+        };
+    }
+
+    // Same "{0} on {1}" format as a browser on a platform, so the word order stays a resource.
+    private static string? DescribeHardware(string? model, string? platform, IStringLocalizer localizer) =>
+        (model, platform) switch
+        {
+            (not null, not null) => localizer["Auth.Sessions.Device.Format", model, platform].Value,
+            (not null, null) => model,
+            (null, not null) => platform,
+            _ => null,
+        };
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     /// <summary>
     /// Reads a native MMCA app header (<see cref="AppUserAgent"/>): the app name is the product token's

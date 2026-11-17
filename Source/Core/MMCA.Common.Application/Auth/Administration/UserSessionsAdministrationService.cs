@@ -45,7 +45,8 @@ public sealed class UserSessionsAdministrationService(
                     s.ExpiresAt,
                     s.IpAddress,
                     s.UserAgent,
-                    IsCurrent: false)),
+                    IsCurrent: false,
+                    s.ToDeviceMetadata())),
         ];
 
         return Result.Success(live);

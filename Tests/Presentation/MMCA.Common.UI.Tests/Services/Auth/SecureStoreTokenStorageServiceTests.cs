@@ -12,6 +12,7 @@ namespace MMCA.Common.UI.Tests.Services.Auth;
 /// once, instead of keeping the dead pair and re-posting a doomed refresh on every read (the
 /// 2026-10-17 loop). A transient failure keeps the pair, and a sign-in that lands mid-refresh wins.
 /// </summary>
+[Collection(SecureStoreTokenStorageCollection.Name)]
 public sealed class SecureStoreTokenStorageServiceTests
 {
     private const string StoredRefresh = "stored-refresh";
@@ -182,4 +183,16 @@ public sealed class SecureStoreTokenStorageServiceTests
             return Task.CompletedTask;
         }
     }
+}
+
+/// <summary>
+/// Serializes the test classes that drive <see cref="SecureStoreTokenStorageService"/>. Its refresh
+/// single-flight is process-wide (static) by design, so two such classes running in parallel join each
+/// other's in-flight refresh and read the other test's outcome.
+/// </summary>
+[CollectionDefinition(Name)]
+public sealed class SecureStoreTokenStorageCollection
+{
+    /// <summary>The collection name.</summary>
+    public const string Name = "SecureStoreTokenStorage";
 }

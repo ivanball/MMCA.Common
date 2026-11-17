@@ -62,11 +62,11 @@
       },
       "Testcontainers.Redis": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "IFYPaYLgM34OTe46kNVsSylcid6wm7zgkiZv3k7Oe6fioPcHByhyPW93fLxIfQIFvDwQcwpELxwRRSDyQmYvoA==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "4AEr8/FE4myGzo7SkCXUpGH+7OrflIio1amGxAf1oeLFEYRgfr4crrdiRRE4DgqVzNa4dyqdfpPGu5N4JObD+Q==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {
@@ -1342,9 +1342,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
@@ -1420,11 +1420,11 @@
       },
       "Testcontainers.Redis": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "IFYPaYLgM34OTe46kNVsSylcid6wm7zgkiZv3k7Oe6fioPcHByhyPW93fLxIfQIFvDwQcwpELxwRRSDyQmYvoA==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "4AEr8/FE4myGzo7SkCXUpGH+7OrflIio1amGxAf1oeLFEYRgfr4crrdiRRE4DgqVzNa4dyqdfpPGu5N4JObD+Q==",
         "dependencies": {
-          "Testcontainers": "4.16.0"
+          "Testcontainers": "4.17.0"
         }
       },
       "xunit.v3": {
@@ -2652,9 +2652,9 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "JmMUZk6ZXQovbGQjaMB+YxOR0PbJTdYjOYjRcrm5LrA2dhLVMuCbhVGGunzCGIQfFMUB5Lno2LPOHMMuaGmuIg==",
+        "requested": "[4.17.0, )",
+        "resolved": "4.17.0",
+        "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",

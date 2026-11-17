@@ -1,4 +1,5 @@
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Testing.Architecture;
 
 namespace MMCA.Common.Architecture.Tests.Governance;
@@ -50,15 +51,22 @@ public sealed class PiiConventionTests : PiiConventionTestsBase
     protected override IReadOnlyDictionary<Type, Func<object>> AnonymizableSamples { get; } =
         new Dictionary<Type, Func<object>>
         {
-            [typeof(RefreshSession)] = static () => RefreshSession
-                .Create(
-                    userId: 1,
-                    refreshToken: "refresh-token",
-                    createdAt: new DateTime(2026, 10, 19, 0, 0, 0, DateTimeKind.Utc),
-                    expiresAt: new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc),
-                    ipAddress: "203.0.113.7",
-                    userAgent: "Mozilla/5.0 (fixture)")
-                .Value!,
+            [typeof(RefreshSession)] = static () =>
+            {
+                var session = RefreshSession
+                    .Create(
+                        userId: 1,
+                        refreshToken: "refresh-token",
+                        createdAt: new DateTime(2026, 10, 19, 0, 0, 0, DateTimeKind.Utc),
+                        expiresAt: new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc),
+                        ipAddress: "203.0.113.7",
+                        userAgent: "Mozilla/5.0 (fixture)")
+                    .Value!;
+
+                // Populated so the device members move under Anonymize() and the reverse rule checks them.
+                session.RecordDevice(new DeviceMetadata("install-1", "Fixture phone", "Pixel 8", "Google", "Android", "Phone", "Physical"));
+                return session;
+            },
         };
 
     [Fact]

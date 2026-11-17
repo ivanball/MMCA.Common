@@ -1189,7 +1189,7 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
+        "requested": "[4.17.0, )",
         "resolved": "4.17.0",
         "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {
@@ -2247,7 +2247,7 @@
       },
       "Testcontainers": {
         "type": "CentralTransitive",
-        "requested": "[4.16.0, )",
+        "requested": "[4.17.0, )",
         "resolved": "4.17.0",
         "contentHash": "yXAdoZ3dcrg84Iy05X10qRfz8EO35tpSmI1kK91Qe32MNz0DyPuSbiCi33i5AvSbYMET9HxBw32UuHJHSSK49A==",
         "dependencies": {

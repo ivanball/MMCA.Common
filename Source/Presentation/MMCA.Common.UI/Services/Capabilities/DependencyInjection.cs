@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MMCA.Common.UI.Services.Auth.Devices;
 using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
@@ -64,6 +65,10 @@ public static class DependencyInjection
             // credentials exist - until then even native heads stay registered-but-tokenless.
             services.TryAddSingleton<IPushRegistrationService, NullPushRegistrationService>();
             services.TryAddSingleton<IPushDeviceTokenProvider, NullPushDeviceTokenProvider>();
+
+            // Per-session device metadata: web heads report none (their sessions are described from
+            // the user-agent); UI.Maui overrides it with the DeviceInfo-backed reporter.
+            services.TryAddSingleton<IDeviceMetadataReporter, NullDeviceMetadataReporter>();
 
             // Media picking (ADR-045): web heads render InputFile instead (IsSupported false).
             services.TryAddSingleton<IMediaPickerService, NullMediaPickerService>();

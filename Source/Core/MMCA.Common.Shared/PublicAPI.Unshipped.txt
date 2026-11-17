@@ -1,1 +1,63 @@
 #nullable enable
+*REMOVED*~override MMCA.Common.Shared.AuthenticationRequest.Equals(object obj) -> bool
+*REMOVED*~override MMCA.Common.Shared.AuthenticationRequest.ToString() -> string
+MMCA.Common.Shared.Auth.DeviceMetadata
+MMCA.Common.Shared.Auth.DeviceMetadata.<Clone>$() -> MMCA.Common.Shared.Auth.DeviceMetadata!
+MMCA.Common.Shared.Auth.DeviceMetadata.Deconstruct(out string? DeviceId, out string? DeviceName, out string? DeviceModel, out string? DeviceManufacturer, out string? DevicePlatform, out string? DeviceFormFactor, out string? DeviceType) -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceFormFactor.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceFormFactor.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceId.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceId.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceManufacturer.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceManufacturer.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceMetadata(string? DeviceId, string? DeviceName, string? DeviceModel, string? DeviceManufacturer, string? DevicePlatform, string? DeviceFormFactor, string? DeviceType) -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceModel.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceModel.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceName.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceName.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DevicePlatform.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DevicePlatform.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceType.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceType.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.Equals(MMCA.Common.Shared.Auth.DeviceMetadata? other) -> bool
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Deconstruct(out System.Guid SessionId, out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out string? IpAddress, out string? UserAgent, out bool IsCurrent, out MMCA.Common.Shared.Auth.DeviceMetadata? Device) -> void
+*REMOVED*MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Deconstruct(out System.Guid SessionId, out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out string? IpAddress, out string? UserAgent, out bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Device.get -> MMCA.Common.Shared.Auth.DeviceMetadata?
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Device.init -> void
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.RefreshSessionSummaryResponse(System.Guid SessionId, System.DateTime CreatedAt, System.DateTime ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent, MMCA.Common.Shared.Auth.DeviceMetadata? Device = null) -> void
+*REMOVED*MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.RefreshSessionSummaryResponse(System.Guid SessionId, System.DateTime CreatedAt, System.DateTime ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind, out MMCA.Common.Shared.Auth.DeviceMetadata? Device) -> void
+*REMOVED*MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Device.get -> MMCA.Common.Shared.Auth.DeviceMetadata?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Device.init -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn, MMCA.Common.Shared.Auth.DeviceMetadata? Device = null) -> void
+*REMOVED*MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn) -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest() -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest(string! DeviceId, string! Email, string! DeviceFormFactor, string! DevicePlatform, string! DeviceModel, string! DeviceManufacturer, string! DeviceName, string! DeviceType) -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.Deconstruct(out string! DeviceId, out string! Email, out string! DeviceFormFactor, out string! DevicePlatform, out string! DeviceModel, out string! DeviceManufacturer, out string! DeviceName, out string! DeviceType) -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceId.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceId.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceModel.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceModel.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceName.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceName.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceType.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.DeviceType.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.Email.get -> string!
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.Email.init -> void
+*REMOVED*MMCA.Common.Shared.AuthenticationRequest.Equals(MMCA.Common.Shared.AuthenticationRequest other) -> bool
+override MMCA.Common.Shared.Auth.DeviceMetadata.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.DeviceMetadata.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.DeviceMetadata.ToString() -> string!
+*REMOVED*override MMCA.Common.Shared.AuthenticationRequest.GetHashCode() -> int
+static MMCA.Common.Shared.Auth.DeviceMetadata.operator !=(MMCA.Common.Shared.Auth.DeviceMetadata? left, MMCA.Common.Shared.Auth.DeviceMetadata? right) -> bool
+static MMCA.Common.Shared.Auth.DeviceMetadata.operator ==(MMCA.Common.Shared.Auth.DeviceMetadata? left, MMCA.Common.Shared.Auth.DeviceMetadata? right) -> bool
+*REMOVED*static MMCA.Common.Shared.AuthenticationRequest.operator !=(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
+*REMOVED*static MMCA.Common.Shared.AuthenticationRequest.operator ==(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool

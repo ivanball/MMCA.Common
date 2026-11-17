@@ -1,11 +1,13 @@
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Passkeys;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Services.Api;
+using MMCA.Common.UI.Services.Auth.Devices;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
@@ -41,6 +43,13 @@ namespace MMCA.Common.UI.Services.Auth;
 /// leaving them behind would show the previous account's rows to whoever signs in next on this
 /// device the first time the network is unavailable.
 /// </param>
+/// <param name="deviceMetadataReporter">
+/// Optional per-session device reporter, called best-effort after every sign-in
+/// (<see cref="IDeviceMetadataReporter"/>). The registered default is a
+/// no-op; the MAUI package replaces it. Its wait is bounded and its failures are logged and swallowed,
+/// so it can never fail or hold up a sign-in.
+/// </param>
+/// <param name="logger">Optional logger for a failed device report.</param>
 public sealed class AuthUIService(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService,
@@ -48,7 +57,9 @@ public sealed class AuthUIService(
     AuthenticationStateProvider authStateProvider,
     IPushRegistrationService pushRegistration,
     IUiReadCache? readCache = null,
-    ILocalCacheStore? localCache = null) : IAuthUIService, ISignInLinkUIService, IPasskeyUIService
+    ILocalCacheStore? localCache = null,
+    IDeviceMetadataReporter? deviceMetadataReporter = null,
+    ILogger<AuthUIService>? logger = null) : IAuthUIService, ISignInLinkUIService, IPasskeyUIService
 {
     /// <summary>
     /// Error code reported when the authentication succeeded but the tokens could not be persisted
@@ -451,7 +462,23 @@ public sealed class AuthUIService(
             jwtProvider.NotifyUserAuthentication(authentication.AccessToken);
         }
 
+        // The new session is stored, so the report's bearer names it. Best-effort and bounded.
+        await ReportDeviceAsync(cancellationToken);
+
         return result;
+    }
+
+    /// <summary>
+    /// Runs the device report (<see cref="IDeviceMetadataReporter"/>) under the shared rules
+    /// (<see cref="DeviceMetadataReporting"/>): bounded, and every failure logged and swallowed, so it
+    /// cannot affect the sign-in it follows.
+    /// </summary>
+    private async Task ReportDeviceAsync(CancellationToken cancellationToken)
+    {
+        if (deviceMetadataReporter is not null)
+        {
+            await DeviceMetadataReporting.ReportAsync(deviceMetadataReporter, logger, cancellationToken);
+        }
     }
 
     /// <summary>

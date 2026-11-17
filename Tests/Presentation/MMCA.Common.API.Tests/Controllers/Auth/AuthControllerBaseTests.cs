@@ -470,6 +470,7 @@ public sealed class AuthControllerBaseTests
     [InlineData(nameof(AuthControllerBase.GetMySignInsAsync), "my-sign-ins")]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync), "revoke/{sessionId:guid}")]
     [InlineData(nameof(AuthControllerBase.RevokeCurrentSessionAsync), "revoke/current")]
+    [InlineData(nameof(AuthControllerBase.RecordCurrentSessionDeviceAsync), "sessions/current/device")]
     public void SessionActions_CarryTheirDocumentedRoute(string actionName, string expectedTemplate)
     {
         MethodInfo action = typeof(AuthControllerBase).GetMethod(actionName)!;
@@ -482,6 +483,7 @@ public sealed class AuthControllerBaseTests
     [InlineData(nameof(AuthControllerBase.GetMySignInsAsync))]
     [InlineData(nameof(AuthControllerBase.RevokeSessionAsync))]
     [InlineData(nameof(AuthControllerBase.RevokeCurrentSessionAsync))]
+    [InlineData(nameof(AuthControllerBase.RecordCurrentSessionDeviceAsync))]
     public void SessionActions_RequireAuthentication(string actionName)
     {
         MethodInfo action = typeof(AuthControllerBase).GetMethod(actionName)!;

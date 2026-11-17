@@ -3,6 +3,7 @@ using System.Text;
 using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.Domain.Auth;
 
@@ -26,7 +27,8 @@ namespace MMCA.Common.Domain.Auth;
 /// <para>
 /// <b>Framework bookkeeping, not an aggregate.</b> Like <c>OutboxMessage</c> and
 /// <c>AuditTrailEntry</c>, this is a flat record with no audit stamps, no soft-delete flag and no
-/// concurrency token. A row is edited only to be revoked or anonymized (<see cref="Anonymize"/>
+/// concurrency token. A row is edited only to record the device a native client reports for it
+/// (<see cref="RecordDevice"/>), to be revoked, or to be anonymized (<see cref="Anonymize"/>
 /// clears the client metadata for an erasure) and is deleted only by the retention sweep once it
 /// has been revoked or expired past the retention window; no global query filter should hide a
 /// revoked row from the reuse check while it is kept. It is mapped only where a consumer opts in
@@ -35,9 +37,10 @@ namespace MMCA.Common.Domain.Auth;
 /// </para>
 /// <para>
 /// <b>Personal data.</b> <see cref="IpAddress"/> and <see cref="UserAgent"/> identify the data subject's
-/// device and network, so both carry <c>[Pii]</c> and <see cref="Anonymize"/> clears them for an erasure
-/// request (ADR-005). The token hashes, timestamps and revocation chain carry no personal data and are kept,
-/// so reuse detection still works on an anonymized row.
+/// device and network, and so do the seven <c>Device*</c> members a native client reports for its session
+/// (<see cref="RecordDevice"/>), so all of them carry <c>[Pii]</c> and <see cref="Anonymize"/> clears them
+/// for an erasure request (ADR-005). The token hashes, timestamps and revocation chain carry no personal
+/// data and are kept, so reuse detection still works on an anonymized row.
 /// </para>
 /// </summary>
 public sealed class RefreshSession : IAnonymizable
@@ -53,6 +56,12 @@ public sealed class RefreshSession : IAnonymizable
 
     /// <summary>Column width for <see cref="ReasonRevoked"/>.</summary>
     public const int ReasonRevokedMaxLength = 64;
+
+    /// <summary>
+    /// Column width for each of the seven <c>Device*</c> members (<see cref="RecordDevice"/>); longer
+    /// values are truncated on capture.
+    /// </summary>
+    public const int DeviceFieldMaxLength = 256;
 
     /// <summary>Reason recorded when a session is revoked because it was rotated on use.</summary>
     public const string ReasonRotated = "Rotated";
@@ -119,6 +128,38 @@ public sealed class RefreshSession : IAnonymizable
     /// </summary>
     [Pii]
     public string? UserAgent { get; private set; }
+
+    /// <summary>
+    /// Gets the per-install identifier the native client reported for this session's device
+    /// (<see cref="RecordDevice"/>), or null. Like every <c>Device*</c> member it is informational,
+    /// never part of a validation decision, and carried to the successor on rotation.
+    /// </summary>
+    [Pii]
+    public string? DeviceId { get; private set; }
+
+    /// <summary>Gets the owner-assigned device name the native client reported, or null.</summary>
+    [Pii]
+    public string? DeviceName { get; private set; }
+
+    /// <summary>Gets the device hardware model the native client reported, or null.</summary>
+    [Pii]
+    public string? DeviceModel { get; private set; }
+
+    /// <summary>Gets the device manufacturer the native client reported, or null.</summary>
+    [Pii]
+    public string? DeviceManufacturer { get; private set; }
+
+    /// <summary>Gets the device operating system the native client reported, or null.</summary>
+    [Pii]
+    public string? DevicePlatform { get; private set; }
+
+    /// <summary>Gets the device form factor (phone, tablet, desktop) the native client reported, or null.</summary>
+    [Pii]
+    public string? DeviceFormFactor { get; private set; }
+
+    /// <summary>Gets whether the device is physical or virtual, as the native client reported it, or null.</summary>
+    [Pii]
+    public string? DeviceType { get; private set; }
 
     /// <summary>Gets a value indicating whether the session has been revoked.</summary>
     public bool IsRevoked => RevokedAt is not null;
@@ -197,14 +238,51 @@ public sealed class RefreshSession : IAnonymizable
         string? userAgent = null)
     {
         var successor = Create(UserId, refreshToken, createdAt, expiresAt, ipAddress, userAgent);
-        if (successor.TryGetValue(out var session) && SignInId is { } signInId)
+        if (successor.TryGetValue(out var session))
         {
-            // A row written before SignInId existed has none to pass on, so its successor keeps the
-            // sign-in it opened in Create: from here on the chain is grouped like any other.
-            session.SignInId = signInId;
+            if (SignInId is { } signInId)
+            {
+                // A row written before SignInId existed has none to pass on, so its successor keeps the
+                // sign-in it opened in Create: from here on the chain is grouped like any other.
+                session.SignInId = signInId;
+            }
+
+            // The device does not change on a refresh, and the client reports it once per sign-in, so
+            // the successor inherits what this session recorded (already truncated, so copied as is).
+            session.DeviceId = DeviceId;
+            session.DeviceName = DeviceName;
+            session.DeviceModel = DeviceModel;
+            session.DeviceManufacturer = DeviceManufacturer;
+            session.DevicePlatform = DevicePlatform;
+            session.DeviceFormFactor = DeviceFormFactor;
+            session.DeviceType = DeviceType;
         }
 
         return successor;
+    }
+
+    /// <summary>
+    /// Records the device metadata a native client reported for this session, replacing whatever was
+    /// recorded before (a member the client leaves out is cleared, not kept). Each value is trimmed,
+    /// truncated to <see cref="DeviceFieldMaxLength"/>, and stored as null when blank. Whether the
+    /// session may still be described (it is the caller's own, and live) is the caller's check: this
+    /// only stamps the row.
+    /// </summary>
+    /// <param name="device">The reported metadata.</param>
+    /// <returns>A success result.</returns>
+    public Result RecordDevice(DeviceMetadata device)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+
+        DeviceId = NormalizeDeviceField(device.DeviceId);
+        DeviceName = NormalizeDeviceField(device.DeviceName);
+        DeviceModel = NormalizeDeviceField(device.DeviceModel);
+        DeviceManufacturer = NormalizeDeviceField(device.DeviceManufacturer);
+        DevicePlatform = NormalizeDeviceField(device.DevicePlatform);
+        DeviceFormFactor = NormalizeDeviceField(device.DeviceFormFactor);
+        DeviceType = NormalizeDeviceField(device.DeviceType);
+
+        return Result.Success();
     }
 
     /// <summary>
@@ -252,18 +330,29 @@ public sealed class RefreshSession : IAnonymizable
     }
 
     /// <summary>
-    /// Erases the client metadata captured at issue time (<see cref="IpAddress"/> and
-    /// <see cref="UserAgent"/>). Idempotent: an already-anonymized session stays as it is and the call
-    /// succeeds. The session's validity is untouched; revoking it is the sign-out path's job.
+    /// Erases the client metadata captured for the session (<see cref="IpAddress"/>,
+    /// <see cref="UserAgent"/> and the seven <c>Device*</c> members). Idempotent: an already-anonymized
+    /// session stays as it is and the call succeeds. The session's validity is untouched; revoking it
+    /// is the sign-out path's job.
     /// </summary>
     /// <returns>A success result.</returns>
     public Result Anonymize()
     {
         IpAddress = null;
         UserAgent = null;
+        DeviceId = null;
+        DeviceName = null;
+        DeviceModel = null;
+        DeviceManufacturer = null;
+        DevicePlatform = null;
+        DeviceFormFactor = null;
+        DeviceType = null;
         return Result.Success();
     }
 
     private static string? Truncate(string? value, int maxLength) =>
         string.IsNullOrEmpty(value) || value.Length <= maxLength ? value : value[..maxLength];
+
+    private static string? NormalizeDeviceField(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : Truncate(value.Trim(), DeviceFieldMaxLength);
 }
