@@ -307,6 +307,9 @@
   <data name="User.PreferredTheme.Invalid" xml:space="preserve">
     <value>El tema debe ser 'light' o 'dark'.</value>
   </data>
+  <data name="UserAdministration.Self" xml:space="preserve">
+    <value>No puede bloquear, desbloquear ni cambiar los roles de su propia cuenta.</value>
+  </data>
   <data name="UserNotification.NotFound" xml:space="preserve">
     <value>Notificación no encontrada.</value>
   </data>

@@ -54,7 +54,7 @@ public sealed class WebApplicationBuilderExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddCommonRateLimiting(permitLimit: 50, queueLimit: 5, perUserPermitLimit: 10);
+        services.AddCommonRateLimiting(globalPermitLimit: 50, authIpPermitLimit: 5);
 
         services.Any(s => s.ServiceType.FullName != null
                        && s.ServiceType.FullName.Contains("RateLimit", StringComparison.Ordinal))

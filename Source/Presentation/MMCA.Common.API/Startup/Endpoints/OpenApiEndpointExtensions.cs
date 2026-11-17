@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Scalar.AspNetCore;
 
 namespace MMCA.Common.API.Startup.Endpoints;
 
@@ -20,7 +19,7 @@ namespace MMCA.Common.API.Startup.Endpoints;
 /// consumer's concrete API surface stays the concern of that host's committed document and its
 /// contract-snapshot tests. Mapped <b>outside Production only</b>: these are internal services
 /// reached through the Gateway (which does not route the endpoint), so the spec is a dev/CI
-/// artifact, not a public production surface. <see cref="MapCommonScalarUi"/> optionally renders it.
+/// artifact, not a public production surface.
 /// </summary>
 public static class OpenApiEndpointExtensions
 {
@@ -72,25 +71,6 @@ public static class OpenApiEndpointExtensions
                 }
 
                 app.MapOpenApi().AllowAnonymous();
-            }
-
-            return app;
-        }
-
-        /// <summary>
-        /// Maps the Scalar interactive API-reference UI (<c>/scalar/{documentName}</c>) <b>outside
-        /// Production</b>: an <b>opt-in</b> developer convenience for browsing the generated OpenAPI
-        /// document. Requires <c>services.AddOpenApi()</c> + <c>AddCommonOpenApi()</c> +
-        /// <c>MapCommonOpenApi()</c>. No-op in Production.
-        /// Internal services fronted by the Gateway typically do not call this (they expose only the JSON
-        /// in dev/CI); it exists for hosts run standalone where a rendered reference helps. Assets are
-        /// served by the bundled <c>Scalar.AspNetCore</c> package (no external CDN).
-        /// </summary>
-        public WebApplication MapCommonScalarUi()
-        {
-            if (!app.Environment.IsProduction())
-            {
-                app.MapScalarApiReference();
             }
 
             return app;

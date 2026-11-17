@@ -169,7 +169,7 @@ public sealed class ServiceHostCompositionTests
     [Fact]
     public async Task CorsAndRateLimiting_AreRegistered_FromConfiguration()
     {
-        var builder = ServiceHostTestHost.CreateBuilder(adjustSettings: s => s["RateLimiting:PermitLimit"] = "77");
+        var builder = ServiceHostTestHost.CreateBuilder(adjustSettings: s => s["RateLimiting:GlobalPermitLimit"] = "77");
         builder.AddMmcaServiceHost(ServiceHostTestHost.Options());
 
         await using var provider = builder.Services.BuildServiceProvider();
@@ -177,7 +177,7 @@ public sealed class ServiceHostCompositionTests
         provider.GetRequiredService<IOptions<CorsOptions>>().Value
             .GetPolicy(WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins)
             .Should().NotBeNull();
-        provider.GetRequiredService<IOptions<RateLimitingSettings>>().Value.PermitLimit
+        provider.GetRequiredService<IOptions<RateLimitingSettings>>().Value.GlobalPermitLimit
             .Should().Be(77, "only the configuration overload of AddCommonRateLimiting binds the RateLimiting section");
     }
 

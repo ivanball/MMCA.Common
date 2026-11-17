@@ -32,6 +32,32 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.API):** `MapCommonScalarUi()` is removed, and with it the `Scalar.AspNetCore` dependency of MMCA.Common.API (no host called it). The rate-limit policies "FixedPolicy" and "UserPolicy" are removed (no endpoint named them), together with the settings only they read (`RateLimitingSettings.PermitLimit`, `QueueLimit`, `PerUserPermitLimit`) and the matching parameters of the permit-count `AddCommonRateLimiting` overload, which is now `AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30)`. A call with no arguments is unchanged.
+
+| Old | New |
+|---|---|
+| `app.MapCommonScalarUi()` | delete the call; reference `Scalar.AspNetCore` in the host and call `app.MapScalarApiReference()` if the UI is wanted |
+| `[EnableRateLimiting("FixedPolicy")]` or `[EnableRateLimiting("UserPolicy")]` | delete the attribute (the global per-user limiter still applies) or name a policy the host registers |
+| `RateLimiting:PermitLimit`, `RateLimiting:QueueLimit`, `RateLimiting:PerUserPermitLimit` in configuration | delete the keys (they no longer bind) |
+| `AddCommonRateLimiting(permitLimit: ..., queueLimit: ..., perUserPermitLimit: ...)` | drop those three arguments |
+| a lock file listing `Scalar.AspNetCore` | regenerate it (`dotnet restore --force-evaluate`) |
+
+**Breaking (MMCA.Common.Infrastructure):** `IdentityModuleDbSeederBase<TUser>.ShouldSeed` is removed (no app overrode it). The seeder seeds every account it is given; whether sample accounts are seeded is the caller's decision, made in the app's `IModuleSeeder` (for example on `Seeding:IncludeSampleUsers`). A `<see cref>` to `ShouldSeed` in an app's XML docs must go.
+
+| Old | New |
+|---|---|
+| `protected override bool ShouldSeed => ...;` | move the condition into the app's `IModuleSeeder` and skip constructing or running the seeder when it is false |
+| `<see cref="IdentityModuleDbSeederBase{TUser}.ShouldSeed"/>` in a doc comment | delete it or reword it to name the app's `IModuleSeeder` gate |
+| a private copy of the concurrent-seed save in an app seeder | delete it and call `SaveToleratingConcurrentSeedAsync(unitOfWork, cancellationToken)` from `DbSeeder` |
+
+**Breaking (MMCA.Common.Testing.Architecture):** `ControllerConventionTestsBase.ControllersExemptFromApiControllerBase` (rule `ArchitectureRules.ControllersInheritApiControllerBase`) now fails on a stale entry: one that names no module controller, or one that names a controller already on `ApiControllerBase` or `EntityControllerBase`.
+
+| Failure line | Fix |
+|---|---|
+| `every ControllersExemptFromApiControllerBase entry must name a module controller that bypasses ...` followed by the entries | delete each listed entry |
+
 ## [1.299.0] - 2026-11-17
 
 **Breaking:** `IPushDeviceRegistrar` (MMCA.Common.Application, `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`) gains `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`, the owner-scoped delete of every native-push installation a user owns. `NullPushDeviceRegistrar`, `AzureNotificationHubDeviceRegistrar`, `SnsPushDeviceRegistrar` and `FcmPushDeviceRegistrar` implement it. Only a consumer with its own `IPushDeviceRegistrar` implementation or hand-written test double is affected (none of ADC, Store or Helpdesk has one; Moq mocks are unaffected): add the member.

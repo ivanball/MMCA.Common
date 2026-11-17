@@ -23,18 +23,6 @@ public sealed class RateLimitingSettings
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "RateLimiting";
 
-    /// <summary>Requests per minute for the opt-in "FixedPolicy" limiter.</summary>
-    [Range(1, 1_000_000)]
-    public int PermitLimit { get; init; } = 100;
-
-    /// <summary>Queued requests allowed once "FixedPolicy" or "UserPolicy" are saturated.</summary>
-    [Range(0, 10_000)]
-    public int QueueLimit { get; init; } = 2;
-
-    /// <summary>Requests per minute per user for the opt-in "UserPolicy" limiter.</summary>
-    [Range(1, 1_000_000)]
-    public int PerUserPermitLimit { get; init; } = 30;
-
     /// <summary>Requests per minute per authenticated user for the always-on global limiter.</summary>
     [Range(1, 1_000_000)]
     public int GlobalPermitLimit { get; init; } = 300;
@@ -49,7 +37,7 @@ public sealed class RateLimitingSettings
     /// <summary>
     /// Requests per minute for the <c>mcp</c> policy on the MCP endpoint, per user (subject claim,
     /// then name) or, for an anonymous caller, per client IP. One tool call is one request, and a
-    /// client also lists tools, so it sits above <see cref="PerUserPermitLimit"/>.
+    /// client also lists tools.
     /// </summary>
     [Range(1, 1_000_000)]
     public int McpPermitLimit { get; init; } = 60;
@@ -70,8 +58,8 @@ public sealed class RateLimitingSettings
     public int SegmentsPerWindow { get; init; } = 4;
 
     /// <summary>
-    /// Whether the global limiter and the "UserPolicy" limiter should count against a shared Redis
-    /// counter instead of per-instance memory, so a limit means the same thing behind a load
+    /// Whether the global limiter, the anonymous hub partition and the <c>mcp</c> policy should count
+    /// against a shared Redis counter instead of per-instance memory, so a limit means the same thing behind a load
     /// balancer as it does on one node. Requires an <c>IConnectionMultiplexer</c> in the container;
     /// when none is registered the limiters silently fall back to the in-memory (per-instance)
     /// behaviour rather than failing startup. The <c>auth-ip</c> policy stays in memory either way,

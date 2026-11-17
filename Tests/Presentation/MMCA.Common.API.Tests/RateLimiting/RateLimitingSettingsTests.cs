@@ -20,9 +20,6 @@ public sealed class RateLimitingSettingsTests
     {
         var settings = new RateLimitingSettings();
 
-        settings.PermitLimit.Should().Be(100);
-        settings.QueueLimit.Should().Be(2);
-        settings.PerUserPermitLimit.Should().Be(30);
         settings.GlobalPermitLimit.Should().Be(300);
         settings.AuthIpPermitLimit.Should().Be(30);
         settings.Algorithm.Should().Be(RateLimitAlgorithm.FixedWindow);
@@ -40,9 +37,6 @@ public sealed class RateLimitingSettingsTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["RateLimiting:PermitLimit"] = "50",
-                ["RateLimiting:QueueLimit"] = "7",
-                ["RateLimiting:PerUserPermitLimit"] = "11",
                 ["RateLimiting:GlobalPermitLimit"] = "600",
                 ["RateLimiting:AuthIpPermitLimit"] = "13",
                 ["RateLimiting:Algorithm"] = "SlidingWindow",
@@ -54,9 +48,6 @@ public sealed class RateLimitingSettingsTests
         var settings = configuration.GetSection(RateLimitingSettings.SectionName).Get<RateLimitingSettings>();
 
         settings.Should().NotBeNull();
-        settings.PermitLimit.Should().Be(50);
-        settings.QueueLimit.Should().Be(7);
-        settings.PerUserPermitLimit.Should().Be(11);
         settings.GlobalPermitLimit.Should().Be(600);
         settings.AuthIpPermitLimit.Should().Be(13);
         settings.Algorithm.Should().Be(RateLimitAlgorithm.SlidingWindow);
@@ -80,7 +71,7 @@ public sealed class RateLimitingSettingsTests
 
         settings.Should().NotBeNull();
         settings.GlobalPermitLimit.Should().Be(900);
-        settings.PermitLimit.Should().Be(100);
+        settings.AuthIpPermitLimit.Should().Be(30);
         settings.Algorithm.Should().Be(RateLimitAlgorithm.FixedWindow);
         settings.Distributed.Should().BeFalse();
     }

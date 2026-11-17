@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.API):** `MapCommonScalarUi()` is removed, and with it the `Scalar.AspNetCore` dependency of MMCA.Common.API (no host called it). The rate-limit policies "FixedPolicy" and "UserPolicy" are removed (no endpoint named them), together with the settings only they read (`RateLimitingSettings.PermitLimit`, `QueueLimit`, `PerUserPermitLimit`) and the matching parameters of the permit-count `AddCommonRateLimiting` overload, which is now `AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30)`. A call with no arguments is unchanged.
+
+**Breaking (MMCA.Common.Infrastructure):** `IdentityModuleDbSeederBase<TUser>.ShouldSeed` is removed (no app overrode it). The seeder seeds every account it is given; whether sample accounts are seeded is the caller's decision, made in the app's `IModuleSeeder` (for example on `Seeding:IncludeSampleUsers`). A `<see cref>` to `ShouldSeed` in an app's XML docs must go.
+
+**Breaking (MMCA.Common.Testing.Architecture):** `ControllerConventionTestsBase.ControllersExemptFromApiControllerBase` (rule `ArchitectureRules.ControllersInheritApiControllerBase`) now fails on a stale entry: one that names no module controller, or one that names a controller already on `ApiControllerBase` or `EntityControllerBase`.
+
+### Added
+
+- **`DbSeeder.SaveToleratingConcurrentSeedAsync(IUnitOfWork, CancellationToken)`** (MMCA.Common.Infrastructure): the concurrent-replica save `IdentityModuleDbSeederBase` used privately, now protected on `DbSeeder` for any seeder. It saves, reads a unique or primary-key violation (classified by the unit of work's engine-aware `IUniqueConstraintViolationDetector`, else the SQL Server one) as a lost race, detaches the failed save's pending entries and returns false; every other failure propagates. `IdentityModuleDbSeederBase` calls it and logs the same line as before.
+
+### Changed
+
+- **`UsersAdminControllerBase` refuses to lock, unlock or re-role the caller's own account** (MMCA.Common.API): `LockAsync`, `UnlockAsync` and `SetRolesAsync` answer 403 with error code `UserAdministration.Self` (localized in en and es) when the target is the signed-in caller, before the service runs.
+- **`UsersAdminControllerBase.LockAsync` and `UnlockAsync` declare `[NonIdempotent]`** (MMCA.Common.API), so an app controller that only inherits them satisfies the POST idempotency fitness rule; an override that exists only to add the attribute can be deleted.
+
 ## [1.299.0] - 2026-11-17
 
 **Breaking:** `IPushDeviceRegistrar` (MMCA.Common.Application, `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`) gains `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`, the owner-scoped delete of every native-push installation a user owns. `NullPushDeviceRegistrar`, `AzureNotificationHubDeviceRegistrar`, `SnsPushDeviceRegistrar` and `FcmPushDeviceRegistrar` implement it. Only a consumer with its own `IPushDeviceRegistrar` implementation or hand-written test double is affected (none of ADC, Store or Helpdesk has one; Moq mocks are unaffected): add the member. See [UPGRADING.md](UPGRADING.md).

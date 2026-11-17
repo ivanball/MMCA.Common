@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -27,22 +26,20 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding;
 /// </list>
 /// </para>
 /// <para>
-/// <see cref="ShouldSeed"/> is the opt-in gate: it defaults to <see langword="true"/> (seed
-/// unconditionally, Store's behavior), and an app that gates its sample accounts on configuration
-/// (ADC's <c>Seeding:IncludeSampleUsers</c>, default false) overrides it. Each account is saved
-/// individually, exactly as before, so one invalid account cannot roll back the others.
+/// <see cref="SeedAsync"/> seeds every account it is given: this type has no gate. Whether sample
+/// accounts are seeded at all is the caller's decision, made in the app's <c>IModuleSeeder</c> before
+/// it constructs and runs this seeder (typically on a configuration flag such as
+/// <c>Seeding:IncludeSampleUsers</c>, default false, so a production host that sets nothing seeds no
+/// accounts). Each account is saved individually, so one invalid account cannot roll back the others.
 /// </para>
 /// <para>
 /// <strong>Concurrent replicas:</strong> the per-account idiom is check-then-insert, so two replicas
 /// starting together on a database that lacks an account both pass the existence check and both
-/// insert. The slower save is rejected by the unique index on the email. That rejection is a lost
-/// race, not a fault: the winner wrote the very account this run meant to write. A unique or
-/// primary-key violation on an account's save is therefore logged, the failed save's pending
-/// entries are detached (so the next account's save does not replay the rejected insert), and
-/// seeding continues with the next account. Every other save failure still propagates. The
-/// violation is classified by the unit of work's registered
-/// <see cref="IUniqueConstraintViolationDetector"/> when it exposes one (the host's engine-aware
-/// choice), else by <see cref="SqlServerUniqueConstraintViolationDetector"/>.
+/// insert. The slower save is rejected by the unique index on the email. Each account is saved
+/// through <see cref="DbSeeder.SaveToleratingConcurrentSeedAsync"/>, which reads that rejection as a
+/// lost race (the winner wrote the very account this run meant to write) and discards the failed
+/// save; the skip is logged and seeding continues with the next account. Every other save failure
+/// still propagates.
 /// </para>
 /// <para>
 /// <strong>Security notice:</strong> seed credentials are deliberately weak plaintext values for
@@ -82,21 +79,9 @@ public abstract partial class IdentityModuleDbSeederBase<TUser>(
     /// <summary>The accounts to seed, in order.</summary>
     protected abstract IReadOnlyList<SeedAccount> Accounts { get; }
 
-    /// <summary>
-    /// Whether to seed at all (default: yes). Override to reproduce a configuration gate such as
-    /// ADC's <c>Seeding:IncludeSampleUsers</c>, which defaults to false so a production host that
-    /// sets nothing seeds no accounts.
-    /// </summary>
-    protected virtual bool ShouldSeed => true;
-
     /// <inheritdoc />
     public override async Task SeedAsync(CancellationToken cancellationToken)
     {
-        if (!ShouldSeed)
-        {
-            return;
-        }
-
         foreach (var account in Accounts)
         {
             await SeedAccountAsync(account, cancellationToken).ConfigureAwait(false);
@@ -143,53 +128,12 @@ public abstract partial class IdentityModuleDbSeederBase<TUser>(
         var repository = UnitOfWork.GetRepository<TUser, UserIdentifierType>();
         await repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
-        try
-        {
-            await UnitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (IsUniqueConstraintViolation(exception))
+        var saved = await SaveToleratingConcurrentSeedAsync(UnitOfWork, cancellationToken).ConfigureAwait(false);
+        if (!saved)
         {
             // Lost the insert race to a concurrent replica seeding the same account (see the type
             // remarks): its row is the one this run meant to write, so move on to the next account.
-            DiscardFailedSave(exception);
             LogSeedAccountAlreadySeededConcurrently(_logger, typeof(TUser).Name);
-        }
-    }
-
-    // The fallback is built on demand rather than cached in a static: this runs only on a failed
-    // save, and a static in a generic type would be one instance per closed TUser anyway.
-    private bool IsUniqueConstraintViolation(Exception exception) =>
-        (UnitOfWork as IUniqueConstraintViolationDetector ?? new SqlServerUniqueConstraintViolationDetector())
-            .IsUniqueConstraintViolation(exception);
-
-    /// <summary>
-    /// Detaches every pending entry of each context the failed save touched. A failed save rolls
-    /// back as a whole, so everything still pending there belongs to it (the rejected account and
-    /// any rows captured with it); left tracked, the scoped context would replay the same rejected
-    /// insert on the next account's save and fail again.
-    /// </summary>
-    private static void DiscardFailedSave(Exception exception)
-    {
-        for (var current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is not DbUpdateException updateException)
-            {
-                continue;
-            }
-
-            foreach (var context in updateException.Entries.Select(entry => entry.Context).Distinct())
-            {
-                var pending = context.ChangeTracker.Entries()
-                    .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-                    .ToList();
-
-                foreach (var entry in pending)
-                {
-                    entry.State = EntityState.Detached;
-                }
-            }
-
-            return;
         }
     }
 

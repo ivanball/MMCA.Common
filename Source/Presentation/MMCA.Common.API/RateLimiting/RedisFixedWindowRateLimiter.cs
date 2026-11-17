@@ -9,9 +9,9 @@ namespace MMCA.Common.API.RateLimiting;
 /// <summary>
 /// A <see cref="RateLimiter"/> that counts a fixed one-minute window in Redis, so every instance
 /// behind a load balancer shares one allowance per partition instead of each getting its own.
-/// Selected by <c>RateLimitingSettings.Distributed</c> for the global limiter and the "UserPolicy"
-/// limiter; when no <see cref="IConnectionMultiplexer"/> is registered the caller falls back to the
-/// in-memory limiters instead.
+/// Selected by <c>RateLimitingSettings.Distributed</c> for the global limiter, the anonymous hub
+/// partition and the <c>mcp</c> policy; when no <see cref="IConnectionMultiplexer"/> is registered the
+/// caller falls back to the in-memory limiters instead.
 /// <para>
 /// <b>Layering:</b> this lives in MMCA.Common.API rather than behind an abstraction implemented in
 /// Infrastructure because API already references Infrastructure (which owns the
