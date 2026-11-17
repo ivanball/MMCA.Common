@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.301.0] - 2026-11-17
 
 **Breaking (MMCA.Common.UI):** the client-side read cache is removed: `IUiReadCache`, `UiReadCache`, `UiReadCacheOptions` (the `UiReadCache` configuration section), the `IUiReadCache? readCache` parameter of the `EntityServiceBase`, `AuthUIService` and `JwtAuthenticationStateProvider` constructors, `EntityServiceBase.ReadCache` and `EntityServiceBase.GetCachedAsync<T>(url, cancellationToken, bypassCache)`. No consumer registered a cache-backed service. A derived service that called `GetCachedAsync` calls the new `SendGetAsync<T>(url, cancellationToken)`, the same plain GET through the retry pipeline. `JwtAuthenticationStateProvider` has one constructor, `(ITokenStorageService, ListPageStateService? listPageState = null)`; `AuthUIService` callers that passed the cache positionally drop that argument. A `UiReadCache` section in a host's configuration is now ignored and can be deleted.
 
