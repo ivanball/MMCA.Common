@@ -16,6 +16,7 @@
          the one MassTransit bus for the broker-parity tier. Consumers of this tier need a Docker daemon.
          MassTransit stays on v8 by policy (v9 is commercial-licensed); Azure.Messaging.ServiceBus 7.20.2
          is the first line with working emulator admin-plane support. -->
+    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.ServiceBus" />
     <PackageReference Include="Azure.Messaging.ServiceBus" />
     <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />

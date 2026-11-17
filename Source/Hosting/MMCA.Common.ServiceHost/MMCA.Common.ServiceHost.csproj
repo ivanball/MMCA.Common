@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- No other PackageReference: OpenAPI, JwtBearer, Serilog and Grpc arrive through the three
          project references below. -->
+    <PackageReference Include="Microsoft.OpenApi" VersionOverride="3.11.1" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
