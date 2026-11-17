@@ -1,9 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase
-MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.AppHostBicepParityTestsBase() -> void
-MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.EveryAppHostServiceReference_HasAMatchingBicepServiceDiscoveryEntry() -> void
-MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.EveryBicepServiceDiscoveryEntry_HasAMatchingAppHostReference() -> void
-abstract MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.AppHostProgramPath.get -> string!
-virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.BicepPath.get -> string!
-virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.KnownAppHostOnlyEdges.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
-virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.RepositoryRoot.get -> string!
