@@ -1,4 +1,1 @@
 #nullable enable
-MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleShared_Enums_ShouldHave_ExplicitValues() -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedEnumValuesAreExplicit(System.Collections.Generic.IReadOnlyCollection<string!>! sharedSourceDirectories) -> void
-virtual MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleSharedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
