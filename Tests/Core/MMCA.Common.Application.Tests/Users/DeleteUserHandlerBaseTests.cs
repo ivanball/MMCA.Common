@@ -7,6 +7,7 @@ using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Application.Users.UseCases.DeleteUser;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Abstractions;
@@ -387,6 +388,51 @@ public sealed class DeleteUserHandlerBaseTests
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task HandleAsync_WithASchedulerForwarded_SchedulesThePushInstallationCleanupBeforeTheSave()
+    {
+        var scheduler = new Mock<IInternalCommandScheduler>();
+        var trace = new List<string>();
+        scheduler
+            .Setup(x => x.ScheduleAsync(It.IsAny<IInternalCommand>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(Guid.NewGuid()))
+            .Callback(() => trace.Add("schedule"));
+        var (sut, mocks) = CreateSut(internalCommandScheduler: scheduler.Object);
+        ArrangeUser(mocks, new TestHidingDeleteUser { Id = 1 });
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => trace.Add("save"));
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        scheduler.Verify(
+            x => x.ScheduleAsync(
+                It.Is<IInternalCommand>(c => c is DeleteUserPushInstallationsInternalCommand && ((DeleteUserPushInstallationsInternalCommand)c).UserId == 1),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        trace.Should().Equal(["schedule", "save"], "the row commits with the erasure in the same unit of work (ADR-114)");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenThePushCleanupCannotBeScheduled_FailsWithoutSaving()
+    {
+        var scheduler = new Mock<IInternalCommandScheduler>();
+        scheduler
+            .Setup(x => x.ScheduleAsync(It.IsAny<IInternalCommand>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<Guid>(Error.Failure("InternalCommands.ScheduleFailed", "no row")));
+        var (sut, mocks) = CreateSut(internalCommandScheduler: scheduler.Object);
+        ArrangeUser(mocks, new TestHidingDeleteUser { Id = 1 });
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsFailure.Should().BeTrue("a partial erasure reported as a success is worse than a retryable failure");
+        result.Errors.Should().ContainSingle(e => e.Code == "InternalCommands.ScheduleFailed");
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // Spec A assertion 3 (erasure half): erasing either party blanks that party's display snapshot on
     // every grant naming it, in the same unit of work as the rest of the erasure.
     [Fact]
@@ -460,7 +506,8 @@ public sealed class DeleteUserHandlerBaseTests
         IRefreshSessionStore? refreshSessions = null,
         TimeProvider? timeProvider = null,
         IViewAsGrantStore? viewAsGrants = null,
-        ITokenService? tokenService = null)
+        ITokenService? tokenService = null,
+        IInternalCommandScheduler? internalCommandScheduler = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>>();
@@ -472,7 +519,7 @@ public sealed class DeleteUserHandlerBaseTests
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var markerWriter = new SoftDeletedUserMarkerWriter(cache.Object, tokenService ?? Mock.Of<ITokenService>());
-        var sut = new TestDeleteUserHandler(unitOfWork.Object, markerWriter, logger.Object, refreshSessions, timeProvider, viewAsGrants);
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, markerWriter, logger.Object, refreshSessions, timeProvider, viewAsGrants, internalCommandScheduler);
         return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
@@ -484,8 +531,9 @@ public sealed class TestDeleteUserHandler(
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
-    IViewAsGrantStore? viewAsGrants = null)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, markerWriter, logger, refreshSessions, timeProvider, viewAsGrants)
+    IViewAsGrantStore? viewAsGrants = null,
+    IInternalCommandScheduler? internalCommandScheduler = null)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, markerWriter, logger, refreshSessions, timeProvider, viewAsGrants, internalCommandScheduler)
 {
     public int TailInvocations { get; private set; }
 

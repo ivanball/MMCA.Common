@@ -3,6 +3,7 @@ using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.SoftDeletedUsers;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
@@ -83,13 +84,23 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// themselves stay until <c>ViewAs:RetentionDays</c> sweeps them. A subclass forwards the store it
 /// injects; one that forwards nothing leaves the snapshots as they are.
 /// </param>
+/// <param name="internalCommandScheduler">
+/// The internal-command scheduler, or <see langword="null"/> when the subclass forwards none. When
+/// present, a <see cref="DeleteUserPushInstallationsInternalCommand"/> is scheduled in the same unit of
+/// work as the erasure (ADR-114), so every native-push installation the account owns is deleted, and
+/// retried until the push provider answers, by the host's <c>IPushDeviceRegistrar</c>. A device still
+/// signed in elsewhere then stops receiving pushes addressed to the erased account. The command runs on
+/// the host that wrote the row, so that host must register the push adapter; on a host with the inert
+/// default registrar it completes having deleted nothing. A scheduling failure fails the erasure.
+/// </param>
 public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ISoftDeletedUserMarkerWriter markerWriter,
     ILogger logger,
     IRefreshSessionStore? refreshSessions = null,
     TimeProvider? timeProvider = null,
-    IViewAsGrantStore? viewAsGrants = null) : ICommandHandler<TCommand, Result>
+    IViewAsGrantStore? viewAsGrants = null,
+    IInternalCommandScheduler? internalCommandScheduler = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IErasableUser
     where TCommand : IUserOwnedRequest
 {
@@ -174,6 +185,22 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
         if (viewAsGrants is not null)
         {
             await viewAsGrants.ForgetUserAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Native-push installations (ADR-044) live with the push provider, outside this unit of work,
+        // so their deletion is scheduled as a durable internal command rather than called inline: the
+        // row commits with the erasure (or rolls back with it) and the processor retries it until the
+        // provider answers. Failing to schedule fails the erasure, as a partial erasure reported as a
+        // success is worse than a retryable failure.
+        if (internalCommandScheduler is not null)
+        {
+            var scheduled = await internalCommandScheduler
+                .ScheduleAsync(new DeleteUserPushInstallationsInternalCommand(command.UserId), cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            if (scheduled.IsFailure)
+            {
+                return Result.Failure(scheduled.Errors);
+            }
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

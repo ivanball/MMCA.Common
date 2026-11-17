@@ -46,4 +46,21 @@ public interface IPushDeviceRegistrar
     /// has nothing to do with either answer.
     /// </remarks>
     Task<Result> DeleteAsync(UserIdentifierType userId, string installationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes every device installation the given user owns: the account-erasure counterpart of
+    /// <see cref="DeleteAsync"/>, so a device still signed in elsewhere stops receiving pushes
+    /// addressed to the erased account.
+    /// </summary>
+    /// <param name="userId">The owner whose installations are deleted.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success (a user with no installations included), or a failure result.</returns>
+    /// <remarks>
+    /// Owner-scoped like <see cref="DeleteAsync"/>: an installation is found through the owner's
+    /// <c>user:{id}</c> stamp and deleted only while it still carries it, so an installation handed
+    /// over to another user in the meantime survives. Idempotent, so a caller may retry a failure:
+    /// installations already deleted are simply no longer found. Erasure runs it through the
+    /// framework's durable internal command, which retries on failure.
+    /// </remarks>
+    Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default);
 }

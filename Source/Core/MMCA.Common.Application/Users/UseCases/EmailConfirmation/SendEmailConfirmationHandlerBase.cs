@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users.Emails;
 using MMCA.Common.Domain.Entities;
@@ -16,7 +17,7 @@ namespace MMCA.Common.Application.Users.UseCases.EmailConfirmation;
 
 /// <summary>
 /// The shared send-a-confirmation-link workflow: resolve the account behind the address, mint a
-/// single-use token, and email it. Every outcome returns <see cref="Result.Success()"/>.
+/// single-use token, and email it. Every outcome of an inline dispatch returns <see cref="Result.Success()"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -25,6 +26,15 @@ namespace MMCA.Common.Application.Users.UseCases.EmailConfirmation;
 /// is already confirmed, a throttled request and a failed send all log and report success, so the
 /// response carries no signal about which addresses hold accounts. Only the request validator can
 /// produce a 400, and it only inspects the shape of the address.
+/// </para>
+/// <para>
+/// <b>The durable path is the one exception.</b> When the command runs as a scheduled internal
+/// command (ADR-114; <see cref="InternalCommandExecution.IsActive"/>), there is no anonymous caller to
+/// leak to, and acknowledging a transient fault would lose the mail the queue exists to guarantee. On
+/// that path a failed send propagates, and a throttle refusal returns its failure, so the row is
+/// retried with backoff (and dead-lettered, visibly, if it never clears) instead of being acked. The
+/// permanent outcomes (malformed address, no account, already confirmed) still succeed, which keeps the
+/// at-least-once execution idempotent. A retry issues a fresh token, replacing the undelivered one.
 /// </para>
 /// <para>
 /// The email sender is the framework's existing <see cref="IEmailSender"/>; no new abstraction ships
@@ -83,6 +93,15 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         var tokenResult = await tokenService.IssueAsync(email.Value, user.Id, cancellationToken).ConfigureAwait(false);
         if (!tokenResult.TryGetValue(out var token))
         {
+            // On the durable path a throttle refusal is not an answer to a caller but a send that has
+            // not happened yet: earlier attempts that failed to send still count against the
+            // per-address window, so acking here would drop the mail. Fail, and let the backoff wait.
+            if (InternalCommandExecution.IsActive)
+            {
+                EmailConfirmationDeferred(logger, user.Id);
+                return Result.Failure(tokenResult.Errors);
+            }
+
             EmailConfirmationRejected(logger, "request throttled");
             return Result.Success();
         }
@@ -94,10 +113,11 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
                 () => (ComposeSubject(), ComposeBody(ComposeConfirmationLink(email.Value, token), token)));
             await emailSender.SendAsync(email.Value, subject, body, isHtml: true, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException && !InternalCommandExecution.IsActive)
         {
             // The token is already issued and still valid, so the user can retry. Reporting the send
-            // failure to the caller would be an oracle.
+            // failure to the caller would be an oracle. On the durable path the filter lets the
+            // exception through, so the processor records it and retries the row.
             EmailConfirmationEmailFailed(logger, ex, user.Id);
             return Result.Success();
         }
@@ -178,6 +198,9 @@ public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Email confirmation could not be sent for user {UserId}; the issued token stays valid")]
     private static partial void EmailConfirmationEmailFailed(ILogger logger, Exception exception, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Scheduled email confirmation for user {UserId} was throttled; the internal command will retry")]
+    private static partial void EmailConfirmationDeferred(ILogger logger, UserIdentifierType userId);
 
     // No address and no account id, for the reason the password-reset rejection carries neither: the
     // confirmation endpoints answer identically whether or not the address exists.

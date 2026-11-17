@@ -4,6 +4,7 @@ public static partial class ArchitectureRules
 {
     private const string CommandWithRequestInterfaceFullName = "MMCA.Common.Application.UseCases.Contracts.ICommandWithRequest`1";
     private const string ValidatorInterfaceFullName = "FluentValidation.IValidator`1";
+    private const string DeleteEntityCommandFullName = "MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand`2";
 
     /// <summary>
     /// The Validating decorator runs FluentValidation before the transaction opens, so a command with
@@ -29,10 +30,24 @@ public static partial class ArchitectureRules
     /// request validator resolves, which is a validator that validates nothing.
     /// </para>
     /// <para>
-    /// <b>Where it looks.</b> Commands and validators are both read from
-    /// <see cref="IArchitectureMap.ModuleApplication"/>, mirroring the DI reality: the framework
-    /// registers validators with <c>AddValidatorsFromAssembly(moduleAssembly)</c>, so a validator
-    /// living anywhere else would not resolve at run time and must not count as coverage here either.
+    /// <b>Where it looks.</b> Commands are read from <see cref="IArchitectureMap.ModuleApplication"/>.
+    /// Validators are read from those assemblies AND from the framework Application assembly, mirroring
+    /// the DI reality: modules register their own validators with
+    /// <c>AddValidatorsFromAssembly(moduleAssembly)</c>, and <c>AddApplication()</c> registers the
+    /// framework's public validators (the auth request validators a module command bridges to, such as
+    /// <c>ForgotPasswordRequestValidator</c>). The framework assembly is the one that declares
+    /// <c>ICommandHandler&lt;,&gt;</c>, plus any framework Application layer the map declares. A
+    /// validator living anywhere else would not resolve at run time and does not count here either.
+    /// </para>
+    /// <para>
+    /// <b>Built-in exemption.</b> The framework's generic <c>DeleteEntityCommand&lt;TEntity, TId&gt;</c>
+    /// carries only the identifier the route supplied, and a module does not author it, so its closed
+    /// forms are never reported and never need an allowlist entry.
+    /// </para>
+    /// <para>
+    /// <b>Stale entries.</b> An allowlist entry that matches no handled command, or matches only
+    /// commands that are validated or built-in exempt, is reported as stale, so the list can only
+    /// shrink: deleting a validator re-flags its command, and an entry cannot outlive its reason.
     /// </para>
     /// <para>
     /// <b>Limits.</b> A validator declared for a BASE command type does not count for its derived
@@ -54,11 +69,21 @@ public static partial class ArchitectureRules
 
         var types = ApplicationTypes(map);
         var validated = ValidatedTypes(types);
+        validated.UnionWith(ValidatedTypes(FrameworkApplicationTypes(map, types)));
 
-        var violations = HandledCommands(types)
-            .Where(command => !IsAllowed(command.FullName ?? command.Name, allowedTypesAndNamespaces)
-                && !IsCovered(command, validated))
+        var commands = HandledCommands(types);
+        var unvalidated = commands
+            .Where(command => !IsBuiltInExempt(command) && !IsCovered(command, validated))
+            .ToList();
+
+        var violations = unvalidated
+            .Where(command => !IsAllowed(command.FullName ?? command.Name, allowedTypesAndNamespaces))
             .Select(command => $"  - {command.FullName} has no IValidator<> and embeds no validated request")
+            .Concat(allowedTypesAndNamespaces
+                .Where(entry => !unvalidated.Exists(command => IsAllowed(command.FullName ?? command.Name, [entry])))
+                .Select(entry => commands.Exists(command => IsAllowed(command.FullName ?? command.Name, [entry]))
+                    ? $"  - {entry} is allowlisted but every command it names is validated or exempt (stale: remove it)"
+                    : $"  - {entry} is allowlisted but names no handled command (stale: remove it)"))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
@@ -67,7 +92,7 @@ public static partial class ArchitectureRules
             "every command that carries data must be validated before it reaches its handler: add a "
                 + "FluentValidation validator for the command, or give it an ICommandWithRequest<T> "
                 + "request that has one. Allowlist a command only when it genuinely has nothing to "
-                + "check");
+                + "check, and remove an entry once it no longer exempts anything");
     }
 
     /// <summary>
@@ -101,6 +126,33 @@ public static partial class ArchitectureRules
             .Where(command => !command.ContainsGenericParameters && HasSettablePublicProperty(command))
             .Distinct()
         ];
+
+    /// <summary>
+    /// The public types of the framework Application assembly: the one that declares the
+    /// <c>ICommandHandler</c> interface the module handlers implement, plus any framework Application
+    /// layer the map declares. Public only, because <c>AddApplication()</c> registers the framework's
+    /// validators with FluentValidation's default scan, which skips internal types.
+    /// </summary>
+    private static List<Type> FrameworkApplicationTypes(IArchitectureMap map, List<Type> moduleTypes)
+    {
+        var moduleAssemblies = map.ModuleApplication().ToHashSet();
+        var frameworkAssemblies = map.OfLayer(Layer.Application)
+            .Where(assembly => !moduleAssemblies.Contains(assembly))
+            .Concat(moduleTypes
+                .SelectMany(type => type.GetInterfaces())
+                .Where(i => i.IsGenericType
+                    && string.Equals(i.GetGenericTypeDefinition().FullName, CommandHandlerInterfaceFullName, StringComparison.Ordinal))
+                .Select(i => i.GetGenericTypeDefinition().Assembly))
+            .Where(assembly => !moduleAssemblies.Contains(assembly))
+            .Distinct();
+
+        return [.. frameworkAssemblies.SelectMany(assembly => assembly.LoadableTypes).Where(type => type.IsVisible)];
+    }
+
+    /// <summary>True for the framework's generic delete command, whose only payload is the route id.</summary>
+    private static bool IsBuiltInExempt(Type command) =>
+        command.IsGenericType
+        && string.Equals(command.GetGenericTypeDefinition().FullName, DeleteEntityCommandFullName, StringComparison.Ordinal);
 
     /// <summary>The types some concrete <c>IValidator&lt;T&gt;</c> in scope validates.</summary>
     private static HashSet<Type> ValidatedTypes(List<Type> types) =>

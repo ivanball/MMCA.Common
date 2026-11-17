@@ -1,1 +1,61 @@
 #nullable enable
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushDeviceRegistrar.DeleteAllForUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.InternalCommands.InternalCommandExecution
+*REMOVED*MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null, MMCA.Common.Application.InternalCommands.IInternalCommandScheduler? internalCommandScheduler = null) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.<Clone>$() -> MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand!
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Deconstruct(out int UserId) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.DeleteUserPushInstallationsInternalCommand(int UserId) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Equals(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? other) -> bool
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.UserId.get -> int
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.UserId.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.ExportAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!>!
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.RefreshSessionUserDataExportSection(MMCA.Common.Application.Auth.IRefreshSessionStore! sessionStore) -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.SectionName.get -> string!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.<Clone>$() -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.CreatedAt.get -> System.DateTime
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.CreatedAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Deconstruct(out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out System.DateTime? RevokedAt, out string? RevocationReason, out string? IpAddress, out string? UserAgent, out string? DeviceId, out string? DeviceName, out string? DeviceModel, out string? DeviceManufacturer, out string? DevicePlatform, out string? DeviceFormFactor, out string? DeviceType) -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceFormFactor.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceFormFactor.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceId.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceId.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceManufacturer.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceManufacturer.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceModel.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceModel.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceName.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceName.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DevicePlatform.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DevicePlatform.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceType.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceType.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Equals(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? other) -> bool
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ExpiresAt.get -> System.DateTime
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ExpiresAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.IpAddress.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.IpAddress.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevocationReason.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevocationReason.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevokedAt.get -> System.DateTime?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevokedAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserAgent.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserAgent.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserSessionExportDTO(System.DateTime CreatedAt, System.DateTime ExpiresAt, System.DateTime? RevokedAt, string? RevocationReason, string? IpAddress, string? UserAgent, string? DeviceId, string? DeviceName, string? DeviceModel, string? DeviceManufacturer, string? DevicePlatform, string? DeviceFormFactor, string? DeviceType) -> void
+const MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.Name = "SignInSessions" -> string!
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.ToString() -> string!
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ToString() -> string!
+static MMCA.Common.Application.InternalCommands.InternalCommandExecution.Begin() -> System.IDisposable!
+static MMCA.Common.Application.InternalCommands.InternalCommandExecution.IsActive.get -> bool
+static MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.operator !=(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? left, MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? right) -> bool
+static MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.operator ==(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? left, MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.From(MMCA.Common.Domain.Auth.RefreshSession! session) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO!
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.operator !=(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.operator ==(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? right) -> bool

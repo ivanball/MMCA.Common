@@ -20,4 +20,8 @@ public sealed class NullPushDeviceRegistrar : IPushDeviceRegistrar
     /// <inheritdoc />
     public Task<Result> DeleteAsync(UserIdentifierType userId, string installationId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result.Success());
+
+    /// <inheritdoc />
+    public Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success());
 }

@@ -1,6 +1,8 @@
 using FluentValidation;
 using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Architecture.Tests.CommandValidatorFixtures;
 
@@ -71,6 +73,31 @@ internal sealed record PurgeTicketsCommand(DateTime OlderThan);
 internal sealed class PurgeTicketsHandler : ICommandHandler<PurgeTicketsCommand, Result>
 {
     public Task<Result> HandleAsync(PurgeTicketsCommand command, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success());
+}
+
+/// <summary>
+/// Bridge coverage across the framework boundary: the request is a framework type whose validator
+/// (<c>ForgotPasswordRequestValidator</c>) ships in MMCA.Common.Application, not in this module.
+/// </summary>
+internal sealed record ForgotTicketPasswordCommand(ForgotPasswordRequest Request) : ICommandWithRequest<ForgotPasswordRequest>;
+
+internal sealed class ForgotTicketPasswordHandler : ICommandHandler<ForgotTicketPasswordCommand, Result>
+{
+    public Task<Result> HandleAsync(ForgotTicketPasswordCommand command, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success());
+}
+
+/// <summary>The aggregate the generic delete fixture closes over.</summary>
+internal sealed class TicketFixtureEntity;
+
+/// <summary>
+/// The framework's generic delete command closed over a module type: identifier-only and not
+/// module-authored, so the rule exempts it without an allowlist entry.
+/// </summary>
+internal sealed class DeleteTicketFixtureHandler : ICommandHandler<DeleteEntityCommand<TicketFixtureEntity, Guid>, Result>
+{
+    public Task<Result> HandleAsync(DeleteEntityCommand<TicketFixtureEntity, Guid> command, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result.Success());
 }
 

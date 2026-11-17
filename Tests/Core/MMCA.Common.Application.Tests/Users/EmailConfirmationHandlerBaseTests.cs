@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users.UseCases.EmailConfirmation;
 using MMCA.Common.Domain.Auth;
@@ -127,6 +128,68 @@ public sealed class EmailConfirmationHandlerBaseTests
         Result result = await sut.HandleAsync(new TestSendConfirmationCommand(new SendEmailConfirmationRequest(KnownEmail)));
 
         result.IsSuccess.Should().BeTrue("reporting the send failure to the caller would be an oracle");
+    }
+
+    [Fact]
+    public async Task Send_AsAScheduledInternalCommand_WhenTheEmailFails_PropagatesSoTheRowRetries()
+    {
+        // ADR-114: the durable path has no anonymous caller to leak to, and acking a transient SMTP
+        // fault would lose the mail the queue exists to guarantee.
+        var (sut, mocks) = CreateSendSut();
+        sut.Found = new ConfirmableUser { Id = TestUserId, Confirmed = false };
+        mocks.EmailSender
+            .Setup(x => x.SendAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("relay is down"));
+
+        using (InternalCommandExecution.Begin())
+        {
+            Func<Task> act = () => sut.HandleAsync(new TestSendConfirmationCommand(new SendEmailConfirmationRequest(KnownEmail)));
+            await act.Should().ThrowAsync<InvalidOperationException>(
+                "the processor records the exception and retries the row with backoff");
+        }
+
+        InternalCommandExecution.IsActive.Should().BeFalse("disposing the scope restores the inline default");
+    }
+
+    [Fact]
+    public async Task Send_AsAScheduledInternalCommand_WhenThrottled_FailsInsteadOfAcking()
+    {
+        // Failed sends on earlier attempts still count against the per-address window, so a retry can
+        // meet the throttle. Acking that refusal would drop the mail; failing lets the backoff wait.
+        var (sut, mocks) = CreateSendSut();
+        sut.Found = new ConfirmableUser { Id = TestUserId, Confirmed = false };
+        mocks.TokenService
+            .Setup(x => x.IssueAsync(It.IsAny<string>(), It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<string>(Error.Unauthorized("Authentication.ConfirmationThrottled", "Too many.")));
+
+        Result result;
+        using (InternalCommandExecution.Begin())
+        {
+            result = await sut.HandleAsync(new TestSendConfirmationCommand(new SendEmailConfirmationRequest(KnownEmail)));
+        }
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Authentication.ConfirmationThrottled");
+        VerifyNoEmail(mocks);
+    }
+
+    [Fact]
+    public async Task Send_AsAScheduledInternalCommand_ForAnAlreadyConfirmedAddress_StillSucceeds()
+    {
+        // The permanent outcomes stay successes on the durable path, which is what keeps an
+        // at-least-once re-run idempotent: a duplicate row after the confirmation sends nothing.
+        var (sut, mocks) = CreateSendSut();
+        sut.Found = new ConfirmableUser { Id = TestUserId, Confirmed = true };
+
+        Result result;
+        using (InternalCommandExecution.Begin())
+        {
+            result = await sut.HandleAsync(new TestSendConfirmationCommand(new SendEmailConfirmationRequest(KnownEmail)));
+        }
+
+        result.IsSuccess.Should().BeTrue();
+        VerifyNoEmail(mocks);
     }
 
     // ── Confirm ──

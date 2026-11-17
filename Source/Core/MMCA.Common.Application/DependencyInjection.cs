@@ -11,6 +11,7 @@ using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Application.Users.UseCases.DeleteUser;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Permissions;
 
@@ -56,6 +57,11 @@ public static partial class DependencyInjection
             // RefreshTokenRequestValidator). Module-level ScanModuleApplicationServices only scans the
             // module's own assembly, so common validators must be registered here.
             services.AddValidatorsFromAssemblyContaining<ClassReference>();
+
+            // The erasure's durable push-installation cleanup (ADR-044, ADR-114). Registered here, ahead
+            // of the decorators, so a host that schedules it through DeleteUserHandlerBase needs no
+            // registration of its own and the processor finds a decorated handler for the row.
+            services.TryAddScoped<ICommandHandler<DeleteUserPushInstallationsInternalCommand, Result>, DeleteUserPushInstallationsInternalCommandHandler>();
 
             return services;
         }

@@ -11,7 +11,9 @@ namespace MMCA.Common.Architecture.Tests.Cqrs;
 /// and pins each behaviour: a command with its own validator passes, one covered only through the
 /// CommandRequestValidator bridge passes, a command with neither fails, a bridge command whose request
 /// has no validator fails (half a bridge validates nothing), a payload-free marker command is skipped,
-/// and the allowlist exempts exactly what it names.
+/// the allowlist exempts exactly what it names, a request validator shipped in the framework
+/// Application assembly counts, the generic delete is exempt by default, and an allowlist entry that
+/// exempts nothing is reported as stale.
 /// </summary>
 public sealed class CommandValidatorCoverageFitnessTests
 {
@@ -98,13 +100,74 @@ public sealed class CommandValidatorCoverageFitnessTests
     }
 
     [Fact]
+    public void BridgeToAFrameworkRequestValidator_IsCovered()
+    {
+        var act = () => ArchitectureRules.CommandsHaveValidators(_map, []);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().NotContain(
+                nameof(ForgotTicketPasswordCommand),
+                "the request validator ships in MMCA.Common.Application, which AddApplication() registers, so the bridge resolves at run time");
+    }
+
+    [Fact]
+    public void GenericDeleteEntityCommand_IsExemptWithoutAnEntry()
+    {
+        var act = () => ArchitectureRules.CommandsHaveValidators(_map, []);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().NotContain(
+                "DeleteEntityCommand",
+                "the framework's generic delete carries only the route id and is not module-authored");
+    }
+
+    [Fact]
+    public void AllowlistEntryNamingNoCommand_IsFlaggedAsStale()
+    {
+        const string stale = $"{FixtureNamespace}.GhostTicketCommand";
+
+        var act = () => ArchitectureRules.CommandsHaveValidators(_map, [FixtureNamespace, stale]);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().Contain(
+                $"{stale} is allowlisted but names no handled command",
+                "an entry that names nothing is stale and must be removed, or the list only grows");
+    }
+
+    [Fact]
+    public void AllowlistEntryNamingAValidatedCommand_IsFlaggedAsStale()
+    {
+        var stale = $"{FixtureNamespace}.{nameof(CreateTicketCommand)}";
+
+        var act = () => ArchitectureRules.CommandsHaveValidators(_map, [FixtureNamespace, stale]);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().Contain(
+                $"{stale} is allowlisted but every command it names is validated or exempt",
+                "an entry for a command that has a validator exempts nothing, and would hide the validator's deletion");
+    }
+
+    [Fact]
+    public void AllowlistEntryForTheExemptGenericDelete_IsFlaggedAsStale()
+    {
+        const string stale = "MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand";
+
+        var act = () => ArchitectureRules.CommandsHaveValidators(_map, [FixtureNamespace, stale]);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().Contain(
+                $"{stale} is allowlisted but every command it names is validated or exempt",
+                "the built-in exemption makes a consumer's hand entry for the generic delete redundant");
+    }
+
+    [Fact]
     public void CommandInventory_CountsTheDataCarryingCommands()
     {
         var count = ArchitectureRules.HandledCommandCount(_map);
 
         count.Should().Be(
-            5,
-            "the fixtures compile five data-carrying commands with handlers (Create, Update, Reopen, Archive, Purge); the payload-free marker is not one");
+            7,
+            "the fixtures compile seven data-carrying commands with handlers (Create, Update, Reopen, Archive, Purge, ForgotTicketPassword and the closed generic delete); the payload-free marker is not one");
     }
 
     /// <summary>

@@ -132,6 +132,98 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
     }
 
     [Fact]
+    public async Task DeleteAllForUserAsync_DeletesEveryInstallationFoundUnderTheOwnerTag_AcrossPages()
+    {
+        const string second = "second-installation";
+        _hubClient
+            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Page("page-2", Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
+        _hubClient
+            .Setup(x => x.GetRegistrationsByTagAsync("user:42", "page-2", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Page(
+                string.Empty,
+                Registration("user:42", $"$installationid:{{{second}}}"),
+                Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
+        SetupInstallation("user:42");
+        SetupInstallationWithId(second, "user:42");
+
+        var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _hubClient.Verify(x => x.DeleteInstallationAsync(InstallationId, It.IsAny<CancellationToken>()), Times.Once,
+            "an installation seen on two registrations is still deleted once");
+        _hubClient.Verify(x => x.DeleteInstallationAsync(second, It.IsAny<CancellationToken>()), Times.Once,
+            "the second page is read, and the system tag matches case-insensitively as the SDK does");
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_WhenAnInstallationChangedHandsMeanwhile_LeavesIt()
+    {
+        _hubClient
+            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Page(string.Empty, Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
+        SetupInstallation("user:99");
+
+        var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _hubClient.Verify(
+            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "each delete re-checks the owner tag on the installation itself, so a handed-over device survives");
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_WithNoRegistrations_SucceedsWithoutDeleting()
+    {
+        _hubClient
+            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Page(string.Empty, Registration("user:42")));
+
+        var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue("a registration with no installation system tag names nothing to delete");
+        _hubClient.Verify(
+            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_WhenListingFails_ReturnsFailure()
+    {
+        _hubClient
+            .Setup(x => x.GetRegistrationsByTagAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(CreateSdkException<MessagingException>());
+
+        var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue("a failure is returned so the erasure's internal command retries");
+        result.Errors.Should().ContainSingle(e => e.Code == "PushDevice.DeleteFailed");
+    }
+
+    private static FcmV1RegistrationDescription Registration(params string[] tags) =>
+        new("fcm-registration-token", tags);
+
+    private static ICollectionQueryResult<RegistrationDescription> Page(string continuationToken, params RegistrationDescription[] registrations)
+    {
+        var page = new Mock<ICollectionQueryResult<RegistrationDescription>>();
+        page.SetupGet(x => x.ContinuationToken).Returns(continuationToken);
+        page.Setup(x => x.GetEnumerator()).Returns(() => ((IEnumerable<RegistrationDescription>)registrations).GetEnumerator());
+        return page.Object;
+    }
+
+    private void SetupInstallationWithId(string installationId, params string[] tags) =>
+        _hubClient
+            .Setup(x => x.GetInstallationAsync(installationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Installation
+            {
+                InstallationId = installationId,
+                Platform = NotificationPlatform.FcmV1,
+                PushChannel = "fcm-registration-token",
+                Tags = [.. tags],
+            });
+
+    [Fact]
     public async Task UpsertAsync_StampsTheOwnerTagTheDeleteChecksFor()
     {
         Installation? captured = null;
