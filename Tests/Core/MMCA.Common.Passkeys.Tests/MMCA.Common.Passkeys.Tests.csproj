@@ -14,10 +14,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <!-- FakeTimeProvider: the step-up tests age a sign-in past the ten-minute window. -->
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Passkeys\MMCA.Common.Passkeys.csproj" />

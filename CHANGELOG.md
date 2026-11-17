@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Shared enums carry explicit values** (MMCA.Common.Testing.Architecture `SharedLayerTestsBase.ModuleShared_Enums_ShouldHave_ExplicitValues`, rule `ArchitectureRules.ModuleSharedEnumValuesAreExplicit`): every member of an enum declared in a module Shared project must write its value (`Pending = 0,`, never a bare `Pending,`). A Shared enum is persisted as its number and crosses the wire to installed clients as a number, so an implicit value renumbers silently when a member is inserted or reordered. The compiled metadata cannot tell an explicit value from an implicit one, so the rule reads the `.cs` files of each module Shared project (comments, literals and attribute arguments masked out) and reports every implicit member as `file:line`. The project folders default to the folders under `Source/` named after each module Shared root namespace, found from `{RepoToken}.slnx`; override `ModuleSharedSourceDirectories()` for another layout. Every repo that subclasses `SharedLayerTestsBase` inherits the fact with no new code, so an implicit Shared enum fails its architecture tests on upgrade: give each member its current value (declaration order from 0) to keep the stored numbers.
+
+### Removed
+
+- **The unused `coverlet.collector` test dependency** (tests only, no package change): it is a VSTest data collector and does nothing under Microsoft Testing Platform, where CI already collects coverage with `dotnet-coverage`. The package references, the central `PackageVersion`, the Dependabot group entry and the unreferenced `coverlet.runsettings` are gone, and the lock files no longer list it.
+
 ### Fixed
 
 - **MMCA.Common.UI.Maui no longer breaks iOS and Mac Catalyst app builds**: the Razor SDK puts `Components/NativeThemeSync.razor` in `Content`, and the Apple SDK embedded it in the ios and maccatalyst assemblies as a bundle resource under the pack runner's absolute path (`__monotouch_content_D:_sa_s...`), which every consuming app build refused to extract ("would extract to ... which is outside of the target directory"). The `.razor` Content items now carry `PublishFolderType="None"`, so no bundle content ships (1.295.0 and 1.296.0 were affected). CI's build-maui job now fails on any `__monotouch_content_` resource in those assemblies.

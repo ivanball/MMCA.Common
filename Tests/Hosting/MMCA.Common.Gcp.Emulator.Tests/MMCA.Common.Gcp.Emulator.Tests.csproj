@@ -33,10 +33,6 @@
          (GHSA-q939-rpr3-3284). This project has no path to MMCA.Common.Testing, so it cannot
          inherit that pin and needs its own. See the comment in Directory.Packages.props. -->
     <PackageReference Include="SSH.NET" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

@@ -154,7 +154,7 @@ Every piece below is opt-in, so a consumer adopting none changes nothing; keep n
 
 ## Testing
 
-xUnit v3 + AwesomeAssertions + Moq + coverlet under MTP. Test projects mirror `Source/` under `Tests/`; test files relax naming and complexity rules via the `.editorconfig` `[Tests/**/*.cs]` section.
+xUnit v3 + AwesomeAssertions + Moq under MTP. CI collects coverage with `dotnet-coverage` wrapping the MTP run. Test projects mirror `Source/` under `Tests/`; test files relax naming and complexity rules via the `.editorconfig` `[Tests/**/*.cs]` section.
 
 ## Governance Docs & Commit Convention
 

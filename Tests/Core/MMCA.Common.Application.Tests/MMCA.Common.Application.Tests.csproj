@@ -16,10 +16,6 @@
          identifier maps in both directions (ADR-115): wrapper-to-wrapper, which needs no help, and
          wrapper-to-primitive through StronglyTypedIdMappings. -->
     <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />

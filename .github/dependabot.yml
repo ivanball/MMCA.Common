@@ -38,7 +38,6 @@ updates:
           - "xunit*"
           - "Moq"
           - "AwesomeAssertions"
-          - "coverlet.*"
           - "NetArchTest.*"
           - "Testcontainers*"
           - "Respawn"

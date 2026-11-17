@@ -13,10 +13,6 @@
     <PackageReference Include="Moq" />
     <!-- TestServer for the same-origin API proxy tests (an in-process fake gateway behind the proxy). -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- DefaultHttpContext, IWebHostEnvironment, and the options plumbing used by the tests. -->
