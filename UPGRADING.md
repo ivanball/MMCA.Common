@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.300.0] - 2026-11-17
 
 **Breaking (MMCA.Common.API):** `MapCommonScalarUi()` is removed, and with it the `Scalar.AspNetCore` dependency of MMCA.Common.API (no host called it). The rate-limit policies "FixedPolicy" and "UserPolicy" are removed (no endpoint named them), together with the settings only they read (`RateLimitingSettings.PermitLimit`, `QueueLimit`, `PerUserPermitLimit`) and the matching parameters of the permit-count `AddCommonRateLimiting` overload, which is now `AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30)`. A call with no arguments is unchanged.
 

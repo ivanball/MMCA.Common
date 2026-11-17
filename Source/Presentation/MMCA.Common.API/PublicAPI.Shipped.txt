@@ -336,12 +336,6 @@ MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.get -> System.
 MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.init -> void
 MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.get -> int
 MMCA.Common.API.RateLimiting.RateLimitingSettings.McpPermitLimit.init -> void
-MMCA.Common.API.RateLimiting.RateLimitingSettings.PerUserPermitLimit.get -> int
-MMCA.Common.API.RateLimiting.RateLimitingSettings.PerUserPermitLimit.init -> void
-MMCA.Common.API.RateLimiting.RateLimitingSettings.PermitLimit.get -> int
-MMCA.Common.API.RateLimiting.RateLimitingSettings.PermitLimit.init -> void
-MMCA.Common.API.RateLimiting.RateLimitingSettings.QueueLimit.get -> int
-MMCA.Common.API.RateLimiting.RateLimitingSettings.QueueLimit.init -> void
 MMCA.Common.API.RateLimiting.RateLimitingSettings.RateLimitingSettings() -> void
 MMCA.Common.API.RateLimiting.RateLimitingSettings.SegmentsPerWindow.get -> int
 MMCA.Common.API.RateLimiting.RateLimitingSettings.SegmentsPerWindow.init -> void
@@ -454,7 +448,6 @@ MMCA.Common.API.Startup.Endpoints.OidcDiscoveryEndpointExtensions.extension(Micr
 MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions
 MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!)
 MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCommonOpenApi() -> Microsoft.AspNetCore.Builder.WebApplication!
-MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCommonScalarUi() -> Microsoft.AspNetCore.Builder.WebApplication!
 MMCA.Common.API.Startup.MiniProfilerExtensions
 MMCA.Common.API.Startup.MiniProfilerExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.API.Startup.MiniProfilerExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMiniProfilerIfEnabled(MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -494,7 +487,7 @@ MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Exte
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonOpenApi() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(MMCA.Common.API.RateLimiting.RateLimitingSettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonResponseCompression() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddForwardedJwtBearer(string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationExtensions
@@ -681,7 +674,6 @@ static MMCA.Common.API.Startup.Endpoints.AppAssociationEndpointExtensions.MapApp
 static MMCA.Common.API.Startup.Endpoints.JwksEndpointExtensions.MapJwksEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static MMCA.Common.API.Startup.Endpoints.OidcDiscoveryEndpointExtensions.MapOidcDiscoveryEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.MapCommonOpenApi(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
-static MMCA.Common.API.Startup.Endpoints.OpenApiEndpointExtensions.MapCommonScalarUi(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
 static MMCA.Common.API.Startup.MiniProfilerExtensions.AddMiniProfilerIfEnabled(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.ModuleHostExtensions.AddModuleHost(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! moduleAssemblies, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Modules.ModuleLoader!>? moduleLoaderLogger = null) -> MMCA.Common.API.Startup.ModuleHostContext!
 static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.CreateDefault() -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
@@ -695,7 +687,7 @@ static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonCors(thi
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonOpenApi(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.API.RateLimiting.RateLimitingSettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, int globalPermitLimit = 300, int authIpPermitLimit = 30) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddCommonResponseCompression(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBearer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationExtensions.MapCultureEndpoint(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
