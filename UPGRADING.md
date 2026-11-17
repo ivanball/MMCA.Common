@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.299.0] - 2026-11-17
 
 **Breaking:** `IPushDeviceRegistrar` (MMCA.Common.Application, `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`) gains `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`, the owner-scoped delete of every native-push installation a user owns. `NullPushDeviceRegistrar`, `AzureNotificationHubDeviceRegistrar`, `SnsPushDeviceRegistrar` and `FcmPushDeviceRegistrar` implement it. Only a consumer with its own `IPushDeviceRegistrar` implementation or hand-written test double is affected (none of ADC, Store or Helpdesk has one; Moq mocks are unaffected): add the member.
 

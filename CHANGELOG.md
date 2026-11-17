@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.299.0] - 2026-11-17
 
 **Breaking:** `IPushDeviceRegistrar` (MMCA.Common.Application, `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`) gains `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`, the owner-scoped delete of every native-push installation a user owns. `NullPushDeviceRegistrar`, `AzureNotificationHubDeviceRegistrar`, `SnsPushDeviceRegistrar` and `FcmPushDeviceRegistrar` implement it. Only a consumer with its own `IPushDeviceRegistrar` implementation or hand-written test double is affected (none of ADC, Store or Helpdesk has one; Moq mocks are unaffected): add the member. See [UPGRADING.md](UPGRADING.md).
 
