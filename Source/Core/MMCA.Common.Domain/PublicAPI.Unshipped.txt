@@ -1,10 +1,1 @@
 #nullable enable
-const MMCA.Common.Domain.Auth.RefreshSession.DeviceFieldMaxLength = 256 -> int
-MMCA.Common.Domain.Auth.RefreshSession.DeviceFormFactor.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DeviceId.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DeviceManufacturer.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DeviceModel.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DeviceName.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DevicePlatform.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.DeviceType.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.RecordDevice(MMCA.Common.Shared.Auth.DeviceMetadata! device) -> MMCA.Common.Shared.Abstractions.Result!

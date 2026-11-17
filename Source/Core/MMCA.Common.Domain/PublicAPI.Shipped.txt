@@ -89,6 +89,13 @@ MMCA.Common.Domain.Auth.RefreshSession.Anonymize() -> MMCA.Common.Shared.Abstrac
 MMCA.Common.Domain.Auth.RefreshSession.CreateSuccessor(string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.DeviceFormFactor.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DeviceId.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DeviceManufacturer.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DeviceModel.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DeviceName.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DevicePlatform.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.DeviceType.get -> string?
 MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.Id.get -> System.Guid
@@ -97,6 +104,7 @@ MMCA.Common.Domain.Auth.RefreshSession.IpAddress.get -> string?
 MMCA.Common.Domain.Auth.RefreshSession.IsActiveAt(System.DateTime utcNow) -> bool
 MMCA.Common.Domain.Auth.RefreshSession.IsRevoked.get -> bool
 MMCA.Common.Domain.Auth.RefreshSession.ReasonRevoked.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.RecordDevice(MMCA.Common.Shared.Auth.DeviceMetadata! device) -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.RefreshSession.RefreshSession() -> void
 MMCA.Common.Domain.Auth.RefreshSession.ReplacedByTokenHash.get -> string?
 MMCA.Common.Domain.Auth.RefreshSession.Revoke(System.DateTime revokedAt, string! reason, string? replacedByTokenHash = null) -> MMCA.Common.Shared.Abstractions.Result!
@@ -355,6 +363,7 @@ const MMCA.Common.Domain.Auth.PasskeyCredential.PublicKeyMaxLength = 2048 -> int
 const MMCA.Common.Domain.Auth.PasskeyCredential.TransportsMaxLength = 100 -> int
 const MMCA.Common.Domain.Auth.PermissionGrant.PermissionMaxLength = 128 -> int
 const MMCA.Common.Domain.Auth.PermissionGrant.RoleMaxLength = 64 -> int
+const MMCA.Common.Domain.Auth.RefreshSession.DeviceFieldMaxLength = 256 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonAccountDeleted = "AccountDeleted" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonReuseDetected = "ReuseDetected" -> string!

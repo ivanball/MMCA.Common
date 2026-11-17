@@ -1,2 +1,1 @@
 ﻿#nullable enable
-virtual MMCA.Common.API.Controllers.AuthControllerBase.RecordCurrentSessionDeviceAsync(MMCA.Common.Shared.Auth.DeviceMetadata! device, MMCA.Common.Application.Auth.Sessions.IAuthSessionIssuer! sessionIssuer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
