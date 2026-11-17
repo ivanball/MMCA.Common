@@ -5,8 +5,8 @@
 @using MMCA.Common.UI.Validation
 @* The notification MANAGE-page policy, not a bare [Authorize]: a signed-in caller without
    notifications:manage is refused at authorization (403, the in-shell Access Denied, on a full page
-   load too), and the request still reaches the router's not-found answer when the host hides these
-   pages (Layout:HideNotificationPagesWhenUnregistered). *@
+   load too), and the request still reaches the router's not-found answer when the host never
+   registered the notification UI. *@
 @attribute [Authorize(Policy = MMCA.Common.UI.Notifications.NotificationPageRequirement.ManagePolicyName)]
 
 @* Same gate as the navigation entry (RequiredPermission on NotificationUIModule): the API refuses

@@ -302,6 +302,7 @@ MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.MonitoringWork
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ObservabilityConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_AreDiscovered_GateIsNotVacuous() -> void
 MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase
+MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.AllowList_HasNoStaleEntries() -> void
 MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.PageE2ECoverageTestsBase() -> void
 MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.Pages_ShouldBe_ReachedByAnE2ETest() -> void
 MMCA.Common.Testing.Architecture.PageE2ECoverageTestsBase.RouteInventory_ShouldNotBe_Empty() -> void
@@ -595,6 +596,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(M
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamedPermissionsAreGranted(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyCollection<string!>! declaredPermissions, System.Collections.Generic.IEnumerable<string!>? additionalReferencedPermissions = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamespacesHaveNoDependencyCycles(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? allowedCycleNamespaces = null) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PageE2EAllowlistHasNoStaleEntries(string! repoRoot, string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! e2eSourceRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedRoutes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PageRouteCount(string! repoRoot, string! sourceRoot) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PagesHaveE2ETests(string! repoRoot, string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! e2eSourceRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedRoutes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToPiiMembers(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void

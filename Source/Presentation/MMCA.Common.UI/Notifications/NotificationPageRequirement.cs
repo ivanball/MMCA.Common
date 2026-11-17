@@ -1,16 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using MMCA.Common.Shared.Notifications;
-using MMCA.Common.UI.Common.Settings;
 
 namespace MMCA.Common.UI.Notifications;
 
 /// <summary>
 /// The requirement behind the policies the notification pages declare instead of a bare
 /// <c>[Authorize]</c>. It asks for an authenticated caller exactly as <c>[Authorize]</c> does, plus
-/// <see cref="Permission"/> when one is set, except when the host hides the notification pages
-/// (<see cref="LayoutSettings.HideNotificationPagesWhenUnregistered"/> with no
-/// <c>AddNotificationUI()</c>): then every caller passes, so the request reaches the router, whose
-/// <see cref="NotificationPageGate"/> answers it with the not-found page (404).
+/// <see cref="Permission"/> when one is set, except when the host never registered the notification
+/// UI (no <c>AddNotificationUI()</c>): then every caller passes, so the request reaches the router,
+/// whose <see cref="NotificationPageGate"/> answers it with the not-found page (404).
 /// </summary>
 /// <remarks>
 /// A bare <c>[Authorize]</c> becomes endpoint metadata, so on a Blazor Web host the authorization

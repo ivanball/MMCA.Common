@@ -2,7 +2,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.UI.Services.Auth.Tokens;
-using MMCA.Common.UI.Services.Caching;
 
 namespace MMCA.Common.UI.Services.Auth;
 
@@ -13,7 +12,7 @@ namespace MMCA.Common.UI.Services.Auth;
 /// <para>
 /// When the storage reports that a held session ended on the server
 /// (<see cref="ISessionAwareTokenStorage.SessionEnded"/>: revoked from another device, or the account
-/// deleted), the provider empties the read cache and signs the shell out (A-34), the same local
+/// deleted), the provider signs the shell out (A-34), the same local
 /// sign-out <see cref="AuthUIService"/> performs for a session it can no longer refresh.
 /// </para>
 /// <para>
@@ -28,40 +27,12 @@ public sealed class JwtAuthenticationStateProvider : AuthenticationStateProvider
         new(new ClaimsPrincipal(new ClaimsIdentity()));
 
     private readonly ITokenStorageService _tokenStorageService;
-    private readonly IUiReadCache? _readCache;
     private readonly ListPageStateService? _listPageState;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JwtAuthenticationStateProvider"/> class without a
-    /// read cache. Kept so code compiled against the original one-argument constructor keeps binding.
+    /// Initializes a new instance of the <see cref="JwtAuthenticationStateProvider"/> class.
     /// </summary>
     /// <param name="tokenStorageService">The store the access token is read from.</param>
-    public JwtAuthenticationStateProvider(ITokenStorageService tokenStorageService)
-        : this(tokenStorageService, readCache: null)
-    {
-    }
-
-    /// <summary>Initializes a new instance of the <see cref="JwtAuthenticationStateProvider"/> class.</summary>
-    /// <param name="tokenStorageService">The store the access token is read from.</param>
-    /// <param name="readCache">
-    /// Optional client-side read cache, emptied when the storage reports a session ended on the
-    /// server: its entries were read under that session.
-    /// </param>
-    public JwtAuthenticationStateProvider(ITokenStorageService tokenStorageService, IUiReadCache? readCache)
-        : this(tokenStorageService, readCache, listPageState: null)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JwtAuthenticationStateProvider"/> class. The
-    /// constructor DI picks whenever <see cref="ListPageStateService"/> is registered
-    /// (<c>AddUIShared</c> registers it on every head).
-    /// </summary>
-    /// <param name="tokenStorageService">The store the access token is read from.</param>
-    /// <param name="readCache">
-    /// Optional client-side read cache, emptied when the storage reports a session ended on the
-    /// server: its entries were read under that session.
-    /// </param>
     /// <param name="listPageState">
     /// Optional list-page state (search, filters, paging), forgotten on every sign-out. It is mirrored
     /// to <c>sessionStorage</c>, which outlives the session in the same tab, so without the clear the
@@ -69,12 +40,10 @@ public sealed class JwtAuthenticationStateProvider : AuthenticationStateProvider
     /// </param>
     public JwtAuthenticationStateProvider(
         ITokenStorageService tokenStorageService,
-        IUiReadCache? readCache,
-        ListPageStateService? listPageState)
+        ListPageStateService? listPageState = null)
     {
         ArgumentNullException.ThrowIfNull(tokenStorageService);
         _tokenStorageService = tokenStorageService;
-        _readCache = readCache;
         _listPageState = listPageState;
 
         // Same DI scope and lifetime as the storage, so the subscription never outlives either.
@@ -157,8 +126,6 @@ public sealed class JwtAuthenticationStateProvider : AuthenticationStateProvider
 
     private void OnSessionEnded(object? sender, EventArgs e)
     {
-        _readCache?.Clear();
-
         // An event handler cannot await. The in-memory list state clears synchronously inside the
         // call; the sessionStorage removal finishes on its own and swallows its own failures.
         _ = ForgetListPageStateAsync();

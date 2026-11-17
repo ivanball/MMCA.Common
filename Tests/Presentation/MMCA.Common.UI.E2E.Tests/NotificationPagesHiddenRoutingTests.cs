@@ -10,32 +10,31 @@ using Xunit;
 namespace MMCA.Common.UI.E2E.Tests;
 
 /// <summary>
-/// U-40 (Store run 1): with <c>Layout:HideNotificationPagesWhenUnregistered=true</c> in a host that
-/// never called <c>AddNotificationUI()</c>, a signed-out request for <c>/notifications</c> or
+/// U-40 (Store run 1): in a host that never called <c>AddNotificationUI()</c>, a signed-out request for <c>/notifications</c> or
 /// <c>/notifications/inbox</c> was answered by the authentication challenge (a redirect to
 /// <c>/login</c> in the real hosts) instead of the not-found page: the gate lived inside the Blazor
 /// router, which runs only after the authorization middleware has already challenged the pages'
-/// <c>[Authorize]</c> endpoint metadata. When the option hides the pages, both routes must answer
-/// 404, signed in or out; with the option off nothing changes.
+/// <c>[Authorize]</c> endpoint metadata. Without the notification UI both routes must answer 404,
+/// signed in or out; a host that registered it keeps the pages' own authorization.
 /// <para>
 /// Plain HTTP against the self-hosted gallery (real Razor Components endpoints, real authorization
 /// middleware, the shared <c>Routes.razor</c>), so no browser is needed. The gallery registers the
-/// notification stubs but not <c>NotificationUIModule</c>, which is exactly the "never called
-/// AddNotificationUI()" host the option is for; the option itself is passed on the command line.
-/// Its auth scheme answers a challenge with 401 rather than a redirect, so "unchanged" is 401 here.
+/// notification UI module by default; <c>Gallery:NotificationUI=false</c> on the command line leaves it
+/// out, which is exactly the "never called AddNotificationUI()" host. Its auth scheme answers a
+/// challenge with 401 rather than a redirect, so "served with authorization" is 401 here.
 /// </para>
 /// </summary>
 public sealed class NotificationPagesHiddenRoutingTests
 {
-    private const string HideOption = "--Layout:HideNotificationPagesWhenUnregistered=true";
+    private const string WithoutNotificationUI = "--Gallery:NotificationUI=false";
     private const string SignedInCookie = "gallery_auth=1";
 
     [Theory]
     [InlineData("/notifications")]
     [InlineData("/notifications/inbox")]
-    public async Task OptionOn_SignedOut_AnswersNotFound(string path)
+    public async Task WithoutNotificationUI_SignedOut_AnswersNotFound(string path)
     {
-        await using var host = await GalleryProcess.StartAsync(HideOption);
+        await using var host = await GalleryProcess.StartAsync(WithoutNotificationUI);
 
         using var response = await host.GetAsync(path, signedIn: false);
 
@@ -47,9 +46,9 @@ public sealed class NotificationPagesHiddenRoutingTests
     [Theory]
     [InlineData("/notifications")]
     [InlineData("/notifications/inbox")]
-    public async Task OptionOn_SignedIn_AnswersNotFound(string path)
+    public async Task WithoutNotificationUI_SignedIn_AnswersNotFound(string path)
     {
-        await using var host = await GalleryProcess.StartAsync(HideOption);
+        await using var host = await GalleryProcess.StartAsync(WithoutNotificationUI);
 
         using var response = await host.GetAsync(path, signedIn: true);
 
@@ -61,7 +60,7 @@ public sealed class NotificationPagesHiddenRoutingTests
     [Theory]
     [InlineData("/notifications")]
     [InlineData("/notifications/inbox")]
-    public async Task OptionOff_SignedOut_IsStillChallenged(string path)
+    public async Task WithNotificationUI_SignedOut_IsStillChallenged(string path)
     {
         await using var host = await GalleryProcess.StartAsync();
 
@@ -69,19 +68,19 @@ public sealed class NotificationPagesHiddenRoutingTests
 
         response.StatusCode.Should().Be(
             HttpStatusCode.Unauthorized,
-            "with the option off the pages keep their [Authorize] challenge exactly as before");
+            "a host with the notification UI keeps the pages' [Authorize] challenge");
     }
 
     [Theory]
     [InlineData("/notifications")]
     [InlineData("/notifications/inbox")]
-    public async Task OptionOff_SignedIn_StillServesThePage(string path)
+    public async Task WithNotificationUI_SignedIn_StillServesThePage(string path)
     {
         await using var host = await GalleryProcess.StartAsync();
 
         using var response = await host.GetAsync(path, signedIn: true);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, "with the option off the pages render as before");
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "a host with the notification UI serves the pages");
     }
 
     /// <summary>The gallery self-hosted on an ephemeral port, plus a non-redirecting client.</summary>

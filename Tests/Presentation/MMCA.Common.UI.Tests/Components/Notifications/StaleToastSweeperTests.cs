@@ -8,7 +8,7 @@ using MudBlazor;
 namespace MMCA.Common.UI.Tests.Components.Notifications;
 
 /// <summary>
-/// <see cref="StaleToastSweeper"/> (opt-in, <c>Layout:ClearToastsOnNavigation</c>): a navigation removes
+/// <see cref="StaleToastSweeper"/> (rendered by MainLayout on every head): a navigation removes
 /// the toasts that had been on screen for longer than <see cref="StaleToastSweeper.Grace"/>, and keeps
 /// one raised in the same moment as the navigation (an action that reports its outcome and moves on).
 /// </summary>

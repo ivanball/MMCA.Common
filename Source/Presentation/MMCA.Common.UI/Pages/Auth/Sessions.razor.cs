@@ -155,7 +155,8 @@ public partial class Sessions : IDisposable
             L["Auth.Sessions.Revoke.Confirm.Title"],
             L["Auth.Sessions.Revoke.Confirm.Message", DescribeDevice(session)],
             L["Auth.Sessions.Revoke"],
-            L["Common.Button.Cancel"]);
+            L["Common.Button.Cancel"],
+            destructive: true);
 
         if (!confirmed || IsBusy)
         {
@@ -222,7 +223,8 @@ public partial class Sessions : IDisposable
             L["Auth.Sessions.RevokeAll.Confirm.Title"],
             L["Auth.Sessions.RevokeAll.Confirm.Message"],
             L["Auth.Sessions.RevokeAll"],
-            L["Common.Button.Cancel"]);
+            L["Common.Button.Cancel"],
+            destructive: true);
 
         if (!confirmed || IsBusy)
         {

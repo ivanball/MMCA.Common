@@ -160,7 +160,7 @@ public sealed class PasskeysPanelTests : BunitTestBase
     public void Delete_AfterTheConfirmation_DeletesThePasskey()
     {
         var id = _rows[0].Id;
-        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(true);
         _passkeys.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
@@ -179,7 +179,7 @@ public sealed class PasskeysPanelTests : BunitTestBase
     [Fact]
     public void Delete_WhenTheUserDeclinesTheConfirmation_DeletesNothing()
     {
-        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(false);
 
         var cut = RenderUnderTest<PasskeysPanel>(_ => { });
         cut.WaitForAssertion(() => cut.FindAll("[data-testid='passkeys-delete']").Should().ContainSingle());
@@ -192,7 +192,7 @@ public sealed class PasskeysPanelTests : BunitTestBase
     public void Delete_RefusedAsTheLastPasskey_ShowsTheReason()
     {
         var id = _rows[0].Id;
-        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        _dialogs.Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(true);
         _passkeys.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure(Error.Conflict("Passkeys.LastPasskey", "This passkey is the only way to sign in to this account, so it cannot be deleted.")));
 

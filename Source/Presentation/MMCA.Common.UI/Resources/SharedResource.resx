@@ -76,6 +76,9 @@
   <data name="Layout.Reload" xml:space="preserve">
     <value>Reload</value>
   </data>
+  <data name="Layout.PageError" xml:space="preserve">
+    <value>This page ran into a problem and could not be displayed. Try again, or go to another page.</value>
+  </data>
   <data name="Common.Error.Load" xml:space="preserve">
     <value>Error loading {0}.</value>
   </data>

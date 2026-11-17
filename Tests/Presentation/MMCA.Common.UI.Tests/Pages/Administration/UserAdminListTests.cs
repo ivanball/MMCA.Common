@@ -475,7 +475,7 @@ public sealed class UserAdminListTests : BunitTestBase
         providers.Popover.Find("[data-testid=toggle-lock]").Click();
 
         cut.WaitForAssertion(() => _dialogs.Verify(
-            x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), true),
             Times.Once()));
         _actions.Verify(x => x.LockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
         _actions.Verify(x => x.UnlockAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()), Times.Never());
@@ -770,10 +770,16 @@ public sealed class UserAdminListTests : BunitTestBase
     }
 
     // ── Helpers ──
-    private void Confirms(bool answer) =>
+    private void Confirms(bool answer)
+    {
+        // Locking confirms through the destructive overload; a role change through the plain one.
         _dialogs
             .Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(answer);
+        _dialogs
+            .Setup(x => x.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            .ReturnsAsync(answer);
+    }
 
     private IRenderedComponent<UserAdminList<TestUser>> OpenTheActionsMenu(MudProviderHandles providers)
     {

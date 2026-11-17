@@ -87,6 +87,17 @@ public static class GalleryHost
         // caption absent, which is exactly the framework-default look the scan should measure.
         builder.Services.AddScoped<INotificationScopeProvider, NullNotificationScopeProvider>();
 
+        // The router serves the notification pages only in a host that registered the notification UI
+        // module (a host without it answers them with the not-found page), so the gallery registers it
+        // like AddNotificationUI() does, over the canned services above. Its listener's hub connection
+        // to the invalid API endpoint fails, is logged and is retried in the background, which no scan
+        // observes. Gallery:NotificationUI=false leaves the module out, for the not-found routing test.
+        if (builder.Configuration.GetValue("Gallery:NotificationUI", defaultValue: true))
+        {
+            builder.Services.AddScoped<NotificationHubService>();
+            builder.Services.AddSingleton<IUIModule, MMCA.Common.UI.Notifications.NotificationUIModule>();
+        }
+
         // Canned role administration (ADR-116) so the gallery's /admin/roles and /admin/roles/{role}
         // hosts render the shared RoleAdminList and RoleAdminEdit components populated for the scan.
         builder.Services.AddScoped<IRoleAdminUIService, StubRoleAdminUIService>();

@@ -9,7 +9,6 @@ using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth.Devices;
 using MMCA.Common.UI.Services.Auth.Tokens;
-using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 
@@ -32,11 +31,6 @@ namespace MMCA.Common.UI.Services.Auth;
 /// <param name="tokenRefresher">Host-specific refresher used to renew an expired access token.</param>
 /// <param name="authStateProvider">Blazor's auth-state provider, notified on sign-in and sign-out.</param>
 /// <param name="pushRegistration">Native push registration, unregistered on sign-out (ADR-044).</param>
-/// <param name="readCache">
-/// Optional client-side read cache, emptied on sign-out. It matters most where the DI scope outlives
-/// the session (WebAssembly and MAUI resolve one scope for the app's lifetime): without the clear, the
-/// next account signing in on the same client could be served the previous account's cached reads.
-/// </param>
 /// <param name="localCache">
 /// Optional device-local document cache (offline list snapshots), wiped on sign-out. Snapshots are
 /// written in plaintext, survive process restarts, and are keyed by surface rather than by user, so
@@ -56,7 +50,6 @@ public sealed class AuthUIService(
     ITokenRefresher tokenRefresher,
     AuthenticationStateProvider authStateProvider,
     IPushRegistrationService pushRegistration,
-    IUiReadCache? readCache = null,
     ILocalCacheStore? localCache = null,
     IDeviceMetadataReporter? deviceMetadataReporter = null,
     ILogger<AuthUIService>? logger = null) : IAuthUIService, ISignInLinkUIService, IPasskeyUIService
@@ -502,7 +495,7 @@ public sealed class AuthUIService(
 
     /// <summary>
     /// The local half of a sign-out, shared by Logout, Sign out everywhere and an unrefreshable
-    /// session: clears the stored tokens, the read cache and the device-local cache, then lets the
+    /// session: clears the stored tokens and the device-local cache, then lets the
     /// auth state provider forget the list-page state and flip to anonymous.
     /// </summary>
     private async Task SignOutLocallyAsync()
@@ -516,10 +509,6 @@ public sealed class AuthUIService(
             // JS interop not available
         }
 
-        // Everything the previous session read is now another user's data. The scope that holds the
-        // cache outlives the session on WebAssembly and MAUI, so leaving entries behind would show
-        // them to whoever signs in next on this client.
-        readCache?.Clear();
         await ClearLocalCacheAsync().ConfigureAwait(false);
 
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)

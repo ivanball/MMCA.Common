@@ -121,6 +121,7 @@ MMCA.Common.UI.Web._Imports.Execute() -> void
 MMCA.Common.UI.Web._Imports._Imports() -> void
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ApiSectionName = "Api" -> string!
 const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ClientConfigPath = "/client-config" -> string!
+const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ModulesSectionName = "Modules" -> string!
 const MMCA.Common.UI.Web.Hosting.E2eRenderMode.ForceServerKey = "E2E:ForceServer" -> string!
 const MMCA.Common.UI.Web.Hosting.E2eRenderMode.ForceWebAssemblyKey = "E2E:ForceWebAssembly" -> string!
 const MMCA.Common.UI.Web.Pwa.ServiceWorkerEndpointExtensions.EnabledKey = "Pwa:ServiceWorker:Enabled" -> string!

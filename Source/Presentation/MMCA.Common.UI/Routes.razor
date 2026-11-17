@@ -2,23 +2,19 @@
 @using MMCA.Common.UI.Common.Interfaces
 @using MMCA.Common.UI.Pages
 @using MMCA.Common.UI.Layout
-@using Microsoft.Extensions.Options
-@using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Notifications
 @inject IEnumerable<IUIModule> UIModules
 @inject IStringLocalizer<SharedResource> L
-@inject IOptions<LayoutSettings> LayoutOptions
 
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Layout.MainLayout).Assembly"
             AdditionalAssemblies="UIModules.Select(m => m.Assembly)"
             NotFoundPage="typeof(Pages.NotFound)">
         <Found Context="routeData">
-            @if (NotificationPageGate.Hides(routeData.PageType, LayoutOptions.Value, UIModules))
+            @if (NotificationPageGate.Hides(routeData.PageType, UIModules))
             {
-                @* Opt-in (Layout:HideNotificationPagesWhenUnregistered): a host that never called
-                   AddNotificationUI() answers the notification routes with the not-found page rather
-                   than serving pages whose services it never registered. *@
+                @* A host that never called AddNotificationUI() answers the notification routes with
+                   the not-found page rather than serving pages whose services it never registered. *@
                 <LayoutView Layout="typeof(Layout.MainLayout)">
                     <MMCA.Common.UI.Pages.NotFound />
                 </LayoutView>

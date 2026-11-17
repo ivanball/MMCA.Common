@@ -9,7 +9,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// <para>
 /// Adoption: subclass, supply <see cref="RepoRoot"/>, and list in <see cref="AllowedUntestedRoutes"/>
 /// (by template, grouped by reason) the routes an E2E run genuinely cannot reach, such as a device-only
-/// page or one behind an external provider's challenge.
+/// page or one behind an external provider's challenge. An entry must stay earned: one that names no
+/// page any more, or a page an E2E test now reaches, fails <see cref="AllowList_HasNoStaleEntries"/>.
 /// </para>
 /// </summary>
 public abstract class PageE2ECoverageTestsBase
@@ -32,6 +33,10 @@ public abstract class PageE2ECoverageTestsBase
     [Fact]
     public void Pages_ShouldBe_ReachedByAnE2ETest() =>
         ArchitectureRules.PagesHaveE2ETests(RepoRoot, SourceRoot, E2ESourceRoots, AllowedUntestedRoutes);
+
+    [Fact]
+    public void AllowList_HasNoStaleEntries() =>
+        ArchitectureRules.PageE2EAllowlistHasNoStaleEntries(RepoRoot, SourceRoot, E2ESourceRoots, AllowedUntestedRoutes);
 
     [Fact]
     public void RouteInventory_ShouldNotBe_Empty() =>

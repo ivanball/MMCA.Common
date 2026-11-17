@@ -195,7 +195,8 @@ public partial class PasskeysPanel
             L["Passkeys.DeleteConfirm.Title"].Value,
             L["Passkeys.DeleteConfirm.Message", passkey.Name].Value,
             L["Passkeys.Delete"].Value,
-            L["Passkeys.Cancel"].Value);
+            L["Passkeys.Cancel"].Value,
+            destructive: true);
         if (!confirmed)
         {
             return;

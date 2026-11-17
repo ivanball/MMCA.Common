@@ -89,8 +89,7 @@ public sealed class AuthUIServiceTests : IDisposable
             _tokenRefresher.Object,
             _authStateProvider,
             _pushRegistration.Object,
-            readCache: null,
-            _localCache.Object);
+            localCache: _localCache.Object);
     }
 
     private AuthUIService CreateSut(HttpStatusCode statusCode, string? json = null) =>
@@ -473,10 +472,9 @@ public sealed class AuthUIServiceTests : IDisposable
             new StubHttpClientFactory(_handler),
             _tokenStorage.Object,
             _tokenRefresher.Object,
-            new JwtAuthenticationStateProvider(_tokenStorage.Object, readCache: null, listPageState),
+            new JwtAuthenticationStateProvider(_tokenStorage.Object, listPageState),
             _pushRegistration.Object,
-            readCache: null,
-            _localCache.Object);
+            localCache: _localCache.Object);
         return (sut, listPageState, module);
     }
 
@@ -667,8 +665,7 @@ public sealed class AuthUIServiceTests : IDisposable
             new DirectApiTokenRefresher(factory, secureStore.Object),
             _authStateProvider,
             _pushRegistration.Object,
-            readCache: null,
-            _localCache.Object);
+            localCache: _localCache.Object);
     }
 
     // ==================== Password ====================

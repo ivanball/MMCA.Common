@@ -283,7 +283,8 @@ public partial class UserAdminList<TUser>
             locking ? T("Confirm.Lock.Title") : T("Confirm.Unlock.Title"),
             locking ? T("Confirm.Lock.Message", user.Email) : T("Confirm.Unlock.Message", user.Email),
             locking ? T("Action.Lock") : T("Action.Unlock"),
-            T("Button.Cancel"));
+            T("Button.Cancel"),
+            destructive: locking);
 
         if (!confirmed)
         {

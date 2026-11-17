@@ -47,6 +47,33 @@ public sealed class DeleteConfirmationKeyboardE2ETests : GalleryAxeTestBase
         await Expect(Page.GetByRole(AriaRole.Dialog)).ToHaveCountAsync(0);
     }
 
+    /// <summary>
+    /// B2: <c>IAppDialogService.ConfirmAsync</c> opens the same Cancel-first dialog. The gallery's
+    /// <c>/components</c> page hosts an <c>UnsavedChangesGuard</c>, whose prompt is a ConfirmAsync:
+    /// mark the page dirty, start an in-app navigation, and the prompt must open on "Stay" (its
+    /// declining button), and Escape must keep the user on the page.
+    /// </summary>
+    [Fact]
+    public async Task UnsavedChangesPrompt_PutsInitialFocusOnStay_AndEscapeStaysOnThePage()
+    {
+        await Page.GotoAndWaitForBlazorAsync("/components");
+        await Page.GetByTestId("toggle-dirty").ClickAsync();
+        await Expect(Page.GetByText("Dirty state: unsaved changes")).ToBeVisibleAsync();
+
+        // An in-app navigation, so the guard's LocationChanging handler runs (a full load would not).
+        await Page.EvaluateAsync("() => Blazor.navigateTo('/grid')");
+
+        var dialog = Page.GetByRole(AriaRole.Dialog);
+        await Expect(dialog.GetByRole(AriaRole.Button, new() { Name = "Stay" })).ToBeFocusedAsync();
+        await Expect(dialog.GetByRole(AriaRole.Button, new() { Name = "Leave" })).Not.ToBeFocusedAsync();
+
+        await Page.Keyboard.PressAsync("Escape");
+
+        await Expect(Page.GetByRole(AriaRole.Dialog)).ToHaveCountAsync(0);
+        await Expect(Page.GetByText("Dirty state: unsaved changes")).ToBeVisibleAsync();
+        Assert.EndsWith("/components", Page.Url, StringComparison.Ordinal);
+    }
+
     private async Task OpenDeleteConfirmationAsync()
     {
         await Page.GotoAndWaitForBlazorAsync("/components");

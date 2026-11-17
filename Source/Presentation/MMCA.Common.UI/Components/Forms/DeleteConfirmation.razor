@@ -2,12 +2,11 @@
 @inject IDialogService DialogService
 
 @code {
-    // A confirmation before something irreversible: Escape backs out (MudBlazor resolves it as Cancel,
-    // so ShowAsync returns null). Initial focus on Cancel comes from DeleteConfirmationDialog's own focus trap.
-    private static readonly DialogOptions ConfirmationDialogOptions = new()
-    {
-        CloseOnEscapeKey = true
-    };
+    // A confirmation before something irreversible, in ConfirmationDialog's shape: Cancel first and
+    // focused, Escape backs out (ShowAsync returns null), the Delete button in the error color.
+
+    // The data-testid of the Delete button, which the E2E confirm helpers target.
+    private const string ConfirmTestId = "confirm-delete";
 
     /// <summary>
     /// Display name of the entity being deleted. Pass a LOCALIZED noun (e.g. <c>L["EntityName"]</c> from
@@ -24,18 +23,16 @@
     /// <returns><see langword="true"/> when the user confirmed; <see langword="null"/> when they cancelled or dismissed it.</returns>
     public async Task<bool?> ShowAsync(string? entityName)
     {
-        var parameters = new DialogParameters<DeleteConfirmationDialog>
-        {
-            { dialog => dialog.EntityType, DisplayEntityType },
-            { dialog => dialog.EntityName, entityName }
-        };
+        var entityType = DisplayEntityType;
+        var confirmed = await ConfirmationDialog.ShowAsync(
+            DialogService,
+            L["Delete.Title", entityType],
+            L["Delete.Message", entityType.ToLower(System.Globalization.CultureInfo.CurrentUICulture), entityName ?? string.Empty],
+            L["Delete.Confirm"],
+            L["Common.Button.Cancel"],
+            destructive: true,
+            ConfirmTestId);
 
-        var reference = await DialogService.ShowAsync<DeleteConfirmationDialog>(
-            title: null,
-            parameters,
-            ConfirmationDialogOptions);
-        var result = await reference.Result;
-
-        return result is null || result.Canceled || result.Data is not bool confirmed ? null : confirmed;
+        return confirmed ? true : null;
     }
 }
