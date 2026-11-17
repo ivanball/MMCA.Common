@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.298.0] - 2026-11-17
 
 **Every host that maps refresh sessions (`RefreshSessions:Enabled`, or its own call to `ApplyRefreshSessionConfiguration`) needs one migration on the Identity database**: seven new nullable columns on `RefreshSessions`, all 256 wide: `DeviceId`, `DevicePlatform`, `DeviceFormFactor` and `DeviceType` non-unicode (`varchar(256)` on SQL Server), `DeviceName`, `DeviceModel` and `DeviceManufacturer` unicode (`nvarchar(256)`). A host with a personal-data inventory (`PiiInventoryTestsBase` over the framework Domain assembly) also needs a row for each of the seven new `[Pii]` members.
 

@@ -143,6 +143,25 @@ MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Role.get -> string!
 MMCA.Common.Shared.Auth.AuthClaimTypes
 MMCA.Common.Shared.Auth.AuthErrorCodes
 MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions
+MMCA.Common.Shared.Auth.DeviceMetadata
+MMCA.Common.Shared.Auth.DeviceMetadata.<Clone>$() -> MMCA.Common.Shared.Auth.DeviceMetadata!
+MMCA.Common.Shared.Auth.DeviceMetadata.Deconstruct(out string? DeviceId, out string? DeviceName, out string? DeviceModel, out string? DeviceManufacturer, out string? DevicePlatform, out string? DeviceFormFactor, out string? DeviceType) -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceFormFactor.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceFormFactor.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceId.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceId.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceManufacturer.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceManufacturer.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceMetadata(string? DeviceId, string? DeviceName, string? DeviceModel, string? DeviceManufacturer, string? DevicePlatform, string? DeviceFormFactor, string? DeviceType) -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceModel.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceModel.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceName.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceName.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DevicePlatform.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DevicePlatform.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceType.get -> string?
+MMCA.Common.Shared.Auth.DeviceMetadata.DeviceType.init -> void
+MMCA.Common.Shared.Auth.DeviceMetadata.Equals(MMCA.Common.Shared.Auth.DeviceMetadata? other) -> bool
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse!
 MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Deconstruct(out string! Provider, out string! DisplayName) -> void
@@ -460,7 +479,9 @@ MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.CreatedAt.get -> System.DateTime
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.CreatedAt.init -> void
-MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Deconstruct(out System.Guid SessionId, out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out string? IpAddress, out string? UserAgent, out bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Deconstruct(out System.Guid SessionId, out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out string? IpAddress, out string? UserAgent, out bool IsCurrent, out MMCA.Common.Shared.Auth.DeviceMetadata? Device) -> void
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Device.get -> MMCA.Common.Shared.Auth.DeviceMetadata?
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Device.init -> void
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.Equals(MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse? other) -> bool
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.ExpiresAt.get -> System.DateTime
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.ExpiresAt.init -> void
@@ -468,7 +489,7 @@ MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.IpAddress.get ->
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.IpAddress.init -> void
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.IsCurrent.get -> bool
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.IsCurrent.init -> void
-MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.RefreshSessionSummaryResponse(System.Guid SessionId, System.DateTime CreatedAt, System.DateTime ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.RefreshSessionSummaryResponse(System.Guid SessionId, System.DateTime CreatedAt, System.DateTime ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent, MMCA.Common.Shared.Auth.DeviceMetadata? Device = null) -> void
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.SessionId.get -> System.Guid
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.SessionId.init -> void
 MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse.UserAgent.get -> string?
@@ -490,7 +511,9 @@ MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn = 0 -> MMCA.Comm
 MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.ViewAs = 1 -> MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse!
-MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Deconstruct(out System.Guid SignInId, out System.DateTime StartedAt, out System.DateTime LastActiveAt, out string? IpAddress, out string? UserAgent, out System.DateTime? EndedAt, out string? EndReason, out bool IsCurrent, out MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind, out MMCA.Common.Shared.Auth.DeviceMetadata? Device) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Device.get -> MMCA.Common.Shared.Auth.DeviceMetadata?
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.Device.init -> void
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.get -> string?
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndReason.init -> void
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.EndedAt.get -> System.DateTime?
@@ -506,7 +529,7 @@ MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.get -> Syst
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.LastActiveAt.init -> void
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.get -> System.Guid
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInId.init -> void
-MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn) -> void
+MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.SignInSummaryResponse(System.Guid SignInId, System.DateTime StartedAt, System.DateTime LastActiveAt, string? IpAddress, string? UserAgent, System.DateTime? EndedAt, string? EndReason, bool IsCurrent, MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind Kind = MMCA.Common.Shared.Auth.Responses.SignInHistoryEntryKind.SignIn, MMCA.Common.Shared.Auth.DeviceMetadata? Device = null) -> void
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.get -> System.DateTime
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.StartedAt.init -> void
 MMCA.Common.Shared.Auth.Responses.SignInSummaryResponse.UserAgent.get -> string?
@@ -583,27 +606,6 @@ MMCA.Common.Shared.Auth.RoleValue.RoleValue(string! value) -> void
 MMCA.Common.Shared.Auth.RoleValue.Value.get -> string!
 MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute
 MMCA.Common.Shared.Auth.ViewAsReadOnlyEndpointAttribute.ViewAsReadOnlyEndpointAttribute() -> void
-MMCA.Common.Shared.AuthenticationRequest
-MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest() -> void
-MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest(string! DeviceId, string! Email, string! DeviceFormFactor, string! DevicePlatform, string! DeviceModel, string! DeviceManufacturer, string! DeviceName, string! DeviceType) -> void
-MMCA.Common.Shared.AuthenticationRequest.Deconstruct(out string! DeviceId, out string! Email, out string! DeviceFormFactor, out string! DevicePlatform, out string! DeviceModel, out string! DeviceManufacturer, out string! DeviceName, out string! DeviceType) -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceId.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceId.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceModel.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceModel.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceName.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceName.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.init -> void
-MMCA.Common.Shared.AuthenticationRequest.DeviceType.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.DeviceType.init -> void
-MMCA.Common.Shared.AuthenticationRequest.Email.get -> string!
-MMCA.Common.Shared.AuthenticationRequest.Email.init -> void
-MMCA.Common.Shared.AuthenticationRequest.Equals(MMCA.Common.Shared.AuthenticationRequest other) -> bool
 MMCA.Common.Shared.Calendars.IcsCalendarBuilder
 MMCA.Common.Shared.Calendars.IcsEvent
 MMCA.Common.Shared.Calendars.IcsEvent.<Clone>$() -> MMCA.Common.Shared.Calendars.IcsEvent!
@@ -1157,6 +1159,9 @@ override MMCA.Common.Shared.Abstractions.PaginationMetadata.ToString() -> string
 override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.GetHashCode() -> int
 override MMCA.Common.Shared.Auditing.AuditHistoryEntryDTO.ToString() -> string!
+override MMCA.Common.Shared.Auth.DeviceMetadata.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.DeviceMetadata.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.DeviceMetadata.ToString() -> string!
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.ToString() -> string!
@@ -1246,7 +1251,6 @@ override MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.ToString()
 override MMCA.Common.Shared.Auth.RoleValue.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.RoleValue.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.RoleValue.ToString() -> string!
-override MMCA.Common.Shared.AuthenticationRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Calendars.IcsEvent.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Calendars.IcsEvent.GetHashCode() -> int
 override MMCA.Common.Shared.Calendars.IcsEvent.ToString() -> string!
@@ -1420,6 +1424,8 @@ static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this Sys
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.IsViewAs(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+static MMCA.Common.Shared.Auth.DeviceMetadata.operator !=(MMCA.Common.Shared.Auth.DeviceMetadata? left, MMCA.Common.Shared.Auth.DeviceMetadata? right) -> bool
+static MMCA.Common.Shared.Auth.DeviceMetadata.operator ==(MMCA.Common.Shared.Auth.DeviceMetadata? left, MMCA.Common.Shared.Auth.DeviceMetadata? right) -> bool
 static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator !=(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse.operator ==(MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? left, MMCA.Common.Shared.Auth.ExternalProviders.OidcDiscoveryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest.operator !=(MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? left, MMCA.Common.Shared.Auth.MachineClients.CreateMachineClientRequest? right) -> bool
@@ -1503,8 +1509,6 @@ static MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.operator !=(
 static MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse.operator ==(MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? left, MMCA.Common.Shared.Auth.Responses.ViewAsGrantSummaryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.RoleValue.BuildLookup<TRole>(params TRole![]! roles) -> System.Collections.Frozen.FrozenDictionary<string!, TRole!>!
 static MMCA.Common.Shared.Auth.RoleValue.Validate(string! role, System.Collections.Generic.IReadOnlySet<string!>! knownRoles, string! source) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.Shared.AuthenticationRequest.operator !=(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
-static MMCA.Common.Shared.AuthenticationRequest.operator ==(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
 static MMCA.Common.Shared.Calendars.IcsCalendarBuilder.Build(string! productId, System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.Calendars.IcsEvent!>! events, System.DateTimeOffset dtStamp) -> string!
 static MMCA.Common.Shared.Calendars.IcsEvent.operator !=(MMCA.Common.Shared.Calendars.IcsEvent? left, MMCA.Common.Shared.Calendars.IcsEvent? right) -> bool
 static MMCA.Common.Shared.Calendars.IcsEvent.operator ==(MMCA.Common.Shared.Calendars.IcsEvent? left, MMCA.Common.Shared.Calendars.IcsEvent? right) -> bool
@@ -1722,8 +1726,6 @@ virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.Str
 ~override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.ToString() -> string
 ~override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.ToString() -> string
-~override MMCA.Common.Shared.AuthenticationRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.AuthenticationRequest.ToString() -> string
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.ToString() -> string
 ~override MMCA.Common.Shared.Legal.AcceptLegalTermsRequest.Equals(object obj) -> bool

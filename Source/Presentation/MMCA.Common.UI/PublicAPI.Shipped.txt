@@ -997,7 +997,7 @@ MMCA.Common.UI.Services.Auditing.IAuditHistoryUIService.GetPageAsync(string! rou
 MMCA.Common.UI.Services.Auth.AuthDelegatingHandler
 MMCA.Common.UI.Services.Auth.AuthDelegatingHandler.AuthDelegatingHandler(MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Auth.AuthUIService
-MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null, MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore? localCache = null) -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null, MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore? localCache = null, MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter? deviceMetadataReporter = null, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Auth.AuthUIService!>? logger = null) -> void
 MMCA.Common.UI.Services.Auth.AuthUIService.BeginRegistrationAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.BeginSignInAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Passkeys.PasskeyOptionsResponse!>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -1020,6 +1020,11 @@ MMCA.Common.UI.Services.Auth.AuthUIService.RevokeSessionAsync(System.Guid sessio
 MMCA.Common.UI.Services.Auth.AuthUIService.SignInAsync(MMCA.Common.Shared.Auth.Passkeys.PasskeySignInRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.TryRefreshTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.Devices.AppUserAgent
+MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter
+MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter.ReportAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.Devices.NullDeviceMetadataReporter
+MMCA.Common.UI.Services.Auth.Devices.NullDeviceMetadataReporter.NullDeviceMetadataReporter() -> void
+MMCA.Common.UI.Services.Auth.Devices.NullDeviceMetadataReporter.ReportAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.EmailConfirmationUIService
 MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.EmailConfirmationUIService(System.Net.Http.IHttpClientFactory! httpClientFactory) -> void
@@ -1124,7 +1129,7 @@ MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.ClearTokensAs
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.Dispose() -> void
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
-MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SecureStoreTokenStorageService(MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! store, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SecureStoreTokenStorageService(MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! store, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter? deviceMetadataReporter = null, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService!>? logger = null) -> void
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition
