@@ -343,6 +343,7 @@ MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContractPurityTestsBase() -> void
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContracts_ShouldNotDependOn_ServiceInternals() -> void
 MMCA.Common.Testing.Architecture.SharedLayerTestsBase
+MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleShared_Enums_ShouldHave_ExplicitValues() -> void
 MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleShared_ShouldBe_Isolated() -> void
 MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleShared_ShouldNotDependOn_EntityFrameworkCore() -> void
 MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleShared_ShouldNotDependOn_OwnInternalLayers() -> void
@@ -588,6 +589,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInfrastructuresA
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInternalLayersAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedDoesNotDependOnOwnInternalLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedEnumValuesAreExplicit(System.Collections.Generic.IReadOnlyCollection<string!>! sharedSourceDirectories) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedIsFrameworkFree(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
@@ -732,6 +734,7 @@ virtual MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.Applica
 virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.ScannedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.MinimumGovernedPages.get -> int
+virtual MMCA.Common.Testing.Architecture.SharedLayerTestsBase.ModuleSharedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.AllowedHardDeleteTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.AllowedEntries.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.SpanishAccentTestsBase.MinimumResourceFileCount.get -> int
