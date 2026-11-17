@@ -620,6 +620,7 @@ MMCA.Common.Application.Interfaces.Infrastructure.Notifications.INativePushSende
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.INotificationRecipientProvider
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.INotificationRecipientProvider.GetRecipientUserIdsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushDeviceRegistrar
+MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushDeviceRegistrar.DeleteAllForUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushDeviceRegistrar.DeleteAsync(int userId, string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushDeviceRegistrar.UpsertAsync(int userId, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Notifications.IPushNotificationSender
@@ -867,6 +868,7 @@ MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.LastError.get
 MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.LastError.init -> void
 MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.ScheduledOn.get -> System.DateTime
 MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.ScheduledOn.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandExecution
 MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute
 MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute.InternalCommandNameAttribute(string! name) -> void
 MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute.Name.get -> string!
@@ -1345,9 +1347,16 @@ MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandle
 MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>
-MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger, MMCA.Common.Application.Auth.IRefreshSessionStore? refreshSessions = null, System.TimeProvider? timeProvider = null, MMCA.Common.Application.Auth.ViewAs.IViewAsGrantStore? viewAsGrants = null, MMCA.Common.Application.InternalCommands.IInternalCommandScheduler? internalCommandScheduler = null) -> void
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.<Clone>$() -> MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand!
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Deconstruct(out int UserId) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.DeleteUserPushInstallationsInternalCommand(int UserId) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Equals(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? other) -> bool
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.UserId.get -> int
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.UserId.init -> void
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.ConfirmEmailHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService! tokenService, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -1364,6 +1373,10 @@ MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<
 MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection
 MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection.ExportAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!>!
 MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection.SectionName.get -> string!
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.ExportAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!>!
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.RefreshSessionUserDataExportSection(MMCA.Common.Application.Auth.IRefreshSessionStore! sessionStore) -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.SectionName.get -> string!
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionDefaults
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.<Clone>$() -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
@@ -1377,6 +1390,37 @@ MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResul
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UnavailableReason.get -> string?
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UnavailableReason.init -> void
 MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UserDataExportSectionResult() -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.<Clone>$() -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.CreatedAt.get -> System.DateTime
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.CreatedAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Deconstruct(out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out System.DateTime? RevokedAt, out string? RevocationReason, out string? IpAddress, out string? UserAgent, out string? DeviceId, out string? DeviceName, out string? DeviceModel, out string? DeviceManufacturer, out string? DevicePlatform, out string? DeviceFormFactor, out string? DeviceType) -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceFormFactor.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceFormFactor.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceId.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceId.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceManufacturer.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceManufacturer.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceModel.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceModel.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceName.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceName.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DevicePlatform.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DevicePlatform.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceType.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.DeviceType.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Equals(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? other) -> bool
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ExpiresAt.get -> System.DateTime
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ExpiresAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.IpAddress.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.IpAddress.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevocationReason.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevocationReason.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevokedAt.get -> System.DateTime?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.RevokedAt.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserAgent.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserAgent.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.UserSessionExportDTO(System.DateTime CreatedAt, System.DateTime ExpiresAt, System.DateTime? RevokedAt, string? RevocationReason, string? IpAddress, string? UserAgent, string? DeviceId, string? DeviceName, string? DeviceModel, string? DeviceManufacturer, string? DevicePlatform, string? DeviceFormFactor, string? DeviceType) -> void
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ForgotPasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.IPasswordResetTokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Mail.IEmailSender! emailSender, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -1659,6 +1703,7 @@ const MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity, TE
 const MMCA.Common.Application.Services.Query.EntityQueryPipeline.MaxUnboundedResultLimit = 1000 -> int
 const MMCA.Common.Application.Services.Query.QueryFieldContract.MaxNavigationDepth = 3 -> int
 const MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.CurrentFormatVersion = "1.0" -> string!
+const MMCA.Common.Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection.Name = "SignInSessions" -> string!
 const MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionDefaults.UnavailableReason = "This section could not be retrieved. The data is unchanged; the export can be requested again later." -> string!
 const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.IdHeader = "webhook-id" -> string!
 const MMCA.Common.Application.Webhooks.Delivery.WebhookSignature.SecretPrefix = "whsec_" -> string!
@@ -1771,9 +1816,15 @@ override MMCA.Common.Application.UseCases.Crud.UpdateEntityHandler<TEntity, TEnt
 override MMCA.Common.Application.UseCases.Crud.UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest>.HandlerName.get -> string!
 override MMCA.Common.Application.UseCases.Crud.UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest>.MutateAsync(TEntity! entity, MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>! command, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 override MMCA.Common.Application.UseCases.Crud.UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest>.RowVersion(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>! command) -> byte[]!
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.ToString() -> string!
 override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Equals(object? obj) -> bool
 override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.GetHashCode() -> int
 override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.ToString() -> string!
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.ToString() -> string!
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.Equals(object? obj) -> bool
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.GetHashCode() -> int
 override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.ToString() -> string!
@@ -1895,6 +1946,8 @@ static MMCA.Common.Application.Interfaces.Navigation.NavigationPropertyInfo.oper
 static MMCA.Common.Application.Interfaces.Navigation.NavigationPropertyInfo.operator ==(MMCA.Common.Application.Interfaces.Navigation.NavigationPropertyInfo? left, MMCA.Common.Application.Interfaces.Navigation.NavigationPropertyInfo? right) -> bool
 static MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.operator !=(MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? left, MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? right) -> bool
 static MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.operator ==(MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? left, MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? right) -> bool
+static MMCA.Common.Application.InternalCommands.InternalCommandExecution.Begin() -> System.IDisposable!
+static MMCA.Common.Application.InternalCommands.InternalCommandExecution.IsActive.get -> bool
 static MMCA.Common.Application.Notifications.DependencyInjection.AddNotificationApplicationServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.operator !=(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? right) -> bool
 static MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.operator ==(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? right) -> bool
@@ -1947,10 +2000,15 @@ static MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdat
 static MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>.operator ==(MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? left, MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>? right) -> bool
 static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For(System.Type! entityType) -> string!
 static MMCA.Common.Application.UseCases.Markers.EntityCachePrefix.For<TEntity>() -> string!
+static MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.operator !=(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? left, MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? right) -> bool
+static MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand.operator ==(MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? left, MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserPushInstallationsInternalCommand? right) -> bool
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Complete(string! sectionName, object? data) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Unavailable(string! sectionName, string? reason = null) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.operator !=(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? right) -> bool
 static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.operator ==(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.From(MMCA.Common.Domain.Auth.RefreshSession! session) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO!
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.operator !=(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO.operator ==(MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserSessionExportDTO? right) -> bool
 static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator !=(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
 static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator ==(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
 static MMCA.Common.Application.Users.UserOwnershipRule.CheckOwnership(MMCA.Common.Application.Users.IUserOwnedRequest! request, bool callerHasPrivilegedRole, string! code, string! message, string! source) -> MMCA.Common.Shared.Abstractions.Error?
