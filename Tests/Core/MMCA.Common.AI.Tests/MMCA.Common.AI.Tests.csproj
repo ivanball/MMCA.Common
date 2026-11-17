@@ -15,10 +15,6 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- The governed package plus both adapters: the provider tests construct each adapter's client

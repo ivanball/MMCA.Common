@@ -77,10 +77,6 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="NetArchTest.eNhancedEdition" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />

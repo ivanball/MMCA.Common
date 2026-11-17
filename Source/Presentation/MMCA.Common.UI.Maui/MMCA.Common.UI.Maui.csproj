@@ -77,6 +77,20 @@
     <PackageReference Include="Xamarin.Firebase.Messaging" />
   </ItemGroup>
 
+  <!-- The Razor SDK's default props add every .razor file to Content (that is how its component
+       compiler finds them, so the items must stay), and on ios and maccatalyst the Apple SDK turns
+       every Content item of a library into an embedded bundle resource. Its bundle path is computed
+       relative to the Razor SDK's own folder: on a same-drive build that path escapes the bundle and
+       is dropped with a warning, but on the CI pack runner (source on D:, SDK on C:) no relative path
+       exists and the ABSOLUTE path was embedded (__monotouch_content_D:_sa_s...NativeThemeSync.razor
+       in 1.295.0 and 1.296.0), which every consuming iOS/Mac Catalyst app build then refuses to
+       extract. A component's source is never runtime content, so PublishFolderType="None" keeps it
+       out of the bundle (the same switch MMCA.Store.UI uses for its linked branding Content). The
+       build-maui CI job fails if any __monotouch_content_ resource reappears. -->
+  <ItemGroup>
+    <Content Update="**\*.razor" PublishFolderType="None" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.UI\MMCA.Common.UI.csproj" />
   </ItemGroup>

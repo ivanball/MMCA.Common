@@ -34,12 +34,6 @@
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
         }
       },
-      "coverlet.collector": {
-        "type": "Direct",
-        "requested": "[10.1.0, )",
-        "resolved": "10.1.0",
-        "contentHash": "SlYCIHnBYxINSUpR75SiM5JEmnx11pqT+Ac/C/fUqTTA0dLPl9eYzmFXKKuxmQhL3ZdTQl4PBD3YdAxAauaKLQ=="
-      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.340, )",
@@ -994,12 +988,6 @@
           "Microsoft.Extensions.Localization.Abstractions": "11.0.0",
           "Microsoft.Extensions.Logging": "11.0.0"
         }
-      },
-      "coverlet.collector": {
-        "type": "Direct",
-        "requested": "[10.1.0, )",
-        "resolved": "10.1.0",
-        "contentHash": "SlYCIHnBYxINSUpR75SiM5JEmnx11pqT+Ac/C/fUqTTA0dLPl9eYzmFXKKuxmQhL3ZdTQl4PBD3YdAxAauaKLQ=="
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
