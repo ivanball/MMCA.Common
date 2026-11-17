@@ -389,7 +389,7 @@
          1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
          does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
          only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
-    <PackageVersion Include="AngleSharp" Version="1.10.3" />
+    <PackageVersion Include="AngleSharp" Version="1.10.4" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -403,18 +403,18 @@
     <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
     <!-- PostgreSQL integration tier only (Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests,
          outside the .slnx, own CI job): the SQL a provider actually emits (partial-index predicates,
          boolean comparisons, timestamp kinds) is the class of thing only a real server can reject,
          and no in-memory or SQLite substitute reproduces it. Same Testcontainers family version as
          the Redis and MsSql pins. -->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
-    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.17.0" />
     <!-- Service Bus emulator fixture base in MMCA.Common.Testing.Azure: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
          tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
-    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.17.0" />
     <!-- AWS integration tier only (Tests/Hosting/MMCA.Common.Aws.Integration.Tests, outside the
          .slnx, own CI job): S3 and SQS/SNS against LocalStack. Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers.LocalStack" Version="4.16.0" />
