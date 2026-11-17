@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Infrastructure.Mail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -41,6 +42,21 @@ public sealed class DependencyInjectionInfrastructureTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(configData)
             .Build();
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersTheSignInSessionsExportSection_Once()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        services.AddInfrastructure(config);
+        services.AddInfrastructure(config);
+
+        services.Where(d => d.ServiceType == typeof(IUserDataExportSection))
+            .Should().ContainSingle(
+                "every host that issues refresh sessions exports them with no app code, and a repeated call adds nothing")
+            .Which.ImplementationType.Should().Be<RefreshSessionUserDataExportSection>();
     }
 
     [Fact]

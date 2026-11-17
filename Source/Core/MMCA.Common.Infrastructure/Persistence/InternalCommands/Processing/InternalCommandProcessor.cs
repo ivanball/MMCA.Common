@@ -551,6 +551,10 @@ public sealed partial class InternalCommandProcessor(
             row.CorrelationId,
             PrincipalAuthenticationType);
 
+        // Marks the flow as the durable path, so a handler shared with an inline endpoint can report a
+        // transient failure here (and get the row retried) where the endpoint would swallow it.
+        using var execution = InternalCommandExecution.Begin();
+
         try
         {
             var result = await InternalCommandDispatcher

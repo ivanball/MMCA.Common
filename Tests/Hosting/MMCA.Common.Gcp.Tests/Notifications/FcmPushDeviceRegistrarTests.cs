@@ -172,4 +172,39 @@ public sealed class FcmPushDeviceRegistrarTests
 
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.DeleteFailed");
     }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_DeletesEveryDocumentTheOwnerHolds_OwnerScoped()
+    {
+        const string second = "9a8b7c6d5e4f40312a1b2c3d4e5f6a7b";
+        AddInstallation("42", "token");
+        _registry.Installations[second] = new FcmInstallation(second, "42", "fcmv1", "token-2");
+        _registry.Installations["someone-else"] = new FcmInstallation("someone-else", "99", "fcmv1", "token-3");
+
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _registry.Queries.Should().ContainSingle().Which.Should().Equal("42");
+        _registry.OwnedDeletes.Should().BeEquivalentTo([(InstallationId, "42"), (second, "42")],
+            "each delete is conditional on the owner, and another user's document is never listed");
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_WithNoDocuments_SucceedsAndDeletesNothing()
+    {
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        ShouldHaveNoDelete();
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_RegistryFailure_ReturnsAFailureResult()
+    {
+        _registry.QueryException = new RpcException(new Status(StatusCode.Unavailable, "boom"));
+
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.DeleteFailed");
+    }
 }

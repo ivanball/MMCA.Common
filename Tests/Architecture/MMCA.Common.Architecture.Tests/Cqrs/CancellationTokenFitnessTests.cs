@@ -50,6 +50,22 @@ public sealed class CancellationTokenFitnessTests
             "an implicit implementation of an interface declared outside the map is auto-exempt: the signature is externally fixed");
     }
 
+    [Fact]
+    public void Base_AlwaysExemptsTheFrameworkHubMethods_OnTopOfTheSubclassList()
+    {
+        RunRule().Should().Contain(
+            $"{nameof(NotificationHub)}.JoinChannelAsync",
+            "the bare rule reports the token-less hub-shaped methods");
+
+        var act = new BaseProbe().AsyncMethods_ShouldDeclare_TrailingCancellationToken;
+
+        var message = act.Should().Throw<Exception>("the other fixtures still offend").Which.Message;
+        message.Should().NotContain($"{nameof(NotificationHub)}.JoinChannelAsync", "the base applies the framework exemptions itself");
+        message.Should().NotContain($"{nameof(NotificationHub)}.LeaveChannelAsync");
+        message.Should().NotContain($"{nameof(ExemptableFixtureService)}.LegacyAsync", "the subclass list still applies alongside them");
+        message.Should().Contain($"{nameof(MissingTokenFixtureService)}.RunAsync");
+    }
+
     private static string RunRule(IReadOnlyCollection<string>? exemptMethods = null)
     {
         var act = () => ArchitectureRules.AsyncMethodsDeclareTrailingCancellationToken(
@@ -57,6 +73,15 @@ public sealed class CancellationTokenFitnessTests
             exemptMethods);
 
         return act.Should().Throw<Exception>().Which.Message;
+    }
+
+    /// <summary>A base subclass with no override of the framework list, private so xUnit does not collect its fact.</summary>
+    private sealed class BaseProbe : CancellationTokenConventionTestsBase
+    {
+        protected override IArchitectureMap Map { get; } = new CancellationTestMap();
+
+        protected override IReadOnlyList<string> CancellationTokenExemptMethods =>
+            [$"{nameof(ExemptableFixtureService)}.LegacyAsync"];
     }
 
     /// <summary>A map whose single Application layer is this test assembly, so the fixtures are in scope.</summary>

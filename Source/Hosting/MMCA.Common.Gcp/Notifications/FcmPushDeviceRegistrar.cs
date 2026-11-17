@@ -90,10 +90,38 @@ internal sealed class FcmPushDeviceRegistrar(
         catch (RpcException ex)
         {
             logger.LogError(ex, "Device installation delete failed");
-            return Result.Failure(Error.Failure(
-                code: "PushDevice.DeleteFailed",
-                message: "The device could not be unregistered from push notifications.",
-                source: nameof(FcmPushDeviceRegistrar)));
+            return DeleteFailed();
         }
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The registry lists the owner's documents; each delete is conditional on the owner, so a
+    /// document handed over in the meantime survives.
+    /// </remarks>
+    public async Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)
+    {
+        var owner = FcmInstallation.UserKey(userId);
+        try
+        {
+            var installations = await registry.QueryByUsersAsync([owner], cancellationToken).ConfigureAwait(false);
+            foreach (var installation in installations)
+            {
+                await registry.DeleteOwnedAsync(installation.InstallationId, owner, cancellationToken).ConfigureAwait(false);
+            }
+
+            return Result.Success();
+        }
+        catch (RpcException ex)
+        {
+            logger.LogError(ex, "Deleting a user's device installations failed");
+            return DeleteFailed();
+        }
+    }
+
+    private static Result DeleteFailed() =>
+        Result.Failure(Error.Failure(
+            code: "PushDevice.DeleteFailed",
+            message: "The device could not be unregistered from push notifications.",
+            source: nameof(FcmPushDeviceRegistrar)));
 }

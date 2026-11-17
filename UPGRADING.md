@@ -32,6 +32,28 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking:** `IPushDeviceRegistrar` (MMCA.Common.Application, `MMCA.Common.Application.Interfaces.Infrastructure.Notifications`) gains `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)`, the owner-scoped delete of every native-push installation a user owns. `NullPushDeviceRegistrar`, `AzureNotificationHubDeviceRegistrar`, `SnsPushDeviceRegistrar` and `FcmPushDeviceRegistrar` implement it. Only a consumer with its own `IPushDeviceRegistrar` implementation or hand-written test double is affected (none of ADC, Store or Helpdesk has one; Moq mocks are unaffected): add the member.
+
+| Old | New |
+|---|---|
+| `IPushDeviceRegistrar` with `UpsertAsync` and `DeleteAsync` | adds `Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)` |
+| a custom registrar | implement it: find the user's installations by the owner stamp, delete each only while it still carries that stamp, return a failure on a provider fault so the erasure's internal command retries |
+| a hand-written test double | `public Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success());` |
+
+**Breaking (binary only):** `DeleteUserHandlerBase<TUser, TCommand>` takes one more optional trailing constructor argument, `IInternalCommandScheduler? internalCommandScheduler = null`. Source compatible: every existing subclass compiles unchanged, so a recompile is the whole fix.
+
+**Not breaking, but adopt it:** forward the scheduler so erasure deletes the account's native-push installations, on the host that registers the push adapter: inject `IInternalCommandScheduler internalCommandScheduler` into the app's `DeleteUserHandler` and pass `internalCommandScheduler: internalCommandScheduler` to the base. The handler for the scheduled command is registered by `AddApplication()`.
+
+**Breaking (MMCA.Common.Testing.Architecture):** `CommandValidatorCoverageTestsBase` and `RawQueryableConventionTestsBase` now fail on a stale allowlist entry, and the command-validator rule now sees the framework's own request validators and exempts the generic delete command by itself. A consumer subclass whose `AllowedUnvalidatedCommands` names `MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand`, or a command bridged (`ICommandWithRequest<T>`) to a request validator shipped in MMCA.Common.Application (forgot and reset password, send and confirm email confirmation, send and redeem sign-in link), or a command that has its own validator, or a name that matches no handled command, is red until the entry is deleted. The same holds for an `AllowedFiles` entry of `RawQueryableConventionTestsBase` that names no scanned file or a file with no raw `IQueryable` use left. Fix: delete each entry the failure message lists as stale.
+
+| Failure line | Fix |
+|---|---|
+| `<entry> is allowlisted but names no handled command (stale: remove it)` | delete the entry (the command was renamed, moved or deleted) |
+| `<entry> is allowlisted but every command it names is validated or exempt (stale: remove it)` | delete the entry (the command has a validator, bridges to a framework request validator, or is the generic delete) |
+| `<file> is in AllowedFiles but no scanned file of that name uses a raw IQueryable surface (stale: remove it)` | delete the entry |
+
 ## [1.291.0] - 2026-11-14
 
 **Breaking:** `IExternalAuthBroker.SignInAsync` (MMCA.Common.UI, `MMCA.Common.UI.Services.Capabilities.Auth`) returns `Task<ExternalSignInResult>` instead of `Task<bool>`, so a provider sign-in the server refused carries the server's error code to the Login page. `UnavailableExternalAuthBroker` and `MauiExternalAuthBroker` change with it. Only a consumer that implements or calls the broker is affected (none of ADC, Store or Helpdesk does): return `ExternalSignInResult.Success` or `ExternalSignInResult.Failed(errorCode)`, and read `Succeeded` where the `bool` was read.

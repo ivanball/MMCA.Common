@@ -118,6 +118,41 @@ internal sealed class SnsPushDeviceRegistrar(
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The <c>UserId</c> index lists the owner's rows. Each distinct endpoint goes first and the rows
+    /// last, the same order as <see cref="DeleteAsync"/>, so a failure part-way leaves rows a retry can
+    /// still find. Every row delete is conditional on the owner, so a row handed over in the meantime
+    /// survives (its endpoint, shared by token, is then re-created by that device's next registration).
+    /// </remarks>
+    public async Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)
+    {
+        var owner = SnsInstallationRegistry.UserKey(userId);
+        try
+        {
+            var ownerRows = await registry.QueryByUserAsync(owner, cancellationToken).ConfigureAwait(false);
+            foreach (var endpointArn in ownerRows.Select(row => row.EndpointArn).Distinct(StringComparer.Ordinal))
+            {
+                await registry.RemoveEndpointAsync(endpointArn, cancellationToken).ConfigureAwait(false);
+            }
+
+            foreach (var row in ownerRows)
+            {
+                await registry.DeleteOwnedAsync(row.InstallationId, owner, cancellationToken).ConfigureAwait(false);
+            }
+
+            return Result.Success();
+        }
+        catch (Exception ex) when (ex is AmazonServiceException || IsTransportFailure(ex, cancellationToken))
+        {
+            logger.LogError(ex, "Deleting a user's device installations failed");
+            return Result.Failure(Error.Failure(
+                code: "PushDevice.DeleteFailed",
+                message: "The device could not be unregistered from push notifications.",
+                source: nameof(SnsPushDeviceRegistrar)));
+        }
+    }
+
     private static Result InstallationConflict() =>
         Result.Failure(Error.Conflict(
             code: "PushDevice.InstallationConflict",

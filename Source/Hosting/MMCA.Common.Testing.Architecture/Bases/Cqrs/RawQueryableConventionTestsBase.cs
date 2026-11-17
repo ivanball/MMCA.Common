@@ -33,7 +33,9 @@ public abstract partial class RawQueryableConventionTestsBase
 
     /// <summary>
     /// File names (e.g. <c>"GetEventsHandler.cs"</c>) exempted from the rule — the adoption
-    /// ratchet for repos with existing raw-queryable handlers. Empty by default.
+    /// ratchet for repos with existing raw-queryable handlers. Empty by default. An entry that names
+    /// no scanned file, or only files with no raw-queryable use left, fails the rule as stale, so the
+    /// ratchet can only tighten.
     /// </summary>
     protected virtual IReadOnlyList<string> AllowedFiles => [];
 
@@ -65,24 +67,39 @@ public abstract partial class RawQueryableConventionTestsBase
         directories.Should().NotBeEmpty(
             because: "the raw-queryable scan found no Application source directories — the map declares no modules or the project folders moved; override ApplicationSourceDirectories() (a vacuous scan would verify nothing)");
 
+        var allowed = AllowedFiles.ToHashSet(StringComparer.Ordinal);
+        var allowedInUse = new HashSet<string>(StringComparer.Ordinal);
         var offenders = new List<string>();
         foreach (var directory in directories)
         {
             foreach (var file in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
             {
                 if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                    file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                    AllowedFiles.Contains(Path.GetFileName(file), StringComparer.Ordinal))
+                    file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                offenders.AddRange(ScanFile(file));
+                var fileName = Path.GetFileName(file);
+                var hits = ScanFile(file).ToList();
+                if (!allowed.Contains(fileName))
+                {
+                    offenders.AddRange(hits);
+                }
+                else if (hits.Count > 0)
+                {
+                    allowedInUse.Add(fileName);
+                }
             }
         }
 
+        offenders.AddRange(allowed
+            .Where(entry => !allowedInUse.Contains(entry))
+            .Order(StringComparer.Ordinal)
+            .Select(entry => $"  - {entry} is in AllowedFiles but no scanned file of that name uses a raw IQueryable surface (stale: remove it)"));
+
         ArchitectureAssert.NoViolations(offenders,
-            "Application-layer code must not use the raw IQueryable repository surfaces (Table/TableNoTracking/TableNoTrackingSingleQuery/TableNoTrackingSplitQuery) — raw-queryable handlers are EF-coupled and cannot move behind a gRPC boundary; use the focused repository methods, or record the file in AllowedFiles as a ratchet");
+            "Application-layer code must not use the raw IQueryable repository surfaces (Table/TableNoTracking/TableNoTrackingSingleQuery/TableNoTrackingSplitQuery): raw-queryable handlers are EF-coupled and cannot move behind a gRPC boundary; use the focused repository methods, or record the file in AllowedFiles as a ratchet (and remove the entry once the file no longer needs it)");
     }
 
     private static IEnumerable<string> ScanFile(string file)

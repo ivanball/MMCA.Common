@@ -387,6 +387,26 @@ public sealed class InternalCommandProcessorTests : IDisposable
         execution.Roles.Should().Equal("Admin", "Manager");
     }
 
+    [Fact]
+    public async Task Cycle_ExecutesTheCommandUnderTheInternalCommandExecutionMarker()
+    {
+        // A handler one command type serves inline AND deferred (the email-confirmation send) reads
+        // the marker to report a transient failure only on the durable path, so the row retries.
+        bool? activeDuringExecution = null;
+        _log.OnExecuted = _ =>
+        {
+            activeDuringExecution = InternalCommandExecution.IsActive;
+            return Task.CompletedTask;
+        };
+        _ = Seed(new RecordingCommand("marker"), InternalCommandTestHarness.EpochUtc);
+        var processor = CreateProcessor();
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        activeDuringExecution.Should().BeTrue("the processor marks the flow around every dispatch");
+        InternalCommandExecution.IsActive.Should().BeFalse("the marker does not leak past the dispatch");
+    }
+
     // L181: a command the inline caller was authorized for ONLY through a Permission claim must pass
     // the same gate when it runs deferred, so the row has to carry the claim and the restore rebuild it.
     [Fact]

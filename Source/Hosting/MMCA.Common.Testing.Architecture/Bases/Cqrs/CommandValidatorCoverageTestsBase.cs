@@ -13,6 +13,9 @@ namespace MMCA.Common.Testing.Architecture;
 /// <c>ICommandWithRequest&lt;TRequest&gt;</c> AND an <c>IValidator&lt;TRequest&gt;</c> exists. Both
 /// halves of the bridge are required, because the framework registers the bridge validator for every
 /// such command whether or not a request validator resolves, and one that resolves none adds no rules.
+/// A request validator shipped in the framework Application assembly counts (it is registered by
+/// <c>AddApplication()</c>), and the framework's generic <c>DeleteEntityCommand&lt;,&gt;</c> is exempt
+/// without an entry.
 /// </para>
 /// <para>
 /// Adoption: subclass and supply <see cref="Map"/>. Run once, write the missing validators, and put
@@ -26,7 +29,8 @@ public abstract class CommandValidatorCoverageTestsBase
     /// <summary>
     /// Command type full names or namespace prefixes that legitimately need no validation: an
     /// internal maintenance command, or one whose only payload is a server-supplied identifier.
-    /// Empty by default, which requires coverage everywhere.
+    /// Empty by default, which requires coverage everywhere. An entry that names no handled command,
+    /// or only commands that are validated or exempt, fails the rule as stale.
     /// </summary>
     protected virtual IReadOnlyCollection<string> AllowedUnvalidatedCommands => [];
 

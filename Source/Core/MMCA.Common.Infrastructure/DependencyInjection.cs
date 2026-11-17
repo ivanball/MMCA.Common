@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -170,6 +171,11 @@ public static partial class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.IRefreshSessionStore, Persistence.Auth.EFRefreshSessionStore>();
+
+            // The data-subject export's sign-in sessions section, over the same store, so every app
+            // with an export handler includes the session metadata it holds with no app code. Inert on
+            // a host with no export handler: nothing resolves the section there.
+            services.AddUserDataExportSection<Application.Users.UseCases.ExportUserData.RefreshSessionUserDataExportSection>();
 
             // Issues, rotates and revokes the token pair over that store; AuthenticationServiceBase
             // delegates every session decision to it. Scoped for the same reason as the store.

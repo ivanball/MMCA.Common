@@ -61,6 +61,20 @@ public sealed class ExemptableFixtureService
 }
 
 /// <summary>
+/// Same simple name and method names as MMCA.Common's SignalR hub: offenders to the bare rule, exempt
+/// under <see cref="MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase"/>, which
+/// always applies the framework's own hub exemptions.
+/// </summary>
+public sealed class NotificationHub
+{
+    /// <summary>Token-less, as a SignalR hub method's wire contract requires.</summary>
+    public Task JoinChannelAsync(string channel) => Task.FromResult(channel);
+
+    /// <summary>Token-less, as a SignalR hub method's wire contract requires.</summary>
+    public Task LeaveChannelAsync(string channel) => Task.FromResult(channel);
+}
+
+/// <summary>
 /// Auto-exempt: <c>MoveNextAsync</c> is an implicit implementation of <see cref="IAsyncEnumerator{T}"/>,
 /// declared outside the map's assemblies, so its token-less signature is not this repo's to change.
 /// </summary>

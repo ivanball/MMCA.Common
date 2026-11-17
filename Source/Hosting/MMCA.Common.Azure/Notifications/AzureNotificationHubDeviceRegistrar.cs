@@ -16,6 +16,12 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     INotificationHubClient hubClient,
     ILogger<AzureNotificationHubDeviceRegistrar> logger) : IPushDeviceRegistrar
 {
+    /// <summary>The system tag prefix the hub stamps on every registration an installation owns.</summary>
+    private const string InstallationIdTagPrefix = "$InstallationId:{";
+
+    /// <summary>Registrations read per page; the hub caps a page at 100.</summary>
+    private const int RegistrationPageSize = 100;
+
     /// <inheritdoc />
     public async Task<Result> UpsertAsync(UserIdentifierType userId, DeviceInstallationRequest request, CancellationToken cancellationToken = default)
     {
@@ -102,6 +108,87 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             logger.LogError(ex, "Device installation delete failed");
             return DeleteFailed();
         }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The hub has no "installations by tag" query, but every installation is materialized as
+    /// registrations that carry its tags plus the system tag <c>$InstallationId:{id}</c> (the SDK
+    /// models that tag on <see cref="RegistrationDescription"/>). Listing the registrations under the
+    /// owner's <c>user:{id}</c> tag, paged by continuation token, therefore yields the user's
+    /// installation ids, and each one goes through <see cref="DeleteAsync"/>, which re-reads the
+    /// installation and deletes it only while the owner tag is still on it.
+    /// </remarks>
+    public async Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)
+    {
+        HashSet<string> installationIds;
+        try
+        {
+            installationIds = await FindInstallationIdsAsync(userId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (MessagingException ex)
+        {
+            logger.LogError(ex, "Listing a user's device installations failed");
+            return DeleteFailed();
+        }
+
+        foreach (var installationId in installationIds)
+        {
+            var deleted = await DeleteAsync(userId, installationId, cancellationToken).ConfigureAwait(false);
+            if (deleted.IsFailure)
+            {
+                // The ones already deleted stay deleted, so a retry converges on the rest.
+                return deleted;
+            }
+        }
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// The installation ids behind every registration tagged with the user's owner tag, read from
+    /// each registration's <c>$InstallationId:{id}</c> system tag. A registration without one (made
+    /// through the registration model, which this registrar never uses) contributes nothing.
+    /// </summary>
+    private async Task<HashSet<string>> FindInstallationIdsAsync(UserIdentifierType userId, CancellationToken cancellationToken)
+    {
+        var ownerTag = NativePushUserTags.UserTag(userId);
+        var installationIds = new HashSet<string>(StringComparer.Ordinal);
+        var continuationToken = string.Empty;
+        do
+        {
+            var page = await hubClient
+                .GetRegistrationsByTagAsync(ownerTag, continuationToken, RegistrationPageSize, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var tag in page.SelectMany(registration => registration.Tags ?? Enumerable.Empty<string>()))
+            {
+                if (TryReadInstallationId(tag, out var installationId))
+                {
+                    installationIds.Add(installationId);
+                }
+            }
+
+            continuationToken = page.ContinuationToken;
+        }
+        while (!string.IsNullOrEmpty(continuationToken));
+
+        return installationIds;
+    }
+
+    /// <summary>Reads the id out of a <c>$InstallationId:{id}</c> system tag (case-insensitive, as the SDK matches it).</summary>
+    private static bool TryReadInstallationId(string? tag, out string installationId)
+    {
+        installationId = string.Empty;
+        if (tag is null
+            || tag.Length <= InstallationIdTagPrefix.Length + 1
+            || !tag.StartsWith(InstallationIdTagPrefix, StringComparison.OrdinalIgnoreCase)
+            || tag[^1] != '}')
+        {
+            return false;
+        }
+
+        installationId = tag[InstallationIdTagPrefix.Length..^1];
+        return true;
     }
 
     /// <summary>

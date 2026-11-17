@@ -341,6 +341,52 @@ public sealed class SnsPushDeviceRegistrarTests
     };
 
     [Fact]
+    public async Task DeleteAllForUserAsync_RemovesEachEndpointOnceAndEveryRowOwnerScoped()
+    {
+        const string otherInstallationId = "9a8b7c6d5e4f40312a1b2c3d4e5f6a7b";
+        _dynamoDb.Setup(x => x.QueryAsync(
+                It.Is<QueryRequest>(r => r.IndexName == SnsInstallationRegistry.UserIdIndexName && r.ExpressionAttributeValues[":user"].S == "42"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueryResponse { Items = [OwnerRow(InstallationId), OwnerRow(otherInstallationId)] });
+
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _sns.Verify(x => x.DeleteEndpointAsync(
+            It.Is<DeleteEndpointRequest>(r => r.EndpointArn == ExistingEndpointArn), It.IsAny<CancellationToken>()), Times.Once,
+            "two installation ids holding one device token share one endpoint, removed once");
+        _dynamoDb.Verify(x => x.DeleteItemAsync(
+            It.Is<DeleteItemRequest>(r => r.ConditionExpression == "UserId = :me" && r.ExpressionAttributeValues[":me"].S == "42"),
+            It.IsAny<CancellationToken>()), Times.Exactly(2),
+            "every row goes, each conditional on the owner so a row handed over meanwhile survives");
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_WithNoRows_SucceedsAndTouchesNothing()
+    {
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        VerifyNoSnsMutation();
+        _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAllForUserAsync_ServiceFailure_ReturnsAFailureAndKeepsTheRows()
+    {
+        _dynamoDb.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueryResponse { Items = [OwnerRow(InstallationId)] });
+        _sns.Setup(x => x.DeleteEndpointAsync(It.IsAny<DeleteEndpointRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonSimpleNotificationServiceException("boom"));
+
+        var result = await CreateSut().DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("PushDevice.DeleteFailed");
+        _dynamoDb.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), It.IsAny<CancellationToken>()), Times.Never,
+            "endpoints go first and rows last, so a retry still finds the rows");
+    }
+
+    [Fact]
     public async Task DeleteAsync_ByAnotherUser_SucceedsAndDeletesNothing()
     {
         SetupRow(Stranger, "token");
