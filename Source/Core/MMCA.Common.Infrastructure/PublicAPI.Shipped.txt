@@ -1072,6 +1072,7 @@ static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbCont
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreateSqlServer(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreateSqlite(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.GetId<TIdentifier>(int id) -> TIdentifier
+static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.SaveToleratingConcurrentSeedAsync(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.operator !=(MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount? left, MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount? right) -> bool
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.operator ==(MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount? left, MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount? right) -> bool
 static MMCA.Common.Infrastructure.Persistence.Encryption.EncryptedStringConverter.GenerateKey() -> byte[]!
@@ -1105,7 +1106,6 @@ virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.
 virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.LogCycleFailure(System.Exception! exception) -> void
 virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.StartupDelay.get -> System.TimeSpan
 virtual MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationBase<TEntity, TIdentifierType>.Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder) -> void
-virtual MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.ShouldSeed.get -> bool
 ~override MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Equals(object obj) -> bool
 ~override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.Equals(object obj) -> bool
 ~override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.ToString() -> string
