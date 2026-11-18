@@ -1,5 +1,4 @@
 using AwesomeAssertions;
-using Microsoft.FeatureManagement;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.UseCases.Markers;
@@ -8,154 +7,54 @@ using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;
 
-public sealed class FeatureGateQueryDecoratorTests
+public sealed class FeatureGateQueryDecoratorTests : FeatureGateDecoratorTestsBase<Result<string>>
 {
-    private readonly Mock<IFeatureManager> _featureManager = new();
+    protected override string FeatureName => "QueryFeature";
 
-    // ── Non-feature-gated query passes through unchanged ──
-    [Fact]
-    public async Task HandleAsync_NonFeatureGatedQuery_DelegatesToInner()
-    {
-        var inner = new Mock<IQueryHandler<PlainQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<PlainQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<string>.Success("data"));
+    protected override Result<string> SuccessResult => Result<string>.Success("data");
 
-        var sut = new FeatureGateQueryDecorator<PlainQuery, Result<string>>(inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new PlainQuery());
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("data");
-        _featureManager.Verify(x => x.IsEnabledAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    // ── Enabled feature delegates to inner handler ──
-    [Fact]
-    public async Task HandleAsync_EnabledFeature_DelegatesToInner()
-    {
-        var inner = new Mock<IQueryHandler<FeatureGatedQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<FeatureGatedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<string>.Success("data"));
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
-            .ReturnsAsync(true);
-
-        var sut = new FeatureGateQueryDecorator<FeatureGatedQuery, Result<string>>(
-            inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new FeatureGatedQuery());
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("data");
-        inner.Verify(x => x.HandleAsync(It.IsAny<FeatureGatedQuery>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    // ── Disabled feature returns failure without calling inner handler ──
-    [Fact]
-    public async Task HandleAsync_DisabledFeature_ReturnsFailure()
-    {
-        var inner = new Mock<IQueryHandler<FeatureGatedQuery, Result<string>>>();
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
-            .ReturnsAsync(false);
-
-        var sut = new FeatureGateQueryDecorator<FeatureGatedQuery, Result<string>>(
-            inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new FeatureGatedQuery());
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle()
-            .Which.Code.Should().Be("Feature.Disabled");
-        inner.Verify(x => x.HandleAsync(It.IsAny<FeatureGatedQuery>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    // ── The user-facing message (X-28 side, ADC local test run 6) ──
-    // Same contract as the command decorator: no internal flag name in the message, the wording
-    // DisabledFeatureHandler uses, and the Feature.Disabled code unchanged.
-    [Fact]
-    public async Task HandleAsync_DisabledFeature_UsesTheGenericMessage_WithoutTheFlagName()
-    {
-        var inner = new Mock<IQueryHandler<FeatureGatedQuery, Result<string>>>();
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
-            .ReturnsAsync(false);
-
-        var sut = new FeatureGateQueryDecorator<FeatureGatedQuery, Result<string>>(
-            inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new FeatureGatedQuery());
-
-        var error = result.Errors.Should().ContainSingle().Subject;
-        error.Code.Should().Be("Feature.Disabled");
-        error.Message.Should().NotContain("QueryFeature", "the flag name is internal and must not reach the user");
-        error.Message.Should().Be("The requested feature is not currently available.");
-    }
-
-    // ── A handler whose TResult is neither Result nor Result<T> ──
-    // Scrutor's TryDecorate is unconditional, so such a handler gets decorated too. Building the
-    // failure delegate eagerly (in the static constructor) turned that into a
-    // TypeInitializationException the moment the decorator was RESOLVED, even for a query that
-    // never short-circuits.
-    [Fact]
-    public async Task HandleAsync_NonResultTResult_NonFeatureGatedQuery_PassesThrough()
-    {
-        var inner = new Mock<IQueryHandler<PlainQuery, string>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<PlainQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("data");
-
-        var sut = new FeatureGateQueryDecorator<PlainQuery, string>(inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new PlainQuery());
-
-        result.Should().Be("data");
-        inner.Verify(x => x.HandleAsync(It.IsAny<PlainQuery>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task HandleAsync_NonResultTResult_EnabledFeature_PassesThrough()
-    {
-        var inner = new Mock<IQueryHandler<FeatureGatedQuery, string>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<FeatureGatedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("data");
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature")).ReturnsAsync(true);
-
-        var sut = new FeatureGateQueryDecorator<FeatureGatedQuery, string>(inner.Object, _featureManager.Object);
-
-        var result = await sut.HandleAsync(new FeatureGatedQuery());
-
-        result.Should().Be("data");
-    }
-
-    [Fact]
-    public async Task HandleAsync_NonResultTResult_DisabledFeature_FailsOnlyOnTheShortCircuit()
-    {
-        var inner = new Mock<IQueryHandler<FeatureGatedQueryNonGeneric, string>>();
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature")).ReturnsAsync(false);
-
-        var sut = new FeatureGateQueryDecorator<FeatureGatedQueryNonGeneric, string>(
-            inner.Object, _featureManager.Object);
-
-        // Fabricating a failure is genuinely impossible for this TResult, so the short-circuit path
-        // still fails: as the factory's own InvalidOperationException, at the point of use.
-        Func<Task> act = () => sut.HandleAsync(new FeatureGatedQueryNonGeneric());
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    // ── Disabled feature with non-generic Result ──
+    // ── Query only: disabled feature with non-generic Result ──
     [Fact]
     public async Task HandleAsync_DisabledFeature_WithNonGenericResult_ReturnsFailure()
     {
         var inner = new Mock<IQueryHandler<FeatureGatedQueryNonGeneric, Result>>();
-        _featureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
+        FeatureManager.Setup(x => x.IsEnabledAsync("QueryFeature"))
             .ReturnsAsync(false);
 
         var sut = new FeatureGateQueryDecorator<FeatureGatedQueryNonGeneric, Result>(
-            inner.Object, _featureManager.Object);
+            inner.Object, FeatureManager.Object);
 
         var result = await sut.HandleAsync(new FeatureGatedQueryNonGeneric());
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle()
             .Which.Code.Should().Be("Feature.Disabled");
+    }
+
+    protected override void AssertPassedThrough(Result<string> result)
+    {
+        base.AssertPassedThrough(result);
+        result.Value.Should().Be("data");
+    }
+
+    protected override Func<Task<T>> CreateSut<T>(RequestKind kind, Func<Task<T>> inner) => kind switch
+    {
+        RequestKind.Plain => Wrap(new PlainQuery(), inner),
+        RequestKind.Gated => Wrap(new FeatureGatedQuery(), inner),
+        RequestKind.OtherGated => Wrap(new FeatureGatedQueryNonGeneric(), inner),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
+    private Func<Task<T>> Wrap<TQuery, T>(TQuery query, Func<Task<T>> inner)
+        where TQuery : class
+    {
+        var handler = new Mock<IQueryHandler<TQuery, T>>();
+        handler.Setup(x => x.HandleAsync(It.IsAny<TQuery>(), It.IsAny<CancellationToken>()))
+            .Returns(() => inner());
+
+        var sut = new FeatureGateQueryDecorator<TQuery, T>(handler.Object, FeatureManager.Object);
+
+        return () => sut.HandleAsync(query);
     }
 }
 

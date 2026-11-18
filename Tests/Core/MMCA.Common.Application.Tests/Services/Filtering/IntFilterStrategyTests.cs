@@ -1,55 +1,15 @@
 using System.Globalization;
 using AwesomeAssertions;
 using MMCA.Common.Application.Services.Filtering;
+using MMCA.Common.Application.Tests.Services.Filtering.Numeric;
 
 namespace MMCA.Common.Application.Tests.Services.Filtering;
 
-public sealed class IntFilterStrategyTests
+public sealed class IntFilterStrategyTests : NumericFilterStrategyTestsBase<int>
 {
-    private sealed class Item
-    {
-        public int Count { get; set; }
-
-        public int? Score { get; set; }
-    }
-
-    private static IQueryable<Item> Items() =>
-        new List<Item>
-        {
-            new() { Count = 5, Score = 5 },
-            new() { Count = 10, Score = null },
-            new() { Count = 15, Score = 15 },
-            new() { Count = 20, Score = null },
-        }.AsQueryable();
-
     private static readonly Dictionary<string, string> EmptyMap = [];
 
-    private static IQueryable<Item> Filter(string op, string value) =>
-        QueryFilterService.ApplyFilters(
-            Items(),
-            new Dictionary<string, (string, string)> { ["Count"] = (op, value) },
-            EmptyMap);
-
-    private static IQueryable<Item> FilterScore(string op, string value) =>
-        QueryFilterService.ApplyFilters(
-            Items(),
-            new Dictionary<string, (string, string)> { ["Score"] = (op, value) },
-            EmptyMap);
-
-    // ── EQUALS ──
-    [Fact]
-    public void Equals_ReturnsExactMatch() =>
-        Filter("EQUALS", "10").Should().ContainSingle(i => i.Count == 10);
-
-    // ── NOT EQUALS ──
-    [Fact]
-    public void NotEquals_ExcludesMatch() =>
-        Filter("NOT EQUALS", "10").Should().HaveCount(3);
-
-    // ── GREATER THAN ──
-    [Fact]
-    public void GreaterThan_ReturnsItemsAboveValue() =>
-        Filter("GREATER THAN", "10").Should().HaveCount(2);
+    protected override IReadOnlyList<int> Values { get; } = [5, 10, 15, 20];
 
     // ── LESS THAN ──
     [Fact]
@@ -61,33 +21,10 @@ public sealed class IntFilterStrategyTests
     public void GreaterThanOrEqual_IncludesBoundary() =>
         Filter("GREATER THAN OR EQUAL", "10").Should().HaveCount(3);
 
-    // ── LESS THAN OR EQUAL ──
-    [Fact]
-    public void LessThanOrEqual_IncludesBoundary() =>
-        Filter("LESS THAN OR EQUAL", "10").Should().HaveCount(2);
-
-    // ── Invalid value ──
-    [Fact]
-    public void InvalidValue_ReturnsAll() =>
-        Filter("EQUALS", "not-a-number").Should().HaveCount(4);
-
-    // ── Unknown operator ──
-    [Fact]
-    public void UnknownOperator_ReturnsAll() =>
-        Filter("CONTAINS", "10").Should().HaveCount(4);
-
     // ── IN ──
-    [Fact]
-    public void In_ReturnsItemsMatchingAnyListedValue() =>
-        Filter("IN", "5,15").Select(i => i.Count).Should().BeEquivalentTo([5, 15]);
-
     [Fact]
     public void In_TrimsWhitespaceAroundValues() =>
         Filter("IN", " 10 , 20 ").Should().HaveCount(2);
-
-    [Fact]
-    public void In_SkipsUnparseableValues() =>
-        Filter("IN", "5,not-a-number,20").Select(i => i.Count).Should().BeEquivalentTo([5, 20]);
 
     [Fact]
     public void In_WithNoParseableValues_ReturnsAll() =>
@@ -99,29 +36,12 @@ public sealed class IntFilterStrategyTests
 
     // ── BETWEEN ──
     [Fact]
-    public void Between_ReturnsInclusiveRange() =>
-        Filter("BETWEEN", "10,15").Select(i => i.Count).Should().BeEquivalentTo([10, 15]);
-
-    [Fact]
     public void Between_IncludesBothBounds() =>
         Filter("BETWEEN", "5,20").Should().HaveCount(4);
 
     [Fact]
-    public void Between_WithSingleValue_ReturnsAll() =>
-        Filter("BETWEEN", "10").Should().HaveCount(4);
-
-    [Fact]
     public void Between_WithUnparseableBound_ReturnsAll() =>
         Filter("BETWEEN", "10,not-a-number").Should().HaveCount(4);
-
-    // ── IS EMPTY / IS NOT EMPTY (nullable) ──
-    [Fact]
-    public void IsEmpty_ReturnsNullScores() =>
-        FilterScore("IS EMPTY", string.Empty).Should().HaveCount(2);
-
-    [Fact]
-    public void IsNotEmpty_ReturnsNonNullScores() =>
-        FilterScore("IS NOT EMPTY", string.Empty).Should().HaveCount(2);
 
     // ── Culture independence: the filter DSL is a wire format, not user input (L10) ──
     private static IQueryable<Item> SignedItems() =>

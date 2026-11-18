@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,50 +35,11 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 /// so whichever ran first would decide the answer for both and the suite would pass or fail by test
 /// order. A marker per case makes each key unique and the class order-independent.
 /// </remarks>
-public sealed class PermissionGrantModelGateTests
+public sealed class PermissionGrantModelGateTests : ModelGateTestsBase
 {
     private const string IdentitySource = "Identity";
 
-    [Fact]
-    public void WithoutTheOptIn_TheTableIsNotInTheModel()
-    {
-        using var context = CreateContext<CaseNoOptIn>(
-            optedIn: false,
-            settings: null,
-            dataSourceName: DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(PermissionGrant)).Should().BeNull(
-            "a host that never called AddStoredPermissionGrants must build the model it had before grants shipped");
-    }
-
-    /// <summary>
-    /// The settings class binds to defaults for any host, so the settings alone can never be the
-    /// gate: only the registration may be.
-    /// </summary>
-    [Fact]
-    public void WithTheSettingsButNoOptIn_TheTableIsStillNotInTheModel()
-    {
-        using var context = CreateContext<CaseSettingsOnly>(
-            optedIn: false,
-            settings: new PermissionGrantSettings(),
-            dataSourceName: DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(PermissionGrant)).Should().BeNull();
-    }
-
-    [Fact]
-    public void WhenOptedInOnTheDefaultSource_TheSingleDatabaseHostGetsTheTable()
-    {
-        using var context = CreateContext<CaseOptedInDefaultSource>(
-            optedIn: true,
-            settings: new PermissionGrantSettings(),
-            dataSourceName: DataSourceKey.DefaultName);
-
-        var entity = context.Model.FindEntityType(typeof(PermissionGrant));
-
-        entity.Should().NotBeNull();
-        entity!.GetTableName().Should().Be(PermissionGrantModelBuilderExtensions.TableName);
-    }
+    protected override Type GatedEntityType => typeof(PermissionGrant);
 
     [Fact]
     public void WhenOptedInForANamedSource_OnlyThatSourcesContextGetsTheTable()
@@ -110,6 +72,20 @@ public sealed class PermissionGrantModelGateTests
             index.IsUnique
             && index.GetDatabaseName() == PermissionGrantModelBuilderExtensions.RolePermissionIndexName);
     }
+
+    // The opt-in here is the AddStoredPermissionGrants registration, not a settings flag: the settings
+    // class binds to defaults for any host, so the Disabled state registers the settings WITHOUT the
+    // gate marker, proving the settings alone can never be the gate.
+    protected override DbContext CreateGateContext<TCase>(GateState state) => state switch
+    {
+        GateState.NeverRegistered => CreateContext<TCase>(optedIn: false, settings: null, DataSourceKey.DefaultName),
+        GateState.Disabled => CreateContext<TCase>(optedIn: false, new PermissionGrantSettings(), DataSourceKey.DefaultName),
+        GateState.Enabled => CreateContext<TCase>(optedIn: true, new PermissionGrantSettings(), DataSourceKey.DefaultName),
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+    };
+
+    protected override void AssertEnabledMapping(IEntityType entity) =>
+        entity.GetTableName().Should().Be(PermissionGrantModelBuilderExtensions.TableName);
 
     /// <summary>
     /// Builds a real context over <see cref="ApplicationDbContext"/> for one physical source and one
@@ -155,13 +131,8 @@ public sealed class PermissionGrantModelGateTests
                 CosmosDatabaseName: string.Empty));
     }
 
-    // One closed type per case; see the class remarks for why the model cache demands it.
-    private sealed class CaseNoOptIn;
-
-    private sealed class CaseSettingsOnly;
-
-    private sealed class CaseOptedInDefaultSource;
-
+    // One closed type per case; see the class remarks for why the model cache demands it (the
+    // shared cases bring their own markers from ModelGateTestsBase).
     private sealed class CaseNamedSource;
 
     private sealed class CaseMappingShape;

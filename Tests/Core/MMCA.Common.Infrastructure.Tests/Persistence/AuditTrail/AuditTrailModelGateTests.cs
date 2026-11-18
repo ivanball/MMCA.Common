@@ -1,6 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,7 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -23,40 +25,9 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.AuditTrail;
 /// same transaction as the change it describes. These tests build the real
 /// <see cref="ApplicationDbContext"/> model under each combination.
 /// </summary>
-public sealed class AuditTrailModelGateTests
+public sealed class AuditTrailModelGateTests : ModelGateTestsBase
 {
-    [Fact]
-    public void Model_AuditTrailDisabled_DoesNotContainTheTrailTable()
-    {
-        using var context = GateTestContext.Create(auditTrailEnabled: false, sourceName: DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(AuditTrailEntry)).Should().BeNull(
-            "a host that never called AddAuditTrail must not gain a table in its next migration");
-    }
-
-    [Fact]
-    public void Model_NoAuditTrailSettingsRegisteredAtAll_DoesNotContainTheTrailTable()
-    {
-        using var context = GateTestContext.Create(
-            auditTrailEnabled: false, sourceName: DataSourceKey.DefaultName, registerSettings: false);
-
-        context.Model.FindEntityType(typeof(AuditTrailEntry)).Should().BeNull(
-            "the absence of the settings must read as disabled, not fail context construction");
-    }
-
-    [Fact]
-    public void Model_AuditTrailEnabled_ContainsTheTrailTableWithItsReadIndex()
-    {
-        using var context = GateTestContext.Create(auditTrailEnabled: true, sourceName: DataSourceKey.DefaultName);
-
-        var entityType = context.Model.FindEntityType(typeof(AuditTrailEntry));
-        entityType.Should().NotBeNull();
-        entityType!.GetTableName().Should().Be("AuditTrailEntries");
-        entityType.FindPrimaryKey()!.Properties.Select(p => p.Name).Should().Equal(nameof(AuditTrailEntry.Id));
-        entityType.GetIndexes()
-            .Select(index => string.Join(",", index.Properties.Select(p => p.Name)))
-            .Should().Contain("EntityType,EntityKey,ChangedOn");
-    }
+    protected override Type GatedEntityType => typeof(AuditTrailEntry);
 
     [Fact]
     public void Model_AuditTrailEnabledOnANonDefaultSource_StillContainsTheTrailTable()
@@ -66,6 +37,25 @@ public sealed class AuditTrailModelGateTests
         context.Model.FindEntityType(typeof(AuditTrailEntry)).Should().NotBeNull(
             "a trail row must land in the same database as the change it describes, so every "
             + "relational source needs the table");
+    }
+
+    // Service-provider caching is off in GateTestContext, so the per-case marker is not needed here.
+    protected override DbContext CreateGateContext<TCase>(GateState state) => state switch
+    {
+        GateState.NeverRegistered => GateTestContext.Create(
+            auditTrailEnabled: false, sourceName: DataSourceKey.DefaultName, registerSettings: false),
+        GateState.Disabled => GateTestContext.Create(auditTrailEnabled: false, sourceName: DataSourceKey.DefaultName),
+        GateState.Enabled => GateTestContext.Create(auditTrailEnabled: true, sourceName: DataSourceKey.DefaultName),
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+    };
+
+    protected override void AssertEnabledMapping(IEntityType entity)
+    {
+        entity.GetTableName().Should().Be("AuditTrailEntries");
+        entity.FindPrimaryKey()!.Properties.Select(p => p.Name).Should().Equal(nameof(AuditTrailEntry.Id));
+        entity.GetIndexes()
+            .Select(index => string.Join(",", index.Properties.Select(p => p.Name)))
+            .Should().Contain("EntityType,EntityKey,ChangedOn");
     }
 
     /// <summary>

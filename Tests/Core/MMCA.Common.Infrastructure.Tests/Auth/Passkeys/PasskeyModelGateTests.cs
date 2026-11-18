@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.Passkeys;
@@ -26,37 +28,11 @@ namespace MMCA.Common.Infrastructure.Tests.Auth.Passkeys;
 /// opens the same gate for <c>dotnet ef</c>. Asserted against real built models, one context type per
 /// case for the EF model-cache reason the view-as gate tests give.
 /// </summary>
-public sealed class PasskeyModelGateTests
+public sealed class PasskeyModelGateTests : ModelGateTestsBase
 {
     private const string IdentitySource = "Identity";
 
-    [Fact]
-    public void Disabled_NoContextGetsTheTable()
-    {
-        using var context = CreateContext<CaseDisabled>(new PasskeySettings(), DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(PasskeyCredential)).Should().BeNull();
-    }
-
-    [Fact]
-    public void NeverRegistered_NoContextGetsTheTable()
-    {
-        using var context = CreateContext<CaseNeverRegistered>(settings: null, DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(PasskeyCredential)).Should().BeNull(
-            "a host that never calls AddPasskeys registers no settings, and that absence reads as disabled");
-    }
-
-    [Fact]
-    public void EnabledOnASingleHost_TheDefaultSourceGetsTheTable()
-    {
-        using var context = CreateContext<CaseSingleHost>(new PasskeySettings { Enabled = true }, DataSourceKey.DefaultName);
-
-        var entity = context.Model.FindEntityType(typeof(PasskeyCredential));
-        entity.Should().NotBeNull();
-        entity!.GetTableName().Should().Be(PasskeyCredentialModelBuilderExtensions.TableName);
-        entity.GetIndexes().Should().Contain(i => i.IsUnique && i.Properties.Single().Name == nameof(PasskeyCredential.CredentialId));
-    }
+    protected override Type GatedEntityType => typeof(PasskeyCredential);
 
     [Fact]
     public void Enabled_OnlyTheNamedSourceGetsTheTable()
@@ -92,6 +68,22 @@ public sealed class PasskeyModelGateTests
 
         context.Model.FindEntityType(typeof(PasskeyCredential)).Should().BeNull(
             "a migrations project that never opts in must keep scaffolding exactly what it did before");
+    }
+
+    protected override DbContext CreateGateContext<TCase>(GateState state) => CreateContext<TCase>(
+        state switch
+        {
+            GateState.NeverRegistered => null,
+            GateState.Disabled => new PasskeySettings(),
+            GateState.Enabled => new PasskeySettings { Enabled = true },
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        },
+        DataSourceKey.DefaultName);
+
+    protected override void AssertEnabledMapping(IEntityType entity)
+    {
+        entity.GetTableName().Should().Be(PasskeyCredentialModelBuilderExtensions.TableName);
+        entity.GetIndexes().Should().Contain(i => i.IsUnique && i.Properties.Single().Name == nameof(PasskeyCredential.CredentialId));
     }
 
     private static void ConfigureDesignTime(DesignTimeDbContextOptions options)
@@ -139,12 +131,6 @@ public sealed class PasskeyModelGateTests
                 MigrationsAssembly: null,
                 CosmosDatabaseName: string.Empty));
     }
-
-    private sealed class CaseDisabled;
-
-    private sealed class CaseNeverRegistered;
-
-    private sealed class CaseSingleHost;
 
     private sealed class CaseNamedSource;
 

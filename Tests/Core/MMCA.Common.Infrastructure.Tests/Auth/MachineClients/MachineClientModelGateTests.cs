@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.MachineClients;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.MachineClients;
@@ -27,40 +29,11 @@ namespace MMCA.Common.Infrastructure.Tests.Auth.MachineClients;
 /// opens the same gate for <c>dotnet ef</c>. Asserted against real built models, one context type per
 /// case for the EF model-cache reason the view-as gate tests give.
 /// </summary>
-public sealed class MachineClientModelGateTests
+public sealed class MachineClientModelGateTests : ModelGateTestsBase
 {
     private const string IdentitySource = "Identity";
 
-    [Fact]
-    public void Disabled_NoContextGetsTheTable()
-    {
-        using var context = CreateContext<CaseDisabled>(new MachineClientSettings(), DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(MachineClient)).Should().BeNull();
-    }
-
-    [Fact]
-    public void NeverRegistered_NoContextGetsTheTable()
-    {
-        using var context = CreateContext<CaseNeverRegistered>(settings: null, DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(MachineClient)).Should().BeNull(
-            "a host that never calls AddMachineClients registers no settings, and that absence reads as disabled");
-    }
-
-    [Fact]
-    public void EnabledOnASingleHost_TheDefaultSourceGetsTheTable()
-    {
-        using var context = CreateContext<CaseSingleHost>(new MachineClientSettings { Enabled = true }, DataSourceKey.DefaultName);
-
-        var entity = context.Model.FindEntityType(typeof(MachineClient));
-        entity.Should().NotBeNull();
-        entity!.GetTableName().Should().Be(MachineClientModelBuilderExtensions.TableName);
-        entity.GetIndexes().Should().Contain(i => i.IsUnique && i.Properties.Single().Name == nameof(MachineClient.ServiceAccountUserId));
-        entity.FindProperty(nameof(MachineClient.IsDeleted)).Should().NotBeNull("the client is an auditable entity, mapped before the soft-delete pass");
-        entity.GetDeclaredQueryFilters().Should().Contain(
-            filter => filter.Key == "SoftDelete", "mapped first, the soft-delete filter reaches it like any auditable entity");
-    }
+    protected override Type GatedEntityType => typeof(MachineClient);
 
     [Fact]
     public void Enabled_OnlyTheNamedSourceGetsTheTable()
@@ -96,6 +69,25 @@ public sealed class MachineClientModelGateTests
 
         context.Model.FindEntityType(typeof(MachineClient)).Should().BeNull(
             "a migrations project that never opts in must keep scaffolding exactly what it did before");
+    }
+
+    protected override DbContext CreateGateContext<TCase>(GateState state) => CreateContext<TCase>(
+        state switch
+        {
+            GateState.NeverRegistered => null,
+            GateState.Disabled => new MachineClientSettings(),
+            GateState.Enabled => new MachineClientSettings { Enabled = true },
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        },
+        DataSourceKey.DefaultName);
+
+    protected override void AssertEnabledMapping(IEntityType entity)
+    {
+        entity.GetTableName().Should().Be(MachineClientModelBuilderExtensions.TableName);
+        entity.GetIndexes().Should().Contain(i => i.IsUnique && i.Properties.Single().Name == nameof(MachineClient.ServiceAccountUserId));
+        entity.FindProperty(nameof(MachineClient.IsDeleted)).Should().NotBeNull("the client is an auditable entity, mapped before the soft-delete pass");
+        entity.GetDeclaredQueryFilters().Should().Contain(
+            filter => filter.Key == "SoftDelete", "mapped first, the soft-delete filter reaches it like any auditable entity");
     }
 
     private static void ConfigureDesignTime(DesignTimeDbContextOptions options)
@@ -143,12 +135,6 @@ public sealed class MachineClientModelGateTests
                 MigrationsAssembly: null,
                 CosmosDatabaseName: string.Empty));
     }
-
-    private sealed class CaseDisabled;
-
-    private sealed class CaseNeverRegistered;
-
-    private sealed class CaseSingleHost;
 
     private sealed class CaseNamedSource;
 

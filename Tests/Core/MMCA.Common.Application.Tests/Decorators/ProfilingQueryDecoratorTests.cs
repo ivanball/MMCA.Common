@@ -6,52 +6,28 @@ using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;
 
-public sealed class ProfilingQueryDecoratorTests
+public sealed class ProfilingQueryDecoratorTests : ProfilingDecoratorTestsBase<Result<string>>
 {
-    [Fact]
-    public async Task HandleAsync_DelegatesCallToInnerHandler()
+    protected override Result<string> SuccessResult => Result.Success("data");
+
+    protected override Result<string> FailureResult => Result.Failure<string>(Error.Failure("test", "failed"));
+
+    protected override void AssertPassedThrough(Result<string> result)
     {
-        var inner = new Mock<IQueryHandler<ProfilingTestQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success("data"));
-
-        var sut = new ProfilingQueryDecorator<ProfilingTestQuery, Result<string>>(inner.Object);
-
-        var result = await sut.HandleAsync(new ProfilingTestQuery());
-
-        result.IsSuccess.Should().BeTrue();
+        base.AssertPassedThrough(result);
         result.Value.Should().Be("data");
-        inner.Verify(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task HandleAsync_WhenInnerFails_ReturnsFailure()
+    protected override Func<CancellationToken, Task<Result<string>>> CreateSut(
+        Func<CancellationToken, Task<Result<string>>> inner)
     {
-        var inner = new Mock<IQueryHandler<ProfilingTestQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<string>(Error.Failure("test", "failed")));
+        var handler = new Mock<IQueryHandler<ProfilingTestQuery, Result<string>>>();
+        handler.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), It.IsAny<CancellationToken>()))
+            .Returns<ProfilingTestQuery, CancellationToken>((_, ct) => inner(ct));
 
-        var sut = new ProfilingQueryDecorator<ProfilingTestQuery, Result<string>>(inner.Object);
+        var sut = new ProfilingQueryDecorator<ProfilingTestQuery, Result<string>>(handler.Object);
 
-        var result = await sut.HandleAsync(new ProfilingTestQuery());
-
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task HandleAsync_PassesCancellationTokenToInner()
-    {
-        using var cts = new CancellationTokenSource();
-        var token = cts.Token;
-        var inner = new Mock<IQueryHandler<ProfilingTestQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), token))
-            .ReturnsAsync(Result.Success("ok"));
-
-        var sut = new ProfilingQueryDecorator<ProfilingTestQuery, Result<string>>(inner.Object);
-
-        await sut.HandleAsync(new ProfilingTestQuery(), token);
-
-        inner.Verify(x => x.HandleAsync(It.IsAny<ProfilingTestQuery>(), token), Times.Once);
+        return ct => sut.HandleAsync(new ProfilingTestQuery(), ct);
     }
 }
 
