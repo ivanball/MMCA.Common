@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **`AccountDeletionTestsBase` asks the backend first** (MMCA.Common.Testing.E2E): when `E2E_API_BASE_URL` is set (new `E2ETestConfiguration.ApiBaseUrl`), the refused re-login is asserted as a 401 from the sign-in endpoint (new virtual `SignInApiPath`, default `/Auth/login`), and the sign-in form then only has to show its error alert. The UI check no longer waits out the 15s `AuthGraceTimeout` it needs when the UI is the only witness. Without the variable the journey behaves as before.
+
 ## [1.304.0] - 2026-11-18
 
 **Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.

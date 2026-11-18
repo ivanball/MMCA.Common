@@ -19,6 +19,15 @@ public static class E2ETestConfiguration
     public static string BaseUrl =>
         Environment.GetEnvironmentVariable("E2E_BASE_URL") ?? DefaultBaseUrl;
 
+    /// <summary>
+    /// The API entry point (a Gateway, or the host itself when it serves the API) from
+    /// <c>E2E_API_BASE_URL</c>, without a trailing slash, or null when unset. A journey that can read
+    /// the backend's own answer uses it (the account-deletion journey asks the sign-in endpoint
+    /// whether the deleted account is refused) and falls back to the UI alone without it.
+    /// </summary>
+    public static string? ApiBaseUrl =>
+        Environment.GetEnvironmentVariable("E2E_API_BASE_URL") is { Length: > 0 } url ? url.TrimEnd('/') : null;
+
     public static bool Headless =>
         !string.Equals(Environment.GetEnvironmentVariable("E2E_HEADLESS"), "false", StringComparison.OrdinalIgnoreCase);
 
