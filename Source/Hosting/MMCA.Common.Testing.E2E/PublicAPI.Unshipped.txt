@@ -1,3 +1,1 @@
 #nullable enable
-static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.ApiBaseUrl.get -> string?
-virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.SignInApiPath.get -> string!
