@@ -257,8 +257,6 @@ MMCA.Common.API.Idempotency.IdempotentAttribute.IdempotentAttribute() -> void
 MMCA.Common.API.Idempotency.NonIdempotentAttribute
 MMCA.Common.API.Idempotency.NonIdempotentAttribute.Justification.get -> string!
 MMCA.Common.API.Idempotency.NonIdempotentAttribute.NonIdempotentAttribute(string! justification) -> void
-MMCA.Common.API.JsonConverters.CurrencyJsonConverter
-MMCA.Common.API.JsonConverters.CurrencyJsonConverter.CurrencyJsonConverter() -> void
 MMCA.Common.API.Localization.ErrorResourceSource
 MMCA.Common.API.Localization.ErrorResourceSource.ErrorResourceSource(Microsoft.Extensions.Localization.IStringLocalizer! localizer) -> void
 MMCA.Common.API.Localization.ErrorResourceSource.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer!
@@ -592,8 +590,6 @@ override MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoV2Resp
 override MMCA.Common.API.Idempotency.IdempotencyRecord.Equals(object? obj) -> bool
 override MMCA.Common.API.Idempotency.IdempotencyRecord.GetHashCode() -> int
 override MMCA.Common.API.Idempotency.IdempotencyRecord.ToString() -> string!
-override MMCA.Common.API.JsonConverters.CurrencyJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
-override MMCA.Common.API.JsonConverters.CurrencyJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, MMCA.Common.Shared.ValueObjects.Financial.Currency! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override MMCA.Common.API.RateLimiting.RedisFixedWindowRateLimiter.GetStatistics() -> System.Threading.RateLimiting.RateLimiterStatistics?
 override MMCA.Common.API.RateLimiting.RedisFixedWindowRateLimiter.IdleDuration.get -> System.TimeSpan?
 override MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest.Equals(object? obj) -> bool

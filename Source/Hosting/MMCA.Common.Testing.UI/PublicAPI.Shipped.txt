@@ -77,6 +77,21 @@ MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.SubmittingWithoutAToken_E
 MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithACompleteLink_ConfirmsOnceAndReportsSuccess() -> void
 MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithARefusedToken_ShowsTheApisMessage_AndKeepsTheFormWithAResend() -> void
 MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithNoToken_DoesNotCallTheServiceAndShowsTheForm() -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.DataGridListPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.RenderList() -> Bunit.IRenderedComponent<TPage!>!
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.SetupRows(System.Collections.Generic.IReadOnlyList<TDto>! rows) -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.TheFirstRow_LinksToItsDetailRoute() -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.ThePageTitle_ReachesTheListShell() -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.WhenTheFetchFails_RendersTheRetryState_NotTheEmptyState() -> void
+MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.WithNoRows_RendersTheEmptyState() -> void
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.DetailPageLoadStateTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.RenderPage(TId id) -> Bunit.IRenderedComponent<TPage!>!
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.WhenTheFetchFails_RendersTheErrorWithRetry_AndRetryFetchesAgain() -> void
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.WhenTheRecordIsNotFound_RendersTheNotFoundState() -> void
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.WhenTheRouteIdChangesBeforeTheFirstFetchCompletes_TheStaleResultIsDropped() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.WhileTheFetchIsPending_RendersTheLoadingState() -> void
 MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>
 MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.ACompiledPermission_IsLocked_AndAnEditableOneIsNot() -> void
 MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RenderEditor() -> Bunit.IRenderedComponent<TPage>!
@@ -122,6 +137,17 @@ MMCA.Common.Testing.UI.UiHttpServiceHarness.Handler.get -> MMCA.Common.Testing.U
 MMCA.Common.Testing.UI.UiHttpServiceHarness.TokenStorage.get -> MMCA.Common.Testing.UI.StubTokenStorageService!
 MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(System.Func<System.Net.Http.HttpRequestMessage!, System.Net.Http.HttpResponseMessage!>! respond, string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
 MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
+abstract MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.CreateRows() -> System.Collections.Generic.IReadOnlyList<TDto>!
+abstract MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.EmptyStateText.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.FirstRowMarker.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.PageTitle.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.SetupFetch(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetch) -> void
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.CreateRecord(TId id) -> TDto
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.LoadedId.get -> TId
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.NotFoundText.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.OtherId.get -> TId
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.RecordMarker(TId id) -> string!
+abstract MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.SetupFetch(TId id, System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TDto>!>!>! fetch) -> void
 abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.CompiledPermission.get -> string!
 abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.EditedRole.get -> string!
 abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.OtherRole.get -> string!
@@ -161,6 +187,13 @@ static readonly MMCA.Common.Testing.UI.BunitComponentTestBase.Anonymous -> Syste
 static readonly MMCA.Common.Testing.UI.HttpTestDoubles.BaseAddress -> System.Uri!
 static readonly MMCA.Common.Testing.UI.UiHttpServiceHarness.DefaultBaseAddress -> System.Uri!
 virtual MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Email.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.FirstRowHref.get -> string?
+virtual MMCA.Common.Testing.UI.Pages.DataGridListPageTestsBase<TPage, TDto>.LoadFailedText.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.IdParameterName.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.LoadFailedText.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.LoadingLabel.get -> string?
+virtual MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.NotFoundError.get -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Testing.UI.Pages.DetailPageLoadStateTestsBase<TPage, TId, TDto>.RetryButtonText.get -> string!
 virtual MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleParameterName.get -> string!
 virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.Email.get -> string!
 virtual MMCA.Common.Testing.UI.Pages.SignInLinkPageTestsBase.LandingPath.get -> string!
