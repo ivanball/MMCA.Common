@@ -306,6 +306,7 @@ static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredenti
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.DefaultPassword.set -> void
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.Email.get -> string!
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.Password.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.ApiBaseUrl.get -> string?
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AuthGraceTimeout.get -> float
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AuthTimeout.get -> float
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.BaseUrl.get -> string!
@@ -382,6 +383,7 @@ virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.Dele
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteSection.get -> Microsoft.Playwright.ILocator!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteSectionText.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.OpenAccountDeletionPageAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.SignInApiPath.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AdminPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AuthenticatedUserPath.get -> string?
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.AddressSavedMessage.get -> string!
