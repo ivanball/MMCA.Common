@@ -47,20 +47,11 @@ public abstract class InstallableWebAppTestsBase : E2ETestBase
         var response = await Page.APIRequest.GetAsync(manifestUrl.AbsoluteUri).ConfigureAwait(false);
         response.Status.Should().Be(200);
         using var manifest = JsonDocument.Parse(await response.TextAsync().ConfigureAwait(false));
-        var root = manifest.RootElement;
 
-        root.GetProperty("name").GetString().Should().Be(ExpectedName);
-        root.GetProperty("short_name").GetString().Should().NotBeNullOrWhiteSpace();
-        root.GetProperty("display").GetString().Should().Be("standalone");
-        root.GetProperty("start_url").GetString().Should().Be("/");
-        root.GetProperty("theme_color").GetString().Should().Be(ExpectedThemeColor);
-
-        var icons = root.GetProperty("icons").EnumerateArray().ToList();
-        icons.Select(icon => icon.GetProperty("sizes").GetString()).Should().Contain("192x192").And.Contain("512x512");
-        icons.Should().Contain(icon => string.Equals(icon.GetProperty("purpose").GetString(), "maskable", StringComparison.Ordinal));
-        foreach (var icon in icons)
+        var iconSources = InstallableManifest.AssertInstallable(manifest.RootElement, ExpectedName, ExpectedThemeColor);
+        foreach (var src in iconSources)
         {
-            var iconUrl = new Uri(manifestUrl, icon.GetProperty("src").GetString() ?? string.Empty);
+            var iconUrl = new Uri(manifestUrl, src);
             var iconResponse = await Page.APIRequest.GetAsync(iconUrl.AbsoluteUri).ConfigureAwait(false);
             iconResponse.Status.Should().Be(200, because: $"{iconUrl} is a manifest icon");
             iconResponse.Headers["content-type"].Should().StartWith("image/png");
