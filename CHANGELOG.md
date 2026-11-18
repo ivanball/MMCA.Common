@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.
+
+### Added
+
+- **`LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Domain`, `_Application` and `_Infrastructure`** (MMCA.Common.Testing.Architecture, rules `ArchitectureRules.GrpcDoesNotDependOnDomain`, `GrpcDoesNotDependOnApplication`, `GrpcDoesNotDependOnInfrastructure`): the Grpc transport layer depends on Shared only. Grpc is an optional layer, so a map that declares no `Layer.Grpc` assembly satisfies the three rules vacuously.
+
 ## [1.303.0] - 2026-11-18
 
 ### Added

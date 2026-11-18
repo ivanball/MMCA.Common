@@ -1,1 +1,7 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Application() -> void
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Domain() -> void
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Infrastructure() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnApplication(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnDomain(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

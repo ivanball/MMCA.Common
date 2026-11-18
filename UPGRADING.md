@@ -32,6 +32,16 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.
+
+| Old | New |
+|---|---|
+| `using MMCA.Common.API.JsonConverters;` | delete it |
+| `options.Converters.Add(new MMCA.Common.API.JsonConverters.CurrencyJsonConverter())` | delete the line; `Currency` serializes through its own attribute |
+| a test asserting the text `Invalid currency code: XYZ` | assert `Invalid currency code 'XYZ'.` |
+
 ## [1.300.0] - 2026-11-17
 
 **Breaking (MMCA.Common.API):** `MapCommonScalarUi()` is removed, and with it the `Scalar.AspNetCore` dependency of MMCA.Common.API (no host called it). The rate-limit policies "FixedPolicy" and "UserPolicy" are removed (no endpoint named them), together with the settings only they read (`RateLimitingSettings.PermitLimit`, `QueueLimit`, `PerUserPermitLimit`) and the matching parameters of the permit-count `AddCommonRateLimiting` overload, which is now `AddCommonRateLimiting(int globalPermitLimit = 300, int authIpPermitLimit = 30)`. A call with no arguments is unchanged.

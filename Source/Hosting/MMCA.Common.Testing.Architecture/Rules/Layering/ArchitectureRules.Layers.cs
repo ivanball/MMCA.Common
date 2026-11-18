@@ -61,6 +61,18 @@ public static partial class ArchitectureRules
         LayerNotDependOnLayer(map, Layer.Ui, Layer.Infrastructure,
             "UI must not depend on Infrastructure");
 
+    public static void GrpcDoesNotDependOnDomain(IArchitectureMap map) =>
+        LayerNotDependOnLayer(map, Layer.Grpc, Layer.Domain,
+            "Grpc is transport infrastructure that depends only on Shared, so it must not depend on Domain");
+
+    public static void GrpcDoesNotDependOnApplication(IArchitectureMap map) =>
+        LayerNotDependOnLayer(map, Layer.Grpc, Layer.Application,
+            "Grpc is transport infrastructure that depends only on Shared, so it must not depend on Application");
+
+    public static void GrpcDoesNotDependOnInfrastructure(IArchitectureMap map) =>
+        LayerNotDependOnLayer(map, Layer.Grpc, Layer.Infrastructure,
+            "Grpc is transport infrastructure that depends only on Shared, so it must not depend on Infrastructure");
+
     /// <summary>
     /// The architecture map declares at least one assembly for every layer in
     /// <paramref name="required"/>. The per-layer dependency rules iterate
