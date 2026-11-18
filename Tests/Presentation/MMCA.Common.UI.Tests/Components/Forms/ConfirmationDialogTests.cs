@@ -88,7 +88,7 @@ public sealed class ConfirmationDialogTests : BunitTestBase
         var providers = RenderMudProviders();
         var answer = await OpenAsync(providers, destructive: true);
 
-        await DeleteConfirmationEscapeTests.PressEscapeInTheDialogAsync(JSInterop, providers.Dialog);
+        await DeleteConfirmationTests.PressEscapeInTheDialogAsync(JSInterop, providers.Dialog);
 
         var finished = await Task.WhenAny(answer, Task.Delay(TimeSpan.FromSeconds(3), Xunit.TestContext.Current.CancellationToken));
         finished.Should().BeSameAs(answer, "Escape must close the confirmation instead of being ignored");

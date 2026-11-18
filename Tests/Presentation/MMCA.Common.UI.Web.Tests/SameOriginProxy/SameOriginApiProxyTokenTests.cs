@@ -121,37 +121,4 @@ public sealed class SameOriginApiProxyTokenTests : IAsyncLifetime
         _gateway.RefreshCalls.Should().Be(0);
         _gateway.Seen.Should().ContainSingle();
     }
-
-    [Fact]
-    public async Task Get_Upstream401_AndTheRefreshFails_Returns401_AndClearsTheCookies()
-    {
-        var revoked = Jwt.Create(DateTime.UtcNow.AddMinutes(10));
-        _gateway.RejectedTokens[revoked] = true;
-        _gateway.FailRefresh = true;
-        using var host = await ProxyHost.StartAsync(_gateway);
-        using var client = host.GetTestClient();
-        using var request = ProxyHost.Request(HttpMethod.Get, "/api/orders", revoked, "refresh-1");
-
-        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        ProxyHost.SetCookies(response).Should().HaveCount(2).And.OnlyContain(c => c.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
-    public async Task ExpiredRefreshToken_Returns401_AndClearsTheCookies_WithoutReachingTheUpstream()
-    {
-        var expired = Jwt.Create(DateTime.UtcNow.AddMinutes(-5));
-        _gateway.FailRefresh = true;
-        using var host = await ProxyHost.StartAsync(_gateway);
-        using var client = host.GetTestClient();
-        using var request = ProxyHost.Request(HttpMethod.Get, "/api/orders", expired, "expired-refresh");
-
-        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).Should().Contain("session_expired");
-        ProxyHost.SetCookies(response).Should().HaveCount(2).And.OnlyContain(c => c.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase));
-        _gateway.Seen.Should().BeEmpty();
-    }
 }

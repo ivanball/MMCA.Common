@@ -282,6 +282,90 @@ public sealed class CurrentUserServiceTests
         sut.Roles.Should().HaveCount(2).And.Contain(sut.Role!);
     }
 
+    // ── GetClaimValue ──
+    [Fact]
+    public void GetClaimValue_WithIntClaim_ReturnsValue()
+    {
+        var principal = CreatePrincipal(new Claim("speaker_id", "42"));
+        var sut = CreateSut(principal);
+
+        var result = sut.GetClaimValue<int>("speaker_id");
+
+        result.Should().Be(42);
+    }
+
+    [Fact]
+    public void GetClaimValue_WithGuidClaim_ReturnsValue()
+    {
+        var guid = Guid.NewGuid();
+        var principal = CreatePrincipal(new Claim("session_id", guid.ToString()));
+        var sut = CreateSut(principal);
+
+        var result = sut.GetClaimValue<Guid>("session_id");
+
+        result.Should().Be(guid);
+    }
+
+    [Fact]
+    public void GetClaimValue_WithMissingClaim_ReturnsNull()
+    {
+        var principal = CreatePrincipal();
+        var sut = CreateSut(principal);
+
+        var result = sut.GetClaimValue<int>("nonexistent");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetClaimValue_WithInvalidValue_ReturnsNull()
+    {
+        var principal = CreatePrincipal(new Claim("speaker_id", "not-a-number"));
+        var sut = CreateSut(principal);
+
+        var result = sut.GetClaimValue<int>("speaker_id");
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetClaimValue_WithNoHttpContext_ReturnsNull()
+    {
+        var sut = CreateSut();
+
+        var result = sut.GetClaimValue<int>("speaker_id");
+
+        result.Should().BeNull();
+    }
+
+    // ── UserId is cached (Lazy<T>) ──
+    [Fact]
+    public void UserId_CalledMultipleTimes_ReturnsSameValue()
+    {
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "99"));
+        var sut = CreateSut(principal);
+
+        var first = sut.UserId;
+        var second = sut.UserId;
+
+        first.Should().Be(99);
+        second.Should().Be(99);
+    }
+
+    // ── Role is cached (Lazy<T>) ──
+    [Fact]
+    public void Role_CalledMultipleTimes_ReturnsSameValue()
+    {
+        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Auditor"));
+        var sut = CreateSut(principal);
+
+        var first = sut.Role;
+        var second = sut.Role;
+
+        first.Should().Be("Auditor");
+        second.Should().Be("Auditor");
+    }
+
     /// <summary>
     /// Stands in for the shape a consumer's controller test produces: an <see cref="ICurrentUserService"/>
     /// whose <c>User</c> was never configured. Written by hand rather than mocked because a mocking

@@ -2,8 +2,8 @@ using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
-using TestDbContext = MMCA.Common.Infrastructure.Tests.Persistence.Repositories.EFRepositoryAdditionalTests.TestDbContext;
-using TestEntity = MMCA.Common.Infrastructure.Tests.Persistence.Repositories.EFRepositoryAdditionalTests.TestEntity;
+using TestDbContext = MMCA.Common.Infrastructure.Tests.Persistence.Repositories.EFRepositoryIntegrationTests.TestDbContext;
+using TestEntity = MMCA.Common.Infrastructure.Tests.Persistence.Repositories.EFRepositoryIntegrationTests.TestEntity;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
 

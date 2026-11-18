@@ -289,42 +289,6 @@ public sealed class ExceptionHandlerTests
         handled.Should().BeFalse();
     }
 
-    // ── OperationCanceledExceptionHandler ──
-    [Fact]
-    public async Task OperationCanceledExceptionHandler_WithOperationCanceledException_Returns499()
-    {
-        var problemDetailsService = new Mock<IProblemDetailsService>();
-        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
-            .ReturnsAsync(true);
-        var sut = new OperationCanceledExceptionHandler(
-            problemDetailsService.Object,
-            NullLogger<OperationCanceledExceptionHandler>.Instance);
-
-        // 499 is the client-disconnect answer, so the request is aborted (L64).
-        var httpContext = new DefaultHttpContext { RequestAborted = new CancellationToken(canceled: true) };
-        var exception = new OperationCanceledException();
-
-        bool handled = await sut.TryHandleAsync(httpContext, exception, CancellationToken.None);
-
-        handled.Should().BeTrue();
-        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status499ClientClosedRequest);
-    }
-
-    [Fact]
-    public async Task OperationCanceledExceptionHandler_WithNonCanceledException_ReturnsFalse()
-    {
-        var problemDetailsService = new Mock<IProblemDetailsService>();
-        var sut = new OperationCanceledExceptionHandler(
-            problemDetailsService.Object,
-            NullLogger<OperationCanceledExceptionHandler>.Instance);
-
-        var httpContext = new DefaultHttpContext();
-
-        bool handled = await sut.TryHandleAsync(httpContext, new InvalidOperationException("not canceled"), CancellationToken.None);
-
-        handled.Should().BeFalse();
-    }
-
     // ── ProblemDetails Title/Detail assertions ported from the per-consumer WebAPI.Tests so that
     //    MMCA.Common owns the full exception-handler coverage (the duplicated ADC/Store copies were
     //    removed; Common is now the single source of these assertions). ──
@@ -385,28 +349,6 @@ public sealed class ExceptionHandlerTests
 
         capturedContext.Should().NotBeNull();
         capturedContext!.ProblemDetails.Detail.Should().Be("A data conflict occurred. Please retry or contact support.");
-    }
-
-    [Fact]
-    public async Task OperationCanceledExceptionHandler_SetsProblemDetailsTitleAndDetail()
-    {
-        ProblemDetailsContext? capturedContext = null;
-        var problemDetailsService = new Mock<IProblemDetailsService>();
-        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
-            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
-            .ReturnsAsync(true);
-        var sut = new OperationCanceledExceptionHandler(
-            problemDetailsService.Object,
-            NullLogger<OperationCanceledExceptionHandler>.Instance);
-
-        await sut.TryHandleAsync(
-            new DefaultHttpContext { RequestAborted = new CancellationToken(canceled: true) },
-            new OperationCanceledException(),
-            CancellationToken.None);
-
-        capturedContext.Should().NotBeNull();
-        capturedContext!.ProblemDetails.Title.Should().Be("Operation Canceled Exception");
-        capturedContext.ProblemDetails.Detail.Should().Be("The operation was canceled by the client");
     }
 }
 

@@ -5,7 +5,9 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Infrastructure.Mail;
+using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
@@ -13,8 +15,8 @@ using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 namespace MMCA.Common.Infrastructure.Tests;
 
 /// <summary>
-/// Tests for <see cref="DependencyInjection.AddInfrastructure"/> covering service registrations
-/// that are not yet covered by DependencyInjectionAdditionalTests.
+/// Tests for <see cref="DependencyInjection.AddInfrastructure"/> service registrations,
+/// plus AddNotificationInfrastructure.
 /// </summary>
 public sealed class DependencyInjectionInfrastructureTests
 {
@@ -209,35 +211,6 @@ public sealed class DependencyInjectionInfrastructureTests
     }
 
     [Fact]
-    public void AddEntityConfigurationAssembly_RegistersAssemblyInOptions()
-    {
-        var services = new ServiceCollection();
-        var assembly = typeof(DependencyInjectionInfrastructureTests).Assembly;
-
-        services.AddEntityConfigurationAssembly(assembly);
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(Microsoft.Extensions.Options.IConfigureOptions<Infrastructure.Persistence.EntityConfigurationOptions>));
-
-        descriptor.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void AddEntityConfigurationAssembly_CalledTwiceWithSameAssembly_DoesNotDuplicate()
-    {
-        var services = new ServiceCollection();
-        var assembly = typeof(DependencyInjectionInfrastructureTests).Assembly;
-
-        services.AddEntityConfigurationAssembly(assembly);
-        services.AddEntityConfigurationAssembly(assembly);
-
-        using ServiceProvider sp = services.BuildServiceProvider();
-        var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Infrastructure.Persistence.EntityConfigurationOptions>>().Value;
-
-        options.AdditionalAssemblies.Count(a => a == assembly).Should().Be(1);
-    }
-
-    [Fact]
     public void AddInfrastructure_RegistersIQueryableExecutor()
     {
         var services = new ServiceCollection();
@@ -322,5 +295,74 @@ public sealed class DependencyInjectionInfrastructureTests
         services.Should().NotContain(
             d => d.ServiceType == typeof(IRawSqlQueryExecutor),
             "a Cosmos-default host has no SQL command surface, so injecting the executor must fail at container validation instead of on the first statement");
+    }
+
+    [Fact]
+    public void AddNotificationInfrastructure_AddsNotificationConfigAssembly()
+    {
+        var services = new ServiceCollection();
+
+        services.AddNotificationInfrastructure();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        EntityConfigurationOptions options = provider.GetRequiredService<IOptions<EntityConfigurationOptions>>().Value;
+
+        options.AdditionalAssemblies.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersDataSourceService()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        services.AddInfrastructure(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IDataSourceService));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersDbContextFactory()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        services.AddInfrastructure(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IDbContextFactory));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersUnitOfWork()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        services.AddInfrastructure(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IUnitOfWork));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void AddInfrastructure_ReturnsServiceCollection_ForChaining()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        IServiceCollection result = services.AddInfrastructure(config);
+
+        result.Should().BeSameAs(services);
     }
 }

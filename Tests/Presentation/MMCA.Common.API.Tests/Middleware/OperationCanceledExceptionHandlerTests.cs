@@ -78,6 +78,28 @@ public sealed class OperationCanceledExceptionHandlerTests
         handled.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task OperationCanceledExceptionHandler_SetsProblemDetailsTitleAndDetail()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new OperationCanceledExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<OperationCanceledExceptionHandler>.Instance);
+
+        await sut.TryHandleAsync(
+            new DefaultHttpContext { RequestAborted = new CancellationToken(canceled: true) },
+            new OperationCanceledException(),
+            CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Title.Should().Be("Operation Canceled Exception");
+        capturedContext.ProblemDetails.Detail.Should().Be("The operation was canceled by the client");
+    }
+
     private static OperationCanceledExceptionHandler CreateSut()
     {
         var problemDetailsService = new Mock<IProblemDetailsService>();

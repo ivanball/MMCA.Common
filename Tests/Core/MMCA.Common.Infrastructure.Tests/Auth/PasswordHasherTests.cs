@@ -74,13 +74,6 @@ public sealed class PasswordHasherTests
 
     // ── VerifyPassword (PBKDF2) ──
     [Fact]
-    public void VerifyPassword_CorrectPassword_ReturnsTrue()
-    {
-        var (hash, salt) = _sut.HashPassword("MyPassword");
-        _sut.VerifyPassword("MyPassword", hash, salt).Should().BeTrue();
-    }
-
-    [Fact]
     public void VerifyPassword_WrongPassword_ReturnsFalse()
     {
         var (hash, salt) = _sut.HashPassword("MyPassword");

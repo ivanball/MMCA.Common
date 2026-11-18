@@ -50,17 +50,6 @@ public sealed class RateLimitPartitionTests
         WebApplicationBuilderExtensions.GlobalRateLimitPartition(Ctx(path: "/health"), 300)
             .PartitionKey.Should().Be("__infra");
 
-    [Fact]
-    public void GlobalRateLimitPartition_ForAnonymousRequest_UsesNoLimiterAnonymousPartition() =>
-        WebApplicationBuilderExtensions.GlobalRateLimitPartition(Ctx(path: "/api/events"), 300)
-            .PartitionKey.Should().Be("__anonymous");
-
-    [Fact]
-    public void GlobalRateLimitPartition_ForAuthenticatedUser_PartitionsByName() =>
-        WebApplicationBuilderExtensions.GlobalRateLimitPartition(
-                Ctx(path: "/api/events", authenticated: true, name: "alice"), 300)
-            .PartitionKey.Should().Be("alice");
-
     // M122: the name claim carries the full name, which two users can share; the subject is unique.
     [Fact]
     public void GlobalRateLimitPartition_WithNameAndSubject_PartitionsBySubject() =>

@@ -90,24 +90,6 @@ public sealed class IdempotencyFilterTests
     }
 
     [Fact]
-    public async Task OnActionExecutionAsync_NoIdempotencyKey_ExecutesNext()
-    {
-        var sut = CreateSut();
-        var (context, _) = CreateContext();
-        var nextCalled = false;
-
-        await sut.OnActionExecutionAsync(context, () =>
-        {
-            nextCalled = true;
-            return Task.FromResult(new ActionExecutedContext(
-                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
-                [], null!));
-        });
-
-        nextCalled.Should().BeTrue();
-    }
-
-    [Fact]
     public async Task OnActionExecutionAsync_CachedResult_ReturnsCachedResponse()
     {
         var sut = CreateSut();
@@ -240,28 +222,6 @@ public sealed class IdempotencyFilterTests
         await Task.WhenAll(task1, task2);
 
         nextCallCount.Should().Be(1, "only one next() delegate should execute; the second should get the cached response");
-    }
-
-    [Fact]
-    public async Task EmptyIdempotencyKey_ExecutesNormally()
-    {
-        var sut = CreateSut();
-        var (context, cache) = CreateContext("   ");
-        var nextCalled = false;
-
-        await sut.OnActionExecutionAsync(context, () =>
-        {
-            nextCalled = true;
-            return Task.FromResult(new ActionExecutedContext(
-                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
-                [], null!));
-        });
-
-        nextCalled.Should().BeTrue("empty/whitespace idempotency key should be treated as absent");
-        cache.Verify(
-            x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "cache should not be consulted for empty idempotency key");
     }
 
     [Fact]
