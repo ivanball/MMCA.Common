@@ -7,6 +7,11 @@
     <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA1056;MA0009;MA0110;SYSLIB1045</NoWarn>
     <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- The Retry reference below brings Microsoft.Testing.Platform's MSBuild props, which mark any
+         project that references it as a test application. This is a library: without the opt-out,
+         a solution-wide dotnet test tries to run it and fails ("OutputType is 'Library'"). Consumers'
+         own test projects are unaffected (the property does not flow through the package). -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
   </PropertyGroup>
   <ItemGroup>
     <!-- Lets the ui-e2e tier cover AuthOutcomeRules directly: the four-way auth classification is a
