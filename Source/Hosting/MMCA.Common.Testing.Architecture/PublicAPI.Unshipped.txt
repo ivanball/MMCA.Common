@@ -1,1 +1,14 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.PageHeadingTestsBase
+MMCA.Common.Testing.Architecture.PageHeadingTestsBase.EveryRoutablePage_RendersExactlyOneH1() -> void
+MMCA.Common.Testing.Architecture.PageHeadingTestsBase.PageHeadingTestsBase() -> void
+abstract MMCA.Common.Testing.Architecture.PageHeadingTestsBase.MinimumRoutablePages.get -> int
+abstract MMCA.Common.Testing.Architecture.PageHeadingTestsBase.RepoRoot.get -> string!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IsRoutableRazorPage(string! razor) -> bool
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PageHeadingViolation(string! relativePath, string! razor, System.Collections.Generic.IReadOnlyCollection<string!>! headingComponents, int? expectedOwnHeadings = null) -> string?
+static MMCA.Common.Testing.Architecture.ArchitectureRules.RoutablePagesRenderExactlyOneH1(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots, int minimumPages, System.Collections.Generic.IReadOnlyCollection<string!>! headingComponents, System.Collections.Generic.IReadOnlyDictionary<string!, int>? branchedHeadingPages = null, System.Collections.Generic.IReadOnlyCollection<string!>? pagesWithoutHeading = null) -> void
+static MMCA.Common.Testing.Architecture.PageHeadingTestsBase.FrameworkHeadingComponents.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Architecture.PageHeadingTestsBase.BranchedHeadingPages.get -> System.Collections.Generic.IReadOnlyDictionary<string!, int>!
+virtual MMCA.Common.Testing.Architecture.PageHeadingTestsBase.HeadingComponents.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.PageHeadingTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.PageHeadingTestsBase.PagesWithoutHeading.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
