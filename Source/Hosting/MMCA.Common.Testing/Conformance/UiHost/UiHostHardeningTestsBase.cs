@@ -45,12 +45,11 @@ public abstract class UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>
     {
         using var client = Factory.CreateClient();
 
-        var handlers = Factory.Services.GetServices<CircuitHandler>().ToList();
+        // Single() is the registration assertion: exactly one ceiling among the host's circuit handlers.
         var first = Factory.Services.GetServices<CircuitHandler>().OfType<TCircuitCeiling>().Single();
         using var scope = Factory.Services.CreateScope();
         var fromScope = scope.ServiceProvider.GetServices<CircuitHandler>().OfType<TCircuitCeiling>().Single();
 
-        handlers.Should().ContainItemsAssignableTo<CircuitHandler>();
         fromScope.Should().BeSameAs(first, "one count must span the replica, not one count per circuit");
     }
 
