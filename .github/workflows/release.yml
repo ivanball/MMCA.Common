@@ -10,9 +10,11 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # About 2x the slowest of the last five tag runs (4m38s-6m28s, measured 2026-09-30), so a hung
-    # restore, test or push fails the job instead of holding a runner for the 6-hour default.
-    timeout-minutes: 15
+    # About 2x the slowest recent completed tag run (10m28s-12m25s for v1.302.0-v1.304.0, measured
+    # 2026-11-18; v1.305.0 hit the old 15-minute limit in its final cleanup step, after both pushes),
+    # so a hung restore, test or push still fails the job instead of holding a runner for the
+    # 6-hour default.
+    timeout-minutes: 25
     # Deployment gate for an IRREVERSIBLE action (SEC-Common-64): nuget.org versions can never be
     # withdrawn (ADR-053), so the publish waits on the `release` environment's protection rules
     # (required reviewer + a deployment policy limited to v* tags), configured in repo settings.
