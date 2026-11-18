@@ -77,6 +77,12 @@ jobs:
           while IFS= read -r f; do
             [ -z "$f" ] && continue
             case "$f" in
+              # Markdown that tests read is code: NavigationFlow.md and samples/deployment/OPERATIONS.md
+              # are embedded resources of Architecture.Tests (NavigationContractTests,
+              # SampleDeploymentObservabilityTests), and every .md under Tests/ is a test fixture.
+              # A Markdown-only PR touching one of them must run the suite, or it merges green and the
+              # next unrelated code PR fails red. Listed before the *.md catch-all on purpose.
+              NavigationFlow.md|samples/deployment/OPERATIONS.md|Tests/*) code=true; break ;;
               *.md) ;;
               *) code=true; break ;;
             esac
@@ -161,10 +167,12 @@ jobs:
         # test failure still gates. Coverage is report-only (see the `coverage` job).
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
-          # Floor at 2000, far below the suite size: a discovery/filter regression that silently drops
-          # thousands of tests must fail the job, not pass green with a handful discovered.
+          # Floor about 5 percent under the measured suite (total: 23687 across both target frameworks,
+          # run 44203486525, 2026-11-18): a discovery/filter regression that silently drops a whole
+          # test project or one framework's run must fail the job, not pass green. Ratchet it up as the
+          # suite grows; lower it only in the PR that deliberately deletes tests. release.yml matches.
           dotnet-coverage collect -f cobertura -o coverage.unit.cobertura.xml \
-            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000"
+            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 22500"
 
       - name: Upload coverage (unit + architecture + bUnit)
         if: always() && needs.changes.outputs.code == 'true'

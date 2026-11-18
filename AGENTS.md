@@ -25,7 +25,7 @@ dotnet run --project build/facts -- .                                       # re
 
 There is no `push: main` trigger: `main` requires an up-to-date branch, so the PR check already ran against the tree that lands. A `changes` job skips heavy steps on a docs-only PR while all required contexts still post green; the FACTS drift gate runs anyway, since FACTS.md is itself markdown. Jobs:
 
-- **build-and-test**: FACTS gate, Release build, vuln audit (re-applies the `NuGetAuditSuppress` list from `Directory.Build.props`), tests with `--minimum-expected-tests 2000`.
+- **build-and-test**: FACTS gate, Release build, vuln audit (re-applies the `NuGetAuditSuppress` list from `Directory.Build.props`), tests with `--minimum-expected-tests 22500` (about 5 percent under the measured total; ratchet it as the suite grows).
 - **ui-e2e**: chromium + firefox + webkit, all required; builds the out-of-slnx `UI.Gallery` + `UI.E2E.Tests` by csproj path and asserts axe-core WCAG 2.1 AA.
 - **package-consumption**: packs every package and builds a throwaway consumer, catching package-mode-only failures that source mode masks. Run it locally with `pwsh build/consumer-check/Invoke-ConsumerCheck.ps1` (one `-Stage` per step).
 - **consumer-source-build**: builds MMCA.Helpdesk against THIS PR's source, so a breaking public-API change fails pre-merge.
