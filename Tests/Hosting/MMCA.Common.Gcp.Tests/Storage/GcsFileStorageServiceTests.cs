@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Gcp.Storage;
+using MMCA.Common.Tests.Shared.Hosting;
 using Moq;
 using StorageObject = Google.Apis.Storage.v1.Data.Object;
 
@@ -16,17 +17,40 @@ namespace MMCA.Common.Gcp.Tests.Storage;
 /// The Cloud Storage store's contract against a mocked client: the object it uploads (bucket, name,
 /// content type, the <see cref="FileUploadOptions"/> headers as object metadata, stream ownership),
 /// the delete-if-exists semantics, and the Result it returns, with the same error codes as the Azure
-/// Blob and S3 stores. The real wire round trip lives in the emulator tier.
+/// Blob and S3 stores. The failure cases shared with the S3 store run from
+/// <see cref="FileStorageServiceFailureTestsBase"/>; the cases below are Cloud Storage-only. The real
+/// wire round trip lives in the emulator tier.
 /// </summary>
-public sealed class GcsFileStorageServiceTests
+public sealed class GcsFileStorageServiceTests : FileStorageServiceFailureTestsBase
 {
     private readonly Mock<StorageClient> _client = new();
 
-    private GcsFileStorageService CreateSut(GcsFileStorageSettings? settings = null) =>
+    private GcsFileStorageService CreateSut(GcsFileStorageSettings? settings) =>
         new(
             _client.Object,
             Options.Create(settings ?? new GcsFileStorageSettings { GcsBucket = "avatars" }),
             NullLogger<GcsFileStorageService>.Instance);
+
+    protected override IFileStorageService CreateSut() => CreateSut(settings: null);
+
+    protected override void ConstructWithNullOptions() =>
+        _ = new GcsFileStorageService(_client.Object, null!, NullLogger<GcsFileStorageService>.Instance);
+
+    protected override Exception CreateServiceException() =>
+        new GoogleApiException("storage", "Forbidden") { HttpStatusCode = HttpStatusCode.Forbidden };
+
+    protected override void FailUploadWith(Exception exception) =>
+        _client.Setup(c => c.UploadObjectAsync(
+                It.IsAny<StorageObject>(),
+                It.IsAny<Stream>(),
+                It.IsAny<UploadObjectOptions>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<IUploadProgress>>()))
+            .ThrowsAsync(exception);
+
+    protected override void FailDeleteWith(Exception exception) =>
+        _client.Setup(c => c.DeleteObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DeleteObjectOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
 
     private void SetupUploadSucceeds() =>
         _client.Setup(c => c.UploadObjectAsync(
@@ -110,53 +134,6 @@ public sealed class GcsFileStorageServiceTests
     }
 
     [Fact]
-    public async Task UploadAsync_ServiceFailure_IsTheUploadFailedResult()
-    {
-        _client.Setup(c => c.UploadObjectAsync(
-                It.IsAny<StorageObject>(),
-                It.IsAny<Stream>(),
-                It.IsAny<UploadObjectOptions>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<IProgress<IUploadProgress>>()))
-            .ThrowsAsync(new GoogleApiException("storage", "Forbidden") { HttpStatusCode = HttpStatusCode.Forbidden });
-        await using var content = new MemoryStream([1]);
-
-        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
-    }
-
-    // M261: a transport failure never becomes a GoogleApiException, and it is still a Result failure.
-    [Fact]
-    public async Task UploadAsync_TransportFailure_IsTheUploadFailedResult()
-    {
-        _client.Setup(c => c.UploadObjectAsync(
-                It.IsAny<StorageObject>(),
-                It.IsAny<Stream>(),
-                It.IsAny<UploadObjectOptions>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<IProgress<IUploadProgress>>()))
-            .ThrowsAsync(new HttpRequestException("connection refused"));
-        await using var content = new MemoryStream([1]);
-
-        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
-    }
-
-    [Fact]
-    public async Task UploadAsync_RejectsNullOptions()
-    {
-        await using var content = new MemoryStream([1]);
-
-        var act = () => CreateSut().UploadAsync("a.png", content, "image/png", null!, TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<ArgumentNullException>();
-    }
-
-    [Fact]
     public async Task DeleteAsync_DeletesTheObjectFromTheBucket()
     {
         string? bucket = null;
@@ -187,18 +164,6 @@ public sealed class GcsFileStorageServiceTests
         result.IsSuccess.Should().BeTrue("delete-if-exists semantics, as with the Blob and S3 stores");
     }
 
-    [Fact]
-    public async Task DeleteAsync_ServiceFailure_IsTheDeleteFailedResult()
-    {
-        _client.Setup(c => c.DeleteObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DeleteObjectOptions>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new GoogleApiException("storage", "Forbidden") { HttpStatusCode = HttpStatusCode.Forbidden });
-
-        var result = await CreateSut().DeleteAsync("a.png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
-    }
-
     // M261: a timeout the caller did not request is a transport failure, not an escaping exception.
     [Fact]
     public async Task DeleteAsync_TimeoutTheCallerDidNotRequest_IsTheDeleteFailedResult()
@@ -223,13 +188,5 @@ public sealed class GcsFileStorageServiceTests
         var act = () => CreateSut().DeleteAsync("a.png", cancellation.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-    }
-
-    [Fact]
-    public void Constructor_RejectsNullOptions()
-    {
-        var act = () => new GcsFileStorageService(_client.Object, null!, NullLogger<GcsFileStorageService>.Instance);
-
-        act.Should().Throw<ArgumentNullException>();
     }
 }

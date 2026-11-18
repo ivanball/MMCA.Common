@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Azure.PostgreSql;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Tests.Shared.Hosting;
 using Npgsql;
 
 namespace MMCA.Common.Azure.Tests.PostgreSql;
@@ -14,78 +15,38 @@ namespace MMCA.Common.Azure.Tests.PostgreSql;
 /// <c>MMCA.Common.Gcp.Tests/CloudSql/CloudSqlIamAuthenticationTests.cs</c>): off unless
 /// <c>AzurePostgreSql:EntraAuthentication:Enabled</c> is true, and when on it registers one data-source
 /// configurator whose periodic password provider hands Npgsql a Microsoft Entra access token for the
-/// Azure Database for PostgreSQL scope, plus the receipt the startup tripwire checks. The token source
-/// is injected, so nothing here reaches Azure; no Azure Database for PostgreSQL emulator exists.
+/// Azure Database for PostgreSQL scope, plus the receipt the startup tripwire checks. The gate,
+/// registration and SSL-mode cases shared with the RDS and Cloud SQL adapters run from
+/// <see cref="PostgreSqlTokenAuthenticationTestsBase"/>; the cases below are Entra-only, plus the one
+/// copy of the Npgsql static-password refusal all three adapters rely on. The token source is
+/// injected, so nothing here reaches Azure; no Azure Database for PostgreSQL emulator exists.
 /// </summary>
-public sealed class AzurePostgreSqlEntraAuthenticationTests
+public sealed class AzurePostgreSqlEntraAuthenticationTests : PostgreSqlTokenAuthenticationTestsBase
 {
-    private const string ServerHost = "orders.postgres.database.azure.com";
-    private const string EncryptedConnectionString = $"Host={ServerHost};Port=5432;Database=orders;Username=orders-api;SSL Mode=Require";
     private const string EntraScope = "https://ossrdbms-aad.database.windows.net/.default";
 
-    private static IConfiguration ConfigurationWith(Dictionary<string, string?> settings) =>
-        new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+    protected override string EnabledKey => "AzurePostgreSql:EntraAuthentication:Enabled";
 
-    private static IConfiguration EnabledConfiguration(Dictionary<string, string?> settings)
-    {
-        settings["AzurePostgreSql:EntraAuthentication:Enabled"] = "true";
-        return ConfigurationWith(settings);
-    }
+    protected override string ServerHost => "orders.postgres.database.azure.com";
+
+    protected override string UserName => "orders-api";
+
+    protected override void Register(IServiceCollection services, IConfiguration configuration) =>
+        services.AddAzurePostgreSqlEntraAuthentication(configuration);
+
+    protected override INpgsqlDataSourceConfigurator CreateConfigurator() =>
+        new AzurePostgreSqlEntraAuthenticationConfigurator(_ => Task.FromResult("token"));
+
+    protected override void AssertNothingRegistered(IServiceCollection services) =>
+        services.Should().BeEmpty("a host that leaves the gate off takes no Azure credential and no configurator");
+
+    protected override void AssertEnabledRegistrations(IServiceCollection services) =>
+        services.Should().ContainSingle(d => IsTheEntraMarker(d));
 
     private static bool IsTheEntraMarker(ServiceDescriptor descriptor) =>
         descriptor.ServiceType == typeof(HostIntegrationMarker)
         && descriptor.ImplementationInstance is HostIntegrationMarker marker
         && marker.Name == HostIntegrationNames.AzurePostgreSqlEntraAuthentication;
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("false")]
-    public void WhenNotEnabled_RegistersNothing(string? enabled)
-    {
-        var services = new ServiceCollection();
-
-        // A weak SSL mode on purpose: with the gate off nothing is validated either.
-        services.AddAzurePostgreSqlEntraAuthentication(ConfigurationWith(new()
-        {
-            ["AzurePostgreSql:EntraAuthentication:Enabled"] = enabled,
-            ["ConnectionStrings:PostgreSQLConnectionString"] = "Host=localhost;Database=app;Username=app;Password=secret",
-        }));
-
-        services.Should().BeEmpty("a host that leaves the gate off takes no Azure credential and no configurator");
-    }
-
-    [Fact]
-    public void WhenEnabled_RegistersTheConfiguratorTheMarkerAndTheDataSource()
-    {
-        var services = new ServiceCollection();
-
-        services.AddAzurePostgreSqlEntraAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString,
-        }));
-
-        services.Should().ContainSingle(d => IsTheEntraMarker(d));
-
-        using var provider = services.BuildServiceProvider();
-        provider.GetServices<INpgsqlDataSourceConfigurator>().Should().ContainSingle()
-            .Which.Should().BeOfType<AzurePostgreSqlEntraAuthenticationConfigurator>();
-
-        // Building it is what applies the configurator. No token is requested here: the credential is
-        // asked for one on the first connection, not at registration or build.
-        provider.GetKeyedService<NpgsqlDataSource>(EncryptedConnectionString).Should().NotBeNull();
-    }
-
-    [Fact]
-    public void CalledTwice_RegistersOneConfigurator()
-    {
-        var services = new ServiceCollection();
-        var configuration = EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString });
-
-        services.AddAzurePostgreSqlEntraAuthentication(configuration);
-        services.AddAzurePostgreSqlEntraAuthentication(configuration);
-
-        services.Count(d => d.ServiceType == typeof(INpgsqlDataSourceConfigurator)).Should().Be(1);
-    }
 
     // Ruling L3: a keyed registration of the marker type is skipped, not read (reading
     // ImplementationInstance on a keyed descriptor throws), and it does not count as the receipt.
@@ -168,23 +129,6 @@ public sealed class AzurePostgreSqlEntraAuthenticationTests
     }
 
     [Theory]
-    [InlineData("Require")]
-    [InlineData("VerifyCA")]
-    [InlineData("VerifyFull")]
-    public void AnEncryptedConnectionString_IsAccepted(string sslMode)
-    {
-        var services = new ServiceCollection();
-
-        var act = () => services.AddAzurePostgreSqlEntraAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:PostgreSQLConnectionString"] = $"Host={ServerHost};Database=orders;Username=orders-api;SSL Mode={sslMode}",
-            ["DataSources:Orders:PostgreSQLConnectionString"] = $"Host={ServerHost};Database=orders;Username=orders-api;SSL Mode={sslMode}",
-        }));
-
-        act.Should().NotThrow();
-    }
-
-    [Theory]
     [InlineData("ConnectionStrings:PostgreSQLConnectionString", "")]
     [InlineData("ConnectionStrings:PostgreSQLConnectionString", ";SSL Mode=Prefer")]
     [InlineData("DataSources:Orders:PostgreSQLConnectionString", "")]
@@ -206,23 +150,11 @@ public sealed class AzurePostgreSqlEntraAuthenticationTests
     }
 
     [Fact]
-    public void AWeakSslMode_AlsoFailsTheDataSourceBuild()
-    {
-        // A connection string registration never saw (supplied later) is still checked when its data
-        // source is built.
-        var configurator = new AzurePostgreSqlEntraAuthenticationConfigurator(_ => Task.FromResult("token"));
-
-        var act = () => configurator.Configure(new NpgsqlDataSourceBuilder($"Host={ServerHost};Database=orders;Username=orders-api"));
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*SSL Mode=Require*");
-    }
-
-    [Fact]
     public void AConnectionStringThatCarriesAPassword_IsRefusedWhenItsDataSourceIsBuilt()
     {
         // The token IS the password, so a static one alongside it is a configuration error. Npgsql
         // refuses a data source with both (provider behaviour, asserted rather than implemented), the
-        // same behaviour the Cloud SQL and RDS adapters rely on.
+        // same behaviour the Cloud SQL and RDS adapters rely on, so this is its only copy.
         var configurator = new AzurePostgreSqlEntraAuthenticationConfigurator(_ => Task.FromResult("token"));
         var builder = new NpgsqlDataSourceBuilder(EncryptedConnectionString + ";Password=static-placeholder");
 
@@ -233,21 +165,6 @@ public sealed class AzurePostgreSqlEntraAuthenticationTests
         };
 
         act.Should().Throw<NotSupportedException>();
-    }
-
-    [Fact]
-    public void OtherEngines_AreLeftAlone()
-    {
-        var services = new ServiceCollection();
-
-        var act = () => services.AddAzurePostgreSqlEntraAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:SQLServerConnectionString"] = "Server=10.20.0.4;Database=app;Encrypt=false",
-            ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
-            ["DataSources:Catalog:CosmosConnectionString"] = "AccountEndpoint=https://cosmos.example:443/;AccountKey=a2V5",
-        }));
-
-        act.Should().NotThrow("Entra token login applies to PostgreSQL connection strings only");
     }
 
     [Fact]

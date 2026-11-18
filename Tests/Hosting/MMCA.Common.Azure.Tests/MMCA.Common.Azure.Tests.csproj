@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Azure\MMCA.Common.Azure.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared PostgreSQL token-authentication contract base (also linked by the Aws and Gcp test projects). -->
+    <Compile Include="..\..\Shared\Hosting\PostgreSqlTokenAuthenticationTestsBase.cs" Link="Shared\Hosting\PostgreSqlTokenAuthenticationTestsBase.cs" />
+  </ItemGroup>
 </Project>

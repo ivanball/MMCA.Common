@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Gcp.CloudSql;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Tests.Shared.Hosting;
 using Npgsql;
 
 namespace MMCA.Common.Gcp.Tests.CloudSql;
@@ -10,70 +11,26 @@ namespace MMCA.Common.Gcp.Tests.CloudSql;
 /// <summary>
 /// <c>AddCloudSqlIamAuthentication</c>: off unless <c>CloudSql:IamAuthentication:Enabled</c> is true,
 /// and when on it registers one data-source configurator whose periodic password provider hands Npgsql
-/// an OAuth2 access token. The token source is injected, so nothing here reaches Google; the real
-/// data-source path against a server is the PostgreSQL Testcontainers tier.
+/// an OAuth2 access token. The gate, registration and SSL-mode cases shared with the RDS and Entra
+/// adapters run from <see cref="PostgreSqlTokenAuthenticationTestsBase"/>; the cases below are Cloud
+/// SQL-only. The token source is injected, so nothing here reaches Google; the real data-source path
+/// against a server is the PostgreSQL Testcontainers tier.
 /// </summary>
-public sealed class CloudSqlIamAuthenticationTests
+public sealed class CloudSqlIamAuthenticationTests : PostgreSqlTokenAuthenticationTestsBase
 {
     private const string CloudSqlHost = "10.20.0.3";
-    private const string EncryptedConnectionString = $"Host={CloudSqlHost};Port=5432;Database=orders;Username=orders-api@my-project.iam;SSL Mode=Require";
 
-    private static IConfiguration ConfigurationWith(Dictionary<string, string?> settings) =>
-        new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+    protected override string EnabledKey => "CloudSql:IamAuthentication:Enabled";
 
-    private static IConfiguration EnabledConfiguration(Dictionary<string, string?> settings)
-    {
-        settings["CloudSql:IamAuthentication:Enabled"] = "true";
-        return ConfigurationWith(settings);
-    }
+    protected override string ServerHost => CloudSqlHost;
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("false")]
-    public void AddCloudSqlIamAuthentication_WhenNotEnabled_RegistersNothing(string? enabled)
-    {
-        var services = new ServiceCollection();
+    protected override string UserName => "orders-api@my-project.iam";
 
-        services.AddCloudSqlIamAuthentication(ConfigurationWith(new()
-        {
-            ["CloudSql:IamAuthentication:Enabled"] = enabled,
-            ["ConnectionStrings:PostgreSQLConnectionString"] = "Host=localhost;Database=app;Username=app;Password=secret",
-        }));
-
-        services.Should().NotContain(d => d.ServiceType == typeof(INpgsqlDataSourceConfigurator));
-        services.Should().NotContain(d => d.ServiceType == typeof(NpgsqlDataSource));
-    }
-
-    [Fact]
-    public void AddCloudSqlIamAuthentication_WhenEnabled_RegistersTheConfiguratorAndTheDataSource()
-    {
-        var services = new ServiceCollection();
-
-        services.AddCloudSqlIamAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString,
-        }));
-
-        using var provider = services.BuildServiceProvider();
-        provider.GetServices<INpgsqlDataSourceConfigurator>().Should().ContainSingle()
-            .Which.Should().BeOfType<CloudSqlIamAuthenticationConfigurator>();
-
-        // Building it is what applies the configurator. No credential is loaded here: Application
-        // Default Credentials are read on the first token request, not at registration or build.
-        provider.GetKeyedService<NpgsqlDataSource>(EncryptedConnectionString).Should().NotBeNull();
-    }
-
-    [Fact]
-    public void AddCloudSqlIamAuthentication_CalledTwice_RegistersOneConfigurator()
-    {
-        var services = new ServiceCollection();
-        var configuration = EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString });
-
-        services.AddCloudSqlIamAuthentication(configuration);
+    protected override void Register(IServiceCollection services, IConfiguration configuration) =>
         services.AddCloudSqlIamAuthentication(configuration);
 
-        services.Count(d => d.ServiceType == typeof(INpgsqlDataSourceConfigurator)).Should().Be(1);
-    }
+    protected override INpgsqlDataSourceConfigurator CreateConfigurator() =>
+        new CloudSqlIamAuthenticationConfigurator(_ => Task.FromResult("token"));
 
     [Fact]
     public async Task ThePasswordProvider_ReturnsTheTokenFromTheInjectedSource()
@@ -106,22 +63,6 @@ public sealed class CloudSqlIamAuthenticationTests
     }
 
     [Theory]
-    [InlineData("Require")]
-    [InlineData("VerifyCA")]
-    [InlineData("VerifyFull")]
-    public void AnEncryptedConnectionString_IsAccepted(string sslMode)
-    {
-        var services = new ServiceCollection();
-
-        var act = () => services.AddCloudSqlIamAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:PostgreSQLConnectionString"] = $"Host={CloudSqlHost};Database=orders;Username=orders-api@my-project.iam;SSL Mode={sslMode}",
-        }));
-
-        act.Should().NotThrow();
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData(";SSL Mode=Prefer")]
     [InlineData(";SSL Mode=Allow")]
@@ -139,48 +80,6 @@ public sealed class CloudSqlIamAuthenticationTests
             .WithMessage("*CloudSql:IamAuthentication:Enabled*")
             .WithMessage("*DataSources:Orders:PostgreSQLConnectionString*")
             .WithMessage("*SSL Mode=Require*");
-    }
-
-    [Fact]
-    public void AWeakSslMode_AlsoFailsTheDataSourceBuild_ForAConnectionStringRegistrationNeverSaw()
-    {
-        var configurator = new CloudSqlIamAuthenticationConfigurator(_ => Task.FromResult("token"));
-
-        var act = () => configurator.Configure(new NpgsqlDataSourceBuilder($"Host={CloudSqlHost};Database=orders;Username=orders-api@my-project.iam"));
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*SSL Mode=Require*");
-    }
-
-    [Fact]
-    public void AConnectionStringThatCarriesAPassword_IsRefusedWhenItsDataSourceIsBuilt()
-    {
-        // The token IS the password, so a static one alongside it is a configuration error; Npgsql
-        // refuses a data source with both, which is the same behaviour the RDS adapter relies on.
-        var configurator = new CloudSqlIamAuthenticationConfigurator(_ => Task.FromResult("token"));
-        var builder = new NpgsqlDataSourceBuilder(EncryptedConnectionString + ";Password=static-secret");
-
-        var act = () =>
-        {
-            configurator.Configure(builder);
-            using var dataSource = builder.Build();
-        };
-
-        act.Should().Throw<NotSupportedException>();
-    }
-
-    [Fact]
-    public void OtherEngines_AreLeftAlone()
-    {
-        var services = new ServiceCollection();
-
-        var act = () => services.AddCloudSqlIamAuthentication(EnabledConfiguration(new()
-        {
-            ["ConnectionStrings:SQLServerConnectionString"] = "Server=10.20.0.4;Database=app;Encrypt=false",
-            ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
-            ["DataSources:Catalog:CosmosConnectionString"] = "AccountEndpoint=https://cosmos.example:443/;AccountKey=a2V5",
-        }));
-
-        act.Should().NotThrow("IAM database authentication applies to PostgreSQL connection strings only");
     }
 
     [Fact]

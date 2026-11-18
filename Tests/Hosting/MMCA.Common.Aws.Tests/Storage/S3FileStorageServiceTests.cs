@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Aws.Storage;
+using MMCA.Common.Tests.Shared.Hosting;
 using Moq;
 
 namespace MMCA.Common.Aws.Tests.Storage;
@@ -14,21 +15,37 @@ namespace MMCA.Common.Aws.Tests.Storage;
 /// <summary>
 /// The S3 store's contract against a mocked client: the request it sends (bucket, key, content
 /// type, the <see cref="FileUploadOptions"/> headers, stream ownership, payload signing) and the
-/// Result it returns, with the same error codes as the Azure Blob store. The real wire round trip
-/// lives in the LocalStack tier.
+/// Result it returns, with the same error codes as the Azure Blob store. The failure cases shared with
+/// the Cloud Storage store run from <see cref="FileStorageServiceFailureTestsBase"/>; the cases below
+/// are S3-only. The real wire round trip lives in the LocalStack tier.
 /// </summary>
-public sealed class S3FileStorageServiceTests
+public sealed class S3FileStorageServiceTests : FileStorageServiceFailureTestsBase
 {
     private readonly Mock<IAmazonS3> _s3 = new();
 
     public S3FileStorageServiceTests() =>
         _s3.SetupGet(s => s.Config).Returns(new AmazonS3Config { RegionEndpoint = RegionEndpoint.EUWest1 });
 
-    private S3FileStorageService CreateSut(S3FileStorageSettings? settings = null) =>
+    private S3FileStorageService CreateSut(S3FileStorageSettings? settings) =>
         new(
             _s3.Object,
             Options.Create(settings ?? new S3FileStorageSettings { Bucket = "avatars", Region = "eu-west-1" }),
             NullLogger<S3FileStorageService>.Instance);
+
+    protected override IFileStorageService CreateSut() => CreateSut(settings: null);
+
+    protected override void ConstructWithNullOptions() =>
+        _ = new S3FileStorageService(_s3.Object, null!, NullLogger<S3FileStorageService>.Instance);
+
+    protected override Exception CreateServiceException() => new AmazonS3Exception("Access Denied");
+
+    protected override void FailUploadWith(Exception exception) =>
+        _s3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+    protected override void FailDeleteWith(Exception exception) =>
+        _s3.Setup(s => s.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
 
     [Fact]
     public async Task UploadAsync_StoresTheObjectWithItsHeaders_AndReturnsItsUrl()
@@ -93,33 +110,6 @@ public sealed class S3FileStorageServiceTests
         captured!.DisablePayloadSigning.GetValueOrDefault().Should().Be(unsignedPayload);
     }
 
-    [Fact]
-    public async Task UploadAsync_ServiceFailure_IsTheUploadFailedResult()
-    {
-        _s3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new AmazonS3Exception("Access Denied"));
-        await using var content = new MemoryStream([1]);
-
-        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
-    }
-
-    // M261: a failed connection is not an AmazonServiceException, and it is still a Result failure.
-    [Fact]
-    public async Task UploadAsync_TransportFailure_IsTheUploadFailedResult()
-    {
-        _s3.Setup(s => s.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("connection refused"));
-        await using var content = new MemoryStream([1]);
-
-        var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
-    }
-
     // L252: the SDK unwraps a timeout cancellation to its inner TimeoutException.
     [Fact]
     public async Task UploadAsync_SdkTimeout_IsTheUploadFailedResult()
@@ -131,16 +121,6 @@ public sealed class S3FileStorageServiceTests
         var result = await CreateSut().UploadAsync("a.png", content, "image/png", TestContext.Current.CancellationToken);
 
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.UploadFailed");
-    }
-
-    [Fact]
-    public async Task UploadAsync_RejectsNullOptions()
-    {
-        await using var content = new MemoryStream([1]);
-
-        var act = () => CreateSut().UploadAsync("a.png", content, "image/png", null!, TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -156,18 +136,6 @@ public sealed class S3FileStorageServiceTests
         result.IsSuccess.Should().BeTrue();
         captured!.BucketName.Should().Be("avatars");
         captured.Key.Should().Be("users/42/a.png");
-    }
-
-    [Fact]
-    public async Task DeleteAsync_ServiceFailure_IsTheDeleteFailedResult()
-    {
-        _s3.Setup(s => s.DeleteObjectAsync(It.IsAny<DeleteObjectRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new AmazonS3Exception("Access Denied"));
-
-        var result = await CreateSut().DeleteAsync("a.png", TestContext.Current.CancellationToken);
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("FileStorage.DeleteFailed");
     }
 
     [Fact]
@@ -195,13 +163,5 @@ public sealed class S3FileStorageServiceTests
         var act = () => CreateSut().DeleteAsync("a.png", cts.Token);
 
         await act.Should().ThrowAsync<IOException>();
-    }
-
-    [Fact]
-    public void Constructor_RejectsNullOptions()
-    {
-        var act = () => new S3FileStorageService(_s3.Object, null!, NullLogger<S3FileStorageService>.Instance);
-
-        act.Should().Throw<ArgumentNullException>();
     }
 }
