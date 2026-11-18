@@ -200,7 +200,7 @@
           "AwesomeAssertions": "[9.6.0, )",
           "Deque.AxeCore.Commons": "[4.14.0, )",
           "Deque.AxeCore.Playwright": "[4.14.0, )",
-          "Microsoft.Playwright": "[1.64.1, )",
+          "Microsoft.Playwright": "[1.65.0, )",
           "Microsoft.Testing.Extensions.Retry": "[2.5.2, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
@@ -227,9 +227,9 @@
       },
       "Microsoft.Playwright": {
         "type": "CentralTransitive",
-        "requested": "[1.64.1, )",
-        "resolved": "1.64.1",
-        "contentHash": "DO8plHiCCUS/54XZxhsuzGtxI4RkyJ/5XOlVFoT0A0K1jNYdGhntry36ivkPjcCbv0uz6P/PmJ35gUgnAYGbiw==",
+        "requested": "[1.65.0, )",
+        "resolved": "1.65.0",
+        "contentHash": "xzxOg/X6NHNGfG4ctVtnp/d2vGEi01mWE7Nq0s8yIHtAd9Kfx7ZWe0xjpDprpOs0CYcaGhRgKCDYQX9UxXEXCQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0",
           "System.ComponentModel.Annotations": "5.0.0"
@@ -448,7 +448,7 @@
           "AwesomeAssertions": "[9.6.0, )",
           "Deque.AxeCore.Commons": "[4.14.0, )",
           "Deque.AxeCore.Playwright": "[4.14.0, )",
-          "Microsoft.Playwright": "[1.64.1, )",
+          "Microsoft.Playwright": "[1.65.0, )",
           "Microsoft.Testing.Extensions.Retry": "[2.5.2, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
@@ -475,9 +475,9 @@
       },
       "Microsoft.Playwright": {
         "type": "CentralTransitive",
-        "requested": "[1.64.1, )",
-        "resolved": "1.64.1",
-        "contentHash": "DO8plHiCCUS/54XZxhsuzGtxI4RkyJ/5XOlVFoT0A0K1jNYdGhntry36ivkPjcCbv0uz6P/PmJ35gUgnAYGbiw==",
+        "requested": "[1.65.0, )",
+        "resolved": "1.65.0",
+        "contentHash": "xzxOg/X6NHNGfG4ctVtnp/d2vGEi01mWE7Nq0s8yIHtAd9Kfx7ZWe0xjpDprpOs0CYcaGhRgKCDYQX9UxXEXCQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0"
         }

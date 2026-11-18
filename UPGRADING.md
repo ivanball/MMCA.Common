@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.304.0] - 2026-11-18
 
 **Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.
 

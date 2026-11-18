@@ -260,12 +260,18 @@ MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.CultureSw
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.MobileViewport_CultureAndTheme_ShouldBeReachable() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.ThemeToggle_ToDark_ShouldApplyAndPersist() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.UserPreferencesTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.Home_LinksAnInstallableManifest_WhoseIconsAllResolve() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.InstallableWebAppTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.TheServiceWorker_IsServedAtTheSiteRoot_AsUncachedJavaScript() -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogOpener.get -> Microsoft.Playwright.ILocator!
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.DialogPagePath.get -> string!
 abstract MMCA.Common.Testing.E2E.Workflows.Accessibility.KeyboardOperabilityTestsBase.PagePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ScannedPages.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.ProtectedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.PublicPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.ExpectedName.get -> string!
+abstract MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.ExpectedThemeColor.get -> string!
 const MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection.Name = "E2E" -> string!
 const MMCA.Common.Testing.E2E.Infrastructure.LocalPacing.SecondsVariable = "E2E_LOCAL_PACING_SECONDS" -> string!
 const MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.MudDataGridRowSelector = ".mud-table-body .mud-table-row" -> string!

@@ -4,13 +4,22 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.304.0] - 2026-11-18
 
 **Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.
 
 ### Added
 
 - **`LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Domain`, `_Application` and `_Infrastructure`** (MMCA.Common.Testing.Architecture, rules `ArchitectureRules.GrpcDoesNotDependOnDomain`, `GrpcDoesNotDependOnApplication`, `GrpcDoesNotDependOnInfrastructure`): the Grpc transport layer depends on Shared only. Grpc is an optional layer, so a map that declares no `Layer.Grpc` assembly satisfies the three rules vacuously.
+- **`DetailPageLoadStateTestsBase<TPage, TId, TDto>`** (MMCA.Common.Testing.UI, namespace `MMCA.Common.Testing.UI.Pages`): pins a consumer detail page's wiring of `DetailPageBase` and `DetailLoadStateContent` (loading, not found, failed with Retry, a superseded route id never overwrites the newer record). Hooks: `LoadedId`, `OtherId`, `NotFoundText`, `CreateRecord`, `RecordMarker`, `SetupFetch`; virtual `LoadingLabel`, `NotFoundError`, `IdParameterName`.
+- **`DataGridListPageTestsBase<TPage, TDto>`** (MMCA.Common.Testing.UI): pins a consumer list page's wiring of `ListPageShell` (title, empty state, a failed fetch shows Retry rather than the empty state, the first `RowLinkCell` href or none). Hooks: `PageTitle`, `EmptyStateText`, `FirstRowMarker`, `CreateRows`, `SetupFetch`; virtual `FirstRowHref`. The data-grid host is configured on the first `RenderList`.
+- **`AuthPreferencesTestsBase<TFixture>`** (MMCA.Common.Testing, namespace `MMCA.Common.Testing.Conformance.Identity`): the six `PUT/GET /Auth/preferences` integration facts (round trip, null-field merge, per-user isolation, unsupported culture and theme rejected, anonymous 401). Hook: `RegisterAndAuthenticateAsync(email)`.
+- **`FallbackAuthorizationTestsBase<TEntryPoint>`** and **`UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>`** (MMCA.Common.Testing, namespace `MMCA.Common.Testing.Conformance.UiHost`): a Blazor UI host's fallback-authorization sweep, its public-path theory (the subclass declares `public static TheoryData<string> PublicPaths`) and the no-`/Error`-exemption fact; the singleton circuit ceiling and the edge rate limiter registration.
+- **`InstallableWebAppTestsBase`** (MMCA.Common.Testing.E2E, namespace `MMCA.Common.Testing.E2E.Workflows.Pwa`): the manifest-and-icons and root service-worker facts. Hooks: `ExpectedName`, `ExpectedThemeColor`.
+
+### Changed
+
+- **Dependencies:** Anthropic 13.10.0, AWSSDK.S3 4.1.1, AWSSDK.Core 4.1.1.1, AWSSDK.SecretsManager 4.1.1.2, AWSSDK.RDS, AWSSDK.SimpleNotificationService and AWSSDK.DynamoDBv2 4.1.0.2, Google.Cloud.Kms.V1 3.28.0, Google.Cloud.Firestore 4.7.0, Microsoft.Playwright 1.65.0 (MMCA.Common.Testing.E2E consumers install the matching browser build). `Microsoft.Testing.Extensions.Retry` stays at 2.5.2 until xunit.v3 resolves Microsoft.Testing.Platform 2.5.3.
 
 ## [1.303.0] - 2026-11-18
 

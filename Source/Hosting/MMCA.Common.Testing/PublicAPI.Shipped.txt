@@ -8,6 +8,14 @@ MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TComma
 MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>
 MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.GracefulShutdownTestsBase() -> void
 MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.Host_StopsGracefully_FiringLifetimeEventsWithinTimeout() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.AuthPreferencesTestsBase(TFixture fixture) -> void
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.GetPreferences_Anonymous_ReturnsUnauthorized() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.GetPreferences_EachUserSeesOnlyOwnValues() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.PutPreferences_NullField_LeavesOtherPreferenceUnchanged() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.PutPreferences_WithUnsupportedCulture_ReturnsBadRequest() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.PutPreferences_WithUnsupportedTheme_ReturnsBadRequest() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.PutThenGetPreferences_RoundTripsCultureAndTheme() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase
 MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.EdgePipeline_OrdersSteps_InDocumentedOrder() -> void
 MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.EdgePipeline_SatisfiesLoadBearingInvariants() -> void
@@ -76,6 +84,15 @@ MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Claim_is_tried_before_
 MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Header_resolution_is_an_explicit_opt_in() -> void
 MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Health_endpoints_are_excluded() -> void
 MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.TenantResolutionTestsBase() -> void
+MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>
+MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.AnonymousRequest_ToAPublicPath_IsNotRefused(string! path) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.EveryMappedEndpoint_DeclaresADecisionOrSitsUnderAnExemptPrefix() -> void
+MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.FallbackAuthorizationTestsBase() -> void
+MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.Host_DoesNotExemptTheErrorPageByPath() -> void
+MMCA.Common.Testing.Conformance.UiHost.UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>
+MMCA.Common.Testing.Conformance.UiHost.UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>.Host_RegistersTheCeilingAsASingleton() -> void
+MMCA.Common.Testing.Conformance.UiHost.UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>.Host_RegistersTheEdgeRateLimiter() -> void
+MMCA.Common.Testing.Conformance.UiHost.UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>.UiHostHardeningTestsBase() -> void
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource.<Clone>$() -> MMCA.Common.Testing.Fixtures.CrossServiceDataSource!
 MMCA.Common.Testing.Fixtures.CrossServiceDataSource.CrossServiceDataSource(string! LogicalName, string! DatabaseName) -> void
@@ -194,6 +211,7 @@ MMCA.Common.Testing.Support.ServiceCollectionFakeExtensions.extension(Microsoft.
 MMCA.Common.Testing.Support.TestPolling
 abstract MMCA.Common.Testing.Builders.EntityBuilderBase<TBuilder, TEntity>.Build() -> TEntity
 abstract MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+abstract MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.RegisterAndAuthenticateAsync(string! email) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamServices.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
 abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.LimitedPath.get -> string!
@@ -205,6 +223,8 @@ abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixtur
 abstract MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.CreateClient() -> System.Net.Http.HttpClient!
 abstract MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.AppHostProgramPath.get -> string!
 abstract MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Settings.get -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!
+abstract MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
+abstract MMCA.Common.Testing.Conformance.UiHost.UiHostHardeningTestsBase<TEntryPoint, TCircuitCeiling>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.BootHostsAsync() -> System.Threading.Tasks.ValueTask
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DataSources.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Fixtures.CrossServiceDataSource!>!
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DisposeHostsAsync() -> System.Threading.Tasks.ValueTask
@@ -212,7 +232,10 @@ abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.MigrationsAssembly
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateFactory() -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DatabaseNamePrefix.get -> string!
 abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlBaseEnvironmentVariable.get -> string!
+const MMCA.Common.Testing.Conformance.Identity.AuthPreferencesTestsBase<TFixture>.PreferencesPath = "/Auth/preferences" -> string!
 const MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.RefreshBaselineEnvironmentVariable = "MMCA_UPDATE_OPENAPI_BASELINE" -> string!
+const MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.PublicPathsMemberName = "PublicPaths" -> string!
+const MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.StaticAssetFallbackRoute = "/{**path:file}" -> string!
 const MMCA.Common.Testing.Fixtures.ServiceHostTestFactory<TProgram>.TestingEnvironmentName = "Testing" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultIssuer = "https://localhost:6001" -> string!
 const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultKeyId = "mmca-test-key" -> string!
@@ -238,6 +261,7 @@ static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator !=(MMCA.Co
 static MMCA.Common.Testing.Conformance.OpenApiBreakingChange.operator ==(MMCA.Common.Testing.Conformance.OpenApiBreakingChange? left, MMCA.Common.Testing.Conformance.OpenApiBreakingChange? right) -> bool
 static MMCA.Common.Testing.Conformance.OpenApiBreakingChangeDetector.Detect(string! baselineJson, string! liveJson) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Conformance.OpenApiBreakingChange!>!
 static MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.AssertProblemDetailsShapeAsync(System.Net.Http.HttpResponseMessage! response, System.Net.HttpStatusCode expected) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
+static MMCA.Common.Testing.Conformance.UiHost.FallbackAuthorizationTestsBase<TEntryPoint>.IsExempt(MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions! fallback, string! path) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator !=(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator ==(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ComposeConnectionString(string! baseConnectionString, string! databaseName, string? applicationName = null) -> string!

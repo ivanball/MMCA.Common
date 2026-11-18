@@ -218,6 +218,9 @@ MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Application_ShouldNotD
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Domain_ShouldNotDependOn_Api() -> void
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Domain_ShouldNotDependOn_Application() -> void
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Domain_ShouldNotDependOn_Infrastructure() -> void
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Application() -> void
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Domain() -> void
+MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Grpc_ShouldNotDependOn_Infrastructure() -> void
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.Infrastructure_ShouldNotDependOn_Api() -> void
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.LayerDependencyTestsBase() -> void
 MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.LayerMap_DeclaresEveryExpectedLayer() -> void
@@ -562,6 +565,9 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.FeatureFlagsDeclareLif
 static MMCA.Common.Testing.Architecture.ArchitectureRules.FoldersStayNarrow(string! repoRoot, int maxDirectFiles, System.Collections.Generic.IReadOnlyCollection<string!>! exemptFolderSuffixes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ForwardedJwtBearerAudienceIsFailClosed(System.Collections.Generic.IReadOnlyCollection<string!>! sourceRoots, int minimumCalls) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageStaysBehindInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnApplication(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnDomain(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GrpcDoesNotDependOnInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandledCommandCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlerCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandlersAreCoLocatedWithTheirContracts(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

@@ -17,6 +17,9 @@
     <!-- Lets the ui-e2e tier cover AuthOutcomeRules directly: the four-way auth classification is a
          pure function, and asserting it needs no browser. -->
     <InternalsVisibleTo Include="MMCA.Common.UI.E2E.Tests" />
+    <!-- Lets the package's own unit tests cover InstallableManifest, the installability rules the
+         browser-bound InstallableWebAppTestsBase applies to a parsed manifest. -->
+    <InternalsVisibleTo Include="MMCA.Common.Testing.E2E.Tests" />
   </ItemGroup>
   <ItemGroup>
     <!-- The MailDev host ports, shared as one linked source file with MMCA.Common.Aspire.Hosting
