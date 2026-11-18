@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **`AccountDeletionTestsBase` no longer throws "Unsupported RegularExpression flags"** (MMCA.Common.Testing.E2E): the v1.305.0 sign-in-page assertion passed a `RegexOptions.CultureInvariant` pattern to `ToHaveURLAsync`, which sends it to the browser as a JavaScript RegExp and accepts only `IgnoreCase`, `Multiline` and `Singleline`. With `E2E_API_BASE_URL` set, `DeleteAccount_ShouldLogOutAndPreventRelogin` failed on every attempt in both consumers (Store deploy run 44396146113). The pattern now carries `IgnoreCase` only.
+
 ## [1.305.0] - 2026-11-18
 
 ### Changed
