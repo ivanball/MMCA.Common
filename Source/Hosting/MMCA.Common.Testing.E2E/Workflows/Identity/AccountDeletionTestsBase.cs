@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Microsoft.Playwright;
 using MMCA.Common.Testing.E2E.Infrastructure;
@@ -22,6 +23,8 @@ namespace MMCA.Common.Testing.E2E.Workflows.Identity;
 /// </summary>
 public abstract class AccountDeletionTestsBase : E2ETestBase
 {
+    private static readonly Regex LoginPath = new("/login", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+
     protected AccountDeletionTestsBase(PlaywrightFixture fixture)
         : base(fixture)
     {
@@ -41,6 +44,13 @@ public abstract class AccountDeletionTestsBase : E2ETestBase
 
     /// <summary>The toast shown once, after the forced reload, when the deletion succeeded.</summary>
     protected virtual string AccountDeletedMessage => "Account deleted successfully.";
+
+    /// <summary>
+    /// The sign-in endpoint, relative to <see cref="E2ETestConfiguration.ApiBaseUrl"/>, asked whether
+    /// the deleted account is refused. Default: the framework <c>AuthControllerBase</c> login action
+    /// under an <c>Auth</c> controller route.
+    /// </summary>
+    protected virtual string SignInApiPath => "/Auth/login";
 
     /// <summary>The confirmation dialog's title to assert, or null to skip the check.</summary>
     protected virtual string? ConfirmDialogTitle => null;
@@ -102,10 +112,41 @@ public abstract class AccountDeletionTestsBase : E2ETestBase
         await Expect(Page.Locator(".mud-snackbar").Filter(new() { HasText = AccountDeletedMessage }))
             .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
 
-        // Assert: the deleted account can no longer authenticate. LoginAsync surfaces the generic
-        // credentials error as an InvalidOperationException.
-        var signIn = () => LoginAsync(email, password);
-        await signIn.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(false);
+        // Assert: the deleted account can no longer authenticate.
+        await AssertSignInRefusedAsync(email, password).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Asserts that the deleted account's credentials are refused.
+    /// </summary>
+    /// <remarks>
+    /// With <see cref="E2ETestConfiguration.ApiBaseUrl"/> set, the backend's own answer decides: a 401
+    /// from <see cref="SignInApiPath"/> is the refusal. The sign-in form then only has to SHOW it, so
+    /// the UI check does not wait out <see cref="E2ETestConfiguration.AuthGraceTimeout"/>, the window
+    /// <c>LoginAsync</c> gives a slow success that flashes the error alert on its way out (a success
+    /// the backend has just refused cannot follow). Without an API base URL the UI-only path keeps the
+    /// grace window: <c>LoginAsync</c> raises the generic credentials error as an
+    /// <see cref="InvalidOperationException"/> once it has expired.
+    /// </remarks>
+    private async Task AssertSignInRefusedAsync(string email, string password)
+    {
+        if (E2ETestConfiguration.ApiBaseUrl is not { } api)
+        {
+            var signIn = () => LoginAsync(email, password);
+            await signIn.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(false);
+            return;
+        }
+
+        var response = await Page.APIRequest.PostAsync(api + SignInApiPath, new() { DataObject = new { email, password } }).ConfigureAwait(false);
+        var body = await response.TextAsync().ConfigureAwait(false);
+        response.Status.Should().Be(401, "the sign-in endpoint must refuse the deleted account (answer: {0})", body);
+
+        var login = new LoginPage(Page);
+        await login.GotoAsync().ConfigureAwait(false);
+        await login.LoginAsync(email, password).ConfigureAwait(false);
+        await Expect(login.ErrorAlert).ToBeVisibleAsync(new() { Timeout = E2ETestConfiguration.AuthTimeout }).ConfigureAwait(false);
+        await Expect(Page).ToHaveURLAsync(LoginPath).ConfigureAwait(false);
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeHiddenAsync().ConfigureAwait(false);
     }
 
     private async Task<ILocator> OpenConfirmationAsync()
