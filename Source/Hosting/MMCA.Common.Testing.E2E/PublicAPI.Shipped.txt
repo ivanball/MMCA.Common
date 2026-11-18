@@ -31,6 +31,7 @@ MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection.E2ETestCollection() -> 
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials
+MMCA.Common.Testing.E2E.Infrastructure.LocalPacing
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!)
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!).ClickAndVerifyAsync(Microsoft.Playwright.ILocator! expected, float timeout = 15000) -> System.Threading.Tasks.Task!
@@ -98,6 +99,20 @@ MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Lcp.init -> void
 MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Ttfb.get -> double
 MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Ttfb.init -> void
 MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.WebVitalsSample() -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevInbox
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.<Clone>$() -> MMCA.Common.Testing.E2E.MailDev.MailDevMessage!
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Deconstruct(out string! Id, out string! Subject, out string! Html, out System.Collections.Generic.IReadOnlyList<string!>! To) -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Equals(MMCA.Common.Testing.E2E.MailDev.MailDevMessage? other) -> bool
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Html.get -> string!
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Html.init -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Id.get -> string!
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Id.init -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.MailDevMessage(string! Id, string! Subject, string! Html, System.Collections.Generic.IReadOnlyList<string!>! To) -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Subject.get -> string!
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Subject.init -> void
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.To.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.E2E.MailDev.MailDevMessage.To.init -> void
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.BackToLoginLink.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.ConfirmationAlert.get -> Microsoft.Playwright.ILocator!
@@ -200,6 +215,9 @@ MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Path.init ->
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.PseudoLocalizedPage(string! Path, string! EnglishProbe, string? SettleSelector = null) -> void
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.SettleSelector.get -> string?
 MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.SettleSelector.init -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.AccountDeletionTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteAccount_ShouldLogOutAndPreventRelogin() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase
 MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AnonymousUser_ProtectedPages_ShouldRedirectToLogin() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AnonymousUser_PublicPages_ShouldBeAccessible() -> System.Threading.Tasks.Task!
@@ -249,7 +267,9 @@ abstract MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTests
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.ProtectedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.PublicPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 const MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection.Name = "E2E" -> string!
+const MMCA.Common.Testing.E2E.Infrastructure.LocalPacing.SecondsVariable = "E2E_LOCAL_PACING_SECONDS" -> string!
 const MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.MudDataGridRowSelector = ".mud-table-body .mud-table-row" -> string!
+const MMCA.Common.Testing.E2E.MailDev.MailDevInbox.BaseUrlVariable = "E2E_MAILDEV_URL" -> string!
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Equals(object? obj) -> bool
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.GetHashCode() -> int
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.ToString() -> string!
@@ -259,6 +279,9 @@ override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.ToString() -> st
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Equals(object? obj) -> bool
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.GetHashCode() -> int
 override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.ToString() -> string!
+override MMCA.Common.Testing.E2E.MailDev.MailDevMessage.Equals(object? obj) -> bool
+override MMCA.Common.Testing.E2E.MailDev.MailDevMessage.GetHashCode() -> int
+override MMCA.Common.Testing.E2E.MailDev.MailDevMessage.ToString() -> string!
 override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Equals(object? obj) -> bool
 override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.GetHashCode() -> int
 override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.ToString() -> string!
@@ -293,6 +316,8 @@ static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentia
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.DefaultPassword.set -> void
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.Email.get -> string!
 static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.Password.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.LocalPacing.CoolDownAsync() -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.LocalPacing.Pause.get -> System.TimeSpan
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.AssertNoAccessibilityViolationsAsync(this Microsoft.Playwright.IPage! page, Deque.AxeCore.Commons.AxeRunOptions? options = null) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.BlazorNavigateAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ClickAndVerifyAsync(this Microsoft.Playwright.ILocator! locator, Microsoft.Playwright.ILocator! expected, float timeout = 15000) -> System.Threading.Tasks.Task!
@@ -317,6 +342,15 @@ static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions.MeasureWeb
 static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions.MeasureWebVitalsWithInteractionAsync(this Microsoft.Playwright.IPage! page, string! label, string! path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget! budget, System.Func<Microsoft.Playwright.IPage!, System.Threading.Tasks.Task!>! interaction, System.Action<string!>? writeLine = null) -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!>!
 static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.operator !=(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? right) -> bool
 static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.operator ==(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? right) -> bool
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.BaseUrl.get -> string!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.LinkContaining(MMCA.Common.Testing.E2E.MailDev.MailDevMessage! message, string! pathFragment) -> System.Uri!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.MessagesAsync(Microsoft.Playwright.IAPIRequestContext! api, string! toAddress, string! subject) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.E2E.MailDev.MailDevMessage!>!>!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.ParseMessages(string! json) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.E2E.MailDev.MailDevMessage!>!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.UnreachableReasonAsync(Microsoft.Playwright.IAPIRequestContext! api) -> System.Threading.Tasks.Task<string?>!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.WaitForMessageAsync(Microsoft.Playwright.IAPIRequestContext! api, string! toAddress, string! subject, int count = 1, int timeoutSeconds = 60) -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.MailDev.MailDevMessage!>!
+static MMCA.Common.Testing.E2E.MailDev.MailDevInbox.WaitForMessageWithSubjectPrefixAsync(Microsoft.Playwright.IAPIRequestContext! api, string! toAddress, string! subjectPrefix, int timeoutSeconds = 90) -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.MailDev.MailDevMessage!>!
+static MMCA.Common.Testing.E2E.MailDev.MailDevMessage.operator !=(MMCA.Common.Testing.E2E.MailDev.MailDevMessage? left, MMCA.Common.Testing.E2E.MailDev.MailDevMessage? right) -> bool
+static MMCA.Common.Testing.E2E.MailDev.MailDevMessage.operator ==(MMCA.Common.Testing.E2E.MailDev.MailDevMessage? left, MMCA.Common.Testing.E2E.MailDev.MailDevMessage? right) -> bool
 static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.operator !=(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? left, MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? right) -> bool
 static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.operator ==(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? left, MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? right) -> bool
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultInterval -> System.TimeSpan
@@ -334,6 +368,14 @@ virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsB
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocale.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Sentinel.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Timeout.get -> float
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.AccountDeletedMessage.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.CancelsBeforeConfirming.get -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.ConfirmDialogMessage.get -> string?
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.ConfirmDialogTitle.get -> string?
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteButtonName.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteSection.get -> Microsoft.Playwright.ILocator!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.DeleteSectionText.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AccountDeletionTestsBase.OpenAccountDeletionPageAsync() -> System.Threading.Tasks.Task!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AdminPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AuthenticatedUserPath.get -> string?
 virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.AddressSavedMessage.get -> string!

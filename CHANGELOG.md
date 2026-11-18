@@ -4,6 +4,19 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.303.0] - 2026-11-18
+
+### Added
+
+- **`PageHeadingTestsBase`** (MMCA.Common.Testing.Architecture, rule `ArchitectureRules.PageHeadings`): every routable page renders exactly one h1, either inline or through a heading component (`FrameworkHeadingComponents`: PageHeader, ListPageShell and the framework admin pages). A subclass sets `RepoRoot` and `MinimumRoutablePages`, and lists pages whose h1 sits in separate loading and loaded branches in `BranchedHeadingPages`; stale exemptions fail. axe-core's WCAG tag set does not run `page-has-heading-one`, so this is the check that does.
+- **`AccountDeletionTestsBase`** (MMCA.Common.Testing.E2E): the self-service delete-account journey (delete, confirm, signed out, cannot sign in again), with label and flow hooks (`DeleteSectionText`, `DeleteButtonName`, `ConfirmDialogTitle`, `ConfirmDialogMessage`, `CancelsBeforeConfirming`, `AcceptsTermsAfterSignIn`).
+- **`MailDevInbox` / `MailDevMessage`** (MMCA.Common.Testing.E2E, namespace `MMCA.Common.Testing.E2E.MailDev`): reads the MailDev REST API for E2E email assertions (`WaitForMessageAsync`, `WaitForMessageWithSubjectPrefixAsync`); bodies are HTML-decoded. The port comes from the same internal constant `MMCA.Common.Aspire.Hosting` publishes, so the MailDev image and its reader move together.
+- **`EvictOutputCacheAssertions`** (MMCA.Common.Testing, namespace `MMCA.Common.Testing.Support`) and **`LocalPacing`** (MMCA.Common.Testing.E2E, namespace `MMCA.Common.Testing.E2E.Infrastructure`): lifted from identical copies in both consumers.
+
+### Changed
+
+- **MMCA.Common.Testing.E2E** now references `Microsoft.Testing.Extensions.Retry`, pinned beside xunit.v3 and moved with it by one Dependabot group, so an E2E project gets `--retry-failed-tests` through the package. Consumers drop their own Retry pin and `PackageReference`; a lingering pin is harmless but can drift from the Microsoft.Testing.Platform version xunit.v3 resolves.
+
 ## [1.302.0] - 2026-11-18
 
 ### Added
