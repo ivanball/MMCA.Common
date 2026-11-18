@@ -1,1 +1,7 @@
 #nullable enable
+abstract MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.ExpectedName.get -> string!
+abstract MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.ExpectedThemeColor.get -> string!
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.Home_LinksAnInstallableManifest_WhoseIconsAllResolve() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.InstallableWebAppTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Pwa.InstallableWebAppTestsBase.TheServiceWorker_IsServedAtTheSiteRoot_AsUncachedJavaScript() -> System.Threading.Tasks.Task!
