@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire.Gateway;
+using MMCA.Common.Tests.Shared.Http;
 
 namespace MMCA.Common.Aspire.Tests.Gateway;
 
@@ -99,7 +100,7 @@ public sealed class GatewayDownstreamHealthChecksTests
         services.AddGatewayDownstreamHealthChecks("catalog");
         services.AddGatewayDownstreamHealthChecks(o => o.ProbeVersion = DownstreamProbeVersion.Http11, "legacy");
 
-        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
 
         // Registered last, so it wins over the real factory AddHttpClient put in earlier.
@@ -223,7 +224,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenAutoAndHttp2Answers_LatchesHttp2AndStopsNegotiating()
     {
-        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
 
@@ -243,7 +244,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     public async Task Probe_WhenAutoAndHttp2IsRefused_FallsBackToHttp11WithinTheSameCheck(
         HttpRequestError error)
     {
-        using var handler = new StubHandler(RefusesHttp2(error));
+        using var handler = new StubHttpMessageHandler(RefusesHttp2(error));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
 
@@ -257,7 +258,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenAutoHasFallenBack_GoesStraightToHttp11()
     {
-        using var handler = new StubHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
+        using var handler = new StubHttpMessageHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
 
@@ -273,7 +274,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenAutoFallbackAnswersNonSuccess_ReportsUnhealthyAndStillLatches()
     {
-        using var handler = new StubHandler(request => request.Version == HttpVersion.Version20
+        using var handler = new StubHttpMessageHandler(request => request.Version == HttpVersion.Version20
             ? throw new HttpRequestException(HttpRequestError.VersionNegotiationError, "HTTP_1_1_REQUIRED")
             : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
@@ -294,7 +295,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     public async Task Probe_WhenAutoAndTheDownstreamIsUnreachable_ReportsUnhealthyWithoutLatching()
     {
         var attempts = 0;
-        using var handler = new StubHandler(_ => ++attempts == 1
+        using var handler = new StubHttpMessageHandler(_ => ++attempts == 1
             ? throw new HttpRequestException("connection refused")
             : new HttpResponseMessage(HttpStatusCode.OK));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
@@ -313,7 +314,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenAutoFallbackAlsoFails_ReportsUnhealthyWithoutLatching()
     {
-        using var handler = new StubHandler(
+        using var handler = new StubHttpMessageHandler(
             _ => throw new HttpRequestException(HttpRequestError.VersionNegotiationError, "refused"));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
@@ -329,7 +330,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenPinnedToHttp2_NeverFallsBack()
     {
-        using var handler = new StubHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
+        using var handler = new StubHttpMessageHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Http2);
 
@@ -342,7 +343,7 @@ public sealed class GatewayDownstreamHealthChecksTests
     [Fact]
     public async Task Probe_WhenPinnedToHttp11_SendsHttp11()
     {
-        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Http11);
 
@@ -367,7 +368,7 @@ public sealed class GatewayDownstreamHealthChecksTests
 
     private static async Task<HealthCheckResult> ProbeAsync(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
-        using var handler = new StubHandler(respond);
+        using var handler = new StubHttpMessageHandler(respond);
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
 
         var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
@@ -393,27 +394,5 @@ public sealed class GatewayDownstreamHealthChecksTests
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;
-    }
-
-    /// <summary>One request the check actually put on the wire, with the version profile it asked for.</summary>
-    /// <param name="Version">The HTTP version on the request.</param>
-    /// <param name="Policy">The version policy on the request.</param>
-    private sealed record ProbeAttempt(Version Version, HttpVersionPolicy Policy);
-
-    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
-    {
-        private readonly List<ProbeAttempt> _attempts = [];
-
-        // Recorded in order and BEFORE respond runs, so an attempt that throws still counts. This is
-        // how a negotiation (HTTP/2 then HTTP/1.1) is told apart from a latched, single-request poll.
-        public IReadOnlyList<ProbeAttempt> Attempts => _attempts;
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            _attempts.Add(new ProbeAttempt(request.Version, request.VersionPolicy));
-            return Task.FromResult(respond(request));
-        }
     }
 }

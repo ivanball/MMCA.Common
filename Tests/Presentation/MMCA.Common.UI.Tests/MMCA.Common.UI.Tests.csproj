@@ -43,4 +43,8 @@
          (MauiLocalNotificationServiceLateDeliveryTests pins the Android late-delivery window). -->
     <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\Capabilities\Notifications\MauiLocalNotificationService.cs" LogicalName="MauiLocalNotificationService.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared in-memory token storage contract (linked by UI.Tests and UI.Web.Tests). -->
+    <Compile Include="..\..\Shared\UI\TokenStorageServiceTestsBase.cs" Link="Shared\UI\TokenStorageServiceTestsBase.cs" />
+  </ItemGroup>
 </Project>

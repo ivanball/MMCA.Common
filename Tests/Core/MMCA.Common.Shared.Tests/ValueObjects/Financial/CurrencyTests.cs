@@ -6,22 +6,22 @@ namespace MMCA.Common.Shared.Tests.ValueObjects.Financial;
 public class CurrencyTests
 {
     // ── FromCode ──
-    [Fact]
-    public void FromCode_WithUsd_ReturnsUsdCurrency()
+    [Theory]
+    [InlineData("USD")]
+    [InlineData("EUR")]
+    public void FromCode_WithASupportedCode_ReturnsThatCurrency(string code)
     {
-        var result = Currency.FromCode("USD");
+        Currency expected = code switch
+        {
+            "USD" => Currency.Usd,
+            "EUR" => Currency.Eur,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown currency."),
+        };
+
+        var result = Currency.FromCode(code);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(Currency.Usd);
-    }
-
-    [Fact]
-    public void FromCode_WithEur_ReturnsEurCurrency()
-    {
-        var result = Currency.FromCode("EUR");
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(Currency.Eur);
+        result.Value.Should().Be(expected);
     }
 
     [Fact]

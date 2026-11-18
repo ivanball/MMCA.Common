@@ -7,34 +7,31 @@ namespace MMCA.Common.Shared.Tests.ValueObjects.Serialization;
 public class CurrencyJsonConverterTests
 {
     // ── Serialize ──
-    [Fact]
-    public void Write_SerializesCurrencyAsCodeString()
+    [Theory]
+    [InlineData("USD", "\"USD\"")]
+    [InlineData("EUR", "\"EUR\"")]
+    public void Write_SerializesCurrencyAsCodeString(string code, string expectedJson)
     {
-        var json = JsonSerializer.Serialize(Currency.Usd);
-        json.Should().Be("\"USD\"");
-    }
-
-    [Fact]
-    public void Write_Eur_SerializesAsEurString()
-    {
-        var json = JsonSerializer.Serialize(Currency.Eur);
-        json.Should().Be("\"EUR\"");
+        var json = JsonSerializer.Serialize(Known(code));
+        json.Should().Be(expectedJson);
     }
 
     // ── Deserialize ──
-    [Fact]
-    public void Read_ValidUsdCode_DeserializesToUsd()
+    [Theory]
+    [InlineData("\"USD\"", "USD")]
+    [InlineData("\"EUR\"", "EUR")]
+    public void Read_ValidCode_DeserializesToThatCurrency(string json, string expectedCode)
     {
-        var currency = JsonSerializer.Deserialize<Currency>("\"USD\"");
-        currency.Should().Be(Currency.Usd);
+        var currency = JsonSerializer.Deserialize<Currency>(json);
+        currency.Should().Be(Known(expectedCode));
     }
 
-    [Fact]
-    public void Read_ValidEurCode_DeserializesToEur()
+    private static Currency Known(string code) => code switch
     {
-        var currency = JsonSerializer.Deserialize<Currency>("\"EUR\"");
-        currency.Should().Be(Currency.Eur);
-    }
+        "USD" => Currency.Usd,
+        "EUR" => Currency.Eur,
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown currency."),
+    };
 
     [Fact]
     public void Read_InvalidCode_ThrowsJsonException() =>

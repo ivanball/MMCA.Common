@@ -1,9 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
 using AwesomeAssertions;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using MMCA.Common.API.SessionCookies;
+using MMCA.Common.Tests.Shared.UI;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Web.Services;
@@ -15,22 +14,22 @@ namespace MMCA.Common.UI.Web.Tests.Services;
 /// Verifies <see cref="ServerTokenStorageService"/> (Blazor Server cookie-backed token storage):
 /// during SSR prerender (a live <see cref="HttpContext"/>) tokens come from the HttpOnly cookies
 /// (preferring the freshly-rotated token stashed on <c>HttpContext.Items</c>); on the interactive
-/// circuit (no <see cref="HttpContext"/>) the access token is held in memory, hydrated single-flight
-/// via <see cref="ITokenRefresher"/>, and refreshed proactively near expiry; the refresh token is
-/// never readable on the circuit; set/clear round-trip through <see cref="ISessionCookieSync"/>.
+/// circuit (no <see cref="HttpContext"/>) the storage keeps the in-memory contract it shares with the
+/// WASM storage, run from <see cref="TokenStorageServiceTestsBase"/>; on the hub connection request the
+/// circuit actually sees, the token stored at sign-in wins over the connection's cookie.
 /// </summary>
-public sealed class ServerTokenStorageServiceTests
+public sealed class ServerTokenStorageServiceTests : TokenStorageServiceTestsBase
 {
     // CookieSessionRefresher stashes the rotated token under this HttpContext.Items key
     // (CookieTokenReader.FreshAccessTokenItemKey, which is internal to MMCA.Common.API).
     private const string FreshAccessTokenItemKey = "mmca.fresh-access-token";
 
-    private sealed record Mocks(
+    private sealed record ServerMocks(
         Mock<IHttpContextAccessor> Accessor,
         Mock<ISessionCookieSync> CookieSync,
         Mock<ITokenRefresher> Refresher);
 
-    private static (ServerTokenStorageService Sut, Mocks Mocks) CreateSut(
+    private static (ServerTokenStorageService Sut, ServerMocks Mocks) CreateServerSut(
         HttpContext? httpContext = null,
         string? refresherToken = "hydrated-token",
         TimeProvider? timeProvider = null)
@@ -50,7 +49,7 @@ public sealed class ServerTokenStorageServiceTests
             cookieSync.Object,
             refresher.Object,
             timeProvider);
-        return (sut, new Mocks(accessor, cookieSync, refresher));
+        return (sut, new ServerMocks(accessor, cookieSync, refresher));
     }
 
     private static DefaultHttpContext ContextWithCookies(string? accessToken = null, string? refreshToken = null)
@@ -89,16 +88,11 @@ public sealed class ServerTokenStorageServiceTests
         return context;
     }
 
-    internal static string CreateJwt(DateTime expires) =>
-        new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
-            notBefore: expires.AddMinutes(-60),
-            expires: expires));
-
     // == SSR prerender: the HttpOnly cookie is the source of truth ==
     [Fact]
     public async Task GetAccessTokenAsync_DuringSsr_ReadsAccessCookieWithoutRefresher()
     {
-        var (sut, mocks) = CreateSut(ContextWithCookies(accessToken: "cookie-access-token"));
+        var (sut, mocks) = CreateServerSut(ContextWithCookies(accessToken: "cookie-access-token"));
 
         var result = await sut.GetAccessTokenAsync();
 
@@ -111,7 +105,7 @@ public sealed class ServerTokenStorageServiceTests
     {
         var context = ContextWithCookies(accessToken: "stale-cookie-token");
         context.Items[FreshAccessTokenItemKey] = "rotated-token";
-        var (sut, _) = CreateSut(context);
+        var (sut, _) = CreateServerSut(context);
 
         var result = await sut.GetAccessTokenAsync();
 
@@ -121,7 +115,7 @@ public sealed class ServerTokenStorageServiceTests
     [Fact]
     public async Task GetAccessTokenAsync_DuringSsrWithNoCookie_ReturnsNull()
     {
-        var (sut, _) = CreateSut(ContextWithCookies());
+        var (sut, _) = CreateServerSut(ContextWithCookies());
 
         var result = await sut.GetAccessTokenAsync();
 
@@ -132,7 +126,7 @@ public sealed class ServerTokenStorageServiceTests
     [Fact]
     public async Task GetAccessTokenAsync_OnHubConnectionWithoutCookie_ReturnsTheTokenStoredAtSignIn()
     {
-        var (sut, mocks) = CreateSut(HubConnectionContext());
+        var (sut, mocks) = CreateServerSut(HubConnectionContext());
         var freshJwt = CreateJwt(DateTime.UtcNow.AddMinutes(10));
 
         await sut.SetTokensAsync(freshJwt, "rt");
@@ -146,7 +140,7 @@ public sealed class ServerTokenStorageServiceTests
     public async Task GetAccessTokenAsync_OnHubConnectionWithExpiredStoredToken_RehydratesAndIgnoresTheConnectionCookie()
     {
         var connectionCookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
-        var (sut, mocks) = CreateSut(HubConnectionContext(connectionCookieToken));
+        var (sut, mocks) = CreateServerSut(HubConnectionContext(connectionCookieToken));
         await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddMinutes(-5)), "rt");
 
         var result = await sut.GetAccessTokenAsync();
@@ -160,7 +154,7 @@ public sealed class ServerTokenStorageServiceTests
     public async Task GetAccessTokenAsync_DuringSsrPrerenderWithNothingInMemory_ReadsTheAccessCookie()
     {
         var cookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
-        var (sut, mocks) = CreateSut(ContextWithCookies(accessToken: cookieToken));
+        var (sut, mocks) = CreateServerSut(ContextWithCookies(accessToken: cookieToken));
 
         (await sut.GetAccessTokenAsync()).Should().Be(cookieToken);
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -170,7 +164,7 @@ public sealed class ServerTokenStorageServiceTests
     public async Task GetAccessTokenAsync_OnHubConnectionAfterLogout_DoesNotResurrectTheConnectionCookie()
     {
         var oldToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
-        var (sut, _) = CreateSut(HubConnectionContext(oldToken), refresherToken: null);
+        var (sut, _) = CreateServerSut(HubConnectionContext(oldToken), refresherToken: null);
         await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddMinutes(10)), "rt");
 
         await sut.ClearTokensAsync();
@@ -184,7 +178,7 @@ public sealed class ServerTokenStorageServiceTests
     {
         // The production loop: a circuit kept sending the connection's expired token for hours.
         var expiredCookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
-        var (sut, mocks) = CreateSut(HubConnectionContext(expiredCookieToken));
+        var (sut, mocks) = CreateServerSut(HubConnectionContext(expiredCookieToken));
 
         (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -195,283 +189,24 @@ public sealed class ServerTokenStorageServiceTests
     {
         // A circuit that starts signed in keeps answering from its connection cookie while it is fresh.
         var cookieToken = CreateJwt(DateTime.UtcNow.AddMinutes(10));
-        var (sut, mocks) = CreateSut(HubConnectionContext(cookieToken));
+        var (sut, mocks) = CreateServerSut(HubConnectionContext(cookieToken));
 
         (await sut.GetAccessTokenAsync()).Should().Be(cookieToken);
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    // L132: on the circuit, an anonymous visitor's "no session" answer is remembered briefly.
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuitWhenNoSessionExists_RemembersTheNegativeAnswerBriefly()
-    {
-        var clock = new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-        var (sut, mocks) = CreateSut(httpContext: null, refresherToken: null, timeProvider: clock);
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        clock.Advance(TimeSpan.FromSeconds(16));
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
-    }
-
-    // L132 review follow-up: a transient failure on the circuit must not start the anonymous grace.
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuitAfterATransientFailure_HydratesAgainOnTheNextRead()
-    {
-        var accessor = new Mock<IHttpContextAccessor>();
-        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
-        var refresher = new Mock<ISessionAwareTokenRefresher>();
-        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(TokenAcquisition.Unavailable)
-            .ReturnsAsync(TokenAcquisition.Acquired("hydrated-token"));
-        var sut = new ServerTokenStorageService(
-            accessor.Object,
-            new CookieTokenReader(accessor.Object),
-            Mock.Of<ISessionCookieSync>(),
-            refresher.Object,
-            new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
-
-        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
-    }
-
-    // == Interactive circuit: in-memory token hydrated via the refresher ==
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_HydratesViaRefresher()
-    {
-        var (sut, mocks) = CreateSut(httpContext: null);
-
-        var result = await sut.GetAccessTokenAsync();
-
-        result.Should().Be("hydrated-token");
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuitWithFreshInMemoryJwt_SkipsRefresher()
-    {
-        var (sut, mocks) = CreateSut(httpContext: null);
-        var freshJwt = CreateJwt(DateTime.UtcNow.AddMinutes(10));
-        await sut.SetTokensAsync(freshJwt, "refresh-token");
-
-        var result = await sut.GetAccessTokenAsync();
-
-        result.Should().Be(freshJwt);
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuitWithJwtInsideExpirySkew_RefreshesProactively()
-    {
-        // Valid for 10 more seconds, but the 30-second skew treats it as expired.
-        var (sut, mocks) = CreateSut(httpContext: null);
-        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
-
-        var result = await sut.GetAccessTokenAsync();
-
-        result.Should().Be("hydrated-token");
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_ConcurrentCallersShareOneSingleFlightAcquisition()
-    {
-        var accessor = new Mock<IHttpContextAccessor>();
-        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
-        var refresher = new Mock<ITokenRefresher>();
-        var pendingAcquisition = new TaskCompletionSource<string?>();
-        refresher
-            .Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
-            .Returns(pendingAcquisition.Task);
-        var sut = new ServerTokenStorageService(
-            accessor.Object,
-            new CookieTokenReader(accessor.Object),
-            new Mock<ISessionCookieSync>().Object,
-            refresher.Object);
-
-        var first = sut.GetAccessTokenAsync();
-        var second = sut.GetAccessTokenAsync();
-        pendingAcquisition.SetResult("hydrated-token");
-
-        (await first).Should().Be("hydrated-token");
-        (await second).Should().Be("hydrated-token");
-        refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_AfterCompletionSecondStaleCallStartsNewHydrate()
-    {
-        // The single-flight slot must be cleared once its own hydrate finishes, so a later caller
-        // with a still-stale token hydrates again rather than awaiting a completed task forever.
-        // The hydrated value is not a JWT, so it stays stale (a null hydrate is now remembered
-        // briefly, L132, and would no longer exercise the slot).
-        var (sut, mocks) = CreateSut(httpContext: null);
-
-        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
-        (await sut.GetAccessTokenAsync()).Should().Be("hydrated-token");
-
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     // == Refresh token exposure ==
     [Fact]
     public async Task GetRefreshTokenAsync_DuringSsr_ReadsRefreshCookie()
     {
-        var (sut, _) = CreateSut(ContextWithCookies(refreshToken: "cookie-refresh-token"));
+        var (sut, _) = CreateServerSut(ContextWithCookies(refreshToken: "cookie-refresh-token"));
 
         var result = await sut.GetRefreshTokenAsync();
 
         result.Should().Be("cookie-refresh-token");
     }
 
-    [Fact]
-    public async Task GetRefreshTokenAsync_OnCircuit_ReturnsNull()
-    {
-        var (sut, _) = CreateSut(httpContext: null);
-
-        var result = await sut.GetRefreshTokenAsync();
-
-        result.Should().BeNull("the HttpOnly refresh cookie must never be readable on the circuit");
-    }
-
-    // == Set / clear round-trip through the cookie sync ==
-    [Fact]
-    public async Task SetTokensAsync_SeedsHttpOnlyCookiesViaSessionSync()
-    {
-        var (sut, mocks) = CreateSut(httpContext: null);
-
-        await sut.SetTokensAsync("access-token", "refresh-token");
-
-        mocks.CookieSync.Verify(c => c.SyncAsync("access-token", "refresh-token"), Times.Once);
-    }
-
-    [Fact]
-    public async Task ClearTokensAsync_ClearsMemoryAndCookies()
-    {
-        var (sut, mocks) = CreateSut(httpContext: null);
-        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddMinutes(10)), "refresh-token");
-
-        await sut.ClearTokensAsync();
-        var afterClear = await sut.GetAccessTokenAsync();
-
-        mocks.CookieSync.Verify(c => c.ClearAsync(), Times.Once);
-        afterClear.Should().Be("hydrated-token", "a cleared in-memory token must re-hydrate from the cookie session");
-        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task SetTokensAsync_WhenTheCookieWriteFails_ThrowsSoLoginReportsStorageUnavailable()
-    {
-        // M129: a login whose cookie write failed would silently sign out at the first access-token
-        // expiry, because no cookie exists to refresh from.
-        var (sut, mocks) = CreateSut(httpContext: null);
-        mocks.CookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
-
-        var act = () => sut.SetTokensAsync("access-token", "refresh-token");
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    [Fact]
-    public async Task ClearTokensAsync_WhenTheCookieClearFails_StillClearsMemoryWithoutThrowing()
-    {
-        // Logout stays best-effort by contract (IAuthUIService.LogoutAsync never fails).
-        var (sut, mocks) = CreateSut(httpContext: null);
-        mocks.CookieSync.Setup(c => c.ClearAsync()).ReturnsAsync(false);
-
-        var act = () => sut.ClearTokensAsync();
-
-        await act.Should().NotThrowAsync();
-    }
-
-    // == M234: a hydrate in flight across a set or clear must not overwrite it ==
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenALoginCompletesDuringAnAnonymousHydrate_KeepsTheNewTokenAndNoGrace()
-    {
-        var (sut, refresher, pending) = CreateGatedCircuitSut();
-        var signedIn = CreateJwt(DateTime.UtcNow.AddHours(1));
-
-        var hydrate = sut.GetAccessTokenAsync();
-        await sut.SetTokensAsync(signedIn, "refresh-token");
-        pending.SetResult(TokenAcquisition.NoSession);
-
-        (await hydrate).Should().Be(signedIn, "the stale anonymous answer must not overwrite a login that landed meanwhile");
-        (await sut.GetAccessTokenAsync()).Should().Be(signedIn, "no anonymous grace may be armed by the stale hydrate");
-        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenALogoutCompletesDuringAHydrate_DoesNotResurrectTheClearedToken()
-    {
-        var (sut, _, pending) = CreateGatedCircuitSut();
-
-        var hydrate = sut.GetAccessTokenAsync();
-        await sut.ClearTokensAsync();
-        pending.SetResult(TokenAcquisition.Acquired(CreateJwt(DateTime.UtcNow.AddHours(1))));
-
-        (await hydrate).Should().BeNull("a token acquired before the logout must not be restored after it");
-    }
-
-    // == M234 review (R2): a hydrate that STARTS while the cookie clear is still awaiting ==
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenAHydrateStartsDuringTheClearAndFinishesAfterIt_DiscardsTheStaleToken()
-    {
-        var pendingClear = new TaskCompletionSource<bool>();
-        var (sut, refresher, pending) = CreateGatedCircuitSut(pendingClear.Task);
-        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
-            .Returns(pending.Task)
-            .ReturnsAsync(TokenAcquisition.NoSession);
-
-        var clear = sut.ClearTokensAsync();
-        var hydrate = sut.GetAccessTokenAsync();
-        pendingClear.SetResult(true);
-        await clear;
-        pending.SetResult(TokenAcquisition.Acquired(CreateJwt(DateTime.UtcNow.AddHours(1))));
-
-        (await hydrate).Should().BeNull("the answer was read from the session the logout was still clearing");
-        (await sut.GetAccessTokenAsync()).Should().BeNull("the stale token must not have been stored");
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenAHydrateStartsAndFinishesDuringTheClear_DoesNotSurviveTheClear()
-    {
-        var pendingClear = new TaskCompletionSource<bool>();
-        var (sut, refresher, pending) = CreateGatedCircuitSut(pendingClear.Task);
-        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
-            .Returns(pending.Task)
-            .ReturnsAsync(TokenAcquisition.NoSession);
-
-        var clear = sut.ClearTokensAsync();
-        var hydrate = sut.GetAccessTokenAsync();
-        pending.SetResult(TokenAcquisition.Acquired(CreateJwt(DateTime.UtcNow.AddHours(1))));
-        await hydrate;
-        pendingClear.SetResult(true);
-        await clear;
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull("a completed logout leaves no token in memory");
-    }
-
-    // == A-34: a held session that ended remotely signs the circuit out ==
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenAHeldSessionWasRevokedRemotely_ClearsTheTokenAndNotifiesLogout()
-    {
-        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.NoSession);
-        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
-        Task<AuthenticationState>? notified = null;
-        provider.AuthenticationStateChanged += task => notified = task;
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-
-        notified.Should().NotBeNull("a session that ended on the server is a sign-out");
-        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
-        (await provider.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated.Should().BeFalse();
-    }
-
+    // == A-34: the session the circuit started with ended remotely ==
     [Fact]
     public async Task GetAccessTokenAsync_OnHubConnection_WhenTheSessionTheCircuitStartedWithIsGone_NotifiesLogout()
     {
@@ -488,29 +223,20 @@ public sealed class ServerTokenStorageServiceTests
         notifications.Should().Be(1);
     }
 
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenTheRefreshFailsTransiently_DoesNotSignTheCircuitOut()
+    protected override ISessionAwareTokenStorage CreateStorage(
+        ISessionCookieSync sessionCookieSync,
+        ITokenRefresher tokenRefresher,
+        TimeProvider? timeProvider)
     {
-        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.Unavailable);
-        await sut.SetTokensAsync(CreateJwt(DateTime.UtcNow.AddSeconds(10)), "refresh-token");
-        var notifications = 0;
-        provider.AuthenticationStateChanged += _ => notifications++;
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-
-        notifications.Should().Be(0, "a 429, 5xx or dropped connection says nothing about the session");
-    }
-
-    [Fact]
-    public async Task GetAccessTokenAsync_OnCircuit_WhenAnAnonymousVisitorHasNoSession_DoesNotNotifyLogout()
-    {
-        var (sut, provider) = CreateSessionAwareCircuitSut(httpContext: null, TokenAcquisition.NoSession);
-        var notifications = 0;
-        provider.AuthenticationStateChanged += _ => notifications++;
-
-        (await sut.GetAccessTokenAsync()).Should().BeNull();
-
-        notifications.Should().Be(0, "nobody was signed in, so there is nothing to sign out");
+        // The interactive circuit: no HttpContext, so the in-memory path is the one under test.
+        var accessor = new Mock<IHttpContextAccessor>();
+        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
+        return new ServerTokenStorageService(
+            accessor.Object,
+            new CookieTokenReader(accessor.Object),
+            sessionCookieSync,
+            tokenRefresher,
+            timeProvider);
     }
 
     private static (ServerTokenStorageService Sut, JwtAuthenticationStateProvider Provider) CreateSessionAwareCircuitSut(
@@ -532,36 +258,6 @@ public sealed class ServerTokenStorageServiceTests
         return (sut, new JwtAuthenticationStateProvider(sut));
     }
 
-    private static (ServerTokenStorageService Sut, Mock<ISessionAwareTokenRefresher> Refresher, TaskCompletionSource<TokenAcquisition> Pending) CreateGatedCircuitSut(
-        Task<bool>? clearResult = null)
-    {
-        var accessor = new Mock<IHttpContextAccessor>();
-        accessor.SetupGet(a => a.HttpContext).Returns((HttpContext?)null);
-        var pending = new TaskCompletionSource<TokenAcquisition>();
-        var refresher = new Mock<ISessionAwareTokenRefresher>();
-        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).Returns(pending.Task);
-        var cookieSync = new Mock<ISessionCookieSync>();
-        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        cookieSync.Setup(c => c.ClearAsync()).Returns(clearResult ?? Task.FromResult(true));
-        var sut = new ServerTokenStorageService(
-            accessor.Object,
-            new CookieTokenReader(accessor.Object),
-            cookieSync.Object,
-            refresher.Object,
-            new ManualClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
-        return (sut, refresher, pending);
-    }
-
     /// <summary>Stands in for Blazor's internal ComponentHub in the connection endpoint's metadata.</summary>
     private sealed class ConnectionHub : Hub;
-
-    /// <summary>A settable clock (this project does not reference the TimeProvider testing package).</summary>
-    private sealed class ManualClock(DateTimeOffset start) : TimeProvider
-    {
-        private DateTimeOffset _now = start;
-
-        public void Advance(TimeSpan delta) => _now += delta;
-
-        public override DateTimeOffset GetUtcNow() => _now;
-    }
 }

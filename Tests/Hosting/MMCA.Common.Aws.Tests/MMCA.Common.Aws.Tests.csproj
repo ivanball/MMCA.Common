@@ -25,4 +25,12 @@
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aws\MMCA.Common.Aws.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared builder double for the secret-store configuration tests (also linked by the other cloud adapter test projects). -->
+    <Compile Include="..\..\Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" Link="Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" />
+    <!-- Shared contract bases for the vendor-neutral cases (each linked by every cloud adapter test project that runs it). -->
+    <Compile Include="..\..\Shared\Hosting\PostgreSqlTokenAuthenticationTestsBase.cs" Link="Shared\Hosting\PostgreSqlTokenAuthenticationTestsBase.cs" />
+    <Compile Include="..\..\Shared\Hosting\SecretStoreConfigurationExtensionsTestsBase.cs" Link="Shared\Hosting\SecretStoreConfigurationExtensionsTestsBase.cs" />
+    <Compile Include="..\..\Shared\Hosting\FileStorageServiceFailureTestsBase.cs" Link="Shared\Hosting\FileStorageServiceFailureTestsBase.cs" />
+  </ItemGroup>
 </Project>

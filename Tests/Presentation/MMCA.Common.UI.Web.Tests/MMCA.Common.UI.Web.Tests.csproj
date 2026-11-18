@@ -28,4 +28,8 @@
          host extensions is exactly the integration this reference exists for. -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared in-memory token storage contract (linked by UI.Tests and UI.Web.Tests). -->
+    <Compile Include="..\..\Shared\UI\TokenStorageServiceTestsBase.cs" Link="Shared\UI\TokenStorageServiceTestsBase.cs" />
+  </ItemGroup>
 </Project>

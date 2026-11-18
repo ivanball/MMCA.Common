@@ -15,44 +15,28 @@ public sealed class DependencyInjectionTests
         return services;
     }
 
+    private static IServiceCollection Invoke(string extension, ServiceCollection services) => extension switch
+    {
+        "AddApplication" => services.AddApplication(),
+        "AddApplicationDecorators" => services.AddApplicationDecorators(),
+        "AddApplicationProfiling" => services.AddApplicationProfiling(),
+        _ => throw new ArgumentOutOfRangeException(nameof(extension), extension, "Unknown extension."),
+    };
+
     // ── AddApplication: core service registrations ──
-    [Fact]
-    public void AddApplication_RegistersDomainEventDispatcher_AsSingleton()
+    [Theory]
+    [InlineData(typeof(IDomainEventDispatcher), typeof(DomainEventDispatcher))]
+    [InlineData(typeof(INavigationMetadataProvider), typeof(NavigationMetadataProvider))]
+    [InlineData(typeof(IEntityQueryPipeline), typeof(EntityQueryPipeline))]
+    public void AddApplication_RegistersTheService_AsSingleton(Type serviceType, Type expectedImplementation)
     {
         ServiceCollection services = CreateServiceCollection();
 
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IDomainEventDispatcher));
+        ServiceDescriptor? descriptor = services.FirstOrDefault(d => d.ServiceType == serviceType);
 
         descriptor.Should().NotBeNull();
         descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        descriptor.ImplementationType.Should().Be<DomainEventDispatcher>();
-    }
-
-    [Fact]
-    public void AddApplication_RegistersNavigationMetadataProvider_AsSingleton()
-    {
-        ServiceCollection services = CreateServiceCollection();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(INavigationMetadataProvider));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        descriptor.ImplementationType.Should().Be<NavigationMetadataProvider>();
-    }
-
-    [Fact]
-    public void AddApplication_RegistersEntityQueryPipeline_AsSingleton()
-    {
-        ServiceCollection services = CreateServiceCollection();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IEntityQueryPipeline));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        descriptor.ImplementationType.Should().Be<EntityQueryPipeline>();
+        descriptor.ImplementationType.Should().Be(expectedImplementation);
     }
 
     // ── AddApplication: idempotency (TryAdd) ──
@@ -72,57 +56,31 @@ public sealed class DependencyInjectionTests
         pipelineCount.Should().Be(1);
     }
 
-    // ── AddApplication: returns service collection for chaining ──
-    [Fact]
-    public void AddApplication_ReturnsServiceCollection_ForChaining()
+    // ── Every registration call returns the service collection for chaining ──
+    [Theory]
+    [InlineData("AddApplication")]
+    [InlineData("AddApplicationDecorators")]
+    [InlineData("AddApplicationProfiling")]
+    public void Extension_ReturnsServiceCollection_ForChaining(string extension)
     {
         var services = new ServiceCollection();
 
-        IServiceCollection result = services.AddApplication();
+        IServiceCollection result = Invoke(extension, services);
 
         result.Should().BeSameAs(services);
     }
 
-    // ── AddApplicationDecorators: does not throw on empty container ──
-    [Fact]
-    public void AddApplicationDecorators_WithNoHandlers_DoesNotThrow()
+    // ── The decorator and profiling passes do not throw on an empty container ──
+    [Theory]
+    [InlineData("AddApplicationDecorators")]
+    [InlineData("AddApplicationProfiling")]
+    public void Extension_WithNoHandlers_DoesNotThrow(string extension)
     {
         var services = new ServiceCollection();
 
-        Action act = () => services.AddApplicationDecorators();
+        Action act = () => Invoke(extension, services);
 
         act.Should().NotThrow();
-    }
-
-    [Fact]
-    public void AddApplicationDecorators_ReturnsServiceCollection_ForChaining()
-    {
-        var services = new ServiceCollection();
-
-        IServiceCollection result = services.AddApplicationDecorators();
-
-        result.Should().BeSameAs(services);
-    }
-
-    // ── AddApplicationProfiling: does not throw on empty container ──
-    [Fact]
-    public void AddApplicationProfiling_WithNoHandlers_DoesNotThrow()
-    {
-        var services = new ServiceCollection();
-
-        Action act = () => services.AddApplicationProfiling();
-
-        act.Should().NotThrow();
-    }
-
-    [Fact]
-    public void AddApplicationProfiling_ReturnsServiceCollection_ForChaining()
-    {
-        var services = new ServiceCollection();
-
-        IServiceCollection result = services.AddApplicationProfiling();
-
-        result.Should().BeSameAs(services);
     }
 
     // ── AddApplication: validators from MMCA.Common.Application assembly ──

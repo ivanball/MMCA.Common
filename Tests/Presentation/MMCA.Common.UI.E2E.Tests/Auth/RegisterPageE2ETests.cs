@@ -26,13 +26,4 @@ public sealed class RegisterPageE2ETests : GalleryAxeTestBase
         await Expect(registerPage.ConfirmPasswordField).ToBeVisibleAsync();
         await Expect(registerPage.RegisterButton).ToBeVisibleAsync();
     }
-
-    [Fact]
-    public async Task RegisterPage_HasNoWcag21AaViolations()
-    {
-        var registerPage = new RegisterPage(Page);
-        await registerPage.GotoAsync();
-
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
-    }
 }

@@ -153,27 +153,18 @@ public sealed class CommonValidationRulesTests
     }
 
     // ── PositiveIntRules ──
-    [Fact]
-    public void PositiveIntRules_WhenZero_HasValidationError()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void PositiveIntRules_WhenNotPositive_HasValidationError(int quantity)
     {
         var validator = new PositiveIntRules<TestIntModel>(x => x.Quantity, "Quantity");
-        var model = new TestIntModel { Quantity = 0 };
+        var model = new TestIntModel { Quantity = quantity };
 
         TestValidationResult<TestIntModel> result = validator.TestValidate(model);
 
         result.ShouldHaveValidationErrorFor(x => x.Quantity)
             .WithErrorMessage("Quantity must be a positive value");
-    }
-
-    [Fact]
-    public void PositiveIntRules_WhenNegative_HasValidationError()
-    {
-        var validator = new PositiveIntRules<TestIntModel>(x => x.Quantity, "Quantity");
-        var model = new TestIntModel { Quantity = -1 };
-
-        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Quantity);
     }
 
     [Fact]
@@ -282,18 +273,6 @@ public sealed class CommonValidationRulesTests
         result.ShouldNotHaveValidationErrorFor(x => x.OwnerId);
     }
 
-    [Fact]
-    public void RequiredIdRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new RequiredIdRules<TestIntModel, int>(x => x.Quantity, "Event", "Session.EventId.Required");
-        var model = new TestIntModel { Quantity = 0 };
-
-        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Quantity)
-            .WithErrorCode("Session.EventId.Required");
-    }
-
     // ── OptionalPositiveIdRules ──
     [Fact]
     public void OptionalPositiveIdRules_WhenNull_NoErrors()
@@ -306,27 +285,18 @@ public sealed class CommonValidationRulesTests
         result.ShouldNotHaveValidationErrorFor(x => x.CategoryId);
     }
 
-    [Fact]
-    public void OptionalPositiveIdRules_WhenZero_HasValidationError()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void OptionalPositiveIdRules_WhenNotPositive_HasValidationError(int categoryId)
     {
         var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
-        var model = new TestOptionalIntModel { CategoryId = 0 };
+        var model = new TestOptionalIntModel { CategoryId = categoryId };
 
         TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
 
         result.ShouldHaveValidationErrorFor(x => x.CategoryId)
             .WithErrorMessage("Category ID must be a valid positive value when provided.");
-    }
-
-    [Fact]
-    public void OptionalPositiveIdRules_WhenNegative_HasValidationError()
-    {
-        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
-        var model = new TestOptionalIntModel { CategoryId = -1 };
-
-        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.CategoryId);
     }
 
     [Fact]
@@ -338,19 +308,6 @@ public sealed class CommonValidationRulesTests
         TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
 
         result.ShouldNotHaveValidationErrorFor(x => x.CategoryId);
-    }
-
-    [Fact]
-    public void OptionalPositiveIdRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(
-            x => x.CategoryId, "Category ID", "Product.CategoryId.Invalid");
-        var model = new TestOptionalIntModel { CategoryId = 0 };
-
-        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.CategoryId)
-            .WithErrorCode("Product.CategoryId.Invalid");
     }
 
     // ── PasswordRules ──
@@ -402,52 +359,20 @@ public sealed class CommonValidationRulesTests
     }
 
     // ── StrongPasswordRules ──
-    [Fact]
-    public void StrongPasswordRules_WhenMissingUppercase_HasValidationError()
+    [Theory]
+    [InlineData("lowercase1!", "Password must contain at least one uppercase letter.")]
+    [InlineData("UPPERCASE1!", "Password must contain at least one lowercase letter.")]
+    [InlineData("NoDigits!!", "Password must contain at least one digit.")]
+    [InlineData("NoSpecial1", "Password must contain at least one special character.")]
+    public void StrongPasswordRules_WhenMissingACharacterClass_HasValidationError(string password, string expectedMessage)
     {
         var validator = new StrongPasswordRules<TestStringModel>(x => x.Name);
-        var model = new TestStringModel { Name = "lowercase1!" };
+        var model = new TestStringModel { Name = password };
 
         TestValidationResult<TestStringModel> result = validator.TestValidate(model);
 
         result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Password must contain at least one uppercase letter.");
-    }
-
-    [Fact]
-    public void StrongPasswordRules_WhenMissingLowercase_HasValidationError()
-    {
-        var validator = new StrongPasswordRules<TestStringModel>(x => x.Name);
-        var model = new TestStringModel { Name = "UPPERCASE1!" };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Password must contain at least one lowercase letter.");
-    }
-
-    [Fact]
-    public void StrongPasswordRules_WhenMissingDigit_HasValidationError()
-    {
-        var validator = new StrongPasswordRules<TestStringModel>(x => x.Name);
-        var model = new TestStringModel { Name = "NoDigits!!" };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Password must contain at least one digit.");
-    }
-
-    [Fact]
-    public void StrongPasswordRules_WhenMissingSpecialChar_HasValidationError()
-    {
-        var validator = new StrongPasswordRules<TestStringModel>(x => x.Name);
-        var model = new TestStringModel { Name = "NoSpecial1" };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Password must contain at least one special character.");
+            .WithErrorMessage(expectedMessage);
     }
 
     [Fact]
@@ -487,40 +412,56 @@ public sealed class CommonValidationRulesTests
             .WithErrorMessage("You must enter a Name");
     }
 
-    [Fact]
-    public void RequiredStringRules_WhenErrorCodeSupplied_AppliesItToTheMaxLengthRuleToo()
+    // A supplied error code reaches the failing rule, whichever rule set and rule fails.
+    [Theory]
+    [InlineData("RequiredIdRules", "Session.EventId.Required")]
+    [InlineData("OptionalPositiveIdRules", "Product.CategoryId.Invalid")]
+    [InlineData("RequiredStringRules.MaxLength", "Question.QuestionText.Invalid")]
+    [InlineData("OptionalStringRules", "Activity.VenueUrl.MaxLength")]
+    [InlineData("EmailRules", "User.Email.Invalid")]
+    [InlineData("PositiveDecimalRules", "Product.Price.NotPositive")]
+    [InlineData("NonNegativeIntRules", "Activity.SortOrder.Negative")]
+    [InlineData("PasswordRules", "User.CurrentPassword.Required")]
+    [InlineData("StrongPasswordRules.EveryComplexityRule", "User.NewPassword.Weak")]
+    [InlineData("AbsoluteUrlRules", "Sponsor.LogoUrl.Invalid")]
+    public void Rules_WhenErrorCodeSupplied_AppliesIt(string rules, string errorCode)
     {
-        var validator = new RequiredStringRules<TestStringModel>(x => x.Name, "Name", 5, "Question.QuestionText.Invalid");
-        var model = new TestStringModel { Name = "123456" };
+        var failure = rules switch
+        {
+            "RequiredIdRules" => new RequiredIdRules<TestIntModel, int>(x => x.Quantity, "Event", errorCode)
+                .TestValidate(new TestIntModel { Quantity = 0 })
+                .ShouldHaveValidationErrorFor(x => x.Quantity),
+            "OptionalPositiveIdRules" => new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID", errorCode)
+                .TestValidate(new TestOptionalIntModel { CategoryId = 0 })
+                .ShouldHaveValidationErrorFor(x => x.CategoryId),
+            "RequiredStringRules.MaxLength" => new RequiredStringRules<TestStringModel>(x => x.Name, "Name", 5, errorCode)
+                .TestValidate(new TestStringModel { Name = "123456" })
+                .ShouldHaveValidationErrorFor(x => x.Name),
+            "OptionalStringRules" => new OptionalStringRules<TestOptionalStringModel>(x => x.Description, "Description", 5, errorCode)
+                .TestValidate(new TestOptionalStringModel { Description = "123456" })
+                .ShouldHaveValidationErrorFor(x => x.Description),
+            "EmailRules" => new EmailRules<TestStringModel>(x => x.Name, "Email", 100, errorCode)
+                .TestValidate(new TestStringModel { Name = "not-an-email" })
+                .ShouldHaveValidationErrorFor(x => x.Name),
+            "PositiveDecimalRules" => new PositiveDecimalRules<TestDecimalModel>(x => x.Price, "Price", errorCode)
+                .TestValidate(new TestDecimalModel { Price = 0m })
+                .ShouldHaveValidationErrorFor(x => x.Price),
+            "NonNegativeIntRules" => new NonNegativeIntRules<TestIntModel>(x => x.Quantity, "Sort Order", errorCode)
+                .TestValidate(new TestIntModel { Quantity = -1 })
+                .ShouldHaveValidationErrorFor(x => x.Quantity),
+            "PasswordRules" => new PasswordRules<TestStringModel>(x => x.Name, errorCode)
+                .TestValidate(new TestStringModel { Name = string.Empty })
+                .ShouldHaveValidationErrorFor(x => x.Name),
+            "StrongPasswordRules.EveryComplexityRule" => new StrongPasswordRules<TestStringModel>(x => x.Name, errorCode)
+                .TestValidate(new TestStringModel { Name = "nospecial1" })
+                .ShouldHaveValidationErrorFor(x => x.Name),
+            "AbsoluteUrlRules" => new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 200, errorCode)
+                .TestValidate(new TestOptionalStringModel { Description = "javascript:alert(1)" })
+                .ShouldHaveValidationErrorFor(x => x.Description),
+            _ => throw new ArgumentOutOfRangeException(nameof(rules), rules, "Unknown rule set."),
+        };
 
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorCode("Question.QuestionText.Invalid");
-    }
-
-    [Fact]
-    public void OptionalStringRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new OptionalStringRules<TestOptionalStringModel>(x => x.Description, "Description", 5, "Activity.VenueUrl.MaxLength");
-        var model = new TestOptionalStringModel { Description = "123456" };
-
-        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Description)
-            .WithErrorCode("Activity.VenueUrl.MaxLength");
-    }
-
-    [Fact]
-    public void EmailRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new EmailRules<TestStringModel>(x => x.Name, "Email", 100, "User.Email.Invalid");
-        var model = new TestStringModel { Name = "not-an-email" };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorCode("User.Email.Invalid");
+        failure.WithErrorCode(errorCode);
     }
 
     [Fact]
@@ -534,54 +475,6 @@ public sealed class CommonValidationRulesTests
         result.ShouldHaveValidationErrorFor(x => x.Quantity)
             .WithErrorCode("CheckIn.SponsorId.Required")
             .WithErrorMessage("Sponsor ID must be a positive value");
-    }
-
-    [Fact]
-    public void PositiveDecimalRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new PositiveDecimalRules<TestDecimalModel>(x => x.Price, "Price", "Product.Price.NotPositive");
-        var model = new TestDecimalModel { Price = 0m };
-
-        TestValidationResult<TestDecimalModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Price)
-            .WithErrorCode("Product.Price.NotPositive");
-    }
-
-    [Fact]
-    public void NonNegativeIntRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new NonNegativeIntRules<TestIntModel>(x => x.Quantity, "Sort Order", "Activity.SortOrder.Negative");
-        var model = new TestIntModel { Quantity = -1 };
-
-        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Quantity)
-            .WithErrorCode("Activity.SortOrder.Negative");
-    }
-
-    [Fact]
-    public void PasswordRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new PasswordRules<TestStringModel>(x => x.Name, "User.CurrentPassword.Required");
-        var model = new TestStringModel { Name = string.Empty };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorCode("User.CurrentPassword.Required");
-    }
-
-    [Fact]
-    public void StrongPasswordRules_WhenErrorCodeSupplied_AppliesItToEveryComplexityRule()
-    {
-        var validator = new StrongPasswordRules<TestStringModel>(x => x.Name, "User.NewPassword.Weak");
-        var model = new TestStringModel { Name = "nospecial1" };
-
-        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorCode("User.NewPassword.Weak");
     }
 
     // ── AbsoluteUrlRules ──
@@ -626,18 +519,6 @@ public sealed class CommonValidationRulesTests
 
         result.ShouldHaveValidationErrorFor(x => x.Description)
             .WithErrorMessage("Logo URL cannot be longer than 20 characters");
-    }
-
-    [Fact]
-    public void AbsoluteUrlRules_WhenErrorCodeSupplied_AppliesIt()
-    {
-        var validator = new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 200, "Sponsor.LogoUrl.Invalid");
-        var model = new TestOptionalStringModel { Description = "javascript:alert(1)" };
-
-        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
-
-        result.ShouldHaveValidationErrorFor(x => x.Description)
-            .WithErrorCode("Sponsor.LogoUrl.Invalid");
     }
 }
 

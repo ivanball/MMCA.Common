@@ -26,15 +26,6 @@ public sealed class LoginPageE2ETests : GalleryAxeTestBase
     }
 
     [Fact]
-    public async Task LoginPage_HasNoWcag21AaViolations()
-    {
-        var loginPage = new LoginPage(Page);
-        await loginPage.GotoAsync();
-
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
-    }
-
-    [Fact]
     public async Task FillAndVerify_PersistsValueThroughBlazorHydration()
     {
         // Exercises the shipped MMCA.Common.Testing.E2E fill helper end-to-end against a real,

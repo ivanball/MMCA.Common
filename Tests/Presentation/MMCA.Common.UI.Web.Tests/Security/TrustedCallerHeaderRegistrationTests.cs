@@ -17,13 +17,21 @@ public sealed class TrustedCallerHeaderRegistrationTests
     private const string Secret = "0123456789abcdef0123456789abcdef";
     private const string GatewayOrigin = "https://gateway.example.com:6001";
 
-    [Fact]
-    public void AddTrustedCallerHeader_WithNoSecret_RegistersNothing()
+    // No secret, no absolute gateway origin, or a blank header name: nothing is registered. A null
+    // argument means the key is absent from configuration.
+    [Theory]
+    [InlineData(null, GatewayOrigin, null)]
+    [InlineData(Secret, null, null)]
+    [InlineData(Secret, "", null)]
+    [InlineData(Secret, "not-an-absolute-uri", null)]
+    [InlineData(Secret, GatewayOrigin, "")]
+    [InlineData(Secret, GatewayOrigin, "   ")]
+    public void AddTrustedCallerHeader_WithIncompleteSettings_RegistersNothing(string? secret, string? apiEndpoint, string? headerName)
     {
         var services = new ServiceCollection();
         var before = services.Count;
 
-        services.AddTrustedCallerHeader(BuildConfiguration(secret: null));
+        services.AddTrustedCallerHeader(BuildConfiguration(secret, apiEndpoint, headerName));
 
         services.Count.Should().Be(before);
     }
@@ -38,33 +46,6 @@ public sealed class TrustedCallerHeaderRegistrationTests
             BuildConfiguration(secret), "AnyClient", GatewayOrigin + "/Auth/refresh");
 
         request.Headers.Contains(DefaultHeaderName).Should().BeFalse();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("not-an-absolute-uri")]
-    public void AddTrustedCallerHeader_WithoutAnAbsoluteGatewayOrigin_RegistersNothing(string? apiEndpoint)
-    {
-        var services = new ServiceCollection();
-        var before = services.Count;
-
-        services.AddTrustedCallerHeader(BuildConfiguration(Secret, apiEndpoint));
-
-        services.Count.Should().Be(before);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void AddTrustedCallerHeader_WithABlankHeaderName_RegistersNothing(string headerName)
-    {
-        var services = new ServiceCollection();
-        var before = services.Count;
-
-        services.AddTrustedCallerHeader(BuildConfiguration(Secret, GatewayOrigin, headerName));
-
-        services.Count.Should().Be(before);
     }
 
     [Fact]

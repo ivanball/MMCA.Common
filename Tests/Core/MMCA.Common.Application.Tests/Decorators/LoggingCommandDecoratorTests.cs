@@ -9,214 +9,59 @@ using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;
 
-public sealed class LoggingCommandDecoratorTests
+public sealed class LoggingCommandDecoratorTests : LoggingDecoratorTestsBase<Result>
 {
-    // ── Mocks ──
-    private sealed record Mocks(
-        Mock<ICommandHandler<TestLoggingCommand, Result>> Inner,
-        Mock<ICorrelationContext> CorrelationContext,
-        Mock<ILogger<LoggingCommandDecorator<TestLoggingCommand, Result>>> Logger);
+    protected override string RequestNameScopeKey => "CommandName";
 
-    // ── Factory ──
-    private static (LoggingCommandDecorator<TestLoggingCommand, Result> Sut, Mocks Mocks) CreateSut()
-    {
-        var inner = new Mock<ICommandHandler<TestLoggingCommand, Result>>();
-        var correlationContext = new Mock<ICorrelationContext>();
-        correlationContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
-        var logger = new Mock<ILogger<LoggingCommandDecorator<TestLoggingCommand, Result>>>();
+    protected override string NoModuleRequestName => nameof(TestLoggingCommand);
 
-        var sut = new LoggingCommandDecorator<TestLoggingCommand, Result>(
-            inner.Object,
-            correlationContext.Object,
-            logger.Object);
+    protected override string BillingModuleRequestName => nameof(BillingFakeCommand);
 
-        var mocks = new Mocks(inner, correlationContext, logger);
+    protected override Result SuccessResult => Result.Success();
 
-        return (sut, mocks);
-    }
-
-    // ── HandleAsync: delegates to inner handler ──
-    [Fact]
-    public async Task HandleAsync_DelegatesCallToInnerHandler()
-    {
-        var (sut, mocks) = CreateSut();
-        mocks.Inner.Setup(x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
-
-        await sut.HandleAsync(new TestLoggingCommand());
-
-        mocks.Inner.Verify(
-            x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    // ── HandleAsync: inner succeeds, returns result ──
-    [Fact]
-    public async Task HandleAsync_WhenInnerSucceeds_ReturnsResult()
-    {
-        var (sut, mocks) = CreateSut();
-        mocks.Inner.Setup(x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
-
-        var result = await sut.HandleAsync(new TestLoggingCommand());
-
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    // ── HandleAsync: inner throws, rethrows exception ──
-    [Fact]
-    public async Task HandleAsync_WhenInnerThrows_RethrowsException()
-    {
-        var (sut, mocks) = CreateSut();
-        mocks.Inner.Setup(x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("test error"));
-
-        var act = () => sut.HandleAsync(new TestLoggingCommand());
-
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("test error");
-    }
-
-    // ── HandleAsync: inner returns failure Result ──
+    // ── Command only: a failure Result passes through untouched ──
     [Fact]
     public async Task HandleAsync_WhenInnerReturnsFailure_ReturnsFailureResult()
     {
-        var (sut, mocks) = CreateSut();
-        var failureResult = Result.Failure(Error.Validation("Test.Error", "something went wrong"));
-        mocks.Inner.Setup(x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(failureResult);
+        var handle = CreateSut(
+            RequestKind.NoModule,
+            () => Task.FromResult(Result.Failure(Error.Validation("Test.Error", "something went wrong"))));
 
-        var result = await sut.HandleAsync(new TestLoggingCommand());
+        var result = await handle();
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle().Which.Code.Should().Be("Test.Error");
     }
 
-    // ── HandleAsync: the logging scope carries command name, module and correlation id ──
-    [Fact]
-    public async Task HandleAsync_BeginsScopeWithCommandNameModuleAndCorrelationId()
-    {
-        var (sut, logger) = CreateSutWithCapturingLogger<BillingFakeCommand>();
+    protected override Func<Task<Result>> CreateSut(
+        RequestKind kind,
+        Func<Task<Result>> inner,
+        ICorrelationContext correlationContext,
+        ILogger sink) => kind switch
+        {
+            RequestKind.NoModule => Wrap(new TestLoggingCommand(), inner, correlationContext, sink),
+            RequestKind.BillingModule => Wrap(new BillingFakeCommand(), inner, correlationContext, sink),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+        };
 
-        await sut.HandleAsync(new BillingFakeCommand());
-
-        var scope = logger.Scopes.Should().ContainSingle().Subject;
-        scope.Should().ContainSingle(entry => entry.Key == "CommandName")
-            .Which.Value.Should().Be(nameof(BillingFakeCommand));
-        scope.Should().ContainSingle(entry => entry.Key == "ModuleName")
-            .Which.Value.Should().Be(
-                "Billing",
-                "the module comes from the workspace App.Module.Layer namespace convention, so log queries can filter by module");
-        scope.Should().ContainSingle(entry => entry.Key == "CorrelationId")
-            .Which.Value.Should().Be("test-correlation-id");
-    }
-
-    // ── HandleAsync: a command outside a module namespace still gets a module value ──
-    [Fact]
-    public async Task HandleAsync_WhenCommandNamespaceCarriesNoModule_ScopeModuleIsUnknown()
-    {
-        var (sut, logger) = CreateSutWithCapturingLogger<TestLoggingCommand>();
-
-        await sut.HandleAsync(new TestLoggingCommand());
-
-        var scope = logger.Scopes.Should().ContainSingle().Subject;
-        scope.Should().ContainSingle(entry => entry.Key == "ModuleName")
-            .Which.Value.Should().Be(
-                "unknown",
-                "an unresolvable module must still produce the key, so the scope shape never varies between handlers");
-    }
-
-    // ── HandleAsync: the exception outcome line is the pipeline's own record, not a second
-    //    full-stack Error. The boundary (GlobalExceptionHandler, or the internal-command processor)
-    //    logs the exception once, with its stack; logging it here too produced two Error rows and
-    //    two stacks for every unhandled exception. ──
-    [Fact]
-    public async Task HandleAsync_WhenInnerThrows_LogsTheOutcomeAtWarningWithoutTheException()
-    {
-        var (sut, logger) = CreateSutWithCapturingLogger<TestLoggingCommand>(
-            new InvalidOperationException("test error"));
-
-        var act = async () => await sut.HandleAsync(new TestLoggingCommand());
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        logger.Entries.Should().NotContain(
-            entry => entry.Level == LogLevel.Error,
-            "the boundary owns the single Error row for an unhandled exception");
-
-        var outcome = logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Subject;
-        outcome.Exception.Should().BeNull("a second stack for the same failure doubles ingestion cost for no diagnostic gain");
-        outcome.Message.Should().Contain(nameof(TestLoggingCommand))
-            .And.Contain(nameof(InvalidOperationException))
-            .And.Contain("test-correlation-id")
-            .And.Contain("propagates to the boundary");
-    }
-
-    // ── Factory: real (capturing) logger, so the scope payload can be inspected ──
-    private static (LoggingCommandDecorator<TCommand, Result> Sut, ScopeCapturingLogger<LoggingCommandDecorator<TCommand, Result>> Logger) CreateSutWithCapturingLogger<TCommand>(
-        Exception? innerFailure = null)
+    private static Func<Task<Result>> Wrap<TCommand>(
+        TCommand command,
+        Func<Task<Result>> inner,
+        ICorrelationContext correlationContext,
+        ILogger sink)
         where TCommand : class
     {
-        var inner = new Mock<ICommandHandler<TCommand, Result>>();
-        if (innerFailure is null)
-        {
-            inner.Setup(x => x.HandleAsync(It.IsAny<TCommand>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(Result.Success());
-        }
-        else
-        {
-            inner.Setup(x => x.HandleAsync(It.IsAny<TCommand>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(innerFailure);
-        }
-
-        var correlationContext = new Mock<ICorrelationContext>();
-        correlationContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
-        var logger = new ScopeCapturingLogger<LoggingCommandDecorator<TCommand, Result>>();
+        var handler = new Mock<ICommandHandler<TCommand, Result>>();
+        handler.Setup(x => x.HandleAsync(It.IsAny<TCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(() => inner());
 
         var sut = new LoggingCommandDecorator<TCommand, Result>(
-            inner.Object,
-            correlationContext.Object,
-            logger);
+            handler.Object,
+            correlationContext,
+            new ForwardingLogger<LoggingCommandDecorator<TCommand, Result>>(sink));
 
-        return (sut, logger);
+        return () => sut.HandleAsync(command);
     }
-
-    private sealed class ScopeCapturingLogger<TCategoryName> : ILogger<TCategoryName>
-    {
-        public List<IReadOnlyList<KeyValuePair<string, object?>>> Scopes { get; } = [];
-
-        public List<string> Messages { get; } = [];
-
-        /// <summary>Every line with the level and exception it was logged at, for the outcome assertions.</summary>
-        public List<LogEntry> Entries { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            if (state is IReadOnlyList<KeyValuePair<string, object?>> values)
-            {
-                Scopes.Add(values);
-            }
-
-            return null;
-        }
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-            var message = formatter(state, exception);
-            Messages.Add(message);
-            Entries.Add(new LogEntry(logLevel, exception, message));
-        }
-    }
-
-    /// <summary>One captured log line: the level it was written at, the exception it carried, its text.</summary>
-    public sealed record LogEntry(LogLevel Level, Exception? Exception, string Message);
 }
 
 // ── Test type (must be public for Moq DynamicProxy) ──

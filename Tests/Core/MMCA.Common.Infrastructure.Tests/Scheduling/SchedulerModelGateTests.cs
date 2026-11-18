@@ -1,6 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -22,37 +24,9 @@ namespace MMCA.Common.Infrastructure.Tests.Scheduling;
 /// build the real <see cref="ApplicationDbContext"/> model under each combination of
 /// <c>Scheduler:Enabled</c> and data source.
 /// </summary>
-public sealed class SchedulerModelGateTests
+public sealed class SchedulerModelGateTests : ModelGateTestsBase
 {
-    [Fact]
-    public void Model_SchedulerDisabled_DoesNotContainTheJobTable()
-    {
-        using var context = GateTestContext.Create(schedulerEnabled: false, sourceName: DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(ScheduledJobEntry)).Should().BeNull(
-            "a host that never called AddScheduledJobs must not gain a table in its next migration");
-    }
-
-    [Fact]
-    public void Model_NoSchedulerSettingsRegisteredAtAll_DoesNotContainTheJobTable()
-    {
-        using var context = GateTestContext.Create(
-            schedulerEnabled: false, sourceName: DataSourceKey.DefaultName, registerSettings: false);
-
-        context.Model.FindEntityType(typeof(ScheduledJobEntry)).Should().BeNull(
-            "the absence of the settings must read as disabled, not fail context construction");
-    }
-
-    [Fact]
-    public void Model_SchedulerEnabledOnTheDefaultSource_ContainsTheJobTable()
-    {
-        using var context = GateTestContext.Create(schedulerEnabled: true, sourceName: DataSourceKey.DefaultName);
-
-        var entityType = context.Model.FindEntityType(typeof(ScheduledJobEntry));
-        entityType.Should().NotBeNull();
-        entityType!.GetTableName().Should().Be("ScheduledJobs");
-        entityType.FindPrimaryKey()!.Properties.Select(p => p.Name).Should().Equal(nameof(ScheduledJobEntry.JobName));
-    }
+    protected override Type GatedEntityType => typeof(ScheduledJobEntry);
 
     [Fact]
     public void Model_SchedulerEnabledOnANonDefaultSource_DoesNotContainTheJobTable()
@@ -61,6 +35,22 @@ public sealed class SchedulerModelGateTests
 
         context.Model.FindEntityType(typeof(ScheduledJobEntry)).Should().BeNull(
             "jobs are host-scoped: the table lives in exactly one database, unlike the per-source outbox");
+    }
+
+    // Service-provider caching is off in GateTestContext, so the per-case marker is not needed here.
+    protected override DbContext CreateGateContext<TCase>(GateState state) => state switch
+    {
+        GateState.NeverRegistered => GateTestContext.Create(
+            schedulerEnabled: false, sourceName: DataSourceKey.DefaultName, registerSettings: false),
+        GateState.Disabled => GateTestContext.Create(schedulerEnabled: false, sourceName: DataSourceKey.DefaultName),
+        GateState.Enabled => GateTestContext.Create(schedulerEnabled: true, sourceName: DataSourceKey.DefaultName),
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+    };
+
+    protected override void AssertEnabledMapping(IEntityType entity)
+    {
+        entity.GetTableName().Should().Be("ScheduledJobs");
+        entity.FindPrimaryKey()!.Properties.Select(p => p.Name).Should().Equal(nameof(ScheduledJobEntry.JobName));
     }
 
     /// <summary>

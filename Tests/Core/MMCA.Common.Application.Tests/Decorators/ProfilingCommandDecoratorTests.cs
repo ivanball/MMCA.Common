@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Shared.Abstractions;
@@ -6,51 +5,21 @@ using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;
 
-public sealed class ProfilingCommandDecoratorTests
+public sealed class ProfilingCommandDecoratorTests : ProfilingDecoratorTestsBase<Result>
 {
-    [Fact]
-    public async Task HandleAsync_DelegatesCallToInnerHandler()
+    protected override Result SuccessResult => Result.Success();
+
+    protected override Result FailureResult => Result.Failure(Error.Failure("test", "failed"));
+
+    protected override Func<CancellationToken, Task<Result>> CreateSut(Func<CancellationToken, Task<Result>> inner)
     {
-        var inner = new Mock<ICommandHandler<ProfilingTestCommand, Result>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
+        var handler = new Mock<ICommandHandler<ProfilingTestCommand, Result>>();
+        handler.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), It.IsAny<CancellationToken>()))
+            .Returns<ProfilingTestCommand, CancellationToken>((_, ct) => inner(ct));
 
-        var sut = new ProfilingCommandDecorator<ProfilingTestCommand, Result>(inner.Object);
+        var sut = new ProfilingCommandDecorator<ProfilingTestCommand, Result>(handler.Object);
 
-        var result = await sut.HandleAsync(new ProfilingTestCommand());
-
-        result.IsSuccess.Should().BeTrue();
-        inner.Verify(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenInnerFails_ReturnsFailure()
-    {
-        var inner = new Mock<ICommandHandler<ProfilingTestCommand, Result>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure(Error.Failure("test", "failed")));
-
-        var sut = new ProfilingCommandDecorator<ProfilingTestCommand, Result>(inner.Object);
-
-        var result = await sut.HandleAsync(new ProfilingTestCommand());
-
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task HandleAsync_PassesCancellationTokenToInner()
-    {
-        using var cts = new CancellationTokenSource();
-        var token = cts.Token;
-        var inner = new Mock<ICommandHandler<ProfilingTestCommand, Result>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), token))
-            .ReturnsAsync(Result.Success());
-
-        var sut = new ProfilingCommandDecorator<ProfilingTestCommand, Result>(inner.Object);
-
-        await sut.HandleAsync(new ProfilingTestCommand(), token);
-
-        inner.Verify(x => x.HandleAsync(It.IsAny<ProfilingTestCommand>(), token), Times.Once);
+        return ct => sut.HandleAsync(new ProfilingTestCommand(), ct);
     }
 }
 

@@ -23,6 +23,11 @@ namespace MMCA.Common.API.Tests.Middleware;
 /// </summary>
 public sealed class ViewAsGuardMiddlewareTests
 {
+    // The two host modes the merged cases run under: the store host reads the grant row through
+    // IViewAsService; a service with HostsGrantStore false checks the shared cache's ended marker.
+    private const string StoreHost = "StoreHost";
+    private const string NonStoreHost = "NonStoreHost";
+
     private const UserIdentifierType StaffUserId = 1;
     private const UserIdentifierType TargetUserId = 2;
 
@@ -30,20 +35,26 @@ public sealed class ViewAsGuardMiddlewareTests
 
     private readonly FakeTimeProvider _clock = new(Now);
     private readonly GrantStore _grants = new();
+    private readonly SharedCache _cache = new();
     private bool _reachedEndpoint;
 
-    // Spec B assertion 1 (HTTP half): with act_sub present every non-safe method is refused 403.
+    // Spec B assertion 1 (HTTP half): with act_sub present every non-safe method is refused 403, on the
+    // store host and on a service that does not hold the grant store alike.
     [Theory]
-    [InlineData("POST")]
-    [InlineData("PUT")]
-    [InlineData("PATCH")]
-    [InlineData("DELETE")]
-    public async Task NonSafeMethod_UnderAViewAsToken_Returns403_AndNeverReachesTheEndpoint(string method)
+    [InlineData(StoreHost, "POST")]
+    [InlineData(StoreHost, "PUT")]
+    [InlineData(StoreHost, "PATCH")]
+    [InlineData(StoreHost, "DELETE")]
+    [InlineData(NonStoreHost, "POST")]
+    [InlineData(NonStoreHost, "PUT")]
+    [InlineData(NonStoreHost, "PATCH")]
+    [InlineData(NonStoreHost, "DELETE")]
+    public async Task NonSafeMethod_UnderAViewAsToken_Returns403_AndNeverReachesTheEndpoint(string host, string method)
     {
-        var grant = SeedLiveGrant();
-        var context = CreateContext(method, ViewAsPrincipal(grant.Id));
+        var harness = Harness(host);
+        var context = CreateContext(method, ViewAsPrincipal(harness.LiveGrant()));
 
-        await InvokeAsync(context);
+        await harness.Invoke(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         _reachedEndpoint.Should().BeFalse();
@@ -63,13 +74,15 @@ public sealed class ViewAsGuardMiddlewareTests
     }
 
     // gRPC is always POST: a host marks a read-only service or method, and the method rule alone relaxes.
-    [Fact]
-    public async Task PostToAReadOnlyEndpoint_UnderALiveGrant_PassesThrough()
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task PostToAReadOnlyEndpoint_UnderALiveGrant_PassesThrough(string host)
     {
-        var grant = SeedLiveGrant();
-        var context = CreateContext("POST", ViewAsPrincipal(grant.Id), readOnlyEndpoint: true);
+        var harness = Harness(host);
+        var context = CreateContext("POST", ViewAsPrincipal(harness.LiveGrant()), readOnlyEndpoint: true);
 
-        await InvokeAsync(context);
+        await harness.Invoke(context);
 
         _reachedEndpoint.Should().BeTrue();
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
@@ -117,16 +130,6 @@ public sealed class ViewAsGuardMiddlewareTests
         _reachedEndpoint.Should().BeFalse();
     }
 
-    [Fact]
-    public async Task NonStoreHost_PostToAReadOnlyEndpoint_WithALiveGrant_PassesThrough()
-    {
-        var context = CreateContext("POST", ViewAsPrincipal(Guid.NewGuid()), readOnlyEndpoint: true);
-
-        await InvokeNonStoreAsync(context, new SharedCache());
-
-        _reachedEndpoint.Should().BeTrue();
-    }
-
     [Theory]
     [InlineData("GET")]
     [InlineData("HEAD")]
@@ -141,50 +144,57 @@ public sealed class ViewAsGuardMiddlewareTests
         _reachedEndpoint.Should().BeTrue();
     }
 
-    // Spec B assertion 4: after End, the same token is refused on the next request.
-    [Fact]
-    public async Task AfterEnd_TheSameTokenIsRefusedOnTheNextRequest()
+    // Spec B assertion 4: after End, the same token is refused on the next request. The store host
+    // ends the grant row; a non-store host sees the ended marker the store host's end endpoint writes.
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task AfterEnd_TheSameTokenIsRefusedOnTheNextRequest(string host)
     {
-        var grant = SeedLiveGrant();
-        var service = CreateService();
+        var harness = Harness(host);
+        var grantId = harness.LiveGrant();
 
-        var before = CreateContext("GET", ViewAsPrincipal(grant.Id));
-        await InvokeAsync(before, service);
-        _reachedEndpoint.Should().BeTrue("the grant is live before End");
+        var before = CreateContext("GET", ViewAsPrincipal(grantId));
+        await harness.Invoke(before);
+        _reachedEndpoint.Should().BeTrue("the grant is live, and no ended marker exists, before End");
 
-        (await service.EndAsync(grant.Id, StaffUserId)).IsSuccess.Should().BeTrue();
+        await harness.End(grantId);
 
         _reachedEndpoint = false;
-        var after = CreateContext("GET", ViewAsPrincipal(grant.Id));
-        await InvokeAsync(after, service);
+        var after = CreateContext("GET", ViewAsPrincipal(grantId));
+        await harness.Invoke(after);
 
         after.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         _reachedEndpoint.Should().BeFalse();
     }
 
-    [Fact]
-    public async Task UnknownOrExpiredGrant_IsRefused401()
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task UnknownOrExpiredGrant_IsRefused401(string host)
     {
-        var grant = SeedLiveGrant();
+        var harness = Harness(host);
+        var grantId = harness.LiveGrant();
         _clock.Advance(TimeSpan.FromMinutes(16));
-        var context = CreateContext("GET", ViewAsPrincipal(grant.Id));
+        var context = CreateContext("GET", ViewAsPrincipal(grantId));
 
-        await InvokeAsync(context);
+        await harness.Invoke(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         _reachedEndpoint.Should().BeFalse();
     }
 
-    // The lookup fails CLOSED for view-as requests (unlike SoftDeletedUserMiddleware).
-    [Fact]
-    public async Task GrantLookupFailure_FailsClosed()
+    // The lookup (the grant row, or the shared cache on a non-store host) fails CLOSED for view-as
+    // requests, unlike SoftDeletedUserMiddleware.
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task GrantLookupFailure_FailsClosed(string host)
     {
-        var viewAs = new Mock<IViewAsService>();
-        viewAs.Setup(v => v.IsGrantActiveAsync(It.IsAny<Guid>(), It.IsAny<UserIdentifierType>(), It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("database unavailable"));
+        var harness = Harness(host);
         var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
 
-        await InvokeAsync(context, viewAs.Object);
+        await harness.InvokeWithFailingLookup(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         _reachedEndpoint.Should().BeFalse();
@@ -236,40 +246,45 @@ public sealed class ViewAsGuardMiddlewareTests
     }
 
     [Fact]
-    public async Task ViewAsServiceNotRegistered_AViewAsToken_IsRefused401()
-    {
-        var grant = SeedLiveGrant();
-        var context = CreateContext("GET", ViewAsPrincipal(grant.Id));
-        var services = new ServiceCollection();
-        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = true }));
-        await using var provider = services.BuildServiceProvider();
-        context.RequestServices = provider;
+    public void TheDefaultPipeline_AlwaysIncludesTheGuard() =>
+        MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.CreateDefault().StepNames
+            .Should().Contain(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ViewAsGuard);
 
-        await new ViewAsGuardMiddleware(_ =>
-        {
-            _reachedEndpoint = true;
-            return Task.CompletedTask;
-        }).InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task ViewAsTokenWithoutAGrantClaim_IsRefused401(string host)
+    {
+        var harness = Harness(host);
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(AuthClaimTypes.Subject, "2"),
+            new Claim(AuthClaimTypes.ViewAsActor, "1"),
+            ExpiryClaim(Now.AddMinutes(15)),
+        ],
+        "Bearer"));
+        var context = CreateContext("GET", principal);
+
+        await harness.Invoke(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         _reachedEndpoint.Should().BeFalse();
     }
 
-    [Fact]
-    public void TheDefaultPipeline_AlwaysIncludesTheGuard() =>
-        MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.CreateDefault().StepNames
-            .Should().Contain(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ViewAsGuard);
-
-    [Fact]
-    public async Task ViewAsTokenWithoutAGrantClaim_IsRefused401()
+    // The lookup service the host mode needs (IViewAsService, or the shared ICacheService on a non-store
+    // host) is not registered: the view-as token is refused rather than waved through.
+    [Theory]
+    [InlineData(StoreHost)]
+    [InlineData(NonStoreHost)]
+    public async Task LookupServiceNotRegistered_AViewAsToken_IsRefused401(string host)
     {
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(AuthClaimTypes.Subject, "2"), new Claim(AuthClaimTypes.ViewAsActor, "1")], "Bearer"));
-        var context = CreateContext("GET", principal);
+        var harness = Harness(host);
+        var context = CreateContext("GET", ViewAsPrincipal(harness.LiveGrant()));
 
-        await InvokeAsync(context);
+        await harness.InvokeWithoutLookupService(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _reachedEndpoint.Should().BeFalse();
     }
 
     // ── Multi-service host: a service that does not hold the grant store (HostsGrantStore false) ──
@@ -289,102 +304,6 @@ public sealed class ViewAsGuardMiddlewareTests
         _reachedEndpoint.Should().BeTrue();
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
         viewAs.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task NonStoreHost_AfterTheEndedMarkerIsWritten_TheSameTokenIsRefused401()
-    {
-        var grantId = Guid.NewGuid();
-        var cache = new SharedCache();
-
-        var before = CreateContext("GET", ViewAsPrincipal(grantId));
-        await InvokeNonStoreAsync(before, cache);
-        _reachedEndpoint.Should().BeTrue("no marker exists before End");
-
-        // The store host's end endpoint writes the marker through this helper.
-        var storeHostServices = new ServiceCollection()
-            .AddSingleton<ICacheService>(cache)
-            .AddSingleton<TimeProvider>(_clock)
-            .BuildServiceProvider();
-        await using (storeHostServices)
-        {
-            await ViewAsEndedMarker.WriteAsync(storeHostServices, ViewAsPrincipal(grantId), grantId, CancellationToken.None);
-        }
-
-        _reachedEndpoint = false;
-        var after = CreateContext("GET", ViewAsPrincipal(grantId));
-        await InvokeNonStoreAsync(after, cache);
-
-        after.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _reachedEndpoint.Should().BeFalse();
-    }
-
-    // Fails CLOSED on a cache outage, unlike SoftDeletedUserMiddleware.
-    [Fact]
-    public async Task NonStoreHost_CacheReadFailure_FailsClosed401()
-    {
-        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
-
-        await InvokeNonStoreAsync(context, new SharedCache { ReadFault = new InvalidOperationException("cache unavailable") });
-
-        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _reachedEndpoint.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task NonStoreHost_NoCacheRegistered_IsRefused401()
-    {
-        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
-
-        await InvokeNonStoreAsync(context, cache: null);
-
-        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _reachedEndpoint.Should().BeFalse();
-    }
-
-    [Theory]
-    [InlineData("POST")]
-    [InlineData("PUT")]
-    [InlineData("PATCH")]
-    [InlineData("DELETE")]
-    public async Task NonStoreHost_NonSafeMethod_Returns403_AndNeverReachesTheEndpoint(string method)
-    {
-        var context = CreateContext(method, ViewAsPrincipal(Guid.NewGuid()));
-
-        await InvokeNonStoreAsync(context, new SharedCache());
-
-        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        _reachedEndpoint.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task NonStoreHost_ExpiredToken_IsRefused401()
-    {
-        var context = CreateContext("GET", ViewAsPrincipal(Guid.NewGuid()));
-        _clock.Advance(TimeSpan.FromMinutes(16));
-
-        await InvokeNonStoreAsync(context, new SharedCache());
-
-        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _reachedEndpoint.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task NonStoreHost_TokenWithoutAGrantClaim_IsRefused401()
-    {
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(
-        [
-            new Claim(AuthClaimTypes.Subject, "2"),
-            new Claim(AuthClaimTypes.ViewAsActor, "1"),
-            ExpiryClaim(Now.AddMinutes(15)),
-        ],
-        "Bearer"));
-        var context = CreateContext("GET", principal);
-
-        await InvokeNonStoreAsync(context, new SharedCache());
-
-        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _reachedEndpoint.Should().BeFalse();
     }
 
     [Fact]
@@ -516,6 +435,71 @@ public sealed class ViewAsGuardMiddlewareTests
         });
         await sut.InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
     }
+
+    /// <summary>
+    /// The per-host-mode wiring a merged case runs against: the store host over the real grant store
+    /// and one <see cref="ViewAsService"/>, or a non-store host over <see cref="_cache"/>.
+    /// </summary>
+    private HostHarness Harness(string host) => host switch
+    {
+        StoreHost => StoreHarness(CreateService()),
+        NonStoreHost => new HostHarness(
+            LiveGrant: Guid.NewGuid,
+            Invoke: context => InvokeNonStoreAsync(context, _cache),
+            End: WriteEndedMarkerAsync,
+            InvokeWithFailingLookup: context => InvokeNonStoreAsync(
+                context, new SharedCache { ReadFault = new InvalidOperationException("cache unavailable") }),
+            InvokeWithoutLookupService: context => InvokeNonStoreAsync(context, cache: null)),
+        _ => throw new ArgumentOutOfRangeException(nameof(host), host, null),
+    };
+
+    private HostHarness StoreHarness(ViewAsService service) => new(
+        LiveGrant: () => SeedLiveGrant().Id,
+        Invoke: context => InvokeAsync(context, service),
+        End: async grantId => (await service.EndAsync(grantId, StaffUserId)).IsSuccess.Should().BeTrue(),
+        InvokeWithFailingLookup: context =>
+        {
+            var viewAs = new Mock<IViewAsService>();
+            viewAs.Setup(v => v.IsGrantActiveAsync(It.IsAny<Guid>(), It.IsAny<UserIdentifierType>(), It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("database unavailable"));
+            return InvokeAsync(context, viewAs.Object);
+        },
+        InvokeWithoutLookupService: InvokeWithoutViewAsServiceAsync);
+
+    // The store host's end endpoint writes the marker through this helper.
+    private async Task WriteEndedMarkerAsync(Guid grantId)
+    {
+        var storeHostServices = new ServiceCollection()
+            .AddSingleton<ICacheService>(_cache)
+            .AddSingleton<TimeProvider>(_clock)
+            .BuildServiceProvider();
+        await using (storeHostServices)
+        {
+            await ViewAsEndedMarker.WriteAsync(storeHostServices, ViewAsPrincipal(grantId), grantId, CancellationToken.None);
+        }
+    }
+
+    private async Task InvokeWithoutViewAsServiceAsync(HttpContext context)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Options.Create(new ViewAsSettings { Enabled = true }));
+        await using var provider = services.BuildServiceProvider();
+        context.RequestServices = provider;
+
+        await new ViewAsGuardMiddleware(_ =>
+        {
+            _reachedEndpoint = true;
+            return Task.CompletedTask;
+        }).InvokeAsync(context, NullLogger<ViewAsGuardMiddleware>.Instance);
+    }
+
+    /// <summary>One host mode's wiring, as the delegates a merged case calls.</summary>
+    private sealed record HostHarness(
+        Func<Guid> LiveGrant,
+        Func<HttpContext, Task> Invoke,
+        Func<Guid, Task> End,
+        Func<HttpContext, Task> InvokeWithFailingLookup,
+        Func<HttpContext, Task> InvokeWithoutLookupService);
 
     /// <summary>A dictionary standing in for the distributed cache every service shares.</summary>
     private sealed class SharedCache : ICacheService

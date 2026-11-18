@@ -8,7 +8,6 @@ using Microsoft.FeatureManagement.Mvc;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.FeatureManagement;
 using MMCA.Common.API.Idempotency;
-using MMCA.Common.API.JsonConverters;
 using MMCA.Common.API.Localization;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Resources;
@@ -29,8 +28,8 @@ public static class DependencyInjection
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers MVC controllers with JSON (<see cref="CurrencyJsonConverter"/>,
-        /// <see cref="EnumerationJsonConverterFactory"/>) and XML formatters,
+        /// Registers MVC controllers with JSON (<see cref="EnumerationJsonConverterFactory"/>; Currency
+        /// carries its own converter in Shared) and XML formatters,
         /// optional module-based controller filtering, and scoped action filters
         /// (<see cref="IdempotencyFilter"/>).
         /// </summary>
@@ -55,8 +54,6 @@ public static class DependencyInjection
                 })
                 .AddJsonOptions(options =>
                 {
-                    options.JsonSerializerOptions.Converters.Add(new CurrencyJsonConverter());
-
                     // Concrete enumerations do not inherit the base-class [JsonConverter] attribute
                     // (System.Text.Json resolves it with inherit: false), so the factory is registered
                     // here once and every Enumeration<T> serializes by Name across the API surface.

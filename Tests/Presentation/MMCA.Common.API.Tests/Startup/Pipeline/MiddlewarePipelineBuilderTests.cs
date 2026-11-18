@@ -115,72 +115,45 @@ public sealed class MiddlewarePipelineBuilderTests
 
     // ── Unknown anchors and duplicate names ──
     [Theory]
-    [InlineData("Nope")]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void InsertBefore_WithUnknownAnchor_Throws(string unknownAnchor)
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertBefore), "Nope", "anchor")]
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertBefore), "", "anchor")]
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertBefore), "   ", "anchor")]
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertAfter), "Nope", "anchor")]
+    [InlineData(nameof(MiddlewarePipelineBuilder.Replace), "Nope", "name")]
+    [InlineData(nameof(MiddlewarePipelineBuilder.Remove), "Nope", "name")]
+    public void Operation_WithUnknownTargetStep_Throws(string operation, string unknownTarget, string parameterName)
     {
         var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var insert = () => builder.InsertBefore(unknownAnchor, Step("Tracing"));
+        Action act = operation switch
+        {
+            nameof(MiddlewarePipelineBuilder.InsertBefore) => () => builder.InsertBefore(unknownTarget, Step("Tracing")),
+            nameof(MiddlewarePipelineBuilder.InsertAfter) => () => builder.InsertAfter(unknownTarget, Step("Tracing")),
+            nameof(MiddlewarePipelineBuilder.Replace) => () => builder.Replace(unknownTarget, Step("Tracing")),
+            nameof(MiddlewarePipelineBuilder.Remove) => () => builder.Remove(unknownTarget),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown operation."),
+        };
 
-        insert.Should().Throw<ArgumentException>().WithParameterName("anchor");
+        act.Should().Throw<ArgumentException>().WithParameterName(parameterName);
     }
 
-    [Fact]
-    public void InsertAfter_WithUnknownAnchor_Throws()
+    // A step name already in the pipeline (Cors) is rejected whichever operation tries to add it.
+    [Theory]
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertBefore), MiddlewarePipelineStepNames.Routing)]
+    [InlineData(nameof(MiddlewarePipelineBuilder.InsertAfter), MiddlewarePipelineStepNames.Routing)]
+    [InlineData(nameof(MiddlewarePipelineBuilder.Replace), MiddlewarePipelineStepNames.OutputCache)]
+    public void Operation_WithAnotherStepsName_Throws(string operation, string target)
     {
         var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var insert = () => builder.InsertAfter("Nope", Step("Tracing"));
+        var duplicate = Step(MiddlewarePipelineStepNames.Cors);
+        Action act = operation switch
+        {
+            nameof(MiddlewarePipelineBuilder.InsertBefore) => () => builder.InsertBefore(target, duplicate),
+            nameof(MiddlewarePipelineBuilder.InsertAfter) => () => builder.InsertAfter(target, duplicate),
+            nameof(MiddlewarePipelineBuilder.Replace) => () => builder.Replace(target, duplicate),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unknown operation."),
+        };
 
-        insert.Should().Throw<ArgumentException>().WithParameterName("anchor");
-    }
-
-    [Fact]
-    public void Replace_WithUnknownName_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var replace = () => builder.Replace("Nope", Step("Tracing"));
-
-        replace.Should().Throw<ArgumentException>().WithParameterName("name");
-    }
-
-    [Fact]
-    public void Remove_WithUnknownName_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var remove = () => builder.Remove("Nope");
-
-        remove.Should().Throw<ArgumentException>().WithParameterName("name");
-    }
-
-    [Fact]
-    public void InsertBefore_WithDuplicateStepName_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var insert = () => builder.InsertBefore(
-            MiddlewarePipelineStepNames.Routing, Step(MiddlewarePipelineStepNames.Cors));
-
-        insert.Should().Throw<ArgumentException>().WithParameterName("step");
-    }
-
-    [Fact]
-    public void InsertAfter_WithDuplicateStepName_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var insert = () => builder.InsertAfter(
-            MiddlewarePipelineStepNames.Routing, Step(MiddlewarePipelineStepNames.Cors));
-
-        insert.Should().Throw<ArgumentException>().WithParameterName("step");
-    }
-
-    [Fact]
-    public void Replace_WithAnotherStepsName_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault();
-        var replace = () => builder.Replace(
-            MiddlewarePipelineStepNames.OutputCache, Step(MiddlewarePipelineStepNames.Cors));
-
-        replace.Should().Throw<ArgumentException>().WithParameterName("step");
+        act.Should().Throw<ArgumentException>().WithParameterName("step");
     }
 
     [Fact]
@@ -194,54 +167,25 @@ public sealed class MiddlewarePipelineBuilderTests
     }
 
     // ── Invariants ──
-    [Fact]
-    public void Build_WhenPreForwardedCaptureIsNotImmediatelyBeforeForwardedHeaders_Throws()
+    [Theory]
+    [InlineData(
+        "IntruderBetweenPreForwardedCaptureAndForwardedHeaders",
+        $"*'{MiddlewarePipelineStepNames.PreForwardedCapture}' must run immediately before '{MiddlewarePipelineStepNames.ForwardedHeaders}'*")]
+    [InlineData(
+        "IntruderBetweenAuthenticationAndTenantResolution",
+        $"*'{MiddlewarePipelineStepNames.Authentication}' must run immediately before '{MiddlewarePipelineStepNames.TenantResolution}'*")]
+    [InlineData(
+        "AuthenticationAfterRateLimiting",
+        $"*'{MiddlewarePipelineStepNames.Authentication}' must run before '{MiddlewarePipelineStepNames.RateLimiting}'*")]
+    [InlineData(
+        "HttpsRedirectionBeforeForwardedHeaders",
+        $"*'{MiddlewarePipelineStepNames.ForwardedHeaders}' must run before '{MiddlewarePipelineStepNames.HttpsRedirection}'*")]
+    public void Build_WhenAGuardedPairIsOutOfOrder_Throws(string scenario, string expectedMessage)
     {
-        var builder = MiddlewarePipelineBuilder.CreateDefault()
-            .InsertBefore(MiddlewarePipelineStepNames.ForwardedHeaders, Step("Intruder"));
+        var builder = ArrangeGuardViolation(scenario);
         var build = () => builder.Build();
 
-        build.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*'{MiddlewarePipelineStepNames.PreForwardedCapture}' must run immediately before '{MiddlewarePipelineStepNames.ForwardedHeaders}'*");
-    }
-
-    [Fact]
-    public void Build_WhenAuthenticationIsNotImmediatelyBeforeTenantResolution_Throws()
-    {
-        var builder = MiddlewarePipelineBuilder.CreateDefault()
-            .InsertAfter(MiddlewarePipelineStepNames.Authentication, Step("Intruder"));
-        var build = () => builder.Build();
-
-        build.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*'{MiddlewarePipelineStepNames.Authentication}' must run immediately before '{MiddlewarePipelineStepNames.TenantResolution}'*");
-    }
-
-    [Fact]
-    public void Build_WhenAuthenticationDoesNotPrecedeRateLimiting_Throws()
-    {
-        // Move authentication (and the tenant resolution that must stay glued to it) after the limiter.
-        var builder = MiddlewarePipelineBuilder.CreateDefault()
-            .Remove(MiddlewarePipelineStepNames.Authentication)
-            .Remove(MiddlewarePipelineStepNames.TenantResolution)
-            .InsertAfter(MiddlewarePipelineStepNames.RateLimiting, Step(MiddlewarePipelineStepNames.TenantResolution))
-            .InsertBefore(MiddlewarePipelineStepNames.TenantResolution, Step(MiddlewarePipelineStepNames.Authentication));
-        var build = () => builder.Build();
-
-        build.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*'{MiddlewarePipelineStepNames.Authentication}' must run before '{MiddlewarePipelineStepNames.RateLimiting}'*");
-    }
-
-    [Fact]
-    public void Build_WhenForwardedHeadersDoesNotPrecedeHttpsRedirection_Throws()
-    {
-        // Move the HTTPS redirect ahead of the capture/forwarded-headers pair, keeping that pair adjacent.
-        var builder = MiddlewarePipelineBuilder.CreateDefault()
-            .Remove(MiddlewarePipelineStepNames.HttpsRedirection)
-            .InsertBefore(MiddlewarePipelineStepNames.PreForwardedCapture, Step(MiddlewarePipelineStepNames.HttpsRedirection));
-        var build = () => builder.Build();
-
-        build.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*'{MiddlewarePipelineStepNames.ForwardedHeaders}' must run before '{MiddlewarePipelineStepNames.HttpsRedirection}'*");
+        build.Should().Throw<InvalidOperationException>().WithMessage(expectedMessage);
     }
 
     [Fact]
@@ -269,6 +213,27 @@ public sealed class MiddlewarePipelineBuilderTests
 
         steps.Select(step => step.Name).Should().Equal(DefaultOrder);
     }
+
+    private static MiddlewarePipelineBuilder ArrangeGuardViolation(string scenario) => scenario switch
+    {
+        "IntruderBetweenPreForwardedCaptureAndForwardedHeaders" => MiddlewarePipelineBuilder.CreateDefault()
+            .InsertBefore(MiddlewarePipelineStepNames.ForwardedHeaders, Step("Intruder")),
+        "IntruderBetweenAuthenticationAndTenantResolution" => MiddlewarePipelineBuilder.CreateDefault()
+            .InsertAfter(MiddlewarePipelineStepNames.Authentication, Step("Intruder")),
+
+        // Move authentication (and the tenant resolution that must stay glued to it) after the limiter.
+        "AuthenticationAfterRateLimiting" => MiddlewarePipelineBuilder.CreateDefault()
+            .Remove(MiddlewarePipelineStepNames.Authentication)
+            .Remove(MiddlewarePipelineStepNames.TenantResolution)
+            .InsertAfter(MiddlewarePipelineStepNames.RateLimiting, Step(MiddlewarePipelineStepNames.TenantResolution))
+            .InsertBefore(MiddlewarePipelineStepNames.TenantResolution, Step(MiddlewarePipelineStepNames.Authentication)),
+
+        // Move the HTTPS redirect ahead of the capture/forwarded-headers pair, keeping that pair adjacent.
+        "HttpsRedirectionBeforeForwardedHeaders" => MiddlewarePipelineBuilder.CreateDefault()
+            .Remove(MiddlewarePipelineStepNames.HttpsRedirection)
+            .InsertBefore(MiddlewarePipelineStepNames.PreForwardedCapture, Step(MiddlewarePipelineStepNames.HttpsRedirection)),
+        _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown scenario."),
+    };
 
     private static MiddlewarePipelineStep Step(string name) => new(name, static _ => { });
 }

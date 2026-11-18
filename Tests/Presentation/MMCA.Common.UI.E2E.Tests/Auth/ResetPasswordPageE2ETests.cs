@@ -38,13 +38,4 @@ public sealed class ResetPasswordPageE2ETests : GalleryAxeTestBase
         await Expect(resetPage.EmailField).ToHaveValueAsync("linked@example.com");
         await Expect(resetPage.TokenField).ToHaveValueAsync("abc-123_token");
     }
-
-    [Fact]
-    public async Task ResetPasswordPage_HasNoWcag21AaViolations()
-    {
-        var resetPage = new ResetPasswordPage(Page);
-        await resetPage.GotoAsync();
-
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
-    }
 }

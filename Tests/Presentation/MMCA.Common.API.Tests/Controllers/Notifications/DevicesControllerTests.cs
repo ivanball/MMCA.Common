@@ -52,18 +52,23 @@ public sealed class DevicesControllerTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task UpsertAsync_WithoutAuthenticatedUser_IsUnauthorized()
+    [Theory]
+    [InlineData(nameof(DevicesController.UpsertAsync))]
+    [InlineData(nameof(DevicesController.DeleteAsync))]
+    public async Task DeviceAction_WithoutAuthenticatedUser_IsUnauthorized(string action)
     {
         var controller = CreateController(userId: null);
 
-        var result = await controller.UpsertAsync(CreateRequest(), TestContext.Current.CancellationToken);
+        IActionResult result = action switch
+        {
+            nameof(DevicesController.UpsertAsync) => await controller.UpsertAsync(CreateRequest(), TestContext.Current.CancellationToken),
+            nameof(DevicesController.DeleteAsync) => await controller.DeleteAsync("abc123", TestContext.Current.CancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown action."),
+        };
 
         result.Should().BeOfType<ObjectResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _registrar.Verify(
-            x => x.UpsertAsync(It.IsAny<UserIdentifierType>(), It.IsAny<DeviceInstallationRequest>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _registrar.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -125,20 +130,6 @@ public sealed class DevicesControllerTests
         var result = await controller.DeleteAsync("someone-elses-id", TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<NoContentResult>();
-    }
-
-    [Fact]
-    public async Task DeleteAsync_WithoutAuthenticatedUser_IsUnauthorized()
-    {
-        var controller = CreateController(userId: null);
-
-        var result = await controller.DeleteAsync("abc123", TestContext.Current.CancellationToken);
-
-        result.Should().BeOfType<ObjectResult>()
-            .Which.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        _registrar.Verify(
-            x => x.DeleteAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]

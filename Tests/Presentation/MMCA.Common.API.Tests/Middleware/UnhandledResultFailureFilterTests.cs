@@ -12,7 +12,8 @@ namespace MMCA.Common.API.Tests.Middleware;
 
 public sealed class UnhandledResultFailureFilterTests
 {
-    // ── Failed Result converted to ProblemDetails ──
+    // ── Failed Result converted to ProblemDetails (single-error smoke; the ErrorType-to-status
+    // matrix is owned by ErrorHttpMappingTests) ──
     [Fact]
     public void OnResultExecuting_FailedResult_ConvertsToProblemDetails()
     {
@@ -28,38 +29,6 @@ public sealed class UnhandledResultFailureFilterTests
         var objectResult = (ObjectResult)context.Result;
         objectResult.Value.Should().BeOfType<ProblemDetails>();
         objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-    }
-
-    // ── Validation error maps to 400 ──
-    [Fact]
-    public void OnResultExecuting_ValidationError_Returns400()
-    {
-        var sut = new UnhandledResultFailureFilter(
-            NullLogger<UnhandledResultFailureFilter>.Instance);
-
-        var failedResult = Result.Failure(Error.Validation("test", "invalid"));
-        var context = CreateContext(new ObjectResult(failedResult));
-
-        sut.OnResultExecuting(context);
-
-        var objectResult = (ObjectResult)context.Result;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-    }
-
-    // ── Conflict error maps to 409 ──
-    [Fact]
-    public void OnResultExecuting_ConflictError_Returns409()
-    {
-        var sut = new UnhandledResultFailureFilter(
-            NullLogger<UnhandledResultFailureFilter>.Instance);
-
-        var failedResult = Result.Failure(Error.Conflict("test", "conflict"));
-        var context = CreateContext(new ObjectResult(failedResult));
-
-        sut.OnResultExecuting(context);
-
-        var objectResult = (ObjectResult)context.Result;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
     }
 
     // ── Aggregated errors use the most severe type, not the first ──
@@ -78,22 +47,6 @@ public sealed class UnhandledResultFailureFilterTests
 
         var objectResult = (ObjectResult)context.Result;
         objectResult.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-    }
-
-    // ── Unexpected error maps to 500 ──
-    [Fact]
-    public void OnResultExecuting_UnexpectedError_Returns500()
-    {
-        var sut = new UnhandledResultFailureFilter(
-            NullLogger<UnhandledResultFailureFilter>.Instance);
-
-        var failedResult = Result.Failure(Error.Unexpected("test", "the server broke"));
-        var context = CreateContext(new ObjectResult(failedResult));
-
-        sut.OnResultExecuting(context);
-
-        var objectResult = (ObjectResult)context.Result;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
 
     // ── Success Result passes through ──

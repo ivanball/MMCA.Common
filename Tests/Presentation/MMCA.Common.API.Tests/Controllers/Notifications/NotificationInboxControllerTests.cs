@@ -36,20 +36,32 @@ public sealed class NotificationInboxControllerTests
             }
         };
 
-    // ── GetInboxAsync ─────────────────────────────────────────────────────────
-    [Fact]
-    public async Task GetInboxAsync_WhenUserIdNull_ReturnsUnauthorized()
+    // ── Every inbox action answers 401 without a user id ─────────────────────
+    [Theory]
+    [InlineData(nameof(InboxController.GetInboxAsync))]
+    [InlineData(nameof(InboxController.GetUnreadCountAsync))]
+    [InlineData(nameof(InboxController.MarkReadAsync))]
+    [InlineData(nameof(InboxController.MarkAllReadAsync))]
+    public async Task InboxAction_WhenUserIdNull_ReturnsUnauthorized(string action)
     {
         _currentUserServiceMock.Setup(s => s.UserId).Returns((int?)null);
         InboxController sut = CreateController();
 
-        ActionResult<PagedCollectionResult<UserNotificationDTO>> result = await sut.GetInboxAsync();
+        IActionResult? result = action switch
+        {
+            nameof(InboxController.GetInboxAsync) => (await sut.GetInboxAsync()).Result,
+            nameof(InboxController.GetUnreadCountAsync) => (await sut.GetUnreadCountAsync()).Result,
+            nameof(InboxController.MarkReadAsync) => await sut.MarkReadAsync(1),
+            nameof(InboxController.MarkAllReadAsync) => await sut.MarkAllReadAsync(),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown action."),
+        };
 
-        var objectResult = result.Result as ObjectResult;
+        var objectResult = result as ObjectResult;
         objectResult.Should().NotBeNull();
         objectResult!.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
+    // ── GetInboxAsync ─────────────────────────────────────────────────────────
     [Fact]
     public async Task GetInboxAsync_Success_ReturnsOkWithPagedResult()
     {
@@ -142,19 +154,6 @@ public sealed class NotificationInboxControllerTests
 
     // ── GetUnreadCountAsync ───────────────────────────────────────────────────
     [Fact]
-    public async Task GetUnreadCountAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(s => s.UserId).Returns((int?)null);
-        InboxController sut = CreateController();
-
-        ActionResult<int> result = await sut.GetUnreadCountAsync();
-
-        var objectResult = result.Result as ObjectResult;
-        objectResult.Should().NotBeNull();
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-    }
-
-    [Fact]
     public async Task GetUnreadCountAsync_Success_ReturnsOkWithCount()
     {
         _currentUserServiceMock.Setup(s => s.UserId).Returns(42);
@@ -241,19 +240,6 @@ public sealed class NotificationInboxControllerTests
 
     // ── MarkReadAsync ─────────────────────────────────────────────────────────
     [Fact]
-    public async Task MarkReadAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(s => s.UserId).Returns((int?)null);
-        InboxController sut = CreateController();
-
-        IActionResult result = await sut.MarkReadAsync(1);
-
-        var objectResult = result as ObjectResult;
-        objectResult.Should().NotBeNull();
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-    }
-
-    [Fact]
     public async Task MarkReadAsync_Success_ReturnsNoContent()
     {
         _currentUserServiceMock.Setup(s => s.UserId).Returns(42);
@@ -303,19 +289,6 @@ public sealed class NotificationInboxControllerTests
     }
 
     // ── MarkAllReadAsync ──────────────────────────────────────────────────────
-    [Fact]
-    public async Task MarkAllReadAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(s => s.UserId).Returns((int?)null);
-        InboxController sut = CreateController();
-
-        IActionResult result = await sut.MarkAllReadAsync();
-
-        var objectResult = result as ObjectResult;
-        objectResult.Should().NotBeNull();
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-    }
-
     [Fact]
     public async Task MarkAllReadAsync_Success_ReturnsNoContent()
     {

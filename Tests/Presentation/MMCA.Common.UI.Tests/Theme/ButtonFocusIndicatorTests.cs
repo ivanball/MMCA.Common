@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
+using static MMCA.Common.UI.Tests.Infrastructure.CssStylesheet;
 
 namespace MMCA.Common.UI.Tests.Theme;
 
@@ -81,14 +82,6 @@ public sealed partial class ButtonFocusIndicatorTests
             $"X-03 (WCAG 2.4.7): the `{focusSelector}` rule in {stylesheet} must draw an outline at least 2px wide in white "
             + "(white, #fff or #ffffff), not the palette primary, so the ring reads on the dark chrome both palettes share");
     }
-
-    private static List<string> RuleBodies(string css, Func<string, bool> selectorMatches) =>
-        [.. CssRule.Matches(css)
-            .Where(rule => rule.Groups["selectors"].Value
-                .Split(',')
-                .Any(selector => selectorMatches(selector.Trim())))
-            .Select(rule => rule.Groups["body"].Value)
-        ];
 
     /// <summary>
     /// True when the declarations resolve to a drawn outline: a style other than none/hidden (from the
@@ -191,25 +184,6 @@ public sealed partial class ButtonFocusIndicatorTests
             ? number
             : number * 16;
     }
-
-    private static string ReadEmbedded(string logicalName)
-    {
-        using var stream = typeof(ButtonFocusIndicatorTests).Assembly.GetManifestResourceStream(logicalName)
-            ?? throw new InvalidOperationException(logicalName + " must be embedded as a resource (see the csproj)");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CssComment { get; }
-
-    // A flat rule: selector list, then a declaration block with no nested braces. A rule inside an
-    // at-rule block still matches, starting after the at-rule's opening brace.
-    [GeneratedRegex(@"(?<selectors>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CssRule { get; }
-
-    [GeneratedRegex(@"(?<property>[a-zA-Z-]+)\s*:\s*(?<value>[^;]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex Declaration { get; }
 
     [GeneratedRegex(@"!\s*important", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Important { get; }

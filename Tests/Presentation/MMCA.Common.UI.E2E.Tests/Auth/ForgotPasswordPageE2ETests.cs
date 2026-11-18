@@ -38,19 +38,10 @@ public sealed class ForgotPasswordPageE2ETests : GalleryAxeTestBase
     }
 
     [Fact]
-    public async Task ForgotPasswordPage_HasNoWcag21AaViolations()
-    {
-        var forgotPage = new ForgotPasswordPage(Page);
-        await forgotPage.GotoAsync();
-
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
-    }
-
-    [Fact]
     public async Task ForgotPasswordPage_ConfirmationState_HasNoWcag21AaViolations()
     {
         // The confirmation replaces the form, so it is a distinct rendering that the form-state scan
-        // above never reaches.
+        // (AxeSweepE2ETests, /forgot-password) never reaches.
         var forgotPage = new ForgotPasswordPage(Page);
         await forgotPage.GotoAsync();
 

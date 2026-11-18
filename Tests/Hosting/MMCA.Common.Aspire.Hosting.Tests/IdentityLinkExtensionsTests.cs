@@ -1,12 +1,12 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Infrastructure.Auth;
+using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
 namespace MMCA.Common.Aspire.Hosting.Tests;
 
@@ -162,29 +162,6 @@ public sealed class IdentityLinkExtensionsTests
         var gateway = builder.AddResource(new ProjectResource("gateway")).WithHttpsEndpoint(name: "https");
 
         return new Model(builder, identity, ui, gateway);
-    }
-
-    /// <summary>
-    /// Resolves a resource's environment variables in publish mode, where every reference stays a
-    /// manifest expression rather than a value DCP happened to allocate.
-    /// </summary>
-    private static async Task<Dictionary<string, string>> EnvironmentOf(
-        IDistributedApplicationBuilder builder,
-        IResource resource)
-    {
-        await using ServiceProvider services = builder.Services.BuildServiceProvider();
-        var executionContext = new DistributedApplicationExecutionContext(
-            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Publish)
-            {
-                Services = services,
-            });
-
-        IExecutionConfigurationResult result = await ExecutionConfigurationBuilder.Create(resource)
-            .WithEnvironmentVariablesConfig()
-            .BuildAsync(executionContext);
-
-        result.Exception.Should().BeNull();
-        return result.EnvironmentVariables.ToDictionary(StringComparer.Ordinal);
     }
 
     private sealed record Model(

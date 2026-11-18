@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using AwesomeAssertions;
 using MMCA.Common.Aspire.Telemetry;
+using static MMCA.Common.Aspire.Tests.Telemetry.ActivityRecording;
 
 namespace MMCA.Common.Aspire.Tests.Telemetry;
 
@@ -20,20 +21,8 @@ public sealed class ProbeTelemetryFilterProcessorTests : IDisposable
     private readonly ActivityListener _listener;
     private readonly ProbeTelemetryFilterProcessor _sut = new();
 
-    public ProbeTelemetryFilterProcessorTests()
-    {
-        _listener = new ActivityListener
-        {
-            ShouldListenTo = source =>
-                string.Equals(source.Name, SourceName, StringComparison.Ordinal)
-                || string.Equals(source.Name, DependencySourceName, StringComparison.Ordinal),
-
-            // Always sample, so what the processor does to the Recorded flag is the only thing the
-            // assertions can be reading.
-            Sample = (ref _) => ActivitySamplingResult.AllDataAndRecorded,
-        };
-        ActivitySource.AddActivityListener(_listener);
-    }
+    public ProbeTelemetryFilterProcessorTests() =>
+        _listener = ActivityRecording.ListenTo(SourceName, DependencySourceName);
 
     public void Dispose()
     {
@@ -42,9 +31,6 @@ public sealed class ProbeTelemetryFilterProcessorTests : IDisposable
         _dependencySource.Dispose();
         _sut.Dispose();
     }
-
-    private static bool IsRecorded(Activity activity) =>
-        activity.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded);
 
     private Activity StartProbeRequest(string urlPath = "/alive")
         => _source.StartActivity(

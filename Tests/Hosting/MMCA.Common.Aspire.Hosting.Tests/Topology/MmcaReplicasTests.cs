@@ -1,8 +1,8 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.RateLimiting;
+using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
 namespace MMCA.Common.Aspire.Hosting.Tests.Topology;
 
@@ -118,28 +118,5 @@ public sealed class MmcaReplicasTests
         var environment = await EnvironmentOf(builder, service.Resource);
         environment.Should().ContainKey(
             $"{RateLimitingSettings.SectionName}__{nameof(RateLimitingSettings.Distributed)}");
-    }
-
-    /// <summary>
-    /// Resolves a resource's environment variables in publish mode, where every reference stays a
-    /// manifest expression rather than a value DCP happened to allocate.
-    /// </summary>
-    private static async Task<Dictionary<string, string>> EnvironmentOf(
-        IDistributedApplicationBuilder builder,
-        IResource resource)
-    {
-        await using ServiceProvider services = builder.Services.BuildServiceProvider();
-        var executionContext = new DistributedApplicationExecutionContext(
-            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Publish)
-            {
-                Services = services,
-            });
-
-        IExecutionConfigurationResult result = await ExecutionConfigurationBuilder.Create(resource)
-            .WithEnvironmentVariablesConfig()
-            .BuildAsync(executionContext);
-
-        result.Exception.Should().BeNull();
-        return result.EnvironmentVariables.ToDictionary(StringComparer.Ordinal);
     }
 }

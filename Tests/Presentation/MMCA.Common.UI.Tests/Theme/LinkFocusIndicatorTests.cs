@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
+using static MMCA.Common.UI.Tests.Infrastructure.CssStylesheet;
 
 namespace MMCA.Common.UI.Tests.Theme;
 
@@ -19,15 +20,10 @@ public sealed partial class LinkFocusIndicatorTests
     [InlineData(".mud-link")]
     public void AppCss_GivesLinksAVisibleKeyboardFocusIndicator(string linkSelector)
     {
-        var css = CssComment.Replace(ReadAppCss(), string.Empty);
+        var css = CssComment.Replace(ReadEmbedded("app.css"), string.Empty);
         var focusSelector = linkSelector + ":focus-visible";
 
-        var bodies = CssRule.Matches(css)
-            .Where(rule => rule.Groups["selectors"].Value
-                .Split(',')
-                .Any(selector => string.Equals(selector.Trim(), focusSelector, StringComparison.Ordinal)))
-            .Select(rule => rule.Groups["body"].Value)
-            .ToList();
+        var bodies = RuleBodies(css, selector => string.Equals(selector, focusSelector, StringComparison.Ordinal));
 
         bodies.Should().NotBeEmpty(
             $"X-03 (WCAG 2.4.7): app.css must declare a `{focusSelector}` rule, because MudBlazor 9.11 ships "
@@ -54,25 +50,6 @@ public sealed partial class LinkFocusIndicatorTests
                 _ => false,
             };
         });
-
-    private static string ReadAppCss()
-    {
-        using var stream = typeof(LinkFocusIndicatorTests).Assembly.GetManifestResourceStream("app.css")
-            ?? throw new InvalidOperationException("app.css must be embedded as a resource");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
-    [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CssComment { get; }
-
-    // A flat rule: selector list, then a declaration block with no nested braces. A rule inside an
-    // at-rule block still matches, starting after the at-rule's opening brace.
-    [GeneratedRegex(@"(?<selectors>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CssRule { get; }
-
-    [GeneratedRegex(@"(?<property>[a-zA-Z-]+)\s*:\s*(?<value>[^;]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex Declaration { get; }
 
     [GeneratedRegex(@"^(none|0(px|rem|em)?)(\s|!|$)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NoneOrZero { get; }

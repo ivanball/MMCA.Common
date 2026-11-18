@@ -52,7 +52,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// so the declaration on this base class only covers a member typed as the base itself. The
 /// alternative, for a host that would rather not annotate each type, is registering
 /// <see cref="EnumerationJsonConverterFactory"/> once in <c>JsonSerializerOptions.Converters</c>
-/// (the shipped <c>CurrencyJsonConverter</c> registration in <c>AddAPI</c> is the precedent).
+/// (<c>AddAPI</c> registers it that way).
 /// <code>
 /// [JsonConverter(typeof(EnumerationJsonConverterFactory))]
 /// public sealed class Priority : Enumeration&lt;Priority&gt;

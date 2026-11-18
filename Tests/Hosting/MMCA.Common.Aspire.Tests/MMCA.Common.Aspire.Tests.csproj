@@ -28,4 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared fake HTTP handler for the probe-outcome tests (linked by Aspire.Tests and Aspire.Hosting.Tests). -->
+    <Compile Include="..\..\Shared\Http\StubHttpMessageHandler.cs" Link="Shared\Http\StubHttpMessageHandler.cs" />
+  </ItemGroup>
 </Project>

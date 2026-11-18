@@ -20,30 +20,15 @@ public sealed class CsvWriterTests
         Write(w => CsvWriter.WriteRow(["alpha", "beta"], w))
             .Should().Be("alpha,beta\r\n", because: "RFC 4180 quotes only fields that need it");
 
-    [Fact]
-    public void WriteRow_ValueWithComma_IsQuoted() =>
-        Write(w => CsvWriter.WriteRow(["a,b", "c"], w))
-            .Should().Be("\"a,b\",c\r\n", because: "an embedded delimiter would otherwise split the record");
-
-    [Fact]
-    public void WriteRow_ValueWithQuote_IsQuotedAndDoubled() =>
-        Write(w => CsvWriter.WriteRow(["say \"hi\"", "x"], w))
-            .Should().Be("\"say \"\"hi\"\"\",x\r\n", because: "RFC 4180 escapes a quote by doubling it");
-
-    [Fact]
-    public void WriteRow_ValueWithLineFeed_IsQuoted() =>
-        Write(w => CsvWriter.WriteRow(["line1\nline2"], w))
-            .Should().Be("\"line1\nline2\"\r\n", because: "an embedded LF must not terminate the record");
-
-    [Fact]
-    public void WriteRow_ValueWithCarriageReturn_IsQuoted() =>
-        Write(w => CsvWriter.WriteRow(["line1\rline2"], w))
-            .Should().Be("\"line1\rline2\"\r\n", because: "an embedded CR must not terminate the record");
-
-    [Fact]
-    public void WriteRow_ValueWithCrLf_IsQuoted() =>
-        Write(w => CsvWriter.WriteRow(["line1\r\nline2"], w))
-            .Should().Be("\"line1\r\nline2\"\r\n", because: "an embedded record separator must be protected");
+    [Theory]
+    [InlineData(new[] { "a,b", "c" }, "\"a,b\",c\r\n", "an embedded delimiter would otherwise split the record")]
+    [InlineData(new[] { "say \"hi\"", "x" }, "\"say \"\"hi\"\"\",x\r\n", "RFC 4180 escapes a quote by doubling it")]
+    [InlineData(new[] { "line1\nline2" }, "\"line1\nline2\"\r\n", "an embedded LF must not terminate the record")]
+    [InlineData(new[] { "line1\rline2" }, "\"line1\rline2\"\r\n", "an embedded CR must not terminate the record")]
+    [InlineData(new[] { "line1\r\nline2" }, "\"line1\r\nline2\"\r\n", "an embedded record separator must be protected")]
+    public void WriteRow_ValueNeedingEscape_IsQuoted(string[] cells, string expected, string reason) =>
+        Write(w => CsvWriter.WriteRow(cells, w))
+            .Should().Be(expected, because: reason);
 
     [Fact]
     public void WriteRow_EmptyCells_ProduceBareDelimiters() =>

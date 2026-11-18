@@ -1,1 +1,5 @@
 ﻿#nullable enable
+*REMOVED*MMCA.Common.API.JsonConverters.CurrencyJsonConverter
+*REMOVED*MMCA.Common.API.JsonConverters.CurrencyJsonConverter.CurrencyJsonConverter() -> void
+*REMOVED*override MMCA.Common.API.JsonConverters.CurrencyJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
+*REMOVED*override MMCA.Common.API.JsonConverters.CurrencyJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, MMCA.Common.Shared.ValueObjects.Financial.Currency! value, System.Text.Json.JsonSerializerOptions! options) -> void

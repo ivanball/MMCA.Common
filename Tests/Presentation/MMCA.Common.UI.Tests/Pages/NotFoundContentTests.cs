@@ -24,14 +24,6 @@ public sealed class NotFoundContentTests : BunitTestBase
     private const string ForbiddenTitle = "Access Denied";
 
     [Fact]
-    public void IUIModule_NotFoundContentType_DefaultsToNull()
-    {
-        IUIModule module = new BareModule();
-
-        module.NotFoundContentType.Should().BeNull("a module that supplies no 404 keeps the framework's");
-    }
-
-    [Fact]
     public void WithAModuleSupplyingContent_RendersItInPlaceOfTheDefault()
     {
         Services.AddSingleton<IUIModule>(new BareModule());

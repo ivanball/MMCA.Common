@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Tests.Shared.Http;
 
 namespace MMCA.Common.Aspire.Hosting.Tests;
 
@@ -215,7 +216,7 @@ public sealed class H2cHealthCheckExtensionsTests
     [Fact]
     public async Task Probe_WhenTheRegistrationTimeoutHasCancelledTheToken_StillReportsUnhealthyRatherThanThrowing()
     {
-        using var handler = new StubHandler(_ => throw new TaskCanceledException("probe budget exhausted"));
+        using var handler = new StubHttpMessageHandler(_ => throw new TaskCanceledException("probe budget exhausted"));
         using var client = new HttpClient(handler, disposeHandler: false);
         var check = new H2cEndpointHealthCheck(() => "http://identity:8080", "/alive", client.SendAsync);
         var registration = new HealthCheckRegistration("identity-h2c-http", check, HealthStatus.Unhealthy, tags: null);
@@ -298,7 +299,7 @@ public sealed class H2cHealthCheckExtensionsTests
         Func<string> resolveEndpointUrl,
         string path)
     {
-        using var handler = new StubHandler(respond);
+        using var handler = new StubHttpMessageHandler(respond);
         using var client = new HttpClient(handler, disposeHandler: false);
 
         var check = new H2cEndpointHealthCheck(resolveEndpointUrl, path, client.SendAsync);
@@ -311,12 +312,5 @@ public sealed class H2cHealthCheckExtensionsTests
         return await check.CheckHealthAsync(
             new HealthCheckContext { Registration = registration },
             CancellationToken.None);
-    }
-
-    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) => Task.FromResult(respond(request));
     }
 }

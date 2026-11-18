@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,40 +35,11 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.DbContexts;
 /// so whichever ran first would decide the answer for both and the suite would pass or fail by test
 /// order. A marker per case makes each key unique and the class order-independent.
 /// </remarks>
-public sealed class RefreshSessionModelGateTests
+public sealed class RefreshSessionModelGateTests : ModelGateTestsBase
 {
     private const string IdentitySource = "Identity";
 
-    [Fact]
-    public void WithNoRefreshSessionSettingsRegistered_TheTableIsNotInTheModel()
-    {
-        using var context = CreateContext<CaseNoSettings>(settings: null, dataSourceName: DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(RefreshSession)).Should().BeNull(
-            "a host that never registered the options must build the model it had before sessions shipped");
-    }
-
-    [Fact]
-    public void WithTheDefaultSettings_TheTableIsNotInTheModel()
-    {
-        using var context = CreateContext<CaseDefaultSettings>(new RefreshSessionSettings(), DataSourceKey.DefaultName);
-
-        context.Model.FindEntityType(typeof(RefreshSession)).Should().BeNull(
-            "Enabled defaults to false, so opting in is explicit and no existing consumer sees a migration");
-    }
-
-    [Fact]
-    public void WhenEnabledOnTheDefaultSource_TheSingleDatabaseHostGetsTheTable()
-    {
-        using var context = CreateContext<CaseEnabledDefaultSource>(
-            new RefreshSessionSettings { Enabled = true },
-            DataSourceKey.DefaultName);
-
-        var entity = context.Model.FindEntityType(typeof(RefreshSession));
-
-        entity.Should().NotBeNull();
-        entity!.GetTableName().Should().Be(RefreshSessionModelBuilderExtensions.TableName);
-    }
+    protected override Type GatedEntityType => typeof(RefreshSession);
 
     [Fact]
     public void WhenEnabledForANamedSource_OnlyThatSourcesContextGetsTheTable()
@@ -98,6 +70,19 @@ public sealed class RefreshSessionModelGateTests
         entity.GetIndexes().Should().ContainSingle(i =>
             i.IsUnique && i.Properties.Count == 1 && i.Properties[0].Name == nameof(RefreshSession.TokenHash));
     }
+
+    protected override DbContext CreateGateContext<TCase>(GateState state) => CreateContext<TCase>(
+        state switch
+        {
+            GateState.NeverRegistered => null,
+            GateState.Disabled => new RefreshSessionSettings(),
+            GateState.Enabled => new RefreshSessionSettings { Enabled = true },
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        },
+        DataSourceKey.DefaultName);
+
+    protected override void AssertEnabledMapping(IEntityType entity) =>
+        entity.GetTableName().Should().Be(RefreshSessionModelBuilderExtensions.TableName);
 
     /// <summary>
     /// Builds a real context over <see cref="ApplicationDbContext"/> for one physical source and one
@@ -135,13 +120,8 @@ public sealed class RefreshSessionModelGateTests
                 CosmosDatabaseName: string.Empty));
     }
 
-    // One closed type per case; see the class remarks for why the model cache demands it.
-    private sealed class CaseNoSettings;
-
-    private sealed class CaseDefaultSettings;
-
-    private sealed class CaseEnabledDefaultSource;
-
+    // One closed type per case; see the class remarks for why the model cache demands it (the
+    // shared cases bring their own markers from ModelGateTestsBase).
     private sealed class CaseNamedSource;
 
     private sealed class CaseMappingShape;

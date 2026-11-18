@@ -2,6 +2,7 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
 namespace MMCA.Common.Aspire.Hosting.Tests;
 
@@ -167,29 +168,5 @@ public sealed class ServiceBusEmulatorBrokerTests
 
         environment.Should().ContainKey("MessageBus__Provider").WhoseValue.Should().Be("RabbitMq");
         environment.Should().NotContainKey("MessageBus__EmulatorAdminEndpoint");
-    }
-
-    /// <summary>
-    /// Resolves a resource's environment variables in publish mode, where every reference stays a
-    /// manifest expression (<c>{servicebus.bindings.amqp.host}</c>). That is what makes the assertion
-    /// about WHICH endpoint a value is bound to, rather than about a port DCP happened to allocate.
-    /// </summary>
-    private static async Task<Dictionary<string, string>> EnvironmentOf(
-        IDistributedApplicationBuilder builder,
-        IResource resource)
-    {
-        await using ServiceProvider services = builder.Services.BuildServiceProvider();
-        var executionContext = new DistributedApplicationExecutionContext(
-            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Publish)
-            {
-                Services = services,
-            });
-
-        IExecutionConfigurationResult result = await ExecutionConfigurationBuilder.Create(resource)
-            .WithEnvironmentVariablesConfig()
-            .BuildAsync(executionContext);
-
-        result.Exception.Should().BeNull();
-        return result.EnvironmentVariables.ToDictionary(StringComparer.Ordinal);
     }
 }

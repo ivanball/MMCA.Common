@@ -1,4 +1,3 @@
-using MMCA.Common.Testing.Architecture;
 using MMCA.Common.Testing.Aspire.Fixtures;
 
 namespace MMCA.Common.Architecture.Tests.Layering;
@@ -22,45 +21,15 @@ public sealed class TestingAspireBoundaryTests
 {
     private static Assembly TestingAspire => typeof(AppHostFixtureBase).Assembly;
 
-    [Fact]
-    public void TestingAspire_ShouldNotDependOn_Domain() =>
-        AssertNoDependency(
-            "MMCA.Common.Domain",
-            "AppHost test infrastructure must not couple to the Domain layer");
-
-    [Fact]
-    public void TestingAspire_ShouldNotDependOn_Infrastructure() =>
-        AssertNoDependency(
-            "MMCA.Common.Infrastructure",
-            "AppHost test infrastructure must not couple to the Infrastructure layer");
-
-    [Fact]
-    public void TestingAspire_ShouldNotDependOn_Api() =>
-        AssertNoDependency(
-            "MMCA.Common.API",
-            "AppHost test infrastructure reaches API only transitively through MMCA.Common.Testing");
-
-    [Fact]
-    public void TestingAspire_ShouldNotDependOn_Ui() =>
-        AssertNoDependency(
-            "MMCA.Common.UI",
-            "AppHost test infrastructure drives services over HTTP, so it has no business seeing the UI layer");
-
-    [Fact]
-    public void TestingAspire_ShouldNotDependOn_ServiceDefaults() =>
-        // No trailing dot: a dotted NetArchTest namespace entry matches nothing, so the segment form
-        // is the one that covers MMCA.Common.Aspire and every namespace under it.
-        AssertNoDependency(
-            "MMCA.Common.Aspire",
-            "the probe paths are mirrored constants precisely so this package never pulls the service-defaults graph");
-
-    private static void AssertNoDependency(string forbiddenNamespace, string reason)
-    {
-        var result = Types.InAssembly(TestingAspire)
-            .ShouldNot()
-            .HaveDependencyOnAny(forbiddenNamespace)
-            .GetResult();
-
-        ArchitectureAssert.NoViolations(result, reason);
-    }
+    // MMCA.Common.Aspire (service defaults) has no trailing dot: a dotted NetArchTest namespace entry
+    // matches nothing, so the segment form is the one that covers MMCA.Common.Aspire and every
+    // namespace under it.
+    [Theory]
+    [InlineData("MMCA.Common.Domain", "AppHost test infrastructure must not couple to the Domain layer")]
+    [InlineData("MMCA.Common.Infrastructure", "AppHost test infrastructure must not couple to the Infrastructure layer")]
+    [InlineData("MMCA.Common.API", "AppHost test infrastructure reaches API only transitively through MMCA.Common.Testing")]
+    [InlineData("MMCA.Common.UI", "AppHost test infrastructure drives services over HTTP, so it has no business seeing the UI layer")]
+    [InlineData("MMCA.Common.Aspire", "the probe paths are mirrored constants precisely so this package never pulls the service-defaults graph")]
+    public void TestingAspire_ShouldNotDependOn(string forbiddenNamespace, string reason) =>
+        DependencyAssertions.AssertNoDependency(TestingAspire, forbiddenNamespace, reason);
 }

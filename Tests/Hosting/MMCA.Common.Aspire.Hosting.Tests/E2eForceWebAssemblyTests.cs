@@ -1,7 +1,7 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
+using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
 namespace MMCA.Common.Aspire.Hosting.Tests;
 
@@ -16,35 +16,25 @@ public sealed class E2eForceWebAssemblyTests
     private const string TriggerVariable = "E2E_FORCE_WASM";
     private const string ForceWebAssemblyKey = "E2E__ForceWebAssembly";
 
-    [Fact]
-    public async Task WhenTheEnvironmentAsks_SetsForceWebAssembly()
+    // The trigger value is case-insensitive.
+    [Theory]
+    [InlineData("true")]
+    [InlineData("TRUE")]
+    public async Task WhenTheEnvironmentAsks_SetsForceWebAssembly(string forceWasmValue)
     {
-        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue: "true");
+        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue);
 
         environment.Should().ContainKey(ForceWebAssemblyKey)
             .WhoseValue.Should().Be("true");
     }
 
-    [Fact]
-    public async Task TriggerIsCaseInsensitive()
+    // Unset (null) or "false".
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    public async Task WhenTheEnvironmentDoesNotAsk_WritesNothing(string? forceWasmValue)
     {
-        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue: "TRUE");
-
-        environment.Should().ContainKey(ForceWebAssemblyKey);
-    }
-
-    [Fact]
-    public async Task Unset_WritesNothing()
-    {
-        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue: null);
-
-        environment.Should().NotContainKey(ForceWebAssemblyKey);
-    }
-
-    [Fact]
-    public async Task False_WritesNothing()
-    {
-        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue: "false");
+        Dictionary<string, string> environment = await ForceWebAssemblyAsync(forceWasmValue);
 
         environment.Should().NotContainKey(ForceWebAssemblyKey);
     }
@@ -78,24 +68,5 @@ public sealed class E2eForceWebAssemblyTests
         ui.WithE2eForceWebAssembly();
 
         return await EnvironmentOf(builder, ui.Resource);
-    }
-
-    private static async Task<Dictionary<string, string>> EnvironmentOf(
-        IDistributedApplicationBuilder builder,
-        IResource resource)
-    {
-        await using ServiceProvider services = builder.Services.BuildServiceProvider();
-        var executionContext = new DistributedApplicationExecutionContext(
-            new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Publish)
-            {
-                Services = services,
-            });
-
-        IExecutionConfigurationResult result = await ExecutionConfigurationBuilder.Create(resource)
-            .WithEnvironmentVariablesConfig()
-            .BuildAsync(executionContext);
-
-        result.Exception.Should().BeNull();
-        return result.EnvironmentVariables.ToDictionary(StringComparer.Ordinal);
     }
 }

@@ -1,146 +1,47 @@
-using System.Security.Claims;
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
-using MMCA.Common.Shared.Auth.Permissions;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;
 
-public sealed class AuthorizationQueryDecoratorTests
+public sealed class AuthorizationQueryDecoratorTests : AuthorizationDecoratorTestsBase<Result<string>>
 {
-    private readonly Mock<ICurrentUserService> _currentUser = new();
-    private readonly Mock<IPermissionRegistry> _permissionRegistry = new();
+    protected override string GuardedPermission => "catalog.products.read";
 
-    public AuthorizationQueryDecoratorTests() =>
-        _currentUser.Setup(x => x.Roles).Returns(["Member"]);
+    protected override string UnrelatedPermission => "catalog.products.write";
 
-    // ── A query without the marker is never checked at all ──
-    [Fact]
-    public async Task HandleAsync_QueryWithoutPermission_DelegatesToInner()
+    protected override string GuardedRequestName => nameof(GuardedQuery);
+
+    protected override Result<string> SuccessResult => Result.Success("ok");
+
+    protected override void AssertPassedThrough(Result<string> result)
     {
-        var inner = new Mock<IQueryHandler<UnguardedQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<UnguardedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success("ok"));
-
-        var sut = new AuthorizationQueryDecorator<UnguardedQuery, Result<string>>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
-
-        var result = await sut.HandleAsync(new UnguardedQuery());
-
-        result.IsSuccess.Should().BeTrue();
+        base.AssertPassedThrough(result);
         result.Value.Should().Be("ok");
-        _permissionRegistry.Verify(
-            x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()),
-            Times.Never);
     }
 
-    // ── Granted permission passes through ──
-    [Fact]
-    public async Task HandleAsync_WhenPermissionGranted_DelegatesToInner()
+    protected override Func<Task<T>> CreateSut<T>(RequestKind kind, Func<Task<T>> inner) => kind switch
     {
-        var inner = new Mock<IQueryHandler<GuardedQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success("ok"));
-        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), "catalog.products.read"))
-            .Returns(true);
+        RequestKind.Unguarded => Wrap(new UnguardedQuery(), inner),
+        RequestKind.Guarded => Wrap(new GuardedQuery(), inner),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
 
-        var sut = new AuthorizationQueryDecorator<GuardedQuery, Result<string>>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
-
-        var result = await sut.HandleAsync(new GuardedQuery());
-
-        result.IsSuccess.Should().BeTrue();
-        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    // ── Denied permission short-circuits with Forbidden and never reaches the handler ──
-    [Fact]
-    public async Task HandleAsync_WhenPermissionDenied_ReturnsForbiddenWithoutCallingInner()
+    private Func<Task<T>> Wrap<TQuery, T>(TQuery query, Func<Task<T>> inner)
+        where TQuery : class
     {
-        var inner = new Mock<IQueryHandler<GuardedQuery, Result<string>>>();
-        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
-            .Returns(false);
+        var handler = new Mock<IQueryHandler<TQuery, T>>();
+        handler.Setup(x => x.HandleAsync(It.IsAny<TQuery>(), It.IsAny<CancellationToken>()))
+            .Returns(() => inner());
 
-        var sut = new AuthorizationQueryDecorator<GuardedQuery, Result<string>>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
+        var sut = new AuthorizationQueryDecorator<TQuery, T>(
+            handler.Object, CurrentUser.Object, PermissionRegistry.Object);
 
-        var result = await sut.HandleAsync(new GuardedQuery());
-
-        result.IsFailure.Should().BeTrue();
-        var error = result.Errors.Should().ContainSingle().Subject;
-        error.Code.Should().Be("Authorization.PermissionDenied");
-        error.Type.Should().Be(ErrorType.Forbidden);
-        error.Source.Should().Be(nameof(GuardedQuery));
-        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+        return () => sut.HandleAsync(query);
     }
-
-    // ── A permission claim grants on its own, with no role behind it: that is how a grant stored in
-    // the minting host reaches a service that does not own the grant table ──
-    [Fact]
-    public async Task HandleAsync_WhenOnlyThePermissionClaimGrantsIt_DelegatesToInner()
-    {
-        var inner = new Mock<IQueryHandler<GuardedQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success("ok"));
-        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
-            .Returns(false);
-        WithPermissionClaims("catalog.products.read");
-
-        var sut = new AuthorizationQueryDecorator<GuardedQuery, Result<string>>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
-
-        var result = await sut.HandleAsync(new GuardedQuery());
-
-        result.IsSuccess.Should().BeTrue();
-        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    // ── Neither source grants it: the claim is additive, never a way around the check ──
-    [Fact]
-    public async Task HandleAsync_WhenNeitherRoleNorClaimGrantsIt_ReturnsForbidden()
-    {
-        var inner = new Mock<IQueryHandler<GuardedQuery, Result<string>>>();
-        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
-            .Returns(false);
-        WithPermissionClaims("catalog.products.write");
-
-        var sut = new AuthorizationQueryDecorator<GuardedQuery, Result<string>>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
-
-        var result = await sut.HandleAsync(new GuardedQuery());
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("Authorization.PermissionDenied");
-        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedQuery>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    // A handler whose TResult is neither Result nor Result<T> is decorated too and must not fail on
-    // resolve; it only fails if it ever needs to fabricate a failure.
-    [Fact]
-    public async Task HandleAsync_NonResultTResult_UnguardedQuery_PassesThrough()
-    {
-        var inner = new Mock<IQueryHandler<UnguardedQuery, string>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<UnguardedQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("handled");
-
-        var sut = new AuthorizationQueryDecorator<UnguardedQuery, string>(
-            inner.Object, _currentUser.Object, _permissionRegistry.Object);
-
-        var result = await sut.HandleAsync(new UnguardedQuery());
-
-        result.Should().Be("handled");
-    }
-
-    private void WithPermissionClaims(params string[] permissions) =>
-        _currentUser.Setup(x => x.User).Returns(
-            new ClaimsPrincipal(new ClaimsIdentity(
-                permissions.Select(permission => new Claim(AuthClaimTypes.Permission, permission)),
-                "TestAuth")));
 }
 
 // ── Test types ──

@@ -28,10 +28,7 @@ public sealed class PasskeysIsolationTests
     [MemberData(nameof(GuardedAssemblies))]
     public void FrameworkAssembly_NamesNoPasskeysOrWebAuthnType(string assemblyName)
     {
-        var result = Types.InAssembly(Load(assemblyName))
-            .ShouldNot()
-            .HaveDependencyOnAny(ForbiddenNamespaces)
-            .GetResult();
+        var result = DependencyAssertions.NoDependencyOnAny(Load(assemblyName), ForbiddenNamespaces);
 
         (result.FailingTypes ?? []).Select(type => type.FullName).Should().BeEmpty(
             "{0} must reach passkeys only through IPasskeyCeremony and IPasskeyService; WebAuthn types live in MMCA.Common.Passkeys",

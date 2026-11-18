@@ -34,15 +34,6 @@ public sealed class PublicAppBarComponentTests : BunitTestBase
     }
 
     [Fact]
-    public void IUIModule_DeclaresPublicAppBarComponentTypes_DefaultingToEmpty()
-    {
-        IUIModule bare = new BareModule();
-
-        bare.PublicAppBarComponentTypes.Should().BeEmpty(
-            "a module that contributes no public app bar control must not have to implement the member");
-    }
-
-    [Fact]
     public void MainLayout_WhenAnonymous_RendersThePublicComponentInTheAppBar_NotTheSignedInOne()
     {
         var cut = RenderLayout(signedIn: false);
@@ -88,14 +79,6 @@ public sealed class PublicAppBarComponentTests : BunitTestBase
 
     private static void WithBody(ComponentParameterCollectionBuilder<MainLayout> parameters) =>
         parameters.Add(layout => layout.Body, builder => builder.AddContent(0, "Page body"));
-
-    /// <summary>A module that contributes nothing beyond the required members.</summary>
-    private sealed class BareModule : IUIModule
-    {
-        public IReadOnlyList<NavItem> NavItems { get; } = [];
-
-        public Assembly Assembly => typeof(BareModule).Assembly;
-    }
 
     /// <summary>A module contributing one public and one signed-in app bar component.</summary>
     private sealed class AppBarModule : IUIModule

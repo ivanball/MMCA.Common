@@ -94,4 +94,14 @@ public abstract class LayerDependencyTestsBase
 
     [Fact]
     public void Ui_ShouldNotDependOn_Infrastructure() => ArchitectureRules.UiDoesNotDependOnInfrastructure(Map);
+
+    // Grpc is an optional layer: a map that declares no Grpc assembly satisfies these vacuously.
+    [Fact]
+    public void Grpc_ShouldNotDependOn_Domain() => ArchitectureRules.GrpcDoesNotDependOnDomain(Map);
+
+    [Fact]
+    public void Grpc_ShouldNotDependOn_Application() => ArchitectureRules.GrpcDoesNotDependOnApplication(Map);
+
+    [Fact]
+    public void Grpc_ShouldNotDependOn_Infrastructure() => ArchitectureRules.GrpcDoesNotDependOnInfrastructure(Map);
 }

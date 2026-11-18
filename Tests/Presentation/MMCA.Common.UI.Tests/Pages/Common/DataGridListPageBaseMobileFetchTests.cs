@@ -143,53 +143,31 @@ public sealed class DataGridListPageBaseMobileFetchTests : BunitTestBase
         calls[0].PageSize.Should().Be(25);
     }
 
-    [Fact]
-    public async Task MobilePageFetcher_DefaultSortAscending_SendsColumnAndAsc()
+    // A null direction omits the argument (the default is ascending). "asc" for every value other
+    // than Descending, None included.
+    [Theory]
+    [InlineData("Name", null, "asc")]
+    [InlineData("CreatedOn", SortDirection.Descending, "desc")]
+    [InlineData("Name", SortDirection.None, "asc")]
+    public async Task MobilePageFetcher_DefaultSort_SendsColumnAndDirection(
+        string defaultSortColumn,
+        SortDirection? defaultSortDirection,
+        string expectedDirection)
     {
         var cut = Render<TestGridPage>();
         var calls = new List<FetchCall>();
-        var fetcher = cut.Instance.CreateMobileFetcher(Recording(calls), defaultSortColumn: "Name");
+        var fetcher = defaultSortDirection is null
+            ? cut.Instance.CreateMobileFetcher(Recording(calls), defaultSortColumn: defaultSortColumn)
+            : cut.Instance.CreateMobileFetcher(
+                Recording(calls),
+                defaultSortColumn: defaultSortColumn,
+                defaultSortDirection: defaultSortDirection.Value);
 
         await FetchOnDispatcherAsync(cut, fetcher);
 
         calls.Should().ContainSingle();
-        calls[0].SortColumn.Should().Be("Name");
-        calls[0].SortDirection.Should().Be("asc");
-    }
-
-    [Fact]
-    public async Task MobilePageFetcher_Descending_SendsDesc()
-    {
-        var cut = Render<TestGridPage>();
-        var calls = new List<FetchCall>();
-        var fetcher = cut.Instance.CreateMobileFetcher(
-            Recording(calls),
-            defaultSortColumn: "CreatedOn",
-            defaultSortDirection: SortDirection.Descending);
-
-        await FetchOnDispatcherAsync(cut, fetcher);
-
-        calls.Should().ContainSingle();
-        calls[0].SortColumn.Should().Be("CreatedOn");
-        calls[0].SortDirection.Should().Be("desc");
-    }
-
-    [Fact]
-    public async Task MobilePageFetcher_SortDirectionNone_SendsAsc()
-    {
-        // "asc" for every value other than Descending, None included.
-        var cut = Render<TestGridPage>();
-        var calls = new List<FetchCall>();
-        var fetcher = cut.Instance.CreateMobileFetcher(
-            Recording(calls),
-            defaultSortColumn: "Name",
-            defaultSortDirection: SortDirection.None);
-
-        await FetchOnDispatcherAsync(cut, fetcher);
-
-        calls.Should().ContainSingle();
-        calls[0].SortColumn.Should().Be("Name");
-        calls[0].SortDirection.Should().Be("asc");
+        calls[0].SortColumn.Should().Be(defaultSortColumn);
+        calls[0].SortDirection.Should().Be(expectedDirection);
     }
 
     [Theory]

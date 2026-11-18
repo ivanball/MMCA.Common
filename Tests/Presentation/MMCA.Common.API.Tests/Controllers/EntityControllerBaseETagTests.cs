@@ -69,21 +69,17 @@ public sealed class EntityControllerBaseETagTests
         sut.Response.Headers[ConcurrencyETag.ETagHeaderName].ToString().Should().Be("W/\"AAAAAAAAB9E=\"");
     }
 
-    [Fact]
-    public async Task GetByIdAsync_WhenTheRowVersionIsEmpty_EmitsNoETag()
+    [Theory]
+    [InlineData("TheRowVersionIsEmpty")]
+    [InlineData("TheReadFails")]
+    public async Task GetByIdAsync_WhenThereIsNoTokenToEmit_EmitsNoETag(string scenario)
     {
-        var queryService = new Mock<IEntityQueryService<VersionedEntity, VersionedDTO, int>>();
-        SetupGetById(queryService, new VersionedDTO { Id = 1, RowVersion = [] });
-        var sut = CreateVersionedController(queryService);
-
-        await sut.GetByIdAsync(1, cancellationToken: CancellationToken.None);
-
-        sut.Response.Headers.Should().NotContainKey(ConcurrencyETag.ETagHeaderName);
-    }
-
-    [Fact]
-    public async Task GetByIdAsync_WhenTheReadFails_EmitsNoETag()
-    {
+        Result<object> read = scenario switch
+        {
+            "TheRowVersionIsEmpty" => Result.Success<object>(new VersionedDTO { Id = 1, RowVersion = [] }),
+            "TheReadFails" => Result.Failure<object>(Error.NotFoundError("Test.NotFound", "Nope")),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown scenario."),
+        };
         var queryService = new Mock<IEntityQueryService<VersionedEntity, VersionedDTO, int>>();
         queryService
             .Setup(q => q.GetByIdAsync(
@@ -94,7 +90,7 @@ public sealed class EntityControllerBaseETagTests
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<object>(Error.NotFoundError("Test.NotFound", "Nope")));
+            .ReturnsAsync(read);
         var sut = CreateVersionedController(queryService);
 
         await sut.GetByIdAsync(1, cancellationToken: CancellationToken.None);

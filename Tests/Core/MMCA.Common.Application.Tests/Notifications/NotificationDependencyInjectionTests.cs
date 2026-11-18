@@ -20,82 +20,22 @@ namespace MMCA.Common.Application.Tests.Notifications;
 
 public sealed class NotificationDependencyInjectionTests
 {
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersSendPushNotificationHandler()
+    [Theory]
+    [InlineData(typeof(ICommandHandler<SendPushNotificationCommand, Result<PushNotificationDTO>>), typeof(SendPushNotificationHandler))]
+    [InlineData(typeof(ICommandHandler<MarkNotificationReadCommand, Result>), typeof(MarkNotificationReadHandler))]
+    [InlineData(typeof(ICommandHandler<MarkAllNotificationsReadCommand, Result>), typeof(MarkAllNotificationsReadHandler))]
+    [InlineData(typeof(IQueryHandler<GetNotificationHistoryQuery, Result<PagedCollectionResult<PushNotificationDTO>>>), typeof(GetNotificationHistoryHandler))]
+    [InlineData(typeof(IQueryHandler<GetMyNotificationsQuery, Result<PagedCollectionResult<UserNotificationDTO>>>), typeof(GetMyNotificationsHandler))]
+    [InlineData(typeof(IQueryHandler<GetUnreadNotificationCountQuery, Result<int>>), typeof(GetUnreadNotificationCountHandler))]
+    public void AddNotificationApplicationServices_RegistersTheHandler(Type serviceType, Type expectedImplementation)
     {
         var services = new ServiceCollection();
         services.AddNotificationApplicationServices();
 
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ICommandHandler<SendPushNotificationCommand, Result<PushNotificationDTO>>));
+        ServiceDescriptor? descriptor = services.FirstOrDefault(d => d.ServiceType == serviceType);
 
         descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<SendPushNotificationHandler>();
-    }
-
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersMarkNotificationReadHandler()
-    {
-        var services = new ServiceCollection();
-        services.AddNotificationApplicationServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ICommandHandler<MarkNotificationReadCommand, Result>));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<MarkNotificationReadHandler>();
-    }
-
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersMarkAllNotificationsReadHandler()
-    {
-        var services = new ServiceCollection();
-        services.AddNotificationApplicationServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ICommandHandler<MarkAllNotificationsReadCommand, Result>));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<MarkAllNotificationsReadHandler>();
-    }
-
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersGetNotificationHistoryHandler()
-    {
-        var services = new ServiceCollection();
-        services.AddNotificationApplicationServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IQueryHandler<GetNotificationHistoryQuery, Result<PagedCollectionResult<PushNotificationDTO>>>));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<GetNotificationHistoryHandler>();
-    }
-
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersGetMyNotificationsHandler()
-    {
-        var services = new ServiceCollection();
-        services.AddNotificationApplicationServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IQueryHandler<GetMyNotificationsQuery, Result<PagedCollectionResult<UserNotificationDTO>>>));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<GetMyNotificationsHandler>();
-    }
-
-    [Fact]
-    public void AddNotificationApplicationServices_RegistersGetUnreadNotificationCountHandler()
-    {
-        var services = new ServiceCollection();
-        services.AddNotificationApplicationServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IQueryHandler<GetUnreadNotificationCountQuery, Result<int>>));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.ImplementationType.Should().Be<GetUnreadNotificationCountHandler>();
+        descriptor!.ImplementationType.Should().Be(expectedImplementation);
     }
 
     [Fact]

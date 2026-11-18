@@ -9,6 +9,7 @@ using MMCA.Common.UI.Layout;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Capabilities.Interop;
 using Moq;
+using static MMCA.Common.UI.Tests.Infrastructure.CssStylesheet;
 
 namespace MMCA.Common.UI.Tests.Layout;
 
@@ -76,7 +77,7 @@ public sealed partial class MainLayoutSkipLinkTests : BunitTestBase
     [Fact]
     public void NavMenuStylesheet_GivesNavLinksAVisibleKeyboardFocusIndicator()
     {
-        var css = ReadEmbeddedCss("NavMenu.razor.css");
+        var css = ReadEmbedded("NavMenu.razor.css");
 
         var focusVisibleRule = NavLinkFocusVisibleRule.Match(css);
 
@@ -93,14 +94,6 @@ public sealed partial class MainLayoutSkipLinkTests : BunitTestBase
 
     private static bool HasPreventDefaultHandler(AngleSharp.Dom.IElement element) =>
         element.Attributes.Any(a => a.Name.Contains("preventdefault", StringComparison.OrdinalIgnoreCase));
-
-    private static string ReadEmbeddedCss(string logicalName)
-    {
-        using var stream = typeof(MainLayoutSkipLinkTests).Assembly.GetManifestResourceStream(logicalName)
-            ?? throw new InvalidOperationException(logicalName + " must be embedded as a resource (see the csproj)");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
 
     private IRenderedComponent<MainLayout> RenderLayout()
     {

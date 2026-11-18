@@ -20,8 +20,20 @@ public sealed class ErrorHttpMappingTests
             errorType,
             "an unmapped ErrorType would fall back to 400 without anyone choosing that status");
 
-    // A lockout (too many failed attempts) is a throttle, not a failed authentication.
-    [Fact]
-    public void TooManyRequests_MapsTo429() =>
-        ErrorHttpMapping.GetStatusCode(ErrorType.TooManyRequests).Should().Be(429);
+    // The one owner of the ErrorType-to-status matrix: ApiControllerBase and
+    // UnhandledResultFailureFilter both delegate here and keep only a smoke case each.
+    // A lockout (too many failed attempts) is a throttle, not a failed authentication, hence 429.
+    [Theory]
+    [InlineData(ErrorType.Validation, 400)]
+    [InlineData(ErrorType.Invariant, 400)]
+    [InlineData(ErrorType.NotFound, 404)]
+    [InlineData(ErrorType.Conflict, 409)]
+    [InlineData(ErrorType.Unauthorized, 401)]
+    [InlineData(ErrorType.Forbidden, 403)]
+    [InlineData(ErrorType.UnprocessableEntity, 422)]
+    [InlineData(ErrorType.Failure, 400)]
+    [InlineData(ErrorType.Unexpected, 500)]
+    [InlineData(ErrorType.TooManyRequests, 429)]
+    public void GetStatusCode_MapsEachErrorTypeToItsHttpStatus(ErrorType errorType, int expectedStatus) =>
+        ErrorHttpMapping.GetStatusCode(errorType).Should().Be(expectedStatus);
 }

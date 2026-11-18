@@ -96,23 +96,16 @@ public sealed class WebhookSubscriptionTests
         WebhookSubscription.Create(Url, null, ["ticket.opened", blank], null, Secret).IsFailure.Should().BeTrue();
 
     // -- Create: URL (rule 35.10) --
-    [Fact]
-    public void Create_WithRelativeUrl_FailsUrlInvalid() => AssertUrlInvalid("/hooks/inbound");
-
-    [Fact]
-    public void Create_WithUserInfo_FailsUrlInvalid() => AssertUrlInvalid("https://user:pass@hooks.example.com/inbound");
-
-    [Fact]
-    public void Create_WithFragment_FailsUrlInvalid() => AssertUrlInvalid("https://hooks.example.com/inbound#section");
-
-    [Fact]
-    public void Create_WithFtpScheme_FailsUrlInvalid() => AssertUrlInvalid("ftp://hooks.example.com/inbound");
-
+    // Blank, malformed, relative, carrying user info or a fragment, or not http(s).
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("not a url")]
-    public void Create_WithBlankOrMalformedUrl_FailsUrlInvalid(string url) => AssertUrlInvalid(url);
+    [InlineData("/hooks/inbound")]
+    [InlineData("https://user:pass@hooks.example.com/inbound")]
+    [InlineData("https://hooks.example.com/inbound#section")]
+    [InlineData("ftp://hooks.example.com/inbound")]
+    public void Create_WithAnInvalidUrl_FailsUrlInvalid(string url) => AssertUrlInvalid(url);
 
     [Fact]
     public void Create_WithUrlOver2048Chars_FailsUrlInvalid()
