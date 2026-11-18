@@ -7,6 +7,11 @@
     <InternalsVisibleTo Include="MMCA.Common.Aspire.Hosting.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The MailDev host ports, shared as one linked source file with MMCA.Common.Testing.E2E (which
+         reads the inbox) so neither package references the other; see MailDevDefaults. -->
+    <Compile Include="..\..\Build\MailDev\MailDevDefaults.cs" Link="MailDev\MailDevDefaults.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Aspire.Hosting" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
     <!-- WithDataSource wires a service to its own SqlServerDatabaseResource (database per

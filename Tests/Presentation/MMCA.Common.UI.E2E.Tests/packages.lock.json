@@ -1179,6 +1179,7 @@
           "Deque.AxeCore.Commons": "[4.14.0, )",
           "Deque.AxeCore.Playwright": "[4.14.0, )",
           "Microsoft.Playwright": "[1.64.1, )",
+          "Microsoft.Testing.Extensions.Retry": "[2.5.2, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -1678,6 +1679,15 @@
         "requested": "[3.11.1, )",
         "resolved": "3.11.1",
         "contentHash": "WZL9g2+9NPICW4Es6zjIBj4mmKxAnI8RCru3gAZUliCMZPnuaxRynXq4cXoU+IYvI7kXY4ydSrrJ1R9EEHr+Lw=="
+      },
+      "Microsoft.Testing.Extensions.Retry": {
+        "type": "CentralTransitive",
+        "requested": "[2.5.2, )",
+        "resolved": "2.5.2",
+        "contentHash": "tWtvpd6vMUbdaegnJ9Hj0+LngNupmgKnHd6SNyyHDmQ4lrzMUWaptaBN0mCITRYY5eSffm4lNv/RSL5wClT8bQ==",
+        "dependencies": {
+          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+        }
       },
       "MiniProfiler.AspNetCore.Mvc": {
         "type": "CentralTransitive",
