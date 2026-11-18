@@ -14,9 +14,9 @@
       },
       "AWSSDK.Core": {
         "type": "Direct",
-        "requested": "[4.1.1, )",
-        "resolved": "4.1.1",
-        "contentHash": "MGURtuvtalMXUaRKCTJv4f3XrwLTcZgrIGfthnOt1Qqol6rTtNKoF0ZusQc12+Z7V9e/UsarZ7AXhh8vMIm76A==",
+        "requested": "[4.1.1.1, )",
+        "resolved": "4.1.1.1",
+        "contentHash": "paZNy+g/hXMCsEpWvmOFr14x9gVzIY2JRSzSk+nXpKcnaASxEFBMWE4CNBuI/WwGN1ygTwojRTsPRn3yXuhSYQ==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
@@ -24,47 +24,47 @@
       },
       "AWSSDK.DynamoDBv2": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "XhVcunhVnCH8v8SL1tjg+aBkso/yeeCjvZEaH/1nHtBvCcalhEhUFQMY/GdctN+mHRDq1SHkUaNtJ7HH+Rznlg==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "7rzJ9h9ahx9gtRYEF9GAMdOSDfHaqoouMxCRedWoeMgrYUlL3Hz8h8QX4cpzaPIwlYIGI1/gnRDwZg604R5FmA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.RDS": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "STfx1EhARY5y029H6OXLssyEtR1aNhFOUVWRIunSfg/fkGRkxr2//dfuAMr7Up7pb9b10X42ShKhZyqsyVVQuw==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "SQR6tCAJSiq/FXxTi984KXca1JZbGtiqmUqpzuXKDnjuwiyJBTOUyJznqwGZ7E3WOoelpb4fkYQ48uUxKGuwWA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.S3": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "ZgNjIc7GwxRvkKbbZVjzEm7Q2H5ZDCAWxsryGahq1/xF292U4UTUEwoiqsSAAPG2kvfmejI1cuVj3VMkKnXJKg==",
+        "requested": "[4.1.1, )",
+        "resolved": "4.1.1",
+        "contentHash": "iqT0dNuaUHkh4hHyG40/brQj0220YomPzAmhSrx82xul+LNTUTMzxcQSQrD+rvtHMlOwxmqaN+xhCnthgKNIFw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SecretsManager": {
         "type": "Direct",
-        "requested": "[4.1.1.1, )",
-        "resolved": "4.1.1.1",
-        "contentHash": "ZqX6pq0AeHnvUfsPAXcd0sVgQN68CCTgNYL4nnrApYshAH6cva8511tsRLLu5IAyN6TZfJLClChiU0kDZ3VSnw==",
+        "requested": "[4.1.1.2, )",
+        "resolved": "4.1.1.2",
+        "contentHash": "UJUSKF7V70OAGBnmYQhWndBblpTgk8mCgKuMHKbOMxAsbf1WFbMcuoQFtky7BLQ0D4zhtLkv0AKFciyUQUVHbA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SimpleNotificationService": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "ZkLhhi8lE8mkW5PFY/70EeC90UKUzV9BA924gdfWIOFM9XGFuk+U4HFGZCJrm0cgcJJCsHoPxDqyRURMHxIsEw==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "CxbWafXjYyOy2LrfbDIkWcBaucrXBnfDhHRAEzGPXhvCQdps7Pwa/XO03yNJxvv2QUlP+CqHG5sMfDeCDyJ/2Q==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "MassTransit.AmazonSQS": {
@@ -1074,9 +1074,9 @@
       },
       "AWSSDK.Core": {
         "type": "Direct",
-        "requested": "[4.1.1, )",
-        "resolved": "4.1.1",
-        "contentHash": "MGURtuvtalMXUaRKCTJv4f3XrwLTcZgrIGfthnOt1Qqol6rTtNKoF0ZusQc12+Z7V9e/UsarZ7AXhh8vMIm76A==",
+        "requested": "[4.1.1.1, )",
+        "resolved": "4.1.1.1",
+        "contentHash": "paZNy+g/hXMCsEpWvmOFr14x9gVzIY2JRSzSk+nXpKcnaASxEFBMWE4CNBuI/WwGN1ygTwojRTsPRn3yXuhSYQ==",
         "dependencies": {
           "AWSSDK.Extensions.Numerics": "[4.1.0, 5.0.0)",
           "System.IO.Hashing": "11.0.0"
@@ -1084,47 +1084,47 @@
       },
       "AWSSDK.DynamoDBv2": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "XhVcunhVnCH8v8SL1tjg+aBkso/yeeCjvZEaH/1nHtBvCcalhEhUFQMY/GdctN+mHRDq1SHkUaNtJ7HH+Rznlg==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "7rzJ9h9ahx9gtRYEF9GAMdOSDfHaqoouMxCRedWoeMgrYUlL3Hz8h8QX4cpzaPIwlYIGI1/gnRDwZg604R5FmA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.RDS": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "STfx1EhARY5y029H6OXLssyEtR1aNhFOUVWRIunSfg/fkGRkxr2//dfuAMr7Up7pb9b10X42ShKhZyqsyVVQuw==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "SQR6tCAJSiq/FXxTi984KXca1JZbGtiqmUqpzuXKDnjuwiyJBTOUyJznqwGZ7E3WOoelpb4fkYQ48uUxKGuwWA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.S3": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "ZgNjIc7GwxRvkKbbZVjzEm7Q2H5ZDCAWxsryGahq1/xF292U4UTUEwoiqsSAAPG2kvfmejI1cuVj3VMkKnXJKg==",
+        "requested": "[4.1.1, )",
+        "resolved": "4.1.1",
+        "contentHash": "iqT0dNuaUHkh4hHyG40/brQj0220YomPzAmhSrx82xul+LNTUTMzxcQSQrD+rvtHMlOwxmqaN+xhCnthgKNIFw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SecretsManager": {
         "type": "Direct",
-        "requested": "[4.1.1.1, )",
-        "resolved": "4.1.1.1",
-        "contentHash": "ZqX6pq0AeHnvUfsPAXcd0sVgQN68CCTgNYL4nnrApYshAH6cva8511tsRLLu5IAyN6TZfJLClChiU0kDZ3VSnw==",
+        "requested": "[4.1.1.2, )",
+        "resolved": "4.1.1.2",
+        "contentHash": "UJUSKF7V70OAGBnmYQhWndBblpTgk8mCgKuMHKbOMxAsbf1WFbMcuoQFtky7BLQ0D4zhtLkv0AKFciyUQUVHbA==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "AWSSDK.SimpleNotificationService": {
         "type": "Direct",
-        "requested": "[4.1.0.1, )",
-        "resolved": "4.1.0.1",
-        "contentHash": "ZkLhhi8lE8mkW5PFY/70EeC90UKUzV9BA924gdfWIOFM9XGFuk+U4HFGZCJrm0cgcJJCsHoPxDqyRURMHxIsEw==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "CxbWafXjYyOy2LrfbDIkWcBaucrXBnfDhHRAEzGPXhvCQdps7Pwa/XO03yNJxvv2QUlP+CqHG5sMfDeCDyJ/2Q==",
         "dependencies": {
-          "AWSSDK.Core": "[4.1.1, 5.0.0)"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "MassTransit.AmazonSQS": {

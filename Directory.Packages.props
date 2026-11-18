@@ -175,7 +175,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="13.9.0" />
+    <PackageVersion Include="Anthropic" Version="13.10.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -219,16 +219,16 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.1.0.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.1.1" />
     <!-- The AWS telemetry exporter (MMCA.Common.Aws.AddAwsTelemetryExporter) signs its OTLP requests
          with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
          signer is guaranteed rather than inherited from whichever service package floors highest.
          Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.Core" Version="4.1.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.1.1.1" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
-    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1.1" />
+    <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1.2" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
          SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
          AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
@@ -236,16 +236,16 @@
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.RDS" Version="4.1.0.1" />
+    <PackageVersion Include="AWSSDK.RDS" Version="4.1.0.2" />
     <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
          per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
          resolve one assembly. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.1.0.1" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.1.0.2" />
     <!-- The native push installation registry (MMCA.Common.Aws.AddAmazonSnsPush): one DynamoDB item
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0.1" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0.2" />
     <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
@@ -260,7 +260,7 @@
          Google.Cloud.AspNetCore.DataProtection.Kms is prerelease only (a stable package cannot
          depend on it, NU5104), so the IXmlEncryptor/IXmlDecryptor pair is hand-written over this
          client. Same Google.Api.Gax.Grpc line as Secret Manager; Apache-2.0. -->
-    <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.27.0" />
+    <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.28.0" />
     <!-- Cloud SQL IAM database authentication (MMCA.Common.Gcp.AddCloudSqlIamAuthentication): an
          OAuth2 access token from Application Default Credentials for the sqlservice.login scope, used
          as the PostgreSQL password. Pinned at the version the Cloud clients above already resolve
@@ -273,7 +273,7 @@
     <!-- The FCM installation registry (MMCA.Common.Gcp.AddFirebaseCloudMessagingPush): one Firestore
          document per installation, a transaction for the ownership rule and a UserId equality query
          for user-targeted sends. gRPC over Google.Api.Gax.Grpc, the Secret Manager line; Apache-2.0. -->
-    <PackageVersion Include="Google.Cloud.Firestore" Version="4.6.0" />
+    <PackageVersion Include="Google.Cloud.Firestore" Version="4.7.0" />
     <!-- Shared DataProtection key ring (MMCA.Common.Azure.AddAzureDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
@@ -393,7 +393,7 @@
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
     <PackageVersion Include="Deque.AxeCore.Commons" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.65.0" />
     <!-- Redis integration tier only (Tests/Core/MMCA.Common.Infrastructure.Redis.Tests, outside the
          .slnx, own CI job): a real Redis is the only way to assert the storage FORMAT the cache
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
@@ -455,7 +455,7 @@
          TestingPlatformBuilderHook in the consuming test project). Lockstep with the
          Microsoft.Testing.Platform that xunit.v3 resolves (2.5.2 via 4.0.3): a mismatch is a
          TypeLoadException at test-host start, so Dependabot's testing group moves the two together. -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.2" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.3" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
