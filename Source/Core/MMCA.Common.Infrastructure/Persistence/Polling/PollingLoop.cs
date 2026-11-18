@@ -21,6 +21,14 @@ internal static class PollingLoop
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
 
     /// <summary>
+    /// Added to the wait for a row that is not ready yet, so the next cycle wakes just AFTER the row
+    /// becomes eligible. Eligibility is a strict <c>&lt; cutoff</c> comparison and the signal wait
+    /// truncates its timeout to whole milliseconds, so waking at the exact instant can still find the
+    /// row ineligible, which used to cost a full <see cref="MinimumWait"/> on top.
+    /// </summary>
+    internal static readonly TimeSpan ReadinessMargin = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>
     /// Runs the processor loop: waits <see cref="StartupDelay"/>, returns after
     /// <paramref name="onNoTargets"/> when the host owns no relational source, and otherwise runs cycles
     /// until <paramref name="stoppingToken"/> is cancelled. A cycle that reports more ready work re-polls
@@ -93,10 +101,13 @@ internal static class PollingLoop
     }
 
     /// <summary>
-    /// Computes how long to wait before the next cycle: until the earliest upcoming row becomes ready
-    /// (<paramref name="earliestUpcoming"/> plus the processing delay), capped at the polling interval
-    /// and floored at one second to avoid hot-looping. Failed-but-already-ready rows never shorten the
-    /// wait: they retry on the next signal or interval, which throttles permanently failing rows.
+    /// Computes how long to wait before the next cycle: until just after the earliest upcoming row
+    /// becomes ready (<paramref name="earliestUpcoming"/> plus the processing delay, plus
+    /// <see cref="ReadinessMargin"/>), capped at the polling interval. A row that is already due but
+    /// was left for a later cycle (it became ready mid-cycle, or its lane was busy) waits one second, so
+    /// it cannot hot-loop the processor; a row that is not due yet is never pushed past its due instant
+    /// by that floor. Failed-but-already-ready rows never shorten the wait: they retry on the next signal
+    /// or interval, which throttles permanently failing rows.
     /// </summary>
     /// <param name="earliestUpcoming">The instant the oldest not-yet-ready row was written or scheduled for, or null.</param>
     /// <param name="utcNow">The current UTC instant.</param>
@@ -115,10 +126,9 @@ internal static class PollingLoop
         }
 
         var untilReady = earliestUpcoming.Value + processingDelay - utcNow;
-        if (untilReady < MinimumWait)
-        {
-            untilReady = MinimumWait;
-        }
+        untilReady = untilReady <= TimeSpan.Zero
+            ? MinimumWait
+            : untilReady + ReadinessMargin;
 
         return untilReady < pollingInterval ? untilReady : pollingInterval;
     }

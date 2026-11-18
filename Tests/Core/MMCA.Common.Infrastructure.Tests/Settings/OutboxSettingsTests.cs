@@ -14,7 +14,7 @@ public class OutboxSettingsTests
     [InlineData(nameof(OutboxSettings.BatchSize), 50)]
     [InlineData(nameof(OutboxSettings.MaxRetries), 5)]
     [InlineData(nameof(OutboxSettings.PollingIntervalSeconds), 2)]
-    [InlineData(nameof(OutboxSettings.ProcessingDelaySeconds), 5)]
+    [InlineData(nameof(OutboxSettings.ProcessingDelaySeconds), 0)]
     [InlineData(nameof(OutboxSettings.DataSource), DataSource.SQLServer)]
     public void Default_PropertyHasTheDocumentedValue(string property, object? expected) =>
         typeof(OutboxSettings).GetProperty(property)!.GetValue(new OutboxSettings()).Should().Be(expected);

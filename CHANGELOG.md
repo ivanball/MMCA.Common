@@ -4,6 +4,19 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.306.0] - 2026-11-18
+
+### Fixed
+
+- **`AccountDeletionTestsBase` no longer throws "Unsupported RegularExpression flags"** (MMCA.Common.Testing.E2E): the v1.305.0 sign-in-page assertion passed a `RegexOptions.CultureInvariant` pattern to `ToHaveURLAsync`, which sends it to the browser as a JavaScript RegExp and accepts only `IgnoreCase`, `Multiline` and `Singleline`. With `E2E_API_BASE_URL` set, `DeleteAccount_ShouldLogOutAndPreventRelogin` failed on every attempt in both consumers (Store deploy run 44396146113). The pattern now carries `IgnoreCase` only.
+
+### Changed
+
+- **Integration events leave the outbox as soon as they are written** (MMCA.Common.Infrastructure): `Outbox:ProcessingDelaySeconds` now defaults to 0 (was 5). The post-save signal already woke the processor at once, but every row was held back 5 s first, so each cross-service event (a broker publish, and the consumer's own follow-up events) arrived about 5-6 s after the write; it now goes out within the processor's next cycle, typically tens of milliseconds. The delay never bounded duplicate dispatch: local domain-event rows are inserted under the `Outbox:LeaseSeconds` lease, sync-path rows never dispatch in-process, and handlers are idempotent regardless (ADR-003). A host that wants the old pause, for example before the processor retries a failed in-process local dispatch, sets `Outbox__ProcessingDelaySeconds=5`.
+- **The outbox and internal-command processors no longer wake a second late** (MMCA.Common.Infrastructure `PollingLoop`): a row that was not yet ready got its wait floored at one second, so a wake landing a few milliseconds before eligibility cost a full extra second. A not-yet-ready row is now waited for exactly, plus a 50 ms margin for the strict eligibility cutoff; the one-second floor stays for rows that are already due but left for a later cycle, so nothing can hot-loop.
+- **`RoleAdminPage.SetPermissionAsync` closes the previous "saved" toast instead of waiting it out** (MMCA.Common.Testing.E2E): a second save on the same editor used to wait up to the snackbar's display timer (several seconds) for the first toast to vanish; it now clicks the toast's close button and confirms it is gone, so a grant-then-revoke journey no longer idles between its two saves.
+- **`E2ETestBase.ScanGridAsync` documents its precondition** (MMCA.Common.Testing.E2E): the scan waits for a first grid row, so the caller must make sure the list has one. The old comment claimed every scanned list page is seeded, which is not true for lists a consumer's seeder leaves empty.
+
 ## [1.305.0] - 2026-11-18
 
 ### Changed

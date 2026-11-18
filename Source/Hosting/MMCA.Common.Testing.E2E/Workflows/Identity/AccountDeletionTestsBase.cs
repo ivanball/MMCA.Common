@@ -23,7 +23,10 @@ namespace MMCA.Common.Testing.E2E.Workflows.Identity;
 /// </summary>
 public abstract class AccountDeletionTestsBase : E2ETestBase
 {
-    private static readonly Regex LoginPath = new("/login", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    // Passed to ToHaveURLAsync, which sends the pattern to the browser as a JavaScript RegExp:
+    // Playwright translates only IgnoreCase, Multiline and Singleline and throws "Unsupported
+    // RegularExpression flags" on anything else (CultureInvariant included).
+    private static readonly Regex LoginPath = new("/login", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     protected AccountDeletionTestsBase(PlaywrightFixture fixture)
         : base(fixture)

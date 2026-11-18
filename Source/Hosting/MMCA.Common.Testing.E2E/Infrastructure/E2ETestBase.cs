@@ -558,8 +558,10 @@ public abstract class E2ETestBase : IAsyncLifetime
     // Scan a MudDataGrid list page. The grid renders its container before its async ServerData load
     // fires, so we must wait for a post-load signal (a data row) before scanning. Waiting for the
     // loading bar to "hide" is racy: with no bar present yet that wait resolves instantly, then the
-    // transient unnamed role="progressbar" loading bar appears and trips aria-progressbar-name. Every
-    // scanned list page is seeded with at least one row, so a visible row reliably means the load settled.
+    // transient unnamed role="progressbar" loading bar appears and trips aria-progressbar-name. A visible
+    // row reliably means the load settled, so the CALLER must guarantee the list has at least one row:
+    // a list the seeder does not populate needs the test to create its own row first, or the scan waits
+    // out this timeout whenever no earlier test happened to leave one behind.
     // Scans with the pager-combobox exception: a grid list page's sole combobox is its MudTablePager
     // "rows per page" select, which MudBlazor 9.6.0 renders without an accessible name (see
     // AxeOptions.Wcag21AaExceptMudPagerCombobox — accepted upstream limitation, not reachable from app
