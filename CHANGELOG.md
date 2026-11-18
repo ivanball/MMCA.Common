@@ -10,6 +10,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 - **`AccountDeletionTestsBase` no longer throws "Unsupported RegularExpression flags"** (MMCA.Common.Testing.E2E): the v1.305.0 sign-in-page assertion passed a `RegexOptions.CultureInvariant` pattern to `ToHaveURLAsync`, which sends it to the browser as a JavaScript RegExp and accepts only `IgnoreCase`, `Multiline` and `Singleline`. With `E2E_API_BASE_URL` set, `DeleteAccount_ShouldLogOutAndPreventRelogin` failed on every attempt in both consumers (Store deploy run 44396146113). The pattern now carries `IgnoreCase` only.
 
+### Changed
+
+- **`RoleAdminPage.SetPermissionAsync` closes the previous "saved" toast instead of waiting it out** (MMCA.Common.Testing.E2E): a second save on the same editor used to wait up to the snackbar's display timer (several seconds) for the first toast to vanish; it now clicks the toast's close button and confirms it is gone, so a grant-then-revoke journey no longer idles between its two saves.
+- **`E2ETestBase.ScanGridAsync` documents its precondition** (MMCA.Common.Testing.E2E): the scan waits for a first grid row, so the caller must make sure the list has one. The old comment claimed every scanned list page is seeded, which is not true for lists a consumer's seeder leaves empty.
+
 ## [1.305.0] - 2026-11-18
 
 ### Changed
