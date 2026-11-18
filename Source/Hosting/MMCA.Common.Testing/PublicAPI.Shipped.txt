@@ -63,6 +63,10 @@ MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.Valida
 MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase
 MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.AliveResponse_CarriesHardenedSecurityHeaders() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.SecurityHeadersTestsBase() -> void
+MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase
+MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.AppHostBicepParityTestsBase() -> void
+MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.EveryAppHostServiceReference_HasAMatchingBicepServiceDiscoveryEntry() -> void
+MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.EveryBicepServiceDiscoveryEntry_HasAMatchingAppHostReference() -> void
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfoVersioningContractTestsBase(TFixture fixture) -> void
 MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V1_ReturnsMinimalShape_AndIsReportedDeprecated() -> System.Threading.Tasks.Task!
@@ -198,6 +202,7 @@ abstract MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.Mini
 abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendNotFoundProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
 abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendValidationErrorProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
 abstract MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.CreateClient() -> System.Net.Http.HttpClient!
+abstract MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.AppHostProgramPath.get -> string!
 abstract MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.Settings.get -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.BootHostsAsync() -> System.Threading.Tasks.ValueTask
 abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DataSources.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Fixtures.CrossServiceDataSource!>!
@@ -266,6 +271,9 @@ virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.Basel
 virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.MinimumPathCountBecause.get -> string!
 virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocumentPath.get -> string!
 virtual MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.ProbePath.get -> string!
+virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.BicepPath.get -> string!
+virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.KnownAppHostOnlyEdges.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+virtual MMCA.Common.Testing.Conformance.ServiceDiscovery.AppHostBicepParityTestsBase.RepositoryRoot.get -> string!
 virtual MMCA.Common.Testing.Conformance.TenantResolutionTestsBase.AllowsHeaderResolution.get -> bool
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ConfigureSharedEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
 virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.OnContainersStartedAsync() -> System.Threading.Tasks.ValueTask

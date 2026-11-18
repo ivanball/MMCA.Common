@@ -4,6 +4,16 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.302.0] - 2026-11-18
+
+### Added
+
+- **`AppHostBicepParityTestsBase`** (MMCA.Common.Testing, namespace `MMCA.Common.Testing.Conformance.ServiceDiscovery`): pins the service-discovery topology a consumer declares twice, in its Aspire AppHost (`WithReference`, plus the `WithMmcaGateway` / `WithMmcaUi` arguments) and in its Bicep template (`services__{peer}__{endpoint}__0` on each container app). Two facts: every AppHost edge has a Bicep entry, and every Bicep entry has an AppHost edge, so a cross-service call wired only in the AppHost fails the build instead of failing in production with an unresolvable service name. Both files are read as text (the AppHost hangs headless). A subclass names `AppHostProgramPath` and lists `KnownAppHostOnlyEdges`, each with a reason; `BicepPath` defaults to `infra/main.bicep`. `WithJwksDiscovery` is not an edge: state a gRPC dependency on Identity with its own `WithReference`.
+
+### Fixed
+
+- **`GatewayReverseProxyExtensions` documentation** (MMCA.Common.Gateway) no longer advertises an "h2c rollback switch": the cluster profile is resolved per property by `GatewayClusterProfileConfigFilter` (the cluster's own `HttpRequest`, then `ClusterRequestOverrides`, then `ClusterRequestDefaults`) and forwarded exactly as resolved.
+
 ## [1.301.0] - 2026-11-17
 
 **Breaking (MMCA.Common.UI):** the client-side read cache is removed: `IUiReadCache`, `UiReadCache`, `UiReadCacheOptions` (the `UiReadCache` configuration section), the `IUiReadCache? readCache` parameter of the `EntityServiceBase`, `AuthUIService` and `JwtAuthenticationStateProvider` constructors, `EntityServiceBase.ReadCache` and `EntityServiceBase.GetCachedAsync<T>(url, cancellationToken, bypassCache)`. No consumer registered a cache-backed service. A derived service that called `GetCachedAsync` calls the new `SendGetAsync<T>(url, cancellationToken)`, the same plain GET through the retry pipeline. `JwtAuthenticationStateProvider` has one constructor, `(ITokenStorageService, ListPageStateService? listPageState = null)`; `AuthUIService` callers that passed the cache positionally drop that argument. A `UiReadCache` section in a host's configuration is now ignored and can be deleted.

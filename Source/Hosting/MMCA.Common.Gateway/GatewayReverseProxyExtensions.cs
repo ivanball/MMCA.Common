@@ -14,8 +14,12 @@ namespace MMCA.Common.Gateway;
 
 /// <summary>
 /// The single composition entry point for the MMCA gateway building blocks: shared cluster request
-/// profiles with an h2c rollback switch, destination health-check defaults, route/cluster trace
-/// headers, and the named per-route rate-limiter policies YARP routes reference by name.
+/// profiles resolved by <see cref="GatewayClusterProfileConfigFilter"/> (per property: the cluster's
+/// own <c>HttpRequest</c>, then its <c>ClusterRequestOverrides</c> entry, then
+/// <c>ClusterRequestDefaults</c>, forwarded exactly as resolved: no global switch rewrites the HTTP
+/// version, so a cluster drops to HTTP/1.1 only through its own settings), destination health-check
+/// defaults, route/cluster trace headers, and the named per-route rate-limiter policies YARP routes
+/// reference by name.
 /// <para>
 /// It deliberately does NOT load the route table: <c>LoadFromConfig</c> (or any other
 /// <c>IProxyConfigProvider</c>) stays the host's call, because which section owns the routes, and
