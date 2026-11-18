@@ -189,7 +189,7 @@
       "mmca.common.ai.anthropic": {
         "type": "Project",
         "dependencies": {
-          "Anthropic": "[13.9.0, )",
+          "Anthropic": "[13.10.0, )",
           "MMCA.Common.AI": "[1.0.0, )"
         }
       },
@@ -210,9 +210,9 @@
       },
       "Anthropic": {
         "type": "CentralTransitive",
-        "requested": "[13.9.0, )",
-        "resolved": "13.9.0",
-        "contentHash": "+uQe8HT1ZHg6Vay+ICQLpj1y6pv7lPXasS0pPICiABZpx3rNaCh6+AxXuNP0zoxY0JEPPggQHCjD8PU4WemWTw==",
+        "requested": "[13.10.0, )",
+        "resolved": "13.10.0",
+        "contentHash": "p9kXFfvKk2quABpikYRstGp522CAMp9nQkllnS5dV07T6lmY6OBX2pSW6QTrI844vovya0jYC84cSCQuxGVnDw==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
@@ -444,7 +444,7 @@
       "mmca.common.ai.anthropic": {
         "type": "Project",
         "dependencies": {
-          "Anthropic": "[13.9.0, )",
+          "Anthropic": "[13.10.0, )",
           "MMCA.Common.AI": "[1.0.0, )"
         }
       },
@@ -465,9 +465,9 @@
       },
       "Anthropic": {
         "type": "CentralTransitive",
-        "requested": "[13.9.0, )",
-        "resolved": "13.9.0",
-        "contentHash": "+uQe8HT1ZHg6Vay+ICQLpj1y6pv7lPXasS0pPICiABZpx3rNaCh6+AxXuNP0zoxY0JEPPggQHCjD8PU4WemWTw==",
+        "requested": "[13.10.0, )",
+        "resolved": "13.10.0",
+        "contentHash": "p9kXFfvKk2quABpikYRstGp522CAMp9nQkllnS5dV07T6lmY6OBX2pSW6QTrI844vovya0jYC84cSCQuxGVnDw==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
