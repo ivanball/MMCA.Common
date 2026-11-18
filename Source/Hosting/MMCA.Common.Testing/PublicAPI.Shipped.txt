@@ -128,6 +128,7 @@ MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Re
 MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Services.get -> System.IServiceProvider!
 MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlServerIntegrationTestFixtureBase() -> void
 MMCA.Common.Testing.Support.DependencyInjectionAssert
+MMCA.Common.Testing.Support.EvictOutputCacheAssertions
 MMCA.Common.Testing.Support.FeatureManagementTestExtensions
 MMCA.Common.Testing.Support.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Testing.Support.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ConfigureTestFeatureFlags(System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -243,6 +244,7 @@ static MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ComposeConnectionStr
 static MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.IsolateCrossServiceHost<TEntryPoint>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.NextId() -> int
 static MMCA.Common.Testing.Support.DependencyInjectionAssert.ReturnsSameCollection(System.Func<Microsoft.Extensions.DependencyInjection.IServiceCollection!, Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> void
+static MMCA.Common.Testing.Support.EvictOutputCacheAssertions.EvictedTagsOf<TController>(string! actionName) -> string![]!
 static MMCA.Common.Testing.Support.FeatureManagementTestExtensions.ConfigureTestFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Testing.Support.JwtTokenGenerator.ConfigureInProcessTokenValidation(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions! options, string! audience) -> void
 static MMCA.Common.Testing.Support.JwtTokenGenerator.GenerateToken(string! audience, int userId, string! role, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null, string? privateKeyPem = null, string! issuer = "https://localhost:6001", string! keyId = "mmca-test-key") -> string!
