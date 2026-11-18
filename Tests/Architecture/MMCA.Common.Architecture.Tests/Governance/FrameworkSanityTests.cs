@@ -1,7 +1,7 @@
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
-using MMCA.Common.Testing.Architecture;
+using static MMCA.Common.Architecture.Tests.DependencyAssertions;
 
 namespace MMCA.Common.Architecture.Tests.Governance;
 
@@ -47,14 +47,4 @@ public sealed class FrameworkSanityTests
     public void ILiveChannelPublisher_LivesInApplicationLayer() =>
         typeof(ILiveChannelPublisher).Assembly.Should().BeSameAs(Application,
             "the live-channel publish abstraction must remain in Application (beside IPushNotificationSender) so application code stays transport-free");
-
-    private static void AssertNoDependency(Assembly assembly, string forbiddenNamespace, string reason)
-    {
-        var result = Types.InAssembly(assembly)
-            .ShouldNot()
-            .HaveDependencyOnAny(forbiddenNamespace)
-            .GetResult();
-
-        ArchitectureAssert.NoViolations(result, reason);
-    }
 }

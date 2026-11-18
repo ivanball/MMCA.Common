@@ -1,13 +1,9 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Aws.Secrets;
+using MMCA.Common.Tests.Shared.Hosting;
 
 namespace MMCA.Common.Aws.Tests;
 
@@ -128,91 +124,5 @@ public sealed class AwsSecretsManagerConfigurationExtensionsTests
             because: "a reload interval that cannot be honored must fail loudly rather than quietly fall back to never reloading")
             .WithMessage("*SecretsManager:ReloadIntervalMinutes*");
         builder.Configuration.Sources.Count.Should().Be(sourceCountBefore);
-    }
-
-    /// <summary>
-    /// A minimal <see cref="IHostApplicationBuilder"/> whose configuration collects sources instead of
-    /// building them, so a Secrets Manager source can be registered and asserted on without AWS ever
-    /// being contacted. Only the members the extension under test uses are functional.
-    /// </summary>
-    private sealed class SourceCollectingHostApplicationBuilder : IHostApplicationBuilder
-    {
-        public SourceCollectingHostApplicationBuilder(Dictionary<string, string?> settings) =>
-            Configuration = new SourceCollectingConfigurationManager(settings);
-
-        public IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
-
-        public IConfigurationManager Configuration { get; }
-
-        public IHostEnvironment Environment { get; } = new StubHostEnvironment();
-
-        public ILoggingBuilder Logging { get; } = new StubLoggingBuilder();
-
-        public IMetricsBuilder Metrics { get; } = new StubMetricsBuilder();
-
-        public IServiceCollection Services { get; } = new ServiceCollection();
-
-        public void ConfigureContainer<TContainerBuilder>(
-            IServiceProviderFactory<TContainerBuilder> factory,
-            Action<TContainerBuilder>? configure = null)
-            where TContainerBuilder : notnull =>
-            throw new NotSupportedException("The source-collecting builder double does not build a container.");
-    }
-
-    /// <summary>
-    /// An <see cref="IConfigurationManager"/> that reads its values from a fixed in-memory set and
-    /// appends added sources to a plain list, deliberately never building or loading them.
-    /// </summary>
-    private sealed class SourceCollectingConfigurationManager : IConfigurationManager
-    {
-        private readonly IConfigurationRoot _values;
-
-        public SourceCollectingConfigurationManager(Dictionary<string, string?> settings) =>
-            _values = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
-
-        public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
-
-        public IList<IConfigurationSource> Sources { get; } = [];
-
-        public string? this[string key]
-        {
-            get => _values[key];
-            set => _values[key] = value;
-        }
-
-        public IConfigurationBuilder Add(IConfigurationSource source)
-        {
-            Sources.Add(source);
-            return this;
-        }
-
-        public IConfigurationRoot Build() => _values;
-
-        public IEnumerable<IConfigurationSection> GetChildren() => _values.GetChildren();
-
-        public IChangeToken GetReloadToken() => _values.GetReloadToken();
-
-        public IConfigurationSection GetSection(string key) => _values.GetSection(key);
-    }
-
-    private sealed class StubHostEnvironment : IHostEnvironment
-    {
-        public string ApplicationName { get; set; } = "MMCA.Common.Aws.Tests";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = Environments.Development;
-    }
-
-    private sealed class StubLoggingBuilder : ILoggingBuilder
-    {
-        public IServiceCollection Services { get; } = new ServiceCollection();
-    }
-
-    private sealed class StubMetricsBuilder : IMetricsBuilder
-    {
-        public IServiceCollection Services { get; } = new ServiceCollection();
     }
 }

@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aws\MMCA.Common.Aws.csproj" />
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared builder double for the secret-store configuration tests (also linked by the other cloud adapter test projects). -->
+    <Compile Include="..\..\Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" Link="Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" />
+  </ItemGroup>
 </Project>

@@ -1,4 +1,3 @@
-using MMCA.Common.Testing.Architecture;
 using MMCA.Common.Testing.Aspire.Fixtures;
 
 namespace MMCA.Common.Architecture.Tests.Layering;
@@ -31,13 +30,6 @@ public sealed class TestingAspireBoundaryTests
     [InlineData("MMCA.Common.API", "AppHost test infrastructure reaches API only transitively through MMCA.Common.Testing")]
     [InlineData("MMCA.Common.UI", "AppHost test infrastructure drives services over HTTP, so it has no business seeing the UI layer")]
     [InlineData("MMCA.Common.Aspire", "the probe paths are mirrored constants precisely so this package never pulls the service-defaults graph")]
-    public void TestingAspire_ShouldNotDependOn(string forbiddenNamespace, string reason)
-    {
-        var result = Types.InAssembly(TestingAspire)
-            .ShouldNot()
-            .HaveDependencyOnAny(forbiddenNamespace)
-            .GetResult();
-
-        ArchitectureAssert.NoViolations(result, reason);
-    }
+    public void TestingAspire_ShouldNotDependOn(string forbiddenNamespace, string reason) =>
+        DependencyAssertions.AssertNoDependency(TestingAspire, forbiddenNamespace, reason);
 }

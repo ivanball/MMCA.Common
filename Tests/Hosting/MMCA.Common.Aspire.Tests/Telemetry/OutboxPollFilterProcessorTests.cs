@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using AwesomeAssertions;
 using MMCA.Common.Aspire.Telemetry;
+using static MMCA.Common.Aspire.Tests.Telemetry.ActivityRecording;
 
 namespace MMCA.Common.Aspire.Tests.Telemetry;
 
@@ -16,17 +17,8 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
     private readonly ActivityListener _listener;
     private readonly OutboxPollFilterProcessor _sut = new();
 
-    public OutboxPollFilterProcessorTests()
-    {
-        _listener = new ActivityListener
-        {
-            ShouldListenTo = source =>
-                string.Equals(source.Name, "MMCA.Common.Outbox", StringComparison.Ordinal)
-                || string.Equals(source.Name, "Test.Other", StringComparison.Ordinal),
-            Sample = (ref _) => ActivitySamplingResult.AllDataAndRecorded,
-        };
-        ActivitySource.AddActivityListener(_listener);
-    }
+    public OutboxPollFilterProcessorTests() =>
+        _listener = ActivityRecording.ListenTo("MMCA.Common.Outbox", "Test.Other");
 
     public void Dispose()
     {
@@ -35,9 +27,6 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         _otherSource.Dispose();
         _sut.Dispose();
     }
-
-    private static bool IsRecorded(Activity activity) =>
-        activity.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded);
 
     [Fact]
     public void PollSpan_IsUnrecorded()

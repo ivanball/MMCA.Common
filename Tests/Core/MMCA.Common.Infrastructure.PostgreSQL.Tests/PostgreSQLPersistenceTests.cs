@@ -18,7 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
-using MMCA.Common.Infrastructure.Persistence.Retention;
+using MMCA.Common.Tests.Shared.Persistence;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -281,47 +281,8 @@ public sealed class PostgreSQLPersistenceTests : IAsyncLifetime
     // The sweep's two statements are the provider's to translate: a limited, ordered read of the keys
     // and a delete by an IN list over them. SQLite accepting them says nothing about this server.
     [Fact]
-    public async Task BatchedDelete_TranslatesAndDeletesInBatches()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var cutoff = DateTime.UtcNow.AddDays(-1);
-
-        await using (var seed = CreateContext())
-        {
-            for (var index = 0; index < 25; index++)
-            {
-                seed.Add(ProcessedOutboxRow(cutoff.AddHours(-1 - index)));
-            }
-
-            seed.Add(ProcessedOutboxRow(DateTime.UtcNow));
-            await seed.SaveChangesAsync(1, ct);
-        }
-
-        await using var sweep = CreateContext();
-        var batches = new List<int>();
-        await foreach (var deleted in BatchedDelete.DeleteBatchesAsync<OutboxMessage, DateTime?>(
-            sweep,
-            m => m.ProcessedOn != null && m.ProcessedOn < cutoff,
-            m => m.ProcessedOn,
-            batchSize: 10,
-            ct))
-        {
-            batches.Add(deleted);
-        }
-
-        batches.Should().Equal(10, 10, 5);
-
-        await using var reader = CreateContext();
-        (await reader.Set<OutboxMessage>().CountAsync(ct)).Should().Be(1, "the row inside the retention window stays");
-    }
-
-    private static OutboxMessage ProcessedOutboxRow(DateTime processedOn) => new()
-    {
-        EventType = "BatchedDeleteFixture",
-        Payload = "{}",
-        OccurredOn = processedOn.AddMinutes(-1),
-        ProcessedOn = processedOn,
-    };
+    public Task BatchedDelete_TranslatesAndDeletesInBatches() =>
+        BatchedDeleteScenario.TranslatesAndDeletesInBatchesAsync(CreateContext);
 
     private ApplicationDbContext CreateContext() =>
         _physicalFactory.Create(_resolver.ResolveLogical(DataSource.PostgreSQL, DataSourceKey.DefaultName));
@@ -347,12 +308,6 @@ public sealed class PostgreSQLPersistenceTests : IAsyncLifetime
         return services.BuildServiceProvider();
     }
 
-    private sealed class FixedAssemblyProvider : IEntityConfigurationAssemblyProvider
-    {
-        public IReadOnlyList<System.Reflection.Assembly> GetConfigurationAssemblies() =>
-            [typeof(PostgreSQLPersistenceTests).Assembly];
-    }
-
     /// <summary>
     /// Stands in for the RDS IAM configurator: the password comes from a periodic provider, exactly
     /// the Npgsql mechanism the AWS adapter uses for its tokens.
@@ -372,16 +327,6 @@ public sealed class PostgreSQLPersistenceTests : IAsyncLifetime
                 },
                 TimeSpan.FromMinutes(10),
                 TimeSpan.FromSeconds(30));
-    }
-
-    /// <summary>
-    /// Stands in for the in-process dispatcher: the outbox routing only needs the call to succeed,
-    /// and a handler of its own would test the dispatcher rather than the provider.
-    /// </summary>
-    private sealed class RecordingDomainEventDispatcher : IDomainEventDispatcher
-    {
-        public Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
     }
 
     [IdValueGenerated]

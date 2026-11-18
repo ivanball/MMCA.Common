@@ -22,4 +22,8 @@
          shape, never for a request). -->
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Azure.Startup\MMCA.Common.Azure.Startup.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared builder double for the secret-store configuration tests (also linked by the other cloud adapter test projects). -->
+    <Compile Include="..\..\Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" Link="Shared\Hosting\SourceCollectingHostApplicationBuilder.cs" />
+  </ItemGroup>
 </Project>

@@ -30,4 +30,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Stubs and the BatchedDelete scenario shared by the SQL Server and PostgreSQL provider tiers. -->
+    <Compile Include="..\..\Shared\Persistence\PersistenceTestDoubles.cs" Link="Shared\Persistence\PersistenceTestDoubles.cs" />
+    <Compile Include="..\..\Shared\Persistence\BatchedDeleteScenario.cs" Link="Shared\Persistence\BatchedDeleteScenario.cs" />
+  </ItemGroup>
 </Project>
