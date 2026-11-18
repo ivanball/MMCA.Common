@@ -36,6 +36,10 @@ updates:
           - "bunit*"
           - "AngleSharp*"
           - "xunit*"
+          # The MTP retry extension (shipped by MMCA.Common.Testing.E2E) must match the
+          # Microsoft.Testing.Platform that xunit.v3 resolves, or the E2E test host fails to start
+          # with a TypeLoadException; one group moves both in one pull request.
+          - "Microsoft.Testing.Extensions.Retry"
           - "Moq"
           - "AwesomeAssertions"
           - "NetArchTest.*"

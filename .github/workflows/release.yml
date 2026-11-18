@@ -90,7 +90,7 @@ jobs:
       - name: Test
         # Same floor as ci.yml build-and-test: a discovery/filter regression that silently drops
         # thousands of tests must fail the release, not publish behind a near-empty green run.
-        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000
+        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 22500
 
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
@@ -146,10 +146,11 @@ jobs:
   # One GitHub release per tag, its notes taken from that version's CHANGELOG.md section (the feed
   # PackageReleaseNotes in Directory.Build.props points at). A separate job so the OIDC publish job
   # keeps contents: read; this job alone can write releases, and it holds no id-token or packages
-  # permission. It runs only after `publish` succeeded, so a release never announces a version that
-  # did not reach the registries. A re-run on a tag whose release already exists skips.
+  # permission. It runs only after BOTH `publish` and `publish-maui` succeeded, so a release never
+  # announces a version that did not reach the registries, nor a lockstep set still missing
+  # MMCA.Common.UI.Maui. A re-run on a tag whose release already exists skips.
   github-release:
-    needs: publish
+    needs: [publish, publish-maui]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

@@ -7,11 +7,21 @@
     <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA1056;MA0009;MA0110;SYSLIB1045</NoWarn>
     <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- The Retry reference below brings Microsoft.Testing.Platform's MSBuild props, which mark any
+         project that references it as a test application. This is a library: without the opt-out,
+         a solution-wide dotnet test tries to run it and fails ("OutputType is 'Library'"). Consumers'
+         own test projects are unaffected (the property does not flow through the package). -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
   </PropertyGroup>
   <ItemGroup>
     <!-- Lets the ui-e2e tier cover AuthOutcomeRules directly: the four-way auth classification is a
          pure function, and asserting it needs no browser. -->
     <InternalsVisibleTo Include="MMCA.Common.UI.E2E.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The MailDev host ports, shared as one linked source file with MMCA.Common.Aspire.Hosting
+         (which publishes them) so neither package references the other; see MailDevDefaults. -->
+    <Compile Include="..\..\Build\MailDev\MailDevDefaults.cs" Link="MailDev\MailDevDefaults.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,6 +30,11 @@
     <PackageReference Include="Deque.AxeCore.Commons" />
     <PackageReference Include="Deque.AxeCore.Playwright" />
     <PackageReference Include="Microsoft.Playwright" />
+    <!-- Ships the MTP retry extension with the package: its buildTransitive props flow the
+         TestingPlatformBuilderHook to every test project that references this one (directly or
+         through the package), so an E2E suite can run with retries without pinning Retry itself
+         and drifting from the xunit.v3 / Microsoft.Testing.Platform pair. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.Retry" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

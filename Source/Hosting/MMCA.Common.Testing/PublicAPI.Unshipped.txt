@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Testing.Support.EvictOutputCacheAssertions
+static MMCA.Common.Testing.Support.EvictOutputCacheAssertions.EvictedTagsOf<TController>(string! actionName) -> string![]!

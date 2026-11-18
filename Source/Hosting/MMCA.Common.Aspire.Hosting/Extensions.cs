@@ -155,14 +155,16 @@ public static class Extensions
     /// <summary>
     /// Fixed host port MailDev's web UI is published on. Fixed rather than dynamic because a
     /// developer opens it by hand and the appsettings SMTP defaults are written against the pair.
+    /// The value lives in the linked <c>MailDevDefaults</c>, which <c>MMCA.Common.Testing.E2E</c>'s
+    /// <c>MailDevInbox</c> reads the inbox from as well, so a port move cannot split the two.
     /// </summary>
-    public const int MailDevHttpPort = 1080;
+    public const int MailDevHttpPort = MMCA.Common.MailDev.MailDevDefaults.HttpPort;
 
     /// <summary>
     /// Fixed host port MailDev's SMTP listener is published on, matching the <c>Smtp:Port</c>
     /// every consumer's appsettings declares.
     /// </summary>
-    public const int MailDevSmtpPort = 1025;
+    public const int MailDevSmtpPort = MMCA.Common.MailDev.MailDevDefaults.SmtpPort;
 
     /// <summary>
     /// MailDev image tag (<c>maildev/maildev</c>). Pinned because the untagged image drifts: a fresh

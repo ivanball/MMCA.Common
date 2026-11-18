@@ -450,6 +450,12 @@
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.21.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.3" />
+    <!-- MTP retry extension, referenced by MMCA.Common.Testing.E2E so every E2E suite gets the
+         retry-failed-tests option from the package (its buildTransitive props register the
+         TestingPlatformBuilderHook in the consuming test project). Lockstep with the
+         Microsoft.Testing.Platform that xunit.v3 resolves (2.5.2 via 4.0.3): a mismatch is a
+         TypeLoadException at test-host start, so Dependabot's testing group moves the two together. -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.2" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
