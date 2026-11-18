@@ -38,23 +38,35 @@ public sealed class UserAccountAuthControllerBaseTests
             }
         };
 
-    // ── ChangePasswordAsync ──
-    [Fact]
-    public async Task ChangePasswordAsync_WhenUserIdNull_ReturnsUnauthorized()
+    // ── Every user-scoped action answers 401 without a user id, before any handler runs ──
+    [Theory]
+    [InlineData(nameof(TestUserAccountAuthController.ChangePasswordAsync))]
+    [InlineData(nameof(TestUserAccountAuthController.ChangePreferencesAsync))]
+    [InlineData(nameof(TestUserAccountAuthController.GetPreferencesAsync))]
+    public async Task UserScopedAction_WhenUserIdNull_ReturnsUnauthorized(string action)
     {
         _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
         TestUserAccountAuthController sut = CreateController();
 
-        ActionResult result = await sut.ChangePasswordAsync(
-            new ChangePasswordRequest("old", "New-Password1!"),
-            CancellationToken.None);
+        IActionResult? result = action switch
+        {
+            nameof(TestUserAccountAuthController.ChangePasswordAsync) => await sut.ChangePasswordAsync(
+                new ChangePasswordRequest("old", "New-Password1!"),
+                CancellationToken.None),
+            nameof(TestUserAccountAuthController.ChangePreferencesAsync) => await sut.ChangePreferencesAsync(
+                new ChangePreferencesRequest("es", null),
+                CancellationToken.None),
+            nameof(TestUserAccountAuthController.GetPreferencesAsync) => (await sut.GetPreferencesAsync(CancellationToken.None)).Result,
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown action."),
+        };
 
         result.Should().BeOfType<UnauthorizedResult>();
-        _changePasswordHandlerMock.Verify(
-            x => x.HandleAsync(It.IsAny<TestChangePasswordCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _changePasswordHandlerMock.VerifyNoOtherCalls();
+        _changePreferencesHandlerMock.VerifyNoOtherCalls();
+        _getPreferencesHandlerMock.VerifyNoOtherCalls();
     }
 
+    // ── ChangePasswordAsync ──
     [Fact]
     public async Task ChangePasswordAsync_Success_ReturnsNoContentAndDispatchesAppCommand()
     {
@@ -97,22 +109,6 @@ public sealed class UserAccountAuthControllerBaseTests
 
     // ── ChangePreferencesAsync ──
     [Fact]
-    public async Task ChangePreferencesAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestUserAccountAuthController sut = CreateController();
-
-        ActionResult result = await sut.ChangePreferencesAsync(
-            new ChangePreferencesRequest("es", null),
-            CancellationToken.None);
-
-        result.Should().BeOfType<UnauthorizedResult>();
-        _changePreferencesHandlerMock.Verify(
-            x => x.HandleAsync(It.IsAny<TestChangePreferencesCommand>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task ChangePreferencesAsync_Success_ReturnsNoContentAndDispatchesAppCommand()
     {
         var request = new ChangePreferencesRequest("es", "dark");
@@ -153,20 +149,6 @@ public sealed class UserAccountAuthControllerBaseTests
     }
 
     // ── GetPreferencesAsync ──
-    [Fact]
-    public async Task GetPreferencesAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestUserAccountAuthController sut = CreateController();
-
-        ActionResult<UserPreferencesResponse> result = await sut.GetPreferencesAsync(CancellationToken.None);
-
-        result.Result.Should().BeOfType<UnauthorizedResult>();
-        _getPreferencesHandlerMock.Verify(
-            x => x.HandleAsync(It.IsAny<GetUserPreferencesQuery>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
     [Fact]
     public async Task GetPreferencesAsync_Success_ReturnsOkWithPreferences()
     {

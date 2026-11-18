@@ -19,22 +19,30 @@ public sealed class CacheSettingsTests
     public void SectionName_IsCache() =>
         CacheSettings.SectionName.Should().Be("Cache");
 
-    [Fact]
-    public void Default_DefaultDuration_MatchesTheHardCodedCachePolicy() =>
-        new CacheSettings().DefaultDuration.Should().Be(
+    public static TheoryData<string, TimeSpan?, string> DefaultValues => new()
+    {
+        {
+            nameof(CacheSettings.DefaultDuration),
             CacheOptions.DefaultDuration,
-            "CacheOptions stays the single source of truth for the value, so the two paths cannot drift");
-
-    [Fact]
-    public void Default_LocalCacheDuration_IsNull() =>
-        new CacheSettings().LocalCacheDuration.Should().BeNull(
-            "null keeps the two-level cache's built-in L1 ceiling rather than introducing a second default");
-
-    [Fact]
-    public void Default_PopulateLockTimeout_WaitsIndefinitely() =>
-        new CacheSettings().PopulateLockTimeout.Should().Be(
+            "CacheOptions stays the single source of truth for the value, so the two paths cannot drift"
+        },
+        {
+            nameof(CacheSettings.LocalCacheDuration),
+            null,
+            "null keeps the two-level cache's built-in L1 ceiling rather than introducing a second default"
+        },
+        {
+            nameof(CacheSettings.PopulateLockTimeout),
             Timeout.InfiniteTimeSpan,
-            "the unbounded wait is the stampede protection the populate lock exists for");
+            "the unbounded wait is the stampede protection the populate lock exists for"
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(DefaultValues))]
+    public void Default_PropertyHasTheDocumentedValue(string property, TimeSpan? expected, string reason) =>
+        typeof(CacheSettings).GetProperty(property)!.GetValue(new CacheSettings())
+            .Should().Be(expected, reason);
 
     [Fact]
     public void Properties_RoundTrip()

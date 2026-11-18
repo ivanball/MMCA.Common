@@ -27,12 +27,23 @@ public sealed class WebApplicationBuilderExtensionsTests
             .Should().BeTrue();
     }
 
-    [Fact]
-    public void AddCommonApiVersioning_ReturnsSameServiceCollection()
+    [Theory]
+    [InlineData(nameof(WebApplicationBuilderExtensions.AddCommonApiVersioning))]
+    [InlineData(nameof(WebApplicationBuilderExtensions.AddCommonResponseCompression))]
+    [InlineData(nameof(WebApplicationBuilderExtensions.AddCommonAuthentication))]
+    [InlineData(nameof(WebApplicationBuilderExtensions.AddCommonCors))]
+    public void Extension_ReturnsSameServiceCollection(string extension)
     {
         var services = new ServiceCollection();
 
-        IServiceCollection result = services.AddCommonApiVersioning();
+        IServiceCollection result = extension switch
+        {
+            nameof(WebApplicationBuilderExtensions.AddCommonApiVersioning) => services.AddCommonApiVersioning(),
+            nameof(WebApplicationBuilderExtensions.AddCommonResponseCompression) => services.AddCommonResponseCompression(),
+            nameof(WebApplicationBuilderExtensions.AddCommonAuthentication) => services.AddCommonAuthentication(CreateValidJwtConfiguration()),
+            nameof(WebApplicationBuilderExtensions.AddCommonCors) => services.AddCommonCors(CreateCorsConfiguration()),
+            _ => throw new ArgumentOutOfRangeException(nameof(extension), extension, "Unknown extension."),
+        };
 
         result.Should().BeSameAs(services);
     }
@@ -111,16 +122,6 @@ public sealed class WebApplicationBuilderExtensionsTests
         // Fastest, matching Brotli: dynamic API payloads on fractional vCPUs make
         // SmallestSize's extra CPU per response a bad trade.
         gzipOptions.Value.Level.Should().Be(System.IO.Compression.CompressionLevel.Fastest);
-    }
-
-    [Fact]
-    public void AddCommonResponseCompression_ReturnsSameServiceCollection()
-    {
-        var services = new ServiceCollection();
-
-        IServiceCollection result = services.AddCommonResponseCompression();
-
-        result.Should().BeSameAs(services);
     }
 
     // Provider order is the server's preference when a client weights encodings equally, so the
@@ -229,17 +230,6 @@ public sealed class WebApplicationBuilderExtensionsTests
             KeyValuePair.Create<string, string?>("PushNotifications:HubPath", "/notify")));
 
         (await HubTokenFromQueryAsync(services, "/hubs/anything")).Should().Be("abc");
-    }
-
-    [Fact]
-    public void AddCommonAuthentication_ReturnsSameServiceCollection()
-    {
-        var services = new ServiceCollection();
-        IConfiguration configuration = CreateValidJwtConfiguration();
-
-        IServiceCollection result = services.AddCommonAuthentication(configuration);
-
-        result.Should().BeSameAs(services);
     }
 
     [Fact]
@@ -355,17 +345,6 @@ public sealed class WebApplicationBuilderExtensionsTests
         policy!.AllowAnyOrigin.Should().BeFalse();
         policy.Origins.Should().BeEmpty(
             "a missing Cors:AllowedOrigins section must fail closed rather than widening to any origin");
-    }
-
-    [Fact]
-    public void AddCommonCors_ReturnsSameServiceCollection()
-    {
-        var services = new ServiceCollection();
-        IConfiguration configuration = CreateCorsConfiguration();
-
-        IServiceCollection result = services.AddCommonCors(configuration);
-
-        result.Should().BeSameAs(services);
     }
 
     [Fact]

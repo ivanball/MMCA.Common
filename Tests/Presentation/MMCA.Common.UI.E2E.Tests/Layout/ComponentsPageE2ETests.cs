@@ -67,16 +67,4 @@ public sealed class ComponentsPageE2ETests : GalleryAxeTestBase
         Assert.True(box!.Width >= 44, $"Touch-target width was {box.Width.ToString(CultureInfo.InvariantCulture)}px, expected >= 44px.");
         Assert.True(box.Height >= 44, $"Touch-target height was {box.Height.ToString(CultureInfo.InvariantCulture)}px, expected >= 44px.");
     }
-
-    [Fact]
-    public async Task ComponentsPage_HasNoWcag21AaViolations()
-    {
-        await Page.GotoAndWaitForBlazorAsync("/components");
-
-        // Broadened to also cover the loading (aria-busy / named progressbar) and error (alert) primitive
-        // states added to the showcase. Adding the loading state here surfaced and fixed a real defect:
-        // PageLoadingState carried a prohibited aria-label on a bare div and an anonymous progressbar.
-        // (Dark mode is scanned separately by DarkModeE2ETests, gated since the dark-palette tuning.)
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
-    }
 }

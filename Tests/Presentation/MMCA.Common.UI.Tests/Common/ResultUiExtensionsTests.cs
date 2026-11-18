@@ -525,37 +525,25 @@ public sealed class ResultUiExtensionsTests
         Result.Success("value").IsUnauthorized().Should().BeFalse();
     }
 
-    [Fact]
-    public void IsNotFound_IsTrue_ForANotFoundFailure()
+    // Forbidden is not Unauthorized: 403 is a different page decision than 401 (known caller,
+    // refused action).
+    [Theory]
+    [InlineData(nameof(ResultUiExtensions.IsNotFound), ErrorType.NotFound, true)]
+    [InlineData(nameof(ResultUiExtensions.IsNotFound), ErrorType.Conflict, false)]
+    [InlineData(nameof(ResultUiExtensions.IsUnauthorized), ErrorType.Unauthorized, true)]
+    [InlineData(nameof(ResultUiExtensions.IsUnauthorized), ErrorType.Forbidden, false)]
+    public void CategoryPredicate_MatchesOnlyItsOwnFailureCategory(string predicate, ErrorType errorType, bool expected)
     {
-        var result = Result.Failure(MakeError(ErrorType.NotFound, "gone"));
+        var result = Result.Failure(MakeError(errorType, "failed"));
 
-        result.IsNotFound().Should().BeTrue();
-    }
+        bool actual = predicate switch
+        {
+            nameof(ResultUiExtensions.IsNotFound) => result.IsNotFound(),
+            nameof(ResultUiExtensions.IsUnauthorized) => result.IsUnauthorized(),
+            _ => throw new ArgumentOutOfRangeException(nameof(predicate), predicate, "Unknown predicate."),
+        };
 
-    [Fact]
-    public void IsNotFound_IsFalse_ForAnotherFailureCategory()
-    {
-        var result = Result.Failure(MakeError(ErrorType.Conflict, "already there"));
-
-        result.IsNotFound().Should().BeFalse();
-    }
-
-    [Fact]
-    public void IsUnauthorized_IsTrue_ForAnUnauthorizedFailure()
-    {
-        var result = Result.Failure(MakeError(ErrorType.Unauthorized, "no token"));
-
-        result.IsUnauthorized().Should().BeTrue();
-    }
-
-    [Fact]
-    public void IsUnauthorized_IsFalse_ForAForbiddenFailure()
-    {
-        // 403 is a different page decision than 401: known caller, refused action.
-        var result = Result.Failure(MakeError(ErrorType.Forbidden, "not yours"));
-
-        result.IsUnauthorized().Should().BeFalse();
+        actual.Should().Be(expected);
     }
 
     // == HTTP failures localized by code (X-01c, ADC local test run 6) ==

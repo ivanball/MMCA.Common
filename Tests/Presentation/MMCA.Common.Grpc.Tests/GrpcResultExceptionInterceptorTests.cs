@@ -30,13 +30,35 @@ public sealed class GrpcResultExceptionInterceptorTests
 
     private readonly FakeServerCallContext _context = new();
 
-    [Fact]
-    public async Task UnaryServerHandler_WhenTheFailureCarriesNoErrors_KeepsInternalAndTheMessage()
+    [Theory]
+    [InlineData(nameof(GrpcResultExceptionInterceptor.UnaryServerHandler))]
+    [InlineData(nameof(GrpcResultExceptionInterceptor.ServerStreamingServerHandler))]
+    [InlineData(nameof(GrpcResultExceptionInterceptor.ClientStreamingServerHandler))]
+    [InlineData(nameof(GrpcResultExceptionInterceptor.DuplexStreamingServerHandler))]
+    public async Task Handler_WhenTheFailureCarriesNoErrors_KeepsInternalAndTheMessage(string handlerKind)
     {
-        Func<Task> act = async () => await _sut.UnaryServerHandler<string, string>(
-            "request",
-            _context,
-            (_, _) => throw new ResultFailureException(Boom));
+        Func<Task> act = handlerKind switch
+        {
+            nameof(GrpcResultExceptionInterceptor.UnaryServerHandler) => async () => await _sut.UnaryServerHandler<string, string>(
+                "request",
+                _context,
+                (_, _) => throw new ResultFailureException(Boom)),
+            nameof(GrpcResultExceptionInterceptor.ServerStreamingServerHandler) => async () => await _sut.ServerStreamingServerHandler<string, string>(
+                "request",
+                new Mock<IServerStreamWriter<string>>().Object,
+                _context,
+                (_, _, _) => throw new ResultFailureException(Boom)),
+            nameof(GrpcResultExceptionInterceptor.ClientStreamingServerHandler) => async () => await _sut.ClientStreamingServerHandler<string, string>(
+                new Mock<IAsyncStreamReader<string>>().Object,
+                _context,
+                (_, _) => throw new ResultFailureException(Boom)),
+            nameof(GrpcResultExceptionInterceptor.DuplexStreamingServerHandler) => async () => await _sut.DuplexStreamingServerHandler<string, string>(
+                new Mock<IAsyncStreamReader<string>>().Object,
+                new Mock<IServerStreamWriter<string>>().Object,
+                _context,
+                (_, _, _) => throw new ResultFailureException(Boom)),
+            _ => throw new ArgumentOutOfRangeException(nameof(handlerKind), handlerKind, "Unknown handler kind."),
+        };
 
         RpcException thrown = (await act.Should().ThrowAsync<RpcException>()).Which;
         thrown.StatusCode.Should().Be(StatusCode.Internal, "an empty error list is a server-side fault, not a bad request");
@@ -78,47 +100,6 @@ public sealed class GrpcResultExceptionInterceptorTests
             (request, _) => Task.FromResult(request + "-ok"));
 
         response.Should().Be("request-ok");
-    }
-
-    [Fact]
-    public async Task ServerStreamingServerHandler_WhenTheFailureCarriesNoErrors_KeepsInternalAndTheMessage()
-    {
-        Func<Task> act = async () => await _sut.ServerStreamingServerHandler<string, string>(
-            "request",
-            new Mock<IServerStreamWriter<string>>().Object,
-            _context,
-            (_, _, _) => throw new ResultFailureException(Boom));
-
-        RpcException thrown = (await act.Should().ThrowAsync<RpcException>()).Which;
-        thrown.StatusCode.Should().Be(StatusCode.Internal);
-        thrown.Status.Detail.Should().Be(Boom);
-    }
-
-    [Fact]
-    public async Task ClientStreamingServerHandler_WhenTheFailureCarriesNoErrors_KeepsInternalAndTheMessage()
-    {
-        Func<Task> act = async () => await _sut.ClientStreamingServerHandler<string, string>(
-            new Mock<IAsyncStreamReader<string>>().Object,
-            _context,
-            (_, _) => throw new ResultFailureException(Boom));
-
-        RpcException thrown = (await act.Should().ThrowAsync<RpcException>()).Which;
-        thrown.StatusCode.Should().Be(StatusCode.Internal);
-        thrown.Status.Detail.Should().Be(Boom);
-    }
-
-    [Fact]
-    public async Task DuplexStreamingServerHandler_WhenTheFailureCarriesNoErrors_KeepsInternalAndTheMessage()
-    {
-        Func<Task> act = async () => await _sut.DuplexStreamingServerHandler<string, string>(
-            new Mock<IAsyncStreamReader<string>>().Object,
-            new Mock<IServerStreamWriter<string>>().Object,
-            _context,
-            (_, _, _) => throw new ResultFailureException(Boom));
-
-        RpcException thrown = (await act.Should().ThrowAsync<RpcException>()).Which;
-        thrown.StatusCode.Should().Be(StatusCode.Internal);
-        thrown.Status.Detail.Should().Be(Boom);
     }
 
     /// <summary>Minimal call context: the interceptor only reads <c>Method</c> for the log line.</summary>

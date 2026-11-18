@@ -34,27 +34,36 @@ public sealed class AuthFormValidationMessageTests : BunitTestBase
         Services.AddSingleton(new Mock<IUserPreferenceReader>().Object);
     }
 
-    // ==================== Reset Password ====================
-    [Fact]
-    public void ResetPassword_EmptySubmit_ShowsLocalizedMessagesNotResourceKeys()
+    // Reset Password and Forgot Password have one required field (Email); Login and Register two
+    // (Email and Password). Each form is checked on an empty submit and with every field touched.
+    [Theory]
+    [InlineData(nameof(ResetPassword), nameof(Submit))]
+    [InlineData(nameof(ResetPassword), nameof(TouchEveryField))]
+    [InlineData(nameof(ForgotPassword), nameof(Submit))]
+    [InlineData(nameof(ForgotPassword), nameof(TouchEveryField))]
+    [InlineData(nameof(Login), nameof(Submit))]
+    [InlineData(nameof(Login), nameof(TouchEveryField))]
+    [InlineData(nameof(Register), nameof(Submit))]
+    [InlineData(nameof(Register), nameof(TouchEveryField))]
+    public void AuthForm_EmptyFields_ShowLocalizedMessagesNotResourceKeys(string form, string trigger)
     {
-        var cut = RenderUnderTest<ResetPassword>(_ => { });
-
-        Submit(cut);
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Email is required"));
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    [Fact]
-    public void ResetPassword_TouchedEmptyFields_ShowLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<ResetPassword>(_ => { });
-
-        TouchEveryField(cut);
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Email is required"));
-        cut.Markup.Should().NotContain(RawKeyPrefix);
+        switch (form)
+        {
+            case nameof(ResetPassword):
+                AssertLocalizedMessages<ResetPassword>(trigger, "Email is required");
+                break;
+            case nameof(ForgotPassword):
+                AssertLocalizedMessages<ForgotPassword>(trigger, "Email is required");
+                break;
+            case nameof(Login):
+                AssertLocalizedMessages<Login>(trigger, "Email is required", "Password is required");
+                break;
+            case nameof(Register):
+                AssertLocalizedMessages<Register>(trigger, "Email is required", "Password is required");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(form), form, "Unknown form.");
+        }
     }
 
     [Fact]
@@ -77,87 +86,26 @@ public sealed class AuthFormValidationMessageTests : BunitTestBase
         }
     }
 
-    // ==================== Forgot Password ====================
-    [Fact]
-    public void ForgotPassword_EmptySubmit_ShowsLocalizedMessagesNotResourceKeys()
+    private void AssertLocalizedMessages<TComponent>(string trigger, params string[] expectedMessages)
+        where TComponent : IComponent
     {
-        var cut = RenderUnderTest<ForgotPassword>(_ => { });
+        var cut = RenderUnderTest<TComponent>(_ => { });
 
-        Submit(cut);
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Email is required"));
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    [Fact]
-    public void ForgotPassword_TouchedEmptyFields_ShowLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<ForgotPassword>(_ => { });
-
-        TouchEveryField(cut);
-
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Email is required"));
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    // ==================== Login ====================
-    [Fact]
-    public void Login_EmptySubmit_ShowsLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<Login>(_ => { });
-
-        Submit(cut);
+        if (trigger == nameof(Submit))
+        {
+            Submit(cut);
+        }
+        else
+        {
+            TouchEveryField(cut);
+        }
 
         cut.WaitForAssertion(() =>
         {
-            cut.Markup.Should().Contain("Email is required");
-            cut.Markup.Should().Contain("Password is required");
-        });
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    [Fact]
-    public void Login_TouchedEmptyFields_ShowLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<Login>(_ => { });
-
-        TouchEveryField(cut);
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Markup.Should().Contain("Email is required");
-            cut.Markup.Should().Contain("Password is required");
-        });
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    // ==================== Register ====================
-    [Fact]
-    public void Register_EmptySubmit_ShowsLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<Register>(_ => { });
-
-        Submit(cut);
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Markup.Should().Contain("Email is required");
-            cut.Markup.Should().Contain("Password is required");
-        });
-        cut.Markup.Should().NotContain(RawKeyPrefix);
-    }
-
-    [Fact]
-    public void Register_TouchedEmptyFields_ShowLocalizedMessagesNotResourceKeys()
-    {
-        var cut = RenderUnderTest<Register>(_ => { });
-
-        TouchEveryField(cut);
-
-        cut.WaitForAssertion(() =>
-        {
-            cut.Markup.Should().Contain("Email is required");
-            cut.Markup.Should().Contain("Password is required");
+            foreach (var message in expectedMessages)
+            {
+                cut.Markup.Should().Contain(message);
+            }
         });
         cut.Markup.Should().NotContain(RawKeyPrefix);
     }

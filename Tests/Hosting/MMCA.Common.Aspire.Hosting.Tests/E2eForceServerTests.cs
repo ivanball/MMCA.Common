@@ -17,35 +17,25 @@ public sealed class E2eForceServerTests
     private const string TriggerVariable = "E2E_FORCE_SERVER";
     private const string ForceServerKey = "E2E__ForceServer";
 
-    [Fact]
-    public async Task WithE2eForceServer_WhenTheEnvironmentAsks_SetsForceServer()
+    // The trigger value is case-insensitive.
+    [Theory]
+    [InlineData("true")]
+    [InlineData("TRUE")]
+    public async Task WithE2eForceServer_WhenTheEnvironmentAsks_SetsForceServer(string triggerValue)
     {
-        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "true");
+        Dictionary<string, string> environment = await ForceServerAsync(triggerValue);
 
         environment.Should().ContainKey(ForceServerKey)
             .WhoseValue.Should().Be("true");
     }
 
-    [Fact]
-    public async Task WithE2eForceServer_TriggerValueIsCaseInsensitive()
+    // Unset (null) or "false".
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    public async Task WithE2eForceServer_WhenTheEnvironmentDoesNotAsk_WritesNothing(string? triggerValue)
     {
-        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "TRUE");
-
-        environment.Should().ContainKey(ForceServerKey);
-    }
-
-    [Fact]
-    public async Task WithE2eForceServer_WhenTheEnvironmentIsUnset_WritesNothing()
-    {
-        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: null);
-
-        environment.Should().NotContainKey(ForceServerKey);
-    }
-
-    [Fact]
-    public async Task WithE2eForceServer_WhenTheEnvironmentSaysFalse_WritesNothing()
-    {
-        Dictionary<string, string> environment = await ForceServerAsync(triggerValue: "false");
+        Dictionary<string, string> environment = await ForceServerAsync(triggerValue);
 
         environment.Should().NotContainKey(ForceServerKey);
     }

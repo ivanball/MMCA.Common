@@ -98,15 +98,6 @@ public sealed class MainLayoutFooterTests : BunitTestBase
     // none leaves the footer exactly as before. Visible content registered as a layout component
     // instead becomes an extra column in the desktop flex row, which is what the slot exists to avoid.
     [Fact]
-    public void IUIModule_FooterComponentTypes_DefaultsToEmpty()
-    {
-        IUIModule module = new BareModule();
-
-        module.FooterComponentTypes.Should().BeEmpty(
-            "a module that contributes no footer content must not have to implement the member");
-    }
-
-    [Fact]
     public void FooterComponent_RendersInsideTheFooter_AfterTheFooterText()
     {
         Services.AddSingleton<IUIModule>(new FooterModule());

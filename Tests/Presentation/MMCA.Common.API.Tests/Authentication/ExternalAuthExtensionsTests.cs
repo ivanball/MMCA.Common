@@ -248,40 +248,31 @@ public sealed class ExternalAuthExtensionsTests
     }
 
     // ── Missing ClientSecret fails fast ──
-    [Fact]
-    public async Task AddExternalAuthProviders_GoogleClientIdWithoutSecret_ThrowsOnOptionsResolution()
+    [Theory]
+    [InlineData("Google")]
+    [InlineData("GitHub")]
+    public async Task AddExternalAuthProviders_ClientIdWithoutSecret_ThrowsOnOptionsResolution(string providerName)
     {
         var services = CreateServices();
         services.AddExternalAuthProviders(BuildConfiguration(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
-            ["OAuth:Google:ClientId"] = "google-client-id",
+            [$"OAuth:{providerName}:ClientId"] = $"{providerName}-client-id",
         }));
         await using var provider = services.BuildServiceProvider();
 
-        var act = () => provider
-            .GetRequiredService<IOptionsMonitor<GoogleOptions>>()
-            .Get(GoogleDefaults.AuthenticationScheme);
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*OAuth:Google:ClientSecret is required*");
-    }
-
-    [Fact]
-    public async Task AddExternalAuthProviders_GitHubClientIdWithoutSecret_ThrowsOnOptionsResolution()
-    {
-        var services = CreateServices();
-        services.AddExternalAuthProviders(BuildConfiguration(new Dictionary<string, string?>(StringComparer.Ordinal)
+        Func<object> act = providerName switch
         {
-            ["OAuth:GitHub:ClientId"] = "github-client-id",
-        }));
-        await using var provider = services.BuildServiceProvider();
-
-        var act = () => provider
-            .GetRequiredService<IOptionsMonitor<GitHubAuthenticationOptions>>()
-            .Get(GitHubAuthenticationDefaults.AuthenticationScheme);
+            "Google" => () => provider
+                .GetRequiredService<IOptionsMonitor<GoogleOptions>>()
+                .Get(GoogleDefaults.AuthenticationScheme),
+            "GitHub" => () => provider
+                .GetRequiredService<IOptionsMonitor<GitHubAuthenticationOptions>>()
+                .Get(GitHubAuthenticationDefaults.AuthenticationScheme),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerName), providerName, "Unknown provider."),
+        };
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*OAuth:GitHub:ClientSecret is required*");
+            .WithMessage($"*OAuth:{providerName}:ClientSecret is required*");
     }
 
     [Theory]

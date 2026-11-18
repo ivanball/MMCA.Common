@@ -15,64 +15,39 @@ namespace MMCA.Common.UI.Web.Tests.Hosting;
 /// </summary>
 public sealed class E2eRenderModeTests
 {
-    [Fact]
-    public void NoFlags_IsInteractiveAuto()
-    {
-        var mode = E2eRenderMode.Resolve(Configuration());
-
-        mode.Should().BeOfType<InteractiveAutoRenderMode>();
-    }
-
-    [Fact]
-    public void ForceServer_IsInteractiveServer()
-    {
-        var mode = E2eRenderMode.Resolve(Configuration((E2eRenderMode.ForceServerKey, "true")));
-
-        mode.Should().BeOfType<InteractiveServerRenderMode>();
-    }
-
-    [Fact]
-    public void ForceWebAssembly_IsInteractiveWebAssembly()
-    {
-        var mode = E2eRenderMode.Resolve(Configuration((E2eRenderMode.ForceWebAssemblyKey, "true")));
-
-        mode.Should().BeOfType<InteractiveWebAssemblyRenderMode>();
-    }
-
-    [Fact]
-    public void BothFlags_WebAssemblyWins()
-    {
-        var mode = E2eRenderMode.Resolve(Configuration(
-            (E2eRenderMode.ForceServerKey, "true"),
-            (E2eRenderMode.ForceWebAssemblyKey, "true")));
-
-        mode.Should().BeOfType<InteractiveWebAssemblyRenderMode>();
-    }
-
     /// <summary>
-    /// A flag that is present but false selects nothing, the same as an absent one: the AppHost writes
-    /// only <see langword="true"/>, but a hand-set <see langword="false"/> must not be read as "set".
-    /// </summary>
-    [Fact]
-    public void FalseFlags_AreInteractiveAuto()
-    {
-        var mode = E2eRenderMode.Resolve(Configuration(
-            (E2eRenderMode.ForceServerKey, "false"),
-            (E2eRenderMode.ForceWebAssemblyKey, "false")));
-
-        mode.Should().BeOfType<InteractiveAutoRenderMode>();
-    }
-
-    /// <summary>
-    /// Both heads read the flags with <c>GetValue&lt;bool&gt;</c> today, which parses case-insensitively;
+    /// A null flag is absent. Forced WebAssembly wins when both flags are set. A flag that is present
+    /// but false selects nothing, the same as an absent one: the AppHost writes only
+    /// <see langword="true"/>, but a hand-set <see langword="false"/> must not be read as "set". Both
+    /// heads read the flags with <c>GetValue&lt;bool&gt;</c> today, which parses case-insensitively;
     /// moving the selector into Common keeps that, so a hand-set <c>TRUE</c> still selects.
     /// </summary>
-    [Fact]
-    public void FlagValue_IsCaseInsensitive()
+    /// <param name="forceServer">The <c>E2E:ForceServer</c> value, or null when absent.</param>
+    /// <param name="forceWebAssembly">The <c>E2E:ForceWebAssembly</c> value, or null when absent.</param>
+    /// <param name="expectedMode">The render-mode type the flags select.</param>
+    [Theory]
+    [InlineData(null, null, typeof(InteractiveAutoRenderMode))]
+    [InlineData("true", null, typeof(InteractiveServerRenderMode))]
+    [InlineData(null, "true", typeof(InteractiveWebAssemblyRenderMode))]
+    [InlineData("true", "true", typeof(InteractiveWebAssemblyRenderMode))]
+    [InlineData("false", "false", typeof(InteractiveAutoRenderMode))]
+    [InlineData(null, "TRUE", typeof(InteractiveWebAssemblyRenderMode))]
+    public void Flags_SelectTheRenderMode(string? forceServer, string? forceWebAssembly, Type expectedMode)
     {
-        var mode = E2eRenderMode.Resolve(Configuration((E2eRenderMode.ForceWebAssemblyKey, "TRUE")));
+        var settings = new List<(string Key, string Value)>();
+        if (forceServer is not null)
+        {
+            settings.Add((E2eRenderMode.ForceServerKey, forceServer));
+        }
 
-        mode.Should().BeOfType<InteractiveWebAssemblyRenderMode>();
+        if (forceWebAssembly is not null)
+        {
+            settings.Add((E2eRenderMode.ForceWebAssemblyKey, forceWebAssembly));
+        }
+
+        var mode = E2eRenderMode.Resolve(Configuration([.. settings]));
+
+        mode.Should().BeOfType(expectedMode);
     }
 
     [Fact]

@@ -159,18 +159,33 @@ public sealed class AuthControllerBaseTests
         objectResult.Value.Should().BeOfType<ProblemDetails>();
     }
 
-    // ── RevokeAsync ──
-    [Fact]
-    public async Task RevokeAsync_WhenUserIdNull_ReturnsUnauthorized()
+    // ── Every user-scoped action answers 401 without a user id, before touching the service ──
+    [Theory]
+    [InlineData(nameof(TestAuthController.RevokeAsync))]
+    [InlineData(nameof(TestAuthController.GetMySessionsAsync))]
+    [InlineData(nameof(TestAuthController.GetMySignInsAsync))]
+    [InlineData(nameof(TestAuthController.RevokeSessionAsync))]
+    [InlineData(nameof(TestAuthController.RevokeCurrentSessionAsync))]
+    public async Task UserScopedAction_WhenUserIdNull_ReturnsUnauthorized(string action)
     {
         _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
         TestAuthController sut = CreateController();
 
-        ActionResult result = await sut.RevokeAsync(CancellationToken.None);
+        IActionResult? result = action switch
+        {
+            nameof(TestAuthController.RevokeAsync) => await sut.RevokeAsync(CancellationToken.None),
+            nameof(TestAuthController.GetMySessionsAsync) => (await sut.GetMySessionsAsync(CancellationToken.None)).Result,
+            nameof(TestAuthController.GetMySignInsAsync) => (await sut.GetMySignInsAsync(CancellationToken.None)).Result,
+            nameof(TestAuthController.RevokeSessionAsync) => await sut.RevokeSessionAsync(Guid.NewGuid(), CancellationToken.None),
+            nameof(TestAuthController.RevokeCurrentSessionAsync) => await sut.RevokeCurrentSessionAsync(CancellationToken.None),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown action."),
+        };
 
         result.Should().BeOfType<UnauthorizedResult>();
+        _authServiceMock.VerifyNoOtherCalls();
     }
 
+    // ── RevokeAsync ──
     [Fact]
     public async Task RevokeAsync_Success_ReturnsNoContent()
     {
@@ -203,18 +218,6 @@ public sealed class AuthControllerBaseTests
     }
 
     // ── GetMySessionsAsync ──
-    [Fact]
-    public async Task GetMySessionsAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestAuthController sut = CreateController();
-
-        ActionResult<IReadOnlyList<RefreshSessionSummaryResponse>> result =
-            await sut.GetMySessionsAsync(CancellationToken.None);
-
-        result.Result.Should().BeOfType<UnauthorizedResult>();
-    }
-
     [Fact]
     public async Task GetMySessionsAsync_Success_ReturnsOkWithTheSessions()
     {
@@ -277,19 +280,6 @@ public sealed class AuthControllerBaseTests
     }
 
     // ── GetMySignInsAsync ──
-    [Fact]
-    public async Task GetMySignInsAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestAuthController sut = CreateController();
-
-        ActionResult<IReadOnlyList<SignInSummaryResponse>> result =
-            await sut.GetMySignInsAsync(CancellationToken.None);
-
-        result.Result.Should().BeOfType<UnauthorizedResult>();
-        _authServiceMock.VerifyNoOtherCalls();
-    }
-
     // Spec A assertion 4 (endpoint half): the endpoint takes no user id from the request, so the
     // only history it can read is the caller's own.
     [Fact]
@@ -327,17 +317,6 @@ public sealed class AuthControllerBaseTests
 
     // ── RevokeSessionAsync ──
     [Fact]
-    public async Task RevokeSessionAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestAuthController sut = CreateController();
-
-        ActionResult result = await sut.RevokeSessionAsync(Guid.NewGuid(), CancellationToken.None);
-
-        result.Should().BeOfType<UnauthorizedResult>();
-    }
-
-    [Fact]
     public async Task RevokeSessionAsync_Success_ReturnsNoContent()
     {
         const int userId = 42;
@@ -373,17 +352,6 @@ public sealed class AuthControllerBaseTests
     }
 
     // ── RevokeCurrentSessionAsync (Store Run 4 C-64 / AI-27: Logout ends this device only) ──
-    [Fact]
-    public async Task RevokeCurrentSessionAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        TestAuthController sut = CreateController();
-
-        ActionResult result = await sut.RevokeCurrentSessionAsync(CancellationToken.None);
-
-        result.Should().BeOfType<UnauthorizedResult>();
-    }
-
     [Fact]
     public async Task RevokeCurrentSessionAsync_WithASessionClaim_RevokesOnlyThatSession()
     {

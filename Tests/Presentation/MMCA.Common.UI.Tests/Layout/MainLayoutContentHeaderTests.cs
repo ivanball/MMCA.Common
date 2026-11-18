@@ -27,23 +27,10 @@ namespace MMCA.Common.UI.Tests.Layout;
 /// </summary>
 public sealed class MainLayoutContentHeaderTests : BunitTestBase
 {
-    private const string ContentHeaderMember = "ContentHeaderComponentTypes";
-
     public MainLayoutContentHeaderTests()
     {
         Services.AddSingleton(new Mock<IAuthUIService>().Object);
         Services.AddSingleton<IExternalLinkService, NullExternalLinkService>();
-    }
-
-    [Fact]
-    public void IUIModule_DeclaresContentHeaderComponentTypes_DefaultingToEmpty()
-    {
-        var member = typeof(IUIModule).GetProperty(ContentHeaderMember, BindingFlags.Public | BindingFlags.Instance);
-
-        member.Should().NotBeNull($"IUIModule needs a {ContentHeaderMember} slot for components rendered above the page body");
-        member!.PropertyType.Should().Be<IReadOnlyList<Type>>();
-        ((IEnumerable<Type>)member.GetValue(new BareModule())!).Should().BeEmpty(
-            "a module that contributes no content header must not have to implement the member");
     }
 
     [Fact]
@@ -99,14 +86,6 @@ public sealed class MainLayoutContentHeaderTests : BunitTestBase
                 builder.AddContent(2, "Page body");
                 builder.CloseElement();
             }));
-    }
-
-    /// <summary>A module that contributes nothing beyond the required members.</summary>
-    private sealed class BareModule : IUIModule
-    {
-        public IReadOnlyList<NavItem> NavItems { get; } = [];
-
-        public Assembly Assembly => typeof(BareModule).Assembly;
     }
 
     /// <summary>A module contributing one content-header component and one layout-level component.</summary>

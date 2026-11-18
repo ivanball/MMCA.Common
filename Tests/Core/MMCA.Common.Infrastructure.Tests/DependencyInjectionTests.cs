@@ -132,141 +132,35 @@ public sealed class DependencyInjectionTests
     }
 
     // ── AddServices: descriptor presence checks ──
-    [Fact]
-    public void AddServices_RegistersCorrelationContext()
+    // A null lifetime or implementation means that row asserts presence only.
+    [Theory]
+    [InlineData(typeof(ICorrelationContext), ServiceLifetime.Scoped, typeof(CorrelationContext))]
+    [InlineData(typeof(ICurrentUserService), ServiceLifetime.Scoped, typeof(CurrentUserService))]
+    [InlineData(typeof(ITokenService), ServiceLifetime.Singleton, typeof(TokenService))]
+    [InlineData(typeof(IPasswordHasher), ServiceLifetime.Singleton, typeof(PasswordHasher))]
+    [InlineData(typeof(IEventBus), ServiceLifetime.Scoped, typeof(InProcessEventBus))]
+    [InlineData(typeof(IEmailSender), ServiceLifetime.Transient, typeof(SmtpEmailSender))]
+    [InlineData(typeof(IPushNotificationSender), ServiceLifetime.Transient, typeof(NullPushNotificationSender))]
+    [InlineData(typeof(ILiveChannelPublisher), ServiceLifetime.Transient, typeof(NullLiveChannelPublisher))]
+    [InlineData(typeof(TimeProvider), ServiceLifetime.Singleton, null)]
+    [InlineData(typeof(Microsoft.AspNetCore.Http.IHttpContextAccessor), null, null)]
+    public void AddServices_RegistersTheService(Type serviceType, ServiceLifetime? expectedLifetime, Type? expectedImplementation)
     {
         var services = new ServiceCollection();
         services.AddServices();
 
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ICorrelationContext));
+        ServiceDescriptor? descriptor = services.FirstOrDefault(d => d.ServiceType == serviceType);
 
         descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        descriptor.ImplementationType.Should().Be<CorrelationContext>();
-    }
+        if (expectedLifetime is not null)
+        {
+            descriptor!.Lifetime.Should().Be(expectedLifetime.Value);
+        }
 
-    [Fact]
-    public void AddServices_RegistersCurrentUserService()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ICurrentUserService));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        descriptor.ImplementationType.Should().Be<CurrentUserService>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersTokenService()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ITokenService));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        descriptor.ImplementationType.Should().Be<TokenService>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersPasswordHasher()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IPasswordHasher));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-        descriptor.ImplementationType.Should().Be<PasswordHasher>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersEventBus()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IEventBus));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        descriptor.ImplementationType.Should().Be<InProcessEventBus>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersEmailSender()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IEmailSender));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
-        descriptor.ImplementationType.Should().Be<SmtpEmailSender>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersPushNotificationSender()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IPushNotificationSender));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
-        descriptor.ImplementationType.Should().Be<NullPushNotificationSender>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersLiveChannelPublisher()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ILiveChannelPublisher));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
-        descriptor.ImplementationType.Should().Be<NullLiveChannelPublisher>();
-    }
-
-    [Fact]
-    public void AddServices_RegistersTimeProvider()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(TimeProvider));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-    }
-
-    [Fact]
-    public void AddServices_RegistersHttpContextAccessor()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(Microsoft.AspNetCore.Http.IHttpContextAccessor));
-
-        descriptor.Should().NotBeNull();
+        if (expectedImplementation is not null)
+        {
+            descriptor!.ImplementationType.Should().Be(expectedImplementation);
+        }
     }
 
     [Fact]

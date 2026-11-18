@@ -90,35 +90,24 @@ public sealed class DataSourceServiceTests
     }
 
     // ── HaveIncludeSupport(DataSourceKey, DataSourceKey) ──
-    [Fact]
-    public void HaveIncludeSupport_SameSQLServerKey_ReturnsTrue() =>
-        _sut.HaveIncludeSupport(
-            DataSourceKey.Default(DataSource.SQLServer),
-            DataSourceKey.Default(DataSource.SQLServer)).Should().BeTrue();
+    // A null name means the engine's default key.
+    [Theory]
+    [InlineData(DataSource.SQLServer, null, DataSource.SQLServer, null, true)]
+    [InlineData(DataSource.Sqlite, null, DataSource.Sqlite, null, true)]
+    [InlineData(DataSource.SQLServer, null, DataSource.Sqlite, null, false)]
+    [InlineData(DataSource.CosmosDB, null, DataSource.CosmosDB, null, false)]
+    [InlineData(DataSource.SQLServer, "Sales", DataSource.SQLServer, "Catalog", false)]
+    public void HaveIncludeSupport_ByKey_IsTrueOnlyForTheSameRelationalSource(
+        DataSource firstEngine,
+        string? firstName,
+        DataSource secondEngine,
+        string? secondName,
+        bool expected) =>
+        _sut.HaveIncludeSupport(Key(firstEngine, firstName), Key(secondEngine, secondName))
+            .Should().Be(expected);
 
-    [Fact]
-    public void HaveIncludeSupport_SameSqliteKey_ReturnsTrue() =>
-        _sut.HaveIncludeSupport(
-            DataSourceKey.Default(DataSource.Sqlite),
-            DataSourceKey.Default(DataSource.Sqlite)).Should().BeTrue();
-
-    [Fact]
-    public void HaveIncludeSupport_DifferentEngines_ReturnsFalse() =>
-        _sut.HaveIncludeSupport(
-            DataSourceKey.Default(DataSource.SQLServer),
-            DataSourceKey.Default(DataSource.Sqlite)).Should().BeFalse();
-
-    [Fact]
-    public void HaveIncludeSupport_SameCosmosKey_ReturnsFalse() =>
-        _sut.HaveIncludeSupport(
-            DataSourceKey.Default(DataSource.CosmosDB),
-            DataSourceKey.Default(DataSource.CosmosDB)).Should().BeFalse();
-
-    [Fact]
-    public void HaveIncludeSupport_SameEngineDifferentName_ReturnsFalse() =>
-        _sut.HaveIncludeSupport(
-            new DataSourceKey(DataSource.SQLServer, "Sales"),
-            new DataSourceKey(DataSource.SQLServer, "Catalog")).Should().BeFalse();
+    private static DataSourceKey Key(DataSource engine, string? name) =>
+        name is null ? DataSourceKey.Default(engine) : new DataSourceKey(engine, name);
 
     // ── HaveIncludeSupport(string, string) ──
     [Fact]

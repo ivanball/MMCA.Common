@@ -83,12 +83,21 @@ public sealed class DependencyInjectionTests
             .Should().BeFalse();
     }
 
-    [Fact]
-    public void AddAPI_ReturnsSameServiceCollection()
+    [Theory]
+    [InlineData("AddAPI")]
+    [InlineData("AddCommonExceptionHandlers")]
+    [InlineData("AddModuleHealthChecks")]
+    public void Extension_ReturnsSameServiceCollection(string extension)
     {
         var services = new ServiceCollection();
 
-        IServiceCollection result = services.AddAPI();
+        IServiceCollection result = extension switch
+        {
+            "AddAPI" => services.AddAPI(),
+            "AddCommonExceptionHandlers" => services.AddCommonExceptionHandlers(),
+            "AddModuleHealthChecks" => services.AddModuleHealthChecks(CreateModuleLoaderWithModules([], [])),
+            _ => throw new ArgumentOutOfRangeException(nameof(extension), extension, "Unknown extension."),
+        };
 
         result.Should().BeSameAs(services);
     }
@@ -126,16 +135,6 @@ public sealed class DependencyInjectionTests
 
         services.Any(s => s.ServiceType.Equals(typeof(IProblemDetailsService)))
             .Should().BeTrue();
-    }
-
-    [Fact]
-    public void AddCommonExceptionHandlers_ReturnsSameServiceCollection()
-    {
-        var services = new ServiceCollection();
-
-        IServiceCollection result = services.AddCommonExceptionHandlers();
-
-        result.Should().BeSameAs(services);
     }
 
     [Fact]
@@ -215,17 +214,6 @@ public sealed class DependencyInjectionTests
             .Registrations;
 
         registrations.Should().AllSatisfy(r => r.Tags.Should().Contain("module"));
-    }
-
-    [Fact]
-    public void AddModuleHealthChecks_ReturnsSameServiceCollection()
-    {
-        var services = new ServiceCollection();
-        ModuleLoader moduleLoader = CreateModuleLoaderWithModules([], []);
-
-        IServiceCollection result = services.AddModuleHealthChecks(moduleLoader);
-
-        result.Should().BeSameAs(services);
     }
 
     private static ModuleLoader CreateModuleLoaderWithModules(
