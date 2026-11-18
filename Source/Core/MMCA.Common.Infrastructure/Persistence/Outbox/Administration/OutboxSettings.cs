@@ -32,13 +32,17 @@ public sealed class OutboxSettings
 
     /// <summary>
     /// Gets the delay in seconds after message creation before it becomes eligible for processing.
-    /// It does not bound the duplicate-dispatch window: on the async save path local domain-event
-    /// rows are inserted under the <see cref="LeaseSeconds"/> lease, so the in-process pipeline
-    /// (save -> dispatch -> mark processed) races the processor only once that lease expires.
-    /// Handlers are required to be idempotent regardless (at-least-once delivery).
+    /// Defaults to 0, so an integration event is published as soon as the post-save signal wakes the
+    /// processor (tens of milliseconds) instead of several seconds later. The delay does not bound the
+    /// duplicate-dispatch window: on the async save path local domain-event rows are inserted under
+    /// the <see cref="LeaseSeconds"/> lease, so the in-process pipeline (save -> dispatch -> mark
+    /// processed) races the processor only once that lease expires, and sync-path rows never dispatch
+    /// in-process. Handlers are required to be idempotent regardless (at-least-once delivery). Set it
+    /// above 0 only to hold rows back deliberately, for example to give a failed in-process local
+    /// dispatch a pause before the processor retries it.
     /// </summary>
     [Range(0, 600)]
-    public int ProcessingDelaySeconds { get; init; } = 5;
+    public int ProcessingDelaySeconds { get; init; }
 
     /// <summary>
     /// Gets the engine of the data source where integration events published via

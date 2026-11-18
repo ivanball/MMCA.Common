@@ -10,6 +10,7 @@ using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Webhooks.Delivery;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
+using MMCA.Common.Infrastructure.Persistence.Polling;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
@@ -500,7 +501,7 @@ public sealed class InternalCommandProcessorTests : IDisposable
     }
 
     [Fact]
-    public void ComputeWaitTime_ARowDueSooner_WaitsOnlyUntilThen()
+    public void ComputeWaitTime_ARowDueSooner_WaitsOnlyUntilJustAfterThen()
     {
         var wait = InternalCommandProcessor.ComputeWaitTime(
             InternalCommandTestHarness.EpochUtc.AddSeconds(5),
@@ -508,7 +509,19 @@ public sealed class InternalCommandProcessorTests : IDisposable
             TimeSpan.Zero,
             TimeSpan.FromSeconds(30));
 
-        wait.Should().Be(TimeSpan.FromSeconds(5));
+        wait.Should().Be(TimeSpan.FromSeconds(5) + PollingLoop.ReadinessMargin);
+    }
+
+    [Fact]
+    public void ComputeWaitTime_ARowDueInUnderASecond_IsNotPushedToTheOneSecondFloor()
+    {
+        var wait = InternalCommandProcessor.ComputeWaitTime(
+            InternalCommandTestHarness.EpochUtc.AddMilliseconds(200),
+            InternalCommandTestHarness.EpochUtc,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(30));
+
+        wait.Should().Be(TimeSpan.FromMilliseconds(200) + PollingLoop.ReadinessMargin);
     }
 
     [Fact]

@@ -222,13 +222,15 @@ public sealed class OutboxProcessorTests : IDisposable
     [Fact]
     public async Task SkipsRecentMessages_DoesNotProcessMessagesWithinDelay()
     {
-        // Arrange: OccurredOn is now, within the 5-second processing delay window
+        // Arrange: a configured 5-second processing delay (the default is 0) and a message whose
+        // OccurredOn is now, inside that window.
         OutboxMessage message = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
         _dbContext.Set<OutboxMessage>().Add(message);
         await _dbContext.SaveChangesAsync();
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings { ProcessingDelaySeconds = 5 });
 
         // Act
-        await InvokeProcessPendingMessagesAsync();
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
 
         // Assert
         OutboxMessage unchanged = await _dbContext.Set<OutboxMessage>().SingleAsync();
@@ -544,14 +546,16 @@ public sealed class OutboxProcessorTests : IDisposable
     [Fact]
     public async Task PendingOnlyMessages_ReturnsEarliestPending_AndProcessesNothing()
     {
-        // Arrange: both messages are younger than the 5s processing delay — not yet eligible.
+        // Arrange: a configured 5s processing delay (the default is 0); both messages are younger
+        // than it, so neither is eligible yet.
         OutboxMessage older = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddSeconds(-2));
         OutboxMessage newer = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddSeconds(-1));
         await _dbContext.Set<OutboxMessage>().AddRangeAsync(older, newer);
         await _dbContext.SaveChangesAsync();
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings { ProcessingDelaySeconds = 5 });
 
         // Act
-        OutboxCycleResult result = await InvokeProcessPendingMessagesAsync();
+        OutboxCycleResult result = await processor.ProcessPendingMessagesAsync(CancellationToken.None);
 
         // Assert: nothing processed, the oldest pending timestamp drives the smart wait.
         result.HasMoreEligibleWork.Should().BeFalse();
@@ -568,14 +572,16 @@ public sealed class OutboxProcessorTests : IDisposable
     [Fact]
     public async Task MixedEligibleAndPending_ProcessesOnlyEligible_ReturnsPendingTimestamp()
     {
-        // Arrange: one eligible message (5 min old) and one pending (just written).
+        // Arrange: a configured 5-second processing delay (the default is 0), one eligible message
+        // (5 min old) and one pending (just written, still inside the delay).
         OutboxMessage eligible = CreateEligibleMessage();
         OutboxMessage pending = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
         await _dbContext.Set<OutboxMessage>().AddRangeAsync(eligible, pending);
         await _dbContext.SaveChangesAsync();
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings { ProcessingDelaySeconds = 5 });
 
         // Act
-        OutboxCycleResult result = await InvokeProcessPendingMessagesAsync();
+        OutboxCycleResult result = await processor.ProcessPendingMessagesAsync(CancellationToken.None);
 
         // Assert
         result.HasMoreEligibleWork.Should().BeFalse("the eligible batch was not full");
