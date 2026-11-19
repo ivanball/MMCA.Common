@@ -93,8 +93,8 @@
       },
       "Microsoft.Testing.Platform": {
         "type": "Transitive",
-        "resolved": "2.5.2",
-        "contentHash": "ocX0rgGY78dKfmZlZe4hB0/dvlh7wJgUAWS+KfwrqxB9DpNsjshnne9dppCKnFNEOkX4QYsrdUU++NInFPiCBw=="
+        "resolved": "2.5.3",
+        "contentHash": "JG78yapjF3r3GUj5UWv3m6r4L5hhdusumlhSoO+bkUakMW4kAInn4q3ulnNy1tqNLiwfumFoukdd+NVGbC3A7g=="
       },
       "Microsoft.Testing.Platform.MSBuild": {
         "type": "Transitive",
@@ -201,7 +201,7 @@
           "Deque.AxeCore.Commons": "[4.14.0, )",
           "Deque.AxeCore.Playwright": "[4.14.0, )",
           "Microsoft.Playwright": "[1.65.1, )",
-          "Microsoft.Testing.Extensions.Retry": "[2.5.2, )",
+          "Microsoft.Testing.Extensions.Retry": "[2.5.3, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -237,11 +237,11 @@
       },
       "Microsoft.Testing.Extensions.Retry": {
         "type": "CentralTransitive",
-        "requested": "[2.5.2, )",
-        "resolved": "2.5.2",
-        "contentHash": "tWtvpd6vMUbdaegnJ9Hj0+LngNupmgKnHd6SNyyHDmQ4lrzMUWaptaBN0mCITRYY5eSffm4lNv/RSL5wClT8bQ==",
+        "requested": "[2.5.3, )",
+        "resolved": "2.5.3",
+        "contentHash": "yf4tEWjzPwZJyT49htSuVpLY+3xRNQaacPzodJECPoYPm5+j/MyRAlnXW069rhj/CyLsVEf9V3QqY+h4Aw/ocQ==",
         "dependencies": {
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "xunit.v3.extensibility.core": {
@@ -346,8 +346,8 @@
       },
       "Microsoft.Testing.Platform": {
         "type": "Transitive",
-        "resolved": "2.5.2",
-        "contentHash": "ocX0rgGY78dKfmZlZe4hB0/dvlh7wJgUAWS+KfwrqxB9DpNsjshnne9dppCKnFNEOkX4QYsrdUU++NInFPiCBw=="
+        "resolved": "2.5.3",
+        "contentHash": "JG78yapjF3r3GUj5UWv3m6r4L5hhdusumlhSoO+bkUakMW4kAInn4q3ulnNy1tqNLiwfumFoukdd+NVGbC3A7g=="
       },
       "Microsoft.Testing.Platform.MSBuild": {
         "type": "Transitive",
@@ -449,7 +449,7 @@
           "Deque.AxeCore.Commons": "[4.14.0, )",
           "Deque.AxeCore.Playwright": "[4.14.0, )",
           "Microsoft.Playwright": "[1.65.1, )",
-          "Microsoft.Testing.Extensions.Retry": "[2.5.2, )",
+          "Microsoft.Testing.Extensions.Retry": "[2.5.3, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -484,11 +484,11 @@
       },
       "Microsoft.Testing.Extensions.Retry": {
         "type": "CentralTransitive",
-        "requested": "[2.5.2, )",
-        "resolved": "2.5.2",
-        "contentHash": "tWtvpd6vMUbdaegnJ9Hj0+LngNupmgKnHd6SNyyHDmQ4lrzMUWaptaBN0mCITRYY5eSffm4lNv/RSL5wClT8bQ==",
+        "requested": "[2.5.3, )",
+        "resolved": "2.5.3",
+        "contentHash": "yf4tEWjzPwZJyT49htSuVpLY+3xRNQaacPzodJECPoYPm5+j/MyRAlnXW069rhj/CyLsVEf9V3QqY+h4Aw/ocQ==",
         "dependencies": {
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "xunit.v3.extensibility.core": {
