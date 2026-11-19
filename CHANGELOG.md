@@ -4,6 +4,10 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.Domain):** the unused `MMCA.Common.Domain.AssemblyReference` and `MMCA.Common.Domain.ClassReference` anchor types are removed. Nothing in the framework or in ADC, Store or Helpdesk resolved the Domain assembly through them. A consumer that did replaces `MMCA.Common.Domain.AssemblyReference.Assembly` with `typeof(MMCA.Common.Domain.Entities.BaseEntity<>).Assembly` (or any other Common.Domain type).
+
 ## [1.307.0] - 2026-11-19
 
 **Breaking (Aspire 17; MMCA.Common.Aspire.Hosting, MMCA.Common.Testing.Aspire, MMCA.Common.Testing):** every Aspire package moves from 13.6.5 to 17.0.0. Aspire 17 obsoletes every `AddProject` overload (CS0618) and the `Aspire.AppHost.Sdk` project SDK (ASPIRE012): an AppHost is now a `Microsoft.NET.Sdk` project referencing `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`, it declares each service with `builder.AddDotnetProject("name", "<path to .csproj>")`, which returns `IResourceBuilder<DotnetProjectResource>` (namespace `Aspire.Hosting.Dotnet`; it derives from `ExecutableResource`, not `ProjectResource`), and building it needs the Aspire CLI 17.0.0 bundle (ASPIRE013, unsuppressible). Every MMCA.Common.Aspire.Hosting extension that took or returned `IResourceBuilder<ProjectResource>` now takes and returns `IResourceBuilder<DotnetProjectResource>`, with the same name, parameters and behavior; there is no `ProjectResource` overload. `AppHostFixtureBase` (MMCA.Common.Testing.Aspire) awaits every `DotnetProjectResource` when `ResourcesToAwait` is null, and now fails startup when the AppHost declares none instead of waiting for nothing. `AppHostBicepParityTestsBase` (MMCA.Common.Testing) reads `var x = builder.AddDotnetProject("name", ...)` declarations only; an `AddProject<...>` declaration is no longer a resource to it.
