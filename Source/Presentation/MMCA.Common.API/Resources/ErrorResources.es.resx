@@ -451,6 +451,9 @@
   <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
     <value>No se puede ver la cuenta de servicio de un cliente de máquina.</value>
   </data>
+  <data name="ViewAs.TargetLocked" xml:space="preserve">
+    <value>No se puede ver una cuenta bloqueada.</value>
+  </data>
   <data name="AuditHistory.UnknownEntity" xml:space="preserve">
     <value>Este punto de acceso no sirve ninguna entidad auditada con ese nombre.</value>
   </data>
