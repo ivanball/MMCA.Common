@@ -34,6 +34,98 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**Breaking (Aspire 17; MMCA.Common.Aspire.Hosting, MMCA.Common.Testing.Aspire, MMCA.Common.Testing):** every Aspire package moves from 13.6.5 to 17.0.0. Aspire 17 obsoletes every `AddProject` overload (CS0618) and the `Aspire.AppHost.Sdk` project SDK (ASPIRE012): an AppHost is now a `Microsoft.NET.Sdk` project referencing `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`, it declares each service with `builder.AddDotnetProject("name", "<path to .csproj>")`, which returns `IResourceBuilder<DotnetProjectResource>` (namespace `Aspire.Hosting.Dotnet`; it derives from `ExecutableResource`, not `ProjectResource`), and building it needs the Aspire CLI 17.0.0 bundle (ASPIRE013, unsuppressible). Every MMCA.Common.Aspire.Hosting extension that took or returned `IResourceBuilder<ProjectResource>` now takes and returns `IResourceBuilder<DotnetProjectResource>`, with the same name, parameters and behavior; there is no `ProjectResource` overload. `AppHostFixtureBase` (MMCA.Common.Testing.Aspire) awaits every `DotnetProjectResource` when `ResourcesToAwait` is null, and now fails startup when the AppHost declares none instead of waiting for nothing. `AppHostBicepParityTestsBase` (MMCA.Common.Testing) reads `var x = builder.AddDotnetProject("name", ...)` declarations only; an `AddProject<...>` declaration is no longer a resource to it.
+
+| Old | New |
+|---|---|
+| `<Project Sdk="Aspire.AppHost.Sdk/13.6.5">` | `<Project Sdk="Microsoft.NET.Sdk">` plus `<PackageReference Include="Aspire.Hosting.AppHost" />` and `<PackageReference Include="Aspire.Hosting.Dotnet" />` (both 17.0.0 in `Directory.Packages.props`) |
+| a resource `<ProjectReference Include="..\Svc\Svc.csproj" />` in the AppHost | delete it; the service is declared by path in `Program.cs` |
+| `builder.AddProject<Projects.Svc>("svc")` | `builder.AddDotnetProject("svc", "../Svc/Svc.csproj")` (path relative to the AppHost project directory) |
+| `builder.AddProject<Projects.Svc>("svc", launchProfileName: "https")` | `builder.AddDotnetProject("svc", "../Svc/Svc.csproj", options => options.LaunchProfileName = "https")` |
+| `IResourceBuilder<ProjectResource>` (a local, field, helper parameter or `Func<,>` such as the `WithMmcaServiceInfrastructure` broker attach delegate) | `IResourceBuilder<DotnetProjectResource>` plus `using Aspire.Hosting.Dotnet;` |
+| `model.Resources.OfType<ProjectResource>()` / `builder.Resources.OfType<ProjectResource>()` in an AppHost test fixture | `OfType<DotnetProjectResource>()` |
+| `IsAspireProjectResource="false"` on a library reference | optional: a `Microsoft.NET.Sdk` AppHost treats no reference as a resource unless it sets `IsAspireProjectResource="true"` |
+| an AppHost build or AppHost test job in CI with no Aspire CLI | install Aspire CLI 17.0.0 and put it on `PATH` before the build |
+
+
+### Consumer migration recipe (Aspire 17)
+
+1. `Directory.Packages.props`: move every `Aspire.*` `PackageVersion` to 17.0.0 and add `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet` at 17.0.0 (they sit outside the `MMCA.Common.*` lockstep, so they are the consumer's own pins). Bump the `MMCA.Common.*` entries to the release that carries this change in the same PR.
+
+2. AppHost project file, before:
+
+   ```xml
+   <Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+     <PropertyGroup>
+       <OutputType>Exe</OutputType>
+       <IsAspireHost>true</IsAspireHost>
+       <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+     </PropertyGroup>
+     <ItemGroup>
+       <PackageReference Include="Aspire.Hosting.SqlServer" />
+       <ProjectReference Include="..\..\Services\MyApp.Sales.Service\MyApp.Sales.Service.csproj" />
+       <PackageReference Include="MMCA.Common.Aspire.Hosting" IsAspireProjectResource="false" />
+     </ItemGroup>
+   </Project>
+   ```
+
+   After:
+
+   ```xml
+   <Project Sdk="Microsoft.NET.Sdk">
+     <PropertyGroup>
+       <OutputType>Exe</OutputType>
+       <IsAspireHost>true</IsAspireHost>
+     </PropertyGroup>
+     <ItemGroup>
+       <PackageReference Include="Aspire.Hosting.AppHost" />
+       <PackageReference Include="Aspire.Hosting.Dotnet" />
+       <PackageReference Include="Aspire.Hosting.SqlServer" />
+       <PackageReference Include="MMCA.Common.Aspire.Hosting" />
+     </ItemGroup>
+   </Project>
+   ```
+
+   Keep `UserSecretsId` and any other property the AppHost already sets. Drop the `ASPIRE010` suppression (the diagnostic does not apply to a C# AppHost) and never set `AspireUseCliBundle` (ASPIRE013 refuses it). A `ProjectReference` that is a real code dependency of the AppHost stays.
+
+3. AppHost `Program.cs`, before:
+
+   ```csharp
+   var salesService = builder.AddProject<Projects.MyApp_Sales_Service>(
+           "sales",
+           launchProfileName: "https")
+       .WithMmcaServiceInfrastructure(salesDb, "Sales", redis, mailDev, withBroker, ServiceEndpointProfile.Http2Only);
+   ```
+
+   After:
+
+   ```csharp
+   var salesService = builder.AddDotnetProject(
+           "sales",
+           "../../Services/MyApp.Sales.Service/MyApp.Sales.Service.csproj",
+           options => options.LaunchProfileName = "https")
+       .WithMmcaServiceInfrastructure(salesDb, "Sales", redis, mailDev, withBroker, ServiceEndpointProfile.Http2Only);
+   ```
+
+   The path is the old `ProjectReference` path with forward slashes, relative to the AppHost project directory. Keep the resource name and every chained call. Keep the `var x = builder.AddDotnetProject("name", ...)` shape for each service: `AppHostBicepParityTestsBase` reads exactly that declaration. Any local helper typed `IResourceBuilder<ProjectResource>` becomes `IResourceBuilder<DotnetProjectResource>` with `using Aspire.Hosting.Dotnet;`.
+
+4. AppHost tests: `AppHostFixtureBase<Projects.MyApp_AppHost>` is unchanged (the host marker type is still generated into the AppHost assembly). A fixture subclass that reads `OfType<ProjectResource>()` or takes a `ProjectResource` parameter switches to `DotnetProjectResource`.
+
+5. CI: before any step that builds the AppHost (an E2E or AppHost-test job, or a solution build that includes it), install the CLI:
+
+   ```yaml
+   - name: Install Aspire CLI 17.0.0
+     env:
+       ASPIRE_CLI_VERSION: 17.0.0
+     run: |
+       set -euo pipefail
+       curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+       echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+       "$HOME/.aspire/bin/aspire" --version
+   ```
+
+   On a developer machine, install the same CLI version (`aspire --version` must report 17.0.0); with no CLI on `PATH` the AppHost build falls back to `dnx aspire.cli@17.0.0 -- setup`.
+
 **Breaking (MMCA.Common.UI, MMCA.Common.UI.Web):** `UseAuthenticatedNoStore(this IApplicationBuilder)` moves from `MMCA.Common.UI.Extensions.WebApplicationExtensions` (MMCA.Common.UI) to `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions` (MMCA.Common.UI.Web), with the same name and behavior. MMCA.Common.UI no longer references `Microsoft.AspNetCore.Mvc.Core` 2.3.x, so the ASP.NET Core 2.3 server types it carried (`IApplicationBuilder`, `HttpContext`, `StatusCodes` from `Microsoft.AspNetCore.Http.Abstractions` 2.3) stop flowing to consumers through it. `UseMmcaBlazorWebPipeline` already calls the method, so a host on the composed pipeline changes nothing; no first-party consumer calls it directly.
 
 | Old | New |
