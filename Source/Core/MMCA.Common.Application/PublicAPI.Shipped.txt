@@ -492,6 +492,8 @@ MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.FullName.get -> string!
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.FullName.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsDeleted.get -> bool
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsDeleted.init -> void
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsLocked.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsLocked.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsServiceAccount.get -> bool
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsServiceAccount.init -> void
 MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.Role.get -> string!
