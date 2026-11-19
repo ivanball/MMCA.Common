@@ -106,7 +106,7 @@ public static class DesignTimeDbContextHelper
 
     /// <summary>
     /// Builds the container, assembly provider and resolved physical source every design-time
-    /// context needs. Shared by the per-engine factories so both scaffold against exactly the same
+    /// context needs. Shared by the per-engine factories so all three scaffold against exactly the same
     /// interceptor and options pipeline: a difference between them would show up as a migration that
     /// differs by engine for reasons that have nothing to do with the engine.
     /// </summary>

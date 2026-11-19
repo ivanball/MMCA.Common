@@ -41,7 +41,7 @@ internal static class OutboxMetrics
     internal static readonly Counter<long> DeadLetterCounter = Meter.CreateCounter<long>(
         "outbox.dead_letter.count",
         "messages",
-        "Number of outbox messages dead-lettered due to unresolvable event types");
+        "Number of outbox messages dead-lettered (unresolvable event type or retries exhausted)");
 
     /// <summary>Messages dispatched successfully and stamped processed, tagged by <c>event_type</c>.</summary>
     internal static readonly Counter<long> ProcessedCounter = Meter.CreateCounter<long>(

@@ -13,8 +13,8 @@ public sealed class PersistenceSettings
     public static readonly string SectionName = "Persistence";
 
     /// <summary>
-    /// Gets the command timeout, in seconds, applied to every SQL command the SQL Server context
-    /// issues. The default of <c>30</c> matches the previous implicit ADO.NET default, so an app
+    /// Gets the command timeout, in seconds, applied to every SQL command the SQL Server and
+    /// PostgreSQL contexts issue. The default of <c>30</c> matches the previous implicit ADO.NET default, so an app
     /// that sets nothing sees no behavior change; raise it for reporting-style workloads whose
     /// queries legitimately run longer than half a minute.
     /// </summary>

@@ -23,7 +23,7 @@ public interface IDataSourceResolver
     /// <para>
     /// An engine the host configures no connection string for (anywhere: neither top-level nor on a
     /// named entry) is substituted by an engine it does configure, preferring SQL Server, then
-    /// SQLite, then Cosmos DB. That is what lets a single-engine host serve the framework's own
+    /// PostgreSQL, then SQLite, then Cosmos DB. That is what lets a single-engine host serve the framework's own
     /// tables, whose engine settings all default to SQL Server. A host that configures the requested
     /// engine, including a polyglot host configuring several (ADR-018), is never redirected.
     /// </para>

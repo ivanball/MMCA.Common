@@ -22,10 +22,12 @@ using Polly.CircuitBreaker;
 namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 /// <summary>
-/// Background service that polls the outbox tables for unprocessed domain events and
-/// dispatches them via <see cref="IDomainEventDispatcher"/>. Acts as a safety net:
-/// events are normally dispatched in-process immediately after persistence, but if
-/// that dispatch fails (e.g. process crash), this processor retries them.
+/// Background service that polls the outbox tables for unprocessed rows and delivers them:
+/// integration events are published through <see cref="IMessageBus"/>, and other domain events are
+/// dispatched via <see cref="IDomainEventDispatcher"/>. For integration events this processor is
+/// the delivery path (they are never dispatched in-process at save time). For local domain events
+/// it is a safety net: they are normally dispatched in-process immediately after persistence, and
+/// if that dispatch fails (e.g. process crash), this processor retries them.
 /// <para>
 /// Every relational physical data source in use by this host has its own
 /// <c>OutboxMessages</c> table; each polling cycle drains them all. A host therefore only

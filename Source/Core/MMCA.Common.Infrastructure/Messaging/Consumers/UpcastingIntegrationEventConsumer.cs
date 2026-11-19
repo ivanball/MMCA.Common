@@ -126,7 +126,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
                 inbox.Abandon(messageId);
 
                 // Rethrow so MassTransit applies the UseMessageRetry policy configured in
-                // ConfigureBrokerTransport before the message is dead-lettered. Logging here gives
+                // BrokerTransportPolicies.ApplyMessageRetry before the message is dead-lettered. Logging here gives
                 // operators visibility into which handler failed without losing the exception.
                 LogHandlerFailure(logger, ex, terminalType.Name, handler.GetType().FullName ?? "<unknown>");
                 throw;

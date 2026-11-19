@@ -5,7 +5,7 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
 /// <summary>
 /// Creates raw <see cref="ApplicationDbContext"/> instances for a specific physical data source.
-/// The engine selects the context class (SQL Server / Cosmos / SQLite); the source name selects
+/// The engine selects the context class (SQL Server / PostgreSQL / Cosmos / SQLite); the source name selects
 /// the database (connection string, migrations assembly, EF model).
 /// <para>
 /// Contexts created here are not scoped or cached — <see cref="IDbContextFactory"/> layers

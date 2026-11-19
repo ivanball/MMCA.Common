@@ -795,9 +795,9 @@ public abstract class ApplicationDbContext(
     /// </summary>
     /// <param name="modelBuilder">The model builder to configure.</param>
     /// <param name="engine">
-    /// The engine of the model being built. Only the three partial-index predicates below depend on
-    /// it, and only for identifier quoting; the columns, indexes and index names are the same on
-    /// every relational engine.
+    /// The engine of the model being built. Only the three partial-index predicates below (for
+    /// identifier quoting) and the included columns (for the provider annotation) depend on it; the
+    /// columns, indexes and index names are the same on every relational engine.
     /// </param>
     private static void ConfigureOutbox(ModelBuilder modelBuilder, DataSource engine) =>
         modelBuilder.Entity<OutboxMessage>(entity =>
@@ -890,9 +890,10 @@ public abstract class ApplicationDbContext(
     /// </summary>
     /// <param name="modelBuilder">The model builder to configure.</param>
     /// <param name="engine">
-    /// The engine of the model being built. Only the three partial-index predicates below depend on
-    /// it, and only for identifier quoting; the columns, indexes and index names are the same on
-    /// every relational engine (the outbox's treatment, ADR-113).
+    /// The engine of the model being built. Only the three partial-index predicates below (for
+    /// identifier quoting) and the included columns (for the provider annotation) depend on it; the
+    /// columns, indexes and index names are the same on every relational engine (the outbox's
+    /// treatment, ADR-113).
     /// </param>
     private static void ConfigureInternalCommands(ModelBuilder modelBuilder, DataSource engine) =>
         modelBuilder.Entity<InternalCommandMessage>(entity =>

@@ -6,7 +6,7 @@ namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 /// <summary>
 /// Application-facing facade over <see cref="IEntityDataSourceRegistry"/>. Resolves each entity's
 /// physical data source (engine + database) and answers include-support questions for navigation
-/// classification. The registry is built eagerly from configuration assemblies, so resolution no
+/// classification. The registry is built from configuration assemblies on first access, so resolution no
 /// longer depends on an EF model having been built first.
 /// </summary>
 public sealed class DataSourceService(IEntityDataSourceRegistry registry) : IDataSourceService

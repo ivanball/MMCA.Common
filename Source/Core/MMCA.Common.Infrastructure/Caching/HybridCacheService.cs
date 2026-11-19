@@ -107,7 +107,8 @@ internal sealed partial class HybridCacheService : ICacheService
 
     /// <summary>
     /// Namespace applied to every key so services sharing one cache instance cannot collide.
-    /// Defaults to no prefix, which is correct for a host that owns its cache outright.
+    /// <c>AddCommonHybridCache</c> passes the configured prefix or the per-application default
+    /// (<see cref="CacheKeyNamespace.From(IServiceProvider)"/>); direct construction without one applies no prefix.
     /// </summary>
     private readonly CacheKeyNamespace _keys;
 

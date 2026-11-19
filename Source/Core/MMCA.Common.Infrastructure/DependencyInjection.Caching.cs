@@ -32,7 +32,8 @@ public static partial class DependencyInjection
             services.AddMemoryCache();
 
             // Optional key namespace so services sharing one cache instance cannot collide
-            // (Cache:KeyPrefix). Absent configuration leaves keys exactly as callers write them.
+            // (Cache:KeyPrefix). Absent configuration, the shared stores fall back to the per-application
+            // namespace (CacheKeyNamespace.From, SEC-Common-53).
             //
             // The same Cache section also carries the TTL policy (CacheSettings) and the one knob the
             // Application-layer query pipeline needs (QueryCachePipelineSettings, defined there
@@ -97,12 +98,13 @@ public static partial class DependencyInjection
                     sp.GetService<IOptions<CacheSettings>>());
             });
 
-            // Cross-replica mutual exclusion, registered alongside the cache because all four
+            // Cross-replica mutual exclusion, registered alongside the cache because all five
             // in-framework callers pair the two: the API idempotency filter guards its execute-then-store
             // window, password-reset token redemption guards its read, compare and remove of one cache
             // record, the two-factor authenticator guards its read, compare and write of an account's
-            // last accepted time step, and OAuthControllerBase (when given a lock) guards its
-            // read-and-burn of a single-use exchange code. Redis when a multiplexer is
+            // last accepted time step, OAuthControllerBase (when given a lock) guards its
+            // read-and-burn of a single-use exchange code, and PasskeyChallenges guards each challenge
+            // redemption and each account's passkey deletes. Redis when a multiplexer is
             // registered, process-local (and warn-once) otherwise, mirroring the cache above.
             services.TryAddSingleton<IDistributedLock>(sp =>
             {

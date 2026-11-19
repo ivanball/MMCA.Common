@@ -67,8 +67,9 @@ public sealed class InternalCommandMessage
     public int Attempts { get; set; }
 
     /// <summary>
-    /// Gets or sets the failure recorded on the most recent attempt: the handler's first
-    /// <c>Result</c> error, or the exception message. Truncated to the column width.
+    /// Gets or sets the failure recorded on the most recent attempt: every <c>Result</c> error the
+    /// handler returned (code and message), or the exception message followed by its causes.
+    /// Truncated to the column width.
     /// </summary>
     public string? LastError { get; set; }
 

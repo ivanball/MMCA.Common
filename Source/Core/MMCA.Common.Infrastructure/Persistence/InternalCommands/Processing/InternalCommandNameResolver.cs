@@ -53,8 +53,9 @@ internal static class InternalCommandNameResolver
     /// <summary>
     /// Reverse lookup for a stored name that is NOT a CLR type name: scans the loaded assemblies for
     /// the type declaring <paramref name="name"/> as its
-    /// <see cref="InternalCommandNameAttribute"/>. Reached at most once per stored name, because the
-    /// caller caches the result (see <c>InternalCommandMessage.ResolveCommandType</c>).
+    /// <see cref="InternalCommandNameAttribute"/>. Reached once per stored name that resolves, because
+    /// the caller caches a successful result (see <c>InternalCommandMessage.ResolveCommandType</c>); a
+    /// name that matches nothing is scanned again for each row carrying it.
     /// </summary>
     /// <remarks>
     /// The query stays lazy, so the scan stops at the first match instead of materializing every

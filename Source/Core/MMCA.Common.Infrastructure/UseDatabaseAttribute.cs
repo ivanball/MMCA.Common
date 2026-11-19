@@ -3,7 +3,7 @@ namespace MMCA.Common.Infrastructure;
 /// <summary>
 /// Declares the <b>logical data source name</b> (database) an entity type configuration targets,
 /// enabling "database per microservice" routing. Distinct from <see cref="UseDataSourceAttribute"/>,
-/// which declares the database <em>engine</em> (SQL Server / Cosmos / SQLite) on the provider-specific
+/// which declares the database <em>engine</em> (SQL Server / PostgreSQL / Cosmos / SQLite) on the provider-specific
 /// configuration base classes — this attribute selects <em>which database on that engine</em>.
 /// <para>
 /// Resolution order for an entity's logical name:

@@ -112,7 +112,7 @@ public static partial class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            // Singleton for the same reason as the other two save interceptors: stateless, with any
+            // Singleton for the same reason as the other save interceptors: stateless, with any
             // per-save state held in a ConditionalWeakTable keyed by context.
             services.TryAddSingleton<Persistence.AuditTrail.AuditTrailSaveChangesInterceptor>();
 

@@ -9,7 +9,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 /// excluding the <see cref="AuditableAggregateRootEntity{TId}.DomainEvents"/> collection from EF mapping.
 /// <para>
 /// The entity-to-data-source mapping is no longer registered here as a model-building side effect —
-/// <see cref="DataSources.EntityDataSourceRegistry"/> derives it eagerly from the configuration
+/// <see cref="DataSources.EntityDataSourceRegistry"/> derives it on first access from the configuration
 /// class's attributes (<see cref="UseDataSourceAttribute"/> for the engine,
 /// <see cref="UseDatabaseAttribute"/>/module namespace for the database).
 /// </para>
