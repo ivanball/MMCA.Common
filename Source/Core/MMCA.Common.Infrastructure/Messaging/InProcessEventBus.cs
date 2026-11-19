@@ -10,15 +10,16 @@ using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Fact
 namespace MMCA.Common.Infrastructure.Messaging;
 
 /// <summary>
-/// In-process event bus that persists integration events to the outbox and dispatches
-/// them via <see cref="IDomainEventDispatcher"/>. This is the default implementation —
-/// all modules run in the same process, so events are dispatched synchronously after
-/// outbox persistence. The <see cref="OutboxProcessor"/> provides at-least-once retry
-/// for events that fail during in-process dispatch.
+/// In-process event bus that dispatches integration events via <see cref="IDomainEventDispatcher"/>.
+/// This is the default implementation: all modules run in the same process, so events are
+/// dispatched synchronously. When the outbox is enabled (<c>MessageBus:EnableOutbox=true</c>; it
+/// resolves to off by default for the in-process provider) the events are persisted to the outbox
+/// first and the <see cref="OutboxProcessor"/> provides at-least-once retry for events that fail
+/// during in-process dispatch; with it off they are dispatched directly, with no retry.
 /// <para>
-/// To swap to an external message broker (Azure Service Bus, RabbitMQ), register an
-/// alternative <see cref="IEventBus"/> implementation that publishes to the broker
-/// instead of dispatching in-process.
+/// A broker deployment does not register a replacement by hand: a non-in-process
+/// <c>MessageBus:Provider</c> makes <c>AddBrokerMessaging</c> replace this registration with
+/// <c>BrokerEventBus</c>, which only writes the outbox rows for the processor to publish.
 /// </para>
 /// </summary>
 /// <param name="dbContextFactory">Scoped factory resolving the outbox target's context.</param>

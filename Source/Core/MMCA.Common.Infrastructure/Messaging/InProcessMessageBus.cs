@@ -9,11 +9,10 @@ namespace MMCA.Common.Infrastructure.Messaging;
 /// through the in-process <see cref="IDomainEventDispatcher"/>. This is the default registration
 /// for the modular monolith deployment.
 /// <para>
-/// Unlike <see cref="InProcessEventBus"/>, this bus does NOT write to the outbox — it is intended
-/// to be invoked from the <c>OutboxProcessor</c> when draining already-persisted entries, or from
-/// application code paths that have already taken responsibility for outbox persistence elsewhere.
-/// Application code that needs the "persist + dispatch in one call" semantics should continue to
-/// use <see cref="IEventBus"/> directly until the migration to broker mode lands.
+/// Unlike <see cref="InProcessEventBus"/>, this bus never writes to the outbox: it is the transport
+/// the <c>OutboxProcessor</c> drains already-persisted entries through, not an application publish
+/// API. Application code publishes integration events through <see cref="IEventBus"/>
+/// (<see cref="InProcessEventBus"/> here, <c>BrokerEventBus</c> under a broker provider).
 /// </para>
 /// </summary>
 public sealed class InProcessMessageBus(IDomainEventDispatcher domainEventDispatcher) : IMessageBus

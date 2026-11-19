@@ -13,8 +13,9 @@ namespace MMCA.Common.Infrastructure.Messaging;
 
 /// <summary>
 /// <see cref="IMessageBus"/> implementation backed by MassTransit. Publishes integration events
-/// to the configured broker (RabbitMQ in development, Azure Service Bus in production). Used by
-/// extracted microservices in place of <see cref="InProcessMessageBus"/>.
+/// to the broker <c>MessageBus:Provider</c> selects (RabbitMQ and PostgreSQL are built in; an adapter
+/// such as MMCA.Common.Azure or MMCA.Common.Aws registers its own transport). Used by extracted
+/// microservices in place of <see cref="InProcessMessageBus"/>.
 /// <para>
 /// This bus does NOT itself write to the outbox. The transactional outbox semantics are preserved
 /// by the existing <c>OutboxProcessor</c>: integration events are persisted to <c>OutboxMessage</c>
