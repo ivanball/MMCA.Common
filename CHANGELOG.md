@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **Server-side `"APIClient"` no longer cuts a request off at 30 seconds** (MMCA.Common.UI.Web): `AddMmcaBlazorWebHost` takes the standard resilience handler that `AddServiceDefaults()` puts on every factory client back off the UI's `"APIClient"`, so the Blazor Server render mode runs the same pipeline as WebAssembly and MAUI: one `HttpClient.Timeout` of `HttpResilienceDefaults.TotalRequestTimeout` (90 s), with user-facing retries owned by the UI service base classes. Before, the handler's 30 s attempt timeout (with POST never retried) failed a large upload in Server mode, where the request body streams from the browser over the circuit at the user's own upload speed. Other factory clients keep the handler. No API change.
+
 ## [1.308.0] - 2026-11-19
 
 **Breaking (MMCA.Common.Domain):** the unused `MMCA.Common.Domain.AssemblyReference` and `MMCA.Common.Domain.ClassReference` anchor types are removed. Nothing in the framework or in ADC, Store or Helpdesk resolved the Domain assembly through them. A consumer that did replaces `MMCA.Common.Domain.AssemblyReference.Assembly` with `typeof(MMCA.Common.Domain.Entities.BaseEntity<>).Assembly` (or any other Common.Domain type).

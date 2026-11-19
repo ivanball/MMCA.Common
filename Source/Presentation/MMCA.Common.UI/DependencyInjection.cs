@@ -150,10 +150,10 @@ public static class DependencyInjection
                 // calls; the bootstrap has already resolved it to an absolute address.
                 client.BaseAddress = new Uri(apiSettings.SameOriginApiEndpoint ?? apiSettings.ApiEndpoint!, UriKind.Absolute);
 
-                // HttpClient's own default is 100s, chosen by the BCL with no knowledge of the
-                // resilience budget: it would cut a call off mid-policy at an arbitrary point.
-                // Pinning it to the shared total-request timeout (90s) keeps the two coordinated,
-                // so the budget decides when to give up and the transport never pre-empts it.
+                // The one time limit on this client in every render mode: WebAssembly and MAUI add no
+                // resilience handler, and the Blazor web host (AddMmcaBlazorWebHost) removes the one
+                // AddServiceDefaults() puts on every factory client. Pinned to the shared
+                // total-request timeout (90s) rather than the BCL's 100s default.
                 client.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("Accept", "application/json");

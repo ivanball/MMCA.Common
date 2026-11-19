@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.API;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.SessionCookies;
@@ -97,6 +98,7 @@ public static class BlazorWebHostExtensions
             }
 
             services.AddUIShared(configuration);
+            RemoveApiClientResilienceHandler(services);
             services.AddBrowserDeviceCapabilities();
 
             var apiEndpoint = configuration[ApiEndpointKey]
@@ -216,4 +218,31 @@ public static class BlazorWebHostExtensions
             ];
         }
     }
+
+    /// <summary>
+    /// Takes the standard resilience handler back off the server-side <c>"APIClient"</c>, so the
+    /// Blazor Server render mode gets the same pipeline as WebAssembly and MAUI: one
+    /// <c>HttpClient.Timeout</c> of <c>HttpResilienceDefaults.TotalRequestTimeout</c> (90 s, set by
+    /// <c>AddUIShared</c>), with user-facing retries owned by the UI service base classes.
+    /// </summary>
+    /// <remarks>
+    /// <c>AddServiceDefaults()</c> puts the standard handler on every factory client, and its 30 s
+    /// attempt timeout with POST never retried cut a large upload off: in Server mode the request
+    /// body is read from the browser over the circuit, so the attempt lasts as long as the user's own
+    /// upload. This is what <c>RemoveAllResilienceHandlers()</c> does, written against the stable
+    /// <c>ConfigureAdditionalHttpMessageHandlers</c> because that helper is still EXTEXP0001
+    /// (experimental), as in the gateway's downstream health-check client.
+    /// </remarks>
+    private static void RemoveApiClientResilienceHandler(IServiceCollection services) =>
+        services.AddHttpClient("APIClient")
+            .ConfigureAdditionalHttpMessageHandlers(static (handlers, _) =>
+            {
+                for (var i = handlers.Count - 1; i >= 0; i--)
+                {
+                    if (handlers[i] is ResilienceHandler)
+                    {
+                        handlers.RemoveAt(i);
+                    }
+                }
+            });
 }
