@@ -74,7 +74,7 @@ public sealed class StronglyTypedIdTypeConverter<TSelf, TValue> : TypeConverter
 /// <c>[TypeConverter]</c> attribute on every wrapper.
 /// <para>
 /// Call it once at startup (<c>services.AddStronglyTypedIds(typeof(OrderId).Assembly)</c> in
-/// <c>MMCA.Common.API</c> is the wrapper). Registration is process-global and idempotent:
+/// <c>MMCA.Common.Infrastructure</c> is the wrapper). Registration is process-global and idempotent:
 /// <see cref="TypeDescriptor"/> keeps the last attribute set registered for a type, so a repeated
 /// call re-registers the same converter rather than stacking.
 /// </para>
