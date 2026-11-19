@@ -13,7 +13,7 @@ namespace MMCA.Common.UI.Maui.Capabilities.Notifications;
 /// Gated on <c>Push:Apns:Enabled</c> so users are never shown the notification-permission prompt
 /// while the head ships without the aps-environment entitlement; with the flag off (the default)
 /// the provider yields <see langword="null"/> and the pipeline stays inert. Never throws: failures
-/// and the no-entitlement timeout log and yield <see langword="null"/>.
+/// log and yield <see langword="null"/>, and the no-entitlement timeout yields <see langword="null"/> silently.
 /// <para>
 /// The head still owns the platform wiring: the aps-environment entitlement, the Info.plist
 /// background modes, and the two <c>AppDelegate</c> callbacks that publish into

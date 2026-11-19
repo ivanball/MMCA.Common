@@ -12,7 +12,7 @@
    launch before the WebView paints: this component only runs after Blazor's first render.
 
    It ships from MMCA.Common.UI.Maui rather than MMCA.Common.UI by necessity: Application and
-   MainThread are MAUI types, so the plain net10.0 MMCA.Common.UI (shared with the Blazor Web heads)
+   MainThread are MAUI types, so the plain net10.0/net11.0 MMCA.Common.UI (shared with the Blazor Web heads)
    cannot reference them. Hybrid heads render it by listing it in an IUIModule's
    LayoutComponentTypes. *@
 

@@ -211,8 +211,8 @@ hr {
     padding-top: 1.1rem;
 }
 
-/* Routes.razor's <FocusOnNavigate Selector="h1" /> moves focus to the page heading on every
-   navigation, so h1 really does receive focus. Suppressing the ring outright (the Blazor template
+/* Routes.razor's <FocusOnInAppNavigate Selector="h1" /> moves focus to the page heading on every
+   in-app navigation, so h1 really does receive focus. Suppressing the ring outright (the Blazor template
    default) left a keyboard user with no visible focus indicator at all, which is WCAG 2.4.7. Keep
    the ring for keyboard focus and drop it only for the programmatic/pointer case. */
 h1:focus-visible {

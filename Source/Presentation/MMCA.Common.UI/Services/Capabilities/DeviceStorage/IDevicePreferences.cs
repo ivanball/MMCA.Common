@@ -11,8 +11,9 @@ namespace MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 public interface IDevicePreferences
 {
     /// <summary>
-    /// Whether values survive an app restart. The Blazor Server fallback is in-memory only
-    /// (<see langword="false"/>) and hosts hide device-settings UI when not persistent.
+    /// Whether values survive an app restart. The in-memory default
+    /// (<see cref="InMemoryDevicePreferences"/>) is not (<see langword="false"/>), and hosts hide
+    /// device-settings UI when not persistent.
     /// </summary>
     bool IsPersistent { get; }
 

@@ -6,9 +6,10 @@ namespace MMCA.Common.UI.Globalization;
 
 /// <summary>
 /// Localizes MudBlazor's built-in component text (pager, filter menus, pickers, close buttons)
-/// from the <see cref="MudTranslations"/> resource pair (ADR-027). MudBlazor's
-/// <c>DefaultLocalizationInterceptor</c> consults this localizer only for non-English cultures and
-/// falls back to its built-in English strings whenever the returned value reports
+/// from the <see cref="MudTranslations"/> resource pair (ADR-027). The
+/// <see cref="InvariantMudLocalizationInterceptor"/> that <c>AddUIShared</c> installs consults this
+/// localizer only for non-English cultures and falls back to MudBlazor's built-in English strings
+/// whenever the returned value reports
 /// <see cref="LocalizedString.ResourceNotFound"/>, so untranslated keys degrade gracefully.
 /// Because resolution flows through the DI <see cref="IStringLocalizerFactory"/>, the
 /// <see cref="PseudoStringLocalizerFactory"/> decorator applies here too: under the development-only

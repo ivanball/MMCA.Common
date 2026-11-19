@@ -56,7 +56,7 @@ public partial class ApiFileDownloadButton
     public Size Size { get; set; } = Size.Small;
 
     /// <summary>
-    /// Accessible name for the icon button (ADR-021: an icon-only control must carry one).
+    /// Accessible name for the icon button (WCAG 4.1.2: an icon-only control must carry one).
     /// Defaults to the localized "Download" label; pass the caller's own wording
     /// (e.g. "Add to calendar") when the generic one would not say what the file is.
     /// </summary>

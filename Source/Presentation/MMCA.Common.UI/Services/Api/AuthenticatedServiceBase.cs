@@ -174,8 +174,9 @@ public abstract class AuthenticatedServiceBase(
     /// <summary>
     /// Records on <paramref name="exception"/> whether <paramref name="request"/> may be sent again.
     /// Called by <see cref="Auth.AuthDelegatingHandler"/>, the outermost of the handlers <c>AddUIShared</c>
-    /// adds to the API client (on a host that calls <c>AddServiceDefaults</c>, the default resilience
-    /// and service-discovery handlers from <c>ConfigureHttpClientDefaults</c> wrap it).
+    /// adds to the API client (on a host that calls <c>AddServiceDefaults</c>, the service-discovery
+    /// handler from <c>ConfigureHttpClientDefaults</c> wraps it, and so does the standard resilience
+    /// handler unless the host removes it, as <c>AddMmcaBlazorWebHost</c> does).
     /// </summary>
     /// <param name="exception">The transport failure the request ended in.</param>
     /// <param name="request">The request that failed.</param>

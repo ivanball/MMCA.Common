@@ -49,7 +49,8 @@ public static class BlazorWebHostExtensions
         /// Registers the shared Blazor web host, in this order: the configuration-source callback, the
         /// Serilog bootstrap, the service defaults, the after-service-defaults callback, Razor components
         /// with interactive server components (then the Razor components callback), bounded circuits and
-        /// the UI rate limiter, MudBlazor, the shared UI services and browser capabilities, the session
+        /// the UI rate limiter, MudBlazor, the shared UI services (then the standard resilience handler
+        /// taken back off the server-side <c>"APIClient"</c>) and browser capabilities, the session
         /// cookie pair, the trusted-caller header, session-cookie authentication, the authorization
         /// policies, server token storage, the request-reading forbidden re-execution detector the
         /// not-found page consults, the same-origin proxy refresher and then the same-origin

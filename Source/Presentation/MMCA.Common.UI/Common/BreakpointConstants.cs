@@ -9,8 +9,8 @@ namespace MMCA.Common.UI.Common;
 public static class BreakpointConstants
 {
     /// <summary>
-    /// Returns <see langword="true"/> when the viewport is below the sidebar-collapse threshold
-    /// (MudBlazor Xs or Sm, i.e. &lt; 960 px). Used to switch between desktop data grids
+    /// Returns <see langword="true"/> when the viewport is in MudBlazor's Xs or Sm breakpoint
+    /// (&lt; 960 px; the layout's sidebar collapses separately, below 1024 px). Used to switch between desktop data grids
     /// and mobile card-based layouts.
     /// </summary>
     public static bool IsMobileBreakpoint(Breakpoint breakpoint) =>

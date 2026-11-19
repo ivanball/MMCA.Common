@@ -34,7 +34,7 @@ public sealed class RegisterModel
     [Compare(nameof(Password), ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.ConfirmPasswordMismatch))]
     public string ConfirmPassword { get; set; } = string.Empty;
 
-    // Address is optional — no validation attributes; an empty Line 1 means "no address supplied".
+    // Address is optional, so no validation attributes; a block left entirely blank means "no address supplied".
     public string AddressLine1 { get; set; } = string.Empty;
     public string? AddressLine2 { get; set; }
     public string? City { get; set; }

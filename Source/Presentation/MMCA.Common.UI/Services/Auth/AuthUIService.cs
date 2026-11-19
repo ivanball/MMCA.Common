@@ -96,7 +96,7 @@ public sealed class AuthUIService(
         var accessToken = await ReadAccessTokenAsync();
         if (!string.IsNullOrWhiteSpace(accessToken))
         {
-            // Best-effort revoke on the server side. Deliberately fire-and-forget: the local
+            // Best-effort revoke on the server side. Awaited, but it never fails: the local
             // sign-out below runs whatever happened, so a dropped connection cannot strand a user
             // inside a session they asked to leave.
             await TryRevokeAsync(accessToken, CancellationToken.None);

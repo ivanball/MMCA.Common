@@ -122,8 +122,8 @@ public partial class NotificationSend : IDisposable
             await _form.ValidateAsync();
             if (!_form.IsValid)
             {
-                // The per-field messages are already on screen; the ErrorSummary above the form
-                // collects them in one place (deduplicated) and the snackbar stays the summary cue.
+                // The per-field messages are already on screen; the ErrorSummary above the form is
+                // deliberately not fed them (see the markup), so the snackbar stays the summary cue.
                 Toast.Warning(ErrorMessages.ValidationError);
                 return;
             }

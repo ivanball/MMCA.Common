@@ -153,12 +153,12 @@ public partial class BiometricGate
         {
             // Component no longer attached; same disposition.
         }
-#pragma warning disable CA1031 // Async void event handler: nothing observes what escapes, and on a native head it terminates the process
+#pragma warning disable CA1031 // Discarded event-handler task: nothing would observe what escapes it
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Exhaustive by necessity: this is an async void event handler, so anything escaping
-            // here has no caller to observe it, and on a native head that terminates the process.
+            // Exhaustive by necessity: OnResumed discards this task, so nothing would observe what
+            // escapes it and a failed re-lock would go unreported.
             Logger.LogError(ex, "Re-locking the app after resume failed.");
         }
     }

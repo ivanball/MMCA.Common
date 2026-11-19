@@ -11,7 +11,8 @@ namespace MMCA.Common.UI.Web.Services;
 /// <see cref="HttpContext"/>) the access token is read from the HttpOnly cookie — refreshed in place by
 /// <c>UseCookieSessionRefresh</c> on navigations. On the interactive circuit (whose <see cref="HttpContext"/>
 /// is only the stale request that opened the hub connection; see below) the access token is held <b>in memory only</b> and hydrated/refreshed on demand from the HttpOnly cookies
-/// via the same-origin <c>/auth/session/token</c> endpoint (<see cref="ITokenRefresher"/>); the refresh
+/// via the registered <see cref="ITokenRefresher"/> (the same-origin <c>/auth/session/token</c> endpoint, or the
+/// protected <c>/auth/session/handoff</c> when the same-origin API proxy is enabled); the refresh
 /// token is never readable by JS. Hoisted from the app Blazor Web hosts (it carries no app-specific
 /// state); its WASM sibling is <see cref="WasmTokenStorageService"/> in MMCA.Common.UI. Register via
 /// <c>AddCommonServerTokenStorage()</c>.
@@ -168,7 +169,8 @@ public sealed class ServerTokenStorageService(
         _memoryIsAuthoritative = true;
         _sessionHeld = true;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
-        // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
+        // (as protected handoff ciphertext when the same-origin API proxy is enabled) and is never
+        // persisted in localStorage. A failed write is surfaced (after the in-memory token is
         // set) so AuthUIService reports Auth.TokenStorageUnavailable instead of a login that silently signs
         // out at the first access-token expiry, when no cookie exists to refresh from.
         if (!await sessionCookieSync.SyncAsync(accessToken, refreshToken))

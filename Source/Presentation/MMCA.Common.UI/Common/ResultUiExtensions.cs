@@ -11,7 +11,7 @@ using MMCA.Common.UI.Services.Api;
 namespace MMCA.Common.UI.Common;
 
 /// <summary>
-/// The page-side half of the Result transport (ADR-030): the four things a Blazor page ever does
+/// The page-side half of the Result transport (ADR-013): the four things a Blazor page ever does
 /// with a failed <see cref="Result"/>, written once so no page hand-rolls them again.
 /// <list type="bullet">
 ///   <item><see cref="Result{T}.TryGetValue(out T)"/> (on the result itself): unwrap the value, or fall through to the error branch.</item>

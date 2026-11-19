@@ -2,9 +2,9 @@ namespace MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
 /// <summary>
 /// Small JSON document cache on the device (offline schedule snapshots). MAUI persists to
-/// the app data directory, WebAssembly to <c>localStorage</c>; the Blazor Server fallback is
-/// unavailable (SSR always has the live API). Not for secrets and not a query cache — this
-/// is last-known-good UI state for offline rendering.
+/// the app data directory, the browser heads (Blazor Server and WebAssembly) to
+/// <c>localStorage</c>; the default (<see cref="NullLocalCacheStore"/>) is unavailable. Not for
+/// secrets and not a query cache: this is last-known-good UI state for offline rendering.
 /// </summary>
 public interface ILocalCacheStore
 {
