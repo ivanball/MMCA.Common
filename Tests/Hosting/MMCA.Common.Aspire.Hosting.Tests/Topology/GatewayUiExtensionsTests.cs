@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
@@ -22,7 +23,7 @@ public sealed class GatewayUiExtensionsTests
     public void WithMmcaGateway_NullArguments_Throw()
     {
         var model = Arrange();
-        IResourceBuilder<ProjectResource> nullGateway = null!;
+        IResourceBuilder<DotnetProjectResource> nullGateway = null!;
 
         FluentActions.Invoking(() => nullGateway.WithMmcaGateway(GatewayPort, model.Identity))
             .Should().Throw<ArgumentNullException>();
@@ -101,7 +102,7 @@ public sealed class GatewayUiExtensionsTests
     public void WithMmcaUi_NullArguments_Throw()
     {
         var model = Arrange();
-        IResourceBuilder<ProjectResource> nullUi = null!;
+        IResourceBuilder<DotnetProjectResource> nullUi = null!;
 
         FluentActions.Invoking(() => nullUi.WithMmcaUi(model.Gateway, UiPort, model.Identity))
             .Should().Throw<ArgumentNullException>();
@@ -170,7 +171,7 @@ public sealed class GatewayUiExtensionsTests
     public void WithGatewayApiEndpoints_NullArguments_Throw()
     {
         var model = Arrange();
-        IResourceBuilder<ProjectResource> nullUi = null!;
+        IResourceBuilder<DotnetProjectResource> nullUi = null!;
 
         FluentActions.Invoking(() => nullUi.WithGatewayApiEndpoints(model.Gateway))
             .Should().Throw<ArgumentNullException>();
@@ -204,37 +205,37 @@ public sealed class GatewayUiExtensionsTests
         WaitNames(model.Ui).Should().BeEmpty();
     }
 
-    // AddResource rather than AddProject: the extensions only need ProjectResources in the model, and
-    // AddProject validates that the project file exists on disk. The gateway and the UI get the http
+    // AddResource rather than AddDotnetProject: the extensions only need DotnetProjectResources in the model, and
+    // AddDotnetProject validates that the project file exists on disk. The gateway and the UI get the http
     // and https endpoints a launch profile would give them; the services get http only.
     private static Model Arrange()
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var gateway = builder.AddResource(new ProjectResource("gateway"))
+        var gateway = builder.AddResource(new DotnetProjectResource("gateway", "."))
             .WithHttpEndpoint(name: "http")
             .WithHttpsEndpoint(name: "https");
-        var ui = builder.AddResource(new ProjectResource("ui"))
+        var ui = builder.AddResource(new DotnetProjectResource("ui", "."))
             .WithHttpEndpoint(name: "http")
             .WithHttpsEndpoint(name: "https");
-        var identity = builder.AddResource(new ProjectResource("identity")).WithHttpEndpoint(name: "http");
-        var catalog = builder.AddResource(new ProjectResource("catalog")).WithHttpEndpoint(name: "http");
+        var identity = builder.AddResource(new DotnetProjectResource("identity", ".")).WithHttpEndpoint(name: "http");
+        var catalog = builder.AddResource(new DotnetProjectResource("catalog", ".")).WithHttpEndpoint(name: "http");
 
         return new Model(builder, gateway, ui, identity, catalog);
     }
 
-    private static IReadOnlyList<string> WaitNames(IResourceBuilder<ProjectResource> resource) =>
+    private static IReadOnlyList<string> WaitNames(IResourceBuilder<DotnetProjectResource> resource) =>
         [.. resource.Resource.Annotations.OfType<WaitAnnotation>().Select(static w => w.Resource.Name)];
 
-    private static IReadOnlyList<string> HealthCheckKeys(IResourceBuilder<ProjectResource> resource) =>
+    private static IReadOnlyList<string> HealthCheckKeys(IResourceBuilder<DotnetProjectResource> resource) =>
         [.. resource.Resource.Annotations.OfType<HealthCheckAnnotation>().Select(static a => a.Key)];
 
-    private static EndpointAnnotation Endpoint(IResourceBuilder<ProjectResource> resource, string name) =>
+    private static EndpointAnnotation Endpoint(IResourceBuilder<DotnetProjectResource> resource, string name) =>
         resource.Resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == name);
 
     private sealed record Model(
         IDistributedApplicationBuilder Builder,
-        IResourceBuilder<ProjectResource> Gateway,
-        IResourceBuilder<ProjectResource> Ui,
-        IResourceBuilder<ProjectResource> Identity,
-        IResourceBuilder<ProjectResource> Catalog);
+        IResourceBuilder<DotnetProjectResource> Gateway,
+        IResourceBuilder<DotnetProjectResource> Ui,
+        IResourceBuilder<DotnetProjectResource> Identity,
+        IResourceBuilder<DotnetProjectResource> Catalog);
 }

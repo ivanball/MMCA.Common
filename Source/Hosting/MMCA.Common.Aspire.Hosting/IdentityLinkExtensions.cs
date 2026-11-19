@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -60,7 +61,7 @@ public static class IdentityLinkExtensions
     internal static string EnvironmentKey(string section, string property) =>
         section.Replace(":", "__", StringComparison.Ordinal) + "__" + property;
 
-    extension(IResourceBuilder<ProjectResource> identity)
+    extension(IResourceBuilder<DotnetProjectResource> identity)
     {
         /// <summary>
         /// Points the four UI links the Identity service emits at the UI's https endpoint: the OAuth
@@ -70,7 +71,7 @@ public static class IdentityLinkExtensions
         /// </summary>
         /// <param name="ui">The UI project resource whose <c>https</c> endpoint roots the links.</param>
         /// <returns>The same Identity resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithUiLinks(IResourceBuilder<ProjectResource> ui)
+        public IResourceBuilder<DotnetProjectResource> WithUiLinks(IResourceBuilder<DotnetProjectResource> ui)
         {
             ArgumentNullException.ThrowIfNull(identity);
             ArgumentNullException.ThrowIfNull(ui);
@@ -96,7 +97,7 @@ public static class IdentityLinkExtensions
         /// </summary>
         /// <param name="gateway">The gateway project resource whose <c>https</c> endpoint is the issuer.</param>
         /// <returns>The same Identity resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithIssuer(IResourceBuilder<ProjectResource> gateway)
+        public IResourceBuilder<DotnetProjectResource> WithIssuer(IResourceBuilder<DotnetProjectResource> gateway)
         {
             ArgumentNullException.ThrowIfNull(identity);
             ArgumentNullException.ThrowIfNull(gateway);

@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 
 namespace MMCA.Common.Aspire.Hosting.Tests;
@@ -20,7 +21,7 @@ public sealed class BrokerSelectionTests
         var builder = DistributedApplication.CreateBuilder([]);
 
         var attach = builder.AddSelectedBroker(variable, builder.AddSqlServer("sql"));
-        var service = builder.AddResource(new ProjectResource("svc")).WithSelectedBroker(attach);
+        var service = builder.AddResource(new DotnetProjectResource("svc", ".")).WithSelectedBroker(attach);
 
         builder.Resources.OfType<RabbitMQServerResource>().Should().ContainSingle()
             .Which.Name.Should().Be(Extensions.DefaultBrokerResourceName);
@@ -38,7 +39,7 @@ public sealed class BrokerSelectionTests
             var builder = DistributedApplication.CreateBuilder([]);
 
             var attach = builder.AddSelectedBroker(variable, builder.AddSqlServer("sql"));
-            var service = builder.AddResource(new ProjectResource("svc")).WithSelectedBroker(attach);
+            var service = builder.AddResource(new DotnetProjectResource("svc", ".")).WithSelectedBroker(attach);
 
             builder.Resources.OfType<ServiceBusEmulatorResource>().Should().ContainSingle()
                 .Which.Name.Should().Be(Extensions.DefaultServiceBusEmulatorResourceName);
@@ -80,6 +81,6 @@ public sealed class BrokerSelectionTests
 
     private static string UniqueVariable() => "MMCA_TEST_BROKER_" + Guid.NewGuid().ToString("N");
 
-    private static IEnumerable<string> WaitsFor(ProjectResource resource) =>
+    private static IEnumerable<string> WaitsFor(DotnetProjectResource resource) =>
         resource.Annotations.OfType<WaitAnnotation>().Select(static w => w.Resource.Name);
 }

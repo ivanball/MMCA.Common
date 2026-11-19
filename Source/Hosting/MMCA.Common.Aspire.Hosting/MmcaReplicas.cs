@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -42,7 +43,7 @@ public static class MmcaReplicas
         return parsed && replicas > 1 ? replicas : 1;
     }
 
-    extension(IResourceBuilder<ProjectResource> service)
+    extension(IResourceBuilder<DotnetProjectResource> service)
     {
         /// <summary>
         /// Runs the service at <paramref name="replicas"/> replicas. A count of 1 or less changes
@@ -59,7 +60,7 @@ public static class MmcaReplicas
         /// <param name="replicas">The replica count; 1 or less is a no-op.</param>
         /// <param name="distributedRateLimiting">Whether to switch the service's rate limiter to the distributed store.</param>
         /// <returns>The same service resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithMmcaReplicas(int replicas, bool distributedRateLimiting)
+        public IResourceBuilder<DotnetProjectResource> WithMmcaReplicas(int replicas, bool distributedRateLimiting)
         {
             ArgumentNullException.ThrowIfNull(service);
 

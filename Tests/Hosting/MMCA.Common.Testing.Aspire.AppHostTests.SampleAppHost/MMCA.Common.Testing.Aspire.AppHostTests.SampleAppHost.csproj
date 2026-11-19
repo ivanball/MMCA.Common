@@ -1,27 +1,34 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsAspireHost>true</IsAspireHost>
     <IsPackable>false</IsPackable>
-    <!-- This AppHost is booted in-process by DistributedApplicationTestingBuilder, never by the
-         Aspire CLI bundle that ASPIRE010 nudges toward. -->
-    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <!--
     DELIBERATELY OUTSIDE MMCA.Common.slnx: an AppHost's committed lock file carries a RID-specific
     Aspire.Dashboard.Sdk RID-specific entry, so a lock committed from Windows fails the solution's
     locked-mode restore on ubuntu, and the fast solution-wide unit loop must not build an
-    orchestrator. The apphost-testing CI job restores and builds this by path. The Aspire.AppHost.Sdk
-    project SDK references Aspire.Hosting.AppHost (and with it the DCP orchestrator the testing builder
-    starts) at its own version, so neither this project nor Directory.Packages.props pins it.
+    orchestrator. The apphost-testing CI job restores and builds this by path.
+
+    A C# AppHost is a Microsoft.NET.Sdk project (Aspire 17 retired the Aspire.AppHost.Sdk project
+    SDK): Aspire.Hosting.AppHost brings the AppHost build targets (including the Projects marker for
+    this host, which DistributedApplicationTestingBuilder boots by) and the orchestrator wiring;
+    Aspire.Hosting.Dotnet brings AddDotnetProject. The sample service is a resource declared by its
+    .csproj path in Program.cs, not a ProjectReference. Building this project needs the matching Aspire
+    CLI bundle (ASPIRE013, unsuppressible): the build finds the CLI on PATH, or fetches the paired
+    aspire.cli package through dnx. CI installs Aspire CLI 17.0.0 before building it.
   -->
   <ItemGroup>
-    <ProjectReference Include="..\MMCA.Common.Testing.Aspire.AppHostTests.SampleService\MMCA.Common.Testing.Aspire.AppHostTests.SampleService.csproj" />
-    <!-- A library, not a project resource: without this the Aspire SDK would generate a Projects
-         marker for it and offer it as something to AddProject. -->
-    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire.Hosting\MMCA.Common.Aspire.Hosting.csproj" IsAspireProjectResource="false" />
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A code dependency (the MMCA AppHost extensions), not a project resource: a ProjectReference
+         in a Microsoft.NET.Sdk AppHost is a resource only when it sets IsAspireProjectResource. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire.Hosting\MMCA.Common.Aspire.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

@@ -11,10 +11,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
-    <!-- The AppHost-side application model (DistributedApplicationModel, ProjectResource,
+    <!-- The AppHost-side application model (DistributedApplicationModel,
          ResourceNotificationService, HealthCheckAnnotation) the fixture reads to decide what to wait
          for. Same version as every other Aspire pin in Directory.Packages.props. -->
     <PackageReference Include="Aspire.Hosting" />
+    <!-- DotnetProjectResource: the resource type AddDotnetProject declares (Aspire 17), which the
+         fixture awaits when ResourcesToAwait names none. -->
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <!-- DistributedApplicationTestingBuilder, app.CreateHttpClient and app.GetConnectionStringAsync:
          the whole reason this package exists. -->
     <PackageReference Include="Aspire.Hosting.Testing" />

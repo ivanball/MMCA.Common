@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -54,7 +55,7 @@ public static class BrokerSelection
         /// <param name="environmentVariableName">The app's selector variable, for example <c>ADC_BROKER</c>.</param>
         /// <param name="sqlServer">The SQL Server resource the emulator keeps its state in.</param>
         /// <returns>The attach delegate that wires one service to the selected broker.</returns>
-        public Func<IResourceBuilder<ProjectResource>, IResourceBuilder<ProjectResource>> AddSelectedBroker(
+        public Func<IResourceBuilder<DotnetProjectResource>, IResourceBuilder<DotnetProjectResource>> AddSelectedBroker(
             string environmentVariableName,
             IResourceBuilder<SqlServerServerResource> sqlServer)
         {
@@ -73,13 +74,13 @@ public static class BrokerSelection
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> service)
+    extension(IResourceBuilder<DotnetProjectResource> service)
     {
         /// <summary>Attaches the selected broker to this service resource.</summary>
         /// <param name="attach">The delegate <see cref="AddSelectedBroker"/> returned.</param>
         /// <returns>The service resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithSelectedBroker(
-            Func<IResourceBuilder<ProjectResource>, IResourceBuilder<ProjectResource>> attach)
+        public IResourceBuilder<DotnetProjectResource> WithSelectedBroker(
+            Func<IResourceBuilder<DotnetProjectResource>, IResourceBuilder<DotnetProjectResource>> attach)
         {
             ArgumentNullException.ThrowIfNull(attach);
             return attach(service);

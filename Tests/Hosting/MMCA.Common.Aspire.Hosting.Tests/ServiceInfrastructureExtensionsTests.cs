@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
@@ -27,7 +28,7 @@ public sealed class ServiceInfrastructureExtensionsTests
     public void NullArguments_Throw()
     {
         var model = Arrange();
-        IResourceBuilder<ProjectResource> nullService = null!;
+        IResourceBuilder<DotnetProjectResource> nullService = null!;
 
         FluentActions.Invoking(() => nullService.WithMmcaServiceInfrastructure(
                 model.Database, LogicalName, model.Cache, model.MailServer, model.AttachBroker, ServiceEndpointProfile.Http2Only))
@@ -173,7 +174,7 @@ public sealed class ServiceInfrastructureExtensionsTests
         Apply(mixed, ServiceEndpointProfile.Mixed).Should().BeSameAs(mixed.Service);
     }
 
-    private static IResourceBuilder<ProjectResource> Apply(
+    private static IResourceBuilder<DotnetProjectResource> Apply(
         Model model,
         ServiceEndpointProfile profile,
         string? probeEndpointName = null) =>
@@ -186,13 +187,13 @@ public sealed class ServiceInfrastructureExtensionsTests
             profile,
             probeEndpointName);
 
-    // AddResource rather than AddProject: the extension only needs a ProjectResource in the model,
-    // and AddProject validates that the project file exists on disk. The connection-string resource
+    // AddResource rather than AddDotnetProject: the extension only needs a DotnetProjectResource in the model,
+    // and AddDotnetProject validates that the project file exists on disk. The connection-string resource
     // stands in for Redis, so this project needs no Redis hosting package.
     private static Model Arrange()
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var service = builder.AddResource(new ProjectResource(ServiceName)).WithHttpEndpoint(name: "http");
+        var service = builder.AddResource(new DotnetProjectResource(ServiceName, ".")).WithHttpEndpoint(name: "http");
         var database = builder.AddSqlServer("sql").AddDatabase(DatabaseName);
         var cache = builder.AddConnectionString(CacheName);
         var mailServer = builder.AddMailDev();
@@ -201,14 +202,14 @@ public sealed class ServiceInfrastructureExtensionsTests
         return new Model(builder, service, database, cache, mailServer, s => s.WithBroker(broker));
     }
 
-    private static IReadOnlyList<string> HealthCheckKeys(IResourceBuilder<ProjectResource> service) =>
+    private static IReadOnlyList<string> HealthCheckKeys(IResourceBuilder<DotnetProjectResource> service) =>
         [.. service.Resource.Annotations.OfType<HealthCheckAnnotation>().Select(static a => a.Key)];
 
     private sealed record Model(
         IDistributedApplicationBuilder Builder,
-        IResourceBuilder<ProjectResource> Service,
+        IResourceBuilder<DotnetProjectResource> Service,
         IResourceBuilder<SqlServerDatabaseResource> Database,
         IResourceBuilder<IResourceWithConnectionString> Cache,
         IResourceBuilder<IResource> MailServer,
-        Func<IResourceBuilder<ProjectResource>, IResourceBuilder<ProjectResource>> AttachBroker);
+        Func<IResourceBuilder<DotnetProjectResource>, IResourceBuilder<DotnetProjectResource>> AttachBroker);
 }

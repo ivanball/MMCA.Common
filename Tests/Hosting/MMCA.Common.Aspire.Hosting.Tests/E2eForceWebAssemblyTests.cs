@@ -1,5 +1,5 @@
 using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
 
@@ -44,7 +44,7 @@ public sealed class E2eForceWebAssemblyTests
     {
         using var scope = new E2eEnvironmentScope(forceWasm: "true");
         var builder = DistributedApplication.CreateBuilder([]);
-        var ui = builder.AddResource(new ProjectResource("ui"));
+        var ui = builder.AddResource(new DotnetProjectResource("ui", "."));
 
         ui.WithE2eForceWebAssembly().Should().BeSameAs(ui);
     }
@@ -62,8 +62,8 @@ public sealed class E2eForceWebAssemblyTests
 
         var builder = DistributedApplication.CreateBuilder([]);
 
-        // AddResource rather than AddProject: AddProject validates that the project file exists.
-        var ui = builder.AddResource(new ProjectResource("ui"));
+        // AddResource rather than AddDotnetProject: AddDotnetProject validates that the project file exists.
+        var ui = builder.AddResource(new DotnetProjectResource("ui", "."));
 
         ui.WithE2eForceWebAssembly();
 

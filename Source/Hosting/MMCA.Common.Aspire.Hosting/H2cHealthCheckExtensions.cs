@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -75,7 +76,7 @@ public static class H2cHealthCheckExtensions
     internal static string CheckKey(string resourceName, string endpointName) =>
         resourceName + "-h2c-" + endpointName;
 
-    extension(IResourceBuilder<ProjectResource> builder)
+    extension(IResourceBuilder<DotnetProjectResource> builder)
     {
         /// <summary>
         /// Registers an HTTP/2 (h2c prior knowledge) health check against one of the resource's
@@ -107,7 +108,7 @@ public static class H2cHealthCheckExtensions
         /// instead of letting it start against a service nobody verified.
         /// </param>
         /// <returns>The project resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithH2cHealthCheck(
+        public IResourceBuilder<DotnetProjectResource> WithH2cHealthCheck(
             string path = DefaultProbePath,
             string endpointName = DefaultEndpointName)
         {

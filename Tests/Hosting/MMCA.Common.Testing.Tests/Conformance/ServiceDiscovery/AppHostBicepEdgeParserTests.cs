@@ -28,7 +28,7 @@ public sealed class AppHostBicepEdgeParserTests
 
         edges.Should().BeEquivalentTo(
             ServiceDiscoverySamples.StoreShapeAppHostEdges,
-            "a WithReference chained onto a multi-line AddProject declaration belongs to the declared resource");
+            "a WithReference chained onto a multi-line AddDotnetProject declaration belongs to the declared resource");
     }
 
     [Fact]
@@ -36,9 +36,9 @@ public sealed class AppHostBicepEdgeParserTests
     {
         var source = ServiceDiscoverySamples.Source(
         [
-            "var identityService = builder.AddProject<Projects.Identity>(\"identity\");",
-            "var gateway = builder.AddProject<Projects.Gateway>(\"gateway\");",
-            "var salesService = builder.AddProject<Projects.Sales>(\"sales\");",
+            "var identityService = builder.AddDotnetProject(\"identity\", \"../Identity/Identity.csproj\");",
+            "var gateway = builder.AddDotnetProject(\"gateway\", \"../Gateway/Gateway.csproj\");",
+            "var salesService = builder.AddDotnetProject(\"sales\", \"../Sales/Sales.csproj\");",
             "salesService.WithJwksDiscovery(identityService, gateway);",
         ]);
 
@@ -48,12 +48,27 @@ public sealed class AppHostBicepEdgeParserTests
     }
 
     [Fact]
-    public void ReferenceInsideAStringLiteral_SurvivesCommentStripping()
+    public void ObsoleteAddProjectDeclaration_IsNotAResource()
     {
         var source = ServiceDiscoverySamples.Source(
         [
             "var identityService = builder.AddProject<Projects.Identity>(\"identity\");",
             "var salesService = builder.AddProject<Projects.Sales>(\"sales\")",
+            "    .WithReference(identityService);",
+        ]);
+
+        var edges = AppHostBicepEdgeParser.ParseAppHostEdges(source);
+
+        edges.Should().BeEmpty("only AddDotnetProject declares a project resource; AddProject is obsolete in Aspire 17");
+    }
+
+    [Fact]
+    public void ReferenceInsideAStringLiteral_SurvivesCommentStripping()
+    {
+        var source = ServiceDiscoverySamples.Source(
+        [
+            "var identityService = builder.AddDotnetProject(\"identity\", \"../Identity/Identity.csproj\");",
+            "var salesService = builder.AddDotnetProject(\"sales\", \"../Sales/Sales.csproj\")",
             "    .WithEnvironment(\"Docs__Url\", \"https://example.test/a\").WithReference(identityService); // trailing note",
         ]);
 

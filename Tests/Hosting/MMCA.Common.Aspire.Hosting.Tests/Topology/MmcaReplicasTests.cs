@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using MMCA.Common.API.RateLimiting;
 using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
@@ -55,7 +56,7 @@ public sealed class MmcaReplicasTests
     [Fact]
     public void WithMmcaReplicas_NullBuilder_Throws()
     {
-        IResourceBuilder<ProjectResource> nullService = null!;
+        IResourceBuilder<DotnetProjectResource> nullService = null!;
 
         FluentActions.Invoking(() => nullService.WithMmcaReplicas(2, distributedRateLimiting: true))
             .Should().Throw<ArgumentNullException>();
@@ -68,7 +69,7 @@ public sealed class MmcaReplicasTests
     public async Task WithMmcaReplicas_OneOrLess_LeavesTheModelUntouched(int replicas)
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var service = builder.AddResource(new ProjectResource("svc"));
+        var service = builder.AddResource(new DotnetProjectResource("svc", "."));
 
         service.WithMmcaReplicas(replicas, distributedRateLimiting: true).Should().BeSameAs(service);
 
@@ -81,7 +82,7 @@ public sealed class MmcaReplicasTests
     public async Task WithMmcaReplicas_AboveOne_SetsTheReplicaCount_AndDistributedRateLimiting()
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var service = builder.AddResource(new ProjectResource("svc"));
+        var service = builder.AddResource(new DotnetProjectResource("svc", "."));
 
         service.WithMmcaReplicas(3, distributedRateLimiting: true).Should().BeSameAs(service);
 
@@ -97,7 +98,7 @@ public sealed class MmcaReplicasTests
     {
         // The gateway's case: its edge limiters stay per replica, as in production.
         var builder = DistributedApplication.CreateBuilder([]);
-        var gateway = builder.AddResource(new ProjectResource("gateway"));
+        var gateway = builder.AddResource(new DotnetProjectResource("gateway", "."));
 
         gateway.WithMmcaReplicas(4, distributedRateLimiting: false);
 
@@ -111,7 +112,7 @@ public sealed class MmcaReplicasTests
     public async Task WithMmcaReplicas_EmitsTheKeyDerivedFromTheCommonOwnedSettings()
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var service = builder.AddResource(new ProjectResource("svc"));
+        var service = builder.AddResource(new DotnetProjectResource("svc", "."));
 
         service.WithMmcaReplicas(2, distributedRateLimiting: true);
 

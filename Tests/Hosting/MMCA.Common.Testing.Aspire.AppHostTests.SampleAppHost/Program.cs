@@ -26,6 +26,11 @@ using MMCA.Common.Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+// The sample service, declared by its .csproj path relative to this AppHost (Aspire 17
+// AddDotnetProject): no resource ProjectReference, no generated Projects marker type.
+const string sampleServiceProject =
+    "../MMCA.Common.Testing.Aspire.AppHostTests.SampleService/MMCA.Common.Testing.Aspire.AppHostTests.SampleService.csproj";
+
 // The outage scenario (SampleOutageAppHostFixture passes --SampleAppHost:Outage=true): ONLY a SQL
 // Server container with one database, a RabbitMQ broker, and the sample service wired to both with a
 // real outbox, for DependencyOutageTestBase to stop and start. No data volume on SQL Server: a per-run
@@ -42,7 +47,7 @@ if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
     // health check is bounded by HealthChecks:CheckTimeoutSeconds, so /health turns 503 anyway.
     var broker = builder.AddMessageBroker();
 
-    builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-outage")
+    builder.AddDotnetProject("sample-outage", sampleServiceProject)
         .WithSQLServerDataSource(sampleDb, "Sample")
         .WithBroker(broker)
         .WithEnvironment("SampleService__Outage", "true")
@@ -60,7 +65,7 @@ if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
 
 var databasePath = Path.Combine(Path.GetTempPath(), "mmca-apphost-testing-sample.db");
 
-builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample")
+builder.AddDotnetProject("sample", sampleServiceProject)
     .WithSqliteDataSource("Sample", databasePath)
     .WithEnvironment("Jwks__Enabled", "true")
     .WithE2eRsaKeys()
@@ -75,7 +80,7 @@ builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleServic
 // reason that helper exists: Aspire's stock probe sends HTTP/1.1, which an Http2-only endpoint
 // answers with GOAWAY HTTP_1_1_REQUIRED, so the resource could never turn healthy and the fixture's
 // wait would time out. Same /alive path, same liveness-not-readiness rule.
-builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-h2c")
+builder.AddDotnetProject("sample-h2c", sampleServiceProject)
     .WithEnvironment("SampleService__Http2Only", "true")
     .WithH2cHealthCheck();
 

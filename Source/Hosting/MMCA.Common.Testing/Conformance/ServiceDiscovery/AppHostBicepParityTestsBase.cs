@@ -17,7 +17,7 @@ namespace MMCA.Common.Testing.Conformance.ServiceDiscovery;
 /// <para>
 /// Both files are read as text (see <c>AppHostBicepEdgeParser</c>), never by booting the AppHost.
 /// An edge is <c>"consumer-&gt;peer"</c> in Aspire resource names: an AppHost edge comes from
-/// <c>WithReference</c> between two <c>AddProject</c> resources (chained onto the declaration or on
+/// <c>WithReference</c> between two <c>AddDotnetProject</c> resources (chained onto the declaration or on
 /// a later statement) and from every resource argument of <c>WithMmcaGateway</c> and
 /// <c>WithMmcaUi</c>; <c>WithJwksDiscovery</c> is not an edge. A Bicep edge is a
 /// <c>services__{peer}__...</c> entry inside the container app named <c>'${prefix}-{consumer}'</c>.

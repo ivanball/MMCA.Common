@@ -492,23 +492,26 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.5" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="17.0.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="17.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
-    <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
-         MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
-         SDK's own version, the same shape as the consumer AppHosts. -->
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="17.0.0" />
+    <!-- C# AppHost packages (Aspire 17 retired the Aspire.AppHost.Sdk project SDK): an AppHost is a
+         Microsoft.NET.Sdk project referencing Aspire.Hosting.AppHost (the DCP orchestrator and the
+         AppHost build targets) and Aspire.Hosting.Dotnet (AddDotnetProject). Taken by the sample
+         AppHost of the apphost-testing CI tier, outside MMCA.Common.slnx. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
