@@ -696,6 +696,23 @@ jobs:
             -p 1433:1433 \
             "$SQLSERVER_IMAGE"
 
+      # Aspire 17 C# AppHosts (Microsoft.NET.Sdk + Aspire.Hosting.AppHost) need the matching Aspire CLI
+      # bundle to BUILD (ASPIRE013, unsuppressible): the AppHost targets find `aspire` on PATH and run
+      # its setup, or fall back to fetching aspire.cli through dnx. Here the AppHost is Helpdesk's,
+      # built inside MMCA.Helpdesk.slnx by the next step. The exact version matches the Aspire packages
+      # pinned in Directory.Packages.props; bump this version with them (the apphost-testing job
+      # installs the same one). --skip-path plus the explicit GITHUB_PATH line keeps the installer
+      # from editing shell profiles on the runner.
+      - name: Install Aspire CLI 17.0.0
+        if: needs.changes.outputs.code == 'true'
+        env:
+          ASPIRE_CLI_VERSION: 17.0.0
+        run: |
+          set -euo pipefail
+          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+          "$HOME/.aspire/bin/aspire" --version
+
       - name: Build Helpdesk against Common source (UseLocalMMCA)
         if: needs.changes.outputs.code == 'true'
         working-directory: MMCA.Helpdesk
@@ -1260,6 +1277,22 @@ jobs:
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
+
+      # Aspire 17 C# AppHosts (Microsoft.NET.Sdk + Aspire.Hosting.AppHost) need the matching Aspire CLI
+      # bundle to BUILD (ASPIRE013, unsuppressible): the AppHost targets find `aspire` on PATH and run
+      # its setup, or fall back to fetching aspire.cli through dnx. Installing the exact version here
+      # keeps the orchestrator the tests boot identical to the Aspire packages pinned in
+      # Directory.Packages.props; bump this version with them. --skip-path plus the explicit
+      # GITHUB_PATH line keeps the installer from editing shell profiles on the runner.
+      - name: Install Aspire CLI 17.0.0
+        if: needs.changes.outputs.code == 'true'
+        env:
+          ASPIRE_CLI_VERSION: 17.0.0
+        run: |
+          set -euo pipefail
+          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
+          "$HOME/.aspire/bin/aspire" --version
 
       - name: Run AppHost integration tests
         # Code-guarded like every other heavy job: a docs-only PR must not start an orchestrator. The
