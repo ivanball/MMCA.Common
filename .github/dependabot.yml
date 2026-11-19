@@ -89,8 +89,11 @@ updates:
       # major supports only the matching new framework (EF Core 11 is net11.0 only), so the bump
       # Dependabot proposes fails net10.0 restore with NU1202 (#713). Adopting a new major means
       # setting MmcaEfCoreVersion in the net11.0 group of Directory.Packages.props, in its own
-      # release.
+      # release. Microsoft.Data.Sqlite reads the same MmcaEfCoreVersion property (it stays
+      # aligned with Microsoft.EntityFrameworkCore.Sqlite), so its major is held with EF Core (#779).
       - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Data.Sqlite"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
