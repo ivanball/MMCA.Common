@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.307.0] - 2026-11-19
 
 **Breaking (Aspire 17; MMCA.Common.Aspire.Hosting, MMCA.Common.Testing.Aspire, MMCA.Common.Testing):** every Aspire package moves from 13.6.5 to 17.0.0. Aspire 17 obsoletes every `AddProject` overload (CS0618) and the `Aspire.AppHost.Sdk` project SDK (ASPIRE012): an AppHost is now a `Microsoft.NET.Sdk` project referencing `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`, it declares each service with `builder.AddDotnetProject("name", "<path to .csproj>")`, which returns `IResourceBuilder<DotnetProjectResource>` (namespace `Aspire.Hosting.Dotnet`; it derives from `ExecutableResource`, not `ProjectResource`), and building it needs the Aspire CLI 17.0.0 bundle (ASPIRE013, unsuppressible). Every MMCA.Common.Aspire.Hosting extension that took or returned `IResourceBuilder<ProjectResource>` now takes and returns `IResourceBuilder<DotnetProjectResource>`, with the same name, parameters and behavior; there is no `ProjectResource` overload. `AppHostFixtureBase` (MMCA.Common.Testing.Aspire) awaits every `DotnetProjectResource` when `ResourcesToAwait` is null, and now fails startup when the AppHost declares none instead of waiting for nothing. `AppHostBicepParityTestsBase` (MMCA.Common.Testing) reads `var x = builder.AddDotnetProject("name", ...)` declarations only; an `AddProject<...>` declaration is no longer a resource to it.
 
