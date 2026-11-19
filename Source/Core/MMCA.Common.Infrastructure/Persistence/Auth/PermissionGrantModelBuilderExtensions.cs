@@ -8,8 +8,10 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <para>
 /// <b>Opt-in, exactly like the refresh sessions.</b> Grants are Identity-module data: one database
 /// owns them, and mapping them everywhere would put an empty <c>PermissionGrants</c> table in the
-/// migrations of every other module's database. The consumer's Identity context calls this from its
-/// own <c>OnModelCreating</c>.
+/// migrations of every other module's database. <c>ApplicationDbContext</c> calls this only for the
+/// context whose source is named by the grant settings' <c>DataSourceName</c>, and only when the host
+/// called <c>AddStoredPermissionGrants</c>; a host with its own context class can call it from its own
+/// <c>OnModelCreating</c> instead.
 /// </para>
 /// </summary>
 public static class PermissionGrantModelBuilderExtensions

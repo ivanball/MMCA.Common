@@ -25,4 +25,11 @@ public sealed record ViewAsSubject(
     /// from the app's <c>IAuthUser.IsServiceAccount</c>; it defaults to <see langword="false"/>.
     /// </summary>
     public bool IsServiceAccount { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the account is locked, which is never viewed: a lock writes the
+    /// soft-deleted-user marker (ADR-047), so every host would refuse the view-as token on its first
+    /// call. The resolver sets it from the app's lock state; it defaults to <see langword="false"/>.
+    /// </summary>
+    public bool IsLocked { get; init; }
 }

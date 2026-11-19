@@ -61,8 +61,9 @@ public abstract class EntityTypeConfiguration<TEntity, TIdentifierType>
     protected DataSource EffectiveEngine { get; private set; }
 
     /// <summary>
-    /// Applies the engine-specific table/container mapping and key generation. Extracted as a
-    /// protected static helper so the provider shim bases can share the exact same logic.
+    /// Applies the engine-specific table/container mapping and key generation. Called from
+    /// <see cref="Configure(EntityTypeBuilder{TEntity})"/>; the provider shim bases inherit it
+    /// rather than calling it themselves.
     /// </summary>
     /// <param name="builder">The entity type builder.</param>
     /// <param name="engine">The target data source engine.</param>

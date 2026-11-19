@@ -3,9 +3,9 @@ namespace MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 /// <summary>
 /// Reports whether the device currently has network access, so shared components can
 /// surface an offline banner and skip doomed API calls. Implementations: MAUI wraps
-/// <c>Connectivity.Current</c>; WebAssembly watches <c>navigator.onLine</c>; Blazor Server
-/// is always online (a dead circuit means the whole UI is down and the reconnect overlay
-/// already covers it).
+/// <c>Connectivity.Current</c>; the browser heads (Blazor Server and WebAssembly, through
+/// <c>AddBrowserDeviceCapabilities</c>) watch <c>navigator.onLine</c>; a head that registers
+/// neither keeps the always-online default (<see cref="AlwaysOnlineConnectivityStatusService"/>).
 /// </summary>
 public interface IConnectivityStatusService
 {

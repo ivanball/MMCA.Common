@@ -102,7 +102,7 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
                 inbox.Abandon(integrationEvent.MessageId);
 
                 // Rethrow so MassTransit applies the UseMessageRetry policy configured in
-                // ConfigureBrokerTransport (exponential backoff, MessageBusSettings.RetryLimit
+                // BrokerTransportPolicies.ApplyMessageRetry (exponential backoff, MessageBusSettings.RetryLimit
                 // attempts) before the message is dead-lettered. Logging here gives operators
                 // visibility into which handler failed without losing the exception.
                 LogHandlerFailure(logger, ex, eventTypeName, handler.GetType().FullName ?? "<unknown>");
@@ -112,7 +112,7 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
 
         if (handlerCount == 0)
         {
-            // No handler registered for this event in this process: log a warning so a
+            // No handler registered for this event in this process: log it at Information so a
             // misconfigured consumer service is visible. Returning normally lets MassTransit
             // ack the message; the broker won't retry.
             LogNoHandlers(logger, eventTypeName);

@@ -8,8 +8,9 @@ namespace MMCA.Common.UI.Pages.Common;
 /// content. Purely best-effort, and only ever consulted for page 1 while the device reports itself
 /// offline, so the live path is never affected: a page wires it into its server-data delegate,
 /// calling <see cref="RememberAsync"/> on every success and <see cref="TryReadAsync"/> when a fetch
-/// fails. Backed by <see cref="ILocalCacheStore"/>, which persists on the MAUI and WebAssembly heads
-/// and reports itself unavailable on Blazor Server (SSR always has the live API).
+/// fails. Backed by <see cref="ILocalCacheStore"/>, which persists on the MAUI head and in browser
+/// <c>localStorage</c> on the Blazor Server and WebAssembly heads (<c>AddBrowserDeviceCapabilities</c>),
+/// and reports itself unavailable only on a head left with the null default.
 /// </summary>
 /// <typeparam name="TItem">The list item DTO type; must be JSON round-trippable.</typeparam>
 /// <param name="store">The device-local cache store; unavailable on heads that have none.</param>

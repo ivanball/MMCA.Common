@@ -316,6 +316,34 @@ MMCA.Common.UI.Components.Forms.ErrorSummary.Title.get -> string?
 MMCA.Common.UI.Components.Forms.ErrorSummary.Title.set -> void
 MMCA.Common.UI.Components.Forms.ErrorSummary.Variant.get -> MudBlazor.Variant
 MMCA.Common.UI.Components.Forms.ErrorSummary.Variant.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton
+MMCA.Common.UI.Components.Forms.FilePickerButton.Accept.get -> string?
+MMCA.Common.UI.Components.Forms.FilePickerButton.Accept.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.AriaLabel.get -> string?
+MMCA.Common.UI.Components.Forms.FilePickerButton.AriaLabel.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Class.get -> string?
+MMCA.Common.UI.Components.Forms.FilePickerButton.Class.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Color.get -> MudBlazor.Color
+MMCA.Common.UI.Components.Forms.FilePickerButton.Color.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Disabled.get -> bool
+MMCA.Common.UI.Components.Forms.FilePickerButton.Disabled.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.FilePickerButton() -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Icon.get -> string!
+MMCA.Common.UI.Components.Forms.FilePickerButton.Icon.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.InputAttributes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>?
+MMCA.Common.UI.Components.Forms.FilePickerButton.InputAttributes.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.InputId.get -> string?
+MMCA.Common.UI.Components.Forms.FilePickerButton.InputId.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Multiple.get -> bool
+MMCA.Common.UI.Components.Forms.FilePickerButton.Multiple.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.OnChange.get -> Microsoft.AspNetCore.Components.EventCallback<Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs!>
+MMCA.Common.UI.Components.Forms.FilePickerButton.OnChange.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Size.get -> MudBlazor.Size
+MMCA.Common.UI.Components.Forms.FilePickerButton.Size.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Text.get -> string!
+MMCA.Common.UI.Components.Forms.FilePickerButton.Text.set -> void
+MMCA.Common.UI.Components.Forms.FilePickerButton.Variant.get -> MudBlazor.Variant
+MMCA.Common.UI.Components.Forms.FilePickerButton.Variant.set -> void
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.IsDirty.get -> bool
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.IsDirty.set -> void
@@ -509,6 +537,26 @@ MMCA.Common.UI.Components.PageState.PageLoadingState
 MMCA.Common.UI.Components.PageState.PageLoadingState.Label.get -> string?
 MMCA.Common.UI.Components.PageState.PageLoadingState.Label.set -> void
 MMCA.Common.UI.Components.PageState.PageLoadingState.PageLoadingState() -> void
+MMCA.Common.UI.Components.Ratings.RatingInput
+MMCA.Common.UI.Components.Ratings.RatingInput.Class.get -> string?
+MMCA.Common.UI.Components.Ratings.RatingInput.Class.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.Disabled.get -> bool
+MMCA.Common.UI.Components.Ratings.RatingInput.Disabled.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.ErrorText.get -> string?
+MMCA.Common.UI.Components.Ratings.RatingInput.ErrorText.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.Label.get -> string!
+MMCA.Common.UI.Components.Ratings.RatingInput.Label.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.LabelTypo.get -> MudBlazor.Typo
+MMCA.Common.UI.Components.Ratings.RatingInput.LabelTypo.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.MaxValue.get -> int
+MMCA.Common.UI.Components.Ratings.RatingInput.MaxValue.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.RatingInput() -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.Size.get -> MudBlazor.Size
+MMCA.Common.UI.Components.Ratings.RatingInput.Size.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.Value.get -> int
+MMCA.Common.UI.Components.Ratings.RatingInput.Value.set -> void
+MMCA.Common.UI.Components.Ratings.RatingInput.ValueChanged.get -> Microsoft.AspNetCore.Components.EventCallback<int>
+MMCA.Common.UI.Components.Ratings.RatingInput.ValueChanged.set -> void
 MMCA.Common.UI.Components.Ratings.RatingStars
 MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.get -> string!
 MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.set -> void
@@ -2122,6 +2170,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Forms.ConfirmationDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.DeleteConfirmation.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.ErrorSummary.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Forms.FilePickerButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.ClickableCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
@@ -2138,6 +2187,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.PageState.PageErrorState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageHeader.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.PageLoadingState.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Ratings.RatingInput.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Sharing.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Sharing.QrCodeImage.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

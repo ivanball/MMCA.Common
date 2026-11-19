@@ -9,8 +9,10 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <b>Opt-in, unlike the outbox.</b> The outbox is cross-cutting infrastructure and is configured on
 /// <c>ApplicationDbContext</c> itself, so every relational source gets the table. Refresh sessions are
 /// Identity-module data: exactly one database owns them, and mapping them everywhere would put an
-/// empty <c>RefreshSessions</c> table in the migrations of every other module's database. The
-/// consumer's Identity context calls this from its own <c>OnModelCreating</c> instead.
+/// empty <c>RefreshSessions</c> table in the migrations of every other module's database.
+/// <c>ApplicationDbContext</c> calls this only for the context whose source is named by
+/// <c>RefreshSessions:DataSourceName</c>, and only while <c>RefreshSessions:Enabled</c> is true; a
+/// host with its own context class can call it from its own <c>OnModelCreating</c> instead.
 /// </para>
 /// </summary>
 public static class RefreshSessionModelBuilderExtensions

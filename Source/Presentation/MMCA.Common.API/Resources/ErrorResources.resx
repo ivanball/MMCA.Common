@@ -451,6 +451,9 @@
   <data name="ViewAs.TargetIsServiceAccount" xml:space="preserve">
     <value>A machine client&apos;s service account cannot be viewed.</value>
   </data>
+  <data name="ViewAs.TargetLocked" xml:space="preserve">
+    <value>A locked account cannot be viewed.</value>
+  </data>
   <data name="AuditHistory.UnknownEntity" xml:space="preserve">
     <value>This endpoint serves no audited entity with that name.</value>
   </data>

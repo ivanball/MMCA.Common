@@ -74,8 +74,9 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
     /// <summary>
     /// Applies pending EF Core migrations for every physical data source in use whose schema a
     /// migrations pipeline owns (each with its own migrations assembly): every SQL Server source,
-    /// plus any SQLite source with a configured <c>SqliteMigrationsAssembly</c>. Cosmos sources and
-    /// SQLite sources without a migrations assembly are skipped, and are created by
+    /// plus any SQLite or PostgreSQL source with a configured <c>SqliteMigrationsAssembly</c> or
+    /// <c>PostgreSQLMigrationsAssembly</c>. Cosmos sources and SQLite or PostgreSQL sources without
+    /// a migrations assembly are skipped, and are created by
     /// <see cref="EnsureCreatedAsync"/> instead.
     /// </summary>
     Task MigrateAsync(CancellationToken cancellationToken = default);

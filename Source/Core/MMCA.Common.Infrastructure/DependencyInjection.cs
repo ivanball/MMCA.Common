@@ -352,8 +352,9 @@ public static partial class DependencyInjection
             // Scoped lifetime caused the underlying RSA to be disposed at end-of-request while
             // Microsoft.IdentityModel.Tokens' static CryptoProviderCache still held the cached
             // AsymmetricSignatureProvider that wrapped it, throwing ObjectDisposedException on
-            // the next RS256 sign. Constructor only depends on IOptions of JwtSettings (singleton) and the
-            // service is stateless after construction, so singleton is correct.
+            // the next RS256 sign. Constructor depends only on singletons (the JWT and JWKS options, the
+            // permission registry, TimeProvider and a logger) and the service is stateless after
+            // construction, so singleton is correct.
             services.TryAddSingleton<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
             services.TryAddScoped<IEventBus, InProcessEventBus>();

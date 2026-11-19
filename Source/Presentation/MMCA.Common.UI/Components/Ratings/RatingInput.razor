@@ -1,0 +1,22 @@
+@* An editable star rating with the group semantics MudRating leaves out. MudRating renders one radio
+   per star but no group around them, so a caption beside it is not their label and an error under
+   it is not linked to them. This wraps the stars in role="radiogroup", names the group with the
+   visible caption (aria-labelledby) and, only while an error is shown, links the message with
+   aria-describedby so it is read out with the control (WCAG 1.3.1 and 3.3.1). The radiogroup role
+   is what consumer E2E page objects locate the control by. *@
+<MudText Typo="@LabelTypo" id="@_labelId">@Label</MudText>
+<div role="radiogroup"
+     aria-labelledby="@_labelId"
+     aria-describedby="@(HasError ? _errorId : null)"
+     class="@Class"
+     data-testid="rating-input">
+    <MudRating SelectedValue="Value"
+               SelectedValueChanged="OnSelectedValueChangedAsync"
+               MaxValue="MaxValue"
+               Size="Size"
+               Disabled="Disabled" />
+</div>
+@if (HasError)
+{
+    <MudText id="@_errorId" Typo="Typo.caption" Color="Color.Error" role="alert">@ErrorText</MudText>
+}

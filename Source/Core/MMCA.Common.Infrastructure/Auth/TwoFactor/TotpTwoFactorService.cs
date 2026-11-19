@@ -13,7 +13,7 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Recovery codes are hashed the way reset tokens are</b> (SHA-256, hex, upper case, matching
+/// <b>Recovery codes are hashed the way refresh tokens are</b> (SHA-256, hex, upper case, matching
 /// <c>RefreshSession.HashToken</c>): a plain digest with no key derivation, which is right precisely
 /// because the codes are high-entropy random values rather than user-chosen secrets. Stretching a
 /// value with eighty bits of entropy buys nothing an attacker cannot skip, and the cheap digest keeps

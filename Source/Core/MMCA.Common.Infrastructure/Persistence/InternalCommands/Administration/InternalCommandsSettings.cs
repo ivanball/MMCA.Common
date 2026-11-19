@@ -51,9 +51,8 @@ public sealed class InternalCommandsSettings
 
     /// <summary>
     /// Gets a grace period in seconds between a row becoming due and the processor attempting it.
-    /// Defaults to <c>0</c>, unlike the outbox's 5: the outbox delay exists to bound a race with the
-    /// in-process fast path that dispatches an event before the processor can, and the job queue has
-    /// no such fast path. Raise it only to hold work back deliberately.
+    /// Defaults to <c>0</c>, as the outbox's <c>ProcessingDelaySeconds</c> does. Raise it only to hold
+    /// work back deliberately.
     /// </summary>
     [Range(0, 600)]
     public int ProcessingDelaySeconds { get; init; }

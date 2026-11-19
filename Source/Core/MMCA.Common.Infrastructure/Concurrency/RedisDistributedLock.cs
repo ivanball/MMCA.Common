@@ -104,7 +104,7 @@ internal sealed partial class RedisDistributedLock(
             }
 
             // The release runs after the guarded work (an idempotent action that already committed
-            // and stored its response, a password-reset token that was already issued), so a Redis
+            // and stored its response, a password-reset token that was already redeemed), so a Redis
             // fault here must not turn that work into a failure. The lock expires on its own TTL,
             // which keeps the guarded section correct; RedisTimeoutException is not a RedisException,
             // hence the broad catch, logged rather than swallowed silently.

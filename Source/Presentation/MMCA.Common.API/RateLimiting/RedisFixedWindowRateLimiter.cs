@@ -79,7 +79,7 @@ public sealed partial class RedisFixedWindowRateLimiter : RateLimiter
     /// </summary>
     /// <param name="connection">The shared Redis connection multiplexer.</param>
     /// <param name="partitionKey">
-    /// The partition this limiter counts, already scoped by the caller (e.g. <c>global:alice</c>)
+    /// The partition this limiter counts, already scoped by the caller (e.g. <c>{namespace}:global:alice</c>)
     /// so two policies limiting the same user never share one counter.
     /// </param>
     /// <param name="permitLimit">Permits allowed per one-minute window.</param>

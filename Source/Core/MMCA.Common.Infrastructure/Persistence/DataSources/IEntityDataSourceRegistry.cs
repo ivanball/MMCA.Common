@@ -3,7 +3,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 
 /// <summary>
-/// Eagerly-built registry mapping every configured entity type to its physical data source.
+/// Registry, built from the configuration assemblies on first access, mapping every configured entity type to its physical data source.
 /// Replaces the legacy lazy cache that was populated as a side effect of EF model building —
 /// routing decisions (UnitOfWork, navigation classification, outbox enumeration) no longer
 /// depend on a model having been built first.

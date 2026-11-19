@@ -81,7 +81,9 @@ public static class DependencyInjection
                     .ValidateOnStart();
             }
 
-            // Registered as scoped because they depend on scoped services (ICacheService, ICurrentUserService)
+            // Registered as scoped: OwnerOrAdminFilter takes the scoped ICurrentUserService.
+            // IdempotencyFilter takes only a logger and reads ICacheService (a singleton) from the
+            // request's services.
             services.AddScoped<IdempotencyFilter>();
             services.AddScoped<OwnerOrAdminFilter>();
 

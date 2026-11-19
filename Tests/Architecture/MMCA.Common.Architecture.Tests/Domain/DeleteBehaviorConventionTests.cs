@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces.Events;
@@ -6,6 +7,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Testing.Architecture;
@@ -49,6 +51,49 @@ public sealed class DeleteBehaviorConventionTests : DeleteBehaviorConventionTest
     }
 
     /// <summary>
+    /// Guards the two facts below against passing over an empty model: every optional table must
+    /// actually be in it, or a gate that stopped engaging would leave nothing to check.
+    /// </summary>
+    [Fact]
+    public void SqlServerModelWithEveryOptionalTable_MapsEveryOptionalTable()
+    {
+        var model = (IModel)FrameworkModels.SqlServerWithEveryOptionalTable();
+
+        var tables = model.GetEntityTypes().Select(static entityType => entityType.GetTableName()).ToList();
+
+        tables.Should().Contain(
+        [
+            "AuditTrailEntries",
+            "ScheduledJobs",
+            "RefreshSessions",
+            "PermissionGrants",
+            "ViewAsGrants",
+            "FeatureFlagOverrides",
+            "PasskeyCredentials",
+            "MachineClients",
+            "WebhookSubscriptions",
+        ]);
+    }
+
+    [Fact]
+    public void SqlServerModelWithEveryOptionalTable_CascadingDeletes_AreExplicitlyOptedIn()
+    {
+        var model = FrameworkModels.SqlServerWithEveryOptionalTable();
+        var act = () => ArchitectureRules.CascadingForeignKeysAreExplicitlyOptedIn(model);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void SqlServerModelWithEveryOptionalTable_ConventionDeletes_AreRestricted()
+    {
+        var model = FrameworkModels.SqlServerWithEveryOptionalTable();
+        var act = () => ArchitectureRules.ConventionForeignKeysRestrictDeletes(model);
+
+        act.Should().NotThrow();
+    }
+
+    /// <summary>
     /// Builds the framework's finalized models without a database. Only the model is asserted, so
     /// neither context ever opens its connection: EF builds the model from the configurations alone.
     /// </summary>
@@ -80,6 +125,37 @@ public sealed class DeleteBehaviorConventionTests : DeleteBehaviorConventionTest
                 Services(),
                 new NoModuleAssemblies(),
                 new PhysicalDataSource(DataSourceKey.Default(DataSource.SQLServer), "Server=unused;Database=unused", null, "Test"));
+
+            return context.Model;
+        }
+
+        /// <summary>
+        /// The SQL Server model with every optional framework table switched on (the ones a host maps
+        /// only when it opts in: refresh sessions, stored permission grants, view-as grants, feature
+        /// flag overrides, passkeys, machine clients, webhooks, plus the audit trail and scheduler),
+        /// built through the same design-time path the consumers' migrations projects use. The two
+        /// models above leave every one of those tables out, and no consumer test enables all of them.
+        /// </summary>
+        public static object SqlServerWithEveryOptionalTable()
+        {
+            const string sourceName = "Framework";
+            using var context = DesignTimeDbContextHelper.CreateSqlServer([], options =>
+            {
+                options.DataSourceName = sourceName;
+                options.DataSources[sourceName] = new DataSourceEntrySettings
+                {
+                    SQLServerConnectionString = "Server=unused;Database=unused;Trusted_Connection=True;TrustServerCertificate=True",
+                };
+                options.EnableAuditTrail = true;
+                options.EnableScheduler = true;
+                options.EnableRefreshSessions = true;
+                options.EnableStoredPermissionGrants = true;
+                options.EnableViewAsGrants = true;
+                options.EnableFeatureFlagOverrides = true;
+                options.EnablePasskeys = true;
+                options.EnableMachineClients = true;
+                options.EnableWebhooks = true;
+            });
 
             return context.Model;
         }

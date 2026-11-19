@@ -16,8 +16,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// first, falling back to the source named by <c>Passkeys:DataSourceName</c>.
 /// </para>
 /// <para>
-/// Registered only by <c>AddPasskeys</c>, and every caller is behind the <c>Passkeys:Enabled</c> gate,
-/// so it never queries a table the model does not carry.
+/// Registered on every host by <c>AddInfrastructure</c> and inert there: only <c>AddPasskeys</c>
+/// registers the ceremony service that reads it, and every caller is behind the
+/// <c>Passkeys:Enabled</c> gate, so it never queries a table the model does not carry.
 /// </para>
 /// </summary>
 /// <param name="dbContextFactory">Resolves and saves through the Identity context.</param>

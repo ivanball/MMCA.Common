@@ -269,7 +269,7 @@ public sealed partial class LoginProtectionService(
     /// </summary>
     private static string LogKeyHash(string email) => EmailIdentity.KeySegment(email)[..LogKeyHashLength];
 
-    // The operation name is logged, never the key: the keys carry the email address or client IP.
+    // The operation name is logged, never the key: the keys are derived from the email address or client IP.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection could not reach the cache during {Operation}; failing open, so this call applies no lockout and no registration limit.")]
     private static partial void LogCacheUnavailable(ILogger logger, string operation, Exception exception);
 

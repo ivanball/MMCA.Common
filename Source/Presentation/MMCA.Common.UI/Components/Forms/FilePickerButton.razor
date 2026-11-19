@@ -1,0 +1,25 @@
+@* A file picker a keyboard can reach. The native <input type="file"> stays in the tab order but is
+   visually hidden (never the hidden attribute, which removes it from the tab order and leaves a
+   keyboard or switch user no way to open the picker: WCAG 2.1.1). The visible control is a
+   <label for> styled as a MudButton, so a click anywhere on it opens the picker and its text is the
+   input's accessible name. A label takes no focus of its own, so the wrapper carries a :focus-within
+   ring (see the scoped stylesheet) and the keyboard path stays visible (WCAG 2.4.7). *@
+<span class="mmca-file-picker @Class" data-testid="file-picker">
+    <MudButton HtmlTag="label"
+               for="@EffectiveInputId"
+               Variant="@Variant"
+               Color="@Color"
+               Size="@Size"
+               StartIcon="@Icon"
+               Disabled="@Disabled">
+        @Text
+    </MudButton>
+    <InputFile id="@EffectiveInputId"
+               OnChange="OnChange"
+               accept="@Accept"
+               multiple="@Multiple"
+               disabled="@Disabled"
+               aria-label="@AriaLabel"
+               class="visually-hidden"
+               @attributes="InputAttributes" />
+</span>

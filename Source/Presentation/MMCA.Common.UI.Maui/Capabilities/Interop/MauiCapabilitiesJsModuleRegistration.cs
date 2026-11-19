@@ -1,4 +1,4 @@
-// The MAUI TFMs import this namespace implicitly (IDE0005 would flag it); the net10.0 test project
+// The MAUI TFMs import this namespace implicitly (IDE0005 would flag it); the net10.0/net11.0 test project
 // that compiles this file as linked source does not.
 #if !(ANDROID || IOS || MACCATALYST || WINDOWS)
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +16,7 @@ namespace MMCA.Common.UI.Maui.Capabilities.Interop;
 /// static assets under <c>_content/</c> like a browser host does (the back-navigation bridge already
 /// imports <c>nav-interop.js</c> there), so the same module works unchanged.
 /// <para>
-/// Kept free of MAUI APIs so the framework's net10.0 test project can compile it as linked source.
+/// Kept free of MAUI APIs so the framework's net10.0/net11.0 test project can compile it as linked source.
 /// TryAdd, so a hybrid head that also calls <c>AddBrowserDeviceCapabilities</c> keeps one registration.
 /// </para>
 /// </summary>

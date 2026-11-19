@@ -119,9 +119,10 @@ public sealed class NotificationInboxService(
     /// <c>401 Unauthorized</c>, makes a single attempt to acquire a fresh access token and replay it.
     /// </summary>
     /// <remarks>
-    /// Only the reads use this: they are safe to replay, whereas a mark-read PUT is left with the
-    /// existing single-shot behaviour. The response content is fully buffered before the send task
-    /// completes, so the caller can still read it after the client that produced it is disposed.
+    /// Only the reads use this: they are safe to replay, whereas a mark-read PUT gets no token
+    /// refresh after a 401 (it still runs under the shared retry policy). The response content is
+    /// fully buffered before the send task completes, so the caller can still read it after the
+    /// client that produced it is disposed.
     /// </remarks>
     /// <param name="send">Issues the request on the supplied client.</param>
     /// <param name="cancellationToken">A cancellation token.</param>

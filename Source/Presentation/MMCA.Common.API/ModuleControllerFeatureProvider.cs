@@ -12,7 +12,7 @@ namespace MMCA.Common.API;
 /// <para>
 /// Matching strategy: a controller is filtered out when its assembly's simple name (or its
 /// containing-type namespace) contains a token <c>.{ModuleName}.</c> for a module whose
-/// <c>ModulesSettings:{ModuleName}:Enabled</c> is <see langword="false"/>. This handles both
+/// <c>Modules:{ModuleName}:Enabled</c> is <see langword="false"/>. This handles both
 /// the <c>MMCA.{Repo}.{Module}.API</c> convention (e.g. <c>MMCA.Store.Catalog.API</c> →
 /// module <c>Catalog</c>) and the legacy <c>{Prefix}.Modules.{Module}.*</c> convention.
 /// </para>

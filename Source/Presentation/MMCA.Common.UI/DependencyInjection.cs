@@ -29,7 +29,7 @@ namespace MMCA.Common.UI;
 
 /// <summary>
 /// Registers services shared across all UI hosts (Blazor Server, WebAssembly, MAUI).
-/// Uses C# preview extension types to add <c>AddUIShared</c> directly to <see cref="IServiceCollection"/>.
+/// Uses C# extension members to add <c>AddUIShared</c> directly to <see cref="IServiceCollection"/>.
 /// </summary>
 public static class DependencyInjection
 {
@@ -37,7 +37,7 @@ public static class DependencyInjection
     {
         /// <summary>
         /// Registers shared UI infrastructure: API settings, named <c>"APIClient"</c> HttpClient with
-        /// JWT auth handler, authentication service, and cart state service.
+        /// JWT auth handler, authentication service, and the shared options, facades and state services.
         /// </summary>
         public IServiceCollection AddUIShared(IConfiguration configuration)
         {
@@ -150,10 +150,10 @@ public static class DependencyInjection
                 // calls; the bootstrap has already resolved it to an absolute address.
                 client.BaseAddress = new Uri(apiSettings.SameOriginApiEndpoint ?? apiSettings.ApiEndpoint!, UriKind.Absolute);
 
-                // HttpClient's own default is 100s, chosen by the BCL with no knowledge of the
-                // resilience budget: it would cut a call off mid-policy at an arbitrary point.
-                // Pinning it to the shared total-request timeout (90s) keeps the two coordinated,
-                // so the budget decides when to give up and the transport never pre-empts it.
+                // The one time limit on this client in every render mode: WebAssembly and MAUI add no
+                // resilience handler, and the Blazor web host (AddMmcaBlazorWebHost) removes the one
+                // AddServiceDefaults() puts on every factory client. Pinned to the shared
+                // total-request timeout (90s) rather than the BCL's 100s default.
                 client.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -247,10 +247,12 @@ public static class DependencyInjection
         /// Registers the vendor-neutral toast and confirm-dialog facades over MudBlazor:
         /// <c>IToastService</c> and <c>IAppDialogService</c>, plus <c>IPendingToastService</c> (the
         /// toast that survives a <c>forceLoad</c> navigation), which the shared layout's
-        /// <c>PendingToastHost</c> injects. Apart from the two Mud-backed implementations,
-        /// the only framework type that names MudBlazor's <c>ISnackbar</c> / <c>IDialogService</c> is
-        /// the <c>DeleteConfirmation</c> component, which injects <c>IDialogService</c> directly to
-        /// show its typed dialog; pages, other components and the <c>Result</c> helpers depend on the
+        /// <c>PendingToastHost</c> injects. Apart from the two Mud-backed implementations (and the
+        /// <c>ConfirmationDialog</c> they open), the only framework types that name MudBlazor's
+        /// <c>ISnackbar</c> / <c>IDialogService</c> are the <c>DeleteConfirmation</c> component, which
+        /// injects <c>IDialogService</c> directly to show its typed dialog, and the
+        /// <c>StaleToastSweeper</c>, which injects <c>ISnackbar</c> to remove toasts a navigation left
+        /// behind; pages, other components and the <c>Result</c> helpers depend on the
         /// contracts instead, so a test can record toasts without a rendered snackbar host. Scoped,
         /// to match the MudBlazor services they wrap.
         /// <para>
@@ -483,5 +485,5 @@ public static class DependencyInjection
     }
 }
 
-/// <summary>Marker class used to reference the UI.Shared assembly (e.g., for Scrutor scanning).</summary>
+/// <summary>Marker class used to reference the MMCA.Common.UI assembly (e.g., for Scrutor scanning).</summary>
 public class UISharedAssemblyReference;

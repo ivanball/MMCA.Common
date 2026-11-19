@@ -23,7 +23,7 @@
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.UI\MMCA.Common.Testing.UI.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- MMCA.Common.UI.Maui targets MAUI TFMs only, so no net10.0 project can reference it. This one
+    <!-- MMCA.Common.UI.Maui targets MAUI TFMs only, so no plain net10.0/net11.0 project can reference it. This one
          file uses no MAUI API (only MMCA.Common.UI abstractions), so it is compiled here as source to
          unit-test its conflict-retry path (MauiPushRegistrationServiceTests). -->
     <Compile Include="..\..\..\Source\Presentation\MMCA.Common.UI.Maui\Capabilities\Notifications\MauiPushRegistrationService.cs" Link="Linked\MauiPushRegistrationService.cs" />

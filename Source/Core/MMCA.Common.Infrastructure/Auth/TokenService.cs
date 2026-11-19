@@ -36,7 +36,7 @@ public sealed partial class TokenService : ITokenService, IDisposable
     private readonly string _validationAlgorithm;
 
     // Owned RSA instances kept alive for the service's lifetime. The RsaSecurityKey wrappers
-    // hold weak references to these — disposing the service releases the underlying handles.
+    // do not dispose them; disposing the service releases the underlying handles.
     private readonly RSA? _ownedSigningRsa;
     private readonly RSA? _ownedValidationRsa;
 

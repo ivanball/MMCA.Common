@@ -52,7 +52,8 @@ internal static class InternalCommandMetrics
 
     /// <summary>
     /// Commands abandoned, tagged by <c>command_type</c> and by <c>reason</c>
-    /// (<c>attempts_exhausted</c>, <c>type_unresolvable</c> or <c>handler_missing</c>).
+    /// (<c>attempts_exhausted</c>, <c>type_unresolvable</c>, <c>payload_invalid</c> or
+    /// <c>handler_missing</c>).
     /// </summary>
     internal static readonly Counter<long> DeadLetterCounter = Meter.CreateCounter<long>(
         "internal_commands.dead_letter.count",

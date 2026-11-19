@@ -47,7 +47,7 @@ public sealed class OutboxSettings
     /// <summary>
     /// Gets the engine of the data source where integration events published via
     /// <c>IEventBus</c> are written to the outbox. Must be a relational provider that
-    /// supports the outbox table (SQL Server or SQLite).
+    /// supports the outbox table (SQL Server, PostgreSQL or SQLite).
     /// Defaults to <see cref="DataSource.SQLServer"/>.
     /// </summary>
     public DataSource DataSource { get; init; } = DataSource.SQLServer;

@@ -17,7 +17,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// is a denied request an operator can see, not a granted one nobody notices.
 /// </para>
 /// <para>
-/// Registered only by <c>AddStoredPermissionGrants()</c>, so a host that never opts in never starts
+/// Registered only by <c>AddStoredPermissionGrants(configuration)</c>, so a host that never opts in never starts
 /// it and never queries a table its model does not map.
 /// </para>
 /// </remarks>

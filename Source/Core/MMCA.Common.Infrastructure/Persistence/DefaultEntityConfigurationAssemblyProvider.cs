@@ -6,7 +6,7 @@ namespace MMCA.Common.Infrastructure.Persistence;
 
 /// <summary>
 /// Default implementation that discovers entity configuration assemblies by scanning loaded assemblies
-/// whose names end with ".Infrastructure". Also includes any additional assemblies explicitly registered
+/// whose names contain ".Infrastructure" (Common.Infrastructure itself excluded). Also includes any additional assemblies explicitly registered
 /// via <see cref="EntityConfigurationOptions"/> (e.g., Common.Infrastructure feature modules like Notification).
 /// </summary>
 public sealed class DefaultEntityConfigurationAssemblyProvider(

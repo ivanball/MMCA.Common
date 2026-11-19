@@ -155,8 +155,9 @@ public static partial class WebApplicationBuilderExtensions
         return false;
     }
 
-    /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
-    /// and limits authenticated callers per user (subject claim, then name, then IP). The subject claim leads
+    /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests
+    /// (except an anonymous hub request, metered per client IP), and limits authenticated callers
+    /// per user (subject claim, then name, then IP). The subject claim leads
     /// because it is unique per account; the name claim carries the full name, which two users can share.</summary>
     /// <remarks>Internal (not private) so the partition-key selection is unit-testable via
     /// <c>InternalsVisibleTo</c>.</remarks>
@@ -362,9 +363,11 @@ public static partial class WebApplicationBuilderExtensions
         /// anonymous traffic — public endpoints are output-cached, login brute-force is handled by
         /// the login-protection service, and anonymous server-rendered (Blazor Server) traffic shares
         /// the UI host's IP, so an IP partition would throttle legitimate public browsing at scale.
+        /// The one exception is an anonymous request to a real-time hub path, metered per client IP
+        /// (<see cref="RateLimitingSettings.HubPathPrefixes"/>, <see cref="RateLimitingSettings.AnonymousHubPermitLimit"/>).
         /// Health/liveness (<c>/health</c>, <c>/alive</c>), JWKS discovery (<c>/.well-known/*</c>) and
-        /// gRPC inter-service traffic (<c>application/grpc</c>) are bypassed — they legitimately run
-        /// at high frequency. The named policies <see cref="RateLimitPolicyAuthIp"/>
+        /// gRPC inter-service traffic (a routed gRPC endpoint, not a <c>Content-Type</c> header) are
+        /// bypassed, since they legitimately run at high frequency. The named policies <see cref="RateLimitPolicyAuthIp"/>
         /// (the per-IP anonymous-authentication throttle described on <paramref name="authIpPermitLimit"/>)
         /// and <see cref="RateLimitPolicyMcp"/> are for opt-in <c>[EnableRateLimiting]</c> use.
         /// <para>

@@ -5,9 +5,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// how long to wait before the next cycle.
 /// </summary>
 /// <param name="HasMoreEligibleWork">
-/// Whether a full batch of eligible messages was fetched and at least one made progress
-/// (dispatched or dead-lettered) — more eligible rows may be waiting, so the processor
-/// re-polls immediately. The progress requirement prevents hot-spinning when an entire
+/// Whether at least one message made progress (dispatched or dead-lettered) and either a full
+/// batch of eligible messages was fetched or key-mates were deferred behind their key's head row:
+/// more eligible rows may be waiting, so the processor re-polls immediately. The progress requirement prevents hot-spinning when an entire
 /// batch fails dispatch and stays eligible.
 /// </param>
 /// <param name="EarliestPendingOccurredOn">

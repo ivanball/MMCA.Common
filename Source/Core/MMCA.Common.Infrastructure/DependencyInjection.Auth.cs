@@ -191,8 +191,7 @@ public static partial class DependencyInjection
 
             // TryDecorate returns false when nothing registered IPermissionRegistry yet. Registering an
             // empty compiled layer and decorating that keeps the call order-tolerant: the host's own
-            // registry, added later with TryAdd, would simply lose to this one, so the fallback is
-            // reported rather than silently swallowing the host's grants.
+            // registry, added later with TryAdd, would simply lose to this one.
             if (!services.TryDecorate<IPermissionRegistry, LayeredPermissionRegistry>())
             {
                 var compiled = new PermissionRegistry(

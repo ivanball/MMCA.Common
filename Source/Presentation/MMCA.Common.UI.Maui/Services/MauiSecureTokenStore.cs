@@ -76,7 +76,7 @@ public sealed class MauiSecureTokenStore : ISecureTokenStore
         catch
 #pragma warning restore CA1031
         {
-            // No logging facility exists in this host (nothing in the MAUI head takes an ILogger),
+            // This store takes no ILogger (it is constructed with no dependencies),
             // so the swallow is documented here rather than reported: the user sees the normal
             // signed-out state and logs in again.
             TryRemove(key);

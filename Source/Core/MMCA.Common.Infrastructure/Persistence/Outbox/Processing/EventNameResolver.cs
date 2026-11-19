@@ -62,8 +62,9 @@ internal static class EventNameResolver
     /// <summary>
     /// Reverse lookup for a stored name that is NOT a CLR type name: scans the loaded assemblies for
     /// the type declaring <paramref name="name"/> as its <see cref="EventNameAttribute"/>. This is
-    /// the counterpart of <see cref="GetStorageName"/> and is only ever reached once per stored name,
-    /// because the caller caches the result (see <c>OutboxMessage.ResolveEventType</c>).
+    /// the counterpart of <see cref="GetStorageName"/> and is reached once per stored name that
+    /// resolves, because the caller caches a successful result (see
+    /// <c>OutboxMessage.ResolveEventType</c>); a name that matches nothing is scanned again on its retry.
     /// </summary>
     /// <remarks>
     /// The query stays lazy, so the scan stops at the first match instead of materializing every

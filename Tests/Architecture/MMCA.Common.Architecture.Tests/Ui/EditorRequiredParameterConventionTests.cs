@@ -46,6 +46,9 @@ public sealed class EditorRequiredParameterConventionTests
         // Defaults to the Material SearchOff icon.
         "EmptyState.Icon",
 
+        // Defaults to the Material Upload icon.
+        "FilePickerButton.Icon",
+
         // Defaults to "mb-4", the spacing the alert needs above a form.
         "ErrorSummary.Class",
 

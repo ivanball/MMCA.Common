@@ -24,7 +24,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <para>
 /// <b>Tracked reads.</b> Every read that returns <see cref="RefreshSession"/> entities is tracked on
 /// purpose: the caller revokes by mutating the instances this returns, and a no-tracking query would
-/// take those revocations and silently drop them at save time. The one entity exception is
+/// take those revocations and silently drop them at save time. The two entity exceptions are
 /// <see cref="FindByIdUntrackedAsync"/>, a read-only re-read for the rotation loser, and
 /// <see cref="GetRecentSignInsAsync"/>, a read-only sign-in history page. The scalar
 /// projections (<see cref="GetUserIdsWithLiveSessionsAsync"/>, <see cref="CountLiveSessionsByUserAsync"/>)
@@ -269,8 +269,8 @@ internal sealed class EFRefreshSessionStore(
 
     /// <inheritdoc />
     /// <remarks>
-    /// The one no-tracking ENTITY read in this store (the scalar projections track nothing either), and
-    /// deliberately so: it exists to see past the tracked
+    /// A no-tracking ENTITY read (as is the sign-in history read; the scalar projections track nothing
+    /// either), and deliberately so: it exists to see past the tracked
     /// copy (which the identity map would otherwise hand back unchanged) to the row the database holds
     /// after a concurrent rotation. Nothing revokes through the instance it returns.
     /// </remarks>
