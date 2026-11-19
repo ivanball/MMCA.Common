@@ -35,6 +35,10 @@
                             at 11.0.0, so the .NET 10 line stays on 10.x and only net11.0 takes 11.x.
       MmcaAspNetOAuthVersion
                             AspNet.Security.OAuth.Apple and .GitHub: 11.x ships net11.0 assets only.
+      MmcaSerilogAspNetCoreVersion
+                            Serilog.AspNetCore: 11.x on net10.0 pulls Serilog.Extensions.Hosting 11
+                            and the Microsoft.Extensions.* 11.0.0 packages into the net10.0
+                            closure, so the .NET 10 line stays on 10.x and only net11.0 takes 11.x.
   -->
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
@@ -45,6 +49,7 @@
     <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
     <MmcaExtensionsVersion>10.11.0</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>10.1.0</MmcaAspNetOAuthVersion>
+    <MmcaSerilogAspNetCoreVersion>10.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
@@ -54,6 +59,7 @@
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
     <MmcaExtensionsVersion>11.0.0</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>11.0.0</MmcaAspNetOAuthVersion>
+    <MmcaSerilogAspNetCoreVersion>11.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
   <!--
     CentralPackageTransitivePinningEnabled is deliberately NOT set in this workspace: CPM pins DIRECT
@@ -200,7 +206,7 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.1.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.1.2" />
     <!-- The AWS telemetry exporter (MMCA.Common.Aws.AddAwsTelemetryExporter) signs its OTLP requests
          with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
          signer is guaranteed rather than inherited from whichever service package floors highest.
@@ -369,7 +375,7 @@
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
     <PackageVersion Include="Deque.AxeCore.Commons" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.65.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.65.1" />
     <!-- Redis integration tier only (Tests/Core/MMCA.Common.Infrastructure.Redis.Tests, outside the
          .slnx, own CI job): a real Redis is the only way to assert the storage FORMAT the cache
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
@@ -476,9 +482,9 @@
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
          silence the OpenTelemetry provider AddServiceDefaults adds); the two sink packages are the
-         console and rolling-file sinks the shared configuration writes to. Versions match the pins
-         both consumer apps already carry. -->
-    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+         console and rolling-file sinks the shared configuration writes to. Serilog.AspNetCore follows
+         the target framework (MmcaSerilogAspNetCoreVersion above). -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="$(MmcaSerilogAspNetCoreVersion)" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Redis client integrations (MMCA.Common.Aspire.Caching.RedisCachingExtensions). Held at the
