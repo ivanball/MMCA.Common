@@ -74,11 +74,8 @@ updates:
       # ASP.NET Core ships a generator targeting 3.x. See Directory.Packages.props.
       - dependency-name: "Microsoft.OpenApi"
         update-types: ["version-update:semver-major"]
-      # Breaking majors held back deliberately. MessagePack is also pinned directly (on the 3.x
-      # line) to override a vulnerable transitive (see Directory.Packages.props).
+      # Breaking majors held back deliberately.
       - dependency-name: "StackExchange.Redis"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "MessagePack"
         update-types: ["version-update:semver-major"]
       # Android bindings held by NU1608: Firebase.Messaging 125.x and Biometric past 1.1.0.30 pull
       # the newer AndroidX train past the .Ktx packages' upper bounds and fail the android restore

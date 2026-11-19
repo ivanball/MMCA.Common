@@ -60,7 +60,8 @@
     PackageReferences only. So lifting a transitive package (a security bump, most often) takes TWO
     edits, never one: a PackageVersion entry here AND a direct PackageReference in a project that
     flows that package onward, otherwise the pin is inert and the vulnerable version still resolves.
-    Worked exemplars below: the Microsoft.OpenApi and MessagePack pins, each with its own note.
+    Worked exemplars below: the Microsoft.OpenApi and System.Security.Cryptography.Pkcs pins, each
+    with its own note.
   -->
   <ItemGroup>
     <!-- API -->
@@ -94,23 +95,9 @@
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
-    <!-- Pinned to a patched version to override the vulnerable MessagePack pulled transitively by
-         SignalR.StackExchangeRedis (2.5.187) and Aspire.Hosting (2.5.192). GHSA-hv8m-jj95-wg3x /
-         CVE-2026-48109 (high, CVSS 8.2 — LZ4 decompression OOB read); fixed in 2.5.301. Forced via a
-         direct PackageReference in MMCA.Common.Infrastructure + .Aspire.Hosting (same pattern as
-         OpenTelemetry.Api below) so the fix flows to consumers through the published package graph.
-         Moved to the 3.x line on 2026-08-28: both dependents constrain MessagePack with a lower
-         bound only, so the major bump restores and builds clean and carries the same fix. -->
-    <PackageVersion Include="MessagePack" Version="3.1.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Cosmos" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MmcaEfCoreVersion)" />
-    <!-- Pins the transitive SQLitePCLRaw bundle (EF Core Sqlite floors it at the vulnerable 2.1.11) to
-         a patched build for GHSA-2m69-gcr7-jv3q / CVE-2025-6965; referenced directly in
-         MMCA.Common.Infrastructure and MMCA.Common.Aspire (whose SQLite health check references
-         Microsoft.Data.Sqlite) so the fix flows to consumers through the published package graph
-         (same pattern as the MessagePack pin above). -->
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MmcaEfCoreVersion)" />
     <!-- PostgreSQL provider (ADR-113). Npgsql ships on its own cadence, so its version tracks the EF
          Core MAJOR (10.x) rather than the exact 10.0.14 patch the Microsoft-owned providers share;
@@ -153,12 +140,6 @@
          package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
          reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
     <PackageVersion Include="Fido2" Version="4.3.3" />
-    <!-- Direct pin to lift the transitive System.Formats.Cbor off 9.0.0 (pulled by Fido2) to the
-         first patched version for GHSA-vmv3-wvjp-wqpj / CVE-2026-118747 (moderate, denial of
-         service in the CBOR reader, which is exactly what Fido2 feeds attacker-supplied bytes to).
-         It follows the framework version (10.0.15 / 11.0.0, both patched) and is referenced
-         directly in MMCA.Common.Passkeys so the pin takes effect and flows to consumers. -->
-    <PackageVersion Include="System.Formats.Cbor" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
@@ -419,14 +400,6 @@
     <!-- Google Cloud emulator tier only: the Firestore emulator for the FCM installation registry.
          Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers.Firestore" Version="4.17.0" />
-    <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
-         package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
-         2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
-         server-controlled SCP filenames); fixed in 2026.0.0. CPM does not pin transitives, so the
-         projects that pull Testcontainers add a direct PackageReference (same pattern as the
-         MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
-         MMCA.Common.Testing package through the published package graph. -->
-    <PackageVersion Include="SSH.NET" Version="2026.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />

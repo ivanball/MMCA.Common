@@ -344,15 +344,19 @@
           "YamlDotNet": "16.3.0"
         }
       },
+      "MessagePack": {
+        "type": "Transitive",
+        "resolved": "2.5.307",
+        "contentHash": "P9LNJ2bz/wx8J5W0EQW4Bh7G5BiEikXiiDqGvw/WOMRyRI0QcxVvRM4XkqhidGJG6uzMT7iF89o0uYGLwmGifQ==",
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.307",
+          "Microsoft.NET.StringTools": "17.6.3"
+        }
+      },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "LdI67sY7F3KK+JsrG02+DP1XFkowaZSoyfL2M88hjm1MOOsjf8amBLAJolV+zxoPUZf3uGbKzq1cMQD8PlpSpA=="
-      },
-      "MessagePackAnalyzer": {
-        "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "iNSNatPh6bafRUbkQKlClExjpPpd8hiZgfZsodGf7bheIlkizGbMzsJ2mPui8jOHRe4Ky9eg5ou/fFzI7CT3fg=="
+        "resolved": "2.5.307",
+        "contentHash": "kIGiwydfCKWRim1ZoFbZ1qVHDHrQfXdJ+FEFVPEqse/XzvPT7lVUjIb1LOuocP3Tx1+PtFEdEandRhxB64Xd4A=="
       },
       "Microsoft.Azure.Cosmos": {
         "type": "Transitive",
@@ -814,7 +818,6 @@
           "Aspire.Hosting.PostgreSQL": "[13.6.5, )",
           "Aspire.Hosting.RabbitMQ": "[13.6.5, )",
           "Aspire.Hosting.SqlServer": "[13.6.5, )",
-          "MessagePack": "[3.1.12, )",
           "OpenTelemetry.Api": "[1.21.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
@@ -1046,17 +1049,6 @@
         "requested": "[2.85.0, )",
         "resolved": "2.83.0",
         "contentHash": "vK2Go/83W0v2Nn7tTP9fGrX4IjmOa93s3M0SZeFimU1vIIr2wL9yNJlIyK21y85SGm3++JncB8IF751cjoLHuQ=="
-      },
-      "MessagePack": {
-        "type": "CentralTransitive",
-        "requested": "[3.1.12, )",
-        "resolved": "3.1.12",
-        "contentHash": "m1QEsd59gUj82ji5tEQbZiyjV6y0F7cYfGVhil6pAlNZpyzR7ze9TucMu4lPpi8cZAV8aNl3D9/T9J1HbFz15Q==",
-        "dependencies": {
-          "MessagePack.Annotations": "3.1.12",
-          "MessagePackAnalyzer": "3.1.12",
-          "Microsoft.NET.StringTools": "17.11.4"
-        }
       },
       "Microsoft.Data.SqlClient": {
         "type": "CentralTransitive",

@@ -337,15 +337,19 @@
         "resolved": "8.5.12",
         "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
+      "MessagePack": {
+        "type": "Transitive",
+        "resolved": "2.5.307",
+        "contentHash": "P9LNJ2bz/wx8J5W0EQW4Bh7G5BiEikXiiDqGvw/WOMRyRI0QcxVvRM4XkqhidGJG6uzMT7iF89o0uYGLwmGifQ==",
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.307",
+          "Microsoft.NET.StringTools": "17.6.3"
+        }
+      },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "LdI67sY7F3KK+JsrG02+DP1XFkowaZSoyfL2M88hjm1MOOsjf8amBLAJolV+zxoPUZf3uGbKzq1cMQD8PlpSpA=="
-      },
-      "MessagePackAnalyzer": {
-        "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "iNSNatPh6bafRUbkQKlClExjpPpd8hiZgfZsodGf7bheIlkizGbMzsJ2mPui8jOHRe4Ky9eg5ou/fFzI7CT3fg=="
+        "resolved": "2.5.307",
+        "contentHash": "kIGiwydfCKWRim1ZoFbZ1qVHDHrQfXdJ+FEFVPEqse/XzvPT7lVUjIb1LOuocP3Tx1+PtFEdEandRhxB64Xd4A=="
       },
       "Microsoft.ApplicationInsights": {
         "type": "Transitive",
@@ -783,30 +787,31 @@
           "Serilog": "4.0.0"
         }
       },
-      "SQLite": {
+      "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
-        "resolved": "3.53.4",
-        "contentHash": "KN7jeWqgUPeBRe1FlcpZURzxomuKKEKHmBBQfg+Nx7NkY1LjKhzHvH+3ASkNvhayESE34nMBinL9CV21JfPRJw=="
-      },
-      "SQLitePCLRaw.config.e_sqlite3": {
-        "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "aSk8WE5tF2MybESMgtZAEyMVCAWA0nBqOMc48HFoa9UoSdtm3goDXVzNRnefeKIwE6bV9NaNXptn1F9ReMQI0Q==",
+        "resolved": "2.1.13",
+        "contentHash": "NlDixlC7uHmo+ojXRgkNvN0tQtVGpLDZ3x2OpgNj+G07VHh5cXSszFDrAiC4BpUiPwkcaeuQkMV9WQ123xVtmQ==",
         "dependencies": {
-          "SQLitePCLRaw.provider.e_sqlite3": "3.0.5"
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.13",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.1.13"
         }
       },
       "SQLitePCLRaw.core": {
         "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "k81AYXXRCw3Zj8rOhyBoCsx/U97KYDFI2CSKr/ijl5BwpsW/hX/4kBiDmerFaoust8nxBwa0IHQFw8MmSHRtnQ=="
+        "resolved": "2.1.13",
+        "contentHash": "2joofoinuHBFs0nMX3nKuXgxpXryRkCOdM2Ua6HBqQLLy6IW+5f28ZI+HAvMyF8vG7XfNz/lwfBfE6V4juru8Q=="
+      },
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.1.13",
+        "contentHash": "D2UAuiGxFYBqeRXjjjGgvJ5UQifzn6wefmSqeKU7XcNGKLbJRP6X7kcPZ6opOBJGdCIlgbSxTvDpBbLvsN594A=="
       },
       "SQLitePCLRaw.provider.e_sqlite3": {
         "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "um8YSWduhhuskTG2bHfZrBqMNQOydfU8pcseT+cu5RivOGyoUbCrGXxgoRNTmRYw2VbMWnEZVVFcneZT/5dsBg==",
+        "resolved": "2.1.13",
+        "contentHash": "ZU60dSqoSNRe49KcQDUmOVgdRtjITOssVXFtiISs+zJXDI4D2Sndwpn2NOtzDQNPu0ZAvpoLPQ+GLKv6iEZn8Q==",
         "dependencies": {
-          "SQLitePCLRaw.core": "3.0.5"
+          "SQLitePCLRaw.core": "2.1.13"
         }
       },
       "StreamJsonRpc": {
@@ -986,7 +991,6 @@
           "OpenTelemetry.Instrumentation.Http": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.21.0, )",
           "RabbitMQ.Client": "[7.2.2, )",
-          "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
@@ -1002,7 +1006,6 @@
           "Aspire.Hosting.PostgreSQL": "[13.6.5, )",
           "Aspire.Hosting.RabbitMQ": "[13.6.5, )",
           "Aspire.Hosting.SqlServer": "[13.6.5, )",
-          "MessagePack": "[3.1.12, )",
           "OpenTelemetry.Api": "[1.21.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
@@ -1042,7 +1045,6 @@
           "MassTransit": "[8.5.12, )",
           "MassTransit.RabbitMQ": "[8.5.12, )",
           "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
-          "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1055,7 +1057,6 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
-          "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.15, )"
@@ -1368,17 +1369,6 @@
           "Dapper": "2.1.89",
           "MassTransit": "8.5.12",
           "Npgsql": "8.0.7"
-        }
-      },
-      "MessagePack": {
-        "type": "CentralTransitive",
-        "requested": "[3.1.12, )",
-        "resolved": "3.1.12",
-        "contentHash": "m1QEsd59gUj82ji5tEQbZiyjV6y0F7cYfGVhil6pAlNZpyzR7ze9TucMu4lPpi8cZAV8aNl3D9/T9J1HbFz15Q==",
-        "dependencies": {
-          "MessagePack.Annotations": "3.1.12",
-          "MessagePackAnalyzer": "3.1.12",
-          "Microsoft.NET.StringTools": "17.11.4"
         }
       },
       "Microsoft.AspNetCore.Authentication.Google": {
@@ -1713,16 +1703,6 @@
         "contentHash": "fKL7mXv7qaiNBUC71ssvn/dU0k9t0o45+qm2XgKAlSt19xF+ijjxyA3R6HmCgfKEKwfcfkwWjayuQtRueZFkYw==",
         "dependencies": {
           "Serilog": "4.2.0"
-        }
-      },
-      "SQLitePCLRaw.bundle_e_sqlite3": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.5, )",
-        "resolved": "3.0.5",
-        "contentHash": "SW8iASIyWMrLzqabUHYQRvALhvD4ylSBsj4PgEVGwc36kQjc9xT5kSV/XQ9rU7nIpBWD+LPyX3Hlw5FzyUzGeQ==",
-        "dependencies": {
-          "SQLite": "3.53.4",
-          "SQLitePCLRaw.config.e_sqlite3": "3.0.5"
         }
       },
       "StackExchange.Redis": {
@@ -2112,15 +2092,19 @@
         "resolved": "8.5.12",
         "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
+      "MessagePack": {
+        "type": "Transitive",
+        "resolved": "2.5.307",
+        "contentHash": "P9LNJ2bz/wx8J5W0EQW4Bh7G5BiEikXiiDqGvw/WOMRyRI0QcxVvRM4XkqhidGJG6uzMT7iF89o0uYGLwmGifQ==",
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.307",
+          "Microsoft.NET.StringTools": "17.6.3"
+        }
+      },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "LdI67sY7F3KK+JsrG02+DP1XFkowaZSoyfL2M88hjm1MOOsjf8amBLAJolV+zxoPUZf3uGbKzq1cMQD8PlpSpA=="
-      },
-      "MessagePackAnalyzer": {
-        "type": "Transitive",
-        "resolved": "3.1.12",
-        "contentHash": "iNSNatPh6bafRUbkQKlClExjpPpd8hiZgfZsodGf7bheIlkizGbMzsJ2mPui8jOHRe4Ky9eg5ou/fFzI7CT3fg=="
+        "resolved": "2.5.307",
+        "contentHash": "kIGiwydfCKWRim1ZoFbZ1qVHDHrQfXdJ+FEFVPEqse/XzvPT7lVUjIb1LOuocP3Tx1+PtFEdEandRhxB64Xd4A=="
       },
       "Microsoft.ApplicationInsights": {
         "type": "Transitive",
@@ -2567,30 +2551,31 @@
           "Serilog": "4.0.0"
         }
       },
-      "SQLite": {
+      "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
-        "resolved": "3.53.4",
-        "contentHash": "KN7jeWqgUPeBRe1FlcpZURzxomuKKEKHmBBQfg+Nx7NkY1LjKhzHvH+3ASkNvhayESE34nMBinL9CV21JfPRJw=="
-      },
-      "SQLitePCLRaw.config.e_sqlite3": {
-        "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "aSk8WE5tF2MybESMgtZAEyMVCAWA0nBqOMc48HFoa9UoSdtm3goDXVzNRnefeKIwE6bV9NaNXptn1F9ReMQI0Q==",
+        "resolved": "2.1.13",
+        "contentHash": "NlDixlC7uHmo+ojXRgkNvN0tQtVGpLDZ3x2OpgNj+G07VHh5cXSszFDrAiC4BpUiPwkcaeuQkMV9WQ123xVtmQ==",
         "dependencies": {
-          "SQLitePCLRaw.provider.e_sqlite3": "3.0.5"
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.13",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.1.13"
         }
       },
       "SQLitePCLRaw.core": {
         "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "k81AYXXRCw3Zj8rOhyBoCsx/U97KYDFI2CSKr/ijl5BwpsW/hX/4kBiDmerFaoust8nxBwa0IHQFw8MmSHRtnQ=="
+        "resolved": "2.1.13",
+        "contentHash": "2joofoinuHBFs0nMX3nKuXgxpXryRkCOdM2Ua6HBqQLLy6IW+5f28ZI+HAvMyF8vG7XfNz/lwfBfE6V4juru8Q=="
+      },
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.1.13",
+        "contentHash": "D2UAuiGxFYBqeRXjjjGgvJ5UQifzn6wefmSqeKU7XcNGKLbJRP6X7kcPZ6opOBJGdCIlgbSxTvDpBbLvsN594A=="
       },
       "SQLitePCLRaw.provider.e_sqlite3": {
         "type": "Transitive",
-        "resolved": "3.0.5",
-        "contentHash": "um8YSWduhhuskTG2bHfZrBqMNQOydfU8pcseT+cu5RivOGyoUbCrGXxgoRNTmRYw2VbMWnEZVVFcneZT/5dsBg==",
+        "resolved": "2.1.13",
+        "contentHash": "ZU60dSqoSNRe49KcQDUmOVgdRtjITOssVXFtiISs+zJXDI4D2Sndwpn2NOtzDQNPu0ZAvpoLPQ+GLKv6iEZn8Q==",
         "dependencies": {
-          "SQLitePCLRaw.core": "3.0.5"
+          "SQLitePCLRaw.core": "2.1.13"
         }
       },
       "StreamJsonRpc": {
@@ -2765,7 +2750,6 @@
           "OpenTelemetry.Instrumentation.Http": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.21.0, )",
           "RabbitMQ.Client": "[7.2.2, )",
-          "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
@@ -2780,7 +2764,6 @@
           "Aspire.Hosting.PostgreSQL": "[13.6.5, )",
           "Aspire.Hosting.RabbitMQ": "[13.6.5, )",
           "Aspire.Hosting.SqlServer": "[13.6.5, )",
-          "MessagePack": "[3.1.12, )",
           "OpenTelemetry.Api": "[1.21.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )"
@@ -2819,7 +2802,6 @@
           "MassTransit": "[8.5.12, )",
           "MassTransit.RabbitMQ": "[8.5.12, )",
           "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
-          "MessagePack": "[3.1.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -2832,7 +2814,6 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
-          "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -3143,17 +3124,6 @@
           "Dapper": "2.1.89",
           "MassTransit": "8.5.12",
           "Npgsql": "8.0.7"
-        }
-      },
-      "MessagePack": {
-        "type": "CentralTransitive",
-        "requested": "[3.1.12, )",
-        "resolved": "3.1.12",
-        "contentHash": "m1QEsd59gUj82ji5tEQbZiyjV6y0F7cYfGVhil6pAlNZpyzR7ze9TucMu4lPpi8cZAV8aNl3D9/T9J1HbFz15Q==",
-        "dependencies": {
-          "MessagePack.Annotations": "3.1.12",
-          "MessagePackAnalyzer": "3.1.12",
-          "Microsoft.NET.StringTools": "17.11.4"
         }
       },
       "Microsoft.AspNetCore.Authentication.Google": {
@@ -3483,16 +3453,6 @@
         "contentHash": "fKL7mXv7qaiNBUC71ssvn/dU0k9t0o45+qm2XgKAlSt19xF+ijjxyA3R6HmCgfKEKwfcfkwWjayuQtRueZFkYw==",
         "dependencies": {
           "Serilog": "4.2.0"
-        }
-      },
-      "SQLitePCLRaw.bundle_e_sqlite3": {
-        "type": "CentralTransitive",
-        "requested": "[3.0.5, )",
-        "resolved": "3.0.5",
-        "contentHash": "SW8iASIyWMrLzqabUHYQRvALhvD4ylSBsj4PgEVGwc36kQjc9xT5kSV/XQ9rU7nIpBWD+LPyX3Hlw5FzyUzGeQ==",
-        "dependencies": {
-          "SQLite": "3.53.4",
-          "SQLitePCLRaw.config.e_sqlite3": "3.0.5"
         }
       },
       "StackExchange.Redis": {
