@@ -570,9 +570,6 @@ MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObje
 MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Financial.Money!).ToDisplayString(System.Globalization.CultureInfo? culture = null) -> string!
 MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!)
 MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!).ToDisplayRange(System.Globalization.CultureInfo? culture = null) -> string!
-MMCA.Common.UI.Extensions.WebApplicationExtensions
-MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
-MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseAuthenticatedNoStore() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 MMCA.Common.UI.Globalization.CultureSwitcher
 MMCA.Common.UI.Globalization.CultureSwitcher.CultureSwitcher() -> void
 MMCA.Common.UI.Globalization.DocumentLanguage
@@ -1570,6 +1567,8 @@ MMCA.Common.UI.Services.Navigation.BackNavigationResult.Deconstruct(out bool Han
 MMCA.Common.UI.Services.Navigation.BackNavigationResult.Equals(MMCA.Common.UI.Services.Navigation.BackNavigationResult? other) -> bool
 MMCA.Common.UI.Services.Navigation.BackNavigationResult.Handled.get -> bool
 MMCA.Common.UI.Services.Navigation.BackNavigationResult.Handled.init -> void
+MMCA.Common.UI.Services.Navigation.IForbiddenReExecutionDetector
+MMCA.Common.UI.Services.Navigation.IForbiddenReExecutionDetector.IsForbiddenReExecution.get -> bool
 MMCA.Common.UI.Services.Navigation.IPublicLinkBuilder
 MMCA.Common.UI.Services.Navigation.IPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
 MMCA.Common.UI.Services.Navigation.MauiBackNavigationBridge
@@ -1979,7 +1978,6 @@ static MMCA.Common.UI.DependencyInjection.AddUserAdministrationUI<TUserDto>(this
 static MMCA.Common.UI.DependencyInjection.AddWasmFormFactor(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayRange(this System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>! prices, System.Globalization.CultureInfo? culture = null) -> string!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Financial.Money! price, System.Globalization.CultureInfo? culture = null) -> string!
-static MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.UI.Globalization.PseudoLocalizer.Transform(string! value) -> string!
 static MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.Plural(this Microsoft.Extensions.Localization.IStringLocalizer! localizer, string! key, int count, params object![]! args) -> Microsoft.Extensions.Localization.LocalizedString!
 static MMCA.Common.UI.Notifications.DependencyInjection.AddNotificationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
