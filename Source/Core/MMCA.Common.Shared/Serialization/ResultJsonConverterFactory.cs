@@ -9,7 +9,7 @@ namespace MMCA.Common.Shared.Serialization;
 /// The Result types deliberately keep internal constructors and get-only properties, which
 /// default reflection-based deserialization cannot rehydrate. This factory makes them
 /// round-trippable (required by the distributed query cache, which serializes cached
-/// handler results to Redis) by writing a compact <c>{"value": ..., "errors": [...]}</c>
+/// handler results to its L2 store) by writing a compact <c>{"value": ..., "errors": [...]}</c>
 /// shape and reconstructing through the public factory methods.
 /// </summary>
 public sealed class ResultJsonConverterFactory : JsonConverterFactory

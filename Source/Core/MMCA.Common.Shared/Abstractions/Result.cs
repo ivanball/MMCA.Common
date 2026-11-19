@@ -203,7 +203,7 @@ public class Result
 [JsonConverter(typeof(ResultJsonConverterFactory))]
 public sealed class Result<T> : Result
 {
-    /// <summary>Gets the success value. <see langword="null"/> when <see cref="Result.IsFailure"/> is <see langword="true"/>.</summary>
+    /// <summary>Gets the success value. The default of <typeparamref name="T"/> (<see langword="null"/> for a reference type) when <see cref="Result.IsFailure"/> is <see langword="true"/>.</summary>
     public T? Value { get; }
 
     /// <summary>

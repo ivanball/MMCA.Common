@@ -224,8 +224,8 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
     }
 
     /// <summary>
-    /// Files each permission under the text before its first colon, which is the
-    /// <c>area:capability</c> shape the registry documents. Areas and the permissions inside them
+    /// Files each permission under the text before its first colon, following the
+    /// <c>area:capability</c> shape the permission constants use. Areas and the permissions inside them
     /// are both ordered, so the form reads the same way on every load.
     /// </summary>
     /// <param name="permissions">The catalog's permissions.</param>

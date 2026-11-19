@@ -40,13 +40,14 @@ public static class MachineClientErrors
         Error.Validation(InvalidRequestCode, "The token request must name a grant_type.", source);
 
     /// <summary>
-    /// The role grants impersonation (<c>users:view-as</c>) or user management (<c>users:manage</c>),
-    /// which no machine client may hold.
+    /// The role grants impersonation (<c>users:view-as</c>), user management (<c>users:manage</c>),
+    /// role management (<c>roles:manage</c>) or client management (<c>clients:manage</c>), which no
+    /// machine client may hold.
     /// </summary>
     /// <param name="source">The member that refused.</param>
     /// <returns>The error.</returns>
     public static Error RoleNotAllowed(string source) =>
-        Error.Validation(RoleNotAllowedCode, "A role that grants viewing as users or managing users cannot back a machine client.", source, "role");
+        Error.Validation(RoleNotAllowedCode, "A role that grants viewing as users, managing users, managing roles or managing clients cannot back a machine client.", source, "role");
 
     /// <summary>A role is required to create a client.</summary>
     /// <param name="source">The member that refused.</param>
