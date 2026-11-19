@@ -20,8 +20,9 @@ namespace MMCA.Common.API.Controllers;
 /// <summary>
 /// Base controller for authentication endpoints (login, register, refresh, revoke).
 /// Downstream modules inherit and apply route/version attributes. Override <see cref="RegisterAsync"/>
-/// to inject additional context (e.g., client IP for rate limiting). Password change is owned by the
-/// derived controller, which dispatches the ChangePassword command handler directly.
+/// to inject additional context beyond the client IP and user-agent it already passes. Password
+/// change is owned by the derived controller, which dispatches the ChangePassword command handler
+/// directly.
 /// <para>
 /// <b>Anti-spray throttling is on by default.</b> <see cref="LoginAsync"/> and
 /// <see cref="RegisterAsync"/> carry
@@ -93,7 +94,8 @@ public abstract class AuthControllerBase(
 
     /// <summary>
     /// Registers a new user account and returns authentication tokens.
-    /// Override in derived controllers to pass additional context (e.g., client IP).
+    /// The caller's IP and user-agent are passed to the service; override in derived controllers to
+    /// pass further context.
     /// </summary>
     [HttpPost("register")]
     [NonIdempotent("Register issues a token pair. A replayed response would hand a retrying client tokens minted for an earlier call, and would keep serving them after the session was revoked; a retry hits the email-exists 409 instead, which is the correct answer.")]

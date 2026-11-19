@@ -148,7 +148,7 @@ public static partial class WebApplicationBuilderExtensions
                           .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                           .AllowCredentials();
                 });
-#pragma warning disable S5122 // Allow-any-origin policy is only ever selected when app.Environment.IsDevelopment() (see WebApplicationExtensions.UseCommonMiddlewarePipeline); production uses CorsPolicyAllowSpecificOrigins above
+#pragma warning disable S5122 // Allow-any-origin policy is only ever selected when app.Environment.IsDevelopment() (see the Cors step of MiddlewarePipelineBuilder.CreateDefault); production uses CorsPolicyAllowSpecificOrigins above
                 options.AddPolicy(CorsPolicyAllowAll, policy =>
                     policy.AllowAnyOrigin()
                           .AllowAnyHeader()

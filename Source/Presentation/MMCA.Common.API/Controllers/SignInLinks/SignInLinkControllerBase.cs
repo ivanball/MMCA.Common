@@ -14,7 +14,7 @@ namespace MMCA.Common.API.Controllers.SignInLinks;
 
 /// <summary>
 /// The anonymous sign-in-link endpoints (<c>POST sign-in-link</c>, <c>POST sign-in-link/redeem</c>,
-/// ADR-116), the routes <c>SignInLinkUIService</c> calls. A sibling of
+/// ADR-116), the routes <c>ISignInLinkUIService</c> calls. A sibling of
 /// <see cref="EmailConfirmationControllerBase{TSendCommand, TConfirmCommand}"/> for the same reason
 /// that one is: the app's own <c>AuthController</c> already occupies the auth controller chain, so
 /// this ships as a separate controller the app routes to the same <c>Auth</c> prefix.

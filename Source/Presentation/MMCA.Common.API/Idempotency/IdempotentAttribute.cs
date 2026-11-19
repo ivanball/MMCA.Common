@@ -8,8 +8,8 @@ namespace MMCA.Common.API.Idempotency;
 /// the action executes normally without deduplication.
 /// </summary>
 /// <remarks>
-/// Uses <see cref="ServiceFilterAttribute"/> so that <see cref="IdempotencyFilter"/> is resolved from DI,
-/// allowing it to access scoped services such as <see cref="Application.Interfaces.ICacheService"/>.
+/// Uses <see cref="ServiceFilterAttribute"/> so that <see cref="IdempotencyFilter"/> is resolved from DI;
+/// the filter reads <see cref="Application.Interfaces.ICacheService"/> from the request's services.
 /// The filter must be registered in DI (see <see cref="DependencyInjection"/>).
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]

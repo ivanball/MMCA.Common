@@ -212,7 +212,7 @@ public abstract class EntityControllerBase<
     /// <para>
     /// <b>Row ceiling and the truncation signal.</b> Every response carries
     /// <c>X-Export-Row-Limit</c> up front, and a truncated export ends with a final
-    /// <c>{"# export truncated at N rows"}</c> line. The ceiling cannot be reported as a
+    /// <c># export truncated at N rows</c> line. The ceiling cannot be reported as a
     /// response header, because it is only known after the last page is read and headers are frozen
     /// the moment the first body byte is flushed. Buffering the whole file to learn the answer first
     /// would defeat the streaming this endpoint exists for, so the marker rides in the body where it
@@ -566,8 +566,8 @@ public abstract class EntityControllerBase<
 
     /// <summary>
     /// Gets the specification every read action applies: both <see cref="GetAllAsync(string, bool, bool, CancellationToken)"/>
-    /// overloads, <see cref="GetAllForLookupAsync"/>, <see cref="GetByIdAsync"/> and
-    /// <see cref="ExportAsync"/>. Returns <see cref="GetExportSpecification"/> by default, itself
+    /// overloads, <see cref="GetAllForLookupAsync"/>, <see cref="GetByIdAsync"/>, <see cref="ExportAsync"/>,
+    /// <see cref="GetCursorPageAsync"/> and <see cref="GetChangesAsync"/>. Returns <see cref="GetExportSpecification"/> by default, itself
     /// <see langword="null"/>, so a controller that overrides neither queries its JSON read endpoints
     /// unscoped exactly as they always have, while its export is refused unless
     /// <see cref="AllowUnscopedExport"/> opts in.
@@ -578,7 +578,7 @@ public abstract class EntityControllerBase<
     /// <para>
     /// <b>Why asynchronous.</b> Row scoping is rarely a pure function of the current principal: it
     /// is resolved through a query handler, a claim lookup that hits a store, a tenancy read. A
-    /// synchronous hook forced every such controller to override all five actions by hand purely to
+    /// synchronous hook forced every such controller to override every read action by hand purely to
     /// get an <see langword="await"/> in before the query, which is exactly the duplication (and the
     /// export-drifts-from-the-list hazard) this hook removes. An override that has nothing to await
     /// returns <c>ValueTask.FromResult(...)</c> and allocates nothing.
@@ -614,7 +614,7 @@ public abstract class EntityControllerBase<
     /// <para>
     /// The synchronous half of <see cref="GetReadSpecificationAsync"/>, which returns this by
     /// default. A controller that can build its scope without awaiting anything overrides this one
-    /// and gets all five read actions scoped; a controller that needs an <see langword="await"/> overrides
+    /// and gets all seven read actions scoped; a controller that needs an <see langword="await"/> overrides
     /// <see cref="GetReadSpecificationAsync"/> instead, and then this hook is no longer consulted
     /// (the override replaces the default that called it).
     /// </para>

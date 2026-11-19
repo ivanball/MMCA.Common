@@ -4,7 +4,7 @@ using MMCA.Common.Application.Settings;
 namespace MMCA.Common.API.Startup;
 
 /// <summary>
-/// Configures MiniProfiler service registration and middleware.
+/// Configures MiniProfiler service registration.
 /// </summary>
 public static class MiniProfilerExtensions
 {

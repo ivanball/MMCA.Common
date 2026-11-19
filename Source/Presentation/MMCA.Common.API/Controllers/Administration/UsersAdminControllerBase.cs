@@ -176,9 +176,10 @@ public abstract class UsersAdminControllerBase<TUserDto>(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Locking does not by itself invalidate an access token the account already holds; a service
-    /// implementation should revoke the account's live refresh sessions too, which is what makes the
-    /// lock take effect within one access-token lifetime rather than at the next sign-in.
+    /// A service derived from <see cref="UserAdministrationServiceBase{TUser, TUserDto}"/> makes the lock
+    /// take effect at once: it writes the soft-deleted user marker, so every host refuses the access
+    /// tokens the account already holds, and revokes its live refresh sessions, so no new one is minted.
+    /// A service that only revokes the sessions leaves each issued access token working until it expires.
     /// </para>
     /// <para>
     /// An administrator who locks their own account revokes their own sessions and can no longer sign
