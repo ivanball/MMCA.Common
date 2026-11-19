@@ -95,13 +95,6 @@ updates:
       # release.
       - dependency-name: "Microsoft.EntityFrameworkCore*"
         update-types: ["version-update:semver-major"]
-      # WebUtilities is a security floor on the 2.3.x line, not a free-standing dependency: it lifts
-      # the transitive pulled by Microsoft.AspNetCore.Mvc.Core 2.3.14 past GHSA-6527-9fp8-r4x6. A
-      # current-line major would mix into that 2.3.x ASP.NET Core closure in MMCA.Common.UI for no
-      # gain (#712). The pin is dropped when Mvc.Core itself depends on 2.3.14 or later. See
-      # Directory.Packages.props.
-      - dependency-name: "Microsoft.AspNetCore.WebUtilities"
-        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

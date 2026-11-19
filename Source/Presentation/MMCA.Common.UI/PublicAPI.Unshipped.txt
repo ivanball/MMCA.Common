@@ -1,1 +1,7 @@
 ﻿#nullable enable
+MMCA.Common.UI.Services.Navigation.IForbiddenReExecutionDetector
+MMCA.Common.UI.Services.Navigation.IForbiddenReExecutionDetector.IsForbiddenReExecution.get -> bool
+*REMOVED*MMCA.Common.UI.Extensions.WebApplicationExtensions
+*REMOVED*MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+*REMOVED*MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseAuthenticatedNoStore() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+*REMOVED*static MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!

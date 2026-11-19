@@ -6,7 +6,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking (MMCA.Common.UI, MMCA.Common.UI.Web):** `UseAuthenticatedNoStore(this IApplicationBuilder)` moves from `MMCA.Common.UI.Extensions.WebApplicationExtensions` (MMCA.Common.UI) to `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions` (MMCA.Common.UI.Web), with the same name and behavior. MMCA.Common.UI no longer references `Microsoft.AspNetCore.Mvc.Core` 2.3.x, so the ASP.NET Core 2.3 server types it carried (`IApplicationBuilder`, `HttpContext`, `StatusCodes` from `Microsoft.AspNetCore.Http.Abstractions` 2.3) stop flowing to consumers through it. `UseMmcaBlazorWebPipeline` already calls the method, so a host on the composed pipeline changes nothing; no first-party consumer calls it directly.
+
+| Old | New |
+|---|---|
+| `using MMCA.Common.UI.Extensions;` for `app.UseAuthenticatedNoStore()` | `using MMCA.Common.UI.Web.Hosting;` (reference MMCA.Common.UI.Web) |
+| `MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(app)` | `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.UseAuthenticatedNoStore(app)` |
+| a WebAssembly-safe project that compiled against `HttpContext`, `StatusCodes` or `IApplicationBuilder` through MMCA.Common.UI | move that code to a server project, or reference the package that owns the type directly |
+
+### Added
+
+- **`IForbiddenReExecutionDetector`** (MMCA.Common.UI, namespace `MMCA.Common.UI.Services.Navigation`): answers whether the page being rendered is a status-code re-execution of a request already answered with 403. `NotFound.razor` reads it to render Access Denied instead of reading `HttpContext` itself. `AddUIShared` registers an always-false default (WebAssembly, MAUI, interactive renders); `AddMmcaBlazorWebHost` (MMCA.Common.UI.Web) replaces it with one that reads the current request's status. A server host that does not use `AddMmcaBlazorWebHost` and wants the 403 rendering registers its own implementation.
+
 ### Changed
+
+- **MMCA.Common.UI's ASP.NET Core dependencies are its real ones** (MMCA.Common.UI): `Microsoft.AspNetCore.WebUtilities` (QueryHelpers) moves off the 2.3.x line to the framework version (10.0.x on net10.0, 11.0.x on net11.0), `Microsoft.Extensions.Hosting.Abstractions` (IHostEnvironment) is now a direct reference, and the `Microsoft.AspNetCore.Mvc.Core` 2.3.14 reference is removed. All three stay WebAssembly-safe (no `Microsoft.AspNetCore.App` framework reference).
 
 - **The dependency readiness checks are the framework's own** (MMCA.Common.Aspire): the SQL Server, PostgreSQL, SQLite and RabbitMQ checks `AddServiceDefaults` registers are internal `IHealthCheck` classes under `Health/`, replacing the four Xabaril `AspNetCore.HealthChecks.*` packages (`SqlServer`, `NpgSql`, `Sqlite`, `Rabbitmq`), which no longer flow to consumers. Check names, tags, failure status and timeouts are unchanged, as is the PostgreSQL check's use of the host's configured data source. The drivers are now direct references: `Microsoft.Data.Sqlite` on the EF Core line and `RabbitMQ.Client` 7.2.2 (the build MassTransit.RabbitMQ already resolves), beside the existing `Microsoft.Data.SqlClient` and `Npgsql`. A consumer that called the Xabaril `AddSqlServer`/`AddNpgSql`/`AddSqlite`/`AddRabbitMQ` extensions itself and relied on the package arriving transitively must now reference it directly.
 

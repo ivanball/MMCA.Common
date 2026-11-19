@@ -302,19 +302,14 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(MmcaFrameworkVersion)" />
-    <!-- Deliberately the ASP.NET Core 2.3.x package on net10.0: it is what brings HttpContext and
-         StatusCodes (via Microsoft.AspNetCore.Http.Abstractions 2.3.x) into Common.UI, which
-         Pages/NotFound.razor needs for its 403 re-execution check. Common.UI is consumed by Blazor
-         WebAssembly clients, so <FrameworkReference Include="Microsoft.AspNetCore.App" /> cannot
-         replace it. Removing it means moving that check into a server-only project first. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.14" />
-    <!-- Direct pin to lift the transitive Microsoft.AspNetCore.WebUtilities off 2.3.12 (pulled by
-         Mvc.Core 2.3.14 through Microsoft.AspNetCore.Http 2.3.13) to the first patched version for
-         GHSA-6527-9fp8-r4x6 / CVE-2026-118750 (moderate, denial of service); referenced directly in
-         MMCA.Common.UI so the pin takes effect (no transitive pinning) and flows to consumers through
-         the published package graph. Drop it when Mvc.Core itself depends on 2.3.14 or later. -->
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
+    <!-- Direct dependency of Common.UI: QueryHelpers (Services/ListPageQueryStateService). It is the
+         standalone package, not the shared framework, because Common.UI is consumed by Blazor
+         WebAssembly clients and cannot take <FrameworkReference Include="Microsoft.AspNetCore.App" />. -->
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MmcaFrameworkVersion)" />
+    <!-- Direct dependency of Common.UI: IConfiguration appears in its public API. -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
+    <!-- Direct dependency of Common.UI: IHostEnvironment (Globalization/CultureSwitcher.razor). -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MmcaFrameworkVersion)" />

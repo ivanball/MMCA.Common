@@ -41,6 +41,10 @@ public abstract class BunitTestBase : BunitComponentTestBase
         // public-site behaviour substitutes its own builder.
         Services.AddScoped<IPublicLinkBuilder, NavigationPublicLinkBuilder>();
 
+        // The not-found page's 403 re-execution question: the shared always-false default AddUIShared
+        // registers. A test of the Access Denied branch registers its own detector (last wins).
+        Services.AddSingleton<IForbiddenReExecutionDetector, NoForbiddenReExecutionDetector>();
+
         // The toast and confirm-dialog facades come from the shared harness (AddCommonUiFacades,
         // called by BunitComponentTestBase over the MudBlazor services it registers), so a component
         // test exercises the real Mud-backed path with no registration here. A test that asserts on

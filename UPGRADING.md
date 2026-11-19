@@ -32,6 +32,16 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**Breaking (MMCA.Common.UI, MMCA.Common.UI.Web):** `UseAuthenticatedNoStore(this IApplicationBuilder)` moves from `MMCA.Common.UI.Extensions.WebApplicationExtensions` (MMCA.Common.UI) to `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions` (MMCA.Common.UI.Web), with the same name and behavior. MMCA.Common.UI no longer references `Microsoft.AspNetCore.Mvc.Core` 2.3.x, so the ASP.NET Core 2.3 server types it carried (`IApplicationBuilder`, `HttpContext`, `StatusCodes` from `Microsoft.AspNetCore.Http.Abstractions` 2.3) stop flowing to consumers through it. `UseMmcaBlazorWebPipeline` already calls the method, so a host on the composed pipeline changes nothing; no first-party consumer calls it directly.
+
+| Old | New |
+|---|---|
+| `using MMCA.Common.UI.Extensions;` for `app.UseAuthenticatedNoStore()` | `using MMCA.Common.UI.Web.Hosting;` (reference MMCA.Common.UI.Web) |
+| `MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(app)` | `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.UseAuthenticatedNoStore(app)` |
+| a WebAssembly-safe project that compiled against `HttpContext`, `StatusCodes` or `IApplicationBuilder` through MMCA.Common.UI | move that code to a server project, or reference the package that owns the type directly |
+
 ## [1.304.0] - 2026-11-18
 
 **Breaking (MMCA.Common.API):** `MMCA.Common.API.JsonConverters.CurrencyJsonConverter` is removed, and `AddAPI` no longer adds it to the MVC JSON options. It duplicated the converter `Currency` already declares through `[JsonConverter]` in MMCA.Common.Shared, which now serves MVC as it serves every other serializer. Reading, writing and the zero sentinel are unchanged; the only visible difference is the 400 text for an unknown code, now `Invalid currency code 'XYZ'.` (was `Invalid currency code: XYZ`). No first-party consumer names the type.

@@ -1778,7 +1778,7 @@
       },
       "Microsoft.AspNetCore.WebUtilities": {
         "type": "CentralTransitive",
-        "requested": "[2.3.14, )",
+        "requested": "[11.0.0, )",
         "resolved": "11.0.0",
         "contentHash": "KDKLMtwYNLKx20HXhMMKeD1ge5BO+8vHSqr6iSNhLYdUHA3tHVGzVeLd1MfeCeXTSB6NgoX1LCFSqQ8EaerSPw==",
         "dependencies": {
