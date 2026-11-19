@@ -4,8 +4,8 @@ namespace MMCA.Common.Application.Auth.Passkeys;
 
 /// <summary>
 /// Persistence for <see cref="PasskeyCredential"/> rows (ADR-139). The framework ships the EF
-/// implementation over the Identity database; <c>AddPasskeys</c> registers it with <c>TryAdd</c>, so a
-/// host may supply its own.
+/// implementation over the Identity database; <c>AddInfrastructure</c> registers it with <c>TryAdd</c>, so
+/// a host may supply its own.
 /// </summary>
 public interface IPasskeyCredentialStore
 {

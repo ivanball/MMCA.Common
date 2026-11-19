@@ -14,7 +14,7 @@ namespace MMCA.Common.Shared.DTOs;
 /// </remarks>
 public interface IConcurrencyAware
 {
-    /// <summary>The optimistic-concurrency token (SQL Server <c>rowversion</c>) of this version of the resource.</summary>
+    /// <summary>The optimistic-concurrency token of this version of the resource (a server-generated <c>rowversion</c> on SQL Server, stamped on every save on PostgreSQL and SQLite).</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "byte[] is required to round-trip the EF rowversion concurrency token")]
     byte[] RowVersion { get; init; }
 }

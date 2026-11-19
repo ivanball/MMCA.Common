@@ -89,8 +89,8 @@ public static class ProblemDetailsResultReader
 
     /// <summary>
     /// The exact reverse of <c>ErrorHttpMapping.ErrorTypeToStatusCode</c> in
-    /// <c>MMCA.Common.API</c> for the statuses that map one-to-one. 400 is deliberately absent
-    /// from the forward map's three-way collapse and resolves to
+    /// <c>MMCA.Common.API</c> for the statuses that map one-to-one. 400, which the forward map
+    /// uses for three error types, cannot be reversed exactly and resolves to
     /// <see cref="ErrorType.Validation"/> here.
     /// </summary>
     private static readonly FrozenDictionary<int, ErrorType> StatusCodeToErrorType =

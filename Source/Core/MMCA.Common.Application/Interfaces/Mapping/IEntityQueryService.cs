@@ -92,9 +92,8 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     /// <returns>A collection of id/name lookup pairs, ordered by display name.</returns>
     /// <remarks>
     /// Results are always ordered by the projected display name (the repository orders after the
-    /// id/name projection). An <c>orderBy</c> parameter existed here through v1.138.0 but was never
-    /// honored (the repository contract has no ordering hook), so it was removed rather than widened;
-    /// see the extraction plan if entity-level lookup ordering ever becomes a real requirement.
+    /// id/name projection). There is no ordering parameter, because the repository's lookup read has
+    /// no ordering hook.
     /// </remarks>
     Task<Result<IReadOnlyCollection<BaseLookup<TIdentifierType>>>> GetAllForLookupAsync(
         string nameProperty,

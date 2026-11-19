@@ -2,9 +2,9 @@ namespace MMCA.Common.Shared.Globalization;
 
 /// <summary>
 /// The framework-wide allowlist of supported UI cultures (ADR-027). Adding a locale means adding a
-/// <c>.&lt;culture&gt;.resx</c> sibling set and one entry here — no other infrastructure change.
+/// <c>.&lt;culture&gt;.resx</c> sibling set and one entry here, with no other infrastructure change.
 /// Referenced by the UI/service hosts' <c>UseRequestLocalization</c>, the culture switcher, and the
-/// Identity <c>User.PreferredCulture</c> guard so they cannot drift apart.
+/// preferred-culture guard (<c>CommonInvariants.EnsurePreferredCultureIsValid</c>) so they cannot drift apart.
 /// </summary>
 public static class SupportedCultures
 {

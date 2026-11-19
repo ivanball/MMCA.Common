@@ -10,7 +10,7 @@ namespace MMCA.Common.Application.Auth;
 /// Collapsing three closely-related dependencies into one keeps the app's
 /// <c>AuthenticationService</c> below the application-service constructor-arity ceiling
 /// (a god-class guardrail) without sacrificing per-request validation. The request DTOs already
-/// live in <c>MMCA.Common.Shared.Auth</c>, so the bundle is app-agnostic (hoisted from the apps).
+/// live in <c>MMCA.Common.Shared.Auth</c>, so the bundle is app-agnostic.
 /// </summary>
 /// <param name="login">Validator for <see cref="LoginRequest"/>.</param>
 /// <param name="register">Validator for <see cref="RegisterRequest"/>.</param>

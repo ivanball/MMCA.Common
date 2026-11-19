@@ -72,7 +72,8 @@ internal sealed partial class DeliverWebhookInternalCommandHandler(
 
     /// <summary>
     /// Maps the send outcome onto the subscription's last-outcome columns and onto the row: 2xx, 410 and
-    /// a connect-time refusal complete it (retrying cannot change them); everything else fails it so the
+    /// a refused target (a non-https scheme or a non-public address) complete it (retrying cannot change
+    /// them); everything else fails it so the
     /// processor retries with backoff.
     /// </summary>
     private Result ApplyOutcome(

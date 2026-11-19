@@ -6,7 +6,8 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 /// <summary>
 /// Maintains the device-installation registry behind <see cref="INativePushSender"/> (ADR-044).
 /// Installations are tagged with the owning user so sends can target users rather than raw
-/// tokens. The default implementation is a no-op until a notification hub is configured.
+/// tokens. The default implementation is a no-op until a native push adapter is configured
+/// (MMCA.Common.Azure, MMCA.Common.Aws or MMCA.Common.Gcp).
 /// </summary>
 public interface IPushDeviceRegistrar
 {

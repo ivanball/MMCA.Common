@@ -335,7 +335,7 @@ public sealed class QueryFieldService
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Rebuilding the <c>MemberInit</c> tree per request meant reflecting over the entity's
+    /// Rebuilding the <c>MemberInit</c> tree per request would mean reflecting over the entity's
     /// properties and allocating a binding array on every field-projected read, unlike the sibling
     /// lookup-selector cache in <c>EFReadRepository</c>. A <see langword="null"/> value is cached
     /// deliberately: it records "this field set projects nothing writable", so the miss is not
@@ -402,8 +402,8 @@ public sealed class QueryFieldService
     /// client) and their values are deliberately not plain property names of
     /// <typeparamref name="TEntity"/>: they may be nested navigation paths such as
     /// <c>"Category.Name"</c> or Dynamic LINQ expressions. Reflecting over them would reject exactly
-    /// the DTO names the map exists to enable, which is what made a mapped sort column fail
-    /// validation while <c>ApplySorting</c> would have sorted by it happily.
+    /// the DTO names the map exists to enable, failing validation on a mapped sort column that
+    /// <c>ApplySorting</c> sorts by happily.
     /// </para>
     /// <para>
     /// A name with NO map entry falls back to the entity-property check below unchanged (existence,
@@ -490,7 +490,7 @@ public sealed class QueryFieldService
     }
 
     /// <summary>
-    /// Shared body of both <c>Validate</c> overloads. See the map-aware overload for why a map hit
+    /// Shared body of every <c>Validate</c> overload. See the map-aware overload for why a map hit
     /// short-circuits the entity-property check.
     /// </summary>
     private static Result ValidateFields<TEntity>(

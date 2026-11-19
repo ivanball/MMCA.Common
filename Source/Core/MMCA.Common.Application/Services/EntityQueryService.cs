@@ -125,8 +125,8 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     /// <summary>
     /// The name properties <see cref="GetAllForLookupAsync"/> will project. Defaults to
     /// <see cref="FieldContract"/>, so a lookup can only surface a column the DTO declares
-    /// (SEC-Common-24): before this gate existed, <c>?nameProperty=</c> projected ANY public entity
-    /// property, unpaginated, for every row.
+    /// (SEC-Common-24): without this gate, <c>?nameProperty=</c> would project ANY public entity
+    /// property for every row.
     /// </summary>
     /// <remarks>
     /// Override with <c>QueryFieldContract.ForNames</c> to pin the lookup to the one or two columns
@@ -182,10 +182,10 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     /// Requested includes do not disqualify the request. The repository's include overload applies
     /// the same <c>Include</c> calls the pipeline would, and auto-applies <c>AsSplitQuery</c> when
     /// any of them is a child collection, so the two produce the same result for a keyed read.
-    /// Disqualifying on includes left the fast path unreachable for every entity that declares a
-    /// navigation, because the REST by-id action defaults <c>includeFKs</c> to true: those reads
-    /// fell back to the dynamic-filter pipeline and emitted <c>TOP 1000</c> plus a client-side
-    /// <c>FirstOrDefault</c> where a keyed <c>TOP 1 WHERE Id = @id</c> would do.
+    /// Disqualifying on includes would leave the fast path unreachable for every entity that declares
+    /// a navigation, because the REST by-id action defaults <c>includeFKs</c> to true: those reads
+    /// would fall back to the dynamic-filter pipeline and emit <c>TOP 1000</c> plus a client-side
+    /// <c>FirstOrDefault</c> where a keyed <c>TOP 1 WHERE Id = @id</c> does.
     /// </para>
     /// <para>
     /// Unsupported includes still do disqualify: those are cross-source navigations that only the
@@ -389,7 +389,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         CancellationToken cancellationToken = default)
     {
         // SECURITY (SEC-Common-24): the lookup projects the named column verbatim for every row, so
-        // an existence check against the ENTITY was enough to dump a column the DTO deliberately
+        // an existence check against the ENTITY would be enough to dump a column the DTO deliberately
         // never exposes. The allow-list is the response contract, not the entity.
         if (LookupNameContract is { } lookupContract && !lookupContract.AllowsClientKey(nameProperty))
         {
@@ -717,9 +717,8 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Both branches go through the validating constructor rather than an object initializer: the
-    /// initializer bypassed the constructor's negative-value guards entirely, so an out-of-range
-    /// input reached the derived properties instead of being corrected here.
+    /// Both branches go through the validating constructor, which (like the init accessors) throws
+    /// on a negative value, so every input is floored or clamped here before it is passed in.
     /// </para>
     /// <para>
     /// The clamp is recomputed here instead of being read back from <see cref="Query.PagingMath"/>:
@@ -731,7 +730,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     private static PaginationMetadata BuildPaginationMetadata(int totalItemCount, int? pageNumber, int? pageSize)
     {
         // The pipeline owns the total and should never report a negative one, but the constructor
-        // now throws on negatives: floor it so a bad count degrades the metadata instead of turning
+        // throws on negatives: floor it so a bad count degrades the metadata instead of turning
         // a successful read into a 500.
         var safeTotalItemCount = Math.Max(totalItemCount, 0);
 
@@ -750,8 +749,9 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
 
         // Floor and ceiling together mirror exactly what PagingMath applied for this request: it
         // takes at least one row and at most the framework ceiling, and treats any page below 1 as
-        // page 1. Without the floor, pageSize = 0 (or negative) advertised PageSize = 0 and
-        // collapsed every derived value to 0 while the pipeline had really fetched one row.
+        // page 1. Without the floor, pageSize = 0 would advertise PageSize = 0 and collapse every
+        // derived value to 0 while the pipeline had really fetched one row (and a negative value
+        // would make the constructor throw).
         return new PaginationMetadata(
             totalItemCount: safeTotalItemCount,
             pageSize: Math.Clamp(pageSize.Value, 1, Query.EntityQueryPipeline.MaxUnboundedResultLimit),

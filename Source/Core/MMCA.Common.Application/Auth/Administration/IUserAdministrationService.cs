@@ -36,11 +36,12 @@ public interface IUserAdministrationService<TUserDto>
     /// Locks or unlocks an account.
     /// </summary>
     /// <remarks>
-    /// An implementation that locks an account should also revoke its live refresh sessions, or the
-    /// lock only takes effect when the current access token expires. Call
-    /// <see cref="RefreshSessionRevocation.RevokeAllAsync"/> with the injected
-    /// <see cref="IRefreshSessionStore"/>: it is the step the framework's own credential-rotation paths
-    /// use for exactly this, and it is a no-op when the host registered no store.
+    /// Derive <see cref="UserAdministrationServiceBase{TUser, TUserDto}"/> rather than implementing this
+    /// by hand: a lock must both refuse the account's already-issued access tokens (the soft-deleted
+    /// user marker, written through <see cref="SoftDeletedUsers.ISoftDeletedUserMarkerWriter"/>) and
+    /// revoke its live refresh sessions (<see cref="RefreshSessionRevocation.RevokeAllAsync"/> over
+    /// <see cref="IRefreshSessionStore"/>), or the lock only takes effect when the current access token
+    /// expires; an unlock clears the marker. The base does all three.
     /// </remarks>
     /// <param name="userId">The account.</param>
     /// <param name="locked"><see langword="true"/> to lock, <see langword="false"/> to unlock.</param>

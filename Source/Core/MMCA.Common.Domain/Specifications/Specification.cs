@@ -65,13 +65,12 @@ public sealed class InlineSpecification<TEntity, TIdentifierType>(Expression<Fun
 /// <para>
 /// It deliberately does not use <c>Expression.Invoke</c>. An <see cref="InvocationExpression"/>
 /// survives into the query tree, and while EF Core's relational providers can usually unwrap it,
-/// others (Cosmos in particular) throw at translation time, so an ANDed specification failed on
-/// exactly the engines the framework is meant to be portable across.
+/// others (Cosmos in particular) throw at translation time, so an Invoke-based composition would
+/// fail on exactly the engines the framework is meant to be portable across.
 /// </para>
 /// <para>
-/// The composed expression is built once per instance and cached: the previous implementation
-/// rebuilt the whole tree on every <see cref="Criteria"/> read, and the query pipeline reads it at
-/// least once per request.
+/// The composed expression is built once per instance and cached, because the query pipeline
+/// reads <see cref="Criteria"/> at least once per request.
 /// </para>
 /// </remarks>
 /// <typeparam name="TEntity">The entity type this specification applies to.</typeparam>

@@ -11,12 +11,11 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePreferences;
 /// <summary>
 /// The shared preference-write workflow (ADR-027 culture / ADR-028 theme). Each request field defaults
 /// to the stored value when <see langword="null"/>, so updating one preference never clears the other.
-/// The app Identity modules carried line-identical copies of this handler.
 /// </summary>
 /// <remarks>
 /// The command record stays app-side (<typeparamref name="TCommand"/>) because ADC marks it
 /// <c>ICacheInvalidating</c> and Store does not; the payload record
-/// (<see cref="ChangePreferencesRequest"/>) was byte-identical in both apps and is now shared.
+/// (<see cref="ChangePreferencesRequest"/>) is shared.
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's change-preferences command record.</typeparam>
@@ -31,8 +30,8 @@ public abstract partial class ChangePreferencesHandlerBase<TUser, TCommand>(
 
     /// <summary>
     /// The name reported as the <c>source</c> of any error this handler returns. Defaults to the
-    /// runtime type name, so an app subclass that keeps the pre-hoist class name
-    /// (<c>ChangePreferencesHandler</c>) reports the identical error payload it did before.
+    /// runtime type name, so an app subclass named <c>ChangePreferencesHandler</c> reports that name
+    /// in the error payload.
     /// </summary>
     protected virtual string HandlerName => GetType().Name;
 

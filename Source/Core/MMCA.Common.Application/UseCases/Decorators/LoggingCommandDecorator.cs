@@ -8,8 +8,9 @@ using MMCA.Common.Shared.Conventions;
 namespace MMCA.Common.Application.UseCases.Decorators;
 
 /// <summary>
-/// Outermost decorator that logs command execution with correlation ID, duration,
-/// and success/failure status. Adds a structured logging scope so that all log
+/// Decorator that logs command execution with correlation ID, duration, and success/failure
+/// status. It sits inside the view-as, feature-gate and authorization decorators, so it logs only
+/// commands that passed them. Adds a structured logging scope so that all log
 /// entries emitted by inner decorators and the handler share the same correlation context.
 /// </summary>
 /// <typeparam name="TCommand">The command type.</typeparam>
@@ -34,8 +35,8 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
             LogCommandStarted(logger, commandName, correlationId);
 
             // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per
-            // command. Elapsed is captured before logging, so the recorded duration stays the
-            // handler's (matching the previous stopwatch.Stop()-then-log ordering).
+            // command. Elapsed is captured before logging, so the recorded duration excludes the
+            // logging itself.
             var startTimestamp = Stopwatch.GetTimestamp();
             try
             {
@@ -63,9 +64,9 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
                 // The outcome line only, WITHOUT the exception object: the exception is rethrown
                 // untouched and the boundary that finally handles it (GlobalExceptionHandler, or the
                 // internal-command processor for a deferred command) logs it once at Error with its
-                // full stack. Logging it here too produced two Error rows and two stacks for every
-                // unhandled exception, which doubled the ingestion cost of the noisiest events in the
-                // system and made an operator counting Errors count each failure twice. The
+                // full stack. Logging it here too would produce two Error rows and two stacks for every
+                // unhandled exception, doubling the ingestion cost of the noisiest events in the
+                // system and making an operator counting Errors count each failure twice. The
                 // correlation id is what joins this line to that stack.
                 LogCommandException(
                     logger,

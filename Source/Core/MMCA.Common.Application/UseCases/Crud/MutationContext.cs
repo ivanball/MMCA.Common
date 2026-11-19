@@ -49,7 +49,7 @@ public sealed class MutationContext
     public void SkipSave() => SaveSkipped = true;
 
     /// <summary>Writes a value into the bag, replacing any value already stored under the same key.</summary>
-    /// <typeparam name="TValue">The value's type, recorded so a later read can verify it.</typeparam>
+    /// <typeparam name="TValue">The value's type; a later read verifies the stored value's runtime type.</typeparam>
     /// <param name="key">The key to store under. Compared ordinally.</param>
     /// <param name="value">The value to store.</param>
     /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>

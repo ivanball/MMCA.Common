@@ -12,9 +12,9 @@ namespace MMCA.Common.Application.Services.Query;
 /// 500 instead of the empty page that page genuinely holds.
 /// </para>
 /// <para>
-/// This lived only inside <c>EntityQueryPipeline</c>, so handlers that paginate their own
-/// queryable (the notification inbox and history reads) each re-derived it in 32-bit and kept
-/// the overflow. Callers must route through here rather than open-coding the multiply.
+/// <c>EntityQueryPipeline</c>, the handlers that paginate their own queryable (the notification
+/// inbox and history reads) and the view-as grant stores all page through it. Callers must route
+/// through here rather than open-coding the multiply.
 /// </para>
 /// </remarks>
 public static class PagingMath

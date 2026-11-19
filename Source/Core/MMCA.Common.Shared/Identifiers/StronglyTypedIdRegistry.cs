@@ -16,7 +16,7 @@ namespace MMCA.Common.Shared.Identifiers;
 /// <para>
 /// A host that declares no identifier types never registers this service, and every framework site
 /// that reads it treats its absence as "no wrappers in use", which is the default posture: the
-/// primitive identifier aliases (ADR-048/ADR-085) stay the identifier model unless a host opts out.
+/// primitive identifier aliases (ADR-048/ADR-085) stay the identifier model unless a host opts in to wrappers.
 /// </para>
 /// </summary>
 public sealed class StronglyTypedIdRegistry

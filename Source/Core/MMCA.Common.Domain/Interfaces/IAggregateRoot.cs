@@ -3,7 +3,7 @@ namespace MMCA.Common.Domain.Interfaces;
 /// <summary>
 /// Marker and contract for aggregate roots in the DDD sense. Aggregates are the only
 /// entities that can raise domain events, and they define the transactional consistency boundary.
-/// The infrastructure layer (<c>ApplicationDbContext</c>) uses this interface to discover
+/// The infrastructure layer (<c>DomainEventSaveChangesInterceptor</c>) uses this interface to discover
 /// pending domain events across all tracked aggregates during <c>SaveChangesAsync</c>.
 /// </summary>
 public interface IAggregateRoot
@@ -15,7 +15,10 @@ public interface IAggregateRoot
     /// <param name="domainEvent">The domain event to add.</param>
     void AddDomainEvent(IDomainEvent domainEvent);
 
-    /// <summary>Clears all pending domain events after they have been dispatched.</summary>
+    /// <summary>
+    /// Clears all pending domain events. The persistence pipeline does not call it: it uses
+    /// <see cref="RemoveDomainEvents"/> so events raised during dispatch survive.
+    /// </summary>
     void ClearDomainEvents();
 
     /// <summary>

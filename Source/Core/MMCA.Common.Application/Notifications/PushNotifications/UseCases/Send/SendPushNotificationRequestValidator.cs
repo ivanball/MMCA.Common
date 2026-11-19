@@ -23,7 +23,7 @@ public sealed class SendPushNotificationRequestValidator : AbstractValidator<Sen
             .MaximumLength(PushNotificationInvariants.BodyMaxLength)
             .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters."));
 
-        // The scope key stays optional: a null one is the unscoped send every existing caller makes.
+        // The scope key stays optional: a null one is an unscoped send.
         RuleFor(x => x.ScopeKey)
             .MaximumLength(PushNotification.ScopeKeyMaxLength)
             .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification scope key cannot exceed {PushNotification.ScopeKeyMaxLength} characters."));

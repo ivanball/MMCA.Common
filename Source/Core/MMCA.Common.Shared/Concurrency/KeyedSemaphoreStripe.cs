@@ -69,7 +69,7 @@ public sealed class KeyedSemaphoreStripe
         ArgumentNullException.ThrowIfNull(key);
 
         // Ordinal hash, folded to a non-negative index. int.MinValue has no positive counterpart,
-        // so mask the sign bit rather than calling Math.Abs.
+        // so reinterpret the hash as unsigned rather than calling Math.Abs.
         var index = (uint)string.GetHashCode(key, StringComparison.Ordinal) % (uint)Width;
         return _stripes[index];
     }

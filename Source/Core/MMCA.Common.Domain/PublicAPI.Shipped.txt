@@ -1,5 +1,4 @@
 #nullable enable
-MMCA.Common.Domain.AssemblyReference
 MMCA.Common.Domain.Attributes.EventNameAttribute
 MMCA.Common.Domain.Attributes.EventNameAttribute.EventNameAttribute(string! name) -> void
 MMCA.Common.Domain.Attributes.EventNameAttribute.Name.get -> string!
@@ -136,8 +135,6 @@ MMCA.Common.Domain.Auth.ViewAsGrant.TargetDisplay.get -> string?
 MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.get -> int
 MMCA.Common.Domain.Auth.ViewAsGrant.TargetUserId.init -> void
 MMCA.Common.Domain.Auth.ViewAsGrant.ViewAsGrant() -> void
-MMCA.Common.Domain.ClassReference
-MMCA.Common.Domain.ClassReference.ClassReference() -> void
 MMCA.Common.Domain.DomainEvents.BaseDomainEvent
 MMCA.Common.Domain.DomainEvents.BaseDomainEvent.BaseDomainEvent() -> void
 MMCA.Common.Domain.DomainEvents.BaseDomainEvent.BaseDomainEvent(MMCA.Common.Domain.DomainEvents.BaseDomainEvent! original) -> void
@@ -512,8 +509,6 @@ static MMCA.Common.Domain.Specifications.SpecificationExtensions.And<TEntity, TI
 static MMCA.Common.Domain.Specifications.SpecificationExtensions.Not<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification) -> MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>!
 static MMCA.Common.Domain.Specifications.SpecificationExtensions.Or<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>!
 static MMCA.Common.Domain.Webhooks.WebhookSubscription.Create(string! url, string? description, System.Collections.Generic.IReadOnlyCollection<string!>! eventTypes, string? tenantId, string! protectedSecret) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Webhooks.WebhookSubscription!>!
-static readonly MMCA.Common.Domain.AssemblyReference.Assembly -> System.Reflection.Assembly!
-static readonly MMCA.Common.Domain.AssemblyReference.AssemblyName -> string!
 static readonly MMCA.Common.Domain.Auth.ViewAsGrant.MaxLifetime -> System.TimeSpan
 static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.BodyMaxLength -> int
 static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.TitleMaxLength -> int

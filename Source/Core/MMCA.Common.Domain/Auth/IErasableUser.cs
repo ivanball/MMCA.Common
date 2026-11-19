@@ -12,7 +12,7 @@ namespace MMCA.Common.Domain.Auth;
 /// <para>
 /// <see cref="Delete"/> is redeclared here so the shared workflow calls it <b>through this
 /// interface</b>: the call runs whatever <c>Delete()</c> the app <c>User</c> maps onto it, an
-/// override that adds account-specific behavior (such as revoking the refresh token) included.
+/// override that adds account-specific behavior included.
 /// </para>
 /// <para>
 /// The base entity deliberately does not implement this interface, so a consumer that forgets to
@@ -22,8 +22,9 @@ namespace MMCA.Common.Domain.Auth;
 public interface IErasableUser : IAnonymizable
 {
     /// <summary>
-    /// Soft-deletes the account (sets <c>IsDeleted</c>), plus whatever the app couples to deletion
-    /// (typically revoking the refresh token so outstanding sessions die immediately).
+    /// Soft-deletes the account (sets <c>IsDeleted</c>), plus whatever the app couples to deletion.
+    /// Revoking the account's refresh sessions is not part of it: the shared workflow does that
+    /// through <c>IRefreshSessionStore</c> when the host registers one.
     /// </summary>
     /// <returns>A success result, or a failure if the account is already deleted.</returns>
     Result Delete();

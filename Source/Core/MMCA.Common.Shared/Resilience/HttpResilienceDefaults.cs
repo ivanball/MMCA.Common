@@ -7,8 +7,7 @@ namespace MMCA.Common.Shared.Resilience;
 /// <see cref="System.Net.Http.HttpClient"/> and its standard resilience handler). Every number lives
 /// here, so one file answers "what timeout does this client get"; the <c>Grpc</c>-prefixed members are
 /// the east-west gRPC path's own values. Lives in Shared because those packages may only depend on
-/// Shared per the layer rules; the previous hand-mirrored copies drifted (10s/30s library defaults on
-/// the gRPC side vs the tuned 30s/90s on the HTTP side).
+/// Shared per the layer rules.
 /// </summary>
 public static class HttpResilienceDefaults
 {
@@ -34,7 +33,7 @@ public static class HttpResilienceDefaults
 
     /// <summary>
     /// The longest <c>Retry-After</c> a client will wait out before retrying a
-    /// <c>429 Too Many Requests</c>: eight seconds, the longest step of the UI retry backoff. A 429 asking for more
+    /// <c>429 Too Many Requests</c>: eight seconds. A 429 asking for more
     /// than this is not retried at all and surfaces to the caller at once, so a refused user action
     /// costs one request rather than a held connection waiting out the rest of a rate-limit window.
     /// </summary>

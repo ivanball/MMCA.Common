@@ -11,8 +11,9 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// pass through unchanged. When the feature is disabled, returns a failure result
 /// with <see cref="ErrorType.NotFound"/> without invoking the handler.
 /// <para>
-/// Registered as the outermost standard decorator so that disabled features are
-/// rejected immediately, before logging, caching, validation, or transaction work.
+/// Registered directly inside <see cref="ViewAsCommandDecorator{TCommand, TResult}"/> and outside
+/// every other standard decorator, so that disabled features are rejected immediately, before
+/// authorization, logging, caching, validation, or transaction work.
 /// </para>
 /// </summary>
 /// <typeparam name="TCommand">The command type.</typeparam>
@@ -29,7 +30,7 @@ public sealed class FeatureGateCommandDecorator<TCommand, TResult>(
     /// <remarks>
     /// Built on the first short-circuit rather than in the static constructor:
     /// <see cref="ResultFailureFactory"/> supports only <see cref="Result"/> and
-    /// <see cref="Result{T}"/>, and an eager static initializer turned an unsupported
+    /// <see cref="Result{T}"/>, and an eager static initializer would turn an unsupported
     /// <typeparamref name="TResult"/> into a <see cref="TypeInitializationException"/> at RESOLVE
     /// time (Scrutor's TryDecorate is unconditional) for a handler that never short-circuits. One
     /// assignment per closed generic type; a benign duplicate build under a race produces an

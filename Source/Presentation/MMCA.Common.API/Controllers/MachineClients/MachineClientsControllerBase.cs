@@ -30,7 +30,8 @@ namespace MMCA.Common.API.Controllers.MachineClients;
 /// </para>
 /// <para>
 /// <b>Refusals a client has to expect:</b> <c>MachineClients.RoleNotAllowed</c> (400) for a role that
-/// grants <c>users:view-as</c> or <c>users:manage</c>, <c>MachineClients.NotFound</c> (404),
+/// grants <c>users:view-as</c>, <c>users:manage</c>, <c>roles:manage</c> or <c>clients:manage</c>,
+/// <c>MachineClients.NotFound</c> (404),
 /// <c>MachineClients.Revoked</c> and <c>MachineClients.NoSecondarySecret</c> (409).
 /// </para>
 /// </remarks>

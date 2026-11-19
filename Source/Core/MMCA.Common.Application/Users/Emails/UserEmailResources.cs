@@ -6,7 +6,7 @@ using MMCA.Common.Shared.Globalization;
 namespace MMCA.Common.Application.Users.Emails;
 
 /// <summary>
-/// Text of the account emails the framework sends (password reset, email confirmation), localized
+/// Text of the account emails the framework sends (password reset, email confirmation, sign-in link), localized
 /// per recipient (ADR-027). The <c>.resx</c> siblings (<c>UserEmailResources.resx</c> /
 /// <c>UserEmailResources.es.resx</c>) are read through a plain <see cref="ResourceManager"/>, the
 /// localization pattern available at this layer: the Application layer references no

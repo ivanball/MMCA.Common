@@ -29,8 +29,9 @@ namespace MMCA.Common.Shared.Auth.Responses;
 /// <see langword="false"/> in an administrator's view of another account.
 /// </param>
 /// <param name="Kind">
-/// What the row records. Every row is a <see cref="SignInHistoryEntryKind.SignIn"/> today; the kind is
-/// the extension point for other account-access events that belong in the same history.
+/// What the row records: a <see cref="SignInHistoryEntryKind.SignIn"/>, or a
+/// <see cref="SignInHistoryEntryKind.ViewAs"/> row for a view-as grant on the account. The kind is the
+/// extension point for other account-access events that belong in the same history.
 /// </param>
 /// <param name="Device">
 /// The device metadata the native client reported, as recorded on the newest session, or

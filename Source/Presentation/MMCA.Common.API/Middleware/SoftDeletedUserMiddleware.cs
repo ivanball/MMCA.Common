@@ -8,13 +8,16 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 namespace MMCA.Common.API.Middleware;
 
 /// <summary>
-/// Middleware that validates authenticated users have not been soft-deleted (BR-133).
+/// Middleware that validates authenticated users have not been soft-deleted or locked (BR-133).
 /// If <c>User.IsDeleted = true</c> for the authenticated user's ID, the request is rejected with HTTP 401.
-/// The deleted-user marker in <see cref="SoftDeletedUserCache"/> is honored on every host and is read
-/// from the shared store (never a replica's local copy), so a delete handled on one replica is seen by
-/// all of them at once. A host that registers an <see cref="ISoftDeletedUserValidator"/> (the Identity
-/// host) also falls back to that query when no marker is set, and writes the marker when the query
-/// finds the user deleted. A "not deleted" answer is never cached, since a replica's local copy of it
+/// The marker in <see cref="SoftDeletedUserCache"/> means "deleted or locked" (an erasure, an
+/// administrator's lock or a machine-client revocation writes it; an unlock clears it). It is honored on
+/// every host and is read from the shared store (never a replica's local copy), so a delete, lock or
+/// unlock handled on one replica is seen by all of them at once. A host that registers an
+/// <see cref="ISoftDeletedUserValidator"/> (the Identity host) also falls back to that query when no
+/// marker is set, and writes the marker when the query finds the user deleted; the query checks
+/// deletion only, so a lock is enforced here by the marker alone (and, once it expires, by the sign-in
+/// and refresh gates, which refuse a locked account a new token). A "not deleted" answer is never cached, since a replica's local copy of it
 /// would outlive a delete made elsewhere; the cost is one shared-store read and one query per
 /// authenticated request on that host.
 /// </summary>
@@ -28,9 +31,9 @@ namespace MMCA.Common.API.Middleware;
 /// Failing closed would convert any cache or database blip into a complete outage for every
 /// authenticated request across the application, since this middleware runs on the hot path of
 /// all of them. The exposure it buys back is bounded: access tokens live 15 minutes, so a deleted
-/// user's token is dead within that window regardless of what this middleware decides, and the
-/// deletion itself already revoked the refresh token, so no new access token can be minted.
-/// The residual risk is therefore a deleted user continuing to be served for at most the remaining
+/// or locked user's token is dead within that window regardless of what this middleware decides, and
+/// the deletion or lock itself already revoked the refresh token, so no new access token can be minted.
+/// The residual risk is therefore a deleted or locked user continuing to be served for at most the remaining
 /// lifetime of one already-issued access token, and only while the cache or database is unhealthy.
 /// </para>
 /// </remarks>
@@ -105,8 +108,8 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
         if (cachedResult is true)
         {
             // The marker is honored on every host, including one that does not host Identity: the
-            // module that deleted the user wrote it to the shared cache, and it outlives any access
-            // token issued before the delete (see SoftDeletedUserCache.MarkerDuration).
+            // module that deleted or locked the user wrote it to the shared cache, and it outlives any
+            // access token issued before the delete or lock (see SoftDeletedUserCache.MarkerDuration).
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
         }

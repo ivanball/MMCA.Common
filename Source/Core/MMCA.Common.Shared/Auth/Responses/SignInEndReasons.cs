@@ -1,9 +1,10 @@
 namespace MMCA.Common.Shared.Auth.Responses;
 
 /// <summary>
-/// The values <see cref="SignInSummaryResponse.EndReason"/> carries. Each revocation reason matches
-/// the refresh session's own reason constant of the same name, so the history reports exactly what
-/// the session store recorded; <see cref="Expired"/> is the one reason no revocation writes.
+/// The values <see cref="SignInSummaryResponse.EndReason"/> carries. Each refresh-session revocation
+/// reason matches the refresh session's own reason constant of the same value, so the history reports
+/// exactly what the session store recorded; <see cref="Expired"/> and <see cref="ViewAsEnded"/> (the end
+/// of a view-as grant) are the two values no session revocation writes.
 /// </summary>
 public static class SignInEndReasons
 {

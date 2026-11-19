@@ -22,8 +22,8 @@ namespace MMCA.Common.Application.Users.UseCases.ResetPassword;
 /// the endpoint reveals nothing about which addresses hold accounts or which tokens exist.
 /// </para>
 /// <para>
-/// The command record stays app-side (<typeparamref name="TCommand"/>), matching the ChangePassword
-/// hoist; the base reads it only through <see cref="ICommandWithRequest{TRequest}"/>.
+/// The command record stays app-side (<typeparamref name="TCommand"/>), matching
+/// <c>ChangePasswordHandlerBase</c>; the base reads it only through <see cref="ICommandWithRequest{TRequest}"/>.
 /// </para>
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>

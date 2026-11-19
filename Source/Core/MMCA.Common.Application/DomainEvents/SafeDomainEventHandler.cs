@@ -11,10 +11,10 @@ namespace MMCA.Common.Application.DomainEvents;
 /// propagate unchanged; <see cref="OperationCanceledException"/> passes straight through without
 /// a log line, because host shutdown is not a delivery failure.
 /// <para>
-/// The base class used to swallow the exception, which made the "retried via the outbox" promise
-/// false: a handler that reported success had its outbox row marked processed, so nothing ever
-/// retried and the side effect was lost with only a log line to show for it. Propagating hands
-/// the decision to the delivery mechanism instead, which is built for exactly this. On the
+/// Propagating rather than swallowing is what makes the outbox retry real: a handler that reports
+/// success has its outbox row marked processed, so nothing retries and the side effect is lost with
+/// only a log line to show for it. Letting the exception through hands the decision to the delivery
+/// mechanism instead, which is built for exactly this. On the
 /// outbox-processor path the failed message keeps its retry count, backs off, and dead-letters
 /// after <c>Outbox:MaxRetries</c> attempts.
 /// </para>

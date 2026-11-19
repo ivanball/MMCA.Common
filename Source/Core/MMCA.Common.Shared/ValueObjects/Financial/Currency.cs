@@ -8,8 +8,8 @@ namespace MMCA.Common.Shared.ValueObjects.Financial;
 /// Value object representing an ISO 4217 currency. Uses a closed set of supported currencies
 /// (<see cref="All"/>) and a private constructor to prevent arbitrary instances.
 /// <see cref="None"/> is an internal sentinel used by <see cref="Money.Zero()"/> to represent
-/// "no currency yet". It crosses the wire only as the empty code of a zero amount: both JSON
-/// converters read that empty code back as the sentinel, so a zero total round-trips, and
+/// "no currency yet". It crosses the wire only as the empty code of a zero amount:
+/// <see cref="CurrencyJsonConverter"/> reads that empty code back as the sentinel, so a zero total round-trips, and
 /// <see cref="Money"/>'s JSON read refuses the sentinel beside a non-zero amount.
 /// </summary>
 [JsonConverter(typeof(CurrencyJsonConverter))]
@@ -64,8 +64,8 @@ public sealed record Currency : ValueObject
 /// Serializes <see cref="Currency"/> as its ISO 4217 code string in JSON.
 /// Deserialization validates the code against <see cref="Currency.All"/>; a non-string token
 /// (number, object, array, boolean) and an unknown code both throw <see cref="JsonException"/>,
-/// matching the API-layer converter so non-MVC paths (cache, outbox, integration events,
-/// typed HttpClient calls) fail the same way MVC model binding does.
+/// and the same converter serves MVC model binding and the non-MVC paths (cache, outbox,
+/// integration events, typed HttpClient calls), so they all fail the same way.
 /// </summary>
 /// <remarks>
 /// <see cref="JsonConverter{T}.HandleNull"/> is left at its default (<see langword="false"/>),

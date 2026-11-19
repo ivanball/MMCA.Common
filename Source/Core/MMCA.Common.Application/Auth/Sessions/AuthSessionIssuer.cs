@@ -660,7 +660,7 @@ public sealed partial class AuthSessionIssuer(
     /// <summary>
     /// The BR-206 answer to a replayed refresh token: revokes every live session the user holds as
     /// <see cref="RefreshSession.ReasonReuseDetected"/>, saves, and logs one Warning so an operator
-    /// sees the event (it was silent before). Both reuse paths (the lookup that lands on a rotated
+    /// sees the event. Both reuse paths (the lookup that lands on a rotated
     /// row, and the loser of a rotation claim) end here, so each event logs exactly once.
     /// </summary>
     private async Task RevokeFamilyOnReuseAsync(UserIdentifierType userId, DateTime now, CancellationToken cancellationToken)

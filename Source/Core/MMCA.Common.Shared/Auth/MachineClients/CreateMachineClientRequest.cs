@@ -6,7 +6,8 @@ namespace MMCA.Common.Shared.Auth.MachineClients;
 /// <param name="Name">The label the operator recognizes the client by (1 to 100 characters).</param>
 /// <param name="Role">
 /// The role the service account is created with; its permissions are what the client's tokens carry.
-/// A role granting <c>users:view-as</c> or <c>users:manage</c> is refused.
+/// A role granting <c>users:view-as</c>, <c>users:manage</c>, <c>roles:manage</c> or
+/// <c>clients:manage</c> is refused.
 /// </param>
 /// <param name="SecretExpiresOn">
 /// The UTC instant the client's secrets stop working, or <see langword="null"/> for no expiry.

@@ -66,7 +66,7 @@ public sealed record Money : ValueObject, IJsonOnDeserialized
 
     /// <summary>
     /// JSON-only guard on the round-trip constructor, which bypasses <see cref="Create"/>. The JSON
-    /// currency converters read the empty code back as <see cref="Financial.Currency.None"/> so a
+    /// currency converter reads the empty code back as <see cref="Financial.Currency.None"/> so a
     /// serialized <see cref="Zero()"/> round-trips, but only a ZERO amount may carry that sentinel:
     /// a non-zero amount with no currency is refused as invalid JSON (a 400 on the MVC path) instead
     /// of becoming a value whose amount the arithmetic silently drops. EF materialization does not
@@ -171,8 +171,8 @@ public sealed record Money : ValueObject, IJsonOnDeserialized
     public static Money Zero(Currency currency) => new(0, currency);
 
     /// <summary>
-    /// Creates a <see cref="Money"/> without currency validation. Internal — exposed to test
-    /// assemblies via <see cref="System.Runtime.CompilerServices.InternalsVisibleToAttribute"/>.
+    /// Creates a <see cref="Money"/> without currency validation, for callers inside this assembly
+    /// only (no <c>InternalsVisibleTo</c> exposes it).
     /// </summary>
     internal static Money CreateUnsafe(decimal amount, Currency currency) => new(amount, currency);
 

@@ -32,13 +32,13 @@ public sealed class PackageGraphPurityTests
     /// <list type="bullet">
     /// <item><c>FluentValidation.DependencyInjectionExtensions</c>: the validators the pipeline resolves.</item>
     /// <item><c>Microsoft.Extensions.Configuration.Json</c>: ModuleLoader reads each module's
-    /// modules.{name}.json. Host-agnostic; it used to arrive transitively through the MiniProfiler
-    /// ASP.NET Core graph, which is precisely the kind of accident this test exists to prevent.</item>
+    /// modules.{name}.json. Host-agnostic, and referenced directly so it never depends on arriving
+    /// transitively through some other package's graph.</item>
     /// <item><c>Microsoft.FeatureManagement</c>: the abstractions-only feature-flag package the feature
     /// gate decorators read (the <c>.AspNetCore</c> variant belongs to MMCA.Common.API).</item>
     /// <item><c>MiniProfiler.Shared</c>: profiling primitives only. Deliberately NOT
-    /// <c>MiniProfiler.AspNetCore.Mvc</c>, which the profiling decorators never touched and which
-    /// pulled MVC into every consumer of this package.</item>
+    /// <c>MiniProfiler.AspNetCore.Mvc</c>, which the profiling decorators do not use and which would
+    /// pull MVC into every consumer of this package.</item>
     /// <item><c>Riok.Mapperly</c>: source generator, PrivateAssets=all, no runtime dependency.</item>
     /// <item><c>MinVer</c>: build-time versioning, PrivateAssets=all.</item>
     /// <item><c>Scrutor</c>: the assembly scanning and decoration this layer's registration is built on.</item>

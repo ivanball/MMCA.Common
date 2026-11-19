@@ -3,13 +3,12 @@ using System.Globalization;
 namespace MMCA.Common.Shared.Extensions;
 
 /// <summary>
-/// Provides extension methods for domain-layer operations using C# preview extension types.
+/// Provides extension methods for domain-layer operations using a C# extension block.
 /// </summary>
 public static class DomainHelper
 {
-    // Extension on string that parses identifier strings into strongly-typed values.
-    // Used by controllers to convert route parameters into entity identifiers
-    // without coupling to a specific identifier type.
+    // Extension on string that parses identifier strings (a route parameter, for example) into
+    // typed values without coupling the caller to a specific identifier type.
     extension(string? id)
     {
         /// <summary>

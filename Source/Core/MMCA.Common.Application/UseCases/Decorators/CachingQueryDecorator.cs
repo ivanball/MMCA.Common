@@ -49,8 +49,8 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
 {
     /// <summary>
     /// The cache key for this query in the current tenant AND for the caller it is addressed at:
-    /// the query's own key, prefixed with the target user when the query is caller-scoped, then with
-    /// the tenant when one is resolved. Two tenants and two users therefore never share an entry,
+    /// the query's own key, suffixed with the target user when the query is caller-scoped, then
+    /// prefixed with the tenant when one is resolved. Two tenants and two users therefore never share an entry,
     /// and a host with neither keeps byte-identical keys to the pre-tenancy framework.
     /// </summary>
     /// <param name="cacheable">The cacheable query carrying the key.</param>

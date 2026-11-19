@@ -11,8 +11,8 @@ namespace MMCA.Common.Shared.Notifications;
 /// <remarks>
 /// The format and the pattern that guards it live together on purpose. The pattern is the default
 /// of <c>PushNotificationSettings.ChannelKeyPattern</c>, which the notification hub enforces before
-/// a client may join a group; the format was hand-written at each call site, so a change to either
-/// half could silently strand the other. Building every key through <see cref="ForEvent"/> or
+/// a client may join a group; a format hand-written at a call site would let a change to either
+/// half silently strand the other. Building every key through <see cref="ForEvent"/> or
 /// <see cref="ForSession"/> keeps them in step, and formats the identifier under
 /// <see cref="CultureInfo.InvariantCulture"/> so a culture with non-ASCII digits cannot produce a
 /// key the pattern rejects.

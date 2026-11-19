@@ -6,8 +6,9 @@ namespace MMCA.Common.Domain.Entities;
 /// <summary>
 /// Base class for aggregate roots — entities that own a consistency boundary and
 /// can raise domain events. Domain events are collected during the business operation
-/// and dispatched by <c>ApplicationDbContext.SaveChangesAsync</c> after successful
-/// persistence, then cleared. This ensures events are never dispatched for failed saves.
+/// and captured by <c>DomainEventSaveChangesInterceptor</c> during <c>SaveChangesAsync</c>, which
+/// dispatches them only after successful persistence (after commit inside a transaction), then
+/// removes them from the aggregate. This ensures events are never dispatched for failed saves.
 /// </summary>
 /// <typeparam name="TIdentifierType">The aggregate's identifier type.</typeparam>
 public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableBaseEntity<TIdentifierType>, IAggregateRoot
@@ -28,8 +29,8 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
     }
 
     /// <summary>
-    /// Removes all pending domain events. Called by the infrastructure layer after
-    /// events have been successfully dispatched to prevent duplicate delivery.
+    /// Removes all pending domain events. The persistence pipeline does not call it: it removes
+    /// exactly the events it captured (<see cref="RemoveDomainEvents"/>).
     /// </summary>
     public void ClearDomainEvents() => _domainEvents.Clear();
 
@@ -254,8 +255,8 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
     /// deleted are skipped rather than reported, so re-deleting a parent is idempotent with respect
     /// to its children and does not surface an <c>Error.AlreadyDeleted</c> the caller cannot act on.
     /// <para>
-    /// This replaces the loop each aggregate used to hand-roll in its own <c>Delete()</c> override
-    /// (iterate the children, call <c>Delete()</c>, collect the results, combine). Call it before
+    /// It is the loop an aggregate's <c>Delete()</c> override would otherwise hand-roll (iterate
+    /// the children, call <c>Delete()</c>, collect the results, combine). Call it before
     /// deleting the root so a failing child aborts the whole cascade:
     /// <code>
     /// public override Result Delete() =>

@@ -9,8 +9,9 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// <summary>
 /// Decorator that checks the query's required permission, and then its required second
 /// authentication factor, before executing the inner handler. Queries that implement neither
-/// <see cref="IRequiresPermission"/> nor <see cref="IRequiresMfa"/> pass through unchanged. When none
-/// of the caller's roles grants the permission, or when an <see cref="IRequiresMfa"/> query is
+/// <see cref="IRequiresPermission"/> nor <see cref="IRequiresMfa"/> pass through unchanged. When neither
+/// a caller's role nor a permission claim on the principal grants the permission, or when an
+/// <see cref="IRequiresMfa"/> query is
 /// reached by a principal carrying no <c>mfa</c> claim, returns a failure result with
 /// <see cref="ErrorType.Forbidden"/> without invoking the handler.
 /// <para>

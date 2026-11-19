@@ -80,10 +80,8 @@ public interface ICurrentUserService
     /// <param name="roleName">The role name to check (use the host's own role constants).</param>
     /// <returns><see langword="true"/> if the user has the specified role; otherwise, <see langword="false"/>.</returns>
     /// <remarks>
-    /// Checks every role claim. Comparing against <see cref="Role"/> alone matched only the first
-    /// one, so a principal holding several roles failed the check for all but whichever happened to
-    /// be listed first. That is latent today (tokens carry a single role) and would have surfaced
-    /// silently, as an authorization denial, the moment a second was added.
+    /// Checks every role claim through <see cref="Roles"/> rather than <see cref="Role"/>, which holds
+    /// only the first, so a principal holding several roles passes the check for each of them.
     /// </remarks>
     bool IsInRole(string roleName) =>
         Roles.Any(role => string.Equals(role, roleName, StringComparison.OrdinalIgnoreCase));

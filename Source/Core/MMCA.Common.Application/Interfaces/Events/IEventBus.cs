@@ -4,9 +4,11 @@ namespace MMCA.Common.Application.Interfaces.Events;
 
 /// <summary>
 /// Abstraction for publishing integration events to an event bus.
-/// The default implementation dispatches in-process via <see cref="IDomainEventDispatcher"/>
-/// with outbox persistence for at-least-once delivery. Alternative implementations
-/// (e.g., Azure Service Bus, RabbitMQ) can be substituted via DI.
+/// The default implementation (<c>InProcessEventBus</c>) dispatches in-process via
+/// <see cref="IDomainEventDispatcher"/>, persisting outbox rows first for at-least-once retry only
+/// when <c>MessageBus:EnableOutbox</c> resolves to true (it is off by default for the in-process
+/// provider). A broker <c>MessageBus:Provider</c> replaces it with <c>BrokerEventBus</c>, which writes
+/// the outbox row for the outbox processor to publish.
 /// </summary>
 public interface IEventBus
 {
