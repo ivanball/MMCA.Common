@@ -1,0 +1,11 @@
+/* The tab stop is the visually hidden file input, so nothing on screen would change when it takes
+   focus. :focus-within moves the ring onto the wrapper the user actually sees (WCAG 2.4.7). */
+.mmca-file-picker {
+    display: inline-block;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.mmca-file-picker:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}

@@ -68,6 +68,9 @@ public sealed class AuthUIService(
 
     private const string ApiClientName = "APIClient";
 
+    /// <summary>How long sign-out waits for the server-side revoke before signing out locally anyway.</summary>
+    private static readonly TimeSpan LogoutRevokeTimeout = TimeSpan.FromSeconds(10);
+
     /// <inheritdoc />
     public Task<Result<AuthenticationResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
         AuthenticateAsync("auth/login", request, cancellationToken);
@@ -98,8 +101,10 @@ public sealed class AuthUIService(
         {
             // Best-effort revoke on the server side. Awaited, but it never fails: the local
             // sign-out below runs whatever happened, so a dropped connection cannot strand a user
-            // inside a session they asked to leave.
-            await TryRevokeAsync(accessToken, CancellationToken.None);
+            // inside a session they asked to leave. It is bounded by LogoutRevokeTimeout rather than
+            // the client's 90 s HttpClient.Timeout, so a hung backend cannot hold the sign-out.
+            using var revokeTimeout = new CancellationTokenSource(LogoutRevokeTimeout);
+            await TryRevokeAsync(accessToken, revokeTimeout.Token);
         }
 
         await SignOutLocallyAsync();
