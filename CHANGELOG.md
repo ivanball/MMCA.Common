@@ -6,7 +6,13 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`ViewAsSubject.IsLocked`** (MMCA.Common.Application, namespace `MMCA.Common.Application.Auth.ViewAs`; ADR-137): an init-only flag, default `false`, that an `IViewAsSubjectResolver` sets from the app's lock state.
+
 ### Fixed
+
+- **View-as refuses a locked account** (MMCA.Common.Application): since 1.308.0 a lock writes the soft-deleted-user marker (ADR-047), so a view-as token minted for a locked account answered 401 on its first call after its grant row had been written. `ViewAsService.StartAsync` now refuses a subject with `IsLocked` set, with the validation error `ViewAs.TargetLocked`, before writing the grant. A resolver that does not set the flag behaves as before.
 
 - **Server-side `"APIClient"` no longer cuts a request off at 30 seconds** (MMCA.Common.UI.Web): `AddMmcaBlazorWebHost` takes the standard resilience handler that `AddServiceDefaults()` puts on every factory client back off the UI's `"APIClient"`, so the Blazor Server render mode runs the same pipeline as WebAssembly and MAUI: one `HttpClient.Timeout` of `HttpResilienceDefaults.TotalRequestTimeout` (90 s), with user-facing retries owned by the UI service base classes. Before, the handler's 30 s attempt timeout (with POST never retried) failed a large upload in Server mode, where the request body streams from the browser over the circuit at the user's own upload speed. Other factory clients keep the handler. No API change.
 

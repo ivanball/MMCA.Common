@@ -96,6 +96,20 @@ public sealed class ViewAsServiceTests
     }
 
     [Fact]
+    public async Task StartAsync_RefusesALockedAccount_BeforeWritingTheGrant()
+    {
+        _subjects.Setup(s => s.FindAsync(TargetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ViewAsSubject(TargetUserId, "user@example.com", "Attendee", "Locked User", IsDeleted: false) { IsLocked = true });
+
+        var result = await CreateSut().StartAsync(StaffUserId, TargetUserId, Reason);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("ViewAs.TargetLocked");
+        _grants.Grants.Should().BeEmpty();
+        _tokens.Minted.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task StartAsync_RefusesAnUnknownAccountAsNotFound()
     {
         var result = await CreateSut().StartAsync(StaffUserId, 99, Reason);

@@ -24,7 +24,8 @@ namespace MMCA.Common.Application.Auth.ViewAs;
 /// <para>
 /// <b>No lateral access.</b> An account whose role holds <c>users:view-as</c> is never viewed, so
 /// staff cannot view each other. Neither is a machine client's service account
-/// (<see cref="ViewAsSubject.IsServiceAccount"/>, ADR-140).
+/// (<see cref="ViewAsSubject.IsServiceAccount"/>, ADR-140), nor a locked account
+/// (<see cref="ViewAsSubject.IsLocked"/>), whose tokens every host refuses.
 /// </para>
 /// </remarks>
 /// <param name="grants">The grant store.</param>
@@ -177,6 +178,14 @@ public sealed class ViewAsService(
         if (subject.IsServiceAccount)
         {
             return Error.Forbidden("ViewAs.TargetIsServiceAccount", "A machine client's service account cannot be viewed.");
+        }
+
+        // A lock writes the soft-deleted-user marker, which every host answers with 401 for this user
+        // id, so a token minted for a locked account could never be used. Refused here, before the
+        // grant row is written.
+        if (subject.IsLocked)
+        {
+            return Error.Validation("ViewAs.TargetLocked", "A locked account cannot be viewed.");
         }
 
         // No lateral access: an account that may itself view others is never viewed.

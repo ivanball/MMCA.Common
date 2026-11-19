@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsLocked.get -> bool
+MMCA.Common.Application.Auth.ViewAs.ViewAsSubject.IsLocked.init -> void
