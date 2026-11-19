@@ -370,7 +370,7 @@
          1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
          does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
          only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
-    <PackageVersion Include="AngleSharp" Version="1.10.4" />
+    <PackageVersion Include="AngleSharp" Version="1.10.5" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -429,7 +429,7 @@
          TestingPlatformBuilderHook in the consuming test project). Lockstep with the
          Microsoft.Testing.Platform that xunit.v3 resolves (2.5.2 via 4.0.3): a mismatch is a
          TypeLoadException at test-host start, so Dependabot's testing group moves the two together. -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.2" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.Retry" Version="2.5.3" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
