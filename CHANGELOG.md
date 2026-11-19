@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **The dependency readiness checks are the framework's own** (MMCA.Common.Aspire): the SQL Server, PostgreSQL, SQLite and RabbitMQ checks `AddServiceDefaults` registers are internal `IHealthCheck` classes under `Health/`, replacing the four Xabaril `AspNetCore.HealthChecks.*` packages (`SqlServer`, `NpgSql`, `Sqlite`, `Rabbitmq`), which no longer flow to consumers. Check names, tags, failure status and timeouts are unchanged, as is the PostgreSQL check's use of the host's configured data source. The drivers are now direct references: `Microsoft.Data.Sqlite` on the EF Core line and `RabbitMQ.Client` 7.2.2 (the build MassTransit.RabbitMQ already resolves), beside the existing `Microsoft.Data.SqlClient` and `Npgsql`. A consumer that called the Xabaril `AddSqlServer`/`AddNpgSql`/`AddSqlite`/`AddRabbitMQ` extensions itself and relied on the package arriving transitively must now reference it directly.
+
 ## [1.306.0] - 2026-11-18
 
 ### Fixed

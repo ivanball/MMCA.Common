@@ -5,9 +5,9 @@ namespace MMCA.Common.Aspire.Health;
 /// <summary>
 /// The one AMQP connection the RabbitMQ health check probes through.
 /// <para>
-/// The <c>AspNetCore.HealthChecks.Rabbitmq</c> check calls its connection factory on every probe round
-/// and never disposes what it returns, so a factory that opened a connection per call leaked one AMQP
-/// connection on the broker every successful round. This singleton holds at most one: it hands out the
+/// <see cref="RabbitMqHealthCheck"/> asks for a connection on every probe round and never disposes it,
+/// so opening one per call would leave one AMQP connection on the broker every successful round. This
+/// singleton holds at most one: it hands out the
 /// held connection while it is open, and replaces it (disposing the old one, best effort) only when it
 /// is gone or no longer open. Creation is single flight, bounded by the check timeout (a token cancelled
 /// at the timeout, and the wait abandoned at the timeout even if the client ignores that token), and a

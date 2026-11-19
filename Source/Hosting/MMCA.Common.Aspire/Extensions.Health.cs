@@ -104,22 +104,22 @@ public static partial class Extensions
             if (!string.IsNullOrWhiteSpace(rabbitConnectionString)
                 && Uri.TryCreate(rabbitConnectionString, UriKind.Absolute, out var rabbitUri))
             {
-                // The registration timeout alone does not bound this check: the package calls the
-                // factory without a token, and a port that accepts the connection but never answers
-                // (a stopped broker behind a proxy, a network black hole) leaves CreateConnectionAsync
-                // waiting for connection.start far beyond it. The factory's own token, on the same
-                // budget, is what ends that wait (RabbitMQ.Client cancels the handshake on it); opening
-                // the channel afterwards gets the check's token. The package never disposes the
-                // connection its factory returns, so the factory hands out ONE connection held by a
-                // singleton (created under that token, replaced only once it is no longer open, closed
-                // when the host stops) instead of opening one per probe round.
+                // The check opens no connection of its own: ONE connection is held by a singleton
+                // (created under its own token on the check-timeout budget, replaced only once it is no
+                // longer open, closed when the host stops), so a probe round never leaves an AMQP
+                // connection behind on the broker. That creation token, not the probe's, is what ends a
+                // handshake against a port that accepts the connection but never answers (a stopped
+                // broker behind a proxy, a network black hole): RabbitMQ.Client cancels the handshake
+                // on it even when no probe is still waiting. The probe's own token bounds its wait for
+                // that connection and the channel it then opens and closes.
                 builder.Services.TryAddSingleton(_ => new Health.RabbitMqHealthConnection(rabbitUri, checkTimeout));
 
-                healthChecks.AddRabbitMQ(
-                    sp => sp.GetRequiredService<Health.RabbitMqHealthConnection>().GetAsync(CancellationToken.None),
-                    name: "rabbitmq",
+                healthChecks.Add(new HealthCheckRegistration(
+                    "rabbitmq",
+                    sp => new Health.RabbitMqHealthCheck(sp.GetRequiredService<Health.RabbitMqHealthConnection>()),
+                    failureStatus: null,
                     tags: [HealthCheckTags.Optional],
-                    timeout: checkTimeout);
+                    timeout: checkTimeout));
             }
 
             return builder;
@@ -251,21 +251,35 @@ public static partial class Extensions
                 + "either at the top level under ConnectionStrings or on a named DataSources entry.");
         }
 
+        // Every database check carries no tags and the default failure status (Unhealthy), so each one
+        // gates readiness. The SQL Server and SQLite checks are stateless and shared across probes.
         foreach (var (name, connectionString) in sqlSources)
         {
-            healthChecks.AddSqlServer(connectionString, name: name, timeout: checkTimeout);
+            var check = new SqlServerHealthCheck(connectionString);
+            healthChecks.Add(new HealthCheckRegistration(name, _ => check, failureStatus: null, tags: null, timeout: checkTimeout));
         }
 
         foreach (var (name, connectionString) in postgresSources)
         {
             // Probes the data source the contexts share when the host registered a configurator
-            // (RDS IAM tokens, for one), else the plain connection-string check.
-            PostgreSqlHealthCheckRegistration.Register(healthChecks, connectionString, name, checkTimeout);
+            // (RDS IAM tokens, for one), else a data source the check owns. The check is a keyed
+            // singleton (keyed by its check name, unique per engine) so that owned data source is
+            // built once and disposed with the container.
+            healthChecks.Services.TryAddKeyedSingleton(
+                name,
+                (sp, _) => new PostgreSqlHealthCheck(connectionString, sp));
+            healthChecks.Add(new HealthCheckRegistration(
+                name,
+                sp => sp.GetRequiredKeyedService<PostgreSqlHealthCheck>(name),
+                failureStatus: null,
+                tags: null,
+                timeout: checkTimeout));
         }
 
         foreach (var (name, connectionString) in sqliteSources)
         {
-            healthChecks.AddSqlite(connectionString, name: name, timeout: checkTimeout);
+            var check = new SqliteHealthCheck(connectionString);
+            healthChecks.Add(new HealthCheckRegistration(name, _ => check, failureStatus: null, tags: null, timeout: checkTimeout));
         }
     }
 

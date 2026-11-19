@@ -107,7 +107,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MmcaEfCoreVersion)" />
     <!-- Pins the transitive SQLitePCLRaw bundle (EF Core Sqlite floors it at the vulnerable 2.1.11) to
          a patched build for GHSA-2m69-gcr7-jv3q / CVE-2025-6965; referenced directly in
-         MMCA.Common.Infrastructure and MMCA.Common.Aspire (whose Sqlite health check pulls
+         MMCA.Common.Infrastructure and MMCA.Common.Aspire (whose SQLite health check references
          Microsoft.Data.Sqlite) so the fix flows to consumers through the published package graph
          (same pattern as the MessagePack pin above). -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
@@ -478,15 +478,15 @@
          Aspire.StackExchange.Redis, which is harmless because the Aspire checks are switched off at
          registration (Caching/RedisCachingExtensions) and this repo does not enable central
          transitive pinning, so no PackageVersion entry is required to keep the restore graph valid. -->
-    <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
-    <!-- Readiness probe for a PostgreSQL source (ADR-113), the peer of the SqlServer and Sqlite
-         checks below. Npgsql is pinned directly alongside it in MMCA.Common.Aspire so the ADO driver
-         the check opens a connection with is the same 10.x build the EF provider uses, rather than
-         the older floor this health-check package carries. -->
-    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <!-- The SQL Server, PostgreSQL, SQLite and RabbitMQ readiness checks are MMCA.Common.Aspire's own
+         IHealthCheck classes (Health/), so the drivers they open a connection with are its direct
+         references: Microsoft.Data.SqlClient (above), Npgsql (the same 10.x build the EF provider uses,
+         ADR-113), Microsoft.Data.Sqlite and RabbitMQ.Client. Microsoft.Data.Sqlite follows the EF Core
+         line so it stays aligned with Microsoft.EntityFrameworkCore.Sqlite; RabbitMQ.Client matches
+         the build MassTransit.RabbitMQ already resolves, so a host carries one client version. -->
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="AspNetCore.HealthChecks.Sqlite" Version="9.0.0" />
-    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="$(MmcaEfCoreVersion)" />
+    <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared
          gateway building blocks are written against; MMCA.Common.Testing takes it for the gateway
          hardening test base and its recording forwarder. Deliberately not referenced from

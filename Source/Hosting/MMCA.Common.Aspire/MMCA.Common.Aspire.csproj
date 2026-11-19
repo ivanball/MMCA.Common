@@ -14,18 +14,17 @@
     <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" />
-    <!-- Readiness probe for a PostgreSQL data source (ADR-113). Npgsql is referenced directly
-         alongside it so the driver this check opens a connection with is the same 10.x build
-         MMCA.Common.Infrastructure's EF provider uses, rather than the older floor the health-check
-         package carries (same direct-pin pattern as SQLitePCLRaw below). -->
-    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <!-- The dependency readiness checks are the framework's own IHealthCheck classes (Health/), one
+         per engine, so each driver below is referenced directly. RabbitMQ.Client: the broker check
+         (Health/RabbitMqHealthCheck over Health/RabbitMqHealthConnection). -->
+    <PackageReference Include="RabbitMQ.Client" />
+    <!-- Readiness probe for a PostgreSQL data source (ADR-113, Health/PostgreSqlHealthCheck), on the
+         same 10.x driver MMCA.Common.Infrastructure's EF provider uses. -->
     <PackageReference Include="Npgsql" />
-    <PackageReference Include="AspNetCore.HealthChecks.Sqlite" />
-    <!-- Microsoft.Data.SqlClient is referenced directly so the SQL Server check runs on the same 7.x
-         driver as MMCA.Common.Infrastructure, rather than the 5.2.2 floor the health-check package
-         carries (that floor drags in the deprecated Azure.Identity 1.11.4 / MSAL 4.61.3 chain). -->
-    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <!-- Readiness probe for a SQLite database (Health/SqliteHealthCheck). -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <!-- Readiness probe for a SQL Server database (Health/SqlServerHealthCheck), on the same 7.x
+         driver as MMCA.Common.Infrastructure. -->
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
          vulnerable 9.0.18 (NU1903); see the pin note in Directory.Packages.props. -->
@@ -56,8 +55,8 @@
          this package rather than MMCA.Common.API because the bootstrap runs on the
          WebApplicationBuilder immediately before AddServiceDefaults, alongside the other host-wiring
          extensions here, and it needs no Application/Infrastructure type. -->
-    <!-- Security pin: AspNetCore.HealthChecks.Sqlite pulls Microsoft.Data.Sqlite, whose SQLitePCLRaw
-         floor is the vulnerable 2.1.6. Forces it to the patched build, same pattern (and same
+    <!-- Security pin: Microsoft.Data.Sqlite (the SQLite health check above) has a SQLitePCLRaw
+         floor of the vulnerable 2.1.6. Forces it to the patched build, same pattern (and same
          reason) as the reference in MMCA.Common.Infrastructure. See the
          SQLitePCLRaw.bundle_e_sqlite3 note in Directory.Packages.props. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
