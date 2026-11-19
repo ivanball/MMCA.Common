@@ -1,12 +1,12 @@
 # AGENTS.md
 
-Framework-specific guidance for every coding agent (Claude Code imports this file from `CLAUDE.md`; Copilot, Codex and Cursor read it directly). Cross-repo conventions (.NET 10 / `LangVersion: preview`, `TreatWarningsAsErrors`, the five analyzers, Central Package Management, code style, PR flow, MTP usage, prose rules) live once in the workspace `../CLAUDE.md`: do not re-derive them here.
+Framework-specific guidance for every coding agent (Claude Code imports this file from `CLAUDE.md`; Copilot, Codex and Cursor read it directly). Cross-repo conventions (the net10.0/net11.0 dual-TFM policy, `LangVersion` (15.0 in this repo), `TreatWarningsAsErrors`, the five analyzers, Central Package Management, code style, PR flow, MTP usage, prose rules) live once in the workspace `../CLAUDE.md`: do not re-derive them here.
 
 This file holds the rules you act on. How each mechanism works lives in the ADR cited beside it (`../Website/docs-src/adr/`, published at <https://ivanball.github.io/docs/>), in `../Website/docs-src/guides/common-CAPABILITIES.md` for the opt-in capabilities, and in the source itself: read those before changing a mechanism, not this file.
 
 ## Project Overview
 
-MMCA.Common is a NuGet package framework for modular monolith applications (DDD, Clean Architecture, CQRS), built for .NET 10 AND .NET 11 from one source tree. It is not a runnable app. **`build/Frameworks.props` names the target frameworks and states the dual-TFM rules; read it before writing version-specific code** (only `#if NET11_0_OR_GREATER` with the existing code as `#else`, identical public API on both, per-framework package versions as properties in `Directory.Packages.props`). The build needs the .NET 11 SDK (`global.json`), which compiles both. Packages publish to both nuget.org and GitHub Packages (ADR-053) in lockstep; authoritative package list and count: `FACTS.md`. `MMCA.Common.UI.Maui` is the one MAUI-TFM package, outside `MMCA.Common.slnx`, built and packed by dedicated windows jobs (ADR-042).
+MMCA.Common is a NuGet package framework for modular monolith applications (DDD, Clean Architecture, CQRS), built for .NET 10 AND .NET 11 from one source tree. It is not a runnable app. **`build/Frameworks.props` names the target frameworks and states the dual-TFM rules; read it before writing version-specific code** (only `#if NET11_0_OR_GREATER` with the existing code as `#else`, identical public API on both, per-framework package versions as properties in `Directory.Packages.props`). The build needs the .NET 11 SDK (`global.json`), which compiles both; running the net10.0 test assemblies also needs the .NET 10 runtime. Packages publish to both nuget.org and GitHub Packages (ADR-053) in lockstep; authoritative package list and count: `FACTS.md`. `MMCA.Common.UI.Maui` is the one MAUI-TFM package, outside `MMCA.Common.slnx`, built and packed by dedicated windows jobs (ADR-042).
 
 ## Build & Test
 
@@ -16,7 +16,7 @@ dotnet test --solution MMCA.Common.slnx -c Release
 dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- --filter-method "*IdempotencyFilterTests*"
 dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests     # NetArchTest layer rules (fast, no DB)
 dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj   # NOT in slnx; needs `playwright install chromium` once
-dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks    # append `-- --job Dry` for a fast pass
+dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks -- --filter "*"   # add --job Dry for a fast pass; without --filter BDN prompts and hangs headless
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
 dotnet run --project build/facts -- .                                       # regenerate FACTS.md (CI gates on `--check`)
 ```
@@ -27,11 +27,14 @@ There is no `push: main` trigger: `main` requires an up-to-date branch, so the P
 
 - **build-and-test**: FACTS gate, Release build, vuln audit (re-applies the `NuGetAuditSuppress` list from `Directory.Build.props`), tests with `--minimum-expected-tests 22500` (about 5 percent under the measured total; ratchet it as the suite grows).
 - **ui-e2e**: chromium + firefox + webkit, all required; builds the out-of-slnx `UI.Gallery` + `UI.E2E.Tests` by csproj path and asserts axe-core WCAG 2.1 AA.
-- **package-consumption**: packs every package and builds a throwaway consumer, catching package-mode-only failures that source mode masks. Run it locally with `pwsh build/consumer-check/Invoke-ConsumerCheck.ps1` (one `-Stage` per step).
+- **build-maui** (windows, required): builds MMCA.Common.UI.Maui for the four MAUI platforms per .NET version.
+- **package-consumption** (not required): packs every package and builds a throwaway consumer, catching package-mode-only failures that source mode masks. Run it locally with `pwsh build/consumer-check/Invoke-ConsumerCheck.ps1` (one `-Stage` per step).
 - **consumer-source-build**: builds MMCA.Helpdesk against THIS PR's source, so a breaking public-API change fails pre-merge.
 - **performance-smoke**: `build/perfgate` against `perf-baseline.json` (ADR-060). Moving a number deliberately means updating the baseline in the same PR.
 - **coverage**: the unit tier must stay >= 68.3% line.
-- Also run: **build-maui** (windows, the four MAUI platforms per .NET version), **sample-deployment-validate**, and the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack) and **gcp-integration** (emulators), all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run); none of these is a required check.
+- **coverage-risk** (ADR-147, not required): merges unit and Testcontainers coverage and fails on a new method above CRAP 30 that is missing from `.github/coverage-baselines/crap.txt`, or on a baselined method whose CRAP rose.
+- Also run, none of them a required check: **sample-deployment-validate**, the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack) and **gcp-integration** (emulators), all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run).
+- The 8 required contexts are build-and-test, build-maui, the three ui-e2e engines, coverage, consumer-source-build and performance-smoke; `gh api repos/ivanball/MMCA.Common/branches/main/protection --jq '.required_status_checks.contexts[]'` is authoritative. `load-tests.yml` runs `Tests/Performance/MMCA.Common.LoadTests` weekly as a trend signal, not a gate.
 
 A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version with MinVer skipped, and MinVer versions every other build from git history (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs from a separate `publish-maui` job off the same tag. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
 
@@ -43,15 +46,20 @@ Gotchas:
 
 ## Source Layout
 
-All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, MinVer otherwise).
+All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, MinVer otherwise). Every one except `MMCA.Common.UI.Maui` declares its surface in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`: a new or changed public member goes into `PublicAPI.Unshipped.txt` in the same change, or RS0016/RS0017 fail the build.
 
 ```
 Source/
-  Build/         MMCA.Common.LayerEnforcement.targets (compile-time layer guard), plus RateLimiting/:
-                 one internal limiter source file linked into API, Aspire, UI.Web and Gateway
+  MMCA.Common/   the metapackage (Shared, Domain, Application, Infrastructure, API and Aspire in
+                 one reference)
+  Build/         MMCA.Common.LayerEnforcement.targets (compile-time layer guard for this repo),
+                 MMCA.Common.Shared.targets (consumer layer rules, shipped in the Shared package's
+                 buildTransitive/), RateLimiting/ (one internal limiter source linked into API,
+                 Aspire, UI.Web and Gateway) and MailDev/ (linked into Aspire.Hosting, Testing.E2E)
   Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}, cloud-neutral (+ AI, the
                  optional language-model boundary on Microsoft.Extensions.AI with no vendor SDK and
-                 no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each)
+                 no MMCA reference, and AI.Anthropic / AI.OpenAI, one IAiProviderFactory each;
+                 + Passkeys, the opt-in WebAuthn package on Fido2NetLib, ADR-139)
   Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx; + Mcp, the opt-in
                  MCP endpoint and the only reference to the MCP SDK)
   Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,ServiceHost,Testing,Testing.Aspire,
@@ -60,20 +68,26 @@ Source/
                  Azure.Startup, Aws, Gcp and Testing.Azure, the cloud vendor adapters)
 Tests/           mirrors Source/ plus Architecture/ and Performance/ (+ the AppHost tier and its
                  sample AppHost and service, all three outside the slnx)
-build/           facts (FACTS.md generator + drift gate), perfgate (benchmark baseline gate)
+build/           Frameworks.props (TFM policy), facts (FACTS.md generator + drift gate), perfgate
+                 (benchmark baseline gate), consumer-check (package-mode consumer canary),
+                 publicapi (Promote-PublicApi.ps1), LocalSource (consumer local source mode)
 ```
+
+**`build/LocalSource/MMCA.Common.LocalSource.targets` is a cross-repo contract**: ADC, Store and Helpdesk import it by path from their `Directory.Build.targets`. Never move or rename it: doing so breaks every consumer's local source mode and the required consumer-source-build check.
 
 **Folder convention** (workspace rule; here the first level names the feature or concern: `Messaging/`, `Notifications/Push/`, `Capabilities/Geo/`). `FolderWidthTests` enforces the 12-file cap, exempting three one-concept folders (`Application/UseCases/Decorators`, its test twin, `Domain/Interfaces`). The formerly flat public namespaces were split by concern in a deliberate second pass, not by oversight.
 
-**A folder move here is a public-API rename.** Land it through `Tools/Scripts/move-namespace.ps1`, record it under **Breaking:** in `CHANGELOG.md` AND as a section of `UPGRADING.md` (old-to-new map plus the mechanical fix, identical to the changelog block), state it at the top of the PR description, and sweep the consumers in the same release. Two folders are folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/` and `Bases/` keep the flat namespace consumers subclass (ADR-015).
+**A folder move here is a public-API rename.** Land it through `../Tools/Scripts/move-namespace.ps1` (a workspace harness script, not in this repo), record it under **Breaking:** in `CHANGELOG.md` AND as a section of `UPGRADING.md` (old-to-new map plus the mechanical fix, identical to the changelog block), state it at the top of the PR description, and sweep the consumers in the same release. Three packaged folders are folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/`, `Testing.Architecture/Bases/` and `Testing.UI/Infrastructure/` keep the flat namespace consumers subclass (ADR-015), so moving a file within them changes no namespace.
 
 ## Architecture
 
-Strict layered flow: `API/Grpc -> Infrastructure -> Application -> Domain -> Shared`. Exceptions: `UI` and `Grpc` depend on **Shared only** (UI for Blazor WASM compatibility, Grpc because it is pure transport); `UI.Web` is the Blazor Web host layer above both, referencing `UI`, `API` and `Aspire` directly with transitive `ProjectReference`s disabled.
+Strict layered flow: `API -> Infrastructure -> Application -> Domain -> Shared`. Exceptions: `UI` and `Grpc` depend on **Shared only** (UI for Blazor WASM compatibility, Grpc because it is pure transport); `UI.Web` is the Blazor Web host layer above both, referencing `Shared`, `UI`, `API` and `Aspire` directly with transitive `ProjectReference`s disabled.
 
-**Two enforcement gates; add new rules in BOTH:**
+**Two enforcement gates for this repo; add new rules in BOTH:**
 1. Compile-time: `Source/Build/MMCA.Common.LayerEnforcement.targets` fails the build on a forbidden `ProjectReference`.
-2. Runtime: `Tests/Architecture/` (NetArchTest). Rule bodies live once in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` parameterized by `IArchitectureMap`); Store and ADC subclass the same bases.
+2. Runtime: `Tests/Architecture/` (NetArchTest). Rule bodies live once in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` parameterized by `IArchitectureMap`); Store, ADC and Helpdesk subclass the same bases, so changing a base is a consumer-facing change.
+
+A third, consumer-facing compile-time gate is `Source/Build/MMCA.Common.Shared.targets`, shipped in the Shared package's `buildTransitive/`: it applies the layer rules to every `{App}.{Module}.{Layer}` consumer project (ADR-058). A new consumer-facing layer rule goes there as well as into `ArchitectureRules`, and never forbids more than the runtime suite does.
 
 ### DI Registration Sequence
 
@@ -106,7 +120,7 @@ A leaf `IModule` is `Name` plus `Register()` (the other members are defaulted), 
 
 ### Entity Model
 
-`BaseEntity<TId>` -> `AuditableBaseEntity<TId>` (audit fields + `IsDeleted`) -> `AuditableAggregateRootEntity<TId>` (domain events, `GetChildOrNotFound<T>()`, `SetItems<T>()`). Aggregates use static `Create(...)` factories returning `Result<T>`; invariants live in static classes composed with `Result.Combine()`. Domain events are collected via `AddDomainEvent()` and dispatched by `DomainEventDispatcher` after `SaveChangesAsync()` (deferred past commit inside a transaction).
+`BaseEntity<TId>` -> `AuditableBaseEntity<TId>` (audit fields + `IsDeleted`) -> `AuditableAggregateRootEntity<TId>` (domain events, `GetChildOrNotFound<TChild, TChildId>()`, `SetItems<T>()`). Aggregates use static `Create(...)` factories returning `Result<T>`; invariants live in static classes composed with `Result.Combine()`. Domain events are collected via `AddDomainEvent()` and dispatched by `DomainEventDispatcher` after `SaveChangesAsync()` (deferred past commit inside a transaction).
 
 Identifier aliases: `GlobalUsings.IdentifierType.cs` (Domain) and `GlobalUsings.NotificationIdentifierType.cs` (Shared) are linked into all projects via `Directory.Build.props`; a new solution-wide alias needs the `GlobalUsings.*.cs` file plus a matching `<Compile Include ... Link=... />` block there.
 
@@ -114,7 +128,7 @@ Strongly typed identifiers are the opt-in alternative (`services.AddStronglyType
 
 ### Multi-Database Strategy (database per service)
 
-Every entity resolves to a `DataSourceKey(Engine, Name)`. Engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/PostgreSQL/Cosmos/Sqlite`); the name resolves `[UseDatabase("X")]` -> module name from the entity namespace -> `"Default"`.
+Every entity resolves to a `DataSourceKey(Engine, Name)`. Engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/PostgreSQL/Cosmos/Sqlite`); the name resolves `[UseDatabase("X")]` on the entity's configuration class (not the entity, where it compiles and is silently ignored) -> module name from the entity namespace -> `"Default"`.
 
 - **Four engines, one context class each** (`SQLServerDbContext`, `PostgreSQLDbContext`, `SqliteDbContext`, `CosmosDbContext`; ADR-006/018/113), one instance per database. Never add a per-module context class, and never pool `PhysicalDbContextFactory`.
 - **PostgreSQL takes the SQL Server mapping unchanged**; an entity moves between the two by its configuration base class alone. Where the server forces a difference, partial-index predicates use `"Quoted"` identifiers (soft delete is `"IsDeleted" = false`) and `DateTime` maps through `UtcDateTimeConverter`, **never** the process-wide `Npgsql.EnableLegacyTimestampBehavior` switch.
@@ -122,7 +136,7 @@ Every entity resolves to a `DataSourceKey(Engine, Name)`. Engine comes from the 
 - **Cross-source relationships auto-degrade** to a scalar FK plus index (`CrossDataSourceDegradeConvention`). Cross-source reads go through `INavigationPopulator` (ADR-002), cross-source consistency is the outbox's job, and there is no two-phase commit.
 - **Design time**: `DesignTimeDbContextHelper.CreateSqlServer(args, ...)` (and its PostgreSQL/Sqlite peers) for `dotnet ef ... -- --datasource <Name>`.
 
-**SaveChanges flow**: stamp audit fields, capture domain events into `OutboxMessage` rows, save data + outbox in one transaction, then dispatch local domain events in-process. **Integration events are NOT dispatched in-process**: `OutboxProcessor` publishes their rows via `IMessageBus` (ADR-003).
+**SaveChanges flow**: stamp audit fields, capture domain events into `OutboxMessage` rows, save data + outbox in one transaction, then dispatch local domain events in-process. **Integration events are NOT dispatched in-process**: `OutboxProcessor` publishes their rows via `IMessageBus` (ADR-003). **Application code publishes integration events through `IEventBus.PublishAsync`** (in broker mode `BrokerEventBus` writes the outbox row); `IMessageBus` is the transport the processor drains through, not an application publish API.
 
 ### Outbox and Internal Commands
 
@@ -137,7 +151,7 @@ The invariant: **application and domain code talks to abstractions; transport ch
 - **Message bus**: Application/Domain/Shared never reference MassTransit (`MicroserviceExtractionTests`). `IMessageBus` is selected by the string `MessageBus:Provider`; `InProcess`, `RabbitMq` and `PostgreSql` are built in, and any other value names an `IBrokerTransport` an adapter registers BEFORE `AddBrokerMessaging` (ADR-066, ADR-118). Retry, redelivery and backpressure live once in `BrokerTransportPolicies`, shared by every transport.
 - **gRPC**: **consuming modules never touch generated protobuf types**; a hand-written adapter implementing the module's own interface wraps the typed client and IS the Anti-Corruption Layer (ADR-007, ADR-012). `AddTypedGrpcClient<TClient>` dials over h2c, so a target service must serve HTTP/2 on its cleartext endpoint. The monolith-to-service move follows Strangler Fig (ADR-008).
 - **Cross-service auth**: signing keys are served at `/.well-known/jwks.json`; `AddForwardedJwtBearer` honors a configured `RequireHttpsMetadata=false` outside Development (with one startup warning) because ACA internal ingress needs it.
-- **`.Contracts` convention**: any project named `*.Contracts` automatically gets `Grpc.Tools`/`Google.Protobuf` and compiles `Protos/**/*.proto` with `GrpcServices="Both"`.
+- **`.Contracts` convention** (a repo-level `Directory.Build.props` block, not shipped in a package; each consumer keeps its own copy): any project named `*.Contracts` gets `Grpc.Tools`, `Google.Protobuf` and `Grpc.Net.ClientFactory` and compiles `Protos/**/*.proto` with `GrpcServices="Both"`.
 
 ### Other Framework Pieces
 
@@ -154,17 +168,17 @@ Every piece below is opt-in, so a consumer adopting none changes nothing; keep n
 
 ## Testing
 
-xUnit v3 + AwesomeAssertions + Moq under MTP. CI collects coverage with `dotnet-coverage` wrapping the MTP run. Test projects mirror `Source/` under `Tests/`; test files relax naming and complexity rules via the `.editorconfig` `[Tests/**/*.cs]` section.
+xUnit v3 + AwesomeAssertions + Moq under MTP. CI collects coverage with `dotnet-coverage` wrapping the MTP run. Test projects mirror `Source/` under `Tests/`; test files relax naming and complexity rules via the `.editorconfig` `[Tests/**/*.cs]` section. In packaged non-UI `Source/` code every `await` takes `ConfigureAwait(false)` (CA2007, ADR-049); the `MMCA.Common.UI*` projects are exempt.
 
 ## Governance Docs & Commit Convention
 
 The documentation library is canonical in the Website repo (`../Website/docs-src/`). Docs-src edits are re-rendered and land via a Website PR.
 
-- **In this repo**: `FACTS.md` (generated and CI-gated by `build/facts`; never hand-edit computed values, link to it rather than restating numbers), `CHANGELOG.md`, `UPGRADING.md`, `SECURITY.md`, `CONTRIBUTING.md`, `samples/deployment/DEPLOYMENT.md`, and `NavigationFlow.md` (an embedded resource parsed by `NavigationContractTests`, so **it must stay next to the code**).
+- **In this repo**: `FACTS.md` (generated and CI-gated by `build/facts`; never hand-edit computed values, link to it rather than restating numbers), `CHANGELOG.md`, `UPGRADING.md`, `SECURITY.md`, `CONTRIBUTING.md`, `samples/deployment/DEPLOYMENT.md`, and files that tests embed, which therefore **must stay next to the code**: `NavigationFlow.md` (parsed by `NavigationContractTests`) and `samples/deployment/OPERATIONS.md` plus `main.bicep` (read by the Architecture.Tests deployment fitness tests). A Markdown-only edit to them still runs full CI.
 - **`../Website/docs-src/`**: `adr/` (its `README.md` owns the count and range; **add new ADRs there, never here**), `governance/` (the 34-category rubric plus `common-ArchitectureScorecard.md` / `common-RemediationBacklog.md`), `guides/` (the `common-*.md` files).
 
-**Commit convention**: remediation work is tagged by scorecard category, `§<m>: <summary>`; update `common-RemediationBacklog.md` when continuing remediation work.
+**Commit convention**: Scoped Commits per `CONTRIBUTING.md` (`<scope>: <summary>`), ASCII only: the workspace commit-prose hook denies non-ASCII, so a section-sign category tag cannot be used. Update `common-RemediationBacklog.md` when continuing remediation work.
 
 ## Contribution Flow
 
-`main` is server-protected: every change, documentation-only included, lands via branch -> PR -> required checks green -> squash-merge. Merges here are not deploys. Releases are cut with `/push-release`; the `vX.Y.Z` tag on merged `main` is the only ref pushed directly.
+`main` is server-protected: every change, documentation-only included, lands via branch -> PR -> required checks green -> squash-merge. Merges here are not deploys, with one exception: ADC and Store `deploy.yml` call this repo's composite actions (`.github/actions/*`) at `@main`, so a merged change there runs in both production deploy pipelines on their next push, with no release or sweep. Releases are cut with `/push-release`; the `vX.Y.Z` tag on merged `main` is the only ref pushed directly.
