@@ -1,6 +1,1 @@
 #nullable enable
-*REMOVED*MMCA.Common.Domain.AssemblyReference
-*REMOVED*MMCA.Common.Domain.ClassReference
-*REMOVED*MMCA.Common.Domain.ClassReference.ClassReference() -> void
-*REMOVED*static readonly MMCA.Common.Domain.AssemblyReference.Assembly -> System.Reflection.Assembly!
-*REMOVED*static readonly MMCA.Common.Domain.AssemblyReference.AssemblyName -> string!

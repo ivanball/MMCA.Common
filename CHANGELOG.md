@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.308.0] - 2026-11-19
 
 **Breaking (MMCA.Common.Domain):** the unused `MMCA.Common.Domain.AssemblyReference` and `MMCA.Common.Domain.ClassReference` anchor types are removed. Nothing in the framework or in ADC, Store or Helpdesk resolved the Domain assembly through them. A consumer that did replaces `MMCA.Common.Domain.AssemblyReference.Assembly` with `typeof(MMCA.Common.Domain.Entities.BaseEntity<>).Assembly` (or any other Common.Domain type).
 

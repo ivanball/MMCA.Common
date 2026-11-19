@@ -1,16 +1,1 @@
 #nullable enable
-MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>
-MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.UserAdministrationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter! markerWriter, Microsoft.Extensions.Logging.ILogger! logger) -> void
-MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
-MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.SetLockedAsync(int userId, bool locked, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.MapToDto(TUser! user) -> TUserDto
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.IsLocked(TUser! user) -> bool
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.ApplyLockState(TUser! user, bool locked, System.DateTime utcNow) -> MMCA.Common.Shared.Abstractions.Result!
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.GetRole(TUser! user) -> string!
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.ApplyRole(TUser! user, string! role) -> MMCA.Common.Shared.Abstractions.Result!
-virtual MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.ValidateRequestedRole(string! role) -> MMCA.Common.Shared.Abstractions.Result!
-abstract MMCA.Common.Application.Auth.Administration.UserAdministrationServiceBase<TUser, TUserDto>.CreateExactlyOneRoleError() -> MMCA.Common.Shared.Abstractions.Error!
-MMCA.Common.Application.Auth.SoftDeletedUsers.ISoftDeletedUserMarkerWriter.ClearMarkerAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-MMCA.Common.Application.Auth.SoftDeletedUsers.SoftDeletedUserMarkerWriter.ClearMarkerAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-static MMCA.Common.Application.Auth.SoftDeletedUserCache.ClearMarkerAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
