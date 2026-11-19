@@ -3,7 +3,7 @@ namespace MMCA.Common.Testing.Tests.Conformance.ServiceDiscovery;
 /// <summary>
 /// Small AppHost and Bicep samples in the two shapes the consuming applications write: the ADC
 /// shape (references stated on later statements, the front-door helpers handed every service) and
-/// the Store shape (a reference chained onto a multi-line <c>AddProject</c> declaration, a JWKS
+/// the Store shape (a reference chained onto a multi-line <c>AddDotnetProject</c> declaration, a JWKS
 /// wiring beside an explicit reference, Bicep values built from <c>${app.name}</c>).
 /// </summary>
 internal static class ServiceDiscoverySamples
@@ -17,23 +17,24 @@ internal static class ServiceDiscoverySamples
         "var builder = DistributedApplication.CreateBuilder(args);",
         "var redis = builder.AddRedis(\"redis\");",
         string.Empty,
-        "var notificationService = builder.AddProject<Projects.Sample_Notification_Service>(",
+        "var notificationService = builder.AddDotnetProject(",
         "        \"notification\",",
-        "        launchProfileName: \"https\")",
+        "        \"../Sample.Notification.Service/Sample.Notification.Service.csproj\",",
+        "        options => options.LaunchProfileName = \"https\")",
         "    .WithReference(redis);",
-        "var conferenceService = builder.AddProject<Projects.Sample_Conference_Service>(\"conference\")",
+        "var conferenceService = builder.AddDotnetProject(\"conference\", \"../Sample.Conference.Service/Sample.Conference.Service.csproj\")",
         "    .WithReference(redis);",
-        "var identityService = builder.AddProject<Projects.Sample_Identity_Service>(\"identity\");",
+        "var identityService = builder.AddDotnetProject(\"identity\", \"../Sample.Identity.Service/Sample.Identity.Service.csproj\");",
         string.Empty,
         "// notificationService.WithReference(identityService) in a comment is prose, not wiring.",
         "notificationService.WithReference(conferenceService).WaitFor(conferenceService);",
         "conferenceService.WithReference(notificationService);",
         "conferenceService.WithJwksDiscovery(identityService, gateway);",
         string.Empty,
-        "var gateway = builder.AddProject<Projects.Sample_Gateway>(\"gateway\")",
+        "var gateway = builder.AddDotnetProject(\"gateway\", \"../Sample.Gateway/Sample.Gateway.csproj\")",
         "    .WithMmcaGateway(6001, notificationService, conferenceService, identityService);",
         string.Empty,
-        "var ui = builder.AddProject<Projects.Sample_UI_Web>(\"ui\", launchProfileName: \"https\")",
+        "var ui = builder.AddDotnetProject(\"ui\", \"../Sample.UI.Web/Sample.UI.Web.csproj\", options => options.LaunchProfileName = \"https\")",
         "    .WithMmcaUi(gateway, 6002, notificationService, conferenceService, identityService);",
         "ui.WithEnvironment(\"Api__Url\", \"https://localhost:6001\");",
     ];
@@ -103,18 +104,21 @@ internal static class ServiceDiscoverySamples
     [
         "var builder = DistributedApplication.CreateBuilder(args);",
         string.Empty,
-        "var catalogService = builder.AddProject<Projects.Store_Catalog_Service>(",
+        "var catalogService = builder.AddDotnetProject(",
         "        \"catalog\",",
-        "        launchProfileName: \"https\")",
+        "        \"../Store.Catalog.Service/Store.Catalog.Service.csproj\",",
+        "        options => options.LaunchProfileName = \"https\")",
         "    .WithMmcaServiceInfrastructure(catalogDb, \"Catalog\", redis, mailDev, withBroker, ServiceEndpointProfile.Http2Only)",
         "    .WithEnvironment(\"Seeding__IncludeSampleCatalog\", \"true\");",
-        "var identityService = builder.AddProject<Projects.Store_Identity_Service>(",
+        "var identityService = builder.AddDotnetProject(",
         "        \"identity\",",
-        "        launchProfileName: \"https\")",
+        "        \"../Store.Identity.Service/Store.Identity.Service.csproj\",",
+        "        options => options.LaunchProfileName = \"https\")",
         "    .WithMmcaServiceInfrastructure(identityDb, \"Identity\", redis, mailDev, withBroker, ServiceEndpointProfile.Http2Only);",
-        "var salesService = builder.AddProject<Projects.Store_Sales_Service>(",
+        "var salesService = builder.AddDotnetProject(",
         "        \"sales\",",
-        "        launchProfileName: \"https\")",
+        "        \"../Store.Sales.Service/Store.Sales.Service.csproj\",",
+        "        options => options.LaunchProfileName = \"https\")",
         "    .WithMmcaServiceInfrastructure(",
         "        salesDb, \"Sales\", redis, mailDev, withBroker, ServiceEndpointProfile.Mixed, probeEndpointName: \"http\")",
         "    .WithReference(catalogService)",
@@ -123,12 +127,12 @@ internal static class ServiceDiscoverySamples
         "salesService.WithReference(identityService);",
         "identityService.WithReference(salesService);",
         string.Empty,
-        "var gateway = builder.AddProject<Projects.Store_Gateway>(\"gateway\")",
+        "var gateway = builder.AddDotnetProject(\"gateway\", \"../Store.Gateway/Store.Gateway.csproj\")",
         "    .WithMmcaGateway(6001, catalogService, identityService, salesService);",
         "catalogService.WithJwksDiscovery(identityService, gateway);",
         "salesService.WithJwksDiscovery(identityService, gateway);",
         string.Empty,
-        "var ui = builder.AddProject<Projects.Store_UI_Web>(\"ui\", launchProfileName: \"https\")",
+        "var ui = builder.AddDotnetProject(\"ui\", \"../Store.UI.Web/Store.UI.Web.csproj\", options => options.LaunchProfileName = \"https\")",
         "    .WithMmcaUi(gateway, 6002, catalogService, identityService, salesService);",
     ];
 

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -15,7 +16,7 @@ namespace MMCA.Common.Aspire.Hosting;
     Justification = "False positive: with extension(T) blocks, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class ServiceInfrastructureExtensions
 {
-    extension(IResourceBuilder<ProjectResource> service)
+    extension(IResourceBuilder<DotnetProjectResource> service)
     {
         /// <summary>
         /// Wires a service project to its infrastructure, in this order: its own database as
@@ -48,12 +49,12 @@ public static class ServiceInfrastructureExtensions
         /// <see cref="ServiceEndpointProfile.Mixed"/> a null value leaves the endpoint choice to Aspire.
         /// </param>
         /// <returns>The same service resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithMmcaServiceInfrastructure(
+        public IResourceBuilder<DotnetProjectResource> WithMmcaServiceInfrastructure(
             IResourceBuilder<SqlServerDatabaseResource> database,
             string logicalName,
             IResourceBuilder<IResourceWithConnectionString> cache,
             IResourceBuilder<IResource> mailServer,
-            Func<IResourceBuilder<ProjectResource>, IResourceBuilder<ProjectResource>> attachBroker,
+            Func<IResourceBuilder<DotnetProjectResource>, IResourceBuilder<DotnetProjectResource>> attachBroker,
             ServiceEndpointProfile profile,
             string? probeEndpointName = null)
         {

@@ -14,8 +14,8 @@ internal static partial class AppHostBicepEdgeParser
 {
     /// <summary>
     /// Consumer-to-peer edges the AppHost declares, using the Aspire resource names (the string each
-    /// <c>AddProject</c> call is given), not the C# variable names. Only edges between two
-    /// <c>AddProject</c> resources count: a reference to Redis, a broker or a mail server injects a
+    /// <c>AddDotnetProject</c> call is given), not the C# variable names. Only edges between two
+    /// <c>AddDotnetProject</c> resources count: a reference to Redis, a broker or a mail server injects a
     /// connection string, not a service-discovery name. <c>WithJwksDiscovery</c> is not an edge here:
     /// the service fetches the signing keys through the <c>Authentication__JwtBearer__Authority</c>
     /// address it sets, which production states as its own setting, so a peer the service also calls
@@ -27,9 +27,9 @@ internal static partial class AppHostBicepEdgeParser
     {
         var source = StripLineComments(programSource);
 
-        // Variable name -> Aspire resource name, from `var x = builder.AddProject<Projects.Y>("name"`.
+        // Variable name -> Aspire resource name, from `var x = builder.AddDotnetProject("name", "path")`.
         var resourceNames = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (Match declaration in AddProjectPattern.Matches(source))
+        foreach (Match declaration in AddDotnetProjectPattern.Matches(source))
         {
             resourceNames[declaration.Groups["variable"].Value] = declaration.Groups["resource"].Value;
         }
@@ -37,7 +37,7 @@ internal static partial class AppHostBicepEdgeParser
         var edges = new HashSet<string>(StringComparer.Ordinal);
 
         // Statement-at-a-time, because a WithReference is attributed to whichever resource the
-        // statement is about: either the one being declared (chained onto AddProject) or the one the
+        // statement is about: either the one being declared (chained onto AddDotnetProject) or the one the
         // statement starts with (`conferenceService.WithReference(engagementService);`).
         foreach (var statement in source.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -133,13 +133,13 @@ internal static partial class AppHostBicepEdgeParser
 
     /// <summary>
     /// The AppHost resource variable one statement is ABOUT: the one it declares when the statement
-    /// is an <c>AddProject</c> declaration, otherwise the identifier it starts with.
+    /// is an <c>AddDotnetProject</c> declaration, otherwise the identifier it starts with.
     /// </summary>
     /// <param name="statement">One semicolon-delimited chunk of the AppHost source.</param>
     /// <returns>The variable name, or <see langword="null"/> when the statement names none.</returns>
     private static string? ConsumerVariable(string statement)
     {
-        var declaration = AddProjectPattern.Match(statement);
+        var declaration = AddDotnetProjectPattern.Match(statement);
         if (declaration.Success)
         {
             return declaration.Groups["variable"].Value;
@@ -183,12 +183,12 @@ internal static partial class AppHostBicepEdgeParser
         return stripped.ToString();
     }
 
-    /// <summary>Matches an AppHost project declaration, capturing the variable and resource names.</summary>
+    /// <summary>Matches an AppHost <c>AddDotnetProject</c> declaration, capturing the variable and resource names.</summary>
     [GeneratedRegex(
-        @"var\s+(?<variable>\w+)\s*=\s*builder\.AddProject<[^>]+>\(\s*""(?<resource>[^""]+)""",
+        @"var\s+(?<variable>\w+)\s*=\s*builder\.AddDotnetProject\(\s*""(?<resource>[^""]+)""",
         RegexOptions.ExplicitCapture,
         matchTimeoutMilliseconds: 5000)]
-    private static partial Regex AddProjectPattern { get; }
+    private static partial Regex AddDotnetProjectPattern { get; }
 
     /// <summary>Matches the leading identifier of a statement that calls a method on an existing resource.</summary>
     [GeneratedRegex(@"^\s*(?<variable>\w+)\s*\.", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 5000)]

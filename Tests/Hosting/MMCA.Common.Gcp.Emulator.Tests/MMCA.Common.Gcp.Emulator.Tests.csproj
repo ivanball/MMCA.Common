@@ -29,10 +29,6 @@
     <PackageReference Include="Testcontainers" />
     <!-- The Firestore emulator behind the FCM installation registry (FCM itself has no emulator). -->
     <PackageReference Include="Testcontainers.Firestore" />
-    <!-- Direct only to lift the vulnerable SSH.NET that Testcontainers floors at 2025.1.0
-         (GHSA-q939-rpr3-3284). This project has no path to MMCA.Common.Testing, so it cannot
-         inherit that pin and needs its own. See the comment in Directory.Packages.props. -->
-    <PackageReference Include="SSH.NET" />
   </ItemGroup>
 
   <ItemGroup>

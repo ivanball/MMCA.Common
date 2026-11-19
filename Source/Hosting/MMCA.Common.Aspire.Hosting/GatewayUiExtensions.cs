@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -16,7 +17,7 @@ public static class GatewayUiExtensions
 {
     private const string HttpsEndpointName = "https";
 
-    extension(IResourceBuilder<ProjectResource> gateway)
+    extension(IResourceBuilder<DotnetProjectResource> gateway)
     {
         /// <summary>
         /// Wires the gateway resource over the services it fronts: a reference to and a wait on each
@@ -36,9 +37,9 @@ public static class GatewayUiExtensions
         /// <param name="httpsPort">The fixed host port of the gateway's <c>https</c> endpoint.</param>
         /// <param name="services">The service resources the gateway references and waits for.</param>
         /// <returns>The same gateway resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithMmcaGateway(
+        public IResourceBuilder<DotnetProjectResource> WithMmcaGateway(
             int httpsPort,
-            params IResourceBuilder<ProjectResource>[] services)
+            params IResourceBuilder<DotnetProjectResource>[] services)
         {
             ArgumentNullException.ThrowIfNull(gateway);
             ArgumentNullException.ThrowIfNull(services);
@@ -56,7 +57,7 @@ public static class GatewayUiExtensions
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> ui)
+    extension(IResourceBuilder<DotnetProjectResource> ui)
     {
         /// <summary>
         /// Wires the UI head over the gateway and the services: external HTTP endpoints, a reference to
@@ -77,10 +78,10 @@ public static class GatewayUiExtensions
         /// <param name="httpsPort">The fixed host port of the UI's <c>https</c> endpoint.</param>
         /// <param name="services">The service resources the UI references and waits for.</param>
         /// <returns>The same UI resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithMmcaUi(
-            IResourceBuilder<ProjectResource> gateway,
+        public IResourceBuilder<DotnetProjectResource> WithMmcaUi(
+            IResourceBuilder<DotnetProjectResource> gateway,
             int httpsPort,
-            params IResourceBuilder<ProjectResource>[] services)
+            params IResourceBuilder<DotnetProjectResource>[] services)
         {
             ArgumentNullException.ThrowIfNull(ui);
             ArgumentNullException.ThrowIfNull(gateway);
@@ -117,7 +118,7 @@ public static class GatewayUiExtensions
         /// </summary>
         /// <param name="gateway">The gateway resource whose <c>https</c> endpoint the UI calls.</param>
         /// <returns>The same UI resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithGatewayApiEndpoints(IResourceBuilder<ProjectResource> gateway)
+        public IResourceBuilder<DotnetProjectResource> WithGatewayApiEndpoints(IResourceBuilder<DotnetProjectResource> gateway)
         {
             ArgumentNullException.ThrowIfNull(ui);
             ArgumentNullException.ThrowIfNull(gateway);

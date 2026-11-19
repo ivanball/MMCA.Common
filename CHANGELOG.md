@@ -4,6 +4,42 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+**Breaking (Aspire 17; MMCA.Common.Aspire.Hosting, MMCA.Common.Testing.Aspire, MMCA.Common.Testing):** every Aspire package moves from 13.6.5 to 17.0.0. Aspire 17 obsoletes every `AddProject` overload (CS0618) and the `Aspire.AppHost.Sdk` project SDK (ASPIRE012): an AppHost is now a `Microsoft.NET.Sdk` project referencing `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet`, it declares each service with `builder.AddDotnetProject("name", "<path to .csproj>")`, which returns `IResourceBuilder<DotnetProjectResource>` (namespace `Aspire.Hosting.Dotnet`; it derives from `ExecutableResource`, not `ProjectResource`), and building it needs the Aspire CLI 17.0.0 bundle (ASPIRE013, unsuppressible). Every MMCA.Common.Aspire.Hosting extension that took or returned `IResourceBuilder<ProjectResource>` now takes and returns `IResourceBuilder<DotnetProjectResource>`, with the same name, parameters and behavior; there is no `ProjectResource` overload. `AppHostFixtureBase` (MMCA.Common.Testing.Aspire) awaits every `DotnetProjectResource` when `ResourcesToAwait` is null, and now fails startup when the AppHost declares none instead of waiting for nothing. `AppHostBicepParityTestsBase` (MMCA.Common.Testing) reads `var x = builder.AddDotnetProject("name", ...)` declarations only; an `AddProject<...>` declaration is no longer a resource to it.
+
+| Old | New |
+|---|---|
+| `<Project Sdk="Aspire.AppHost.Sdk/13.6.5">` | `<Project Sdk="Microsoft.NET.Sdk">` plus `<PackageReference Include="Aspire.Hosting.AppHost" />` and `<PackageReference Include="Aspire.Hosting.Dotnet" />` (both 17.0.0 in `Directory.Packages.props`) |
+| a resource `<ProjectReference Include="..\Svc\Svc.csproj" />` in the AppHost | delete it; the service is declared by path in `Program.cs` |
+| `builder.AddProject<Projects.Svc>("svc")` | `builder.AddDotnetProject("svc", "../Svc/Svc.csproj")` (path relative to the AppHost project directory) |
+| `builder.AddProject<Projects.Svc>("svc", launchProfileName: "https")` | `builder.AddDotnetProject("svc", "../Svc/Svc.csproj", options => options.LaunchProfileName = "https")` |
+| `IResourceBuilder<ProjectResource>` (a local, field, helper parameter or `Func<,>` such as the `WithMmcaServiceInfrastructure` broker attach delegate) | `IResourceBuilder<DotnetProjectResource>` plus `using Aspire.Hosting.Dotnet;` |
+| `model.Resources.OfType<ProjectResource>()` / `builder.Resources.OfType<ProjectResource>()` in an AppHost test fixture | `OfType<DotnetProjectResource>()` |
+| `IsAspireProjectResource="false"` on a library reference | optional: a `Microsoft.NET.Sdk` AppHost treats no reference as a resource unless it sets `IsAspireProjectResource="true"` |
+| an AppHost build or AppHost test job in CI with no Aspire CLI | install Aspire CLI 17.0.0 and put it on `PATH` before the build |
+
+**Breaking (MMCA.Common.UI, MMCA.Common.UI.Web):** `UseAuthenticatedNoStore(this IApplicationBuilder)` moves from `MMCA.Common.UI.Extensions.WebApplicationExtensions` (MMCA.Common.UI) to `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions` (MMCA.Common.UI.Web), with the same name and behavior. MMCA.Common.UI no longer references `Microsoft.AspNetCore.Mvc.Core` 2.3.x, so the ASP.NET Core 2.3 server types it carried (`IApplicationBuilder`, `HttpContext`, `StatusCodes` from `Microsoft.AspNetCore.Http.Abstractions` 2.3) stop flowing to consumers through it. `UseMmcaBlazorWebPipeline` already calls the method, so a host on the composed pipeline changes nothing; no first-party consumer calls it directly.
+
+| Old | New |
+|---|---|
+| `using MMCA.Common.UI.Extensions;` for `app.UseAuthenticatedNoStore()` | `using MMCA.Common.UI.Web.Hosting;` (reference MMCA.Common.UI.Web) |
+| `MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(app)` | `MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.UseAuthenticatedNoStore(app)` |
+| a WebAssembly-safe project that compiled against `HttpContext`, `StatusCodes` or `IApplicationBuilder` through MMCA.Common.UI | move that code to a server project, or reference the package that owns the type directly |
+
+### Added
+
+- **`IForbiddenReExecutionDetector`** (MMCA.Common.UI, namespace `MMCA.Common.UI.Services.Navigation`): answers whether the page being rendered is a status-code re-execution of a request already answered with 403. `NotFound.razor` reads it to render Access Denied instead of reading `HttpContext` itself. `AddUIShared` registers an always-false default (WebAssembly, MAUI, interactive renders); `AddMmcaBlazorWebHost` (MMCA.Common.UI.Web) replaces it with one that reads the current request's status. A server host that does not use `AddMmcaBlazorWebHost` and wants the 403 rendering registers its own implementation.
+
+### Changed
+
+- **Aspire 17.0.0** (MMCA.Common.Aspire, Aspire.Hosting, Testing.Aspire and every package that carries an Aspire client integration): every `Aspire.*` pin moves from 13.6.5, and `Aspire.Hosting.Dotnet` (MMCA.Common.Aspire.Hosting, Testing.Aspire) and `Aspire.Hosting.AppHost` (the sample AppHost) join them. The other Aspire 17 breaking changes touch nothing in this repo: no code reads `ResourceUrlAnnotation.DisplayOrder`, configures a Cosmos client through `configureClientOptions`, sets `TerminalOptions.ShowTerminalHost` or declares a required parameter that may be empty (the service-token signing key is generated), and the 64 MiB OTLP request default comes from OpenTelemetry 1.18, already in effect on the 1.21 line pinned here. The apphost-testing and consumer-source-build CI jobs install Aspire CLI 17.0.0 before they build an AppHost.
+- **MMCA.Common.UI's ASP.NET Core dependencies are its real ones** (MMCA.Common.UI): `Microsoft.AspNetCore.WebUtilities` (QueryHelpers) moves off the 2.3.x line to the framework version (10.0.x on net10.0, 11.0.x on net11.0), `Microsoft.Extensions.Hosting.Abstractions` (IHostEnvironment) is now a direct reference, and the `Microsoft.AspNetCore.Mvc.Core` 2.3.14 reference is removed. All three stay WebAssembly-safe (no `Microsoft.AspNetCore.App` framework reference).
+- **Four security pins retired because upstream now floors a patched build** (MMCA.Common.Infrastructure, Aspire, Aspire.Hosting, Passkeys, Testing, Testing.Azure): `SSH.NET` (Testcontainers 4.17.0 floors 2026.0.0, patched for GHSA-q939-rpr3-3284), `MessagePack` (SignalR.StackExchangeRedis floors 2.5.303 and Aspire.Hosting 2.5.307, both past the 2.5.301 fix for GHSA-hv8m-jj95-wg3x), `System.Formats.Cbor` (Fido2 4.3.3 floors 9.0.24, patched for GHSA-vmv3-wvjp-wqpj) and `SQLitePCLRaw.bundle_e_sqlite3` (EF Core Sqlite floors 2.1.13, past the vulnerable 2.1.11 range of GHSA-2m69-gcr7-jv3q). The packages are no longer direct references, so a consumer resolves the upstream floor: MessagePack on the 2.5.x line instead of 3.1.12 and SQLitePCLRaw on 2.1.x instead of 3.0.5. A consumer that wants the newer lines references them itself.
+- **Dependency bumps**: `Microsoft.Playwright` 1.65.1 (MMCA.Common.Testing.E2E), `AWSSDK.S3` 4.1.2 (MMCA.Common.Aws), and `Serilog.AspNetCore` 11.0.0 on the net11.0 line only (MMCA.Common.Aspire; net10.0 stays on 10.0.0, because 11.x pulls the Microsoft.Extensions.* 11 packages into a net10.0 closure).
+
+- **The dependency readiness checks are the framework's own** (MMCA.Common.Aspire): the SQL Server, PostgreSQL, SQLite and RabbitMQ checks `AddServiceDefaults` registers are internal `IHealthCheck` classes under `Health/`, replacing the four Xabaril `AspNetCore.HealthChecks.*` packages (`SqlServer`, `NpgSql`, `Sqlite`, `Rabbitmq`), which no longer flow to consumers. Check names, tags, failure status and timeouts are unchanged, as is the PostgreSQL check's use of the host's configured data source. The drivers are now direct references: `Microsoft.Data.Sqlite` on the EF Core line and `RabbitMQ.Client` 7.2.2 (the build MassTransit.RabbitMQ already resolves), beside the existing `Microsoft.Data.SqlClient` and `Npgsql`. A consumer that called the Xabaril `AddSqlServer`/`AddNpgSql`/`AddSqlite`/`AddRabbitMQ` extensions itself and relied on the package arriving transitively must now reference it directly.
+
 ## [1.306.0] - 2026-11-18
 
 ### Fixed

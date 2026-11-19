@@ -231,6 +231,11 @@ public static class DependencyInjection
             // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()
             services.TryAddSingleton<IOAuthUISettings, DefaultOAuthUISettings>();
 
+            // The not-found page's "is this a 403 re-execution" question. No request to read on a
+            // WebAssembly or MAUI head, so the default always answers false; the Blazor Web host
+            // (MMCA.Common.UI.Web AddMmcaBlazorWebHost) replaces it with the request-reading one.
+            services.TryAddSingleton<IForbiddenReExecutionDetector, NoForbiddenReExecutionDetector>();
+
             // Device-capability defaults (ADR-042): every contract resolves on every head.
             // MAUI/browser hosts override AFTER this call (last registration wins).
             services.AddDeviceCapabilityDefaults();

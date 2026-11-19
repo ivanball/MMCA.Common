@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -93,8 +94,10 @@ public abstract class AppHostFixtureBase : IAsyncLifetime
 
     /// <summary>
     /// Which resources to wait for, by name. <see langword="null"/> (the default) means every project
-    /// resource in the model: containers are already awaited transitively through the WaitFor edges
-    /// the projects declare, and naming them again only lengthens the critical path.
+    /// resource (<c>AddDotnetProject</c>) in the model: containers are already awaited transitively
+    /// through the WaitFor edges the projects declare, and naming them again only lengthens the
+    /// critical path. An AppHost with no project resource fails the fixture rather than waiting for
+    /// nothing.
     /// </summary>
     protected virtual IReadOnlyCollection<string>? ResourcesToAwait => null;
 
@@ -289,14 +292,35 @@ public abstract class AppHostFixtureBase : IAsyncLifetime
     /// <param name="application">The started application.</param>
     /// <returns>The resources, in model order.</returns>
     /// <exception cref="InvalidOperationException">A named resource is not in the model.</exception>
-    private IReadOnlyList<IResource> ResolveResources(DistributedApplication application)
+    private IReadOnlyList<IResource> ResolveResources(DistributedApplication application) =>
+        SelectResources(application.Services.GetRequiredService<DistributedApplicationModel>(), ResourcesToAwait);
+
+    /// <summary>
+    /// Picks the resources to await from the model: the named ones, or every
+    /// <see cref="DotnetProjectResource"/> (an <c>AddDotnetProject</c> resource) when none are named.
+    /// </summary>
+    /// <param name="model">The application model.</param>
+    /// <param name="names">The names to await, or <see langword="null"/> for every project resource.</param>
+    /// <returns>The resources, in model order.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// A named resource is not in the model, or no names were given and the model holds no project
+    /// resource. The second case refuses to pass vacuously: a fixture that waits for nothing would hand
+    /// every test an application whose services never started.
+    /// </exception>
+    internal static IReadOnlyList<IResource> SelectResources(
+        DistributedApplicationModel model,
+        IReadOnlyCollection<string>? names)
     {
-        var model = application.Services.GetRequiredService<DistributedApplicationModel>();
-        var names = ResourcesToAwait;
+        ArgumentNullException.ThrowIfNull(model);
 
         if (names is null)
         {
-            return [.. model.Resources.OfType<ProjectResource>()];
+            IResource[] projects = [.. model.Resources.OfType<DotnetProjectResource>()];
+            return projects.Length > 0
+                ? projects
+                : throw new InvalidOperationException(
+                    "The AppHost declares no project resource to await. Declare each service with "
+                    + "AddDotnetProject (Aspire 17), or name the resources to wait for in ResourcesToAwait.");
         }
 
         return

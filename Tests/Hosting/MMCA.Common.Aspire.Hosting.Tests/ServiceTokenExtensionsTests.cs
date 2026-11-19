@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using MMCA.Common.Grpc.Authentication;
 using static MMCA.Common.Aspire.Hosting.Tests.Support.PublishModeEnvironment;
@@ -87,10 +88,10 @@ public sealed class ServiceTokenExtensionsTests
     public void NullArguments_Throw()
     {
         IDistributedApplicationBuilder nullBuilder = null!;
-        IResourceBuilder<ProjectResource> nullService = null!;
+        IResourceBuilder<DotnetProjectResource> nullService = null!;
         var builder = DistributedApplication.CreateBuilder([]);
         var signingKey = builder.AddServiceTokenSigningKey();
-        var service = builder.AddResource(new ProjectResource("identity"));
+        var service = builder.AddResource(new DotnetProjectResource("identity", "."));
 
         FluentActions.Invoking(() => nullBuilder.AddServiceTokenSigningKey())
             .Should().Throw<ArgumentNullException>();
@@ -105,9 +106,9 @@ public sealed class ServiceTokenExtensionsTests
     {
         var builder = DistributedApplication.CreateBuilder([]);
         var signingKey = builder.AddServiceTokenSigningKey();
-        var control = builder.AddResource(new ProjectResource("control"))
+        var control = builder.AddResource(new DotnetProjectResource("control", "."))
             .WithEnvironment("Expected", signingKey);
-        var service = builder.AddResource(new ProjectResource("identity"));
+        var service = builder.AddResource(new DotnetProjectResource("identity", "."));
 
         service.WithServiceTokenSigningKey(signingKey);
 
@@ -123,7 +124,7 @@ public sealed class ServiceTokenExtensionsTests
     {
         var builder = DistributedApplication.CreateBuilder([]);
         var signingKey = builder.AddServiceTokenSigningKey();
-        var service = builder.AddResource(new ProjectResource("identity"));
+        var service = builder.AddResource(new DotnetProjectResource("identity", "."));
 
         service.WithServiceTokenSigningKey(signingKey);
 
@@ -149,7 +150,7 @@ public sealed class ServiceTokenExtensionsTests
     {
         var builder = DistributedApplication.CreateBuilder([]);
         var signingKey = builder.AddServiceTokenSigningKey();
-        var service = builder.AddResource(new ProjectResource("identity"));
+        var service = builder.AddResource(new DotnetProjectResource("identity", "."));
 
         service.WithServiceTokenSigningKey(signingKey).Should().BeSameAs(service);
     }

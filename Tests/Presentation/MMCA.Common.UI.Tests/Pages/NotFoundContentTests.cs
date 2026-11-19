@@ -3,12 +3,13 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages;
+using MMCA.Common.UI.Services.Navigation;
+using Moq;
 
 namespace MMCA.Common.UI.Tests.Pages;
 
@@ -51,11 +52,9 @@ public sealed class NotFoundContentTests : BunitTestBase
     public void WhenReExecutedForA403_StillRendersAccessDenied()
     {
         Services.AddSingleton<IUIModule>(new NotFoundModule(typeof(FirstProbe)));
-        var context = new DefaultHttpContext();
-        context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        Services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = context });
+        Services.AddSingleton(Mock.Of<IForbiddenReExecutionDetector>(d => d.IsForbiddenReExecution));
 
-        var cut = RenderAs<NotFound>(TestPrincipal.AuthenticatedUser(), p => p.AddCascadingValue<HttpContext>(context));
+        var cut = RenderAs<NotFound>(TestPrincipal.AuthenticatedUser(), _ => { });
 
         cut.Markup.Should().Contain(ForbiddenTitle, "an app's 404 content never replaces the Access Denied view");
         cut.FindAll("[data-testid=first-probe]").Should().BeEmpty();

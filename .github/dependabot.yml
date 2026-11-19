@@ -74,11 +74,8 @@ updates:
       # ASP.NET Core ships a generator targeting 3.x. See Directory.Packages.props.
       - dependency-name: "Microsoft.OpenApi"
         update-types: ["version-update:semver-major"]
-      # Breaking majors held back deliberately. MessagePack is also pinned directly (on the 3.x
-      # line) to override a vulnerable transitive (see Directory.Packages.props).
+      # Breaking majors held back deliberately.
       - dependency-name: "StackExchange.Redis"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "MessagePack"
         update-types: ["version-update:semver-major"]
       # Android bindings held by NU1608: Firebase.Messaging 125.x and Biometric past 1.1.0.30 pull
       # the newer AndroidX train past the .Ktx packages' upper bounds and fail the android restore
@@ -94,13 +91,6 @@ updates:
       # setting MmcaEfCoreVersion in the net11.0 group of Directory.Packages.props, in its own
       # release.
       - dependency-name: "Microsoft.EntityFrameworkCore*"
-        update-types: ["version-update:semver-major"]
-      # WebUtilities is a security floor on the 2.3.x line, not a free-standing dependency: it lifts
-      # the transitive pulled by Microsoft.AspNetCore.Mvc.Core 2.3.14 past GHSA-6527-9fp8-r4x6. A
-      # current-line major would mix into that 2.3.x ASP.NET Core closure in MMCA.Common.UI for no
-      # gain (#712). The pin is dropped when Mvc.Core itself depends on 2.3.14 or later. See
-      # Directory.Packages.props.
-      - dependency-name: "Microsoft.AspNetCore.WebUtilities"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"

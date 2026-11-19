@@ -35,6 +35,10 @@
                             at 11.0.0, so the .NET 10 line stays on 10.x and only net11.0 takes 11.x.
       MmcaAspNetOAuthVersion
                             AspNet.Security.OAuth.Apple and .GitHub: 11.x ships net11.0 assets only.
+      MmcaSerilogAspNetCoreVersion
+                            Serilog.AspNetCore: 11.x on net10.0 pulls Serilog.Extensions.Hosting 11
+                            and the Microsoft.Extensions.* 11.0.0 packages into the net10.0
+                            closure, so the .NET 10 line stays on 10.x and only net11.0 takes 11.x.
   -->
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
@@ -45,6 +49,7 @@
     <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
     <MmcaExtensionsVersion>10.11.0</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>10.1.0</MmcaAspNetOAuthVersion>
+    <MmcaSerilogAspNetCoreVersion>10.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
@@ -54,13 +59,15 @@
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
     <MmcaExtensionsVersion>11.0.0</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>11.0.0</MmcaAspNetOAuthVersion>
+    <MmcaSerilogAspNetCoreVersion>11.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
   <!--
     CentralPackageTransitivePinningEnabled is deliberately NOT set in this workspace: CPM pins DIRECT
     PackageReferences only. So lifting a transitive package (a security bump, most often) takes TWO
     edits, never one: a PackageVersion entry here AND a direct PackageReference in a project that
     flows that package onward, otherwise the pin is inert and the vulnerable version still resolves.
-    Worked exemplars below: the Microsoft.OpenApi and MessagePack pins, each with its own note.
+    Worked exemplars below: the Microsoft.OpenApi and System.Security.Cryptography.Pkcs pins, each
+    with its own note.
   -->
   <ItemGroup>
     <!-- API -->
@@ -94,23 +101,9 @@
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
-    <!-- Pinned to a patched version to override the vulnerable MessagePack pulled transitively by
-         SignalR.StackExchangeRedis (2.5.187) and Aspire.Hosting (2.5.192). GHSA-hv8m-jj95-wg3x /
-         CVE-2026-48109 (high, CVSS 8.2 — LZ4 decompression OOB read); fixed in 2.5.301. Forced via a
-         direct PackageReference in MMCA.Common.Infrastructure + .Aspire.Hosting (same pattern as
-         OpenTelemetry.Api below) so the fix flows to consumers through the published package graph.
-         Moved to the 3.x line on 2026-08-28: both dependents constrain MessagePack with a lower
-         bound only, so the major bump restores and builds clean and carries the same fix. -->
-    <PackageVersion Include="MessagePack" Version="3.1.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Cosmos" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MmcaEfCoreVersion)" />
-    <!-- Pins the transitive SQLitePCLRaw bundle (EF Core Sqlite floors it at the vulnerable 2.1.11) to
-         a patched build for GHSA-2m69-gcr7-jv3q / CVE-2025-6965; referenced directly in
-         MMCA.Common.Infrastructure and MMCA.Common.Aspire (whose Sqlite health check pulls
-         Microsoft.Data.Sqlite) so the fix flows to consumers through the published package graph
-         (same pattern as the MessagePack pin above). -->
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MmcaEfCoreVersion)" />
     <!-- PostgreSQL provider (ADR-113). Npgsql ships on its own cadence, so its version tracks the EF
          Core MAJOR (10.x) rather than the exact 10.0.14 patch the Microsoft-owned providers share;
@@ -153,12 +146,6 @@
          package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
          reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
     <PackageVersion Include="Fido2" Version="4.3.3" />
-    <!-- Direct pin to lift the transitive System.Formats.Cbor off 9.0.0 (pulled by Fido2) to the
-         first patched version for GHSA-vmv3-wvjp-wqpj / CVE-2026-118747 (moderate, denial of
-         service in the CBOR reader, which is exactly what Fido2 feeds attacker-supplied bytes to).
-         It follows the framework version (10.0.15 / 11.0.0, both patched) and is referenced
-         directly in MMCA.Common.Passkeys so the pin takes effect and flows to consumers. -->
-    <PackageVersion Include="System.Formats.Cbor" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
@@ -219,7 +206,7 @@
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.1.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.1.2" />
     <!-- The AWS telemetry exporter (MMCA.Common.Aws.AddAwsTelemetryExporter) signs its OTLP requests
          with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
          signer is guaranteed rather than inherited from whichever service package floors highest.
@@ -302,19 +289,14 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(MmcaFrameworkVersion)" />
-    <!-- Deliberately the ASP.NET Core 2.3.x package on net10.0: it is what brings HttpContext and
-         StatusCodes (via Microsoft.AspNetCore.Http.Abstractions 2.3.x) into Common.UI, which
-         Pages/NotFound.razor needs for its 403 re-execution check. Common.UI is consumed by Blazor
-         WebAssembly clients, so <FrameworkReference Include="Microsoft.AspNetCore.App" /> cannot
-         replace it. Removing it means moving that check into a server-only project first. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.14" />
-    <!-- Direct pin to lift the transitive Microsoft.AspNetCore.WebUtilities off 2.3.12 (pulled by
-         Mvc.Core 2.3.14 through Microsoft.AspNetCore.Http 2.3.13) to the first patched version for
-         GHSA-6527-9fp8-r4x6 / CVE-2026-118750 (moderate, denial of service); referenced directly in
-         MMCA.Common.UI so the pin takes effect (no transitive pinning) and flows to consumers through
-         the published package graph. Drop it when Mvc.Core itself depends on 2.3.14 or later. -->
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
+    <!-- Direct dependency of Common.UI: QueryHelpers (Services/ListPageQueryStateService). It is the
+         standalone package, not the shared framework, because Common.UI is consumed by Blazor
+         WebAssembly clients and cannot take <FrameworkReference Include="Microsoft.AspNetCore.App" />. -->
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MmcaFrameworkVersion)" />
+    <!-- Direct dependency of Common.UI: IConfiguration appears in its public API. -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
+    <!-- Direct dependency of Common.UI: IHostEnvironment (Globalization/CultureSwitcher.razor). -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MmcaFrameworkVersion)" />
@@ -393,7 +375,7 @@
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
     <PackageVersion Include="Deque.AxeCore.Commons" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.65.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.65.1" />
     <!-- Redis integration tier only (Tests/Core/MMCA.Common.Infrastructure.Redis.Tests, outside the
          .slnx, own CI job): a real Redis is the only way to assert the storage FORMAT the cache
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
@@ -424,14 +406,6 @@
     <!-- Google Cloud emulator tier only: the Firestore emulator for the FCM installation registry.
          Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers.Firestore" Version="4.17.0" />
-    <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
-         package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
-         2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
-         server-controlled SCP filenames); fixed in 2026.0.0. CPM does not pin transitives, so the
-         projects that pull Testcontainers add a direct PackageReference (same pattern as the
-         MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
-         MMCA.Common.Testing package through the published package graph. -->
-    <PackageVersion Include="SSH.NET" Version="2026.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
@@ -478,15 +452,15 @@
          Aspire.StackExchange.Redis, which is harmless because the Aspire checks are switched off at
          registration (Caching/RedisCachingExtensions) and this repo does not enable central
          transitive pinning, so no PackageVersion entry is required to keep the restore graph valid. -->
-    <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
-    <!-- Readiness probe for a PostgreSQL source (ADR-113), the peer of the SqlServer and Sqlite
-         checks below. Npgsql is pinned directly alongside it in MMCA.Common.Aspire so the ADO driver
-         the check opens a connection with is the same 10.x build the EF provider uses, rather than
-         the older floor this health-check package carries. -->
-    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <!-- The SQL Server, PostgreSQL, SQLite and RabbitMQ readiness checks are MMCA.Common.Aspire's own
+         IHealthCheck classes (Health/), so the drivers they open a connection with are its direct
+         references: Microsoft.Data.SqlClient (above), Npgsql (the same 10.x build the EF provider uses,
+         ADR-113), Microsoft.Data.Sqlite and RabbitMQ.Client. Microsoft.Data.Sqlite follows the EF Core
+         line so it stays aligned with Microsoft.EntityFrameworkCore.Sqlite; RabbitMQ.Client matches
+         the build MassTransit.RabbitMQ already resolves, so a host carries one client version. -->
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="AspNetCore.HealthChecks.Sqlite" Version="9.0.0" />
-    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="$(MmcaEfCoreVersion)" />
+    <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared
          gateway building blocks are written against; MMCA.Common.Testing takes it for the gateway
          hardening test base and its recording forwarder. Deliberately not referenced from
@@ -508,9 +482,9 @@
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
          silence the OpenTelemetry provider AddServiceDefaults adds); the two sink packages are the
-         console and rolling-file sinks the shared configuration writes to. Versions match the pins
-         both consumer apps already carry. -->
-    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+         console and rolling-file sinks the shared configuration writes to. Serilog.AspNetCore follows
+         the target framework (MmcaSerilogAspNetCoreVersion above). -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="$(MmcaSerilogAspNetCoreVersion)" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Redis client integrations (MMCA.Common.Aspire.Caching.RedisCachingExtensions). Held at the
@@ -518,23 +492,26 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.5" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.5" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="17.0.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="17.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME version as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
-    <!-- Aspire.Hosting.AppHost has no pin: the sample AppHost (apphost-testing CI tier, outside
-         MMCA.Common.slnx) uses Aspire.AppHost.Sdk as its project SDK, which references it at the
-         SDK's own version, the same shape as the consumer AppHosts. -->
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="17.0.0" />
+    <!-- C# AppHost packages (Aspire 17 retired the Aspire.AppHost.Sdk project SDK): an AppHost is a
+         Microsoft.NET.Sdk project referencing Aspire.Hosting.AppHost (the DCP orchestrator and the
+         AppHost build targets) and Aspire.Hosting.Dotnet (AddDotnetProject). Taken by the sample
+         AppHost of the apphost-testing CI tier, outside MMCA.Common.slnx. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>

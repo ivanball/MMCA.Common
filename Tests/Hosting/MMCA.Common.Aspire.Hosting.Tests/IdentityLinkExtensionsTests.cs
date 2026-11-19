@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Auth;
@@ -33,7 +34,7 @@ public sealed class IdentityLinkExtensionsTests
     public void NullArguments_Throw()
     {
         var model = Arrange();
-        IResourceBuilder<ProjectResource> nullIdentity = null!;
+        IResourceBuilder<DotnetProjectResource> nullIdentity = null!;
 
         FluentActions.Invoking(() => nullIdentity.WithUiLinks(model.Ui))
             .Should().Throw<ArgumentNullException>();
@@ -49,7 +50,7 @@ public sealed class IdentityLinkExtensionsTests
     public async Task WithUiLinks_SetsTheFourKeys()
     {
         var model = Arrange();
-        var control = model.Builder.AddResource(new ProjectResource("control"))
+        var control = model.Builder.AddResource(new DotnetProjectResource("control", "."))
             .WithEnvironment("UiHttps", model.Ui.GetEndpoint("https"));
 
         model.Identity.WithUiLinks(model.Ui);
@@ -111,7 +112,7 @@ public sealed class IdentityLinkExtensionsTests
     public async Task WithIssuer_SetsJwtIssuer_DerivedFromJwtSettings()
     {
         var model = Arrange();
-        var control = model.Builder.AddResource(new ProjectResource("control"))
+        var control = model.Builder.AddResource(new DotnetProjectResource("control", "."))
             .WithEnvironment("GatewayHttps", model.Gateway.GetEndpoint("https"));
 
         model.Identity.WithIssuer(model.Gateway);
@@ -152,21 +153,21 @@ public sealed class IdentityLinkExtensionsTests
     private static string Key(string section, string property) =>
         section.Replace(":", "__", StringComparison.Ordinal) + "__" + property;
 
-    // AddResource rather than AddProject: the helpers only need ProjectResources in the model, and
-    // AddProject validates that the project file exists on disk.
+    // AddResource rather than AddDotnetProject: the helpers only need DotnetProjectResources in the model, and
+    // AddDotnetProject validates that the project file exists on disk.
     private static Model Arrange()
     {
         var builder = DistributedApplication.CreateBuilder([]);
-        var identity = builder.AddResource(new ProjectResource("identity"));
-        var ui = builder.AddResource(new ProjectResource("ui")).WithHttpsEndpoint(name: "https");
-        var gateway = builder.AddResource(new ProjectResource("gateway")).WithHttpsEndpoint(name: "https");
+        var identity = builder.AddResource(new DotnetProjectResource("identity", "."));
+        var ui = builder.AddResource(new DotnetProjectResource("ui", ".")).WithHttpsEndpoint(name: "https");
+        var gateway = builder.AddResource(new DotnetProjectResource("gateway", ".")).WithHttpsEndpoint(name: "https");
 
         return new Model(builder, identity, ui, gateway);
     }
 
     private sealed record Model(
         IDistributedApplicationBuilder Builder,
-        IResourceBuilder<ProjectResource> Identity,
-        IResourceBuilder<ProjectResource> Ui,
-        IResourceBuilder<ProjectResource> Gateway);
+        IResourceBuilder<DotnetProjectResource> Identity,
+        IResourceBuilder<DotnetProjectResource> Ui,
+        IResourceBuilder<DotnetProjectResource> Gateway);
 }

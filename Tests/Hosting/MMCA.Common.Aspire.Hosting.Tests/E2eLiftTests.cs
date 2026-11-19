@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using MMCA.Common.API.RateLimiting;
 using MMCA.Common.Aspire.Gateway;
@@ -183,14 +184,14 @@ public sealed class E2eLiftTests
         using var scope = new E2eEnvironmentScope(lift: liftValue, forceWasm: forceWasmValue);
 
         var builder = DistributedApplication.CreateBuilder([]);
-        var identity = builder.AddResource(new ProjectResource("identity"));
+        var identity = builder.AddResource(new DotnetProjectResource("identity", "."));
         identity.WithE2eRegistrationThrottleLift();
 
         return await EnvironmentOf(builder, identity.Resource);
     }
 
-    // AddResource rather than AddProject: the extension only needs a ProjectResource in the model, and
-    // AddProject validates that the project file exists on disk.
-    private static IResourceBuilder<ProjectResource> AddGateway(IDistributedApplicationBuilder builder) =>
-        builder.AddResource(new ProjectResource("gateway"));
+    // AddResource rather than AddDotnetProject: the extension only needs a DotnetProjectResource in the model, and
+    // AddDotnetProject validates that the project file exists on disk.
+    private static IResourceBuilder<DotnetProjectResource> AddGateway(IDistributedApplicationBuilder builder) =>
+        builder.AddResource(new DotnetProjectResource("gateway", "."));
 }

@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 
-namespace MMCA.Common.UI.Extensions;
+namespace MMCA.Common.UI.Web.Hosting;
 
 /// <summary>
-/// Middleware extensions used by Blazor Server / WASM hybrid hosts.
+/// Middleware extensions used by the Blazor Web host (server-only: they need the request pipeline).
 /// </summary>
-public static class WebApplicationExtensions
+public static class AuthenticatedNoStoreExtensions
 {
     extension(IApplicationBuilder app)
     {
@@ -31,8 +31,8 @@ public static class WebApplicationExtensions
                         context.Response.ContentType is { } contentType &&
                         contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
                     {
-                        context.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
-                        context.Response.Headers["Pragma"] = "no-cache";
+                        context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+                        context.Response.Headers.Pragma = "no-cache";
                     }
                     return Task.CompletedTask;
                 });

@@ -57,12 +57,6 @@
         "resolved": "1.3.180",
         "contentHash": "/TDyrO3tUJOsnyTazvaX+qwwBt4aixQLNLtxmkyWQZE94IOZ9PnClHrwKUVn/NSXdXUUWrKMHTtlxUkZ1F8JWg=="
       },
-      "System.Formats.Cbor": {
-        "type": "Direct",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "8EBB814RXFnm/Klsuil8A6r+n6zvz4L/rQ1ROamxDZDt8lIjUl0tbSGlsYzea1jr/4V3Q6TNQbWfU/C8tjwPDQ=="
-      },
       "Fido2.Models": {
         "type": "Transitive",
         "resolved": "4.3.3",
@@ -284,6 +278,11 @@
           "libsodium": "[1.0.20.1, 1.0.21)"
         }
       },
+      "System.Formats.Cbor": {
+        "type": "Transitive",
+        "resolved": "9.0.24",
+        "contentHash": "SEfEvHu6qXcXoDsDKagddLDf8A9iHIhHUD0hGemdmwlP206KLLCI5ksskOpeXMgNpQCs2diB0fOBKcnjySHFUQ=="
+      },
       "mmca.common.application": {
         "type": "Project",
         "dependencies": {
@@ -444,12 +443,6 @@
         "resolved": "1.3.180",
         "contentHash": "/TDyrO3tUJOsnyTazvaX+qwwBt4aixQLNLtxmkyWQZE94IOZ9PnClHrwKUVn/NSXdXUUWrKMHTtlxUkZ1F8JWg=="
       },
-      "System.Formats.Cbor": {
-        "type": "Direct",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "2ULEPU67LRt4YVwBnCk1OhjsJspIBzg1JlDkN2hnZm9im3fC9bSbVQorLraOIcLMlA6/8eWQG1fjTpurHkIFZw=="
-      },
       "Fido2.Models": {
         "type": "Transitive",
         "resolved": "4.3.3",
@@ -591,6 +584,11 @@
         "dependencies": {
           "libsodium": "[1.0.20.1, 1.0.21)"
         }
+      },
+      "System.Formats.Cbor": {
+        "type": "Transitive",
+        "resolved": "9.0.24",
+        "contentHash": "SEfEvHu6qXcXoDsDKagddLDf8A9iHIhHUD0hGemdmwlP206KLLCI5ksskOpeXMgNpQCs2diB0fOBKcnjySHFUQ=="
       },
       "mmca.common.application": {
         "type": "Project",

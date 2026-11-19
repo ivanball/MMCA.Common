@@ -1,6 +1,7 @@
 using System.Net;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -267,16 +268,16 @@ public sealed class H2cHealthCheckExtensionsTests
         result.Exception.Should().BeOfType<InvalidOperationException>();
     }
 
-    // AddResource rather than AddProject: the extension only needs a ProjectResource in the model,
-    // and AddProject validates that the project file exists on disk, which no unit test should have
+    // AddResource rather than AddDotnetProject: the extension only needs a DotnetProjectResource in the model,
+    // and AddDotnetProject validates that the project file exists on disk, which no unit test should have
     // to fabricate.
-    private static IResourceBuilder<ProjectResource> AddService(
+    private static IResourceBuilder<DotnetProjectResource> AddService(
         IDistributedApplicationBuilder builder,
         string name = "identity") =>
-        builder.AddResource(new ProjectResource(name));
+        builder.AddResource(new DotnetProjectResource(name, "."));
 
     private static IReadOnlyList<HealthCheckAnnotation> HealthCheckAnnotations(
-        IResourceBuilder<ProjectResource> service) =>
+        IResourceBuilder<DotnetProjectResource> service) =>
         [.. service.Resource.Annotations.OfType<HealthCheckAnnotation>()];
 
     // Filtered to this extension's own keys: the AppHost container carries health checks of Aspire's

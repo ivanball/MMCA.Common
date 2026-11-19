@@ -3,6 +3,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.API;
 using MMCA.Common.API.Authorization;
@@ -12,14 +13,15 @@ using MMCA.Common.Aspire;
 using MMCA.Common.Aspire.Logging;
 using MMCA.Common.Aspire.Security;
 using MMCA.Common.UI.Common.Interfaces;
-using MMCA.Common.UI.Extensions;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Navigation;
 using MMCA.Common.UI.Web.ClientConfig;
 using MMCA.Common.UI.Web.Hardening;
 using MMCA.Common.UI.Web.Pwa;
 using MMCA.Common.UI.Web.SameOriginProxy;
+using MMCA.Common.UI.Web.Services;
 using MudBlazor.Services;
 
 namespace MMCA.Common.UI.Web.Hosting;
@@ -48,7 +50,8 @@ public static class BlazorWebHostExtensions
         /// with interactive server components (then the Razor components callback), bounded circuits and
         /// the UI rate limiter, MudBlazor, the shared UI services and browser capabilities, the session
         /// cookie pair, the trusted-caller header, session-cookie authentication, the authorization
-        /// policies, server token storage with the same-origin proxy refresher and then the same-origin
+        /// policies, server token storage, the request-reading forbidden re-execution detector the
+        /// not-found page consults, the same-origin proxy refresher and then the same-origin
         /// API proxy, the authentication state provider, cascading authentication state, the distributed
         /// memory cache, the web form factor, the Blazor CSP and finally the security headers.
         /// <para>
@@ -110,6 +113,12 @@ public static class BlazorWebHostExtensions
             // The proxy replaces the circuit's ITokenRefresher and ISessionCookieSync, so it is
             // registered after both (MapCommonSameOriginApiProxy fails the boot otherwise).
             services.AddCommonServerTokenStorage();
+
+            // The not-found page renders Access Denied for a 403 re-executed to /not-found; only this
+            // server host can read that status, so it replaces the shared always-false default.
+            services.AddHttpContextAccessor();
+            services.Replace(ServiceDescriptor.Singleton<IForbiddenReExecutionDetector, HttpContextForbiddenReExecutionDetector>());
+
             services.AddScoped<ITokenRefresher, SameOriginProxyTokenRefresher>();
             services.AddCommonSameOriginApiProxy(configuration);
 

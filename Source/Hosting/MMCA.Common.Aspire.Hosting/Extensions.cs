@@ -3,6 +3,7 @@ using System.Globalization;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -366,8 +367,8 @@ public static class Extensions
         /// </param>
         /// <returns>The project resource builder for chaining.</returns>
         public IResourceBuilder<TResource> WithJwksDiscovery(
-            IResourceBuilder<ProjectResource> identity,
-            IResourceBuilder<ProjectResource>? gateway = null)
+            IResourceBuilder<DotnetProjectResource> identity,
+            IResourceBuilder<DotnetProjectResource>? gateway = null)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(identity);
@@ -396,7 +397,7 @@ public static class Extensions
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> identity)
+    extension(IResourceBuilder<DotnetProjectResource> identity)
     {
         /// <summary>
         /// CI/E2E only: forwards an ephemeral RSA keypair from the AppHost's own environment to the
@@ -409,7 +410,7 @@ public static class Extensions
         /// out. No-op locally and in prod (vars absent, so user-secrets / Key Vault are used).
         /// </summary>
         /// <returns>The Identity resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eRsaKeys()
+        public IResourceBuilder<DotnetProjectResource> WithE2eRsaKeys()
         {
             ArgumentNullException.ThrowIfNull(identity);
 
@@ -451,7 +452,7 @@ public static class Extensions
         /// </para>
         /// </summary>
         /// <returns>The Identity resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eRegistrationThrottleLift()
+        public IResourceBuilder<DotnetProjectResource> WithE2eRegistrationThrottleLift()
         {
             ArgumentNullException.ThrowIfNull(identity);
 
@@ -469,7 +470,7 @@ public static class Extensions
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> ui)
+    extension(IResourceBuilder<DotnetProjectResource> ui)
     {
         /// <summary>
         /// CI/E2E only: pins the UI host to InteractiveServer for the suite by setting
@@ -485,7 +486,7 @@ public static class Extensions
         /// </para>
         /// </summary>
         /// <returns>The UI resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eForceServer()
+        public IResourceBuilder<DotnetProjectResource> WithE2eForceServer()
         {
             ArgumentNullException.ThrowIfNull(ui);
 
@@ -509,7 +510,7 @@ public static class Extensions
         /// </para>
         /// </summary>
         /// <returns>The UI resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eForceWebAssembly()
+        public IResourceBuilder<DotnetProjectResource> WithE2eForceWebAssembly()
         {
             ArgumentNullException.ThrowIfNull(ui);
 
@@ -519,7 +520,7 @@ public static class Extensions
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> service)
+    extension(IResourceBuilder<DotnetProjectResource> service)
     {
         /// <summary>
         /// CI/E2E only: lifts the gateway's edge rate limiter (the <c>GatewayRateLimiting</c> per-client-IP
@@ -543,7 +544,7 @@ public static class Extensions
         /// </para>
         /// </summary>
         /// <returns>The gateway resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithE2eGatewayRateLimitLift()
+        public IResourceBuilder<DotnetProjectResource> WithE2eGatewayRateLimitLift()
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -582,7 +583,7 @@ public static class Extensions
         /// <param name="database">The service's own database resource.</param>
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
         /// <returns>The service resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithSQLServerDataSource(
+        public IResourceBuilder<DotnetProjectResource> WithSQLServerDataSource(
             IResourceBuilder<SqlServerDatabaseResource> database,
             string logicalName)
         {
@@ -612,7 +613,7 @@ public static class Extensions
         /// <param name="database">The service's own database resource.</param>
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
         /// <returns>The service resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithPostgreSQLDataSource(
+        public IResourceBuilder<DotnetProjectResource> WithPostgreSQLDataSource(
             IResourceBuilder<PostgresDatabaseResource> database,
             string logicalName)
         {
@@ -641,7 +642,7 @@ public static class Extensions
         /// <param name="database">The Cosmos database resource (from <c>AddAzureCosmosDB(...).AddCosmosDatabase(...)</c>).</param>
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Conference"</c>).</param>
         /// <returns>The service resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithCosmosDataSource(
+        public IResourceBuilder<DotnetProjectResource> WithCosmosDataSource(
             IResourceBuilder<AzureCosmosDBDatabaseResource> database,
             string logicalName)
         {
@@ -666,7 +667,7 @@ public static class Extensions
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Conference"</c>).</param>
         /// <param name="filePath">The absolute path to the SQLite database file.</param>
         /// <returns>The service resource builder for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithSqliteDataSource(
+        public IResourceBuilder<DotnetProjectResource> WithSqliteDataSource(
             string logicalName,
             string filePath)
         {

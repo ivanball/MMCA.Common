@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -55,7 +56,7 @@ public static class ServiceTokenExtensions
         }
     }
 
-    extension(IResourceBuilder<ProjectResource> service)
+    extension(IResourceBuilder<DotnetProjectResource> service)
     {
         /// <summary>
         /// Hands the signing key to one service as <c>Grpc__ServiceToken__SigningKey</c> (the parameter
@@ -63,7 +64,7 @@ public static class ServiceTokenExtensions
         /// </summary>
         /// <param name="signingKey">The parameter <c>AddServiceTokenSigningKey</c> returned.</param>
         /// <returns>The same service resource builder, for chaining.</returns>
-        public IResourceBuilder<ProjectResource> WithServiceTokenSigningKey(IResourceBuilder<ParameterResource> signingKey)
+        public IResourceBuilder<DotnetProjectResource> WithServiceTokenSigningKey(IResourceBuilder<ParameterResource> signingKey)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(signingKey);
