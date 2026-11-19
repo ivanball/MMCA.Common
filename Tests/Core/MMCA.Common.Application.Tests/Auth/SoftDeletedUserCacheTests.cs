@@ -110,6 +110,20 @@ public sealed class SoftDeletedUserCacheTests
         cache.Verify(c => c.SetAsync("user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // ---- Marker clear ----
+    [Fact]
+    public async Task ClearMarkerAsync_RemovesExactlyTheUsersKeyAndForwardsTheToken()
+    {
+        var cache = new Mock<ICacheService>();
+        using var cts = new CancellationTokenSource();
+
+        await SoftDeletedUserCache.ClearMarkerAsync(cache.Object, 7, cts.Token);
+
+        cache.Verify(c => c.RemoveAsync(SoftDeletedUserCache.KeyFor(7), cts.Token), Times.Once);
+        cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        cache.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task MarkDeletedAsync_NullCache_Throws()
     {

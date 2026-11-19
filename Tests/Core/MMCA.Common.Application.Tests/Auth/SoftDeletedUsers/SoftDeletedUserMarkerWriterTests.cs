@@ -42,6 +42,21 @@ public sealed class SoftDeletedUserMarkerWriterTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task ClearMarkerAsync_RemovesTheUsersMarkerKeyAndForwardsTheToken()
+    {
+        var sut = new SoftDeletedUserMarkerWriter(_cache.Object, _tokens.Object);
+        using var cts = new CancellationTokenSource();
+
+        await sut.ClearMarkerAsync(7, cts.Token);
+
+        _cache.Verify(c => c.RemoveAsync(SoftDeletedUserCache.KeyFor(7), cts.Token), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(
+            c => c.SetAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // A Development host validates every registration at build, so a dependency the writer's
     // constructor names would stop a host with no token service from starting at all.
     [Fact]
