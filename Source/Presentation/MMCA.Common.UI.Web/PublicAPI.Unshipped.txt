@@ -1,5 +1,1 @@
 #nullable enable
-MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions
-MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
-MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseAuthenticatedNoStore() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
-static MMCA.Common.UI.Web.Hosting.AuthenticatedNoStoreExtensions.UseAuthenticatedNoStore(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
