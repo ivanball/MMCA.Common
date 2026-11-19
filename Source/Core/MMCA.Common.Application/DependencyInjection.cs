@@ -76,14 +76,15 @@ public static partial class DependencyInjection
         /// <para>
         /// <b>Command pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   FeatureGateCommandDecorator              ← outermost: short-circuits if feature flag disabled
-        ///     → AuthorizationCommandDecorator         ← short-circuits with Forbidden (if IRequiresPermission)
-        ///       → LoggingCommandDecorator             ← logs start/end, captures full pipeline duration
-        ///         → CachingCommandDecorator           ← invalidates cache AFTER transaction commits
-        ///           → ValidatingCommandDecorator      ← short-circuits with Result.Failure on validation errors
-        ///             → TimeoutCommandDecorator       ← applies the command's own budget (if IHasTimeout)
-        ///               → TransactionalCommandDecorator ← wraps handler in DB transaction (if ITransactional)
-        ///                 → ConcreteHandler            ← the actual business logic
+        ///   ViewAsCommandDecorator                     &lt;- outermost: short-circuits with Forbidden for a view-as caller (ADR-137)
+        ///     -> FeatureGateCommandDecorator            &lt;- short-circuits if feature flag disabled
+        ///       -> AuthorizationCommandDecorator        &lt;- short-circuits with Forbidden (if IRequiresPermission)
+        ///         -> LoggingCommandDecorator            &lt;- logs start/end, captures the duration of everything inside it
+        ///           -> CachingCommandDecorator          &lt;- invalidates cache AFTER transaction commits
+        ///             -> ValidatingCommandDecorator     &lt;- short-circuits with Result.Failure on validation errors
+        ///               -> TimeoutCommandDecorator      &lt;- applies the command's own budget (if IHasTimeout)
+        ///                 -> TransactionalCommandDecorator &lt;- wraps handler in DB transaction (if ITransactional)
+        ///                   -> ConcreteHandler          &lt;- the actual business logic
         /// </code>
         /// </para>
         /// <para>
@@ -101,8 +102,9 @@ public static partial class DependencyInjection
         /// <para>
         /// <b>Design rationale:</b>
         /// <list type="bullet">
-        /// <item>Feature gating is outermost so disabled features are rejected immediately with zero
-        /// overhead: no authorization, logging, caching, validation, or transaction work. It also
+        /// <item>Feature gating is outermost on queries, and on commands sits directly inside the view-as
+        /// guard (which refuses every command for a read-only view-as caller), so disabled features are
+        /// rejected immediately: no authorization, logging, caching, validation, or transaction work. It also
         /// sits outside authorization deliberately: a feature that is off must answer the same way
         /// for every caller rather than leaking which permission guards it.</item>
         /// <item>Authorization sits directly inside feature gating and outside caching, so a denied

@@ -6,8 +6,8 @@ namespace MMCA.Common.Application.Services.Filtering;
 /// <summary>
 /// Filter strategy for <see cref="string"/> properties. Supports text-specific operators
 /// like CONTAINS, STARTS WITH, ENDS WITH, and IS EMPTY in addition to equality checks.
-/// Also used for nested property paths (e.g. "Category.Name") regardless of the target type,
-/// since LINQ Dynamic evaluates the full path as a string expression.
+/// Also used for a nested property path (e.g. "Category.Name") whose leaf is a string:
+/// <c>QueryFilterService</c> walks the path and picks the strategy by the leaf's type.
 /// </summary>
 internal sealed class StringFilterStrategy : IFilterStrategy
 {

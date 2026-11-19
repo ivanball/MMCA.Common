@@ -3,8 +3,7 @@ using MMCA.Common.Domain.Auth;
 namespace MMCA.Common.Application.Auth;
 
 /// <summary>
-/// Persistence for <see cref="RefreshSession"/> rows: the multi-device replacement for the single
-/// plaintext refresh-token column the user aggregate used to carry.
+/// Persistence for <see cref="RefreshSession"/> rows: one hashed refresh session per signed-in device.
 /// <para>
 /// The contract is deliberately narrow. Sessions are looked up by hash (never by token), listed per
 /// user for the cap and for family revocation, and mutated only through

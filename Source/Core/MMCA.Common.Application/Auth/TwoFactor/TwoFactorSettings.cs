@@ -19,7 +19,7 @@ public sealed class TwoFactorSettings
 
     /// <summary>
     /// The issuer shown beside the account in the authenticator app, and the label the provisioning
-    /// URI is built from. Defaults to the application name where the host leaves it unset.
+    /// URI is built from. Defaults to <c>MMCA</c>; a host sets its own application name here.
     /// </summary>
     [Required]
     [StringLength(64, MinimumLength = 1)]

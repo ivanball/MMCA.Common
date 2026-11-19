@@ -36,8 +36,8 @@ namespace MMCA.Common.Application.Users.UseCases.ExportUserData;
 /// </para>
 /// <para>
 /// This is a query handler, so it never calls <c>SaveChangesAsync</c>, and the account is fetched
-/// through <c>GetReadRepository</c> rather than the read-write repository the two pre-hoist app
-/// copies used: a no-tracking read is the correct choice for a projection both apps only read.
+/// through <c>GetReadRepository</c>: a no-tracking read is the correct choice for a projection that is
+/// only read.
 /// </para>
 /// <para>
 /// The document it produces is <b>PII by design</b>. It must never be logged or cached; the caching
@@ -65,8 +65,8 @@ public abstract partial class ExportUserDataHandlerBase<TUser, TQuery>(
 
     /// <summary>
     /// The name reported as the <c>source</c> of any error this handler returns. Defaults to the
-    /// runtime type name, so an app subclass that keeps the pre-hoist class name
-    /// (<c>ExportUserDataHandler</c>) reports the identical error payload it did before.
+    /// runtime type name, so an app subclass named <c>ExportUserDataHandler</c> reports that name in
+    /// the error payload.
     /// </summary>
     protected virtual string HandlerName => GetType().Name;
 
@@ -131,8 +131,8 @@ public abstract partial class ExportUserDataHandlerBase<TUser, TQuery>(
 
     /// <summary>
     /// Projects the account itself into the app's portable subject snapshot: the fields the app
-    /// considers personal data, deliberately excluding credentials (password hash and salt, refresh
-    /// token, external-provider key), which are secrets rather than portable personal data.
+    /// considers personal data, deliberately excluding credentials (password hash and salt,
+    /// external-provider key), which are secrets rather than portable personal data.
     /// </summary>
     /// <param name="user">The loaded account.</param>
     /// <param name="query">The originating query (carries the caller, for apps that vary the snapshot).</param>

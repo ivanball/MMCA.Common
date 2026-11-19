@@ -23,15 +23,14 @@ using MMCA.Common.Shared.ValueObjects.Contact;
 namespace MMCA.Common.Application.Auth;
 
 /// <summary>
-/// The shared authentication workflow (login, registration, token refresh/rotation, revocation) the
-/// app Identity modules previously duplicated (~70-95% line-identical). The workflow — validate-first,
-/// ADR-029 lockout/rate-limit checks, the untracked-then-tracked dual-fetch, BR-205/206 refresh-token
-/// rotation with reuse detection — lives once here; everything genuinely app-specific stays in the
-/// sealed subclass via hooks:
+/// The shared authentication workflow (login, registration, token refresh, revocation). The
+/// workflow (validate-first, ADR-029 lockout/rate-limit checks, the untracked-then-tracked dual-fetch,
+/// and the hand-off of every session decision to <see cref="IAuthSessionIssuer"/>) lives once here;
+/// everything genuinely app-specific stays in the sealed subclass via hooks:
 /// <list type="bullet">
 ///   <item><see cref="FindUntrackedByEmailAsync"/> / <see cref="EmailExistsAsync"/> — the EF-translated
 ///     predicates are deliberately written against the app's concrete <c>User</c> (never an interface
-///     member), so query translation is byte-for-byte what the app had before the hoist.</item>
+///     member), so EF translates them against the app's own mapped columns.</item>
 ///   <item><see cref="CreateUser"/> — the app's factory, default role and profile fields.</item>
 ///   <item><see cref="CreateAccessToken"/> — the app's claim set (e.g. <c>speaker_id</c> vs
 ///     <c>customer_id</c>) and display-name choice.</item>
@@ -196,8 +195,8 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         // App gate (e.g. deactivated-account rejection) runs AFTER the password check on purpose:
         // reaching it proves the caller owns the account, so the gate's distinct status message is
-        // told to the owner rather than to anyone sweeping addresses. Running it first made account
-        // state readable with no credential at all, and skipped the failed-attempt counter.
+        // told to the owner rather than to anyone sweeping addresses. Running it first would make
+        // account state readable with no credential at all, and would skip the failed-attempt counter.
         var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken).ConfigureAwait(false);
         if (candidateResult.IsFailure)
         {
@@ -648,7 +647,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <summary>
     /// Fetches the user with the given email as a NO-TRACKING query, or null. Implement with a
     /// predicate on the app's concrete <c>User</c> (e.g. <c>u =&gt; u.Email == email</c>) so EF
-    /// translation is identical to the pre-hoist code.
+    /// translates it against the app's own mapped columns.
     /// </summary>
     protected abstract Task<TUser?> FindUntrackedByEmailAsync(Email? email, CancellationToken cancellationToken);
 
@@ -665,7 +664,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// Gives a new account with no stored language the language the registration request was made
     /// in (ADR-027). The confirmation email is composed later by an internal command, outside this
     /// request, in the recipient's STORED culture; without one it falls back to the default, so a user
-    /// who registered from the Spanish UI got the email in English. A user that does not implement
+    /// who registered from the Spanish UI would get the email in English. A user that does not implement
     /// <see cref="IUserPreferences"/>, or whose <c>CreateUser</c> already set a culture, is left as is.
     /// </summary>
     private static Result SeedRegistrationCulture(TUser user)

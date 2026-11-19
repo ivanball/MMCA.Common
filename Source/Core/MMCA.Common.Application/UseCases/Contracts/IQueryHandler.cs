@@ -2,7 +2,8 @@ namespace MMCA.Common.Application.UseCases.Contracts;
 
 /// <summary>
 /// Handles a query (read operation) and returns a result. Implementations are auto-registered
-/// via Scrutor and optionally wrapped by profiling decorators.
+/// via Scrutor and wrapped by decorators (feature gate, authorization, logging, caching, validation,
+/// timeout), plus profiling when the host opts in.
 /// </summary>
 /// <typeparam name="TQuery">The query type containing the read parameters.</typeparam>
 /// <typeparam name="TResult">The result type.</typeparam>

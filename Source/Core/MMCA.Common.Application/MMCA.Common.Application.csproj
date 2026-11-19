@@ -10,9 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <!-- ModuleLoader loads each module's modules.{name}.json via AddJsonFile. This used to arrive
-         transitively through MiniProfiler.AspNetCore.Mvc's ASP.NET Core graph: an accidental
-         dependency on a web package for a host-agnostic feature. Referenced directly now. -->
+    <!-- ModuleLoader loads each module's modules.{name}.json via AddJsonFile. Referenced directly,
+         so this host-agnostic feature never depends on a web package's graph to supply it. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.FeatureManagement" />
 

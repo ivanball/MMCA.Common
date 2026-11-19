@@ -12,8 +12,8 @@ namespace MMCA.Common.Application.Auth;
 /// Registered by <c>AddApplicationDecorators()</c> with <c>TryAdd</c>, so a host that calls
 /// <c>AddAuthorizationPolicies()</c> or <c>AddPermissions(...)</c> keeps its own registry and this
 /// type is never constructed. Without it the authorization decorators, which are registered
-/// unconditionally, made every request through the pipeline fail to activate: a small app with no
-/// Identity module answered 500 on every read, not only on the permission-gated ones.
+/// unconditionally, would make every request through the pipeline fail to activate: a small app with
+/// no Identity module would answer 500 on every read, not only on the permission-gated ones.
 /// </para>
 /// </summary>
 /// <param name="logger">Logger for the one-time misconfiguration warning.</param>

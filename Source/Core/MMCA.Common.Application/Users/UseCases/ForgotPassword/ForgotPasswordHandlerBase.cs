@@ -26,8 +26,8 @@ namespace MMCA.Common.Application.Users.UseCases.ForgotPassword;
 /// request validator can produce a 400, and it only inspects the shape of the address.
 /// </para>
 /// <para>
-/// The command record stays app-side (<typeparamref name="TCommand"/>), matching the ChangePassword
-/// hoist: the base reads it only through <see cref="ICommandWithRequest{TRequest}"/>. Resolving an
+/// The command record stays app-side (<typeparamref name="TCommand"/>), matching
+/// <c>ChangePasswordHandlerBase</c>: the base reads it only through <see cref="ICommandWithRequest{TRequest}"/>. Resolving an
 /// account by email is the one app-specific step (each app's <c>User</c> stores the address
 /// differently), so it is the single abstract member.
 /// </para>

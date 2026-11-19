@@ -6,8 +6,8 @@ namespace MMCA.Common.Application.Auth.Passkeys;
 
 /// <summary>
 /// The passkey ceremonies and the management of an account's passkeys (ADR-139), registered by
-/// <c>AddPasskeys</c>. The WebAuthn verification lives behind this interface in Infrastructure; the
-/// controller base only gates and maps.
+/// <c>AddPasskeys</c>. The WebAuthn verification lives behind <see cref="IPasskeyCeremony"/> in the
+/// opt-in <c>MMCA.Common.Passkeys</c> package; the controller base only gates and maps.
 /// </summary>
 public interface IPasskeyService
 {

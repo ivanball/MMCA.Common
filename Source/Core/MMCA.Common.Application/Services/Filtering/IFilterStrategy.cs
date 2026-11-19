@@ -32,9 +32,9 @@ public interface IFilterStrategy
     /// <remarks>
     /// <para>
     /// <see cref="Apply{T}"/> silently returns the query unfiltered when it cannot parse a value,
-    /// which fails open: <c>?filter=id:equals:abc</c> returned the whole result set instead of no
-    /// matches. Validating up front turns that into a 400, so an unparseable value can never widen
-    /// a response.
+    /// which fails open: unvalidated, <c>?filter=id:equals:abc</c> would return the whole result set
+    /// instead of no matches. Validating up front turns that into a 400, so an unparseable value can
+    /// never widen a response.
     /// </para>
     /// <para>
     /// Defaults to <see langword="true"/>, so a custom strategy keeps its existing behavior until

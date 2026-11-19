@@ -109,8 +109,8 @@ public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
 
     /// <summary>
     /// The name reported as the <c>source</c> of any error this handler returns. Defaults to the
-    /// runtime type name, so an app subclass that keeps the pre-hoist class name
-    /// (<c>DeleteUserHandler</c>) reports the identical error payload it did before.
+    /// runtime type name, so an app subclass named <c>DeleteUserHandler</c> reports that name in the
+    /// error payload.
     /// </summary>
     protected virtual string HandlerName => GetType().Name;
 

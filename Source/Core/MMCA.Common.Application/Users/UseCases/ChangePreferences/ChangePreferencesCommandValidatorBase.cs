@@ -9,8 +9,7 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePreferences;
 /// The shared change-preferences validation (ADR-027 culture / ADR-028 theme): the request must be
 /// present, a supplied culture must be one the framework supports, and a supplied theme must be light
 /// or dark. A <see langword="null"/> field passes, because null is the documented "leave this
-/// preference unchanged" value. The app Identity modules carried near-identical copies of this
-/// validator.
+/// preference unchanged" value.
 /// </summary>
 /// <remarks>
 /// A COMMAND validator rather than a request validator, deliberately: the command carries its payload

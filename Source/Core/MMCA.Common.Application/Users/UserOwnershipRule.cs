@@ -7,11 +7,10 @@ namespace MMCA.Common.Application.Users;
 /// of its owner: the caller must be the account owner, or hold the app's privileged role.
 /// </summary>
 /// <remarks>
-/// The idiom (<c>CurrentUserId != UserId &amp;&amp; !role-bypass -&gt; Error.Forbidden</c>) was written
-/// out four times across the two apps (account deletion and data export, in each). It is hoisted as a
-/// plain helper rather than folded into a base class because the two data-export handlers stay
-/// app-level (their projections are entirely app-specific) and still need the identical decision and
-/// the identical error shape.
+/// The idiom (<c>CurrentUserId != UserId &amp;&amp; !role-bypass -&gt; Error.Forbidden</c>) is held once
+/// as a plain helper, called by both the account-deletion and the data-export base handlers
+/// (<c>DeleteUserHandlerBase</c> and <c>ExportUserDataHandlerBase</c>), so the two apply the identical
+/// decision and the identical error shape.
 /// <para>
 /// The role test is passed in already evaluated: each app owns its own role vocabulary
 /// (<c>UserRole.IsAdmin</c>, or whatever the app's privileged role is), and every such test is

@@ -24,8 +24,8 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// with, so the path from one secret to another is disable, then enroll again.
 /// </para>
 /// <para>
-/// The command record stays app-side (<typeparamref name="TCommand"/>), matching the ChangePassword
-/// hoist: the base reads it only through <see cref="IUserScopedRequest"/>.
+/// The command record stays app-side (<typeparamref name="TCommand"/>), matching
+/// <c>ChangePasswordHandlerBase</c>: the base reads it only through <see cref="IUserScopedRequest"/>.
 /// </para>
 /// </remarks>
 /// <typeparam name="TCommand">The app's begin-enrollment command record.</typeparam>

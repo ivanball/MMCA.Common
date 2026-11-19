@@ -33,7 +33,7 @@ public sealed class MarkAllNotificationsReadHandler(
         // cannot see as read, and a no-scope command must keep the legacy predicate exactly as it was
         // rather than inherit PushNotification's soft-delete global query filter. The scope test is
         // an EXISTS subquery over the push notification set, to which that filter applies exactly as
-        // it did to the former join.
+        // it does to the unread count's join.
         if (!string.IsNullOrWhiteSpace(command.ScopeKey))
         {
             string scopeKey = command.ScopeKey;

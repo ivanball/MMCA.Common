@@ -13,8 +13,8 @@ namespace MMCA.Common.Application.Users;
 /// Closed over the app's <c>User</c> aggregate at registration
 /// (<c>services.TryAddScoped&lt;ISoftDeletedUserValidator, SoftDeletedUserValidator&lt;User&gt;&gt;()</c>),
 /// so no per-app subclass is needed. The predicate is expressed against <typeparamref name="TUser"/>
-/// and closes over the concrete entity type at run time, so EF translation is what it was before the
-/// hoist.
+/// and closes over the concrete entity type at run time, so EF translates it against the app's own
+/// mapped entity.
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 public sealed class SoftDeletedUserValidator<TUser>(IUnitOfWork unitOfWork) : ISoftDeletedUserValidator

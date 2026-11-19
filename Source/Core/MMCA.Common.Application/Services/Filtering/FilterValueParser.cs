@@ -70,8 +70,8 @@ internal static class FilterValueParser
     /// <remarks>
     /// Deliberately does not use <see cref="StringSplitOptions.RemoveEmptyEntries"/> and does not go
     /// through <see cref="ParseList{T}(string, Func{string, T?})"/>: dropping unparseable and empty
-    /// segments let "5,abc,10" and "5,,10" validate as a two-bound range, and the strategies then
-    /// applied the surviving pair as the bounds the caller never asked for.
+    /// segments would let "5,abc,10" and "5,,10" validate as a two-bound range, and the strategies
+    /// would then apply the surviving pair as bounds the caller never asked for.
     /// </remarks>
     private static bool HasExactlyTwoBounds<T>(string value, Func<string, T?> parse)
         where T : struct

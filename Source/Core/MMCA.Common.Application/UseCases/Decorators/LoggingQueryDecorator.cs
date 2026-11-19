@@ -31,8 +31,8 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
         using (BeginQueryScope(logger, queryName, ModuleName, correlationId))
         {
             // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per
-            // query. Elapsed is captured before logging, so the recorded duration stays the handler's
-            // (matching the previous stopwatch.Stop()-then-log ordering).
+            // query. Elapsed is captured before logging, so the recorded duration excludes the
+            // logging itself.
             var startTimestamp = Stopwatch.GetTimestamp();
             try
             {
@@ -73,9 +73,9 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
     }
 
     /// <summary>
-    /// Source-generated scope, matching <c>LoggingCommandDecorator</c>: the previous
-    /// <c>BeginScope(new Dictionary&lt;string, object&gt;)</c> allocated a dictionary and boxed the
-    /// scope state on every query, at every log level, including when logging was disabled entirely.
+    /// Source-generated scope, matching <c>LoggingCommandDecorator</c>: avoids the per-query
+    /// dictionary allocation and boxing of a <c>BeginScope(new Dictionary&lt;string, object&gt;)</c>
+    /// payload while keeping the same structured keys.
     /// </summary>
     private static readonly Func<ILogger, string, string, string, IDisposable?> BeginQueryScope =
         LoggerMessage.DefineScope<string, string, string>(

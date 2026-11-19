@@ -8,7 +8,9 @@ namespace MMCA.Common.Application.Interfaces.Events;
 /// notifications — e.g., a Sales module handling <c>UserRegistered</c> from the Identity module.
 /// <para>
 /// Implementations are auto-discovered by Scrutor assembly scanning (singleton lifetime,
-/// handlers create their own DI scopes internally) and dispatched by <see cref="IDomainEventDispatcher"/>.
+/// handlers create their own DI scopes internally) and dispatched in-process by
+/// <see cref="IDomainEventDispatcher"/>, or by the broker consumers (<c>IntegrationEventConsumer</c>)
+/// when a broker transport is configured.
 /// </para>
 /// </summary>
 /// <typeparam name="TIntegrationEvent">The integration event type this handler processes.</typeparam>

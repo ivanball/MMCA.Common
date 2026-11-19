@@ -58,7 +58,8 @@ public static class QueryFilterService
 
     /// <summary>
     /// Registers a filter strategy for a property type, enabling extension without
-    /// modifying existing code (e.g. Guid, long, custom value objects).
+    /// modifying existing code (e.g. custom value objects; string, bool, int, long, DateTime, decimal,
+    /// Guid and <see cref="Email"/> are built in, and strongly typed identifiers are resolved automatically).
     /// </summary>
     /// <param name="propertyType">The CLR type this strategy handles.</param>
     /// <param name="strategy">The filter strategy implementation.</param>
@@ -330,18 +331,17 @@ public static class QueryFilterService
     /// mapped entity name (its root segment for a nested path like <c>"Category.Name"</c>).
     /// <para>
     /// Shared by <c>ApplyFilters</c> and <c>ValidateFilters</c> so both agree on what
-    /// resolves. They used to disagree on the fallback: validation tried the mapped entity name
-    /// while application retried the DTO name, so a plain rename entry (for example
-    /// <c>["Name"] = "Title"</c>) passed validation and was then silently dropped, returning an
+    /// resolves: were the two to fall back differently, a plain rename entry (for example
+    /// <c>["Name"] = "Title"</c>) could pass validation and then be silently dropped, returning an
     /// unfiltered result set with a 200.
     /// </para>
     /// <para>
     /// Only SUCCESSFUL lookups are cached. Both names probed here are client-influenced (the filter
-    /// key arrives in the query string), so caching misses too let any caller grow a process-lifetime
-    /// static dictionary without bound simply by filtering on names that do not exist: the request
-    /// gets a clean 400 back, which makes the growth invisible in error metrics. A miss now costs a
-    /// reflection lookup instead, which the per-request filter cap in <c>QueryFilterModelBinder</c>
-    /// bounds.
+    /// key arrives in the query string), so caching misses too would let any caller grow a
+    /// process-lifetime static dictionary without bound simply by filtering on names that do not
+    /// exist: the request gets a clean 400 back, which makes the growth invisible in error metrics. A
+    /// miss costs a reflection lookup instead, which the per-request filter cap in
+    /// <c>QueryFilterModelBinder</c> bounds.
     /// </para>
     /// </summary>
     private static PropertyInfo? ResolvePropertyInfo<TEntity>(string property, string entityProperty)

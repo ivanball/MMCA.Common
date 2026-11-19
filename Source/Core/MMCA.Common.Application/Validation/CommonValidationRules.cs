@@ -10,10 +10,9 @@ namespace MMCA.Common.Application.Validation;
 /// Applies an optional error code to a rule without changing the rule when none is supplied.
 /// </summary>
 /// <remarks>
-/// Every rule class in this file takes an optional <c>errorCode</c>. Module validators used to
-/// bypass these bases entirely and re-write the rule by hand for the single reason that the bases
-/// set a message but no code, so a validator that needed a machine-readable code had nothing to
-/// compose. The code, when given, is applied to <b>every</b> rule the class declares for the field,
+/// Every rule class in this file takes an optional <c>errorCode</c>, so a module validator that needs
+/// a machine-readable code composes these bases instead of re-writing the rule by hand. The code,
+/// when given, is applied to <b>every</b> rule the class declares for the field,
 /// so one field answers under one code. A field whose bounds must answer under distinct codes still
 /// declares its own rules.
 /// </remarks>

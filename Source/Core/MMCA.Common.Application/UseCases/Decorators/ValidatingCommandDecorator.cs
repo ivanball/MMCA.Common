@@ -44,7 +44,7 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     /// <remarks>
     /// Built on the first short-circuit rather than in the static constructor:
     /// <see cref="ResultFailureFactory"/> supports only <see cref="Result"/> and
-    /// <see cref="Result{T}"/>, and an eager static initializer turned an unsupported
+    /// <see cref="Result{T}"/>, and an eager static initializer would turn an unsupported
     /// <typeparamref name="TResult"/> into a <see cref="TypeInitializationException"/> at RESOLVE
     /// time (Scrutor's TryDecorate is unconditional) for a handler that never short-circuits. One
     /// assignment per closed generic type; a benign duplicate build under a race produces an

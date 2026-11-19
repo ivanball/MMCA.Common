@@ -1,8 +1,9 @@
 namespace MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 
 /// <summary>
-/// Sends push notifications to connected clients. Infrastructure implementations may use
-/// SignalR, Firebase Cloud Messaging, etc.
+/// Sends push notifications to connected clients. The framework implementation pushes over
+/// SignalR; OS-level device push (Firebase Cloud Messaging, APNs) goes through
+/// <see cref="INativePushSender"/> instead.
 /// </summary>
 public interface IPushNotificationSender
 {

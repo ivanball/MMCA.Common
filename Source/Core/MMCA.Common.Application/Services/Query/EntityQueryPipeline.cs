@@ -286,7 +286,7 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
     /// <summary>
     /// Reports the true total for an unpaginated read. The materialized count is only the truth
     /// while it stays under <see cref="MaxUnboundedResultLimit"/>; at the ceiling it is the cap
-    /// itself, and returning it as the total told callers the set was exactly 1000 rows.
+    /// itself, and returning it as the total would tell callers the set was exactly 1000 rows.
     /// </summary>
     private async Task<int> CountUnpaginatedAsync<TEntity>(
         IQueryable<TEntity> unpagedQuery,
