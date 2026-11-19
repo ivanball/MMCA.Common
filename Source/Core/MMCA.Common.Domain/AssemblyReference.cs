@@ -3,7 +3,9 @@ using System.Reflection;
 namespace MMCA.Common.Domain;
 
 /// <summary>
-/// Provides assembly metadata for Scrutor assembly-scanning registration and architecture tests.
+/// Assembly anchor for the Domain layer: the same <c>AssemblyReference</c> / <c>ClassReference</c>
+/// pair the Application and Infrastructure projects declare. No framework or consumer code
+/// currently resolves the Domain assembly through it.
 /// </summary>
 public static class AssemblyReference
 {

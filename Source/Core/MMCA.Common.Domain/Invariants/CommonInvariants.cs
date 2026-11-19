@@ -230,7 +230,7 @@ public static class CommonInvariants
     /// Behaviourally the same bound as <see cref="EnsureStringMaxLength"/>, which is already
     /// null-tolerant. It exists so an optional field states that intent at the call site instead
     /// of guarding with a redundant <c>string.IsNullOrEmpty(value) ? Result.Success() : ...</c>
-    /// ternary, which is what the duplicated app-side copies do today.
+    /// ternary.
     /// </remarks>
     /// <param name="value">The optional string value to validate.</param>
     /// <param name="maxLength">The maximum allowed length.</param>

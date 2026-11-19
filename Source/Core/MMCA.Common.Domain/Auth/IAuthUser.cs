@@ -7,19 +7,18 @@ namespace MMCA.Common.Domain.Auth;
 /// workflow reaches them only through its per-app hooks (<c>CreateAccessToken</c>, <c>CreateUser</c>,
 /// ...), never through this contract.
 /// <para>
-/// Refresh tokens are deliberately absent. They used to live here as a single plaintext column per
-/// user, which capped every account at one signed-in device and put a usable credential in the users
-/// table. They are now rows in <see cref="RefreshSession"/>, hashed at rest and reached through
-/// <c>IRefreshSessionStore</c>, so this contract covers passwords only.
+/// Refresh tokens are deliberately absent. They are rows in <see cref="RefreshSession"/>, one per
+/// signed-in device, hashed at rest and reached through <c>IRefreshSessionStore</c>, so no usable
+/// credential sits in the users table and this contract covers passwords only.
 /// </para>
 /// </summary>
 public interface IAuthUser
 {
 #pragma warning disable CA1819 // Properties should not return arrays — mirrors IPasswordHasher's byte[] material and the existing app User aggregates (EF-mapped varbinary columns).
-    /// <summary>The PBKDF2/legacy password hash (ADR-032).</summary>
+    /// <summary>The PBKDF2 password hash, versioned or in the header-less legacy shape (ADR-032).</summary>
     byte[] PasswordHash { get; }
 
-    /// <summary>The salt paired with <see cref="PasswordHash"/> (its length selects the verify algorithm, ADR-032).</summary>
+    /// <summary>The salt paired with <see cref="PasswordHash"/> (ADR-032).</summary>
     byte[] PasswordSalt { get; }
 #pragma warning restore CA1819
 

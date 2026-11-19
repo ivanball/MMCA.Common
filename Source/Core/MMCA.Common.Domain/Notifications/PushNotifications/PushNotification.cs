@@ -111,12 +111,12 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// <param name="sentByUserId">The sender user identifier.</param>
     /// <param name="recipientCount">The number of targeted recipients.</param>
     /// <param name="dedupKey">
-    /// Optional deduplication key (max 128 chars); null (the default) keeps the legacy behaviour
-    /// where every send creates a new notification.
+    /// Optional deduplication key (max 128 chars); null (the default) means every send creates a
+    /// new notification.
     /// </param>
     /// <param name="scopeKey">
-    /// Optional scope key (max 128 chars); null (the default) keeps the legacy behaviour where the
-    /// notification is visible to every read, scoped or not.
+    /// Optional scope key (max 128 chars); null (the default) makes the notification visible to
+    /// every read, scoped or not.
     /// </param>
     /// <returns>A <see cref="Result{T}"/> containing the created notification, or validation errors.</returns>
     public static Result<PushNotification> Create(

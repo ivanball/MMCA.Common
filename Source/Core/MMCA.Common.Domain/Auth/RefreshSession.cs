@@ -10,7 +10,7 @@ namespace MMCA.Common.Domain.Auth;
 /// <summary>
 /// One refresh-token session: a single device's right to mint access tokens for one user, held as a
 /// hash of the issued refresh token (BR-205/206). A user has as many rows as they have signed-in
-/// devices, so signing in on a phone no longer signs the same account out of a laptop.
+/// devices, so signing in on a phone does not sign the same account out of a laptop.
 /// <para>
 /// <b>Hash at rest.</b> The plaintext refresh token exists only in the response that hands it to the
 /// client; the store keeps <see cref="TokenHash"/>, so a database read cannot mint tokens. Lookups are

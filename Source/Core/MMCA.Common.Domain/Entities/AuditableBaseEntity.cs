@@ -6,8 +6,8 @@ namespace MMCA.Common.Domain.Entities;
 /// <summary>
 /// Extends <see cref="BaseEntity{TIdentifierType}"/> with soft-delete and audit tracking.
 /// Audit fields (<see cref="CreatedOn"/>, <see cref="CreatedBy"/>, etc.) have private setters
-/// because they are populated by EF Core's <c>SaveChangesAsync</c> override via
-/// <c>entry.Property(...).CurrentValue</c> reflection — the domain layer never sets them directly.
+/// because they are populated during <c>SaveChangesAsync</c> by <c>AuditSaveChangesInterceptor</c>
+/// via <c>entry.Property(...).CurrentValue</c>; the domain layer never sets them directly.
 /// </summary>
 /// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>
 public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentifierType>, IAuditableEntity, IRowVersioned
@@ -19,8 +19,8 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     /// </summary>
     public virtual bool IsDeleted { get; private set; }
 
-    // Audit properties: private setters are populated by EF Core's SaveChangesAsync override
-    // via entry.Property(...).CurrentValue reflection — not by domain code.
+    // Audit properties: private setters are populated by AuditSaveChangesInterceptor during
+    // SaveChangesAsync via entry.Property(...).CurrentValue, not by domain code.
 #pragma warning disable S1144, CA1819 // Private setters used by EF Core; byte[] required for EF rowversion mapping
     public virtual DateTime CreatedOn { get; private set; }
 
@@ -45,10 +45,12 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     public virtual UserIdentifierType? DeletedBy { get; private set; }
 
     /// <summary>
-    /// Optimistic concurrency token managed by the database. EF Core automatically includes
+    /// Optimistic concurrency token. EF Core automatically includes
     /// this value in UPDATE/DELETE WHERE clauses and throws <c>DbUpdateConcurrencyException</c>
     /// if the row was modified by another transaction since it was read.
-    /// Configured as <c>[Timestamp]</c> (SQL Server <c>rowversion</c>) in EF entity configurations.
+    /// Mapped per engine by <c>ApplicationDbContext.ConfigureConcurrencyTokens</c>: a database-generated
+    /// <c>rowversion</c> on SQL Server, a plain concurrency token that <c>AuditSaveChangesInterceptor</c>
+    /// stamps on every insert and update on PostgreSQL and SQLite, and none on Cosmos.
     /// </summary>
     public byte[] RowVersion { get; private set; } = [];
 #pragma warning restore S1144, CA1819
