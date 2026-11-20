@@ -614,12 +614,23 @@ public static class PageExtensions
             TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
         if (remaining > 0)
         {
-            var which = text is null ? string.Empty : $" containing \"{text}\"";
-            throw new TimeoutException(string.Create(
-                CultureInfo.InvariantCulture,
-                $"{remaining} snackbar(s){which} still on screen after {SnackbarDismissRounds} close rounds and a 15 s wait: "
-                + $"none of them could be closed through '{SnackbarCloseIconSelector}' or '{SnackbarActionButtonSelector}'."));
+            throw new TimeoutException(DescribeRemainingSnackbars(remaining, text));
         }
+    }
+
+    // The failure text for WaitOutRemainingSnackbarsAsync: how many matching toasts are left and which
+    // close shapes were tried.
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static string DescribeRemainingSnackbars(int remaining, string? text)
+    {
+        var which = text is null ? string.Empty : $" containing \"{text}\"";
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{remaining} snackbar(s){which} still on screen after {SnackbarDismissRounds} close rounds and a 15 s wait: "
+            + $"none of them could be closed through '{SnackbarCloseIconSelector}' or '{SnackbarActionButtonSelector}'.");
     }
 
     // Clicks one snackbar's close icon, or its content-action button when it has no close icon. A toast
