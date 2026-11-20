@@ -41,6 +41,7 @@ MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwr
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).AssertNoAccessibilityViolationsAsync(Deque.AxeCore.Commons.AxeRunOptions? options = null) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).BlazorNavigateAsync(string! path) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).ConfirmDeleteAsync(Microsoft.Playwright.ILocator! deleteButton, string! confirmTestId = "confirm-delete", float timeout = 10000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).DismissSnackbarsAsync(string? text = null) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).GotoAndWaitForBlazorAsync(string! path) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).GotoProtectedAsync(string! path) -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).SearchAndWaitForRowAsync(Microsoft.Playwright.ILocator! searchField, string! text, string! rowSelector = ".mud-table-body .mud-table-row", float timeout = 15000) -> System.Threading.Tasks.Task!
@@ -330,6 +331,7 @@ static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.BlazorNavigateAsync
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ClickAndVerifyAsync(this Microsoft.Playwright.ILocator! locator, Microsoft.Playwright.ILocator! expected, float timeout = 15000) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ClickAndWaitForUrlAsync(this Microsoft.Playwright.ILocator! locator, Microsoft.Playwright.IPage! page, string! urlPattern) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ConfirmDeleteAsync(this Microsoft.Playwright.IPage! page, Microsoft.Playwright.ILocator! deleteButton, string! confirmTestId = "confirm-delete", float timeout = 10000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.DismissSnackbarsAsync(this Microsoft.Playwright.IPage! page, string? text = null) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.FillAndVerifyAsync(this Microsoft.Playwright.ILocator! locator, string! value, float timeout = 10000) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.GotoAndWaitForBlazorAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
 static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.GotoProtectedAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
