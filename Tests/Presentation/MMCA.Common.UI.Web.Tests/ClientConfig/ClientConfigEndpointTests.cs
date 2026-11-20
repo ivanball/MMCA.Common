@@ -64,6 +64,24 @@ public sealed class ClientConfigEndpointTests
             .Which.Message.Should().Contain("Api:WasmApiEndpoint");
     }
 
+    // A deployment placeholder, a relative path, another scheme or a service-discovery name is not a
+    // base address a browser can call: the endpoint fails closed exactly as it does for a missing key.
+    [Theory]
+    [InlineData("SET-VIA-ENVIRONMENT-VARIABLE")]
+    [InlineData("/relative/path")]
+    [InlineData("ftp://gateway.example.com")]
+    [InlineData("https+http://gateway")]
+    public async Task ANonHttpWasmApiEndpoint_FailsClosedNamingTheKeyAndTheRequiredShape(string wasmApiEndpoint)
+    {
+        await using var app = CreateApp(wasmApiEndpoint);
+        app.MapClientConfigEndpoint();
+
+        var act = () => InvokeAsync(app);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Message.Should().Contain("Api:WasmApiEndpoint").And.Contain("absolute http(s) URL");
+    }
+
     [Fact]
     public async Task AnExtraNamedApi_IsRefused()
     {

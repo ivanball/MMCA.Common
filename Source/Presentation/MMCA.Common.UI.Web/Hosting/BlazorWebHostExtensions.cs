@@ -22,6 +22,7 @@ using MMCA.Common.UI.Web.ClientConfig;
 using MMCA.Common.UI.Web.Hardening;
 using MMCA.Common.UI.Web.Pwa;
 using MMCA.Common.UI.Web.SameOriginProxy;
+using MMCA.Common.UI.Web.Security;
 using MMCA.Common.UI.Web.Services;
 using MudBlazor.Services;
 
@@ -65,7 +66,10 @@ public static class BlazorWebHostExtensions
         /// </summary>
         /// <param name="options">The head-specific values and callbacks.</param>
         /// <returns>The same builder, for chaining.</returns>
-        /// <exception cref="InvalidOperationException"><c>Api:ApiEndpoint</c> is not configured.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// <c>Api:ApiEndpoint</c> is not configured, or is neither an absolute http(s) URL nor an Aspire
+        /// service-discovery name.
+        /// </exception>
         public WebApplicationBuilder AddMmcaBlazorWebHost(MmcaBlazorWebHostOptions options)
         {
             ArgumentNullException.ThrowIfNull(builder);
@@ -102,8 +106,18 @@ public static class BlazorWebHostExtensions
             RemoveApiClientResilienceHandler(services);
             services.AddBrowserDeviceCapabilities();
 
-            var apiEndpoint = configuration[ApiEndpointKey]
-                ?? throw new InvalidOperationException("Api:ApiEndpoint configuration is required for the cookie session refresher.");
+            // Absolute http(s), or an Aspire service-discovery name the factory clients resolve
+            // (https+http://gateway): a deployment placeholder fails here rather than booting the
+            // server head's clients against a non-URL.
+            var apiEndpoint = configuration[ApiEndpointKey];
+            if (!ApiEndpointUrl.IsAbsoluteHttpOrServiceDiscovery(apiEndpoint))
+            {
+                throw new InvalidOperationException(
+                    "Api:ApiEndpoint configuration is required for the cookie session refresher. The value must be an "
+                    + "absolute http(s) URL (or an Aspire service-discovery name such as https+http://gateway), not blank "
+                    + "and not a placeholder.");
+            }
+
             services.AddServerAuthSessionCookie(apiEndpoint);
             services.AddClientAuthSessionCookieSync();
 

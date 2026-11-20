@@ -42,7 +42,10 @@ public sealed class BlazorWebHostExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
-    /// <summary>Rule 20.8: the text both heads throw today, kept verbatim.</summary>
+    /// <summary>
+    /// Rule 20.8: the text both heads threw, kept as the opening sentence and extended with the shape
+    /// the value must take.
+    /// </summary>
     [Fact]
     public void MissingApiEndpoint_ThrowsWithTheDocumentedMessage()
     {
@@ -51,7 +54,43 @@ public sealed class BlazorWebHostExtensionsTests
         var act = () => builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Api:ApiEndpoint configuration is required for the cookie session refresher.");
+            .WithMessage("Api:ApiEndpoint configuration is required for the cookie session refresher. The value must be an absolute http(s) URL*");
+    }
+
+    /// <summary>
+    /// Rule 20.8: a value that is set but is not a URL (a deployment placeholder left in
+    /// appsettings.Production.json, a relative path, another scheme) fails the same way a missing one
+    /// does, instead of booting the server head's clients against a non-URL.
+    /// </summary>
+    [Theory]
+    [InlineData("SET-VIA-ENVIRONMENT-VARIABLE")]
+    [InlineData("")]
+    [InlineData("/relative/path")]
+    [InlineData("ftp://gateway.example.com")]
+    public void ANonUrlApiEndpoint_ThrowsWithTheDocumentedMessage(string apiEndpoint)
+    {
+        var builder = BlazorWebHostHarness.CreateBuilder(
+            settings: new Dictionary<string, string?>(StringComparer.Ordinal) { ["Api:ApiEndpoint"] = apiEndpoint });
+
+        var act = () => builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Api:ApiEndpoint configuration is required for the cookie session refresher. The value must be an absolute http(s) URL*");
+    }
+
+    /// <summary>
+    /// Rule 20.8: the server head's endpoint may be an Aspire service-discovery name, which every
+    /// factory client resolves through the handler <c>AddServiceDefaults()</c> adds.
+    /// </summary>
+    [Fact]
+    public void AServiceDiscoveryApiEndpoint_IsAccepted()
+    {
+        var builder = BlazorWebHostHarness.CreateBuilder(
+            settings: new Dictionary<string, string?>(StringComparer.Ordinal) { ["Api:ApiEndpoint"] = "https+http://gateway" });
+
+        var act = () => builder.AddMmcaBlazorWebHost(BlazorWebHostHarness.DefaultOptions());
+
+        act.Should().NotThrow();
     }
 
     /// <summary>

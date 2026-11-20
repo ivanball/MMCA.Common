@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Web.SameOriginProxy;
+using MMCA.Common.UI.Web.Security;
 
 namespace MMCA.Common.UI.Web.ClientConfig;
 
@@ -41,7 +42,8 @@ public static class ClientConfigEndpointExtensions
         /// <b>Fail-closed.</b> The endpoint serves <c>Api:WasmApiEndpoint</c> (the browser-reachable
         /// gateway URL) and never falls back to <c>Api:ApiEndpoint</c>: that value is the server
         /// head's service-discovery name, which a browser cannot resolve, so serving it would hand the
-        /// client a silently broken base address. A host without the key answers every request with a
+        /// client a silently broken base address. A host without the key, or whose value is not an
+        /// absolute http(s) URL (a deployment placeholder, for one), answers every request with a
         /// server error whose exception names the key, which the client's bootstrap then surfaces as a
         /// failed start instead of a client pointed at the wrong API.
         /// </para>
@@ -68,11 +70,13 @@ public static class ClientConfigEndpointExtensions
             endpoints.MapGet(ClientConfigPath, (HttpContext context, IOptions<ApiSettings> apiSettings) =>
                 {
                     var wasmApiEndpoint = apiSettings.Value.WasmApiEndpoint;
-                    if (string.IsNullOrWhiteSpace(wasmApiEndpoint))
+                    if (!ApiEndpointUrl.IsAbsoluteHttp(wasmApiEndpoint))
                     {
                         throw new InvalidOperationException(
                             "Api:WasmApiEndpoint is not configured. The WASM client needs the browser-reachable "
-                            + "gateway URL; Api:ApiEndpoint is the server head's service-discovery name and cannot stand in.");
+                            + "gateway URL; Api:ApiEndpoint is the server head's service-discovery name and cannot stand in. "
+                            + "The value must be an absolute http(s) URL (for example https://gateway.example.com), "
+                            + "not blank and not a placeholder.");
                     }
 
                     var builder = new ClientConfigBuilder(context);
