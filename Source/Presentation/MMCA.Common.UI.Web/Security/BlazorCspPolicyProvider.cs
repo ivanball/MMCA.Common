@@ -50,12 +50,9 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
     {
         var endpoint = api.WasmApiEndpoint ?? api.ApiEndpoint;
 
-        // The scheme check matters on Linux, where a rooted path like "/relative/path" parses as an
-        // absolute file:// URI; only an http(s) endpoint yields a connect-src origin worth enforcing.
-        if (string.IsNullOrWhiteSpace(endpoint) ||
-            !Uri.TryCreate(endpoint, UriKind.Absolute, out var apiUri) ||
-            !string.Equals(apiUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(apiUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        // Only an absolute http(s) endpoint yields a connect-src origin worth enforcing (the shared
+        // test, which /client-config and AddMmcaBlazorWebHost apply to the same keys).
+        if (!ApiEndpointUrl.TryParseAbsoluteHttp(endpoint, out var apiUri))
         {
             // Fail closed: an endpoint we cannot parse is a misconfiguration, and the honest signal is
             // blocked cross-origin calls in the console rather than a policy that is emitted but inert.

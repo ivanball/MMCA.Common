@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Tests.Shared.Hosting;
 
 namespace MMCA.Common.Azure.Startup.Tests;
@@ -60,6 +61,34 @@ public sealed class AzureKeyVaultConfigurationExtensionsTests
         IsKeyVaultSource(builder.Configuration.Sources[^1])
             .Should().BeTrue(
                 because: "the source has to be the Key Vault one specifically, and it has to be appended last so vault secrets override the file and environment values added before it");
+    }
+
+    [Fact]
+    public void AddAzureKeyVaultConfiguration_WithoutVaultUri_LeavesNoReceipt()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddAzureKeyVaultConfiguration();
+
+        builder.Services.Should().NotContain(
+            d => d.ImplementationInstance is HostIntegrationMarker,
+            because: "a call that added nothing leaves no receipt, so a vault URI that appears later still trips the startup check");
+    }
+
+    [Fact]
+    public void AddAzureKeyVaultConfiguration_WithVaultUri_LeavesTheReceipt()
+    {
+        var builder = SourceCollectingBuilderWith(new(StringComparer.Ordinal)
+        {
+            ["KeyVault:Uri"] = "https://mmca-tests.vault.azure.net/",
+        });
+
+        builder.AddAzureKeyVaultConfiguration();
+
+        builder.Services.Should().ContainSingle(
+            d => d.ImplementationInstance is HostIntegrationMarker
+                && string.Equals(((HostIntegrationMarker)d.ImplementationInstance).Name, HostIntegrationNames.AzureKeyVaultConfiguration, StringComparison.Ordinal),
+            because: "a call that added the vault source leaves the receipt the startup check reads");
     }
 
     [Fact]

@@ -209,8 +209,9 @@ public static class GatewayRateLimitingExtensions
         || IsTrustedInternalCaller(httpContext, settings);
 
     /// <summary>
-    /// Per-client-IP partition: no limiter for bypassed paths or proven synthetic traffic, no
-    /// limiter for an unresolvable IP (fail open), otherwise one fixed window per IP.
+    /// Per-client-IP partition: no limiter for bypassed paths, proven synthetic traffic or a proven
+    /// trusted internal caller, no limiter for an unresolvable IP (fail open), otherwise one fixed
+    /// window per IP.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
@@ -264,7 +265,8 @@ public static class GatewayRateLimitingExtensions
 
     /// <summary>
     /// Process-wide concurrency partition: one bucket for the whole replica, bypassed for the same
-    /// paths and the same proven synthetic traffic the per-IP window is.
+    /// paths, the same proven synthetic traffic and the same trusted internal caller the per-IP
+    /// window is.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>

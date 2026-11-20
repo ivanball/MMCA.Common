@@ -11,7 +11,7 @@ namespace MMCA.Common.Testing.Conformance;
 /// <see cref="ServiceCollection"/> through the repo's own registration sequence, resolves the
 /// decorated command/query handlers from the built provider, and asserts the runtime nesting order
 /// is exactly the documented pipeline —
-/// commands: FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Transactional
+/// commands: ViewAs → FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Transactional
 /// → Handler;
 /// queries: FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Handler. Because Scrutor's
 /// <c>TryDecorate</c> applies decorators in reverse registration order, an innocent-looking reorder

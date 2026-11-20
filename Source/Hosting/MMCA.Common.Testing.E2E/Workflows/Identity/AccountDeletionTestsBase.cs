@@ -9,8 +9,7 @@ using static Microsoft.Playwright.Assertions;
 namespace MMCA.Common.Testing.E2E.Workflows.Identity;
 
 /// <summary>
-/// Account self-deletion journey (the right to erasure, ADR-005), lifted from MMCA.ADC's
-/// <c>AccountDeletionTests</c>. A freshly registered user deletes their own account from the profile
+/// Account self-deletion journey (the right to erasure, ADR-005). A freshly registered user deletes their own account from the profile
 /// page through the shared confirmation dialog, is signed out, sees the deletion confirmed after the
 /// forced reload, and can no longer sign in (the account is soft-deleted and anonymized, so login
 /// answers the generic credentials error).

@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// FinOps attribution gate (rubric section 34, cost visibility): every container app the consumer's
+/// FinOps attribution gate (rubric section 31, cost visibility): every container app the consumer's
 /// <c>infra/main.bicep</c> declares must carry a per-service <c>service</c> tag on top of the shared
 /// <c>commonTags</c>, and every per-service database must carry the same dimension, so Azure Cost
 /// Analysis can split the bill by service instead of stopping at the application total. A new app

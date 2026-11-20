@@ -6,8 +6,9 @@ namespace MMCA.Common.UI.Common.Settings;
 /// host that configures nothing sees no change.
 /// </summary>
 /// <remarks>
-/// A WebAssembly client reads configuration from <c>client-config</c>, so a host that turns an option
-/// on there also adds this section to the document it serves.
+/// A WebAssembly client reads configuration from <c>client-config</c>, which forwards the server
+/// head's <c>SignIn</c> section (as it does <c>Layout</c>, <c>Registration</c> and <c>Legal</c>), so an
+/// option turned on in the server configuration reaches the client with no second copy.
 /// </remarks>
 public sealed class SignInSettings
 {

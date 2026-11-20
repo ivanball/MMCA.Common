@@ -33,7 +33,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         GC.SuppressFinalize(this);
 
         // A failed InitializeAsync (no browser binaries, a launch timeout) leaves these null despite
-        // the null! declarations, and the NullReferenceException from disposal then replaced the real
+        // the null! declarations, and a NullReferenceException from disposal would replace the real
         // launch error in the run output.
         if (Browser is { } browser)
         {

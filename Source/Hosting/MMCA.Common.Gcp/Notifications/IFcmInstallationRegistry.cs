@@ -24,7 +24,7 @@ internal interface IFcmInstallationRegistry
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// Whether the write happened, and the push channel the installation held before (or
-    /// <see langword="null"/> for a new id), so the caller can move the topic subscription.
+    /// <see langword="null"/> for a new id).
     /// </returns>
     Task<(bool Claimed, string? PreviousPushChannel)> TryClaimAsync(FcmInstallation installation, CancellationToken cancellationToken);
 

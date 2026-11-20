@@ -10,7 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <!-- The in-memory fixed window with a remaining-window Retry-After, shared as one source file with
-         MMCA.Common.API and MMCA.Common.UI.Web (see the type's remarks for why it is not in Shared). -->
+         MMCA.Common.API, MMCA.Common.UI.Web and MMCA.Common.Gateway (see the type's remarks for why it
+         is not in Shared). -->
     <Compile Include="..\..\Build\RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" Link="RateLimiting\RemainingWindowFixedWindowRateLimiter.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -44,7 +45,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
-    <!-- Direct reference to force transitive OpenTelemetry.Api resolution to non-vulnerable 1.15.3. -->
+    <!-- Direct reference to force transitive OpenTelemetry.Api resolution to the non-vulnerable version
+         Directory.Packages.props pins. -->
     <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -60,8 +62,8 @@
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Shared holds HttpResilienceDefaults — the single source of truth for the resilience
-         values this package and MMCA.Common.Grpc must keep identical. -->
+    <!-- Shared holds HttpResilienceDefaults, the single source of truth for the resilience
+         values this package and MMCA.Common.Grpc read. -->
     <ProjectReference Include="..\..\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>

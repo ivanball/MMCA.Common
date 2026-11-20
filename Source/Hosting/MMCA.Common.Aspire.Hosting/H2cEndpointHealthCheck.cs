@@ -149,9 +149,9 @@ internal sealed class H2cEndpointHealthCheck : IHealthCheck
             // Unreachable, still starting, refusing HTTP/2, or slower than the probe budget. Narrow
             // catch list (rather than a blanket Exception) so a genuine programming error still
             // surfaces. No cancellation guard: the registration's own timeout cancels the SAME token
-            // this method receives, so a probe that outlives ProbeTimeout used to slip past the
-            // filter and be logged by the health service as an unhandled exception rather than
-            // reported here. The status is Unhealthy either way; catching it just keeps the report
+            // this method receives, so with such a guard a probe that outlives ProbeTimeout would slip
+            // past the filter and be logged by the health service as an unhandled exception rather
+            // than reported here. The status is Unhealthy either way; catching it just keeps the report
             // honest. The one other canceller is AppHost shutdown, where an Unhealthy result goes
             // nowhere and costs nothing.
             return new HealthCheckResult(

@@ -3,6 +3,7 @@ using Amazon.Runtime;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Aws.Rds;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Tests.Shared.Hosting;
@@ -13,7 +14,7 @@ namespace MMCA.Common.Aws.Tests.Rds;
 /// <summary>
 /// <c>AddAwsRdsIamAuthentication</c>: off unless <c>Rds:IamAuthentication:Enabled</c> is true, and when
 /// on it registers one data-source configurator that swaps the static password for a periodically
-/// refreshed RDS IAM token. The gate, registration and SSL-mode cases shared with the Cloud SQL and
+/// refreshed RDS IAM token, plus the receipt the startup tripwire checks. The gate, registration and SSL-mode cases shared with the Cloud SQL and
 /// Entra adapters run from <see cref="PostgreSqlTokenAuthenticationTestsBase"/>; the
 /// cases below are RDS-only. Token signing is local SigV4 over fake static keys, so nothing here
 /// reaches AWS; the real data-source path against a server is the PostgreSQL Testcontainers tier.
@@ -40,6 +41,46 @@ public sealed class AwsRdsIamAuthenticationTests : PostgreSqlTokenAuthentication
         settings.TryAdd("Rds:IamAuthentication:AccessKeyId", "AKIDEXAMPLE");
         settings.TryAdd("Rds:IamAuthentication:SecretAccessKey", "fake-secret-key");
         return base.EnabledConfiguration(settings);
+    }
+
+    protected override void AssertNothingRegistered(IServiceCollection services) =>
+        services.Should().BeEmpty("a host that leaves the gate off takes no AWS credential, no configurator and no receipt");
+
+    protected override void AssertEnabledRegistrations(IServiceCollection services) =>
+        services.Should().ContainSingle(d => IsTheRdsMarker(d));
+
+    private static bool IsTheRdsMarker(ServiceDescriptor descriptor) =>
+        descriptor.ServiceType == typeof(HostIntegrationMarker)
+        && descriptor.ImplementationInstance is HostIntegrationMarker marker
+        && marker.Name == HostIntegrationNames.AwsRdsIamAuthentication;
+
+    // As for the Entra twin: a keyed registration of the marker type is skipped, not read, and it
+    // does not count as the receipt.
+    [Fact]
+    public void AKeyedMarker_NeitherThrowsNorCounts()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton(
+            "some-key",
+            new HostIntegrationMarker(HostIntegrationNames.AwsRdsIamAuthentication));
+
+        var act = () => services.AddAwsRdsIamAuthentication(
+            EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString }));
+
+        act.Should().NotThrow();
+        services.Should().ContainSingle(d => !d.IsKeyedService && IsTheRdsMarker(d), "the keyed one is not the receipt");
+    }
+
+    [Fact]
+    public void CalledTwice_LeavesOneReceipt()
+    {
+        var services = new ServiceCollection();
+        var configuration = EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString });
+
+        services.AddAwsRdsIamAuthentication(configuration);
+        services.AddAwsRdsIamAuthentication(configuration);
+
+        services.Should().ContainSingle(d => IsTheRdsMarker(d));
     }
 
     [Fact]

@@ -9,7 +9,7 @@ public static partial class ArchitectureRules
     /// Component-lifetime rule: no file under the given root reads <c>_cts.Token</c> (or
     /// <c>_cts!.Token</c>) directly. Reading <c>Token</c> off a disposed
     /// <see cref="CancellationTokenSource"/> throws <see cref="ObjectDisposedException"/>, so a load or
-    /// handler that resumed after the user navigated away crashed the circuit instead of stopping.
+    /// handler that resumes after the user navigates away crashes the circuit instead of stopping.
     /// Components read the token through MMCA.Common.UI's <c>_cts.LifetimeToken()</c> (or a
     /// <c>LifetimeToken</c> property), which returns an already-cancelled token once <c>Dispose</c>
     /// has cancelled the source; the one permitted direct read is inside such a property's own

@@ -3,8 +3,7 @@ using Microsoft.Playwright;
 namespace MMCA.Common.Testing.E2E.Infrastructure;
 
 /// <summary>
-/// The one-call Core Web Vitals measurement every consumer's <c>WebVitalsTests</c> hand-rolled as a
-/// private <c>MeasureAsync</c>: install the collector, load the page, optionally drive one scripted
+/// The one-call Core Web Vitals measurement a consumer's <c>WebVitalsTests</c> calls: install the collector, load the page, optionally drive one scripted
 /// interaction so an INP sample is recorded, collect, write the dated artifact, and assert the sample
 /// against a budget. The order is the load-bearing part (the collector's observers must be installed
 /// BEFORE the navigation, or LCP/FCP/TTFB are never recorded for that load), which is exactly what a

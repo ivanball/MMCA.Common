@@ -16,8 +16,8 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
 
     /// <summary>
     /// Whether the app's profile page offers an email-change section. Off by default: no reference app
-    /// currently exposes one, and the previous DOM-probing version of the test passed vacuously when the
-    /// field was absent (reporting coverage for a journey the app does not offer). A consumer that ships
+    /// currently exposes one, and a DOM-probing test would pass vacuously when the field is absent
+    /// (reporting coverage for a journey the app does not offer). A consumer that ships
     /// email change opts in by overriding to true; the test then FAILS LOUD if the field goes missing.
     /// </summary>
     protected virtual bool ProfileSupportsEmailChange => false;
@@ -125,9 +125,8 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         // Assert — log out and log back in with new password. Wait for the logout forceLoad's /login
         // URL, not LoadState.Load: the CURRENT document's load event fired long ago, so that wait
         // returns immediately and LoginAsync races the in-flight logout navigation (its /login goto
-        // dies with ERR_ABORTED / "interrupted by another navigation"). Same fix as
-        // UserLoginTestsBase.Login_WithValidCredentials (v1.103.1); this was the one remaining
-        // sign-out-then-login site still on the racy pattern.
+        // dies with ERR_ABORTED / "interrupted by another navigation"). Same wait as
+        // UserLoginTestsBase.Login_WithValidCredentials.
         await SignOutAsync().ConfigureAwait(false);
         await LoginAsync(email, newPassword).ConfigureAwait(false);
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Logout" })).ToBeVisibleAsync().ConfigureAwait(false);

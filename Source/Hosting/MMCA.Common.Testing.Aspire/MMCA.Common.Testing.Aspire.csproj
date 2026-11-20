@@ -31,8 +31,8 @@
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>
   <ItemGroup>
-    <!-- AppHostTestBase mints bearer tokens with MMCA.Common.Testing's JwtTokenGenerator and polls
-         with its TestPolling, rather than restating either here. That reference is also the layer
+    <!-- AppHostTestBase mints bearer tokens with MMCA.Common.Testing's JwtTokenGenerator rather
+         than restating it here. That reference is also the layer
          ceiling for this package: it reaches Core only through what MMCA.Common.Testing already
          pulls, and adds no Core reference of its own. -->
     <ProjectReference Include="..\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />

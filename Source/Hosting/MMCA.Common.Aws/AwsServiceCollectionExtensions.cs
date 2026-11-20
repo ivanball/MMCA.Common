@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Aws.Messaging;
 using MMCA.Common.Aws.Notifications;
 using MMCA.Common.Aws.Rds;
@@ -124,6 +125,17 @@ public static class AwsServiceCollectionExtensions
             RdsIamAuthenticationConfigurator.EnsureConfiguredConnectionStringsAreEncrypted(configuration);
 
             var region = string.IsNullOrWhiteSpace(settings.Region) ? null : RegionEndpoint.GetBySystemName(settings.Region);
+
+            // The receipt the core startup tripwire checks, left only past the gate: the gate set
+            // without this call fails the host instead of letting it log in with whatever password the
+            // connection string carries.
+            if (!services.Any(static descriptor =>
+                    descriptor.ServiceType == typeof(HostIntegrationMarker)
+                    && descriptor.ImplementationInstance is HostIntegrationMarker marker
+                    && string.Equals(marker.Name, HostIntegrationNames.AwsRdsIamAuthentication, StringComparison.Ordinal)))
+            {
+                services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AwsRdsIamAuthentication));
+            }
 
             return services.AddNpgsqlDataSourceConfigurator(new RdsIamAuthenticationConfigurator(region, credentials));
         }

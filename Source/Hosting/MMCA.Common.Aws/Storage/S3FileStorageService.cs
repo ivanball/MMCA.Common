@@ -31,7 +31,7 @@ public sealed class S3FileStorageService(
     public bool IsConfigured => true;
 
     /// <inheritdoc />
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Implements the grandfathered IFileStorageService overload pair (see the RS0026 suppression on IFileStorageService.UploadAsync); both overloads are unshipped in this new package and the analyzer flags this one too, exactly as on AzureBlobFileStorageService")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Implements the grandfathered IFileStorageService overload pair (see the RS0026 suppression on IFileStorageService.UploadAsync); both overloads entered this package's public API as a pair, exactly as on AzureBlobFileStorageService")]
     public Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, CancellationToken cancellationToken = default) =>
         UploadAsync(blobName, content, contentType, FileUploadOptions.None, cancellationToken);
 

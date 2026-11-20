@@ -110,7 +110,7 @@ public static class AzureServiceCollectionExtensions
         /// Registers the Azure Service Bus broker transport, so <c>AddBrokerMessaging</c> can select it
         /// with <c>MessageBus:Provider=AzureServiceBus</c>. Call it BEFORE <c>AddBrokerMessaging</c>,
         /// which picks the transport while it registers the bus. The connection string resolves the
-        /// usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:messaging</c>); one
+        /// usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:rabbitmq</c>, then <c>ConnectionStrings:messaging</c>); one
         /// carrying <c>UseDevelopmentEmulator=true</c> targets the local emulator and needs
         /// <c>MessageBus:EmulatorAdminEndpoint</c>. Registration only: a host whose provider is
         /// something else is unaffected.

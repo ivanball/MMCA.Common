@@ -30,7 +30,7 @@ public static partial class ArchitectureRules
 
             ArchitectureAssert.NoViolations(result,
                 $"{layerRef.RootNamespace}: {layerRef.Layer} must stay transport-agnostic — depend on "
-                    + "IMessageBus / typed gRPC client interfaces, not MassTransit/Grpc/Protobuf directly");
+                    + "IEventBus and the module's own interfaces (gRPC adapters live at the edge), not MassTransit/Grpc/Protobuf directly");
         }
     }
 }

@@ -143,6 +143,7 @@ const MMCA.Common.Aspire.HealthEndpointPaths.Alive = "/alive" -> string!
 const MMCA.Common.Aspire.HealthEndpointPaths.Health = "/health" -> string!
 const MMCA.Common.Aspire.HealthEndpointPaths.Ready = "/health/ready" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsDataProtection = "AwsDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsRdsIamAuthentication = "AwsRdsIamAuthentication" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsSecretsManagerConfiguration = "AwsSecretsManagerConfiguration" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AwsTelemetryExporter = "AwsTelemetryExporter" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureDataProtection = "AzureDataProtection" -> string!
@@ -150,6 +151,7 @@ const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureKeyVaultConfigur
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureMonitorExporter = "AzureMonitorExporter" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzurePostgreSqlEntraAuthentication = "AzurePostgreSqlEntraAuthentication" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleCloudDataProtection = "GoogleCloudDataProtection" -> string!
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleCloudSqlIamAuthentication = "GoogleCloudSqlIamAuthentication" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleCloudTelemetryExporter = "GoogleCloudTelemetryExporter" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.GoogleSecretManagerConfiguration = "GoogleSecretManagerConfiguration" -> string!
 const MMCA.Common.Aspire.Integrations.HostIntegrationNames.ServiceDefaultsTelemetry = "ServiceDefaultsTelemetry" -> string!

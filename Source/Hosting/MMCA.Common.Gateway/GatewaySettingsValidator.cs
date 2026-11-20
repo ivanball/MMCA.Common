@@ -8,7 +8,7 @@ namespace MMCA.Common.Gateway;
 /// <see cref="GatewaySettings.TraceHeaders"/>, both halves of
 /// <see cref="GatewaySettings.HealthCheckDefaults"/> and <see cref="GatewaySettings.Retry"/>. <c>ValidateDataAnnotations</c> reads only the
 /// attributes on <see cref="GatewaySettings"/>'s own properties and does not recurse, so without this a
-/// blank trace-header name passed startup and then threw from every proxied request.
+/// blank trace-header name would pass startup and then throw from every proxied request.
 /// <para>
 /// Used two ways, as the route policies are: <see cref="ThrowIfInvalid"/> fails registration for both
 /// <c>AddMmcaGateway</c> overloads (ADR-070 fail-fast), and the configuration overload also registers

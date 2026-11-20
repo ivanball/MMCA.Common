@@ -261,7 +261,6 @@ public static partial class ArchitectureRules
                 .Select(m => (m.Groups["route"].Value, Path.GetRelativePath(repoRoot, file).Replace('\\', '/'))))
         ];
 
-    /// <summary>A literal reduced to the path it navigates to, or null when it is not a path.</summary>
     /// <summary>
     /// Every string literal in the E2E sources that reads as an app path (normalized: query, fragment
     /// and leading interpolation holes removed), distinct.
@@ -283,6 +282,7 @@ public static partial class ArchitectureRules
         return literals.Exists(pattern.IsMatch);
     }
 
+    /// <summary>A literal reduced to the path it navigates to, or null when it is not a path.</summary>
     private static string? NormalizeLiteral(string literal)
     {
         var path = LeadingInterpolationRegex.Replace(literal, string.Empty);

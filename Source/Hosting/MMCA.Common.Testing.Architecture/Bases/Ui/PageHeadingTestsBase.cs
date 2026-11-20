@@ -1,7 +1,7 @@
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// Accessibility guard (rubric section 20), driven by
+/// Accessibility guard (rubric section 21), driven by
 /// <see cref="ArchitectureRules.RoutablePagesRenderExactlyOneH1"/>: every routable page under the
 /// repo's <c>Source/</c> renders exactly one level-one heading. Authored once here (lifted from
 /// MMCA.ADC's <c>PageHeadingTests</c>) and re-run as a thin subclass in each repo, which supplies

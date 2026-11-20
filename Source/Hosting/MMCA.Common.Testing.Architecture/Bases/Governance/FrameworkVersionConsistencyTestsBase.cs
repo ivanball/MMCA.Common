@@ -1,7 +1,7 @@
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// Evolvability / drift fitness function (rubric §16, ADR-016 made executable): the MMCA.Common.*
+/// Evolvability / drift fitness function (rubric §32, ADR-016 made executable): the MMCA.Common.*
 /// packages are released in lockstep at one version and consumers are swept in a single pass, with no
 /// phased rollout. Authored once here and re-run as a thin subclass in each consumer repo (each supplies
 /// its <see cref="Map"/>). The rule reads the pinned versions in the repo's
@@ -16,8 +16,8 @@ public abstract class FrameworkVersionConsistencyTestsBase
 
     /// <summary>
     /// Minimum number of <c>MMCA.Common.*</c> pins the scan must discover — a non-vacuous guard so a
-    /// wrong path or a renamed prefix cannot let the gate pass with zero entries. Defaults to the
-    /// released package count (see MMCA.Common/FACTS.md).
+    /// wrong path or a renamed prefix cannot let the gate pass with zero entries. Defaults to a floor
+    /// of 13, below the released package count (see MMCA.Common/FACTS.md).
     /// </summary>
     protected virtual int MinimumCommonPackageCount => 13;
 

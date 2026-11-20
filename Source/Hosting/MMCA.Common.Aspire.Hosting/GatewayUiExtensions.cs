@@ -30,8 +30,9 @@ public static class GatewayUiExtensions
         /// unreachable downstream stops <c>ui.WaitFor(gateway)</c> from ever releasing. That was the
         /// 2026-08-29 UI WaitFor wedge: the stack never became ready and a whole E2E run reported zero
         /// tests executed. Liveness proves what a wait needs (Kestrel up and serving) without pulling
-        /// cross-resource readiness into the startup order. <c>/health/ready</c> stays the
-        /// load-balancer signal in deployed environments, where the platform probe owns it.
+        /// cross-resource readiness into the startup order. Deployed environments own their own
+        /// probes; the ADC and Store Container Apps point the gateway's readiness probe at <c>/alive</c>
+        /// as well, and <c>/health/ready</c> stays a reporting endpoint.
         /// </para>
         /// </summary>
         /// <param name="httpsPort">The fixed host port of the gateway's <c>https</c> endpoint.</param>

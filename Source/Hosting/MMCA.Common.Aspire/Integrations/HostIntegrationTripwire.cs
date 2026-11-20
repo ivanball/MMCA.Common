@@ -55,6 +55,18 @@ internal sealed class HostIntegrationTripwire(
     /// </summary>
     internal const string AzurePostgreSqlEntraAuthenticationEnabledKey = "AzurePostgreSql:EntraAuthentication:Enabled";
 
+    /// <summary>
+    /// The boolean key that, when it parses true, requires the RDS IAM token configurator. A boolean
+    /// gate, read like <see cref="AzurePostgreSqlEntraAuthenticationEnabledKey"/>.
+    /// </summary>
+    internal const string AwsRdsIamAuthenticationEnabledKey = "Rds:IamAuthentication:Enabled";
+
+    /// <summary>
+    /// The boolean key that, when it parses true, requires the Cloud SQL IAM token configurator. A
+    /// boolean gate, read like <see cref="AzurePostgreSqlEntraAuthenticationEnabledKey"/>.
+    /// </summary>
+    internal const string GoogleCloudSqlIamAuthenticationEnabledKey = "CloudSql:IamAuthentication:Enabled";
+
     /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
     private static readonly string[] KeyRingKeys =
     [
@@ -116,20 +128,21 @@ internal sealed class HostIntegrationTripwire(
             "no AWS telemetry exporter is registered, so no trace or log reaches X-Ray or CloudWatch Logs. Reference MMCA.Common.Aws and call builder.AddAwsTelemetryExporter() after AddServiceDefaults()",
             failures);
 
-        var entraGate = ReadBooleanGate(AzurePostgreSqlEntraAuthenticationEnabledKey);
-        if (entraGate is null)
-        {
-            // Unreadable is not "off": whoever wrote "yes" or "1" meant on, and the host would
-            // otherwise log in with whatever password the connection string carries.
-            failures.Add(
-                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is \"{configuration[AzurePostgreSqlEntraAuthenticationEnabledKey]}\", which is not a boolean. Set it to true or false (or leave it blank for off).");
-        }
-        else if (entraGate.Value
-            && !_registered.Contains(HostIntegrationNames.AzurePostgreSqlEntraAuthentication))
-        {
-            failures.Add(
-                $"{AzurePostgreSqlEntraAuthenticationEnabledKey} is true, but no Entra token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Azure and call services.AddAzurePostgreSqlEntraAuthentication(configuration).");
-        }
+        CheckBooleanGate(
+            AzurePostgreSqlEntraAuthenticationEnabledKey,
+            HostIntegrationNames.AzurePostgreSqlEntraAuthentication,
+            "no Entra token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Azure and call services.AddAzurePostgreSqlEntraAuthentication(configuration)",
+            failures);
+        CheckBooleanGate(
+            AwsRdsIamAuthenticationEnabledKey,
+            HostIntegrationNames.AwsRdsIamAuthentication,
+            "no RDS IAM token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Aws and call services.AddAwsRdsIamAuthentication(configuration)",
+            failures);
+        CheckBooleanGate(
+            GoogleCloudSqlIamAuthenticationEnabledKey,
+            HostIntegrationNames.GoogleCloudSqlIamAuthentication,
+            "no Cloud SQL IAM token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Gcp and call services.AddCloudSqlIamAuthentication(configuration)",
+            failures);
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration
         // runs last owns the repository, so services that disagree on the order, or that call only
@@ -149,6 +162,22 @@ internal sealed class HostIntegrationTripwire(
         if (IsSet(key) && !_registered.Contains(integration))
         {
             failures.Add($"{key} is set, but {consequence}.");
+        }
+    }
+
+    private void CheckBooleanGate(string key, string integration, string consequence, List<string> failures)
+    {
+        var gate = ReadBooleanGate(key);
+        if (gate is null)
+        {
+            // Unreadable is not "off": whoever wrote "yes" or "1" meant on, and the host would
+            // otherwise log in with whatever password the connection string carries.
+            failures.Add(
+                $"{key} is \"{configuration[key]}\", which is not a boolean. Set it to true or false (or leave it blank for off).");
+        }
+        else if (gate.Value && !_registered.Contains(integration))
+        {
+            failures.Add($"{key} is true, but {consequence}.");
         }
     }
 

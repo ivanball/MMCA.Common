@@ -77,7 +77,7 @@ public abstract class MmcaGatewayHardeningTestsBase<TEntryPoint>
     protected abstract IReadOnlyList<string> DownstreamServices { get; }
 
     /// <summary>
-    /// Paths that must never be throttled. <c>/health</c> and <c>/.well-known</c> are always exempt
+    /// Paths that must never be throttled. <c>/health</c>, <c>/alive</c> and <c>/.well-known</c> are always exempt
     /// inside the kit: probes and JWKS discovery run at high frequency by design, and throttling them
     /// turns a traffic spike into a failed liveness probe and a container restart. A host adds its own
     /// (a SignalR hub prefix, say) through its bypass configuration and lists them here.

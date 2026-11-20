@@ -10,10 +10,10 @@ namespace MMCA.Common.Aspire.Health;
 /// <remarks>
 /// <para>
 /// SEC-Common-71 and SEC-ADC-17. Both endpoints are anonymous and sit on the always-bypassed
-/// rate-limit prefix, and both used to execute EVERY registered check per request: a
+/// rate-limit prefix, and uncached both would execute EVERY registered check per request: a
 /// <c>SELECT 1</c> on a pooled SQL connection, a Redis PING, a broker check, and on a gateway one
-/// outbound <c>/alive</c> call per fronted service. One unauthenticated client turned N requests
-/// into N x (services + database + cache) backend operations, exhausted the SQL pool and took the
+/// outbound <c>/alive</c> call per fronted service. One unauthenticated client would turn N requests
+/// into N x (services + database + cache) backend operations, exhaust the SQL pool and take the
 /// app down without an account. Caching the REPORT bounds that amplification at one probe round per
 /// window regardless of inbound rate, which the bypass list alone cannot do.
 /// </para>

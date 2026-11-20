@@ -19,7 +19,8 @@ public abstract class NamespaceCycleTestsBase
 
     /// <summary>
     /// Fully-qualified namespace nodes (e.g. <c>"MMCA.Common.Domain.Entities"</c>) whose cycle is accepted
-    /// by design. A cycle is skipped only when EVERY namespace on its reported path appears in this list,
+    /// by design. A cycle is skipped only when EVERY namespace in its strongly connected component (the
+    /// reported path plus any namespace listed as "component also contains") appears in this list,
     /// so an allowance can never hide a NEW cycle that merely touches an accepted namespace. Empty by
     /// default; each entry a subclass adds should carry a comment justifying why the tangle is deliberate.
     /// </summary>

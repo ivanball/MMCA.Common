@@ -194,10 +194,10 @@ public abstract class AnonymousEndpointTestsBase
 
     /// <summary>
     /// Every scanned endpoint that declares NO authorization attribute, as allow-list identifiers.
-    /// A controller action counts as decided when the action itself or any type in its declaring
-    /// hierarchy carries <c>[Authorize]</c> (<c>[HasPermission]</c> derives from it) or
-    /// <c>[AllowAnonymous]</c>; a routable component counts as decided when the component type
-    /// itself carries one.
+    /// Reported per concrete type: a controller or routable component counts as decided when the
+    /// type, any type it inherits from, or any public action declared along that chain carries
+    /// <c>[Authorize]</c> (<c>[HasPermission]</c> derives from it), <c>[AllowAnonymous]</c> or
+    /// <c>[PublicCachedReads]</c>.
     /// </summary>
     /// <returns>The identifiers of every endpoint left to the fallback policy.</returns>
     protected IEnumerable<string> UndecoratedEndpoints() =>

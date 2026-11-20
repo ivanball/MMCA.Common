@@ -12,8 +12,9 @@ namespace MMCA.Common.Testing.Architecture;
 /// focused repository methods (readers, queriers, specifications) instead.
 /// <para>
 /// <b>Implementation and its limits:</b> NetArchTest and plain reflection cannot see member
-/// <em>usage</em> inside method bodies, and this package deliberately carries no IL or Roslyn
-/// dependency. The rule is therefore an honest textual scan: it reads the <c>.cs</c> files of the
+/// <em>usage</em> inside method bodies, and this package deliberately carries no Roslyn
+/// dependency (this rule does not use the Mono.Cecil IL reader the call-graph rules use). The rule
+/// is therefore an honest textual scan: it reads the <c>.cs</c> files of the
 /// map's module Application projects and flags lines matching <c>.Table</c> /
 /// <c>.TableNoTracking*</c> member access. It cannot see through variable indirection
 /// (<c>var q = repo.TableNoTracking;</c> is caught, but an interface alias re-exposing the

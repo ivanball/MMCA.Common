@@ -12,8 +12,8 @@ using Microsoft.Extensions.Options;
 namespace MMCA.Common.Aspire.Security;
 
 /// <summary>
-/// Strongly-typed configuration for <see cref="SecurityHeadersMiddleware"/>. Defaults match the
-/// hardened values each client-facing host previously hand-rolled; override per consumer via the
+/// Strongly-typed configuration for <see cref="SecurityHeadersMiddleware"/>. Defaults are the
+/// hardened values a client-facing host needs; override per consumer via the
 /// <c>"SecurityHeaders"</c> configuration section or the <c>configure</c> delegate.
 /// </summary>
 public sealed class SecurityHeadersSettings
@@ -141,8 +141,8 @@ public static class CspNonce
 /// <summary>
 /// Adds hardened security response headers to every response: <c>X-Content-Type-Options</c>,
 /// <c>X-Frame-Options</c>, <c>Referrer-Policy</c>, <c>Permissions-Policy</c>, HSTS (outside Development),
-/// and a Content-Security-Policy resolved from <see cref="ICspPolicyProvider"/>. Centralizes what each
-/// client-facing host previously hand-rolled.
+/// and a Content-Security-Policy resolved from <see cref="ICspPolicyProvider"/>. One implementation for
+/// every client-facing host.
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
