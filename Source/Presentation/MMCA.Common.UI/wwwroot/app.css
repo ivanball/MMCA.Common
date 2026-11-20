@@ -125,6 +125,51 @@ html[data-mmca-theme="dark"]:not([data-mmca-interactive]) body {
     background-color: var(--mmca-prepaint-background-dark);
 }
 
+/* -- MAUI WebView host rules --
+   Both classes match only elements a MAUI head's index.html carries (a status-bar spacer before
+   #app and a placeholder inside it), so the web heads are untouched.
+
+   Safe-area spacer: pushes #app below the device status bar or notch. Always visible in MAUI (the
+   Android WebView is Chromium-based, so a WebKit-only @supports(-webkit-touch-callout:none) gate
+   never matches). env(safe-area-inset-top) resolves to the status bar height when the viewport meta
+   tag includes viewport-fit=cover, but the Android WebView reports 0 on a COLD launch (the insets
+   reach it only after the first layout), so the header drew under the status bar. The larger of the
+   inset and --mmca-status-bar-fallback wins: MainPageBase (MMCA.Common.UI.Maui) hands the native
+   status bar height to the page on Android and theme-prepaint.js sets the fallback from it (unset
+   elsewhere, where the inset is reliable). The strip colour is the --mmca-sidebar-bg-dark token, which
+   an app redefines in its own sheet.
+   Stacking: once the page scrolls, the in-page chrome slides under this sticky strip, so it has to
+   paint above all of it (the hamburger at --mmca-z-hamburger 300, the mobile app bar at 400, the error
+   bar at 1000) while every MudBlazor overlay still paints above it: one below --mud-zindex-drawer
+   (1100), under popovers (1200), dialogs (1400) and snackbars (1500). */
+.status-bar-safe-area {
+    display: flex;
+    position: sticky;
+    top: 0;
+    height: max(env(safe-area-inset-top, 0px), var(--mmca-status-bar-fallback, 0px));
+    background-color: var(--mmca-sidebar-bg-dark);
+    width: 100%;
+    z-index: calc(var(--mud-zindex-drawer, 1100) - 1);
+}
+
+/* Language-neutral loading placeholder inside #app: it shows before localization is available, so
+   it carries no words. Blazor replaces it on the first render. */
+.host-loading-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 30vh auto 0;
+    border: 4px solid rgba(128, 128, 128, 0.3);
+    border-top-color: var(--mmca-primary);
+    border-radius: 50%;
+    animation: host-loading-spin 1s linear infinite;
+}
+
+@keyframes host-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* Deliberately no overflow-y here. With height: auto both boxes are already content-sized, so
    overflow-y: auto changed nothing visually but made <body> a scroll container that never
    scrolls (the viewport does). The layout's sticky sidebar then resolved against that dead
