@@ -367,41 +367,13 @@ public static class PageExtensions
 
             for (var round = 0; round < SnackbarDismissRounds; round++)
             {
-                var count = await snackbars.CountAsync().ConfigureAwait(false);
-                if (count == 0)
-                {
-                    return;
-                }
-
-                // Last to first, so a toast detaching does not shift the index of one not yet clicked.
-                for (var i = count - 1; i >= 0; i--)
-                {
-                    await CloseSnackbarAsync(snackbars.Nth(i)).ConfigureAwait(false);
-                }
-
-                // The hide transition after a close is about 2 s.
-                if (await E2EPolling.PollUntilAsync(
-                        async () => await snackbars.CountAsync().ConfigureAwait(false) == 0,
-                        TimeSpan.FromSeconds(4),
-                        TimeSpan.FromMilliseconds(100)).ConfigureAwait(false))
+                if (await CloseSnackbarRoundAsync(snackbars).ConfigureAwait(false))
                 {
                     return;
                 }
             }
 
-            var remaining = await E2EPolling.PollUntilAsync(
-                snackbars.CountAsync,
-                static left => left == 0,
-                TimeSpan.FromSeconds(15),
-                TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
-            if (remaining > 0)
-            {
-                var which = text is null ? string.Empty : $" containing \"{text}\"";
-                throw new TimeoutException(string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"{remaining} snackbar(s){which} still on screen after {SnackbarDismissRounds} close rounds and a 15 s wait: "
-                    + $"none of them could be closed through '{SnackbarCloseIconSelector}' or '{SnackbarActionButtonSelector}'."));
-            }
+            await WaitOutRemainingSnackbarsAsync(snackbars, text).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -599,6 +571,55 @@ public static class PageExtensions
             .Where(m => !string.IsNullOrWhiteSpace(m))
             .ToList();
         return messages.Count == 0 ? string.Empty : $" :: {string.Join("; ", messages)}";
+    }
+
+    // One close-then-wait round: closes every matching snackbar on screen and waits out the hide
+    // transition. True when none is left (including when there was none to begin with).
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static async Task<bool> CloseSnackbarRoundAsync(ILocator snackbars)
+    {
+        var count = await snackbars.CountAsync().ConfigureAwait(false);
+        if (count == 0)
+        {
+            return true;
+        }
+
+        // Last to first, so a toast detaching does not shift the index of one not yet clicked.
+        for (var i = count - 1; i >= 0; i--)
+        {
+            await CloseSnackbarAsync(snackbars.Nth(i)).ConfigureAwait(false);
+        }
+
+        // The hide transition after a close is about 2 s.
+        return await E2EPolling.PollUntilAsync(
+            async () => await snackbars.CountAsync().ConfigureAwait(false) == 0,
+            TimeSpan.FromSeconds(4),
+            TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+    }
+
+    // The final bounded wait after the close rounds; throws naming what is still on screen.
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static async Task WaitOutRemainingSnackbarsAsync(ILocator snackbars, string? text)
+    {
+        var remaining = await E2EPolling.PollUntilAsync(
+            snackbars.CountAsync,
+            static left => left == 0,
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+        if (remaining > 0)
+        {
+            var which = text is null ? string.Empty : $" containing \"{text}\"";
+            throw new TimeoutException(string.Create(
+                CultureInfo.InvariantCulture,
+                $"{remaining} snackbar(s){which} still on screen after {SnackbarDismissRounds} close rounds and a 15 s wait: "
+                + $"none of them could be closed through '{SnackbarCloseIconSelector}' or '{SnackbarActionButtonSelector}'."));
+        }
     }
 
     // Clicks one snackbar's close icon, or its content-action button when it has no close icon. A toast
