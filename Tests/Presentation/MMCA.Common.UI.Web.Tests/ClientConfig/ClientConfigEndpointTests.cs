@@ -164,6 +164,147 @@ public sealed class ClientConfigEndpointTests
         endpoint.RoutePattern.RawText.Should().Be(ClientConfigEndpointExtensions.ClientConfigPath);
     }
 
+    [Fact]
+    public async Task ForwardsTheCommonUiSections_OnlyTheKeysTheServerSets()
+    {
+        await using var app = CreateApp(
+            Gateway,
+            ("Layout:BrandName", "AtlDevCon"),
+            ("Layout:FooterText", "(c) Example"),
+            ("Registration:CollectAddress", "false"),
+            ("SignIn:OfferSignInLink", "true"),
+            ("SignIn:SignInLinkLandingPath", "/conference"),
+            ("Legal:TermsUrl", "https://example.com/terms"));
+        app.MapClientConfigEndpoint();
+
+        using var document = await InvokeAsync(app);
+
+        var root = document.RootElement;
+        root.EnumerateObject().Select(section => section.Name).Should().Equal("api", "modules", "layout", "registration", "signIn", "legal");
+        PropertyNames(root.GetProperty("layout")).Should().BeEquivalentTo("brandName", "footerText");
+        root.GetProperty("layout").GetProperty("brandName").GetString().Should().Be("AtlDevCon");
+        root.GetProperty("layout").GetProperty("footerText").GetString().Should().Be("(c) Example");
+        root.GetProperty("registration").GetProperty("collectAddress").GetBoolean().Should().BeFalse();
+        PropertyNames(root.GetProperty("signIn")).Should().BeEquivalentTo("offerSignInLink", "signInLinkLandingPath");
+        root.GetProperty("signIn").GetProperty("offerSignInLink").GetBoolean().Should().BeTrue();
+        root.GetProperty("signIn").GetProperty("signInLinkLandingPath").GetString().Should().Be("/conference");
+        PropertyNames(root.GetProperty("legal")).Should().BeEquivalentTo(
+            ["termsUrl"],
+            "a key the server leaves unset is not written, so the client's own default holds");
+    }
+
+    [Fact]
+    public async Task ASectionTheServerDoesNotConfigure_IsLeftOut()
+    {
+        await using var app = CreateApp(Gateway, ("Layout:BrandName", "AtlDevCon"));
+        app.MapClientConfigEndpoint();
+
+        using var document = await InvokeAsync(app);
+
+        document.RootElement.EnumerateObject().Select(section => section.Name).Should().Equal("api", "modules", "layout");
+    }
+
+    [Fact]
+    public async Task KeysTheSettingsClassDoesNotDeclare_AreNeverForwarded()
+    {
+        // The served document is anonymous: a server-only key under a forwarded section name (the API
+        // host's terms version, or anything secret an operator put there) must not reach the browser,
+        // and neither must a computed member of the settings class.
+        await using var app = CreateApp(
+            Gateway,
+            ("Legal:PrivacyUrl", "https://example.com/privacy"),
+            ("Legal:CurrentTermsVersion", "7"),
+            ("Legal:ApiKey", "do-not-serve"),
+            ("Legal:HasFooterLinks", "false"),
+            ("SignIn:ClientSecret", "do-not-serve"));
+        app.MapClientConfigEndpoint();
+
+        using var document = await InvokeAsync(app);
+
+        var root = document.RootElement;
+        PropertyNames(root.GetProperty("legal")).Should().BeEquivalentTo("privacyUrl");
+        root.TryGetProperty("signIn", out _).Should().BeFalse("no declared SignIn key is set, so the section is left out");
+        root.GetRawText().Should().NotContain("do-not-serve");
+    }
+
+    [Fact]
+    public async Task EveryDeclaredProperty_RoundTripsIntoTheClientsBinding()
+    {
+        // What the server binds is what the WASM client binds after loading the document into its
+        // configuration (MmcaClientConfigBootstrap + AddJsonStream), for every settable property of
+        // the four classes: a property added to one of them is forwarded with no change here.
+        await using var app = CreateApp(
+            Gateway,
+            ("Layout:BrandName", "AtlDevCon"),
+            ("Layout:FooterText", "(c) Example"),
+            ("Layout:BrandLogoUrl", "/img/logo.svg"),
+            ("Layout:SessionsNavRequiredRole", "Admin"),
+            ("Layout:StampColorModeOnDocument", "true"),
+            ("Registration:CollectAddress", "false"),
+            ("SignIn:OfferSignInLink", "true"),
+            ("SignIn:OfferPasskeys", "true"),
+            ("SignIn:SignInLinkLandingPath", "/conference"),
+            ("Legal:TermsUrl", "https://example.com/terms"),
+            ("Legal:PrivacyUrl", "https://example.com/privacy"),
+            ("Legal:CodeOfConductUrl", "https://example.com/conduct"),
+            ("Legal:DeleteAccountUrl", "https://example.com/delete"));
+        app.MapClientConfigEndpoint();
+
+        using var document = await InvokeAsync(app);
+        await using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(document.RootElement.GetRawText()));
+        var client = new ConfigurationBuilder().AddJsonStream(stream).Build();
+        var server = app.Services.GetRequiredService<IConfiguration>();
+
+        foreach (var (sectionName, settingsType) in ClientConfigUiSections.Forwarded)
+        {
+            var properties = ClientConfigUiSections.DeclaredSettableProperties(settingsType).ToList();
+            properties.Should().NotBeEmpty();
+            var expected = server.GetSection(sectionName).Get(settingsType)!;
+            var actual = client.GetSection(sectionName).Get(settingsType)!;
+            foreach (var property in properties)
+            {
+                server.GetSection(sectionName).GetSection(property.Name).Value.Should().NotBeNull(
+                    $"the round trip must set every declared property; add {sectionName}:{property.Name} to this test");
+                property.GetValue(actual).Should().Be(property.GetValue(expected), $"{sectionName}:{property.Name} must reach the client unchanged");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AHostThatStillAddsLegalAndSignIn_KeepsServingItsOwnValues()
+    {
+        // The ADC shape before its version bump: the head forwards Legal and SignIn field by field.
+        await using var app = CreateApp(
+            Gateway,
+            ("Legal:TermsUrl", "https://example.com/terms"),
+            ("SignIn:OfferSignInLink", "true"));
+        app.MapClientConfigEndpoint(config => config
+            .Add("Legal", new
+            {
+                TermsUrl = config.Configuration["Legal:TermsUrl"],
+                PrivacyUrl = config.Configuration["Legal:PrivacyUrl"],
+                CodeOfConductUrl = config.Configuration["Legal:CodeOfConductUrl"],
+                DeleteAccountUrl = config.Configuration["Legal:DeleteAccountUrl"],
+            })
+            .Add("SignIn", new
+            {
+                OfferSignInLink = config.Configuration.GetValue<bool>("SignIn:OfferSignInLink"),
+                SignInLinkLandingPath = config.Configuration["SignIn:SignInLinkLandingPath"],
+                OfferPasskeys = config.Configuration.GetValue<bool>("SignIn:OfferPasskeys"),
+            }));
+
+        using var document = await InvokeAsync(app);
+
+        var root = document.RootElement;
+        root.GetProperty("legal").GetProperty("termsUrl").GetString().Should().Be("https://example.com/terms");
+        root.GetProperty("signIn").GetProperty("offerSignInLink").GetBoolean().Should().BeTrue();
+        root.GetProperty("signIn").GetProperty("offerPasskeys").GetBoolean().Should().BeFalse();
+        root.EnumerateObject().Count(section => section.NameEquals("legal")).Should().Be(1);
+    }
+
+    private static IEnumerable<string> PropertyNames(JsonElement section) =>
+        section.EnumerateObject().Select(property => property.Name);
+
     private static WebApplication CreateApp(string? wasmApiEndpoint, params (string Key, string Value)[] extra)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });

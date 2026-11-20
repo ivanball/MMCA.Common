@@ -34,7 +34,7 @@ public static class ClientConfigEndpointExtensions
     {
         /// <summary>
         /// Maps <c>GET /client-config</c>: an anonymous document of the shape
-        /// <c>{ "api": { "apiEndpoint": "&lt;Api:WasmApiEndpoint&gt;" }, "modules": { "Identity": { "enabled": true } }, ...extras }</c>,
+        /// <c>{ "api": { "apiEndpoint": "&lt;Api:WasmApiEndpoint&gt;" }, "modules": { "Identity": { "enabled": true } }, "layout": { ... }, ...extras }</c>,
         /// excluded from the OpenAPI description.
         /// </summary>
         /// <remarks>
@@ -54,6 +54,14 @@ public static class ClientConfigEndpointExtensions
         /// client loads the document into configuration before it registers modules, so a module the
         /// head disables does not come back after hydration. A head with no <c>Modules</c> section serves
         /// an empty one.
+        /// </para>
+        /// <para>
+        /// <b>Common.UI settings forwarded.</b> The <c>layout</c>, <c>registration</c>, <c>signIn</c>
+        /// and <c>legal</c> sections carry the server head's <c>Layout</c>, <c>Registration</c>,
+        /// <c>SignIn</c> and <c>Legal</c> configuration, limited to the properties the matching
+        /// Common.UI settings class declares and to the keys the server actually sets; a section the
+        /// server does not configure is left out, so the client's defaults hold. A section the host
+        /// adds through <paramref name="extras"/> under the same name replaces the forwarded one.
         /// </para>
         /// <para>
         /// <b>Anonymous by declaration.</b> The WASM client fetches the document before it can hold a
@@ -89,6 +97,14 @@ public static class ClientConfigEndpointExtensions
                         [JsonNamingPolicy.CamelCase.ConvertName(ApiSectionName)] = BuildApiSection(context, wasmApiEndpoint),
                         [JsonNamingPolicy.CamelCase.ConvertName(ModulesSectionName)] = BuildModulesSection(builder.Configuration),
                     };
+
+                    // Common.UI's own Layout, Registration, SignIn and Legal sections, as far as the
+                    // server sets them; written before the host's extras so a head that still adds one
+                    // of them itself replaces the forwarded copy rather than colliding with it.
+                    foreach (var (name, value) in ClientConfigUiSections.Build(builder.Configuration))
+                    {
+                        document[name] = value;
+                    }
 
                     foreach (var (name, value) in builder.Sections)
                     {

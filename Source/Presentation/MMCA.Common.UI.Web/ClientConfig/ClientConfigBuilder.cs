@@ -7,7 +7,9 @@ namespace MMCA.Common.UI.Web.ClientConfig;
 /// <summary>
 /// Collects the app-specific sections a host adds to the <c>/client-config</c> document on top of
 /// the framework's <c>Api</c> and <c>Modules</c> sections (see <see cref="ClientConfigEndpointExtensions"/>). Built
-/// once per request, so a section can read request-scoped services and current configuration.
+/// once per request, so a section can read request-scoped services and current configuration. A
+/// section added under one of the forwarded Common.UI names (<c>Layout</c>, <c>Registration</c>,
+/// <c>SignIn</c>, <c>Legal</c>) replaces the forwarded copy.
 /// </summary>
 /// <remarks>
 /// Everything added here is served ANONYMOUSLY to every browser before sign-in. Add only values the
