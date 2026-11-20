@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Gcp.CloudSql;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Tests.Shared.Hosting;
@@ -11,7 +12,7 @@ namespace MMCA.Common.Gcp.Tests.CloudSql;
 /// <summary>
 /// <c>AddCloudSqlIamAuthentication</c>: off unless <c>CloudSql:IamAuthentication:Enabled</c> is true,
 /// and when on it registers one data-source configurator whose periodic password provider hands Npgsql
-/// an OAuth2 access token. The gate, registration and SSL-mode cases shared with the RDS and Entra
+/// an OAuth2 access token, plus the receipt the startup tripwire checks. The gate, registration and SSL-mode cases shared with the RDS and Entra
 /// adapters run from <see cref="PostgreSqlTokenAuthenticationTestsBase"/>; the cases below are Cloud
 /// SQL-only. The token source is injected, so nothing here reaches Google; the real data-source path
 /// against a server is the PostgreSQL Testcontainers tier.
@@ -31,6 +32,46 @@ public sealed class CloudSqlIamAuthenticationTests : PostgreSqlTokenAuthenticati
 
     protected override INpgsqlDataSourceConfigurator CreateConfigurator() =>
         new CloudSqlIamAuthenticationConfigurator(_ => Task.FromResult("token"));
+
+    protected override void AssertNothingRegistered(IServiceCollection services) =>
+        services.Should().BeEmpty("a host that leaves the gate off takes no Google credential, no configurator and no receipt");
+
+    protected override void AssertEnabledRegistrations(IServiceCollection services) =>
+        services.Should().ContainSingle(d => IsTheCloudSqlMarker(d));
+
+    private static bool IsTheCloudSqlMarker(ServiceDescriptor descriptor) =>
+        descriptor.ServiceType == typeof(HostIntegrationMarker)
+        && descriptor.ImplementationInstance is HostIntegrationMarker marker
+        && marker.Name == HostIntegrationNames.GoogleCloudSqlIamAuthentication;
+
+    // As for the Entra twin: a keyed registration of the marker type is skipped, not read, and it
+    // does not count as the receipt.
+    [Fact]
+    public void AKeyedMarker_NeitherThrowsNorCounts()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton(
+            "some-key",
+            new HostIntegrationMarker(HostIntegrationNames.GoogleCloudSqlIamAuthentication));
+
+        var act = () => services.AddCloudSqlIamAuthentication(
+            EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString }));
+
+        act.Should().NotThrow();
+        services.Should().ContainSingle(d => !d.IsKeyedService && IsTheCloudSqlMarker(d), "the keyed one is not the receipt");
+    }
+
+    [Fact]
+    public void CalledTwice_LeavesOneReceipt()
+    {
+        var services = new ServiceCollection();
+        var configuration = EnabledConfiguration(new() { ["ConnectionStrings:PostgreSQLConnectionString"] = EncryptedConnectionString });
+
+        services.AddCloudSqlIamAuthentication(configuration);
+        services.AddCloudSqlIamAuthentication(configuration);
+
+        services.Should().ContainSingle(d => IsTheCloudSqlMarker(d));
+    }
 
     [Fact]
     public async Task ThePasswordProvider_ReturnsTheTokenFromTheInjectedSource()

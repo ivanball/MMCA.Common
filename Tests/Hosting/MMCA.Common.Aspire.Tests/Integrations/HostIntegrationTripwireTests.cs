@@ -34,6 +34,15 @@ public sealed class HostIntegrationTripwireTests
         { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
     };
 
+    // The AWS RDS and Google Cloud SQL IAM gates are boolean gates read exactly like the Entra one
+    // (the AzurePostgreSql tests): true without the adapter call fails naming it, false or blank
+    // never trips, and a value that is not a boolean fails whichever registrations ran.
+    public static TheoryData<string, string, string, string> TokenGates => new()
+    {
+        { "Rds:IamAuthentication:Enabled", HostIntegrationNames.AwsRdsIamAuthentication, "services.AddAwsRdsIamAuthentication(configuration)", "MMCA.Common.Aws" },
+        { "CloudSql:IamAuthentication:Enabled", HostIntegrationNames.GoogleCloudSqlIamAuthentication, "services.AddCloudSqlIamAuthentication(configuration)", "MMCA.Common.Gcp" },
+    };
+
     private static ValidateOptionsResult Validate(Dictionary<string, string?> settings, params string[] registered)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
@@ -253,6 +262,65 @@ public sealed class HostIntegrationTripwireTests
     public void AzurePostgreSqlEnabled_Whitespace_DoesNotTrip() =>
         Validate(new() { ["AzurePostgreSql:EntraAuthentication:Enabled"] = "   " })
             .Succeeded.Should().BeTrue("blank stays off");
+
+    [Theory]
+    [MemberData(nameof(TokenGates))]
+    public void TokenGateEnabled_WithoutTheMarker_Fails_NamingTheCall(string key, string marker, string call, string package)
+    {
+        _ = marker;
+
+        var result = Validate(new() { [key] = "true" });
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle().Which.Should()
+            .Contain(key)
+            .And.Contain(package)
+            .And.Contain(call);
+    }
+
+    [Theory]
+    [MemberData(nameof(TokenGates))]
+    public void TokenGateEnabled_WithTheMarker_Succeeds(string key, string marker, string call, string package)
+    {
+        _ = (call, package);
+
+        Validate(new() { [key] = "True" }, marker).Succeeded.Should().BeTrue();
+    }
+
+    [Theory]
+    [MemberData(nameof(TokenGates))]
+    public void TokenGateFalseOrBlank_DoesNotTrip(string key, string marker, string call, string package)
+    {
+        _ = (marker, call, package);
+
+        foreach (var value in new[] { "false", "False", string.Empty, "   ", null })
+        {
+            Validate(new() { [key] = value }).Succeeded.Should().BeTrue($"\"{value}\" leaves IAM token login off");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(TokenGates))]
+    public void TokenGateNotABoolean_FailsEvenWithTheMarker(string key, string marker, string call, string package)
+    {
+        _ = (call, package);
+
+        var result = Validate(new() { [key] = "yes" }, marker);
+
+        result.Failed.Should().BeTrue("the value is unreadable whichever registrations ran");
+        result.Failures.Should().ContainSingle().Which.Should()
+            .Contain(key)
+            .And.Contain("\"yes\"")
+            .And.Contain("true")
+            .And.Contain("false");
+    }
+
+    [Fact]
+    public void TokenGateNames_AreStable()
+    {
+        HostIntegrationNames.AwsRdsIamAuthentication.Should().Be("AwsRdsIamAuthentication");
+        HostIntegrationNames.GoogleCloudSqlIamAuthentication.Should().Be("GoogleCloudSqlIamAuthentication");
+    }
 
     [Fact]
     public void AddServiceDefaults_ValidatesOnStart_AndFailsTheHost()

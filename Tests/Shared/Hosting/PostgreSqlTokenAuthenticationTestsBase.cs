@@ -51,7 +51,7 @@ public abstract class PostgreSqlTokenAuthenticationTestsBase
         services.Should().NotContain(d => d.ServiceType == typeof(NpgsqlDataSource));
     }
 
-    /// <summary>Extra registrations an enabled call must make (the Azure adapter's startup receipt).</summary>
+    /// <summary>Extra registrations an enabled call must make (each adapter's startup receipt).</summary>
     protected virtual void AssertEnabledRegistrations(IServiceCollection services)
     {
     }

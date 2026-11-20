@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Startup tripwire checks for the AWS RDS and Google Cloud SQL IAM gates** (MMCA.Common.Aspire, MMCA.Common.Aws, MMCA.Common.Gcp; ADR-134): `HostIntegrationNames.AwsRdsIamAuthentication` and `HostIntegrationNames.GoogleCloudSqlIamAuthentication`, the receipts `services.AddAwsRdsIamAuthentication(configuration)` and `services.AddCloudSqlIamAuthentication(configuration)` now leave once past their gate, and two boolean-gate checks beside the Azure PostgreSQL Entra one. A host with `Rds:IamAuthentication:Enabled` or `CloudSql:IamAuthentication:Enabled` true and no matching adapter call now fails at startup naming the call, instead of logging in with whatever password its connection string carries; a value that is neither blank nor a boolean fails too, as the Entra gate already did. A host that makes the call, or leaves the gate false or blank, changes nothing.
+
 ### Fixed
 
 - **The Azure startup calls leave their tripwire receipt only when they registered something** (MMCA.Common.Azure.Startup; ADR-134): `AddAzureKeyVaultConfiguration()`, `AddAzureDataProtection()` and `AddAzureMonitorExporter()` now add their `HostIntegrationMarker` after their "do nothing" gate, as the six AWS and GCP twins already did. Before, a call made while its gate key (`KeyVault:Uri`, `DataProtection:BlobStorageUri`, `APPLICATIONINSIGHTS_CONNECTION_STRING`) was still blank registered nothing yet satisfied the startup check, so a key that arrived through a source added after the call (calling `AddAzureDataProtection()` before `AddAzureKeyVaultConfiguration()` with the blob URI held in the vault, for one) left every replica on its own in-memory key ring with no startup error. **Behavior change: such a host now fails at startup, naming the missing call**; move the call below the source that supplies its key. `AddAzureMonitorExporter()` still refuses to run before `AddServiceDefaults()` whether or not the connection string is set. No API change.
