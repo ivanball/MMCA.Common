@@ -17,6 +17,8 @@ namespace MMCA.Common.Testing.E2E.PageObjects;
 /// </remarks>
 public sealed class RoleAdminPage
 {
+    private const string SavedToastText = "Stored permissions saved.";
+
     private readonly IPage _page;
 
     public RoleAdminPage(IPage page) => _page = page;
@@ -34,7 +36,7 @@ public sealed class RoleAdminPage
     /// The success snackbar a stored-permissions save raises. Exposed so a test can await or dismiss
     /// it explicitly; it lives in the root layout and survives a client-side navigation.
     /// </summary>
-    public ILocator SavedToast => _page.GetByText("Stored permissions saved.");
+    public ILocator SavedToast => _page.GetByText(SavedToastText);
 
     public Task GotoListAsync() =>
         _page.GotoProtectedAsync("/roles");
@@ -66,7 +68,7 @@ public sealed class RoleAdminPage
         // root layout), so it would satisfy the wait below before THIS save's PUT has landed, and two
         // visible toasts make the text locator a strict-mode violation. Close it rather than wait out
         // its display timer (several seconds per save), then confirm it is gone.
-        await DismissSavedToastsAsync().ConfigureAwait(false);
+        await _page.DismissSnackbarsAsync(SavedToastText).ConfigureAwait(false);
         await Assertions.Expect(SavedToast)
             .ToHaveCountAsync(0, new() { Timeout = 30_000 }).ConfigureAwait(false);
 
@@ -82,27 +84,5 @@ public sealed class RoleAdminPage
         // "Operation cancelled by user" (a consumer deploy run once lost the write on all three tries).
         await Assertions.Expect(SavedToast)
             .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Clicks the close button of every "saved" snackbar on screen. MudBlazor renders a timed
-    /// snackbar's close icon as <c>.mud-snackbar-close-button</c>; a toast that times out between
-    /// the count and the click detaches, which is the outcome wanted, so that race is ignored.
-    /// </summary>
-    private async Task DismissSavedToastsAsync()
-    {
-        var saved = _page.Locator(".mud-snackbar").Filter(new() { HasText = "Stored permissions saved." });
-        for (var attempt = 0; attempt < 5 && await saved.CountAsync().ConfigureAwait(false) > 0; attempt++)
-        {
-            try
-            {
-                await saved.First.Locator(".mud-snackbar-close-button")
-                    .ClickAsync(new() { Timeout = 2_000 }).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
-            {
-                // The toast expired or re-rendered under the click; the count is re-read above.
-            }
-        }
     }
 }

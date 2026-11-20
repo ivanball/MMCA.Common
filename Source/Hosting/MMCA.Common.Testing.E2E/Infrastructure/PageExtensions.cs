@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Deque.AxeCore.Commons;
 using Deque.AxeCore.Playwright;
@@ -58,6 +59,24 @@ public static class PageExtensions
 
     /// <summary>A single animation frame: enough to flush the render pipeline once the marker has confirmed interactivity.</summary>
     private const string SingleFrameSettleScript = "() => new Promise(r => requestAnimationFrame(r))";
+
+    /// <summary>A MudBlazor snackbar (toast), whatever its severity.</summary>
+    private const string SnackbarSelector = ".mud-snackbar";
+
+    /// <summary>The close icon MudBlazor renders on a timed snackbar (<c>ShowCloseIcon</c>).</summary>
+    private const string SnackbarCloseIconSelector = ".mud-snackbar-close-button";
+
+    /// <summary>
+    /// The action button in a snackbar's content area: the only way to close a
+    /// <c>RequireInteraction</c> toast, which renders no close icon.
+    /// </summary>
+    private const string SnackbarActionButtonSelector = ".mud-snackbar-content-action button";
+
+    /// <summary>Close-and-wait rounds before the final wait; a queued toast takes a freed slot each round.</summary>
+    private const int SnackbarDismissRounds = 5;
+
+    /// <summary>One close click's budget: a toast that expires under the click detaches, which is the goal.</summary>
+    private const float SnackbarCloseClickTimeoutMs = 2_000;
 
     extension(IPage page)
     {
@@ -307,6 +326,85 @@ public static class PageExtensions
         }
 
         /// <summary>
+        /// Closes the MudBlazor snackbars on screen (only those whose text contains
+        /// <paramref name="text"/>, when given) and waits until none of them is left in the DOM, so the
+        /// next step gets a quiet screen: a click a toast could overlay, an axe scan that must not sample
+        /// a toast mid-fade, a navigation that must not race a toast's own render.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Waiting a toast out costs its whole lifecycle (MudBlazor's defaults: a 1 s show transition,
+        /// 5 s visible, a 2 s hide transition), so each toast is closed instead and only the hide
+        /// transition is waited. Both close shapes are matched: the close icon
+        /// (<c>.mud-snackbar-close-button</c>) a timed toast renders, and, for a toast without one (a
+        /// <c>RequireInteraction</c> notification), the button in its content action
+        /// (<c>.mud-snackbar-content-action button</c>). The close icon is preferred when a toast has
+        /// both, so an action with a side effect is never clicked to dismiss.
+        /// </para>
+        /// <para>
+        /// Bounded: up to five rounds of close-then-wait (four seconds each for the hide transition; a
+        /// queued toast that takes a freed slot is closed on the next round), then a final wait of up to
+        /// fifteen seconds, after which a <see cref="TimeoutException"/> names what is still on screen.
+        /// A toast that expires between the count and the click detaches, which is the outcome wanted,
+        /// so that race is ignored. With no matching toast on screen it returns at once: it does not
+        /// wait for a toast to appear.
+        /// </para>
+        /// </remarks>
+        /// <param name="text">
+        /// Only snackbars whose text contains this value; <see langword="null"/> (the default) closes all.
+        /// </param>
+        /// <returns>A task that completes once no matching snackbar remains.</returns>
+        /// <exception cref="TimeoutException">A matching snackbar is still on screen after the final wait.</exception>
+        public async Task DismissSnackbarsAsync(string? text = null)
+        {
+            ArgumentNullException.ThrowIfNull(page);
+
+            var snackbars = page.Locator(SnackbarSelector);
+            if (text is not null)
+            {
+                snackbars = snackbars.Filter(new() { HasText = text });
+            }
+
+            for (var round = 0; round < SnackbarDismissRounds; round++)
+            {
+                var count = await snackbars.CountAsync().ConfigureAwait(false);
+                if (count == 0)
+                {
+                    return;
+                }
+
+                // Last to first, so a toast detaching does not shift the index of one not yet clicked.
+                for (var i = count - 1; i >= 0; i--)
+                {
+                    await CloseSnackbarAsync(snackbars.Nth(i)).ConfigureAwait(false);
+                }
+
+                // The hide transition after a close is about 2 s.
+                if (await E2EPolling.PollUntilAsync(
+                        async () => await snackbars.CountAsync().ConfigureAwait(false) == 0,
+                        TimeSpan.FromSeconds(4),
+                        TimeSpan.FromMilliseconds(100)).ConfigureAwait(false))
+                {
+                    return;
+                }
+            }
+
+            var remaining = await E2EPolling.PollUntilAsync(
+                snackbars.CountAsync,
+                static left => left == 0,
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+            if (remaining > 0)
+            {
+                var which = text is null ? string.Empty : $" containing \"{text}\"";
+                throw new TimeoutException(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{remaining} snackbar(s){which} still on screen after {SnackbarDismissRounds} close rounds and a 15 s wait: "
+                    + $"none of them could be closed through '{SnackbarCloseIconSelector}' or '{SnackbarActionButtonSelector}'."));
+            }
+        }
+
+        /// <summary>
         /// Runs an axe-core accessibility scan against the current page and throws an
         /// <see cref="AccessibilityViolationException"/> if any violation is found. Call from a
         /// consumer E2E test once the page is interactive (e.g. after
@@ -501,5 +599,35 @@ public static class PageExtensions
             .Where(m => !string.IsNullOrWhiteSpace(m))
             .ToList();
         return messages.Count == 0 ? string.Empty : $" :: {string.Join("; ", messages)}";
+    }
+
+    // Clicks one snackbar's close icon, or its content-action button when it has no close icon. A toast
+    // with neither is left to time out (the caller's wait covers it), and a toast that detaches under the
+    // click is the outcome wanted.
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static async Task CloseSnackbarAsync(ILocator snackbar)
+    {
+        try
+        {
+            var closeIcon = snackbar.Locator(SnackbarCloseIconSelector);
+            var target = closeIcon;
+            if (await closeIcon.CountAsync().ConfigureAwait(false) == 0)
+            {
+                target = snackbar.Locator(SnackbarActionButtonSelector);
+                if (await target.CountAsync().ConfigureAwait(false) == 0)
+                {
+                    return;
+                }
+            }
+
+            await target.First.ClickAsync(new() { Timeout = SnackbarCloseClickTimeoutMs }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
+        {
+            // The toast expired or re-rendered under the click; the caller re-counts.
+        }
     }
 }

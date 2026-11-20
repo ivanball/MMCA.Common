@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).DismissSnackbarsAsync(string? text = null) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.DismissSnackbarsAsync(this Microsoft.Playwright.IPage! page, string? text = null) -> System.Threading.Tasks.Task!
