@@ -33,17 +33,17 @@ public static partial class ArchitectureRules
     /// Api, Shared and UI against every OTHER module's Domain, Application, Infrastructure and Api.
     /// <para>
     /// The six named rules above cover the pairs worth their own failure message; this covers the
-    /// rest, which nothing checked before. A per-module layer rule
+    /// rest. A per-module layer rule
     /// (<c>DomainDoesNotDependOnApplication</c> and friends) only forbids the SAME module's higher
     /// layers, and the compile-time layer guard only knows about <c>MMCA.Common.*</c> references, so
-    /// a <c>Sales.Domain -> Catalog.Application</c> project reference passed every gate while
+    /// a <c>Sales.Domain -> Catalog.Application</c> project reference would pass every other gate while
     /// compile-coupling two modules that ADR-007/008 promise can be extracted separately.
     /// </para>
     /// <para>
     /// Shared and UI are SOURCES only. The per-layer <c>SharedDoesNotDependOn*</c> and
     /// <c>UiDoesNotDependOn*</c> rules forbid only the same module's internal layers, so a module's
-    /// Shared or UI reaching another module's Domain, Application, Infrastructure or Api was
-    /// unchecked. As TARGETS they stay out of the product: a module's UI composing another module's
+    /// Shared or UI reaching another module's Domain, Application, Infrastructure or Api would
+    /// otherwise go unchecked. As TARGETS they stay out of the product: a module's UI composing another module's
     /// UI, and any layer consuming another module's Shared contracts, are real, intended
     /// arrangements in the shipped apps (Shared to other Shared has its own rule,
     /// <see cref="ModuleSharedAreIsolated"/>).

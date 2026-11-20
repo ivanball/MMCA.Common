@@ -50,7 +50,7 @@ public static class AwsDataProtectionExtensions
         /// </para>
         /// <para>
         /// A host keeps exactly one key ring: setting this prefix and
-        /// <c>DataProtection:BlobStorageUri</c> together fails the startup tripwire.
+        /// <c>DataProtection:BlobStorageUri</c> or <c>DataProtection:GcsObjectUri</c> together fails the startup tripwire.
         /// </para>
         /// </summary>
         /// <returns>The same builder instance for chaining.</returns>

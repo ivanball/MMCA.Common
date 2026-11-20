@@ -3,8 +3,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// <summary>
 /// Feature-flag lifecycle fitness functions (ADR-031): every flag constant declares whether it is a
 /// permanent capability switch or a temporary rollout toggle, and a temporary one fails the build
-/// once its <c>RemoveBy</c> date has passed. The second rule is the dead-toggle detector the
-/// framework previously recorded as an open trade-off: a flag whose rollout finished stops being a
+/// once its <c>RemoveBy</c> date has passed. The second rule is the dead-toggle detector: a flag
+/// whose rollout finished stops being a
 /// choice and becomes a branch nobody takes, and nothing else in a codebase notices.
 /// </summary>
 public abstract class FeatureFlagLifecycleTestsBase

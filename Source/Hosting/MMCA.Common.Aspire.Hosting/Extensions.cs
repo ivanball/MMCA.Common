@@ -104,8 +104,8 @@ public static class Extensions
     /// <summary>
     /// Configuration section the gateway's edge rate limiter binds from. Mirrors
     /// <c>MMCA.Common.Aspire</c>'s <c>GatewayRateLimitingSettings.SectionName</c> rather than
-    /// referencing it: this AppHost-tier package must not pull in the service-defaults graph (Azure
-    /// Monitor, OpenTelemetry, Key Vault) to spell one configuration key, the same reasoning
+    /// referencing it: this AppHost-tier package must not pull in the service-defaults graph
+    /// (OpenTelemetry, Redis, the health-check drivers, Serilog) to spell one configuration key, the same reasoning
     /// <c>MMCA.Common.Gateway</c> records for its own independence. A unit test cross-asserts the two
     /// are equal, so a section rename cannot silently orphan the lift.
     /// </summary>
@@ -230,7 +230,7 @@ public static class Extensions
         /// different topology semantics: anything that only breaks on Azure Service Bus (entity
         /// naming limits, topic/subscription provisioning, scheduled redelivery) is invisible locally
         /// until it reaches production. This closes that divergence for hosts that want it, and it is
-        /// opt-in rather than the default because the emulator costs two containers and a warm-up.
+        /// opt-in rather than the default because the emulator costs a container and a warm-up.
         /// <para>
         /// The emulator keeps its state in SQL Server, so it is wired to an EXISTING SQL Server
         /// resource (<paramref name="sqlServer"/>) rather than starting one of its own: a stack that
@@ -353,7 +353,7 @@ public static class Extensions
 
         /// <summary>
         /// Wires JWKS-based JWT authority discovery onto a project resource. The consuming
-        /// service should call <c>AddForwardedJwtBearer(authority, audience)</c> using the
+        /// service should call <c>AddForwardedJwtBearer(authority, audience, configuration, environment)</c> using the
         /// <c>Authentication__JwtBearer__Authority</c> environment variable that this method sets,
         /// so its JWT bearer middleware fetches the Identity service's JWKS document and
         /// validates tokens against the published RSA public key.

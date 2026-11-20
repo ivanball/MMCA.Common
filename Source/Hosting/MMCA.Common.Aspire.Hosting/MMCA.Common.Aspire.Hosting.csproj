@@ -17,7 +17,7 @@
          the receiver and return type of every service-wiring extension in this package. -->
     <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
-    <!-- WithDataSource wires a service to its own SqlServerDatabaseResource (database per
+    <!-- WithSQLServerDataSource wires a service to its own SqlServerDatabaseResource (database per
          microservice). This pulls in Aspire.Hosting.SqlServer for the resource type. -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     <!-- Direct reference lifting the System.Security.Cryptography.Pkcs transitive (10.0.12 from

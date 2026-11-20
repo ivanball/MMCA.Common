@@ -19,10 +19,10 @@ internal enum AuthOutcome
 /// <para>
 /// The case that matters is <see cref="AuthOutcome.Silent"/>. A submit that fails with NEITHER a
 /// navigation NOR a rendered error alert (a 500 that renders nothing, a dropped request, a JS
-/// exception mid-submit) used to leave the wait returning normally, and the caller's follow-up
-/// interactivity wait was already satisfied by the still-rendered auth page. Login and registration
-/// then reported success on a sign-in that never happened, and the real failure surfaced much later
-/// as an unrelated assertion.
+/// exception mid-submit) would otherwise leave the wait returning normally, and the caller's follow-up
+/// interactivity wait is already satisfied by the still-rendered auth page. Login and registration
+/// would then report success on a sign-in that never happened, and the real failure would surface much
+/// later as an unrelated assertion.
 /// </para>
 /// </summary>
 internal static class AuthOutcomeRules

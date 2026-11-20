@@ -6,8 +6,7 @@ public static partial class ArchitectureRules
     /// Translation-coverage fitness gate (ADR-027): every base <c>*.resx</c> under <c>Source/</c> must
     /// have, for each required culture, a sibling <c>&lt;stem&gt;.&lt;culture&gt;.resx</c> that translates
     /// every key with a non-empty value. This fails the build when a new English string ships without its
-    /// translation, instead of silently degrading to the English fallback at runtime — the missing-key gate
-    /// the i18n posture previously lacked (only the advisory <c>MA0076</c> formatting analyzer existed).
+    /// translation, instead of silently degrading to the English fallback at runtime.
     /// The required-culture list is supplied by the caller (e.g. the repo's supported-culture allowlist
     /// minus the default), so the rule is repo-agnostic and vacuous for single-locale repos.
     /// </summary>

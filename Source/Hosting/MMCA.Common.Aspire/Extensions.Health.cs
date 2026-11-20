@@ -43,8 +43,9 @@ public static partial class Extensions
         /// <summary>
         /// Conditionally registers health checks for infrastructure dependencies (SQL Server,
         /// PostgreSQL, SQLite,
-        /// Redis, RabbitMQ) when their connection strings are configured. These are tagged as readiness
-        /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
+        /// Redis, RabbitMQ) when their connection strings are configured. None is tagged live (Redis and
+        /// RabbitMQ are tagged optional, which also keeps them off <c>/health/ready</c>), so they appear
+        /// in <c>/health</c> but not <c>/alive</c>, and a transient
         /// infrastructure outage does not kill the process.
         /// <para>
         /// Every check is registered with the timeout <c>HealthChecks:CheckTimeoutSeconds</c> (5 seconds
@@ -133,7 +134,7 @@ public static partial class Extensions
         /// <list type="bullet">
         ///   <item><c>/health</c> — all checks must pass (used by humans/dashboards).</item>
         ///   <item><c>/alive</c> — liveness probe; only "live"-tagged checks must pass.</item>
-        ///   <item><c>/health/ready</c> — readiness probe; everything except "live"-only checks.
+        ///   <item><c>/health/ready</c> — readiness probe; everything except "live" and "optional" checks.
         ///     Reports unhealthy until the <see cref="WarmupReadinessGate"/> opens, so ACA
         ///     ingress holds back traffic from a replica that is still warming up.</item>
         /// </list>
@@ -161,7 +162,7 @@ public static partial class Extensions
 
             // Readiness: everything except "live"-only and "optional" checks. Warm-up gate is
             // tagged "ready" and reports unhealthy until WarmupHostedService finishes; untagged
-            // dependency checks (e.g., AddSqlServer) also show up here so a failing dependency
+            // dependency checks (e.g., the database checks) also show up here so a failing dependency
             // removes the replica from traffic without restarting the container.
             //
             // "optional" is excluded on purpose. A dependency the app degrades gracefully without
@@ -224,8 +225,8 @@ public static partial class Extensions
     /// when the caller asks for it. Every relational engine is checked because a host picks one from
     /// configuration: SQL Server or PostgreSQL for a deployed service, SQLite for a small
     /// single-node application.
-    /// No check is tagged optional, so they all gate readiness (see the tagging note on the Redis
-    /// branch for why that distinction matters). A host that owns several databases gets one check
+    /// No check is tagged optional, so they all gate readiness (see the "optional" note in
+    /// <c>MapDefaultEndpoints</c> for why that distinction matters). A host that owns several databases gets one check
     /// per database: readiness means every database it serves from is reachable.
     /// </summary>
     /// <param name="healthChecks">The builder the checks are added to.</param>

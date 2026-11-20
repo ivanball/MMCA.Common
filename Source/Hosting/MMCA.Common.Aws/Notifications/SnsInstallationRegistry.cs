@@ -24,7 +24,7 @@ internal sealed class SnsInstallationRegistry(
 {
     /// <summary>
     /// The global secondary index user-targeted sends query: partition key <c>UserId</c> (string),
-    /// projecting at least <c>EndpointArn</c> (ALL is simplest).
+    /// projecting at least <c>EndpointArn</c> and <c>Platform</c> (ALL is simplest).
     /// </summary>
     internal const string UserIdIndexName = "UserId-index";
 

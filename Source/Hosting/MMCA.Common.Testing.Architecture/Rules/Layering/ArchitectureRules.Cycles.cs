@@ -27,8 +27,8 @@ public static partial class ArchitectureRules
     /// generic arguments, array/by-ref/pointer element types recursively expanded.
     /// </para>
     /// <para>
-    /// <b>Limitation - method-body blindness.</b> This package carries no IL or Roslyn dependency, so the
-    /// rule is pure reflection over signatures. A reference that exists ONLY inside a method body (a
+    /// <b>Limitation - method-body blindness.</b> The rule is pure reflection over signatures (it does
+    /// not use the Mono.Cecil IL reader the call-graph rules use). A reference that exists ONLY inside a method body (a
     /// local variable, a constructor call, a static call) is invisible to it, so the rule catches
     /// STRUCTURAL cycles (the ones that show up in the type surface) and cannot claim a clean report
     /// means zero coupling. Compiler-generated types (closure/iterator classes, which do leak some body
@@ -39,8 +39,8 @@ public static partial class ArchitectureRules
     /// <param name="map">The repo's architecture map.</param>
     /// <param name="allowedCycleNamespaces">
     /// Fully-qualified namespace nodes whose cycles are accepted by design. A cycle is skipped only when
-    /// EVERY namespace on its path is listed, so an allowance can never hide a new cycle that merely
-    /// touches an accepted namespace.
+    /// EVERY namespace in its strongly connected component is listed, so an allowance can never hide a
+    /// new cycle that merely touches an accepted namespace.
     /// </param>
     public static void NamespacesHaveNoDependencyCycles(
         IArchitectureMap map,

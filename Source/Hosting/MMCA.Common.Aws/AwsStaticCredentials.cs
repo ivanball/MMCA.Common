@@ -3,8 +3,9 @@ using Amazon.Runtime;
 namespace MMCA.Common.Aws;
 
 /// <summary>
-/// Turns an optional access key pair from configuration into SDK credentials, shared by the storage
-/// and the broker registrations so both read a key pair the same way.
+/// Turns an optional access key pair from configuration into SDK credentials, shared by every
+/// registration that reads one (storage, the broker, Secrets Manager, RDS IAM, SNS push and the
+/// telemetry exporter) so all read a key pair the same way.
 /// </summary>
 internal static class AwsStaticCredentials
 {

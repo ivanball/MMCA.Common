@@ -11,9 +11,9 @@ namespace MMCA.Common.Aspire.Warmup;
 /// rotation forever; transient failures are absorbed by the existing Polly retry pipeline on
 /// the first real request.
 /// <para>
-/// Each task is additionally bounded by <see cref="TaskTimeoutSeconds"/>. Failure was already
-/// harmless, but a task that neither completes nor throws used to leave <c>Task.WhenAll</c>
-/// pending forever and the gate closed with it, so the replica never entered rotation at all:
+/// Each task is additionally bounded by <see cref="TaskTimeoutSeconds"/>. Failure is harmless,
+/// but without the bound a task that neither completes nor throws would leave <c>Task.WhenAll</c>
+/// pending forever and the gate closed with it, so the replica would never enter rotation at all:
 /// strictly worse than serving a cold one. The timeout turns that case into the existing
 /// log-and-continue failure path, which is the whole point of the gate.
 /// </para>

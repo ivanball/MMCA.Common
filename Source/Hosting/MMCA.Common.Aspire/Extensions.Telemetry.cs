@@ -291,7 +291,8 @@ public static partial class Extensions
         }
 
         // MMCA.Common meters (literal names, because Aspire has no reference to the
-        // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
+        // defining assemblies): outbox counters and dispatch lag, the internal-command
+        // queue's completions, dead letters, latency and backlog, CQRS RED histograms
         // plus query cache hit/miss, the idempotency filter's replay, conflict and
         // degraded counters, the recurring scheduler's run outcomes, duration and
         // schedule lag (inert in a host that never enables Scheduler:Enabled), the
@@ -316,8 +317,8 @@ public static partial class Extensions
         // Polly's own meter (ADR-009). The standard resilience handler above is on every
         // HttpClient and every gRPC typed client, so it is the component that decides
         // whether an inter-service call is retried, timed out or refused by an open
-        // circuit, and until this meter was subscribed none of that left the process.
-        // A brownout looked, from the outside, exactly like latency.
+        // circuit, and without this meter none of that leaves the process.
+        // A brownout would look, from the outside, exactly like latency.
         metrics.AddMeter(PollyMeterName);
 
         // Cost control (rubric §31): Polly's two duration HISTOGRAMS

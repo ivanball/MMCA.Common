@@ -1,8 +1,7 @@
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// Shared assertion helpers for architecture fitness functions — the un-drifted successor to the
-/// three per-repo <c>ArchitectureTestHelper.AssertNoViolations</c> copies. One overload reports a
+/// Shared assertion helpers for architecture fitness functions. One overload reports a
 /// NetArchTest <c>TestResult</c>; the other reports a reflection-derived violation list.
 /// </summary>
 public static class ArchitectureAssert

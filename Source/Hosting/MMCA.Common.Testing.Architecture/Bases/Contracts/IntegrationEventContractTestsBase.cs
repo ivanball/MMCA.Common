@@ -83,7 +83,7 @@ public abstract class IntegrationEventContractTestsBase
     /// different type is reported as a retype rather than as an unrelated add and remove, because
     /// that is the failure a consumer sees: the property still deserializes, into the wrong shape.
     /// </summary>
-    /// <param name="eventName">The event's full type name, for the message.</param>
+    /// <param name="eventName">The event's contract key (its <c>[EventName]</c> or full type name), for the message.</param>
     /// <param name="expected">The committed members, member name to declared type.</param>
     /// <param name="actual">The live members, member name to declared type.</param>
     /// <returns>One line per differing member.</returns>
@@ -119,7 +119,7 @@ public abstract class IntegrationEventContractTestsBase
     /// committed literal surfaces as a mismatch rather than being silently dropped.
     /// </summary>
     /// <param name="lines">The contract lines to parse.</param>
-    /// <returns>Each event's members, keyed by the event's full type name.</returns>
+    /// <returns>Each event's members, keyed by the event's contract key (its <c>[EventName]</c> or full type name).</returns>
     private static Dictionary<string, Dictionary<string, string>> Parse(IReadOnlyList<string> lines)
     {
         var events = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);

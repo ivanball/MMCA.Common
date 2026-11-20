@@ -13,8 +13,8 @@ namespace MMCA.Common.Aspire.Kestrel;
 /// answer HTTP/2 with prior knowledge (h2c): there is no TLS, so there is no ALPN to negotiate
 /// with, and the typed gRPC clients from <c>MMCA.Common.Grpc</c> speak h2c directly. Second, the
 /// Azure Container Apps <c>httpGet</c> probes speak HTTP/1.1, which an Http2-only endpoint rejects
-/// with GOAWAY <c>HTTP_1_1_REQUIRED</c>: that is why those probes used to be TCP-only and never
-/// consulted the real, dependency-aware health checks. A separate Http1-only listener on a port
+/// with GOAWAY <c>HTTP_1_1_REQUIRED</c>: against such an endpoint alone those probes could only be
+/// TCP-only and never consult the real, dependency-aware health checks. A separate Http1-only listener on a port
 /// that is never published through ingress gives the platform a probe target while the service
 /// endpoints stay on their own profile, and <c>MapDefaultEndpoints()</c> maps <c>/health</c>,
 /// <c>/alive</c> and <c>/health/ready</c> on every listener, so the probe listener serves the real

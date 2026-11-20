@@ -217,11 +217,10 @@ public static class PageExtensions
         /// <summary>
         /// Types <paramref name="text"/> into a list page's search field and waits for the debounced
         /// server filter to surface a matching grid row. The single search helper shared by every
-        /// consumer list-page object; it replaces the per-page copies, one of which slept a fixed
-        /// 1.5 seconds and hoped.
+        /// consumer list-page object.
         /// </summary>
         /// <remarks>
-        /// Three things make this reliable where the hand-rolled versions were not.
+        /// Three things make this reliable.
         /// <list type="number">
         /// <item><description>It waits for the grid's own loading indicator to clear rather than for a
         /// row to exist. Filling the field while the first ServerData page is still arriving loses the
@@ -367,7 +366,7 @@ public static class PageExtensions
         /// which polls until the value sticks (or <paramref name="timeout"/> elapses). If the pre-render
         /// value was wiped before it stuck, the field is re-typed character-by-character and re-asserted.
         /// This is the single fill helper shared by <c>E2ETestBase</c>, <c>LoginPage</c>, and
-        /// <c>RegisterPage</c>; it replaces the duplicated fixed-delay retry loops.
+        /// <c>RegisterPage</c>.
         /// </summary>
         public async Task FillAndVerifyAsync(string value, float timeout = 10_000)
         {
@@ -477,7 +476,7 @@ public static class PageExtensions
     [SuppressMessage(
         "Style",
         "IDE0051:Remove unused private members",
-        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string CompactHtml(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))

@@ -200,7 +200,7 @@ public abstract class CrossServiceFixtureBase : IAsyncLifetime
         Environment.SetEnvironmentVariable(key, value);
     }
 
-    // The parameterless module-builder ctors are [Obsolete] in Testcontainers 4.11 but fully functional
+    // The parameterless module-builder ctors are [Obsolete] in Testcontainers 4.11 and later but fully functional
     // (each uses its module's own default pinned image). Testcontainers is version-pinned, so this is
     // stable; suppress the deprecation rather than couple to an image-ctor overload whose signature varies.
     // Built here rather than in a field initializer so a subclass can be constructed (and its non-container

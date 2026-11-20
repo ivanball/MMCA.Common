@@ -6,7 +6,7 @@ namespace MMCA.Common.Testing.Architecture;
 public static partial class ArchitectureRules
 {
     /// <summary>
-    /// Accessibility rule (rubric section 20, WCAG 2.1 AA): every routable page (a <c>.razor</c> file
+    /// Accessibility rule (rubric section 21, WCAG 2.1 AA): every routable page (a <c>.razor</c> file
     /// with an <c>@page</c> directive) gives the document exactly one level-one heading, so a screen
     /// reader can jump to the page title and axe's <c>page-has-heading-one</c> best-practice rule, which
     /// the WCAG-tag scans in <c>MMCA.Common.Testing.E2E</c> never run, would pass. A page title is a

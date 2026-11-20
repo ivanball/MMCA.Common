@@ -114,9 +114,8 @@ public abstract class AuthorizationTestsBase : E2ETestBase
             // Assert: the shared Forbidden page renders (its h1 carries the localized "Access
             // Denied" title). Role denial is not a redirect: the URL stays on the requested path, so
             // the page CONTENT is the only reliable denial signal. The heading is located as a plain
-            // h1: role="alert" used to sit ON the heading, where the explicit role replaced the
-            // implicit heading one and left the page with no level-1 heading at all; it now sits on
-            // the message beneath.
+            // h1: role="alert" sits on the message beneath it, not on the heading, where the explicit
+            // role would replace the implicit heading one and leave the page with no level-1 heading.
             await Expect(Page.GetByRole(AriaRole.Heading, new() { Level = 1 }))
                 .ToContainTextAsync("Access Denied", new() { Timeout = 15_000 }).ConfigureAwait(false);
         }

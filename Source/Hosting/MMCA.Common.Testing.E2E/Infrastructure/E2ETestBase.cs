@@ -51,7 +51,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         GC.SuppressFinalize(this);
 
         // A failed InitializeAsync (context or page creation threw) leaves these null despite the
-        // null! declarations, and the NullReferenceException from disposal then replaced the real
+        // null! declarations, and a NullReferenceException from disposal would replace the real
         // setup error in the run output. StopTracingAsync dereferences the context, so it is guarded
         // by the same check.
         if (E2ETestConfiguration.TracePath is not null && _context is not null)
@@ -137,7 +137,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         await FillFieldAsync(Page.GetByLabel("Email"), email).ConfigureAwait(false);
         await FillFieldAsync(Page.GetByLabel("Password"), password).ConfigureAwait(false);
 
-        // MudBlazor applies text-transform: uppercase — visible text is "LOGIN"
+        // MudBlazor applies text-transform: uppercase — visible text is "SIGN IN"
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync().ConfigureAwait(false);
 
         // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full page reload away
@@ -402,10 +402,9 @@ public abstract class E2ETestBase : IAsyncLifetime
     // (1) a context-destroyed PlaywrightException from the in-flight forceLoad reload (the original
     //     guarded race), and (2) a TimeoutException when the freshly loaded page never initializes its
     //     runtime under contention (InteractiveAuto's second visit boots the downloaded WASM bundle,
-    //     which can exceed the wait on a saturated host). The old catch handled only
-    //     PlaywrightException, so Playwright's TimeoutException (which derives from
-    //     System.TimeoutException, not PlaywrightException) skipped the retry entirely; and re-waiting
-    //     without reloading just watched the same stalled boot. A reload issues a fresh request whose
+    //     which can exceed the wait on a saturated host). Both are caught because Playwright's
+    //     TimeoutException derives from System.TimeoutException, not PlaywrightException; and the
+    //     retry reloads because re-waiting without reloading just watches the same stalled boot. A reload issues a fresh request whose
     //     framework assets are now HTTP-cached, giving the retry a genuinely new attempt.
     private async Task WaitForInteractiveOrReloadAsync()
     {
@@ -421,7 +420,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     }
 
     // Waits for the post-submit auth result, racing THREE signals so success detection does NOT depend
-    // on the interactive "Sign out" button having hydrated — which under Blazor Server-mode prerender on
+    // on the interactive "Logout" button having hydrated — which under Blazor Server-mode prerender on
     // a contended CI runner can lag well behind the successful forceLoad (the TD-06/07 register/login
     // contention failure mode). The forceLoad URL change away from the auth page (<paramref
     // name="authPagePath"/>, e.g. "/login" or "/register") is the interactivity-INDEPENDENT success
@@ -475,7 +474,7 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         // Silent: all three waits timed out and the grace window added nothing. The auth page is
         // still showing with nothing rendered to say why, so the submit was never accepted. Returning
-        // here is what used to let a broken login report success (the caller's interactivity wait is
+        // here would let a broken login report success (the caller's interactivity wait is
         // already satisfied by the still-rendered auth page), so fail with the diagnostics instead.
         var budget = (E2ETestConfiguration.AuthTimeout + E2ETestConfiguration.AuthGraceTimeout)
             .ToString(CultureInfo.InvariantCulture);
@@ -488,8 +487,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     // AuthTimeout) for the post-auth full navigation away from it to commit AND fire its load event
     // (WaitForURLAsync's default WaitUntil is Load), so the caller's interactivity wait runs against
     // the new page rather than the old one. Returns at once when the URL has already left the auth
-    // page. A success that renders in place with no navigation keeps its old behavior: the timeout
-    // is swallowed and the caller carries on, so this wait cannot fail a sign-in that used to pass.
+    // page. A success that renders in place with no navigation is not failed here: the timeout
+    // is swallowed and the caller carries on.
     private async Task WaitForPendingNavigationAwayFromAsync(string authPagePath)
     {
         if (!Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase))
@@ -506,7 +505,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
         {
             // No navigation came: the signed-in state rendered in place, which the result wait has
-            // already accepted. Fall through to the interactivity wait as before.
+            // already accepted. Fall through to the interactivity wait.
         }
     }
 

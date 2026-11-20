@@ -9,8 +9,8 @@ using Serilog.Events;
 namespace MMCA.Common.Aspire.Logging;
 
 /// <summary>
-/// The Serilog bootstrap every MMCA service host repeats verbatim before
-/// <c>AddServiceDefaults()</c>: console always, a rolling file sink outside Production, the
+/// The Serilog bootstrap the composed hosts (<c>AddMmcaServiceHost</c>, <c>AddMmcaBlazorWebHost</c>) run
+/// before <c>AddServiceDefaults()</c>: console always, a rolling file sink outside Production, the
 /// framework's minimum-level overrides, and registration as ONE logging provider.
 /// <para>
 /// The provider registration is the load-bearing part. <c>UseSerilog()</c> replaces the whole

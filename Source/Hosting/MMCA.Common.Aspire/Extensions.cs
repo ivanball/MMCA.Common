@@ -50,14 +50,15 @@ public static partial class Extensions
             // is not one of them: it builds its clients through its own forwarder client factory.
             builder.Services.ConfigureHttpClientDefaults(http =>
             {
-                // Polly resilience pipeline (values from HttpResilienceDefaults, shared with the
-                // gRPC typed clients in MMCA.Common.Grpc):
+                // Polly resilience pipeline (values from HttpResilienceDefaults; the gRPC typed
+                // clients in MMCA.Common.Grpc share only the retry budget and the breaker window):
                 //   - 30s per-attempt timeout
                 //   - Circuit breaker sampled over 60s
                 //   - 90s total request timeout (including retries)
                 //   - ONE retry per hop: the UI service base classes own user-facing retries.
                 //     Stacking full retry budgets at every hop multiplies load during a backend
-                //     brownout (previously up to 4 outer x 4 inner = 16 gateway hits per action).
+                //     brownout (full budgets at both layers would mean up to 4 outer x 4 inner = 16
+                //     gateway hits per action).
                 http.AddStandardResilienceHandler(options =>
                 {
                     options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
@@ -67,7 +68,7 @@ public static partial class Extensions
 
                     // Never replay a POST or PATCH: an attempt that timed out may still be running
                     // server-side, and most hops carry no idempotency key (a server-to-server call
-                    // never does; the UI's "APIClient" stamps one only on EntityServiceBase creates,
+                    // never does; the UI's "APIClient" stamps one only on EntityServiceBase creates and updates,
                     // whose replay the UI service base classes own). GET, PUT,
                     // DELETE and the other idempotent verbs keep their one retry, which is why this
                     // names the two verbs rather than using DisableForUnsafeHttpMethods (that helper
@@ -116,7 +117,7 @@ public static partial class Extensions
         /// the <see cref="WarmupHostedService"/> background runner, the
         /// <see cref="WarmupReadinessHealthCheck"/> tagged <c>ready</c>, and the built-in
         /// <see cref="OpenIdConnectMetadataWarmupTask"/> that pre-fetches the OIDC discovery
-        /// document for every configured JwtBearer scheme. Additional tasks can be registered
+        /// document for the configured <c>Authentication:JwtBearer:Authority</c>. Additional tasks can be registered
         /// with <c>AddWarmupTask&lt;T&gt;()</c>.
         /// </summary>
         /// <returns>The same builder instance for chaining.</returns>

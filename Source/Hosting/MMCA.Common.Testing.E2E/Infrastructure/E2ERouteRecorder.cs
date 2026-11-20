@@ -8,7 +8,7 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
 /// <summary>
 /// Records which pages and API paths an end-to-end test reaches, for the test-gap report (ADR-147).
 /// Opt-in: <see cref="FromEnvironment"/> returns <see langword="null"/> unless <c>E2E_ROUTE_LOG_DIR</c>
-/// names a folder, so a run that never sets it behaves exactly as before. When on, each test writes
+/// names a folder, so a run that never sets it records nothing. When on, each test writes
 /// one JSON Lines file (<c>&lt;test&gt;-&lt;guid&gt;.jsonl</c>), so tests running in parallel never share
 /// a file, and each line is <c>{ test, kind, method, path }</c>.
 /// <para>

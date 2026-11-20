@@ -25,7 +25,7 @@ namespace MMCA.Common.Testing.Conformance;
 /// breaking change, never on an additive or documentation-only one. Refreshing the baseline is a
 /// deliberate step: set <see cref="RefreshBaselineEnvironmentVariable"/> to <c>1</c>, run the test once
 /// (it rewrites the file and fails), then review and commit the new baseline. Without the override the
-/// gate is a no-op and the subclass behaves exactly as before.
+/// gate is a no-op.
 /// </para>
 /// </summary>
 /// <typeparam name="TFixture">The concrete fixture type implementing <see cref="IIntegrationTestFixture"/>.</typeparam>
@@ -119,7 +119,7 @@ public abstract class OpenApiContractTestsBase<TFixture> : IntegrationTestBase<T
     {
         if (BaselineDocumentPath is not { } configuredPath)
         {
-            // Not opted in: no baseline, no request, no change from the behavior before this gate.
+            // Not opted in: no baseline, no request.
             return;
         }
 

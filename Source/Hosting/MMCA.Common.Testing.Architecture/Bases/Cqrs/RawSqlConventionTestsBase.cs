@@ -20,8 +20,9 @@ namespace MMCA.Common.Testing.Architecture;
 /// </para>
 /// <para>
 /// <b>Implementation and its limits:</b> the same honest textual scan as
-/// <see cref="RawQueryableConventionTestsBase"/>, for the same reason (this package carries no IL or
-/// Roslyn dependency, and reflection cannot see member usage inside method bodies). It reads the
+/// <see cref="RawQueryableConventionTestsBase"/>, for the same reason (this package carries no
+/// Roslyn dependency, this rule does not use the Mono.Cecil IL reader, and reflection cannot see
+/// member usage inside method bodies). It reads the
 /// <c>.cs</c> files under <see cref="ScannedSourceDirectories"/> and flags member access on the four
 /// banned names, skipping whole-line <c>//</c> comments; a match inside a string literal or a
 /// trailing comment is a (rare) false positive, recorded in <see cref="AllowedFiles"/> with a

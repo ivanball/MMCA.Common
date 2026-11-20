@@ -8,14 +8,14 @@ public static partial class ArchitectureRules
     private const string ExtensionMarkerAttributeFullName = "System.Runtime.CompilerServices.ExtensionMarkerAttribute";
     private const string CompilerGeneratedAttributeFullName = "System.Runtime.CompilerServices.CompilerGeneratedAttribute";
 
+    /// <summary>The exception the compiler throws from the default arm of a switch expression with no discard.</summary>
+    private const string SwitchExpressionExceptionFullName = "System.Runtime.CompilerServices.SwitchExpressionException";
+
     /// <summary>
     /// The exceptions a Result-pattern domain still throws: argument guards, which report a caller
     /// BUG rather than a business outcome. A caller cannot recover from passing null, so there is
     /// nothing for a <c>Result</c> to carry.
     /// </summary>
-    /// <summary>The exception the compiler throws from the default arm of a switch expression with no discard.</summary>
-    private const string SwitchExpressionExceptionFullName = "System.Runtime.CompilerServices.SwitchExpressionException";
-
     private static readonly string[] ArgumentGuardExceptionFullNames =
     [
         "System.ArgumentException",

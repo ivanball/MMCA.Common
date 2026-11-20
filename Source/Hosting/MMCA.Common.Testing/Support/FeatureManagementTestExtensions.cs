@@ -27,7 +27,7 @@ public static class FeatureManagementTestExtensions
         /// The host's configuration is picked up only when it was registered as an instance, which is
         /// how <c>WebApplicationFactory</c> and the framework's own hosts register it. Behind a
         /// factory registration there is nothing to read without building the provider, so the flags
-        /// stand alone, exactly as they did before.
+        /// stand alone.
         /// </para>
         /// </summary>
         /// <param name="features">A dictionary of feature flag names to their enabled/disabled state.</param>

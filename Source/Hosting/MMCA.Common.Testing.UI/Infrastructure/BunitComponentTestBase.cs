@@ -63,7 +63,7 @@ public abstract class BunitComponentTestBase : BunitContext
         Services.AddSingleton<IAuthorizationService, DefaultAuthorizationService>();
         Services.AddSingleton<AuthenticationStateProvider>(_authProvider);
 
-        // Localization (ADR-027): components/pages now inject IStringLocalizer<T>. Registering the open
+        // Localization (ADR-027): components/pages inject IStringLocalizer<T>. Registering the open
         // generic here lets every component test render localized markup (resolving to the neutral/English
         // resources in the component's own assembly) without per-test setup.
         Services.AddLogging();
@@ -89,8 +89,7 @@ public abstract class BunitComponentTestBase : BunitContext
     /// The ordering is load-bearing, which is the whole reason this exists as one helper:
     /// <c>SetRendererInfo</c> builds and FREEZES the bUnit service provider, so any registration made
     /// after it is silently ignored, and the page then resolves the framework default instead of the
-    /// test's double. Fifteen call sites across the MMCA repos hand-rolled this block and each one had
-    /// to remember that rule.
+    /// test's double.
     /// </para>
     /// <para>
     /// <paramref name="stubViewport"/> substitutes MudBlazor's <see cref="IBrowserViewportService"/>
