@@ -52,19 +52,22 @@ public static class AzureDataProtectionExtensions
         /// <returns>The same builder instance for chaining.</returns>
         public TBuilder AddAzureDataProtection()
         {
-            // The receipt the core startup tripwire checks: DataProtection:BlobStorageUri set without
-            // this call fails the host instead of running every replica on its own key ring.
-            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureDataProtection));
-
             var blobStorageUri = builder.Configuration["DataProtection:BlobStorageUri"];
 
             // Gate 1 (blob persistence). Absent means "do nothing": a developer machine, a test host,
             // and the Helpdesk seed all run single-process, where the in-memory default is correct and
-            // an unconditional Azure dependency at startup would be a liability, not a feature.
+            // an unconditional Azure dependency at startup would be a liability, not a feature. No
+            // receipt either, so a URI that only appears in a source added after this call (a Key
+            // Vault secret loaded by a later AddAzureKeyVaultConfiguration, for one) still trips the
+            // startup check.
             if (string.IsNullOrWhiteSpace(blobStorageUri))
             {
                 return builder;
             }
+
+            // The receipt the core startup tripwire checks: DataProtection:BlobStorageUri set without
+            // this call fails the host instead of running every replica on its own key ring.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureDataProtection));
 
             var applicationName = builder.Configuration["DataProtection:ApplicationName"]
                 ?? builder.Environment.ApplicationName;

@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **The Azure startup calls leave their tripwire receipt only when they registered something** (MMCA.Common.Azure.Startup; ADR-134): `AddAzureKeyVaultConfiguration()`, `AddAzureDataProtection()` and `AddAzureMonitorExporter()` now add their `HostIntegrationMarker` after their "do nothing" gate, as the six AWS and GCP twins already did. Before, a call made while its gate key (`KeyVault:Uri`, `DataProtection:BlobStorageUri`, `APPLICATIONINSIGHTS_CONNECTION_STRING`) was still blank registered nothing yet satisfied the startup check, so a key that arrived through a source added after the call (calling `AddAzureDataProtection()` before `AddAzureKeyVaultConfiguration()` with the blob URI held in the vault, for one) left every replica on its own in-memory key ring with no startup error. **Behavior change: such a host now fails at startup, naming the missing call**; move the call below the source that supplies its key. `AddAzureMonitorExporter()` still refuses to run before `AddServiceDefaults()` whether or not the connection string is set. No API change.
+
 ## [1.309.0] - 2026-11-19
 
 ### Added

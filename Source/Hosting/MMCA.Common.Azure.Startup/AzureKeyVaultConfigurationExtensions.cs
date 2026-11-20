@@ -79,15 +79,13 @@ public static class AzureKeyVaultConfigurationExtensions
         /// </exception>
         public TBuilder AddAzureKeyVaultConfiguration()
         {
-            // The receipt the core startup tripwire checks: KeyVault:Uri set without this call fails
-            // the host instead of starting it with every vault secret missing.
-            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureKeyVaultConfiguration));
-
             var vaultUri = builder.Configuration["KeyVault:Uri"];
 
             // The gate. Absent means "do nothing": a developer machine, a test host and the Helpdesk
             // seed all read their configuration from files and user secrets, where reaching for a vault
-            // at startup buys nothing and costs a hard Azure dependency on every run.
+            // at startup buys nothing and costs a hard Azure dependency on every run. No receipt
+            // either, so a URI that only appears in a source added after this call still trips the
+            // startup check.
             if (string.IsNullOrWhiteSpace(vaultUri))
             {
                 return builder;
@@ -111,6 +109,10 @@ public static class AzureKeyVaultConfigurationExtensions
 
                 options.ReloadInterval = TimeSpan.FromMinutes(minutes);
             }
+
+            // The receipt the core startup tripwire checks: KeyVault:Uri set without this call fails
+            // the host instead of starting it with every vault secret missing.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureKeyVaultConfiguration));
 
             builder.Configuration.AddAzureKeyVault(new Uri(vaultUri), new DefaultAzureCredential(), options);
 

@@ -51,14 +51,16 @@ public static class AzureMonitorExporterExtensions
                     "AddAzureMonitorExporter() must run after AddServiceDefaults() (or ConfigureOpenTelemetry()): the outbox-poll and probe filter processors service defaults register have to run before the Azure Monitor exporter's batch processor, or the spans they drop are exported anyway. Move the call below builder.AddServiceDefaults().");
             }
 
-            // The receipt the core startup tripwire checks: APPLICATIONINSIGHTS_CONNECTION_STRING set
-            // without this call fails the host instead of starting it with no telemetry export.
-            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureMonitorExporter));
-
+            // The gate. Absent means "do nothing": no exporter, and no receipt either, so a connection
+            // string that only appears in a source added after this call still trips the startup check.
             if (string.IsNullOrWhiteSpace(builder.Configuration[ConnectionStringKey]))
             {
                 return builder;
             }
+
+            // The receipt the core startup tripwire checks: APPLICATIONINSIGHTS_CONNECTION_STRING set
+            // without this call fails the host instead of starting it with no telemetry export.
+            builder.Services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureMonitorExporter));
 
             builder.Services.AddOpenTelemetry().UseAzureMonitor();
 

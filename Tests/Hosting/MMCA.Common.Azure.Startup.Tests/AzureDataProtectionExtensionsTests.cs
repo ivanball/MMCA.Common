@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Aspire.Integrations;
 
 namespace MMCA.Common.Azure.Startup.Tests;
 
@@ -64,6 +65,34 @@ public sealed class AzureDataProtectionExtensionsTests
             .Should().Be(
                 "Azure.Extensions.AspNetCore.DataProtection.Blobs",
                 because: "the replacement has to be the blob repository specifically: any other repository leaves each replica with its own keys");
+    }
+
+    [Fact]
+    public void AddAzureDataProtection_WithoutBlobStorageUri_LeavesNoReceipt()
+    {
+        var builder = BuilderWith([]);
+
+        builder.AddAzureDataProtection();
+
+        builder.Services.Should().NotContain(
+            d => d.ImplementationInstance is HostIntegrationMarker,
+            because: "a call that added nothing leaves no receipt, so a blob URI that appears later (a vault secret loaded after this call, for one) still trips the startup check");
+    }
+
+    [Fact]
+    public void AddAzureDataProtection_WithBlobStorageUri_LeavesTheReceipt()
+    {
+        var builder = BuilderWith(new()
+        {
+            ["DataProtection:BlobStorageUri"] = "https://example.blob.core.windows.net/dataprotection/keys.xml",
+        });
+
+        builder.AddAzureDataProtection();
+
+        builder.Services.Should().ContainSingle(
+            d => d.ImplementationInstance is HostIntegrationMarker
+                && string.Equals(((HostIntegrationMarker)d.ImplementationInstance).Name, HostIntegrationNames.AzureDataProtection, StringComparison.Ordinal),
+            because: "a call that registered the blob key ring leaves the receipt the startup check reads");
     }
 
     private static HostApplicationBuilder BuilderWith(Dictionary<string, string?> settings)
