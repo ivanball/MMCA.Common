@@ -16,4 +16,23 @@ public interface ISessionAwareTokenStorage : ITokenStorageService
     /// The stored access token is already cleared when it fires.
     /// </summary>
     event EventHandler? SessionEnded;
+
+    /// <summary>
+    /// The API answered <c>401</c> to a request that carried <paramref name="rejectedAccessToken"/>
+    /// (<see cref="AuthDelegatingHandler"/> reports it). When this storage still holds that token, it
+    /// is discarded and ONE refresh is attempted, through the same single-flight a stale token takes:
+    /// a definitive "no session" ends the session exactly as an expired token's refresh does (the
+    /// stored tokens are cleared and <see cref="SessionEnded"/> fires), and an acquired token replaces
+    /// the rejected one. A token the storage no longer holds (already replaced, or never held by this
+    /// instance) changes nothing.
+    /// </summary>
+    /// <param name="rejectedAccessToken">The access token the API refused.</param>
+    /// <returns>The access token this storage holds afterwards, or <see langword="null"/> when none.</returns>
+    /// <remarks>
+    /// Without this, a session ended only when a refresh was refused, and an API <c>401</c> never
+    /// caused one: a locked user's still-fresh token kept the shell signed in behind
+    /// "you are not signed in" errors until it expired. The default implementation changes nothing,
+    /// so a storage written before this member keeps compiling and behaves as before.
+    /// </remarks>
+    Task<string?> RenewRejectedAccessTokenAsync(string rejectedAccessToken) => Task.FromResult<string?>(null);
 }

@@ -1,4 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.UI.Services.Auth;
@@ -319,6 +322,77 @@ public abstract class TokenStorageServiceTestsBase
         notifications.Should().Be(0, "nobody was signed in, so there is nothing to sign out");
     }
 
+    // == Store Run 5 D1b: an API 401 to a held token makes one refresh attempt ==
+    [Fact]
+    public async Task ApiUnauthorized_ForAFreshHeldToken_WhenTheRefreshIsRefused_EndsTheSession()
+    {
+        // A locked user's token is still fresh by the clock, so no read ever refreshed it: the shell
+        // stayed signed in behind "you are not signed in" errors. The 401 itself must trigger the refresh.
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(TokenAcquisition.NoSession);
+        var (sut, provider) = await CreateSignedInWithFreshTokenAsync(refresher);
+        Task<AuthenticationState>? notified = null;
+        provider.AuthenticationStateChanged += task => notified = task;
+
+        using var response = await SendThroughHandlerAsync(sut, HttpStatusCode.Unauthorized);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "the caller still gets the server's answer");
+        notified.Should().NotBeNull("a refused refresh after an API 401 is a sign-out");
+        (await notified!).User.Identity!.IsAuthenticated.Should().BeFalse();
+        (await sut.GetAccessTokenAsync()).Should().BeNull("the rejected token is gone");
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApiUnauthorized_WhenTheRefreshSucceeds_TheNewTokenServes_AndItsOwn401DoesNotRefreshAgain()
+    {
+        var renewed = CreateUniqueJwt(DateTime.UtcNow.AddMinutes(15));
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        refresher.SetupSequence(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TokenAcquisition.Acquired(renewed))
+            .ReturnsAsync(TokenAcquisition.NoSession);
+        var (sut, provider) = await CreateSignedInWithFreshTokenAsync(refresher);
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        using (var response = await SendThroughHandlerAsync(sut, HttpStatusCode.Unauthorized))
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        (await sut.GetAccessTokenAsync()).Should().Be(renewed, "the next call carries the refreshed token");
+
+        using (var response = await SendThroughHandlerAsync(sut, HttpStatusCode.Unauthorized))
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        refresher.Verify(
+            r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()),
+            Times.Once,
+            "a 401 to the token a refresh just produced must not drive another refresh");
+        notifications.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ApiUnauthorized_ForATokenTheStorageDoesNotHold_ChangesNothing()
+    {
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        var (sut, provider) = await CreateSignedInWithFreshTokenAsync(refresher);
+        var held = await sut.GetAccessTokenAsync();
+        var notifications = 0;
+        provider.AuthenticationStateChanged += _ => notifications++;
+
+        using (var response = await SendThroughHandlerAsync(sut, HttpStatusCode.Unauthorized, bearer: CreateUniqueJwt(DateTime.UtcNow.AddMinutes(10))))
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Never);
+        (await sut.GetAccessTokenAsync()).Should().Be(held);
+        notifications.Should().Be(0);
+    }
+
     /// <summary>A JWT that expires at <paramref name="expires"/>.</summary>
     protected internal static string CreateJwt(DateTime expires) =>
         new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
@@ -367,6 +441,47 @@ public abstract class TokenStorageServiceTestsBase
         return (sut, provider, refresher);
     }
 
+    /// <summary>
+    /// A JWT that expires at <paramref name="expires"/> and is unique: the delegating handler remembers
+    /// tokens process-wide, so two tests must never share one.
+    /// </summary>
+    protected internal static string CreateUniqueJwt(DateTime expires) =>
+        new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+            claims: [new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))],
+            notBefore: expires.AddMinutes(-60),
+            expires: expires));
+
+    /// <summary>Sends one request through a real <see cref="AuthDelegatingHandler"/> over <paramref name="storage"/>.</summary>
+    /// <param name="storage">The storage the handler reads the bearer from.</param>
+    /// <param name="answer">The status the API answers with.</param>
+    /// <param name="bearer">A bearer the request already carries; the storage's token when null.</param>
+    protected static async Task<HttpResponseMessage> SendThroughHandlerAsync(
+        ITokenStorageService storage,
+        HttpStatusCode answer,
+        string? bearer = null)
+    {
+        using var invoker = new HttpMessageInvoker(new AuthDelegatingHandler(storage) { InnerHandler = new AnsweringHandler(answer) });
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://api.test/widgets"));
+        if (bearer is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        }
+
+        return await invoker.SendAsync(request, CancellationToken.None);
+    }
+
+    /// <summary>A signed-in storage holding a FRESH token (no read refreshes it), observed by a provider.</summary>
+    private async Task<(ISessionAwareTokenStorage Sut, JwtAuthenticationStateProvider Provider)> CreateSignedInWithFreshTokenAsync(
+        Mock<ISessionAwareTokenRefresher> refresher)
+    {
+        var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        var sut = CreateStorage(cookieSync.Object, refresher.Object, timeProvider: null);
+        var provider = new JwtAuthenticationStateProvider(sut);
+        await sut.SetTokensAsync(CreateUniqueJwt(DateTime.UtcNow.AddMinutes(10)), "refresh-token");
+        return (sut, provider);
+    }
+
     private (ISessionAwareTokenStorage Sut, TaskCompletionSource<bool> PendingClear, TaskCompletionSource<TokenAcquisition> PendingAcquisition) CreateGatedClearSut()
     {
         var pendingClear = new TaskCompletionSource<bool>();
@@ -382,6 +497,13 @@ public abstract class TokenStorageServiceTestsBase
 
     /// <summary>The cookie sync and refresher behind a <see cref="CreateSut"/> storage.</summary>
     protected sealed record Mocks(Mock<ISessionCookieSync> CookieSync, Mock<ITokenRefresher> Refresher);
+
+    /// <summary>The API: answers every request with one status.</summary>
+    private sealed class AnsweringHandler(HttpStatusCode answer) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(answer) { RequestMessage = request });
+    }
 
     /// <summary>A settable clock (MMCA.Common.UI.Web.Tests does not reference the TimeProvider testing package).</summary>
     protected sealed class ManualClock(DateTimeOffset start) : TimeProvider

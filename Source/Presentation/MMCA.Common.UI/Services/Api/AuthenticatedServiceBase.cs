@@ -75,6 +75,11 @@ public abstract class AuthenticatedServiceBase(
             {
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", token);
+
+                // The handler in this client's pipeline holds a different storage instance (its own
+                // DI scope), so it is told which instance this bearer came from: a 401 to it must
+                // reach the storage the component's auth state listens to.
+                Auth.AuthDelegatingHandler.TrackTokenOwner(token, _tokenStorageService);
             }
         }
         catch (InvalidOperationException)

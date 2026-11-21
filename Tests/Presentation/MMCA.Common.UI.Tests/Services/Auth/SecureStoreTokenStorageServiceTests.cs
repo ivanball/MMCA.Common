@@ -1,5 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using AwesomeAssertions;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using Moq;
 
@@ -147,6 +149,37 @@ public sealed class SecureStoreTokenStorageServiceTests
         store.RefreshToken.Should().Be(StoredRefresh, "a refresher that cannot tell no-session from unavailable proves nothing");
     }
 
+    // Store Run 5 D1b: a locked user's token is still fresh by the clock, so no read ever refreshed it
+    // and the app stayed signed in. The API's 401 itself must make one refresh attempt.
+    [Fact]
+    public async Task ApiUnauthorized_ForTheFreshStoredToken_WhenTheRefreshIsRefused_ClearsThePair_AndEndsTheSession()
+    {
+        var fresh = CreateUniqueJwt(DateTime.UtcNow.AddMinutes(10));
+        var store = new FakeSecureTokenStore(fresh, StoredRefresh);
+        var refresher = SessionAwareRefresher(TokenAcquisition.NoSession);
+        using var sut = new SecureStoreTokenStorageService(store, refresher.Object);
+        var ended = 0;
+        sut.SessionEnded += (_, _) => ended++;
+
+        using (var invoker = new HttpMessageInvoker(new AuthDelegatingHandler(sut) { InnerHandler = new AnsweringHandler(HttpStatusCode.Unauthorized) }))
+        using (var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://api.test/profile")))
+        using (var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken))
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        store.AccessToken.Should().BeNull("the refused pair must not stay stored");
+        store.RefreshToken.Should().BeNull();
+        ended.Should().Be(1, "the shell signs out, and the router sends a protected page to sign-in");
+        refresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static string CreateUniqueJwt(DateTime expires) =>
+        new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+            claims: [new System.Security.Claims.Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))],
+            notBefore: expires.AddMinutes(-60),
+            expires: expires));
+
     private static Mock<ISessionAwareTokenRefresher> SessionAwareRefresher(TokenAcquisition outcome)
     {
         var refresher = new Mock<ISessionAwareTokenRefresher>();
@@ -158,6 +191,12 @@ public sealed class SecureStoreTokenStorageServiceTests
         new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             notBefore: expires.AddMinutes(-60),
             expires: expires));
+
+    private sealed class AnsweringHandler(HttpStatusCode answer) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(answer) { RequestMessage = request });
+    }
 
     private sealed class FakeSecureTokenStore(string? accessToken, string? refreshToken) : ISecureTokenStore
     {

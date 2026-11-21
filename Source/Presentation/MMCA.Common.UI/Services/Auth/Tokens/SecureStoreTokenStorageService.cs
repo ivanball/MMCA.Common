@@ -147,6 +147,34 @@ public sealed class SecureStoreTokenStorageService(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Runs the same process-wide single-flight hydrate a stale token takes, so concurrent 401s for one
+    /// token share one refresh (a second rotation would read as reuse and revoke the session). A
+    /// definitive "no session" clears the stored pair and raises <see cref="SessionEnded"/>; a 401
+    /// that arrives after the pair was replaced changes nothing.
+    /// </remarks>
+    public async Task<string?> RenewRejectedAccessTokenAsync(string rejectedAccessToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rejectedAccessToken);
+
+        var stored = await store.GetAccessTokenAsync();
+        if (!string.Equals(stored, rejectedAccessToken, StringComparison.Ordinal))
+        {
+            return stored;
+        }
+
+        Task<string?> inFlight = JoinOrStartHydrate(HydrateAsync);
+        try
+        {
+            return await inFlight.ConfigureAwait(false);
+        }
+        finally
+        {
+            ClearHydrateIfCurrent(inFlight);
+        }
+    }
+
+    /// <inheritdoc />
     public Task<string?> GetRefreshTokenAsync() => store.GetRefreshTokenAsync();
 
     /// <inheritdoc />
