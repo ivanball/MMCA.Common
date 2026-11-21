@@ -56,6 +56,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         protected override string Title => "Widgets";
 
+        public bool RestoreAppliedNow { get; private set; }
+
         public bool LoadingNow => IsLoading;
 
         public bool LoadFailedNow => LoadFailed;
@@ -100,6 +102,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             GridStateVirtualize<WidgetRow> state,
             Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null) =>
             LoadVirtualizedServerDataAsync(state, Fetch, additionalFilters);
+
+        protected override Task OnRestoredStateAppliedAsync(bool needsReload)
+        {
+            RestoreAppliedNow = true;
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -1171,6 +1179,97 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         await gridCut.WaitForAssertionAsync(() => requestedPages.Should().Equal(0, 1));
         grid.CurrentPage.Should().Be(1);
+    }
+
+    // -- Store Run 5 D8: a cold deep link's first load runs before the restore --
+    // The first-render restore waits behind JS interop round trips (the sessionStorage hydrate first), and
+    // the grid's first load starts with its page reset to 0. Under Slow 4G that load rendered page-1 rows
+    // under the restored "6-10 of 36" pager and saved the URL without p for seconds.
+    private void BlockTheSessionHydrate() =>
+        _ = JSInterop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js").Setup<ListPageState?>("sessionGet", _ => true);
+
+    [Fact]
+    public async Task DeepLinkedPage_FirstLoadBeforeTheRestore_FetchesAndKeepsTheRestoredPage()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=1&ps=5");
+        BlockTheSessionHydrate();
+        var cut = Render<TestGridPage>();
+        var seenPageNumber = 0;
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            seenPageNumber = pageNumber;
+            return Loaded(36, new WidgetRow(6, "Sixth"));
+        };
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 5));
+
+        seenPageNumber.Should().Be(2, "the deep link asked for the second page, so its rows are what the restored pager shows");
+        navigation.Uri.Should().Contain("p=1", "the first load must not save the page away");
+    }
+
+    [Fact]
+    public async Task DeepLinkedPage_AfterTheRestoreCompletes_LoadsTheGridsOwnPage()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=1&ps=5");
+        var cut = Render<TestGridPage>();
+        cut.Instance.RestoreAppliedNow.Should().BeTrue("with interop answering at once, the first-render restore has run");
+        var seenPageNumber = 0;
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            seenPageNumber = pageNumber;
+            return Loaded(36, new WidgetRow(1, "First"));
+        };
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 5));
+
+        seenPageNumber.Should().Be(1, "once the restore is done, a load for page 0 is the user's own choice");
+    }
+
+    // -- Store Run 5 O4: a page beyond the last one is clamped to the last page --
+    // A hand-typed or stale ?p= past the end came back with no rows but a non-zero total, so the grid
+    // showed nothing, a pager like "1-2 of 2" and no empty-state text.
+    [Fact]
+    public async Task LoadServerDataAsync_PageBeyondTheLast_RefetchesTheLastPage_AndKeepsTheUrlInStep()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=5&ps=10");
+        var cut = Render<TestGridPage>();
+        var requested = new List<int>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            requested.Add(pageNumber);
+            return pageNumber == 2
+                ? Loaded(12, new WidgetRow(11, "Eleventh"), new WidgetRow(12, "Twelfth"))
+                : Loaded(12);
+        };
+
+        var data = await LoadOnDispatcherAsync(cut, State(page: 5, pageSize: 10));
+
+        requested.Should().Equal(6, 2);
+        data.Items.Should().HaveCount(2, "the last page's rows are shown instead of an empty grid");
+        data.TotalItems.Should().Be(12);
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse();
+        cut.Instance.CurrentPageNow.Should().Be(1, "the pager follows the clamped page");
+        navigation.Uri.Should().Contain("p=1").And.NotContain("p=5");
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_EmptyFirstPageOfAnEmptyList_DoesNotRefetch()
+    {
+        var cut = Render<TestGridPage>();
+        var requested = new List<int>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            requested.Add(pageNumber);
+            return Loaded(0);
+        };
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
+
+        requested.Should().Equal(1);
+        cut.Instance.EmptyConfirmedNow.Should().BeTrue();
     }
 
     [Fact]

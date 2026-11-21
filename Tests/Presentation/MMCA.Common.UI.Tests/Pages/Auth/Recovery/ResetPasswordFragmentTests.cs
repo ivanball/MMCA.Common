@@ -110,8 +110,61 @@ public sealed class ResetPasswordFragmentTests : BunitTestBase
         take.VerifyInvoke("locationHashTake", calledTimes: 1);
     }
 
+    // Store Run 5 D3: a new link opened in a tab already on /reset-password only changes the fragment,
+    // so the page is not rebuilt. Its values must replace the stale ones and it must be scrubbed,
+    // exactly like a fresh tab; before, the old token stayed in the form.
+    [Fact]
+    public async Task NewLinkOnTheOpenPage_ReplacesTheStaleValues()
+    {
+        var take = UseFragment("email=old%40example.com&token=expired-1");
+        var cut = RenderPage("/reset-password");
+        await cut.WaitForAssertionAsync(() => TokenValue(cut).Should().Be("expired-1"));
+
+        take.Setup<string?>("locationHashTake").SetResult("email=grace%40example.com&token=new-1");
+        await cut.InvokeAsync(() => Services.GetRequiredService<NavigationManager>()
+            .NavigateTo("/reset-password#email=grace%40example.com&token=new-1"));
+
+        await cut.WaitForAssertionAsync(() =>
+        {
+            EmailValue(cut).Should().Be("grace@example.com");
+            TokenValue(cut).Should().Be("new-1");
+        });
+        take.VerifyInvoke("locationHashTake", calledTimes: 2);
+    }
+
+    [Fact]
+    public async Task NewLinkOnTheOpenPage_CarryingOnlyTheToken_ClearsTheOldAddress()
+    {
+        var take = UseFragment("email=old%40example.com&token=expired-1");
+        var cut = RenderPage("/reset-password");
+        await cut.WaitForAssertionAsync(() => TokenValue(cut).Should().Be("expired-1"));
+
+        take.Setup<string?>("locationHashTake").SetResult("token=new-1");
+        await cut.InvokeAsync(() => Services.GetRequiredService<NavigationManager>()
+            .NavigateTo("/reset-password#token=new-1"));
+
+        await cut.WaitForAssertionAsync(() =>
+        {
+            TokenValue(cut).Should().Be("new-1");
+            EmailValue(cut).Should().BeNullOrEmpty();
+        });
+    }
+
+    [Fact]
+    public async Task NavigationWithoutAFragment_TakesNothing()
+    {
+        var take = UseFragment("email=grace%40example.com&token=t-1");
+        var cut = RenderPage("/reset-password");
+        await cut.WaitForAssertionAsync(() => TokenValue(cut).Should().Be("t-1"));
+
+        await cut.InvokeAsync(() => Services.GetRequiredService<NavigationManager>().NavigateTo("/reset-password"));
+
+        take.VerifyInvoke("locationHashTake", calledTimes: 1);
+        TokenValue(cut).Should().Be("t-1");
+    }
+
     private static string? EmailValue(IRenderedComponent<ResetPassword> cut) =>
-        cut.Find("input[type=email]").GetAttribute("value");
+        cut.Find("input[autocomplete=email]").GetAttribute("value");
 
     private static string? TokenValue(IRenderedComponent<ResetPassword> cut) =>
         cut.Find("input[autocomplete=one-time-code]").GetAttribute("value");

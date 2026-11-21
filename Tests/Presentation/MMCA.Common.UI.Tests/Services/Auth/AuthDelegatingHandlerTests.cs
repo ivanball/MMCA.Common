@@ -99,4 +99,144 @@ public sealed class AuthDelegatingHandlerTests
         inner.LastRequest.Authorization!.Parameter.Should().Be("freshly-refreshed");
         tokenStorage.Verify(s => s.GetAccessTokenAsync(), Times.Never);
     }
+
+    // Store Run 5 D1b: in a browser host the handler resolves its OWN storage in the IHttpClientFactory
+    // handler scope, while a service attaches the bearer from the component's storage, which is the one
+    // the auth state listens to. The 401 must reach that owner, or the shell never signs out.
+    [Fact]
+    public async Task SendAsync_On401_ToABearerAServiceAttached_EndsTheSessionOfTheStorageThatHeldIt()
+    {
+        var componentRefresher = new Mock<ISessionAwareTokenRefresher>();
+        componentRefresher.Setup(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(TokenAcquisition.NoSession);
+        var componentStorage = new WasmTokenStorageService(SucceedingCookieSync(), componentRefresher.Object);
+        await componentStorage.SetTokensAsync(CreateUniqueJwt(), "refresh-token");
+        var ended = 0;
+        componentStorage.SessionEnded += (_, _) => ended++;
+
+        var handlerRefresher = new Mock<ISessionAwareTokenRefresher>();
+        var handlerScopeStorage = new WasmTokenStorageService(SucceedingCookieSync(), handlerRefresher.Object);
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient("APIClient")).Returns(() =>
+            new HttpClient(new AuthDelegatingHandler(handlerScopeStorage) { InnerHandler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.Unauthorized) })
+            {
+                BaseAddress = new Uri("https://api.test/"),
+            });
+        var service = new ProfileService(factory.Object, componentStorage);
+
+        var status = await service.GetProfileStatusAsync(TestContext.Current.CancellationToken);
+
+        status.Should().Be(HttpStatusCode.Unauthorized);
+        ended.Should().Be(1, "the refused refresh ends the session the component holds");
+        componentRefresher.Verify(r => r.TryAcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+        handlerRefresher.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendAsync_On401_ToASkipBearerRequest_ReportsNothing()
+    {
+        // The refresh POST itself: its 401 is the refresher's own "no session" answer.
+        var refresher = new Mock<ISessionAwareTokenRefresher>();
+        var storage = new WasmTokenStorageService(SucceedingCookieSync(), refresher.Object);
+        var token = CreateUniqueJwt();
+        await storage.SetTokensAsync(token, "refresh-token");
+        var handler = new AuthDelegatingHandler(storage) { InnerHandler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.Unauthorized) };
+        using var invoker = new HttpMessageInvoker(handler, disposeHandler: true);
+        using var request = CreateRequest();
+        request.Options.Set(AuthDelegatingHandler.SkipBearer, true);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        refresher.VerifyNoOtherCalls();
+        (await storage.GetAccessTokenAsync()).Should().Be(token);
+    }
+
+    // The owner registry is process-wide, so a sweep must drop only what can never be used again: an
+    // owner whose storage was collected, or an entry older than any token lives. Live entries stay. The
+    // entries here are unique to this test, so other tests running alongside are unaffected.
+    private const int AboveTheSweepThreshold = 1100;
+
+    private static readonly long PastTheRetention = (long)TimeSpan.FromHours(25).TotalMilliseconds;
+
+    [Fact]
+    public void Sweep_AboveTheThreshold_DropsDeadAndExpiredOwners_AndKeepsLiveOnes()
+    {
+        var live = new WasmTokenStorageService(SucceedingCookieSync(), new Mock<ISessionAwareTokenRefresher>().Object);
+        var run = Guid.NewGuid().ToString("N");
+        var liveTokens = Enumerable.Range(0, AboveTheSweepThreshold).Select(i => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"sweep-live-{run}-{i}")).ToList();
+        foreach (var token in liveTokens)
+        {
+            AuthDelegatingHandler.TrackTokenOwner(token, live);
+        }
+
+        var expired = $"sweep-expired-{run}";
+        AuthDelegatingHandler.TrackTokenOwnerAt(expired, new WeakReference<ISessionAwareTokenStorage>(live), Environment.TickCount64 - PastTheRetention);
+        var dead = $"sweep-dead-{run}";
+        // A reference whose storage is gone, as after a circuit or scope ends and its storage is collected.
+        AuthDelegatingHandler.TrackTokenOwnerAt(dead, new WeakReference<ISessionAwareTokenStorage>(null!), Environment.TickCount64);
+
+        AuthDelegatingHandler.SweepIfLarge();
+
+        AuthDelegatingHandler.IsTrackedOwner(dead).Should().BeFalse("its storage is gone, so no 401 can reach it");
+        AuthDelegatingHandler.IsTrackedOwner(expired).Should().BeFalse("it outlived any access token");
+        liveTokens.Should().OnlyContain(token => AuthDelegatingHandler.HasLiveOwner(token), "a live, recent owner is kept");
+        GC.KeepAlive(live);
+    }
+
+    [Fact]
+    public void Sweep_AboveTheThreshold_DropsExpiredRenewals_AndKeepsRecentOnes()
+    {
+        var run = Guid.NewGuid().ToString("N");
+        var recent = Enumerable.Range(0, AboveTheSweepThreshold).Select(i => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"sweep-renewed-{run}-{i}")).ToList();
+        foreach (var token in recent)
+        {
+            AuthDelegatingHandler.MarkRenewedAt(token, Environment.TickCount64);
+        }
+
+        var old = $"sweep-renewed-old-{run}";
+        AuthDelegatingHandler.MarkRenewedAt(old, Environment.TickCount64 - PastTheRetention);
+
+        AuthDelegatingHandler.SweepIfLarge();
+
+        AuthDelegatingHandler.IsMarkedRenewed(old).Should().BeFalse();
+        recent.Should().OnlyContain(token => AuthDelegatingHandler.IsMarkedRenewed(token));
+    }
+
+    [Fact]
+    public void TrackTokenOwner_IgnoresABlankTokenAndAStorageThatCannotRenew()
+    {
+        var plain = new Mock<ITokenStorageService>().Object;
+        var token = $"untracked-{Guid.NewGuid():N}";
+
+        AuthDelegatingHandler.TrackTokenOwner(token, plain);
+        AuthDelegatingHandler.TrackTokenOwner("   ", new WasmTokenStorageService(SucceedingCookieSync(), new Mock<ISessionAwareTokenRefresher>().Object));
+
+        AuthDelegatingHandler.IsTrackedOwner(token).Should().BeFalse("a storage without the session-aware capability cannot renew");
+        AuthDelegatingHandler.IsTrackedOwner("   ").Should().BeFalse();
+    }
+
+    private static ISessionCookieSync SucceedingCookieSync()
+    {
+        var sync = new Mock<ISessionCookieSync>();
+        sync.Setup(s => s.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        return sync.Object;
+    }
+
+    private static string CreateUniqueJwt() =>
+        new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            claims: [new System.Security.Claims.Claim("jti", Guid.NewGuid().ToString("N"))],
+            notBefore: DateTime.UtcNow.AddMinutes(-5),
+            expires: DateTime.UtcNow.AddMinutes(10)));
+
+    /// <summary>A module service the way a page uses one: the bearer comes from the component's storage.</summary>
+    private sealed class ProfileService(IHttpClientFactory factory, ITokenStorageService storage)
+        : MMCA.Common.UI.Services.Api.AuthenticatedServiceBase(factory, storage)
+    {
+        public async Task<HttpStatusCode> GetProfileStatusAsync(CancellationToken cancellationToken)
+        {
+            using var client = await CreateAuthenticatedClientAsync();
+            using var response = await client.GetAsync(new Uri("profile", UriKind.Relative), cancellationToken);
+            return response.StatusCode;
+        }
+    }
 }

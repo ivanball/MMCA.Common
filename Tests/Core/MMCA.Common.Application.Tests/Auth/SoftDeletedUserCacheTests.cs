@@ -20,7 +20,7 @@ public sealed class SoftDeletedUserCacheTests
     // ── Key shape ──
     [Fact]
     public void KeyFor_ReturnsTheExpectedKeyShape() =>
-        SoftDeletedUserCache.KeyFor(42).Should().Be("user:deleted:42");
+        SoftDeletedUserCache.KeyFor(42).Should().Be("xsvc:user:deleted:42", "the marker is a cross-service key, read by services that do not host Identity");
 
     [Fact]
     public void KeyFor_IsIdenticalUnderANonInvariantCurrentCulture()
@@ -33,8 +33,8 @@ public sealed class SoftDeletedUserCacheTests
         {
             CultureInfo.CurrentCulture = CreateNonInvariantCulture();
 
-            SoftDeletedUserCache.KeyFor(1234567).Should().Be(expectedPositive).And.Be("user:deleted:1234567");
-            SoftDeletedUserCache.KeyFor(-42).Should().Be(expectedNegative).And.Be("user:deleted:-42");
+            SoftDeletedUserCache.KeyFor(1234567).Should().Be(expectedPositive).And.Be("xsvc:user:deleted:1234567");
+            SoftDeletedUserCache.KeyFor(-42).Should().Be(expectedNegative).And.Be("xsvc:user:deleted:-42");
         }
         finally
         {
@@ -76,7 +76,7 @@ public sealed class SoftDeletedUserCacheTests
 
         cache.Verify(
             c => c.SetAsync(
-                "user:deleted:7",
+                "xsvc:user:deleted:7",
                 true,
                 TimeSpan.FromMinutes(20),
                 It.IsAny<CancellationToken>()),
@@ -107,7 +107,7 @@ public sealed class SoftDeletedUserCacheTests
 
         await SoftDeletedUserCache.MarkDeletedForAsync(cache.Object, 7, TimeSpan.FromMinutes(65));
 
-        cache.Verify(c => c.SetAsync("user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
+        cache.Verify(c => c.SetAsync("xsvc:user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ---- Marker clear ----

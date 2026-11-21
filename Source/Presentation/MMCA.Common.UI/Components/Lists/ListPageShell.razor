@@ -22,6 +22,7 @@
         {
             <MudTextField T="string" Value="SearchText" ValueChanged="SearchTextChanged"
                           Placeholder="@(SearchPlaceholder ?? L["List.Search.Placeholder"])"
+                          aria-label="@(SearchAriaLabel ?? SearchPlaceholder ?? L["List.Search.Placeholder"])"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Immediate="true" DebounceInterval="300" Clearable="true"
                           Variant="Variant.Outlined" Class="list-search-field" />

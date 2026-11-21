@@ -109,6 +109,33 @@ public sealed class WasmTokenStorageService(
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The rejected token is dropped from memory and the hydrate runs through the same single-flight
+    /// <see cref="GetAccessTokenAsync"/> uses, so concurrent 401s for one token share one refresh. A
+    /// definitive "no session" then raises <see cref="SessionEnded"/> for the session this client held.
+    /// </remarks>
+    public Task<string?> RenewRejectedAccessTokenAsync(string rejectedAccessToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rejectedAccessToken);
+
+        Task<string?> inFlight;
+        lock (_hydrateSync)
+        {
+            if (!string.Equals(_accessToken, rejectedAccessToken, StringComparison.Ordinal))
+            {
+                return Task.FromResult(_accessToken);
+            }
+
+            _accessToken = null;
+            _anonymousUntil = default;
+            _hydrateInFlight ??= HydrateAsync();
+            inFlight = _hydrateInFlight;
+        }
+
+        return AwaitHydrateAsync(inFlight);
+    }
+
     // The refresh token is never held client-side in the browser: it lives only in the HttpOnly cookie.
     public Task<string?> GetRefreshTokenAsync() => Task.FromResult<string?>(null);
 
@@ -144,6 +171,26 @@ public sealed class WasmTokenStorageService(
         // answer if it is still in flight, and drops it if it already landed.
         Interlocked.Increment(ref _tokenVersion);
         _accessToken = null;
+    }
+
+    private async Task<string?> AwaitHydrateAsync(Task<string?> inFlight)
+    {
+        try
+        {
+            return await inFlight.ConfigureAwait(false);
+        }
+        finally
+        {
+            // Only clear our own task: an unguarded clear can drop a NEWER hydrate started after
+            // this one completed, splitting the next set of callers again.
+            lock (_hydrateSync)
+            {
+                if (ReferenceEquals(_hydrateInFlight, inFlight))
+                {
+                    _hydrateInFlight = null;
+                }
+            }
+        }
     }
 
     private async Task<string?> HydrateAsync()

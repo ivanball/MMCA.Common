@@ -193,12 +193,15 @@ public static partial class DependencyInjection
                 var multiplexer = sp.GetService<IConnectionMultiplexer>();
                 var keyNamespace = CacheKeyNamespace.From(sp);
 
+                // Cross-service keys (the soft-deleted-user marker) get the namespace every service of
+                // the deployment shares, so Identity's write is the entry every other service reads.
                 return new HybridCacheService(
                     sp.GetRequiredService<HybridCache>(),
                     logger,
                     multiplexer,
                     keyNamespace,
-                    sp.GetService<IOptions<CacheSettings>>());
+                    sp.GetService<IOptions<CacheSettings>>(),
+                    CacheKeyNamespace.CrossServiceFrom(sp));
             });
 
             return services;

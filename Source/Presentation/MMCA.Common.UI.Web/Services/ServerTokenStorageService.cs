@@ -151,6 +151,46 @@ public sealed class ServerTokenStorageService(
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The token held is the in-memory one once memory is authoritative, otherwise the connection
+    /// request's cookie token the circuit started with. On the circuit it is dropped and re-acquired
+    /// through the same single-flight <see cref="GetAccessTokenAsync"/> uses, from then on with memory
+    /// authoritative (so the stale cookie never answers again), and a definitive "no session" raises
+    /// <see cref="SessionEnded"/>. During the SSR prerender there is no JS interop to refresh with, so a
+    /// rejection there changes nothing; the circuit that follows re-checks the session.
+    /// </remarks>
+    public Task<string?> RenewRejectedAccessTokenAsync(string rejectedAccessToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rejectedAccessToken);
+
+        Task<string?> inFlight;
+        lock (_hydrateSync)
+        {
+            var httpContext = httpContextAccessor.HttpContext;
+            var answersFromCookie = httpContext is not null && !_memoryIsAuthoritative;
+            var held = answersFromCookie ? cookieTokenReader.ReadAccessToken() : _accessToken;
+            if (!string.Equals(held, rejectedAccessToken, StringComparison.Ordinal))
+            {
+                return Task.FromResult(held);
+            }
+
+            if (answersFromCookie && !IsHubConnection(httpContext!))
+            {
+                return Task.FromResult(held);
+            }
+
+            _accessToken = null;
+            _anonymousUntil = default;
+            _memoryIsAuthoritative = true;
+            _sessionHeld = true;
+            _hydrateInFlight ??= HydrateAsync();
+            inFlight = _hydrateInFlight;
+        }
+
+        return AwaitHydrateAsync(inFlight);
+    }
+
     public Task<string?> GetRefreshTokenAsync()
     {
         // The refresh token is never held client-side or in memory. It is read from the HttpOnly cookie of
@@ -197,6 +237,29 @@ public sealed class ServerTokenStorageService(
         // answer if it is still in flight, and drops it if it already landed.
         Interlocked.Increment(ref _tokenVersion);
         _accessToken = null;
+    }
+
+    /// <summary>
+    /// Awaits the hydrate in flight, then clears the slot when it still holds that hydrate: an unguarded
+    /// clear can drop a NEWER hydrate started after this one completed, splitting the next set of
+    /// callers again.
+    /// </summary>
+    private async Task<string?> AwaitHydrateAsync(Task<string?> inFlight)
+    {
+        try
+        {
+            return await inFlight.ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_hydrateSync)
+            {
+                if (ReferenceEquals(_hydrateInFlight, inFlight))
+                {
+                    _hydrateInFlight = null;
+                }
+            }
+        }
     }
 
     private async Task<string?> HydrateAsync()

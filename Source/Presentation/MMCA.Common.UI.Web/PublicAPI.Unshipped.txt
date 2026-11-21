@@ -1,1 +1,2 @@
 #nullable enable
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!

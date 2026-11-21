@@ -31,10 +31,14 @@ namespace MMCA.Common.API.Middleware;
 /// </remarks>
 internal static partial class ViewAsEndedMarker
 {
-    /// <summary>The cache key holding the ended marker for one grant.</summary>
+    /// <summary>
+    /// The cache key holding the ended marker for one grant: a cross-service key
+    /// (<see cref="CrossServiceCacheKeys"/>), because the store host writes it and every other service
+    /// reads it, so it must not be qualified with each host's own namespace (Store Run 5).
+    /// </summary>
     /// <param name="grantId">The grant (a view-as token's <c>vag</c> claim).</param>
     /// <returns>The cache key.</returns>
-    internal static string KeyFor(Guid grantId) => $"viewas:ended:{grantId:D}";
+    internal static string KeyFor(Guid grantId) => $"{CrossServiceCacheKeys.Prefix}viewas:ended:{grantId:D}";
 
     /// <summary>Reads the token's <c>exp</c> claim (Unix seconds).</summary>
     /// <param name="user">The authenticated principal.</param>
