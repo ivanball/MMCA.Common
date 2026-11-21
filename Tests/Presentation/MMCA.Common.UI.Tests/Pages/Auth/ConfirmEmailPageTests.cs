@@ -17,6 +17,19 @@ public sealed class ConfirmEmailPageTests : ConfirmEmailPageTestsBase
 {
     private const string CapabilitiesModulePath = "./_content/MMCA.Common.UI/capabilities-interop.js";
 
+    // Run 19 N1: type=email refuses an internationalized local part in the browser, so the resend
+    // form's email is a text input that still asks for the email keyboard.
+    [Fact]
+    public void EmailField_IsATextInputWithTheEmailKeyboard()
+    {
+        var cut = RenderPage(Email, token: null);
+
+        cut.WaitForAssertion(() => cut.Find("input[data-testid=confirm-email-address]"));
+        var input = cut.Find("input[data-testid=confirm-email-address]");
+        input.GetAttribute("type").Should().Be("text");
+        input.GetAttribute("inputmode").Should().Be("email");
+    }
+
     [Fact]
     public void Fragment_CarryingBothValues_IsRedeemedDecoded()
     {

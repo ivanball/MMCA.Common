@@ -57,9 +57,11 @@
 
                     @* Both fields are mandatory: Confirm refuses without either. Required renders
                        aria-required, so the obligation is stated before the submit (WCAG 3.3.2). *@
+                    @* A text input with the email keyboard, not type=email: the browser's email check refuses an
+                       internationalized local part that the API accepts and stores (Run 19 N1). *@
                     <MudTextField @bind-Value="_email"
                                   Label="@L["Auth.Field.Email"].Value"
-                                  InputType="InputType.Email"
+                                  InputType="InputType.Text" InputMode="InputMode.email"
                                   Required="true"
                                   RequiredError="@L["Auth.Confirm.EmailRequired"].Value"
                                   Immediate="true"
@@ -67,6 +69,7 @@
                                   Class="mb-4"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Email"
+                                  autocapitalize="none" spellcheck="false"
                                   autocomplete="email"
                                   data-testid="confirm-email-address" />
 

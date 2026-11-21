@@ -111,7 +111,7 @@ public sealed class ResetPasswordFragmentTests : BunitTestBase
     }
 
     private static string? EmailValue(IRenderedComponent<ResetPassword> cut) =>
-        cut.Find("input[type=email]").GetAttribute("value");
+        cut.Find("input[autocomplete=email]").GetAttribute("value");
 
     private static string? TokenValue(IRenderedComponent<ResetPassword> cut) =>
         cut.Find("input[autocomplete=one-time-code]").GetAttribute("value");
