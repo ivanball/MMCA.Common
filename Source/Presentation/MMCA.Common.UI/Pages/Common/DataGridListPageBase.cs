@@ -129,6 +129,12 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     private double? _pendingScrollRestore;
     private int _savedPage;
     private int _savedPageSize;
+
+    // True while a page restored from the URL or saved state is not yet on the grid (Store Run 5 D8). The
+    // grid's first load starts before the first-render setup can touch the grid, with its page reset to
+    // 0 by the RowsPerPage parameter, so while this is set that load asks for the restored page itself
+    // (ResolvePage) instead of rendering page-1 rows under the restored pager and saving p=0.
+    private bool _restoredPagePending;
     private string? _savedSortColumn;
     private bool _savedSortDescending;
 
@@ -271,6 +277,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
         CurrentPageState = effectiveState.Page;
         _savedPage = effectiveState.Page;
+        _restoredPagePending = effectiveState.Page > 0;
         _savedPageSize = effectiveState.PageSize;
         if (effectiveState.PageSize > 0)
         {
@@ -328,6 +335,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
         var urlState = QueryStateService.ReadCurrent();
         _savedPage = urlState.Page;
+        _restoredPagePending = false;
         _savedPageSize = urlState.PageSize;
         if (urlState.PageSize > 0)
         {
@@ -433,6 +441,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         _savedPage = saved.Page;
         _savedPageSize = saved.PageSize;
         CurrentPageState = saved.Page;
+        _restoredPagePending = saved.Page > 0;
         if (saved.PageSize > 0)
         {
             RowsPerPageState = saved.PageSize;
@@ -704,6 +713,19 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         return false;
     }
 
+    /// <summary>
+    /// The 0-based page a paged load fetches and saves. While a restored page is not yet on the grid
+    /// (<see cref="_restoredPagePending"/>) and the grid still reports page 0, that is the restored page:
+    /// a cold deep link's first load starts before the first-render setup restores the pager (two JS
+    /// interop round trips later), and on a slow network it otherwise rendered page-1 rows under the
+    /// restored pager and saved the URL without <c>p</c> for seconds (Store Run 5 D8). Read when the
+    /// load starts, so a restore that completes during the load cannot change what it asked for.
+    /// </summary>
+    /// <param name="gridPage">The page the grid's state carries.</param>
+    /// <returns>The page to fetch and save.</returns>
+    private int ResolvePage(int gridPage) =>
+        _restoredPagePending && gridPage == 0 && _savedPage > 0 ? _savedPage : gridPage;
+
     private static bool HasListPageState(ListPageState state) =>
         state.Page > 0 || state.PageSize > 0 || state.MobilePage > 1
         || !string.IsNullOrEmpty(state.SortColumn) || state.Filters.Count > 0 || state.ColumnFilters.Count > 0;
@@ -711,6 +733,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     private void ApplyRestoredState(ListPageState state)
     {
         _savedPage = state.Page;
+        _restoredPagePending = state.Page > 0;
         _savedPageSize = state.PageSize;
         CurrentPageState = state.Page;
         if (state.PageSize > 0)
@@ -738,6 +761,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         // (sort/filters were restored after the first fetch returned defaults).
         if (VirtualizeGrid)
         {
+            _restoredPagePending = false;
             await ApplyRestoredSortOrReloadAsync(needsReload);
             return;
         }
@@ -760,6 +784,10 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         // page-number restoration still works alongside rows-per-page restoration. Moving the page
         // reloads: the setter does not while the grid's first load is still running.
         needsReload |= RestoreCurrentPageAfterRowsPerPageReset();
+
+        // The restored page is on the grid now (or there is no grid to put it on), so every later load
+        // asks for the grid's own page again.
+        _restoredPagePending = false;
 
         // A URL or saved sort the grid's default column sort shadowed: put it on the header. Then reload
         // when the restored page or a session restore changed what the grid's first load asked for.
@@ -966,6 +994,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         // Read before anything yields: the grid's state is a copy taken when this load started, so a
         // restore the first-render setup completes during the load must still reach this fetch.
         var restorePendingAtLoadStart = _restoredColumnFiltersPending;
+        var pageIndex = ResolvePage(state.Page);
         var loadSource = await ResetCancellationTokenAsync();
 
         // Superseded while the previous load was being cancelled: the newer load owns the grid, and
@@ -990,11 +1019,11 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
             var (_, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions, restorePendingAtLoadStart);
-            SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
+            SaveCurrentState(pageIndex, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
             return cached;
         }
 
-        return await FetchPagedAsync(loadSource, state, fetchAsync, additionalFilters, showCancelSnackbar, restorePendingAtLoadStart);
+        return await FetchPagedAsync(loadSource, state, pageIndex, fetchAsync, additionalFilters, showCancelSnackbar, restorePendingAtLoadStart);
     }
 
     /// <summary>
@@ -1025,6 +1054,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     private Task<GridData<TDto>> FetchPagedAsync(
         CancellationTokenSource loadSource,
         GridState<TDto> state,
+        int pageIndex,
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
         bool showCancelSnackbar,
@@ -1042,7 +1072,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
 
-                var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, token);
+                var fetched = await fetchAsync(filters, pageIndex + 1, state.PageSize, sortColumn, sortDirection, token);
                 ThrowIfSuperseded(loadSource);
                 if (!fetched.TryGetValue(out var page))
                 {
@@ -1052,7 +1082,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
                 EmptyConfirmed = page.TotalItems == 0;
-                SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
+                SaveCurrentState(pageIndex, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
                 return gridData;
             },
             onCancelled: EmptyGridData,

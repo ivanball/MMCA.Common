@@ -56,6 +56,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         protected override string Title => "Widgets";
 
+        public bool RestoreAppliedNow { get; private set; }
+
         public bool LoadingNow => IsLoading;
 
         public bool LoadFailedNow => LoadFailed;
@@ -100,6 +102,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             GridStateVirtualize<WidgetRow> state,
             Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null) =>
             LoadVirtualizedServerDataAsync(state, Fetch, additionalFilters);
+
+        protected override Task OnRestoredStateAppliedAsync(bool needsReload)
+        {
+            RestoreAppliedNow = true;
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -1171,6 +1179,54 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         await gridCut.WaitForAssertionAsync(() => requestedPages.Should().Equal(0, 1));
         grid.CurrentPage.Should().Be(1);
+    }
+
+    // -- Store Run 5 D8: a cold deep link's first load runs before the restore --
+    // The first-render restore waits behind JS interop round trips (the sessionStorage hydrate first), and
+    // the grid's first load starts with its page reset to 0. Under Slow 4G that load rendered page-1 rows
+    // under the restored "6-10 of 36" pager and saved the URL without p for seconds.
+    private JSRuntimeInvocationHandler<ListPageState?> BlockTheSessionHydrate() =>
+        JSInterop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js").Setup<ListPageState?>("sessionGet", _ => true);
+
+    [Fact]
+    public async Task DeepLinkedPage_FirstLoadBeforeTheRestore_FetchesAndKeepsTheRestoredPage()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=1&ps=5");
+        BlockTheSessionHydrate();
+        var cut = Render<TestGridPage>();
+        var seenPageNumber = 0;
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            seenPageNumber = pageNumber;
+            return Loaded(36, new WidgetRow(6, "Sixth"));
+        };
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 5));
+
+        seenPageNumber.Should().Be(2, "the deep link asked for the second page, so its rows are what the restored pager shows");
+        navigation.Uri.Should().Contain("p=1", "the first load must not save the page away");
+    }
+
+    [Fact]
+    public async Task DeepLinkedPage_AfterTheRestoreCompletes_LoadsTheGridsOwnPage()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=1&ps=5");
+        var sessionGet = BlockTheSessionHydrate();
+        var cut = Render<TestGridPage>();
+        var seenPageNumber = 0;
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            seenPageNumber = pageNumber;
+            return Loaded(36, new WidgetRow(1, "First"));
+        };
+
+        await cut.InvokeAsync(() => sessionGet.SetResult(null));
+        await cut.WaitForAssertionAsync(() => cut.Instance.RestoreAppliedNow.Should().BeTrue());
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 5));
+
+        seenPageNumber.Should().Be(1, "once the restore is done, a load for page 0 is the user's own choice");
     }
 
     [Fact]
