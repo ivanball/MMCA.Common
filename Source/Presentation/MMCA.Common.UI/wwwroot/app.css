@@ -220,8 +220,11 @@ a:focus-visible,
    takes no focus, so forward Tab skipped the Language control on desktop and phone alike (WCAG
    2.1.1). Giving the wrapper a box makes it the one focusable control, named by the text inside it,
    and the .mud-menu-activator rings above and in the app bar and top row draw around it. Sized and
-   shaped like the MudIconButton siblings it sits beside. */
-.culture-switcher > .mud-menu-activator {
+   shaped like the MudIconButton siblings it sits beside. The selector has to out-rank MudBlazor's own
+   .mud-menu>div.mud-menu-activator{display:contents} (0,2,1), so it names the menu root, the class
+   and the div (0,3,1); the shorter .culture-switcher > .mud-menu-activator (0,2,0) lost and left the
+   box at display: contents. */
+.mud-menu.culture-switcher > div.mud-menu-activator {
     display: inline-flex;
     padding: 12px;
     border-radius: 50%;
@@ -229,7 +232,7 @@ a:focus-visible,
     cursor: pointer;
 }
 
-.culture-switcher > .mud-menu-activator:hover {
+.mud-menu.culture-switcher > div.mud-menu-activator:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
 

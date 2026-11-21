@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.312.0] - 2026-11-21
+
+### Fixed
+
+- **The Language control takes keyboard focus in the browser** (MMCA.Common.UI; WCAG 2.1.1): the `app.css` rule that gives `CultureSwitcher`'s activator wrapper a box is now `.mud-menu.culture-switcher > div.mud-menu-activator` (specificity 0,3,1). The 1.311.0 selector `.culture-switcher > .mud-menu-activator` (0,2,0) lost to MudBlazor's own `.mud-menu>div.mud-menu-activator{display:contents}` (0,2,1), so the wrapper stayed `display: contents`, `focus()` was a no-op and forward Tab still skipped the control in the app bar and the phone top row. A Playwright check in the gallery tier (`CultureSwitcherKeyboardE2ETests`) now reads the computed display, real focus by Tab and Enter opening the menu on every engine.
+- **Auth email fields accept an internationalized local part** (MMCA.Common.UI): the email field on Login, Register, Forgot password, Reset password, Confirm email (resend) and the sign-in link page is a text input with `inputmode="email"` (the email keyboard), `autocapitalize="none"` and `spellcheck="false"`, keeping its `autocomplete`, instead of `type="email"`, whose browser check refused a non-ASCII local part before the form submitted (web Chrome and the MAUI WebView). The DataAnnotations and server-side validation are unchanged and already accept such an address.
+
 ## [1.311.0] - 2026-11-20
 
 ### Added

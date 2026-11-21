@@ -66,6 +66,30 @@ public sealed class AuthFormValidationMessageTests : BunitTestBase
         }
     }
 
+    // Run 19 N1: type=email makes the browser refuse an internationalized local part before the form
+    // submits, on web Chrome and in the MAUI WebView. Each form's email field is a text input that
+    // still asks for the email keyboard and autofill.
+    [Theory]
+    [InlineData(nameof(ResetPassword))]
+    [InlineData(nameof(ForgotPassword))]
+    [InlineData(nameof(Login))]
+    [InlineData(nameof(Register))]
+    public void AuthForm_EmailField_IsATextInputWithTheEmailKeyboard(string form)
+    {
+        var input = form switch
+        {
+            nameof(ResetPassword) => EmailInputOf<ResetPassword>(),
+            nameof(ForgotPassword) => EmailInputOf<ForgotPassword>(),
+            nameof(Login) => EmailInputOf<Login>(),
+            nameof(Register) => EmailInputOf<Register>(),
+            _ => throw new ArgumentOutOfRangeException(nameof(form), form, "Unknown form."),
+        };
+
+        input.GetAttribute("type").Should().Be("text");
+        input.GetAttribute("inputmode").Should().Be("email");
+        input.GetAttribute("autocomplete").Should().StartWith("email");
+    }
+
     [Fact]
     public void ResetPassword_TouchedEmptyFields_InSpanish_ShowTheSpanishMessage()
     {
@@ -109,6 +133,10 @@ public sealed class AuthFormValidationMessageTests : BunitTestBase
         });
         cut.Markup.Should().NotContain(RawKeyPrefix);
     }
+
+    private AngleSharp.Dom.IElement EmailInputOf<TComponent>()
+        where TComponent : IComponent =>
+        RenderUnderTest<TComponent>(_ => { }).Find("form input[autocomplete^='email']");
 
     private static void Submit<TComponent>(IRenderedComponent<TComponent> cut)
         where TComponent : IComponent =>

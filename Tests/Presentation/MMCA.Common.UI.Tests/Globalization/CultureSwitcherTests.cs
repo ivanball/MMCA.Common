@@ -127,6 +127,9 @@ public sealed class CultureSwitcherTests : BunitTestBase
         activator.TextContent.Should().Contain("Language");
     }
 
+    // Run 19: the rule has to out-rank MudBlazor's .mud-menu>div.mud-menu-activator{display:contents}
+    // (0,2,1); the Run 18 selector .culture-switcher > .mud-menu-activator (0,2,0) lost in the browser.
+    // CultureSwitcherKeyboardE2ETests reads the computed display and real focus.
     [Fact]
     public void AppCss_GivesTheActivatorAFocusableBox()
     {
@@ -134,7 +137,7 @@ public sealed class CultureSwitcherTests : BunitTestBase
 
         var bodies = CssStylesheet.RuleBodies(
             css,
-            selector => string.Equals(selector, ".culture-switcher > .mud-menu-activator", StringComparison.Ordinal));
+            selector => string.Equals(selector, ".mud-menu.culture-switcher > div.mud-menu-activator", StringComparison.Ordinal));
 
         bodies.Should().ContainSingle().Which.Should().Contain("display: inline-flex", "display: contents takes no focus");
     }

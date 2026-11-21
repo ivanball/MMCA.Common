@@ -10,11 +10,35 @@ namespace MMCA.Common.UI.Tests.Pages.Auth;
 /// </summary>
 public sealed class AuthModelValidationTests
 {
+    /// <summary>An internationalized local part (an e-acute), which the API accepts and stores.</summary>
+    private const string InternationalEmail = "josé@example.com";
+
     private static List<ValidationResult> Validate(object model)
     {
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
         return results;
+    }
+
+    // Run 19 N1: the auth forms now render the email as a text input, so the browser no longer refuses
+    // a non-ASCII local part; the client-side DataAnnotations rule must not refuse it either.
+    [Theory]
+    [InlineData(nameof(RegisterModel))]
+    [InlineData(nameof(LoginModel))]
+    [InlineData(nameof(ForgotPasswordModel))]
+    [InlineData(nameof(ResetPasswordModel))]
+    public void EmailWithAnInternationalizedLocalPart_PassesTheEmailRule(string modelName)
+    {
+        object model = modelName switch
+        {
+            nameof(RegisterModel) => new RegisterModel { Email = InternationalEmail },
+            nameof(LoginModel) => new LoginModel { Email = InternationalEmail },
+            nameof(ForgotPasswordModel) => new ForgotPasswordModel { Email = InternationalEmail },
+            nameof(ResetPasswordModel) => new ResetPasswordModel { Email = InternationalEmail },
+            _ => throw new ArgumentOutOfRangeException(nameof(modelName), modelName, "Unknown model."),
+        };
+
+        Validate(model).SelectMany(r => r.MemberNames).Should().NotContain("Email");
     }
 
     [Fact]
