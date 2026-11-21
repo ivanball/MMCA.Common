@@ -434,6 +434,8 @@ MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.PageSizeOptions.get -> Syst
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.PageSizeOptions.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.RowsPerPage.get -> int
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.RowsPerPage.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchAriaLabel.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchAriaLabel.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchPlaceholder.get -> string?
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchPlaceholder.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchText.get -> string?
@@ -821,6 +823,7 @@ MMCA.Common.UI.Pages.Auth.RegisterModel.State.set -> void
 MMCA.Common.UI.Pages.Auth.RegisterModel.ZipCode.get -> string?
 MMCA.Common.UI.Pages.Auth.RegisterModel.ZipCode.set -> void
 MMCA.Common.UI.Pages.Auth.ResetPassword
+MMCA.Common.UI.Pages.Auth.ResetPassword.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Pages.Auth.ResetPassword.Email.get -> string?
 MMCA.Common.UI.Pages.Auth.ResetPassword.Email.set -> void
 MMCA.Common.UI.Pages.Auth.ResetPassword.ResetPassword() -> void
@@ -1152,6 +1155,7 @@ MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore.SetTokensAsync(string! acc
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenRefresher.TryAcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Auth.Tokens.TokenAcquisition!>!
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage
+MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher
 MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher.AcquireAccessTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
@@ -1170,6 +1174,7 @@ MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.ClearTokensAs
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.Dispose() -> void
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SecureStoreTokenStorageService(MMCA.Common.UI.Services.Auth.Tokens.ISecureTokenStore! store, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter? deviceMetadataReporter = null, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService!>? logger = null) -> void
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
@@ -1181,6 +1186,7 @@ MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SessionEnded -> System.EventHandler?
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
@@ -1930,6 +1936,7 @@ override MMCA.Common.UI.Pages.Auth.ForgotPassword.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.Login.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.OAuthComplete.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Auth.ResetPassword.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
 override MMCA.Common.UI.Pages.Auth.Sessions.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!

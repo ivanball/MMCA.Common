@@ -97,6 +97,8 @@ MMCA.Common.Infrastructure.Auth.TokenService.RefreshTokenLifetime.get -> System.
 MMCA.Common.Infrastructure.Auth.TokenService.TokenService(Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Auth.JwtSettings!>! jwtOptions, MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry! permissionRegistry, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Auth.TokenService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Auth.JwksSettings!>? jwksSettings = null) -> void
 MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions
 MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.CacheKeyPrefixOptions() -> void
+MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.CrossServiceKeyPrefix.get -> string!
+MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.CrossServiceKeyPrefix.init -> void
 MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.KeyPrefix.get -> string!
 MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.KeyPrefix.init -> void
 MMCA.Common.Infrastructure.Caching.CacheOptions
