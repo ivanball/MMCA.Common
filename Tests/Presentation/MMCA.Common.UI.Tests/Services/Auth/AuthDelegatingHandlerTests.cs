@@ -151,6 +151,70 @@ public sealed class AuthDelegatingHandlerTests
         (await storage.GetAccessTokenAsync()).Should().Be(token);
     }
 
+    // The owner registry is process-wide, so a sweep must drop only what can never be used again: an
+    // owner whose storage was collected, or an entry older than any token lives. Live entries stay. The
+    // entries here are unique to this test, so other tests running alongside are unaffected.
+    private const int AboveTheSweepThreshold = 1100;
+
+    private static readonly long PastTheRetention = (long)TimeSpan.FromHours(25).TotalMilliseconds;
+
+    [Fact]
+    public void Sweep_AboveTheThreshold_DropsDeadAndExpiredOwners_AndKeepsLiveOnes()
+    {
+        var live = new WasmTokenStorageService(SucceedingCookieSync(), new Mock<ISessionAwareTokenRefresher>().Object);
+        var run = Guid.NewGuid().ToString("N");
+        var liveTokens = Enumerable.Range(0, AboveTheSweepThreshold).Select(i => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"sweep-live-{run}-{i}")).ToList();
+        foreach (var token in liveTokens)
+        {
+            AuthDelegatingHandler.TrackTokenOwner(token, live);
+        }
+
+        var expired = $"sweep-expired-{run}";
+        AuthDelegatingHandler.TrackTokenOwnerAt(expired, new WeakReference<ISessionAwareTokenStorage>(live), Environment.TickCount64 - PastTheRetention);
+        var dead = $"sweep-dead-{run}";
+        // A reference whose storage is gone, as after a circuit or scope ends and its storage is collected.
+        AuthDelegatingHandler.TrackTokenOwnerAt(dead, new WeakReference<ISessionAwareTokenStorage>(null!), Environment.TickCount64);
+
+        AuthDelegatingHandler.SweepIfLarge();
+
+        AuthDelegatingHandler.IsTrackedOwner(dead).Should().BeFalse("its storage is gone, so no 401 can reach it");
+        AuthDelegatingHandler.IsTrackedOwner(expired).Should().BeFalse("it outlived any access token");
+        liveTokens.Should().OnlyContain(token => AuthDelegatingHandler.HasLiveOwner(token), "a live, recent owner is kept");
+        GC.KeepAlive(live);
+    }
+
+    [Fact]
+    public void Sweep_AboveTheThreshold_DropsExpiredRenewals_AndKeepsRecentOnes()
+    {
+        var run = Guid.NewGuid().ToString("N");
+        var recent = Enumerable.Range(0, AboveTheSweepThreshold).Select(i => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"sweep-renewed-{run}-{i}")).ToList();
+        foreach (var token in recent)
+        {
+            AuthDelegatingHandler.MarkRenewedAt(token, Environment.TickCount64);
+        }
+
+        var old = $"sweep-renewed-old-{run}";
+        AuthDelegatingHandler.MarkRenewedAt(old, Environment.TickCount64 - PastTheRetention);
+
+        AuthDelegatingHandler.SweepIfLarge();
+
+        AuthDelegatingHandler.IsMarkedRenewed(old).Should().BeFalse();
+        recent.Should().OnlyContain(token => AuthDelegatingHandler.IsMarkedRenewed(token));
+    }
+
+    [Fact]
+    public void TrackTokenOwner_IgnoresABlankTokenAndAStorageThatCannotRenew()
+    {
+        var plain = new Mock<ITokenStorageService>().Object;
+        var token = $"untracked-{Guid.NewGuid():N}";
+
+        AuthDelegatingHandler.TrackTokenOwner(token, plain);
+        AuthDelegatingHandler.TrackTokenOwner("   ", new WasmTokenStorageService(SucceedingCookieSync(), new Mock<ISessionAwareTokenRefresher>().Object));
+
+        AuthDelegatingHandler.IsTrackedOwner(token).Should().BeFalse("a storage without the session-aware capability cannot renew");
+        AuthDelegatingHandler.IsTrackedOwner("   ").Should().BeFalse();
+    }
+
     private static ISessionCookieSync SucceedingCookieSync()
     {
         var sync = new Mock<ISessionCookieSync>();

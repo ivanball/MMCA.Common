@@ -43,8 +43,8 @@ public sealed class AuthDelegatingHandler(
     /// <summary>Entries kept before a sweep drops the ones whose owner is gone or that outlived any token.</summary>
     private const int SweepThreshold = 1024;
 
-    /// <summary>How long a remembered token is kept: longer than any access token lives.</summary>
-    private static readonly TimeSpan Retention = TimeSpan.FromHours(24);
+    /// <summary>How long a remembered token is kept, in milliseconds: 24 hours, longer than any access token lives.</summary>
+    private const long RetentionMs = 24L * 60 * 60 * 1000;
 
     /// <summary>Which storage attached each bearer, so its 401 reaches the instance that holds it.</summary>
     private static readonly ConcurrentDictionary<string, TokenOwner> Owners = new(StringComparer.Ordinal);
@@ -66,8 +66,55 @@ public sealed class AuthDelegatingHandler(
             return;
         }
 
-        Owners[accessToken] = new TokenOwner(new WeakReference<ISessionAwareTokenStorage>(sessionAware), Environment.TickCount64);
+        TrackTokenOwnerAt(accessToken, new WeakReference<ISessionAwareTokenStorage>(sessionAware), Environment.TickCount64);
+    }
+
+    /// <summary>
+    /// Stores an owner entry as given, so a test can age it or hand it a reference whose storage is gone.
+    /// </summary>
+    /// <param name="accessToken">The bearer attached to the request.</param>
+    /// <param name="owner">The weak reference to the storage that holds it.</param>
+    /// <param name="trackedAt">The <see cref="Environment.TickCount64"/> the entry is stamped with.</param>
+    internal static void TrackTokenOwnerAt(string accessToken, WeakReference<ISessionAwareTokenStorage> owner, long trackedAt)
+    {
+        Owners[accessToken] = new TokenOwner(owner, trackedAt);
         SweepIfLarge();
+    }
+
+    /// <summary>Remembers <paramref name="accessToken"/> as the product of a 401 renewal, stamped <paramref name="renewedAt"/>.</summary>
+    /// <param name="accessToken">The token a renewal produced.</param>
+    /// <param name="renewedAt">The <see cref="Environment.TickCount64"/> the entry is stamped with.</param>
+    internal static void MarkRenewedAt(string accessToken, long renewedAt)
+    {
+        RenewedTokens[accessToken] = renewedAt;
+        SweepIfLarge();
+    }
+
+    /// <summary>Whether a 401 to <paramref name="accessToken"/> would still reach a tracked, live owner.</summary>
+    /// <param name="accessToken">The bearer.</param>
+    /// <returns><see langword="true"/> when the token has an entry whose owner is still alive.</returns>
+    internal static bool HasLiveOwner(string accessToken) =>
+        Owners.TryGetValue(accessToken, out var owner) && owner.Storage.TryGetTarget(out _);
+
+    /// <summary>Whether <paramref name="accessToken"/> has any owner entry, live or dead.</summary>
+    /// <param name="accessToken">The bearer.</param>
+    /// <returns><see langword="true"/> when the map still holds an entry for the token.</returns>
+    internal static bool IsTrackedOwner(string accessToken) => Owners.ContainsKey(accessToken);
+
+    /// <summary>Whether <paramref name="accessToken"/> is remembered as the product of a renewal.</summary>
+    /// <param name="accessToken">The token.</param>
+    /// <returns><see langword="true"/> when a 401 to it would not be renewed again.</returns>
+    internal static bool IsMarkedRenewed(string accessToken) => RenewedTokens.ContainsKey(accessToken);
+
+    /// <summary>
+    /// Drops, once a map holds more than <see cref="SweepThreshold"/> entries, the owner entries whose
+    /// storage is gone or that outlived <see cref="RetentionMs"/>, and the renewal entries that outlived it.
+    /// </summary>
+    internal static void SweepIfLarge()
+    {
+        var now = Environment.TickCount64;
+        SweepOwners(now);
+        SweepRenewed(now);
     }
 
     /// <inheritdoc/>
@@ -95,33 +142,37 @@ public sealed class AuthDelegatingHandler(
                 ? token
                 : null;
 
-    private static void SweepIfLarge()
+    private static void SweepOwners(long now)
     {
-        var now = Environment.TickCount64;
-        var retentionMs = (long)Retention.TotalMilliseconds;
-
-        if (Owners.Count > SweepThreshold)
+        if (Owners.Count <= SweepThreshold)
         {
-            foreach (var (token, owner) in Owners)
-            {
-                if (now - owner.TrackedAt > retentionMs || !owner.Storage.TryGetTarget(out _))
-                {
-                    Owners.TryRemove(token, out _);
-                }
-            }
+            return;
         }
 
-        if (RenewedTokens.Count > SweepThreshold)
+        // A ConcurrentDictionary may be modified while it is enumerated.
+        foreach (var entry in Owners.Where(entry => IsStale(entry.Value, now)))
         {
-            foreach (var (token, renewedAt) in RenewedTokens)
-            {
-                if (now - renewedAt > retentionMs)
-                {
-                    RenewedTokens.TryRemove(token, out _);
-                }
-            }
+            Owners.TryRemove(entry.Key, out _);
         }
     }
+
+    private static void SweepRenewed(long now)
+    {
+        if (RenewedTokens.Count <= SweepThreshold)
+        {
+            return;
+        }
+
+        foreach (var entry in RenewedTokens.Where(entry => IsExpired(entry.Value, now)))
+        {
+            RenewedTokens.TryRemove(entry.Key, out _);
+        }
+    }
+
+    private static bool IsStale(TokenOwner owner, long now) =>
+        IsExpired(owner.TrackedAt, now) || !owner.Storage.TryGetTarget(out _);
+
+    private static bool IsExpired(long stampedAt, long now) => now - stampedAt > RetentionMs;
 
     private async Task<HttpResponseMessage> SendWithBearerAsync(
         HttpRequestMessage request,
@@ -179,9 +230,8 @@ public sealed class AuthDelegatingHandler(
             var renewed = await owner.RenewRejectedAccessTokenAsync(rejectedToken);
             if (!string.IsNullOrWhiteSpace(renewed) && !string.Equals(renewed, rejectedToken, StringComparison.Ordinal))
             {
-                RenewedTokens[renewed] = Environment.TickCount64;
-                Owners[renewed] = new TokenOwner(new WeakReference<ISessionAwareTokenStorage>(owner), Environment.TickCount64);
-                SweepIfLarge();
+                TrackTokenOwner(renewed, owner);
+                MarkRenewedAt(renewed, Environment.TickCount64);
             }
         }
 #pragma warning disable CA1031 // Best effort by design: the caller still receives the server's 401, which is the answer that matters.
