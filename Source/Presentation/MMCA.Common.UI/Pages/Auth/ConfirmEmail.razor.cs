@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.UI.Common;
@@ -45,6 +46,7 @@ public sealed partial class ConfirmEmail : IDisposable
     private bool _isBusy;
     private bool _attempted;
     private bool _disposed;
+    private bool _locationHandlerRegistered;
 
     /// <summary>What the page is showing.</summary>
     private enum ConfirmationState
@@ -71,6 +73,8 @@ public sealed partial class ConfirmEmail : IDisposable
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     /// <inheritdoc />
@@ -82,8 +86,55 @@ public sealed partial class ConfirmEmail : IDisposable
         }
 
         _disposed = true;
+        if (_locationHandlerRegistered)
+        {
+            Navigation.LocationChanged -= OnLocationChanged;
+        }
+
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    /// <summary>
+    /// Reads one <c>name=value</c> pair of an emailed link's fragment: <see langword="true"/> for an
+    /// <c>email</c> or <c>token</c> pair (names match exactly), with its value decoded. Shared with the
+    /// reset-password page, whose link has the same shape.
+    /// </summary>
+    /// <param name="pair">One pair of the fragment.</param>
+    /// <param name="isEmail">Whether the pair is the address (otherwise the token).</param>
+    /// <param name="value">The decoded value.</param>
+    /// <returns>Whether the pair is one the link carries.</returns>
+    internal static bool TryReadLinkPair(string pair, out bool isEmail, out string value)
+    {
+        isEmail = false;
+        value = string.Empty;
+        var separator = pair.IndexOf('=', StringComparison.Ordinal);
+        if (separator <= 0)
+        {
+            return false;
+        }
+
+        var name = pair[..separator];
+        isEmail = string.Equals(name, "email", StringComparison.Ordinal);
+        if (!isEmail && !string.Equals(name, "token", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+        return true;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Listens for a new link opened in this tab while the page is already showing (for example after
+    /// "send me a new one"): the browser only changes the fragment, so the page is not rebuilt and
+    /// <see cref="OnAfterRenderAsync"/> never runs its first-render read again.
+    /// </remarks>
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        _locationHandlerRegistered = true;
     }
 
     /// <inheritdoc />
@@ -113,18 +164,55 @@ public sealed partial class ConfirmEmail : IDisposable
         }
 
         _attempted = true;
-        ApplyFragment(await TakeFragmentAsync());
+        ApplyFragment(await TakeFragmentAsync(), replace: false);
+        await RedeemOrShowFormAsync();
+    }
 
+    /// <summary>
+    /// A navigation within the page that carries a fragment is a new emailed link (Store Run 5 D3): its
+    /// values replace whatever the form held, it is redeemed once exactly like a fresh tab, and taking
+    /// it scrubs the single-use token from the address bar.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (_disposed || !_attempted || !HasFragment(e.Location))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            var fragment = await TakeFragmentAsync();
+            if (_disposed || !ApplyFragment(fragment, replace: true))
+            {
+                return;
+            }
+
+            _linkSent = false;
+            _errorMessage = null;
+            _state = ConfirmationState.Working;
+            await RedeemOrShowFormAsync();
+        });
+    }
+
+    private static bool HasFragment(string location)
+    {
+        var hash = location.IndexOf('#', StringComparison.Ordinal);
+        return hash >= 0 && hash < location.Length - 1;
+    }
+
+    private Task RedeemOrShowFormAsync()
+    {
         if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_token))
         {
             // Nothing to redeem: straight to manual entry and resend rather than posting a request
             // that can only be refused.
             _state = ConfirmationState.Form;
             StateHasChanged();
-            return;
+            return Task.CompletedTask;
         }
 
-        await ConfirmAsync();
+        return ConfirmAsync();
     }
 
     private async Task<string?> TakeFragmentAsync()
@@ -139,35 +227,50 @@ public sealed partial class ConfirmEmail : IDisposable
             : await module.InvokeOrDefaultAsync<string?>("locationHashTake", [], CancellationToken.None);
     }
 
-    /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment into the empty fields.</summary>
+    /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment into the fields.</summary>
     /// <param name="fragment">The raw fragment, without its leading hash.</param>
-    private void ApplyFragment(string? fragment)
+    /// <param name="replace">
+    /// <see langword="false"/> on the first render: only EMPTY fields are filled (the query string and
+    /// the first pair win). <see langword="true"/> for a new link opened on the open page: the link's
+    /// values replace the stale ones, and a field the link does not carry is cleared, so an old token
+    /// is never redeemed under a new address.
+    /// </param>
+    /// <returns><see langword="true"/> when the fragment carried an <c>email</c> or <c>token</c> pair.</returns>
+    private bool ApplyFragment(string? fragment, bool replace)
     {
         if (string.IsNullOrWhiteSpace(fragment))
         {
-            return;
+            return false;
         }
 
+        var recognized = false;
         foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
-            var separator = pair.IndexOf('=', StringComparison.Ordinal);
-            if (separator <= 0)
+            if (!TryReadLinkPair(pair, out var isEmail, out var value))
             {
                 continue;
             }
 
-            var name = pair[..separator];
-            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+            if (replace && !recognized)
+            {
+                // A new link: nothing the form held survives it.
+                _email = string.Empty;
+                _token = string.Empty;
+            }
 
-            if (string.Equals(name, "email", StringComparison.Ordinal) && string.IsNullOrWhiteSpace(_email))
+            recognized = true;
+
+            if (isEmail && string.IsNullOrWhiteSpace(_email))
             {
                 _email = value;
             }
-            else if (string.Equals(name, "token", StringComparison.Ordinal) && string.IsNullOrWhiteSpace(_token))
+            else if (!isEmail && string.IsNullOrWhiteSpace(_token))
             {
                 _token = value;
             }
         }
+
+        return recognized;
     }
 
     private async Task ConfirmAsync()
