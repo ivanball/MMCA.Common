@@ -1227,6 +1227,51 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         seenPageNumber.Should().Be(1, "once the restore is done, a load for page 0 is the user's own choice");
     }
 
+    // -- Store Run 5 O4: a page beyond the last one is clamped to the last page --
+    // A hand-typed or stale ?p= past the end came back with no rows but a non-zero total, so the grid
+    // showed nothing, a pager like "1-2 of 2" and no empty-state text.
+    [Fact]
+    public async Task LoadServerDataAsync_PageBeyondTheLast_RefetchesTheLastPage_AndKeepsTheUrlInStep()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=5&ps=10");
+        var cut = Render<TestGridPage>();
+        var requested = new List<int>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            requested.Add(pageNumber);
+            return pageNumber == 2
+                ? Loaded(12, new WidgetRow(11, "Eleventh"), new WidgetRow(12, "Twelfth"))
+                : Loaded(12);
+        };
+
+        var data = await LoadOnDispatcherAsync(cut, State(page: 5, pageSize: 10));
+
+        requested.Should().Equal(6, 2);
+        data.Items.Should().HaveCount(2, "the last page's rows are shown instead of an empty grid");
+        data.TotalItems.Should().Be(12);
+        cut.Instance.EmptyConfirmedNow.Should().BeFalse();
+        cut.Instance.CurrentPageNow.Should().Be(1, "the pager follows the clamped page");
+        navigation.Uri.Should().Contain("p=1").And.NotContain("p=5");
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_EmptyFirstPageOfAnEmptyList_DoesNotRefetch()
+    {
+        var cut = Render<TestGridPage>();
+        var requested = new List<int>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            requested.Add(pageNumber);
+            return Loaded(0);
+        };
+
+        await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
+
+        requested.Should().Equal(1);
+        cut.Instance.EmptyConfirmedNow.Should().BeTrue();
+    }
+
     [Fact]
     public void RestoreGridState_WhenPaged_RestoresRowsPerPageOntoTheGrid()
     {

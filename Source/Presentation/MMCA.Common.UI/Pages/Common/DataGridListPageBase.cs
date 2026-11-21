@@ -1072,23 +1072,96 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
                 var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
 
-                var fetched = await fetchAsync(filters, pageIndex + 1, state.PageSize, sortColumn, sortDirection, token);
-                ThrowIfSuperseded(loadSource);
+                var (fetched, fetchedPage) = await FetchWithinRangeAsync(
+                    loadSource,
+                    fetchAsync,
+                    filters,
+                    pageIndex,
+                    state.PageSize,
+                    (sortColumn, sortDirection),
+                    token);
                 if (!fetched.TryGetValue(out var page))
                 {
                     return FailedFetch(fetched, EmptyGridData);
                 }
 
+                if (fetchedPage != pageIndex)
+                {
+                    MovePagerTo(fetchedPage);
+                }
+
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
                 EmptyConfirmed = page.TotalItems == 0;
-                SaveCurrentState(pageIndex, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
+                SaveCurrentState(fetchedPage, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
                 return gridData;
             },
             onCancelled: EmptyGridData,
             onFailed: EmptyGridData,
             showCancelSnackbar,
             CancellationToken.None);
+
+    /// <summary>
+    /// Fetches <paramref name="pageIndex"/>, and when it comes back empty although the list is not (a
+    /// hand-typed or stale <c>?p=</c> past the end, or rows deleted since), fetches the last page instead
+    /// (Store Run 5 O4). Without that the grid showed no rows, a pager such as "1-2 of 2" and no
+    /// empty-state text, because the total was not zero.
+    /// </summary>
+    /// <param name="loadSource">The load's cancellation source, checked after each fetch.</param>
+    /// <param name="fetchAsync">The page's fetch delegate.</param>
+    /// <param name="filters">The filters to send.</param>
+    /// <param name="pageIndex">The 0-based page asked for.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="sort">The sort column and direction to send.</param>
+    /// <param name="token">The load's token.</param>
+    /// <returns>The fetch result and the 0-based page it holds.</returns>
+    private async Task<(Result<(IReadOnlyList<TDto> Items, int TotalItems)> Fetched, int PageIndex)> FetchWithinRangeAsync(
+        CancellationTokenSource loadSource,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
+        Dictionary<string, (string Operator, string Value)> filters,
+        int pageIndex,
+        int pageSize,
+        (string? Column, string? Direction) sort,
+        CancellationToken token)
+    {
+        var fetched = await fetchAsync(filters, pageIndex + 1, pageSize, sort.Column, sort.Direction, token);
+        ThrowIfSuperseded(loadSource);
+
+        if (pageIndex == 0
+            || pageSize <= 0
+            || !fetched.TryGetValue(out var page)
+            || page.Items.Count > 0
+            || page.TotalItems <= 0)
+        {
+            return (fetched, pageIndex);
+        }
+
+        var lastPage = (page.TotalItems - 1) / pageSize;
+        if (lastPage >= pageIndex)
+        {
+            return (fetched, pageIndex);
+        }
+
+        var clamped = await fetchAsync(filters, lastPage + 1, pageSize, sort.Column, sort.Direction, token);
+        ThrowIfSuperseded(loadSource);
+        return (clamped, lastPage);
+    }
+
+    /// <summary>
+    /// Puts the pager on <paramref name="pageIndex"/> after a fetch was clamped to it: the bound page, the
+    /// page a pending restore applies, and the rendered grid's own page (which reloads that page once the
+    /// grid's first load is done, answering with the same rows).
+    /// </summary>
+    /// <param name="pageIndex">The 0-based page the fetch returned.</param>
+    private void MovePagerTo(int pageIndex)
+    {
+        _savedPage = pageIndex;
+        CurrentPageState = pageIndex;
+        if (!VirtualizeGrid && GridRef is { } grid)
+        {
+            ApplyCurrentPageFromUrl(grid, pageIndex);
+        }
+    }
 
     /// <summary>
     /// The <c>VirtualizeServerData</c> counterpart of <see cref="LoadServerDataAsync"/>: it manages the
