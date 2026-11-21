@@ -43,11 +43,24 @@ public sealed class CacheKeyPrefixOptions
     /// Redis shared one keyspace for both cache entries and distributed locks, silently.
     /// </remarks>
     public string KeyPrefix { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Prefix for the cross-service keys (<see cref="MMCA.Common.Application.Interfaces.CrossServiceCacheKeys"/>),
+    /// the records one service writes and another reads, such as the soft-deleted-user marker. Leave it
+    /// empty to take the framework default: the token audience (<c>Jwt:Audience</c>), which every service
+    /// accepting the same tokens shares and two applications do not, falling back to this host's own
+    /// namespace when no audience is configured. Set it only to pin that keyspace explicitly, and set the
+    /// SAME value on every service of the deployment.
+    /// </summary>
+    public string CrossServiceKeyPrefix { get; init; } = string.Empty;
 }
 
 /// <summary>Applies <see cref="CacheKeyPrefixOptions.KeyPrefix"/> to cache keys.</summary>
 internal sealed class CacheKeyNamespace(string prefix)
 {
+    /// <summary>The configuration key of the token audience, the default cross-service namespace.</summary>
+    private static readonly string AudienceConfigurationKey = string.Concat(Auth.JwtSettings.SectionName, ":", nameof(Auth.JwtSettings.Audience));
+
     /// <summary>A namespace that leaves keys untouched.</summary>
     public static CacheKeyNamespace None { get; } = new(string.Empty);
 
@@ -84,6 +97,36 @@ internal sealed class CacheKeyNamespace(string prefix)
             serviceProvider.GetService<IHostEnvironment>());
 
         return new CacheKeyNamespace(string.Concat(applicationNamespace, ":"));
+    }
+
+    /// <summary>
+    /// Builds the namespace the cross-service keys are qualified with
+    /// (<see cref="MMCA.Common.Application.Interfaces.CrossServiceCacheKeys"/>): the configured
+    /// <see cref="CacheKeyPrefixOptions.CrossServiceKeyPrefix"/>, otherwise the token audience, otherwise
+    /// this host's own namespace (<see cref="From(IServiceProvider)"/>).
+    /// </summary>
+    /// <param name="serviceProvider">The resolving provider.</param>
+    /// <returns>The namespace every service of one deployment shares for cross-service keys.</returns>
+    /// <remarks>
+    /// The audience is the default because it names exactly the set of services that must see a
+    /// cross-service record: each service of a deployment is configured with the audience of the tokens
+    /// it accepts (while its <c>Application:Namespace</c> and <c>Cache:KeyPrefix</c> differ per service),
+    /// and a different application accepts a different audience, so its keys stay apart (SEC-Common-53).
+    /// </remarks>
+    public static CacheKeyNamespace CrossServiceFrom(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        var configured = serviceProvider.GetService<IOptions<CacheKeyPrefixOptions>>()?.Value.CrossServiceKeyPrefix;
+        if (!string.IsNullOrEmpty(configured))
+        {
+            return new CacheKeyNamespace(configured);
+        }
+
+        var audience = serviceProvider.GetService<IConfiguration>()?[AudienceConfigurationKey];
+        return string.IsNullOrWhiteSpace(audience)
+            ? From(serviceProvider)
+            : new CacheKeyNamespace(string.Concat(Configuration.ApplicationNamespace.Sanitize(audience), ":"));
     }
 
     /// <summary>Qualifies a caller-supplied key.</summary>

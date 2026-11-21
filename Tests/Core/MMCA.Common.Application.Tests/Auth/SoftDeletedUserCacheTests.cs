@@ -20,7 +20,7 @@ public sealed class SoftDeletedUserCacheTests
     // ── Key shape ──
     [Fact]
     public void KeyFor_ReturnsTheExpectedKeyShape() =>
-        SoftDeletedUserCache.KeyFor(42).Should().Be("user:deleted:42");
+        SoftDeletedUserCache.KeyFor(42).Should().Be("xsvc:user:deleted:42", "the marker is a cross-service key, read by services that do not host Identity");
 
     [Fact]
     public void KeyFor_IsIdenticalUnderANonInvariantCurrentCulture()
@@ -33,8 +33,8 @@ public sealed class SoftDeletedUserCacheTests
         {
             CultureInfo.CurrentCulture = CreateNonInvariantCulture();
 
-            SoftDeletedUserCache.KeyFor(1234567).Should().Be(expectedPositive).And.Be("user:deleted:1234567");
-            SoftDeletedUserCache.KeyFor(-42).Should().Be(expectedNegative).And.Be("user:deleted:-42");
+            SoftDeletedUserCache.KeyFor(1234567).Should().Be(expectedPositive).And.Be("xsvc:user:deleted:1234567");
+            SoftDeletedUserCache.KeyFor(-42).Should().Be(expectedNegative).And.Be("xsvc:user:deleted:-42");
         }
         finally
         {

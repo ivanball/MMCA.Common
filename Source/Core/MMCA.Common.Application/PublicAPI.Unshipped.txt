@@ -1,1 +1,4 @@
 #nullable enable
+const MMCA.Common.Application.Interfaces.CrossServiceCacheKeys.Prefix = "xsvc:" -> string!
+MMCA.Common.Application.Interfaces.CrossServiceCacheKeys
+static MMCA.Common.Application.Interfaces.CrossServiceCacheKeys.IsCrossService(string! key) -> bool

@@ -64,9 +64,14 @@ public static class SoftDeletedUserCache
     /// renders differently under some cultures (digit shapes and group separators), so a
     /// culture-sensitive key would be written under one request's culture and missed under
     /// another, silently letting a deleted user keep making requests.
+    /// <para>
+    /// The key is a cross-service key (<see cref="CrossServiceCacheKeys"/>): the Identity service writes
+    /// the marker and every other service's middleware reads it, so it must not be qualified with each
+    /// host's own namespace, or a service that does not host Identity would never see a lock.
+    /// </para>
     /// </remarks>
     public static string KeyFor(UserIdentifierType userId) =>
-        string.Create(CultureInfo.InvariantCulture, $"user:deleted:{userId}");
+        string.Create(CultureInfo.InvariantCulture, $"{CrossServiceCacheKeys.Prefix}user:deleted:{userId}");
 
     /// <summary>
     /// Writes the deleted-or-locked marker for a user, so authenticated requests bearing an

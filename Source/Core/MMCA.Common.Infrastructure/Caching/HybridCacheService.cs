@@ -45,6 +45,12 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// that covers them converges across replicas within the local expiration like any other entry;
 /// nothing in the framework invalidates such a prefix.
 /// </para>
+/// <para>
+/// <b>Cross-service keys</b> (<see cref="CrossServiceCacheKeys"/>, such as the soft-deleted-user marker)
+/// are the one exception to the host's namespace: they are qualified with the cross-service namespace
+/// every service of a deployment shares, and carry no generation token, so a record Identity writes is
+/// the record every other service reads.
+/// </para>
 /// </remarks>
 internal sealed partial class HybridCacheService : ICacheService
 {
@@ -113,6 +119,14 @@ internal sealed partial class HybridCacheService : ICacheService
     private readonly CacheKeyNamespace _keys;
 
     /// <summary>
+    /// Namespace applied to the cross-service keys (<see cref="CrossServiceCacheKeys"/>), which every
+    /// service sharing the cache must address identically. <c>AddCommonHybridCache</c> passes
+    /// <see cref="CacheKeyNamespace.CrossServiceFrom(IServiceProvider)"/>; direct construction without one
+    /// uses <see cref="_keys"/>.
+    /// </summary>
+    private readonly CacheKeyNamespace _crossServiceKeys;
+
+    /// <summary>
     /// Bound <c>Cache</c> section, or the framework defaults when a host builds this service without
     /// one (direct construction in tests). The defaults reproduce
     /// <see cref="CacheOptions.DefaultDuration"/> and <see cref="LocalCacheDefault"/> exactly.
@@ -131,12 +145,16 @@ internal sealed partial class HybridCacheService : ICacheService
     /// </param>
     /// <param name="keyNamespace">Namespace applied to every key and generation key.</param>
     /// <param name="cacheSettings">The bound <c>Cache</c> section.</param>
+    /// <param name="crossServiceNamespace">
+    /// Namespace applied to the cross-service keys; <paramref name="keyNamespace"/> when omitted.
+    /// </param>
     public HybridCacheService(
         HybridCache hybrid,
         ILogger<HybridCacheService> logger,
         IConnectionMultiplexer? connectionMultiplexer = null,
         CacheKeyNamespace? keyNamespace = null,
-        IOptions<CacheSettings>? cacheSettings = null)
+        IOptions<CacheSettings>? cacheSettings = null,
+        CacheKeyNamespace? crossServiceNamespace = null)
     {
         ArgumentNullException.ThrowIfNull(hybrid);
         ArgumentNullException.ThrowIfNull(logger);
@@ -144,6 +162,7 @@ internal sealed partial class HybridCacheService : ICacheService
         _hybrid = hybrid;
         _logger = logger;
         _keys = keyNamespace ?? CacheKeyNamespace.None;
+        _crossServiceKeys = crossServiceNamespace ?? _keys;
         _settings = cacheSettings?.Value ?? new CacheSettings();
         _generations = new CachePrefixGenerations(
             connectionMultiplexer,
@@ -412,8 +431,19 @@ internal sealed partial class HybridCacheService : ICacheService
     /// <param name="key">The caller-supplied key.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The fully qualified key, <c>{prefix}hc:{key}</c> plus any generation suffix.</returns>
+    /// <remarks>
+    /// A cross-service key (<see cref="CrossServiceCacheKeys"/>) is qualified with the cross-service
+    /// namespace and carries no generation suffix: it is written by one service and read by another,
+    /// so it must resolve to the same stored key in every service, and the generation tokens are per
+    /// namespace (a prefix wipe in one service would otherwise move its copy away from the others').
+    /// </remarks>
     private async ValueTask<string> HybridKeyAsync(string key, CancellationToken cancellationToken)
     {
+        if (CrossServiceCacheKeys.IsCrossService(key))
+        {
+            return _crossServiceKeys.Qualify(string.Concat(KeyspaceSegment, key));
+        }
+
         var suffix = await _generations.SuffixAsync(key, cancellationToken).ConfigureAwait(false);
         return _keys.Qualify(string.Concat(KeyspaceSegment, key, suffix));
     }
