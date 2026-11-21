@@ -1,4 +1,6 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.FeatureFlags;
 using MMCA.Common.Application.Interfaces;
@@ -22,9 +24,12 @@ namespace MMCA.Common.Infrastructure.FeatureFlags;
 /// (<c>FeatureFlags:OverrideCacheSeconds</c>) is the staleness bound for the other replicas.
 /// </para>
 /// <para>
-/// <b>Keyed by the owning data source.</b> Services that share one Redis without a key prefix would
-/// otherwise read each other's snapshots; each service owns its overrides in its own database, so the
-/// source name is part of the key.
+/// <b>Keyed by the owning service and data source.</b> Services that share one Redis would otherwise
+/// read each other's snapshots; each service owns its overrides in its own database, so both the host's
+/// application name (<see cref="IHostEnvironment.ApplicationName"/>) and the source name are part of the
+/// key. The source name alone is not enough: two services that keep the default
+/// <c>FeatureFlags:DataSourceName</c> on one Redis would share one snapshot, the last loader would win and
+/// either service's invalidation would drop the other's.
 /// </para>
 /// <para>
 /// Singleton, and it opens its own DI scope per load because the store is scoped (it shares the
@@ -34,27 +39,59 @@ namespace MMCA.Common.Infrastructure.FeatureFlags;
 /// <param name="cache">The host's cache service.</param>
 /// <param name="scopeFactory">Factory for the scope each load resolves the store from.</param>
 /// <param name="settings">Bound override settings (the entry lifetime and the owning source).</param>
+/// <param name="environment">
+/// The host environment, whose application name identifies the owning service. Optional so a bare
+/// container still resolves the snapshot; the entry assembly name stands in when it is absent.
+/// </param>
 internal sealed class FeatureFlagOverrideSnapshot(
     ICacheService cache,
     IServiceScopeFactory scopeFactory,
-    IOptions<FeatureFlagOverrideSettings> settings) : IFeatureFlagOverrideSnapshot
+    IOptions<FeatureFlagOverrideSettings> settings,
+    IHostEnvironment? environment = null) : IFeatureFlagOverrideSnapshot
 {
     /// <summary>The root every snapshot key sits under.</summary>
     internal const string KeyRoot = "featureflags:overrides:";
 
     private readonly TimeSpan _lifetime = TimeSpan.FromSeconds(settings.Value.OverrideCacheSeconds);
 
-    /// <summary>The invalidation boundary of this service's snapshot (ends in <c>:</c>).</summary>
-    private readonly string _prefix = string.Concat(KeyRoot, settings.Value.DataSourceName, ":");
+    /// <summary>
+    /// The invalidation boundary of this service's snapshot (ends in <c>:</c>): the owning service, then
+    /// the owning data source. The snapshot key sits directly beneath it, so the key and the prefix a
+    /// write invalidates can never disagree.
+    /// </summary>
+    internal string Prefix { get; } = BuildPrefix(ResolveServiceName(environment), settings.Value.DataSourceName);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<FeatureFlagOverrideResponse>> GetAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrCreateAsync(string.Concat(_prefix, "all"), LoadAsync, _lifetime, cancellationToken)
+        await cache.GetOrCreateAsync(string.Concat(Prefix, "all"), LoadAsync, _lifetime, cancellationToken)
             .ConfigureAwait(false);
 
     /// <inheritdoc />
     public Task InvalidateAsync(CancellationToken cancellationToken = default) =>
-        cache.RemoveByPrefixAsync(_prefix, cancellationToken);
+        cache.RemoveByPrefixAsync(Prefix, cancellationToken);
+
+    /// <summary>Composes the invalidation boundary for one service and data source.</summary>
+    /// <param name="serviceName">The owning service's identity.</param>
+    /// <param name="dataSourceName">The owning data source.</param>
+    /// <returns>The prefix, ending in <c>:</c>.</returns>
+    internal static string BuildPrefix(string serviceName, string dataSourceName) =>
+        string.Concat(KeyRoot, serviceName, ":", dataSourceName, ":");
+
+    /// <summary>
+    /// The owning service's identity: the host's application name, else the entry assembly name.
+    /// </summary>
+    /// <param name="environment">The host environment, when one is registered.</param>
+    /// <returns>A stable per-service name.</returns>
+    private static string ResolveServiceName(IHostEnvironment? environment)
+    {
+        var name = environment?.ApplicationName;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = Assembly.GetEntryAssembly()?.GetName().Name;
+        }
+
+        return string.IsNullOrWhiteSpace(name) ? "host" : name;
+    }
 
     /// <summary>Reads the whole table through a fresh scope's store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>

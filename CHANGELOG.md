@@ -4,6 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.311.0] - 2026-11-20
+
+### Added
+
+- **`DataGridListPageBase<TDto>.MobileListRef`** (MMCA.Common.UI): a protected virtual property, default `null`, that a page rendering a `MobileInfiniteScrollList<TDto>` on a phone overrides to expose it, as `GridRef` exposes the grid. The base uses it to reload the card list after a same-route navigation (see Fixed).
+
+### Fixed
+
+- **Mail reaches an address with a non-ASCII local part** (MMCA.Common.Infrastructure): `SmtpEmailSender` sends with `SmtpDeliveryFormat.International` (SMTPUTF8), so confirmation, reset, sign-in link and invite mail to such an address no longer throws "only configured for E-mail addresses with ASCII local-parts". ASCII addresses are sent as before. The relay must offer SMTPUTF8 for a Unicode address.
+- **Stored feature-flag overrides no longer flap between services that share one Redis** (MMCA.Common.Infrastructure; ADR-031): the override snapshot key now carries the owning service (the host's `IHostEnvironment.ApplicationName`, or the entry assembly name without one) as well as `FeatureFlags:DataSourceName`, so two services that keep the default `Default` source no longer share one snapshot, where the last loader won and either service's invalidation dropped the other's. The invalidation prefix follows the key. Existing snapshot entries are simply no longer addressed and expire.
+- **A transport-level gRPC failure is a retryable server fault, not a 400** (MMCA.Common.Grpc): `RpcException.ToResult()` and `ToResult<T>()` turn a fault that carries no structured trailers (`Unavailable`, `DeadlineExceeded` and any other transport status) into `ErrorType.Unexpected` (HTTP 500 at the edge, the top rank in `ErrorTypeSeverity`) instead of `ErrorType.Failure` (400), keeping the `Grpc.{StatusCode}` code and the source. A peer outage no longer reaches clients as a definitive "not available".
+- **List-page column filters: one rule for the fetch and the URL** (MMCA.Common.UI): a filter row with no operator yet (the second row a user adds on a filtered column) is ignored by both the fetch and the saved `c:` state, and of the complete rows on a column the newest wins in both. Before, the fetch took the incomplete row (no filter) while the URL kept the first.
+- **A column filter restored from the URL reaches the first fetch however long `OnBeforeFetchAsync` takes** (MMCA.Common.UI): the grid's state is a copy taken when its load starts, so when the first-render setup put the restored filter on the grid while the load awaited a slow lookup, the load sent no filter and dropped `c:` from the URL (WASM). The load now remembers that a restore was pending when it started.
+- **A same-route navigation reloads the active layout** (MMCA.Common.UI): back/forward, or a link to the list page the reader is on with other filters, now reloads the phone card list (through `MobileListRef` and `ReloadActiveLayoutAsync`, or `OnMobileDataRequestedAsync` for a page without one) instead of only the grid, so the phone no longer keeps the cards of the old filters.
+- **List-page search is forgotten on sign-in** (MMCA.Common.UI): a successful login, register, passkey or OAuth sign-in clears `ListPageStateService` (memory and `sessionStorage`) before it announces the new account, as every sign-out already did. A session revoked from another device while a WASM tab was closed ends without `SessionEnded`, and a different account can sign in over a tab that still looks signed in, so the sign-in itself drops the previous account's search. It does so on every sign-in, the same account's included; a token refresh keeps the state.
+- **The Language control is reachable by keyboard** (MMCA.Common.UI; WCAG 2.1.1): `CultureSwitcher`'s focusable control is MudMenu's own activator wrapper (`role="button"`, `tabindex="0"`, Enter and Space open the menu), which MudBlazor renders `display: contents` and so takes no focus. The menu root now carries `culture-switcher`, and `app.css` gives that wrapper a box sized like the app-bar icon buttons, so forward Tab reaches it on desktop and phone and the existing `.mud-menu-activator` focus rings draw around it. The name stays the text inside it ("Language" / "Idioma"); `CultureSwitcher.razor.css` is removed.
+
 ## [1.310.0] - 2026-11-19
 
 ### Added

@@ -197,7 +197,27 @@ public sealed class ResultGrpcExtensionsDecoderTests
         result.Errors[0].Code.Should().Be("Grpc.Unavailable");
         result.Errors[0].Message.Should().Be("Connection reset");
         result.Errors[0].Source.Should().Be("GetEventLiveInfoAsync");
-        result.Errors[0].Type.Should().Be(ErrorType.Failure);
+        result.Errors[0].Type.Should().Be(ErrorType.Unexpected);
+    }
+
+    // Run 18 D8: a peer outage reached clients as a definitive 400 (Failure), so a booth scan showed
+    // "not available" instead of the retry state. A transport fault is a retryable server fault.
+    [Theory]
+    [InlineData(StatusCode.Unavailable)]
+    [InlineData(StatusCode.DeadlineExceeded)]
+    [InlineData(StatusCode.Internal)]
+    [InlineData(StatusCode.Unknown)]
+    public void ToResult_TransportFaultWithoutTrailers_IsAnUnexpectedServerFault(StatusCode statusCode)
+    {
+        var exception = new RpcException(new Status(statusCode, "transport"));
+
+        var result = exception.ToResult("Validate");
+        var typed = exception.ToResult<int>("Validate");
+
+        result.Errors.Should().ContainSingle().Which.Type.Should().Be(ErrorType.Unexpected);
+        typed.Errors.Should().ContainSingle().Which.Type.Should().Be(ErrorType.Unexpected);
+        result.Errors[0].Code.Should().Be($"Grpc.{statusCode}");
+        typed.Errors[0].Source.Should().Be("Validate");
     }
 
     [Fact]

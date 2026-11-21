@@ -215,6 +215,24 @@ a:focus-visible,
     outline-offset: 2px;
 }
 
+/* The culture switcher's control is MudMenu's own activator wrapper (role=button, tabindex 0, Enter
+   and Space handled by MudMenu), which MudBlazor renders display: contents. A display: contents box
+   takes no focus, so forward Tab skipped the Language control on desktop and phone alike (WCAG
+   2.1.1). Giving the wrapper a box makes it the one focusable control, named by the text inside it,
+   and the .mud-menu-activator rings above and in the app bar and top row draw around it. Sized and
+   shaped like the MudIconButton siblings it sits beside. */
+.culture-switcher > .mud-menu-activator {
+    display: inline-flex;
+    padding: 12px;
+    border-radius: 50%;
+    color: inherit;
+    cursor: pointer;
+}
+
+.culture-switcher > .mud-menu-activator:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
 /* A ClickableCard with an Actions slot carries its button role on the body wrapper instead of the
    card, so that wrapper gets the same keyboard ring and the pointer cursor the whole card has. */
 .mobile-list-card-activator {

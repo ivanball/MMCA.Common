@@ -124,6 +124,24 @@ public sealed class JwtAuthenticationStateProvider : AuthenticationStateProvider
         NotifyUserLogout();
     }
 
+    /// <summary>
+    /// The sign-in <see cref="AuthUIService"/> completes (login, register, passkey, OAuth exchange):
+    /// forgets the per-tab list-page state, then pushes the new authenticated state. A sign-out does
+    /// not always run before it: in WASM a session revoked from another device while the tab was not
+    /// running ends without <see cref="ISessionAwareTokenStorage.SessionEnded"/> (the next boot never
+    /// held it), and a different account can sign in over a tab that still looks signed in, so the
+    /// previous account's search must also be dropped here. It is dropped on EVERY sign-in, the same
+    /// account's included: telling the accounts apart would need the previous account's identity,
+    /// which the revoked-tab case no longer has, and a fresh sign-in starting from an unfiltered list
+    /// is the safe default. A token refresh is not a sign-in and keeps the state.
+    /// </summary>
+    /// <param name="token">The new session's access token.</param>
+    internal async Task SignInAsync(string token)
+    {
+        await ForgetListPageStateAsync().ConfigureAwait(false);
+        NotifyUserAuthentication(token);
+    }
+
     private void OnSessionEnded(object? sender, EventArgs e)
     {
         // An event handler cannot await. The in-memory list state clears synchronously inside the

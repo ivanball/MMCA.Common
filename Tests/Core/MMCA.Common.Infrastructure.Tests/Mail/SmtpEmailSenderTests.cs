@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Mail;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Mail;
@@ -124,6 +125,17 @@ public sealed class SmtpEmailSenderTests
         using var client = SmtpEmailSender.CreateClient(new SmtpSettings { Host = "smtp.test.com" }, enableSsl: false);
 
         client.Timeout.Should().Be(30_000, "and never SmtpClient's own 100-second default");
+    }
+
+    // ── Non-ASCII local parts (Run 18 D1) ──
+    // The 7-bit default throws for an address such as "joseé@example.com", so confirmation,
+    // reset and invite mail never reached a Unicode address.
+    [Fact]
+    public void CreateClient_UsesTheInternationalDeliveryFormat()
+    {
+        using var client = SmtpEmailSender.CreateClient(new SmtpSettings { Host = "smtp.test.com" }, enableSsl: false);
+
+        client.DeliveryFormat.Should().Be(SmtpDeliveryFormat.International);
     }
 
     [Theory]

@@ -170,6 +170,16 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     protected virtual MudDataGrid<TDto>? GridRef => null;
 
     /// <summary>
+    /// Override in derived pages that render a <see cref="MobileInfiniteScrollList{TItem}"/> on a phone
+    /// to expose it, as <see cref="GridRef"/> exposes the grid. The base needs it to reload the card list
+    /// when a same-route navigation (back/forward, or a link to this page with other filters) restores
+    /// new filters: without it only the grid reloaded, so the phone kept the cards of the old filters.
+    /// Returns <see langword="null"/> by default; such a page then reloads through
+    /// <see cref="OnMobileDataRequestedAsync"/>.
+    /// </summary>
+    protected virtual MobileInfiniteScrollList<TDto>? MobileListRef => null;
+
+    /// <summary>
     /// Opt-in switch for MudDataGrid row virtualization. Defaults to <see langword="false"/>, so every
     /// existing page keeps its pager and its <c>ServerData</c> binding untouched. A page that overrides
     /// this to <see langword="true"/> binds <c>Virtualize="true"</c>, <c>Height="@VirtualizedGridHeight"</c>,
@@ -331,26 +341,51 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
         _ = InvokeAsync(async () =>
         {
-            if (GridRef is { } grid)
-            {
-                // A virtualized grid renders no pager, so there is no CurrentPage to re-apply; the
-                // reload alone re-reads the restored sort/filters.
-                if (!VirtualizeGrid)
-                {
-                    ApplyCurrentPageFromUrl(grid, urlState.Page);
-                }
-
-                // The URL's column filters replace the grid's before the reload below reads them.
-                ApplyRestoredColumnFiltersToGrid(grid);
-
-                // Applying a restored sort reloads the grid itself; otherwise reload here.
-                if (!await ApplyRestoredSortToGridAsync(grid))
-                {
-                    await grid.ReloadServerData();
-                }
-            }
+            await ReloadActiveLayoutAfterNavigationAsync(urlState.Page);
             StateHasChanged();
         });
+    }
+
+    /// <summary>
+    /// Reloads whichever layout is rendered after a same-route navigation restored new state. On a
+    /// phone with a card list (<see cref="MobileListRef"/>) that list is the active layout, so it
+    /// reloads the way a filter change does (<see cref="ReloadActiveLayoutAsync"/>: save, then reset
+    /// from page 1); reloading only the grid left the phone on the cards of the old filters. Otherwise
+    /// the grid takes the URL's page, column filters and sort and reloads, and a phone page without a
+    /// card list reference reloads through <see cref="OnMobileDataRequestedAsync"/>.
+    /// </summary>
+    /// <param name="urlPage">The 0-based page the URL carries.</param>
+    private async Task ReloadActiveLayoutAfterNavigationAsync(int urlPage)
+    {
+        if (IsMobile && MobileListRef is { } mobileList)
+        {
+            await ReloadActiveLayoutAsync(mobileList);
+            return;
+        }
+
+        if (GridRef is { } grid)
+        {
+            // A virtualized grid renders no pager, so there is no CurrentPage to re-apply; the
+            // reload alone re-reads the restored sort/filters.
+            if (!VirtualizeGrid)
+            {
+                ApplyCurrentPageFromUrl(grid, urlPage);
+            }
+
+            // The URL's column filters replace the grid's before the reload below reads them.
+            ApplyRestoredColumnFiltersToGrid(grid);
+
+            // Applying a restored sort reloads the grid itself; otherwise reload here.
+            if (!await ApplyRestoredSortToGridAsync(grid))
+            {
+                await grid.ReloadServerData();
+            }
+        }
+
+        if (IsMobile)
+        {
+            await OnMobileDataRequestedAsync();
+        }
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism and is well-behaved.")]
@@ -928,6 +963,9 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
         bool showCancelSnackbar)
     {
+        // Read before anything yields: the grid's state is a copy taken when this load started, so a
+        // restore the first-render setup completes during the load must still reach this fetch.
+        var restorePendingAtLoadStart = _restoredColumnFiltersPending;
         var loadSource = await ResetCancellationTokenAsync();
 
         // Superseded while the previous load was being cancelled: the newer load owns the grid, and
@@ -951,12 +989,12 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             EmptyConfirmed = cached.TotalItems == 0;
 
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
-            var (_, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+            var (_, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions, restorePendingAtLoadStart);
             SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
             return cached;
         }
 
-        return await FetchPagedAsync(loadSource, state, fetchAsync, additionalFilters, showCancelSnackbar);
+        return await FetchPagedAsync(loadSource, state, fetchAsync, additionalFilters, showCancelSnackbar, restorePendingAtLoadStart);
     }
 
     /// <summary>
@@ -989,7 +1027,8 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         GridState<TDto> state,
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
-        bool showCancelSnackbar) =>
+        bool showCancelSnackbar,
+        bool restorePendingAtLoadStart) =>
         RunFetchAsync(
             loadSource,
             async token =>
@@ -997,7 +1036,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
                 await OnBeforeFetchAsync(token);
                 ThrowIfSuperseded(loadSource);
 
-                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions, restorePendingAtLoadStart);
                 var filters = ExtractGridFilters(columnFilters);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
@@ -1055,6 +1094,8 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(fetchAsync);
 
+        // Read before anything yields, as in LoadPagedAsync: the state is a copy taken at load start.
+        var restorePendingAtLoadStart = _restoredColumnFiltersPending;
         var loadSource = await ResetCancellationTokenAsync();
         if (!IsCurrentLoad(loadSource))
         {
@@ -1069,7 +1110,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
                 await OnBeforeFetchAsync(token);
                 ThrowIfSuperseded(loadSource);
 
-                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions);
+                var (columnFilters, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions, restorePendingAtLoadStart);
                 var filters = ExtractGridFilters(columnFilters);
                 ApplyAdditionalFilters(filters, additionalFilters);
 
@@ -1379,7 +1420,8 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     /// <summary>
     /// Flattens the grid's filter definitions into the one-filter-per-column shape the fetch
     /// delegate takes. MudDataGrid lets the user add several filter rows on the SAME column, which
-    /// a dictionary cannot carry, so the newest row wins instead of the projection throwing.
+    /// a dictionary cannot carry, so one row per column is taken by <see cref="EffectiveColumnFilters"/>,
+    /// the same rule the saved URL state uses.
     /// </summary>
     /// <remarks>
     /// Takes the definition collection rather than the state object so the paged
@@ -1388,18 +1430,26 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     /// </remarks>
     private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(
         IEnumerable<IFilterDefinition<TDto>>? filterDefinitions) =>
-        filterDefinitions?
-            .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName))
+        EffectiveColumnFilters(filterDefinitions).ToDictionary(
+            f => f.Column!.PropertyName!,
+            f => (f.Operator!, f.Value?.ToString() ?? string.Empty),
+            StringComparer.Ordinal);
+
+    /// <summary>
+    /// The one-filter-per-column rule the fetch and the saved state (URL <c>c:</c> keys) share: a row
+    /// with no column or no operator yet is ignored, and of the remaining rows on a column the newest
+    /// wins. Ignoring the incomplete rows matters: a second row the user just added on a filtered
+    /// column has no operator, and taking it as the newest row sent no filter while the URL kept the
+    /// first row (Run 18 O-39).
+    /// </summary>
+    /// <param name="filterDefinitions">The grid's filter definitions, in the order the grid holds them.</param>
+    /// <returns>At most one definition per column, each with a column property name and an operator.</returns>
+    private static IEnumerable<IFilterDefinition<TDto>> EffectiveColumnFilters(
+        IEnumerable<IFilterDefinition<TDto>>? filterDefinitions) =>
+        (filterDefinitions ?? [])
+            .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName) && !string.IsNullOrWhiteSpace(f.Operator))
             .GroupBy(f => f.Column!.PropertyName!, StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                {
-                    var newest = g.Last();
-                    return (newest.Operator ?? string.Empty, newest.Value?.ToString() ?? string.Empty);
-                },
-                StringComparer.Ordinal
-            ) ?? [];
+            .Select(g => g.Last());
 
     /// <summary>
     /// Runs the page's <c>additionalFilters</c> callback (search box, status dropdown) over the grid's
