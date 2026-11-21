@@ -250,6 +250,35 @@ public sealed class ListPageShellTests : BunitTestBase
         field.Variant.Should().Be(Variant.Outlined);
     }
 
+    // Store Run 5 O5: a placeholder is not an accessible name, so the search input had none.
+    [Fact]
+    public void SearchField_HasAnAccessibleName_DefaultingToThePlaceholderText()
+    {
+        var cut = RenderShell();
+
+        cut.Find(".list-search-field input").GetAttribute("aria-label").Should().Be("Search");
+    }
+
+    [Fact]
+    public void SearchField_AccessibleName_FollowsAnOverriddenPlaceholder()
+    {
+        var cut = RenderShell(p => p.Add(s => s.SearchPlaceholder, "Find a room"));
+
+        cut.Find(".list-search-field input").GetAttribute("aria-label").Should().Be("Find a room");
+    }
+
+    [Fact]
+    public void SearchAriaLabel_NamesTheFieldIndependentlyOfThePlaceholder()
+    {
+        var cut = RenderShell(p => p
+            .Add(s => s.SearchPlaceholder, "Name or SKU")
+            .Add(s => s.SearchAriaLabel, "Search products"));
+
+        var input = cut.Find(".list-search-field input");
+        input.GetAttribute("aria-label").Should().Be("Search products");
+        input.GetAttribute("placeholder").Should().Be("Name or SKU");
+    }
+
     [Fact]
     public void SearchPlaceholder_CanBeOverridden()
     {

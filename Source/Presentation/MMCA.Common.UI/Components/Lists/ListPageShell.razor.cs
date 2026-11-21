@@ -58,6 +58,13 @@ public partial class ListPageShell<TItem>
     /// <summary>Gets or sets the search box placeholder; defaults to the shared <c>List.Search.Placeholder</c> text.</summary>
     [Parameter] public string? SearchPlaceholder { get; set; }
 
+    /// <summary>
+    /// Gets or sets the search box's accessible name (its <c>aria-label</c>). Defaults to the placeholder
+    /// text, so every list's search field is named without a change; a placeholder alone is not an
+    /// accessible name (WCAG 4.1.2).
+    /// </summary>
+    [Parameter] public string? SearchAriaLabel { get; set; }
+
     /// <summary>Gets or sets the page's filter controls, rendered in the search row after the search box.</summary>
     [Parameter] public RenderFragment? Filters { get; set; }
 

@@ -4,3 +4,5 @@ MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.RenewRejected
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Pages.Auth.ResetPassword.DisposeAsync() -> System.Threading.Tasks.ValueTask
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnInitialized() -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchAriaLabel.get -> string?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.SearchAriaLabel.set -> void
