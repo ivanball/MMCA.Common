@@ -43,7 +43,35 @@ public sealed class DataGridListPageBaseFilterStateTests : BunitTestBase
 
         public Task Reload(MobileInfiniteScrollList<Row>? list) => ReloadActiveLayoutAsync(list);
 
+        public int MobileDataRequests { get; private set; }
+
         protected override void SaveFilters(Dictionary<string, string> filters) => filters["mode"] = Mode;
+
+        protected override void RestoreFilters(IReadOnlyDictionary<string, string> filters) =>
+            Mode = filters.TryGetValue("mode", out var mode) ? mode : "all";
+
+        protected override Task OnMobileDataRequestedAsync()
+        {
+            MobileDataRequests++;
+            return Task.CompletedTask;
+        }
+    }
+
+    // A phone page that exposes its card list, as GridRef exposes the grid.
+    private sealed class CardListPage : DataGridListPageBase<Row>
+    {
+        [Parameter] public MobileInfiniteScrollList<Row>? List { get; set; }
+
+        public string Mode { get; private set; } = "all";
+
+        protected override string Title => "Rows";
+
+        protected override MobileInfiniteScrollList<Row>? MobileListRef => List;
+
+        protected override void SaveFilters(Dictionary<string, string> filters) => filters["mode"] = Mode;
+
+        protected override void RestoreFilters(IReadOnlyDictionary<string, string> filters) =>
+            Mode = filters.TryGetValue("mode", out var mode) ? mode : "all";
     }
 
     private NavigationManager Navigation => Services.GetRequiredService<NavigationManager>();
@@ -199,15 +227,119 @@ public sealed class DataGridListPageBaseFilterStateTests : BunitTestBase
         await grid.WaitForAssertionAsync(() => seen[^1].Should().NotContainKey("Name"));
     }
 
+    // Run 18 O-39: a second filter row added on a filtered column has no operator yet. The fetch took
+    // that row (the server dropped it, so no filter) while the URL kept the first: both now ignore it.
+    [Fact]
+    public async Task ColumnFilter_ASecondRowWithNoOperator_DoesNotReplaceTheCompleteRow()
+    {
+        Navigation.NavigateTo(Route);
+        var (grid, _, seen) = RenderGridPage();
+
+        grid.Instance.FilterDefinitions.Add(new FilterDefinition<GridRow> { Column = Column(grid, "Name"), Operator = "contains", Value = "Zed" });
+        grid.Instance.FilterDefinitions.Add(new FilterDefinition<GridRow> { Column = Column(grid, "Name"), Operator = null, Value = null });
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+
+        seen[^1].Should().ContainKey("Name").WhoseValue.Should().Be(("contains", "Zed"));
+        State.GetState(Route)!.ColumnFilters["Name"].Should().Be(new ColumnFilterState("contains", "Zed"));
+        Uri.UnescapeDataString(new Uri(Navigation.Uri).Query).Should().Contain("c:Name=contains:Zed");
+    }
+
+    [Fact]
+    public async Task ColumnFilter_OfTwoCompleteRowsOnOneColumn_TheNewestWinsInTheFetchAndTheUrl()
+    {
+        Navigation.NavigateTo(Route);
+        var (grid, _, seen) = RenderGridPage();
+
+        grid.Instance.FilterDefinitions.Add(new FilterDefinition<GridRow> { Column = Column(grid, "Name"), Operator = "contains", Value = "Zed" });
+        grid.Instance.FilterDefinitions.Add(new FilterDefinition<GridRow> { Column = Column(grid, "Name"), Operator = "equals", Value = "Ann" });
+        await grid.InvokeAsync(grid.Instance.ReloadServerData);
+
+        seen[^1]["Name"].Should().Be(("equals", "Ann"));
+        State.GetState(Route)!.ColumnFilters["Name"].Should().Be(new ColumnFilterState("equals", "Ann"));
+    }
+
+    // Run 18 O-85 / X-34: the grid's state is a copy taken when its load starts. When the page awaited
+    // a slow lookup in OnBeforeFetchAsync, the first-render setup put the restored filter on the grid
+    // (clearing the pending flag) during that wait, and the load then read its own empty copy: the
+    // restored c: filter was neither sent nor kept in the URL.
+    [Fact]
+    public async Task ColumnFilterInTheUrl_IsSent_WhenTheSetupAppliesItWhileTheLoadAwaitsALookup()
+    {
+        Navigation.NavigateTo(Route + "?c:Name=contains%3AAnn");
+        var hydrate = JSInterop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js")
+            .Setup<ListPageState?>("sessionGet", "mmca.lps:" + Route);
+        var (grid, page, seen) = RenderGridPage();
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        page.Instance.Gate = gate;
+
+        // The load starts while the setup still waits on its sessionStorage read: the grid holds no filter yet.
+        grid.Instance.FilterDefinitions.Should().BeEmpty();
+        var load = grid.InvokeAsync(grid.Instance.ReloadServerData);
+        hydrate.SetResult(null);
+
+        // The setup applies the filter without rendering, so poll rather than wait for a render.
+        for (var attempt = 0; attempt < 200 && grid.Instance.FilterDefinitions.Count == 0; attempt++)
+        {
+            await Task.Delay(10, Xunit.TestContext.Current.CancellationToken);
+        }
+
+        grid.Instance.FilterDefinitions.Should().ContainSingle("the setup put the restored filter on the grid during the load");
+
+        gate.SetResult();
+        await load;
+
+        seen[^1].Should().ContainKey("Name").WhoseValue.Should().Be(("contains", "Ann"));
+        State.GetState(Route)!.ColumnFilters.Should().ContainKey("Name");
+        Uri.UnescapeDataString(new Uri(Navigation.Uri).Query).Should().Contain("c:Name=contains:Ann", "the restored filter stays in the URL");
+    }
+
+    // Run 18 A-09 (D10): a same-route navigation (the drawer's My Schedule link on the schedule page,
+    // back/forward) restored the filters but reloaded only the grid, so the phone kept the old cards.
+    [Fact]
+    public async Task SameRouteNavigation_OnAPhone_ReloadsTheCardList()
+    {
+        Navigation.NavigateTo(Route);
+        var fetches = 0;
+        var list = RenderCardList(() => fetches++);
+        var cut = Render<CardListPage>(ps => ps.Add(p => p.List, list.Instance));
+        await cut.InvokeAsync(() => cut.Instance.NotifyBrowserViewportChangeAsync(
+            new BrowserViewportEventArgs(Guid.NewGuid(), PhoneViewport, Breakpoint.Xs)));
+        var before = fetches;
+
+        await cut.InvokeAsync(() => Navigation.NavigateTo(Route + "?f:mode=mine"));
+
+        await cut.WaitForAssertionAsync(() => fetches.Should().BeGreaterThan(before));
+        cut.Instance.Mode.Should().Be("mine");
+        State.GetState(Route)!.Filters["mode"].Should().Be("mine", "the phone reload saves, as ReloadActiveLayoutAsync does");
+    }
+
+    [Fact]
+    public async Task SameRouteNavigation_OnAPhoneWithoutACardListReference_RequestsTheMobileData()
+    {
+        Navigation.NavigateTo(Route);
+        var cut = Render<FilteredPage>();
+        await GoToPhoneAsync(cut);
+        var before = cut.Instance.MobileDataRequests;
+
+        await cut.InvokeAsync(() => Navigation.NavigateTo(Route + "?f:mode=mine"));
+
+        await cut.WaitForAssertionAsync(() => cut.Instance.MobileDataRequests.Should().BeGreaterThan(before));
+    }
+
     public sealed record GridRow(int Id, string Name);
 
     private sealed class GridPage : DataGridListPageBase<GridRow>
     {
         [Parameter] public MudDataGrid<GridRow>? Grid { get; set; }
 
+        // Held open to stand in for a slow lookup (ADC's event scope) the fetch awaits.
+        public TaskCompletionSource? Gate { get; set; }
+
         protected override string Title => "Rows";
 
         protected override MudDataGrid<GridRow>? GridRef => Grid;
+
+        protected override Task OnBeforeFetchAsync(CancellationToken cancellationToken) => Gate?.Task ?? Task.CompletedTask;
 
         public Task<GridData<GridRow>> LoadAsync(GridState<GridRow> state, List<Dictionary<string, (string Operator, string Value)>> seen) =>
             LoadServerDataAsync(state, (filters, _, _, _, _, _) =>

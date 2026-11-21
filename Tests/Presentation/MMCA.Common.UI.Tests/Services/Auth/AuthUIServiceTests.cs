@@ -1,4 +1,4 @@
-﻿#pragma warning disable VSTHRD002 // Synchronous wait on an already-completed task raised by the auth state provider
+#pragma warning disable VSTHRD002 // Synchronous wait on an already-completed task raised by the auth state provider
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
@@ -63,6 +63,9 @@ public sealed class AuthUIServiceTests : IDisposable
     private readonly List<AuthenticationState> _authStates = [];
 
     private StubHttpMessageHandler _handler = StubHttpMessageHandler.RespondingWith(HttpStatusCode.NotFound);
+
+    // The provider CreateSutWithListPageState built, so a test can observe its notifications.
+    private JwtAuthenticationStateProvider? _currentProvider;
 
     public AuthUIServiceTests()
     {
@@ -455,8 +458,65 @@ public sealed class AuthUIServiceTests : IDisposable
         module.Invocations["sessionRemoveByPrefix"].Should().BeEmpty();
     }
 
+    // Run 18 D6 (X-39): a sign-out does not always run before the next sign-in. In WASM a session
+    // revoked from another device while the tab was closed ends without SessionEnded, and a different
+    // account can sign in over a tab that still looks signed in, so the sign-in itself forgets the
+    // previous account's search. It does so on every sign-in (the same account's included): the
+    // previous account's identity is gone in the revoked-tab case, so the accounts cannot be told apart.
+    [Fact]
+    public async Task LoginAsync_OnSuccess_ForgetsThePreviousAccountsListPageSearch()
+    {
+        var (sut, listPageState, module) = CreateSutWithListPageState(_ => AuthResponse(Jwt("next@test.com")));
+
+        var result = await sut.LoginAsync(Credentials(), Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        ShouldHaveForgottenTheListPageState(listPageState, module);
+    }
+
+    [Fact]
+    public async Task LoginAsync_OnSuccess_ForgetsTheStateBeforeAnnouncingTheNewAccount()
+    {
+        var (sut, listPageState, _) = CreateSutWithListPageState(_ => AuthResponse(Jwt("next@test.com")));
+        ListPageState? seenByTheNewAccount = new();
+        _currentProvider!.AuthenticationStateChanged += _ => seenByTheNewAccount = listPageState.GetState(MyOrdersRoute);
+
+        await sut.LoginAsync(Credentials(), Ct);
+
+        seenByTheNewAccount.Should().BeNull("a page re-rendering for the new account must not find the old search");
+    }
+
+    [Fact]
+    public async Task LoginAsync_OnFailure_KeepsTheListPageState()
+    {
+        var (sut, listPageState, module) = CreateSutWithListPageState(
+            _ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.Unauthorized, MmcaErrorBody));
+
+        var result = await sut.LoginAsync(Credentials(), Ct);
+
+        result.IsFailure.Should().BeTrue();
+        listPageState.GetState(MyOrdersRoute).Should().NotBeNull("no new session started");
+        module.Invocations["sessionRemoveByPrefix"].Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TryRefreshTokenAsync_OnSuccess_KeepsTheListPageState()
+    {
+        _tokenRefresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Jwt());
+        var (sut, listPageState, module) = CreateSutWithListPageState(HttpStatusCode.NoContent);
+
+        (await sut.TryRefreshTokenAsync(Ct)).Should().BeTrue();
+
+        listPageState.GetState(MyOrdersRoute).Should().NotBeNull("a refresh continues the same session");
+        module.Invocations["sessionRemoveByPrefix"].Should().BeEmpty();
+    }
+
     private (AuthUIService Sut, ListPageStateService ListPageState, BunitJSModuleInterop Module) CreateSutWithListPageState(
-        HttpStatusCode statusCode)
+        HttpStatusCode statusCode) =>
+        CreateSutWithListPageState(_ => StubHttpMessageHandler.CreateResponse(statusCode, null));
+
+    private (AuthUIService Sut, ListPageStateService ListPageState, BunitJSModuleInterop Module) CreateSutWithListPageState(
+        Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         var interop = new BunitJSInterop();
         var module = interop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js");
@@ -467,12 +527,13 @@ public sealed class AuthUIServiceTests : IDisposable
             new ListPageState { Filters = new Dictionary<string, string> { ["search"] = "previous account's search" } });
 
         _handler.Dispose();
-        _handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.CreateResponse(statusCode, null));
+        _handler = new StubHttpMessageHandler(responder);
+        _currentProvider = new JwtAuthenticationStateProvider(_tokenStorage.Object, listPageState);
         var sut = new AuthUIService(
             new StubHttpClientFactory(_handler),
             _tokenStorage.Object,
             _tokenRefresher.Object,
-            new JwtAuthenticationStateProvider(_tokenStorage.Object, listPageState),
+            _currentProvider,
             _pushRegistration.Object,
             localCache: _localCache.Object);
         return (sut, listPageState, module);

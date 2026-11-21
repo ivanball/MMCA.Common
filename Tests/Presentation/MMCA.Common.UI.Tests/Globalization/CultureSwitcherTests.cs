@@ -1,10 +1,12 @@
 using AngleSharp.Dom;
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Globalization;
 using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services.Culture;
+using MMCA.Common.UI.Tests.Infrastructure;
 
 namespace MMCA.Common.UI.Tests.Globalization;
 
@@ -105,6 +107,47 @@ public sealed class CultureSwitcherTests : BunitTestBase
         var cut = RenderUnderTest<CultureSwitcher>(_ => { });
 
         cut.Find("div[role=button][aria-haspopup=menu]").Click();
+
+        providers.Popover.FindAll("div.mud-menu-item").Should().NotBeEmpty();
+    }
+
+    // Run 18 D9: the Language control was never reached by Tab, because MudBlazor renders the
+    // activator wrapper display: contents, and a display: contents box takes no focus. The wrapper is
+    // the one control (tabindex 0, named by its text), and app.css gives it a box through the
+    // culture-switcher class on the menu root.
+    [Fact]
+    public void Activator_IsInTheTabOrder_AndTheMenuRootCarriesTheStylingHook()
+    {
+        RenderMudProviders();
+
+        var cut = RenderUnderTest<CultureSwitcher>(_ => { });
+
+        var activator = cut.Find(".mud-menu.culture-switcher > div.mud-menu-activator[role=button]");
+        activator.GetAttribute("tabindex").Should().Be("0");
+        activator.TextContent.Should().Contain("Language");
+    }
+
+    [Fact]
+    public void AppCss_GivesTheActivatorAFocusableBox()
+    {
+        var css = CssStylesheet.CssComment.Replace(CssStylesheet.ReadEmbedded("app.css"), string.Empty);
+
+        var bodies = CssStylesheet.RuleBodies(
+            css,
+            selector => string.Equals(selector, ".culture-switcher > .mud-menu-activator", StringComparison.Ordinal));
+
+        bodies.Should().ContainSingle().Which.Should().Contain("display: inline-flex", "display: contents takes no focus");
+    }
+
+    [Theory]
+    [InlineData("Enter")]
+    [InlineData(" ")]
+    public void EnterOrSpaceOnTheActivator_OpensTheMenu(string key)
+    {
+        var providers = RenderMudProviders();
+        var cut = RenderUnderTest<CultureSwitcher>(_ => { });
+
+        cut.Find("div[role=button][aria-haspopup=menu]").KeyDown(new KeyboardEventArgs { Key = key });
 
         providers.Popover.FindAll("div.mud-menu-item").Should().NotBeEmpty();
     }

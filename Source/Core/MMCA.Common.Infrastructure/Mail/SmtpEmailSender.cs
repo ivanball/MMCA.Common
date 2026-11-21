@@ -105,6 +105,11 @@ public sealed class SmtpEmailSender : IEmailSender
             // it: a relay that accepts the connection and never answers would hold the request for
             // the whole of it. Bounded explicitly, and validated at startup (ADR-070).
             Timeout = (int)TimeSpan.FromSeconds(settings.TimeoutSeconds).TotalMilliseconds,
+
+            // International sends an address with a non-ASCII local part over SMTPUTF8; the 7-bit
+            // default throws for such an address, so the mail never left. ASCII addresses are sent
+            // exactly as before (the extension is only requested when an address needs it).
+            DeliveryFormat = SmtpDeliveryFormat.International,
         };
 #pragma warning restore S5332
 }

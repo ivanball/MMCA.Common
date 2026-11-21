@@ -207,7 +207,8 @@ public static class ResultGrpcExtensions
         /// Converts a caught <see cref="RpcException"/> back into a failed <see cref="Result"/>,
         /// closing the round trip opened by <see cref="ToRpcException"/>. The structured
         /// <c>error-{i}-*</c> trailers win when present; a transport-level fault that carries none
-        /// degrades to a single <see cref="ErrorType.Failure"/> error coded
+        /// degrades to a single <see cref="ErrorType.Unexpected"/> error (a retryable server fault,
+        /// HTTP 500 at the edge) coded
         /// <c>Grpc.{StatusCode}</c> carrying the RPC detail.
         /// </summary>
         /// <param name="source">
@@ -230,7 +231,8 @@ public static class ResultGrpcExtensions
         /// Converts a caught <see cref="RpcException"/> back into a failed <see cref="Result{T}"/>,
         /// closing the round trip opened by <see cref="ToRpcException"/>. The structured
         /// <c>error-{i}-*</c> trailers win when present; a transport-level fault that carries none
-        /// degrades to a single <see cref="ErrorType.Failure"/> error coded
+        /// degrades to a single <see cref="ErrorType.Unexpected"/> error (a retryable server fault,
+        /// HTTP 500 at the edge) coded
         /// <c>Grpc.{StatusCode}</c> carrying the RPC detail.
         /// </summary>
         /// <typeparam name="T">The value type the failed result stands in for.</typeparam>
@@ -328,8 +330,15 @@ public static class ResultGrpcExtensions
     /// trailers, so a connection reset or an exceeded deadline still reaches the caller as a
     /// <see cref="Result"/> failure rather than an exception.
     /// </summary>
+    /// <remarks>
+    /// A fault with no trailers never came from the peer's own <see cref="Result"/> (the peer would
+    /// have sent them), so it says nothing about the request: the peer was down, slow or unreachable.
+    /// It is therefore <see cref="ErrorType.Unexpected"/> (HTTP 500 at the edge, the top rank in
+    /// <see cref="ErrorTypeSeverity"/>), which callers treat as retryable, and never
+    /// <see cref="ErrorType.Failure"/>, which reaches clients as a definitive 400.
+    /// </remarks>
     private static Error TransportError(RpcException exception, string source) =>
-        Error.Failure(
+        Error.Unexpected(
             code: $"Grpc.{exception.StatusCode}",
             message: exception.Status.Detail,
             source: source);

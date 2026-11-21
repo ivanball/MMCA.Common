@@ -39,10 +39,18 @@ public abstract partial class DataGridListPageBase<TDto>
     /// drop out); otherwise the grid's own.
     /// </summary>
     /// <param name="gridDefinitions">The grid's filter definitions from its state.</param>
+    /// <param name="restorePendingAtLoadStart">
+    /// Whether a restore was pending when the fetch STARTED. The grid's state is a copy taken then, so
+    /// when the first-render setup put the restored filters on the grid (clearing the pending flag)
+    /// while the fetch awaited <see cref="OnBeforeFetchAsync"/>, that copy still holds none: the fetch
+    /// must send the restored filters anyway, or the restored <c>c:</c> filter was neither sent nor
+    /// kept in the URL (Run 18 O-85, X-34).
+    /// </param>
     private (IEnumerable<IFilterDefinition<TDto>>? Definitions, IReadOnlyDictionary<string, ColumnFilterState> Saved) ResolveColumnFilters(
-        IEnumerable<IFilterDefinition<TDto>>? gridDefinitions)
+        IEnumerable<IFilterDefinition<TDto>>? gridDefinitions,
+        bool restorePendingAtLoadStart = false)
     {
-        if (!_restoredColumnFiltersPending)
+        if (!_restoredColumnFiltersPending && !restorePendingAtLoadStart)
         {
             return (gridDefinitions, SnapshotColumnFilters(gridDefinitions));
         }
@@ -78,24 +86,14 @@ public abstract partial class DataGridListPageBase<TDto>
     }
 
     /// <summary>
-    /// The saved form of <paramref name="definitions"/>: one filter per column (the newest row wins, as
-    /// in <see cref="ExtractGridFilters"/>), values written in the invariant culture.
+    /// The saved form of <paramref name="definitions"/>: one filter per column by the same rule the
+    /// fetch uses (<see cref="EffectiveColumnFilters"/>), values written in the invariant culture.
     /// </summary>
-    private static Dictionary<string, ColumnFilterState> SnapshotColumnFilters(IEnumerable<IFilterDefinition<TDto>>? definitions)
-    {
-        var snapshot = new Dictionary<string, ColumnFilterState>(StringComparer.Ordinal);
-        foreach (var definition in definitions ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(definition.Column?.PropertyName) || string.IsNullOrEmpty(definition.Operator))
-            {
-                continue;
-            }
-
-            snapshot[definition.Column.PropertyName] = new ColumnFilterState(definition.Operator, FormatFilterValue(definition.Value));
-        }
-
-        return snapshot;
-    }
+    private static Dictionary<string, ColumnFilterState> SnapshotColumnFilters(IEnumerable<IFilterDefinition<TDto>>? definitions) =>
+        EffectiveColumnFilters(definitions).ToDictionary(
+            definition => definition.Column!.PropertyName!,
+            definition => new ColumnFilterState(definition.Operator!, FormatFilterValue(definition.Value)),
+            StringComparer.Ordinal);
 
     /// <summary>
     /// Builds a filter definition for each saved filter whose column the grid renders and allows

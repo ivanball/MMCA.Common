@@ -455,9 +455,11 @@ public sealed class AuthUIService(
                     exception.Message));
         }
 
+        // A new session starts from no list-page search: the provider forgets the previous
+        // account's state before it reports the new one (see SignInAsync).
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
         {
-            jwtProvider.NotifyUserAuthentication(authentication.AccessToken);
+            await jwtProvider.SignInAsync(authentication.AccessToken).ConfigureAwait(false);
         }
 
         // The new session is stored, so the report's bearer names it. Best-effort and bounded.

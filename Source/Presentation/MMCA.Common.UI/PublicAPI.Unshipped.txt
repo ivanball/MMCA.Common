@@ -1,1 +1,2 @@
 ﻿#nullable enable
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileListRef.get -> MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>?

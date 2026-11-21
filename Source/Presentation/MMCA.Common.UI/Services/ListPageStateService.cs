@@ -160,10 +160,11 @@ public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
 
     /// <summary>
     /// Forgets every list page's state: the in-memory dictionary and every <c>mmca.lps:*</c> entry in
-    /// <c>sessionStorage</c>, leaving the tab's other keys alone. Called on sign-out, because the
-    /// search and filters belong to the account that typed them and <c>sessionStorage</c> outlives
-    /// the session in the same tab. The in-memory half clears before the first await, so a caller
-    /// that cannot await still drops it at once. Storage failures are swallowed like the other calls.
+    /// <c>sessionStorage</c>, leaving the tab's other keys alone. Called on sign-out and on sign-in,
+    /// because the search and filters belong to the account that typed them and <c>sessionStorage</c>
+    /// outlives the session in the same tab (a session that ends unseen leaves no sign-out to run).
+    /// The in-memory half clears before the first await, so a caller that cannot await still drops it
+    /// at once. Storage failures are swallowed like the other calls.
     /// </summary>
     public async ValueTask ClearAsync()
     {
