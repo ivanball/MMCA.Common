@@ -2129,6 +2129,7 @@ virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.CancellablePageBase.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.GridRef.get -> MudBlazor.MudDataGrid<TDto>?
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileListRef.get -> MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>?
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnBeforeFetchAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnMobileDataRequestedAsync() -> System.Threading.Tasks.Task!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnRestoredStateAppliedAsync(bool needsReload) -> System.Threading.Tasks.Task!
