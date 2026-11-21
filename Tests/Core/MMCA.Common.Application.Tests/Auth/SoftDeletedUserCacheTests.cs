@@ -76,7 +76,7 @@ public sealed class SoftDeletedUserCacheTests
 
         cache.Verify(
             c => c.SetAsync(
-                "user:deleted:7",
+                "xsvc:user:deleted:7",
                 true,
                 TimeSpan.FromMinutes(20),
                 It.IsAny<CancellationToken>()),
@@ -107,7 +107,7 @@ public sealed class SoftDeletedUserCacheTests
 
         await SoftDeletedUserCache.MarkDeletedForAsync(cache.Object, 7, TimeSpan.FromMinutes(65));
 
-        cache.Verify(c => c.SetAsync("user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
+        cache.Verify(c => c.SetAsync("xsvc:user:deleted:7", true, TimeSpan.FromMinutes(65), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ---- Marker clear ----

@@ -1185,8 +1185,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
     // The first-render restore waits behind JS interop round trips (the sessionStorage hydrate first), and
     // the grid's first load starts with its page reset to 0. Under Slow 4G that load rendered page-1 rows
     // under the restored "6-10 of 36" pager and saved the URL without p for seconds.
-    private JSRuntimeInvocationHandler<ListPageState?> BlockTheSessionHydrate() =>
-        JSInterop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js").Setup<ListPageState?>("sessionGet", _ => true);
+    private void BlockTheSessionHydrate() =>
+        _ = JSInterop.SetupModule("./_content/MMCA.Common.UI/nav-interop.js").Setup<ListPageState?>("sessionGet", _ => true);
 
     [Fact]
     public async Task DeepLinkedPage_FirstLoadBeforeTheRestore_FetchesAndKeepsTheRestoredPage()
@@ -1213,8 +1213,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
     {
         var navigation = Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/widgets?p=1&ps=5");
-        var sessionGet = BlockTheSessionHydrate();
         var cut = Render<TestGridPage>();
+        cut.Instance.RestoreAppliedNow.Should().BeTrue("with interop answering at once, the first-render restore has run");
         var seenPageNumber = 0;
         cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
         {
@@ -1222,8 +1222,6 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             return Loaded(36, new WidgetRow(1, "First"));
         };
 
-        await cut.InvokeAsync(() => sessionGet.SetResult(null));
-        await cut.WaitForAssertionAsync(() => cut.Instance.RestoreAppliedNow.Should().BeTrue());
         await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 5));
 
         seenPageNumber.Should().Be(1, "once the restore is done, a load for page 0 is the user's own choice");

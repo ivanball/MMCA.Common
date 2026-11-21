@@ -96,33 +96,47 @@ public sealed partial class ConfirmEmail : IDisposable
     }
 
     /// <summary>
-    /// Reads one <c>name=value</c> pair of an emailed link's fragment: <see langword="true"/> for an
-    /// <c>email</c> or <c>token</c> pair (names match exactly), with its value decoded. Shared with the
+    /// Merges an emailed link's fragment into the address and token a form holds. Shared with the
     /// reset-password page, whose link has the same shape.
     /// </summary>
-    /// <param name="pair">One pair of the fragment.</param>
-    /// <param name="isEmail">Whether the pair is the address (otherwise the token).</param>
-    /// <param name="value">The decoded value.</param>
-    /// <returns>Whether the pair is one the link carries.</returns>
-    internal static bool TryReadLinkPair(string pair, out bool isEmail, out string value)
+    /// <param name="fragment">The raw fragment, without its leading hash.</param>
+    /// <param name="replace">
+    /// <see langword="false"/> on the first render: only EMPTY values are filled (the query string and
+    /// the first pair win). <see langword="true"/> for a new link opened on the open page: nothing the
+    /// form held survives a fragment that carries either pair, so an old token is never used under a new
+    /// address (Store Run 5 D3).
+    /// </param>
+    /// <param name="email">The address the form holds.</param>
+    /// <param name="token">The token the form holds.</param>
+    /// <returns>Whether the fragment carried an <c>email</c> or <c>token</c> pair, and the merged values.</returns>
+    internal static (bool Recognized, string Email, string Token) MergeLinkFragment(string? fragment, bool replace, string? email, string? token)
     {
-        isEmail = false;
-        value = string.Empty;
-        var separator = pair.IndexOf('=', StringComparison.Ordinal);
-        if (separator <= 0)
+        email ??= string.Empty;
+        token ??= string.Empty;
+        if (string.IsNullOrWhiteSpace(fragment))
         {
-            return false;
+            return (false, email, token);
         }
 
-        var name = pair[..separator];
-        isEmail = string.Equals(name, "email", StringComparison.Ordinal);
-        if (!isEmail && !string.Equals(name, "token", StringComparison.Ordinal))
+        var recognized = false;
+        foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
-            return false;
+            if (!TryReadLinkPair(pair, out var isEmail, out var value))
+            {
+                continue;
+            }
+
+            if (replace && !recognized)
+            {
+                email = string.Empty;
+                token = string.Empty;
+            }
+
+            recognized = true;
+            (email, token) = FillEmpty(isEmail, value, email, token);
         }
 
-        value = Uri.UnescapeDataString(pair[(separator + 1)..]);
-        return true;
+        return (recognized, email, token);
     }
 
     /// <inheritdoc />
@@ -227,49 +241,65 @@ public sealed partial class ConfirmEmail : IDisposable
             : await module.InvokeOrDefaultAsync<string?>("locationHashTake", [], CancellationToken.None);
     }
 
-    /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment into the fields.</summary>
-    /// <param name="fragment">The raw fragment, without its leading hash.</param>
-    /// <param name="replace">
-    /// <see langword="false"/> on the first render: only EMPTY fields are filled (the query string and
-    /// the first pair win). <see langword="true"/> for a new link opened on the open page: the link's
-    /// values replace the stale ones, and a field the link does not carry is cleared, so an old token
-    /// is never redeemed under a new address.
-    /// </param>
-    /// <returns><see langword="true"/> when the fragment carried an <c>email</c> or <c>token</c> pair.</returns>
-    private bool ApplyFragment(string? fragment, bool replace)
+    /// <summary>Puts <paramref name="value"/> into the address or the token, only when that one is still empty.</summary>
+    /// <param name="isEmail">Whether the value is the address (otherwise the token).</param>
+    /// <param name="value">The decoded value.</param>
+    /// <param name="email">The address so far.</param>
+    /// <param name="token">The token so far.</param>
+    /// <returns>The address and token after the fill.</returns>
+    private static (string Email, string Token) FillEmpty(bool isEmail, string value, string email, string token)
     {
-        if (string.IsNullOrWhiteSpace(fragment))
+        if (isEmail && string.IsNullOrWhiteSpace(email))
+        {
+            return (value, token);
+        }
+
+        if (!isEmail && string.IsNullOrWhiteSpace(token))
+        {
+            return (email, value);
+        }
+
+        return (email, token);
+    }
+
+    /// <summary>
+    /// Reads one <c>name=value</c> pair of an emailed link's fragment: <see langword="true"/> for an
+    /// <c>email</c> or <c>token</c> pair (names match exactly), with its value decoded.
+    /// </summary>
+    /// <param name="pair">One pair of the fragment.</param>
+    /// <param name="isEmail">Whether the pair is the address (otherwise the token).</param>
+    /// <param name="value">The decoded value.</param>
+    /// <returns>Whether the pair is one the link carries.</returns>
+    private static bool TryReadLinkPair(string pair, out bool isEmail, out string value)
+    {
+        isEmail = false;
+        value = string.Empty;
+        var separator = pair.IndexOf('=', StringComparison.Ordinal);
+        if (separator <= 0)
         {
             return false;
         }
 
-        var recognized = false;
-        foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        var name = pair[..separator];
+        isEmail = string.Equals(name, "email", StringComparison.Ordinal);
+        if (!isEmail && !string.Equals(name, "token", StringComparison.Ordinal))
         {
-            if (!TryReadLinkPair(pair, out var isEmail, out var value))
-            {
-                continue;
-            }
-
-            if (replace && !recognized)
-            {
-                // A new link: nothing the form held survives it.
-                _email = string.Empty;
-                _token = string.Empty;
-            }
-
-            recognized = true;
-
-            if (isEmail && string.IsNullOrWhiteSpace(_email))
-            {
-                _email = value;
-            }
-            else if (!isEmail && string.IsNullOrWhiteSpace(_token))
-            {
-                _token = value;
-            }
+            return false;
         }
 
+        value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+        return true;
+    }
+
+    /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment into the fields.</summary>
+    /// <param name="fragment">The raw fragment, without its leading hash.</param>
+    /// <param name="replace">See <see cref="MergeLinkFragment"/>.</param>
+    /// <returns><see langword="true"/> when the fragment carried an <c>email</c> or <c>token</c> pair.</returns>
+    private bool ApplyFragment(string? fragment, bool replace)
+    {
+        var (recognized, email, token) = MergeLinkFragment(fragment, replace, _email, _token);
+        _email = email;
+        _token = token;
         return recognized;
     }
 

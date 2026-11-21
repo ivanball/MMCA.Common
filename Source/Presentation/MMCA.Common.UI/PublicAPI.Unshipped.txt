@@ -2,5 +2,5 @@
 MMCA.Common.UI.Services.Auth.Tokens.ISessionAwareTokenStorage.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.SecureStoreTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.RenewRejectedAccessTokenAsync(string! rejectedAccessToken) -> System.Threading.Tasks.Task<string?>!
-MMCA.Common.UI.Pages.Auth.ResetPassword.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword.DisposeAsync() -> System.Threading.Tasks.ValueTask
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnInitialized() -> void
