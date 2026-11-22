@@ -1,9 +1,12 @@
+using System.Xml.Linq;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire.Integrations;
 
@@ -100,5 +103,121 @@ public sealed class AzureDataProtectionExtensionsTests
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(settings);
         return builder;
+    }
+
+    // -- The shared key ring with no at-rest key: one startup Warning outside Development --
+    private const string BlobUri = "https://example.blob.core.windows.net/dataprotection/keys.xml";
+    private const string AtRestKey = "DataProtection:KeyVaultKeyUri";
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public async Task AddAzureDataProtection_WithoutAnAtRestKey_OutsideDevelopment_WarnsOnceAtStartup(string environmentName)
+    {
+        var warnings = await StartupWarningsAsync(environmentName, new() { ["DataProtection:BlobStorageUri"] = BlobUri });
+
+        warnings.Should().ContainSingle(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddAzureDataProtection_WithAnAtRestKey_OutsideDevelopment_DoesNotWarn()
+    {
+        var warnings = await StartupWarningsAsync("Production", new()
+        {
+            ["DataProtection:BlobStorageUri"] = BlobUri,
+            [AtRestKey] = "https://myvault.vault.azure.net/keys/dataprotection",
+        });
+
+        warnings.Should().NotContain(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddAzureDataProtection_WithoutAnAtRestKey_InDevelopment_DoesNotWarn()
+    {
+        var warnings = await StartupWarningsAsync(Environments.Development, new() { ["DataProtection:BlobStorageUri"] = BlobUri });
+
+        warnings.Should().NotContain(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Builds and starts a real host over <c>AddAzureDataProtection</c> and returns every Warning it
+    /// logged. The key ring is redirected to memory after the call (repository and encryptor), so
+    /// starting the host reaches neither Blob Storage nor Key Vault.
+    /// </summary>
+    private static async Task<List<string>> StartupWarningsAsync(string environmentName, Dictionary<string, string?> settings)
+    {
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { EnvironmentName = environmentName });
+        builder.Configuration.AddInMemoryCollection(settings);
+        var capture = new CapturingLoggerProvider();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(capture);
+
+        builder.AddAzureDataProtection();
+        builder.Services.Configure<KeyManagementOptions>(options =>
+        {
+            options.XmlRepository = new InMemoryXmlRepository();
+            options.XmlEncryptor = null;
+        });
+
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        return capture.Warnings;
+    }
+
+    private sealed class InMemoryXmlRepository : IXmlRepository
+    {
+        private readonly List<XElement> _elements = [];
+
+        public IReadOnlyCollection<XElement> GetAllElements() => [.. _elements];
+
+        public void StoreElement(XElement element, string friendlyName) => _elements.Add(element);
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly List<string> _warnings = [];
+
+        public List<string> Warnings
+        {
+            get
+            {
+                lock (_warnings)
+                {
+                    return [.. _warnings];
+                }
+            }
+        }
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+
+        public void Dispose()
+        {
+        }
+
+        private void Add(string message)
+        {
+            lock (_warnings)
+            {
+                _warnings.Add(message);
+            }
+        }
+
+        private sealed class CapturingLogger(CapturingLoggerProvider owner) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Warning)
+                {
+                    owner.Add(formatter(state, exception));
+                }
+            }
+        }
     }
 }

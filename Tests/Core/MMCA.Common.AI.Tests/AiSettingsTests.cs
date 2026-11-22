@@ -1,4 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.Internal;
 
 namespace MMCA.Common.AI.Tests;
 
@@ -156,4 +159,43 @@ public sealed class AiSettingsTests
 
     private static IReadOnlyList<ValidationResult> Validate(AiSettings settings) =>
         [.. settings.Validate(new ValidationContext(settings))];
+
+    // -- Ai:Endpoint transport, decided by the host environment the validation context carries --
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void Enabled_RejectsAnHttpEndpoint_OutsideDevelopment(string environmentName)
+    {
+        var results = ValidateIn(environmentName, Endpointed("http://gateway.example.com/openai/v1/"));
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Contain(nameof(AiSettings.Endpoint));
+    }
+
+    [Fact]
+    public void Enabled_AcceptsAnHttpEndpoint_InDevelopment() =>
+        ValidateIn(Environments.Development, Endpointed("http://localhost:11434/v1/")).Should().BeEmpty();
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Development")]
+    public void Enabled_AcceptsAnHttpsEndpoint_InEveryEnvironment(string environmentName) =>
+        ValidateIn(environmentName, Endpointed("https://gateway.example.com/openai/v1/")).Should().BeEmpty();
+
+    private static AiSettings Endpointed(string endpoint) => new()
+    {
+        Enabled = true,
+        Provider = "OpenAI",
+        Model = "gpt-5",
+        ApiKey = "key",
+        Endpoint = new Uri(endpoint),
+    };
+
+    private static IReadOnlyList<ValidationResult> ValidateIn(string environmentName, AiSettings settings)
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IHostEnvironment>(new HostingEnvironment { EnvironmentName = environmentName })
+            .BuildServiceProvider();
+        return [.. settings.Validate(new ValidationContext(settings, services, items: null))];
+    }
 }
