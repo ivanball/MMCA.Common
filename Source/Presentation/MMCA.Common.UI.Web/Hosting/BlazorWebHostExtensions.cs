@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -56,7 +57,8 @@ public static class BlazorWebHostExtensions
         /// policies, server token storage, the request-reading forbidden re-execution detector the
         /// not-found page consults, the same-origin proxy refresher and then the same-origin
         /// API proxy, the authentication state provider, cascading authentication state, the distributed
-        /// memory cache, the web form factor, the Blazor CSP and finally the security headers.
+        /// memory cache, the web form factor, the antiforgery cookie policy (always Secure outside
+        /// Development), the Blazor CSP and finally the security headers.
         /// <para>
         /// The head registers its UI modules, <c>IHomePageContent</c> and any <c>IOAuthUISettings</c> of
         /// its own after this call (the shared default is a TryAdd, so a later registration wins). It must
@@ -143,6 +145,13 @@ public static class BlazorWebHostExtensions
             services.AddCascadingAuthenticationState();
             services.AddDistributedMemoryCache();
             services.AddCommonWebFormFactor();
+
+            // Outside Development the antiforgery cookie is always Secure: TLS ends at the ingress,
+            // so the default SameAsRequest policy would see plain http and leave the flag off.
+            if (!builder.Environment.IsDevelopment())
+            {
+                services.AddAntiforgery(static antiforgery => antiforgery.Cookie.SecurePolicy = CookieSecurePolicy.Always);
+            }
 
             // The dynamic Blazor CSP before the security headers, whose static default is a TryAdd.
             services.AddCommonBlazorCsp();
