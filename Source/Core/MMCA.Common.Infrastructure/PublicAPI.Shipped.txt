@@ -110,6 +110,8 @@ MMCA.Common.Infrastructure.Caching.CacheSettings.LocalCacheDuration.get -> Syste
 MMCA.Common.Infrastructure.Caching.CacheSettings.LocalCacheDuration.init -> void
 MMCA.Common.Infrastructure.Caching.CacheSettings.PopulateLockTimeout.get -> System.TimeSpan
 MMCA.Common.Infrastructure.Caching.CacheSettings.PopulateLockTimeout.init -> void
+MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator
+MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator.Configure(StackExchange.Redis.ConfigurationOptions! options) -> void
 MMCA.Common.Infrastructure.ClassReference
 MMCA.Common.Infrastructure.ClassReference.ClassReference() -> void
 MMCA.Common.Infrastructure.Configuration.ApplicationNamespace
@@ -148,6 +150,7 @@ MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.De
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNotificationInfrastructure() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNpgsqlDataSourceConfigurator(MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddPushNotifications(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddRedisConfigurationOptionsConfigurator(MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddReloadableFeatureFlags(Microsoft.Extensions.Configuration.IConfiguration! configuration, params System.Reflection.Assembly![]! flagAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddScheduledJob<TJob>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddScheduledJobs(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -1030,6 +1033,7 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddMultiTenancy(this Micro
 static MMCA.Common.Infrastructure.DependencyInjection.AddNotificationInfrastructure(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddNpgsqlDataSourceConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Persistence.DbContexts.INpgsqlDataSourceConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddPushNotifications(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.DependencyInjection.AddRedisConfigurationOptionsConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddReloadableFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, params System.Reflection.Assembly![]! flagAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJob<TJob>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJobs(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

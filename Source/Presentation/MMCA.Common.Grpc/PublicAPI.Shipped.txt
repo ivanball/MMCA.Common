@@ -1,6 +1,9 @@
 #nullable enable
 MMCA.Common.Grpc.Authentication.IServiceTokenProvider
 MMCA.Common.Grpc.Authentication.IServiceTokenProvider.GetToken() -> string!
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.extension(System.Security.Claims.ClaimsPrincipal!).IsServiceCaller() -> bool
 MMCA.Common.Grpc.Authentication.ServiceTokenDefaults
 MMCA.Common.Grpc.Authentication.ServiceTokenHttpClientBuilderExtensions
 MMCA.Common.Grpc.Authentication.ServiceTokenHttpClientBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!)
@@ -58,6 +61,7 @@ MMCA.Common.Grpc.ResultGrpcExtensions.extension<T>(MMCA.Common.Shared.Abstractio
 MMCA.Common.Grpc.ResultGrpcExtensions.extension<T>(MMCA.Common.Shared.Abstractions.Result<T>!).UnwrapOrThrow() -> T
 const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.AuthenticationScheme = "ServiceToken" -> string!
 const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.InternalCallerPolicy = "InternalCaller" -> string!
+const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.ServiceCallerPolicy = "ServiceCaller" -> string!
 const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.ServiceClaimType = "svc" -> string!
 const MMCA.Common.Grpc.Authentication.ServiceTokenSettings.SectionName = "Grpc:ServiceToken" -> string!
 override MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.ClientStreamingServerHandler<TRequest, TResponse>(Grpc.Core.IAsyncStreamReader<TRequest!>! requestStream, Grpc.Core.ServerCallContext! context, Grpc.Core.ClientStreamingServerMethod<TRequest!, TResponse!>! continuation) -> System.Threading.Tasks.Task<TResponse!>!
@@ -74,6 +78,7 @@ override MMCA.Common.Grpc.Interceptors.ServiceTokenClientInterceptor.AsyncDuplex
 override MMCA.Common.Grpc.Interceptors.ServiceTokenClientInterceptor.AsyncServerStreamingCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncServerStreamingCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncServerStreamingCall<TResponse!>!
 override MMCA.Common.Grpc.Interceptors.ServiceTokenClientInterceptor.AsyncUnaryCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncUnaryCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncUnaryCall<TResponse!>!
 override MMCA.Common.Grpc.Interceptors.ServiceTokenClientInterceptor.BlockingUnaryCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.BlockingUnaryCallContinuation<TRequest!, TResponse!>! continuation) -> TResponse!
+static MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.IsServiceCaller(this System.Security.Claims.ClaimsPrincipal! principal) -> bool
 static MMCA.Common.Grpc.Authentication.ServiceTokenHttpClientBuilderExtensions.WithServiceToken(this Microsoft.Extensions.DependencyInjection.IHttpClientBuilder! builder) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
 static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Grpc.Authentication.ServiceTokenServiceCollectionExtensions.AddServiceTokenClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
