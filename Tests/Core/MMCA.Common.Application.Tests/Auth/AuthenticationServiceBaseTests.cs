@@ -155,7 +155,7 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsFailure.Should().BeTrue();
         mocks.PasswordHasher.Verify(
-            x => x.HashPassword("pw"),
+            x => x.BurnVerificationCost("pw"),
             Times.Once,
             "an unknown address must answer on the same timescale as a known one, or the response time is a membership oracle");
     }
@@ -167,6 +167,10 @@ public sealed class AuthenticationServiceBaseTests
         // else before deriving). Burning against fixed decoy material would cost nothing here.
         var (sut, mocks) = CreateSut();
         sut.UntrackedUser = null;
+
+        // The interface's default burn runs (a hasher that does not override it), so the derivation
+        // it costs is the hasher's own HashPassword.
+        mocks.PasswordHasher.CallBase = true;
         var derivations = 0;
         mocks.PasswordHasher
             .Setup(x => x.HashPassword(It.IsAny<string>()))

@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Domain.Auth.Credentials.IPasswordClearableUser
+MMCA.Common.Domain.Auth.Credentials.IPasswordClearableUser.ClearPassword() -> MMCA.Common.Shared.Abstractions.Result!

@@ -307,6 +307,9 @@
   <data name="User.PreferredTheme.Invalid" xml:space="preserve">
     <value>El tema debe ser 'light' o 'dark'.</value>
   </data>
+  <data name="UserAdministration.PrivilegeCeiling" xml:space="preserve">
+    <value>No puede asignar este rol ni administrar esta cuenta, porque otorga permisos que usted no tiene.</value>
+  </data>
   <data name="UserAdministration.Self" xml:space="preserve">
     <value>No puede bloquear, desbloquear ni cambiar los roles de su propia cuenta.</value>
   </data>

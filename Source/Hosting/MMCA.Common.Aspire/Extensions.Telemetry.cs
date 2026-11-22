@@ -300,7 +300,8 @@ public static partial class Extensions
         // (inert in a host that stays on the in-process bus), the output-cache
         // eviction consumer's failed tag evictions, the swallowed failures of
         // best-effort side effects (both inert until a host opts into them), the
-        // optimistic-concurrency conflicts the API answers, and the
+        // optimistic-concurrency conflicts the API answers, the password sign-in
+        // outcomes, and the
         // optional AI package's token spend plus call duration (inert until a host
         // adds that package and enables Ai:Enabled).
         metrics.AddMeter("MMCA.Common.Outbox")
@@ -312,6 +313,7 @@ public static partial class Extensions
             .AddMeter("MMCA.Common.BestEffort")
             .AddMeter("MMCA.Common.InternalCommands")
             .AddMeter("MMCA.Common.Persistence")
+            .AddMeter("MMCA.Common.Auth")
             .AddMeter(AiTelemetryName);
 
         // Polly's own meter (ADR-009). The standard resilience handler above is on every

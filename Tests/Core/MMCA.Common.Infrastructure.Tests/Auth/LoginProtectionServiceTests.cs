@@ -256,14 +256,16 @@ public sealed class LoginProtectionServiceTests
             await sut.IncrementFailedAttemptsAsync(TestEmail);
         }
 
-        logged.Should().BeEmpty("below the threshold nothing is logged");
+        // Each recorded attempt writes its own Information line; the lockout Warning is what this pins.
+        logged.Where(e => e.Level == LogLevel.Warning).Should().BeEmpty("below the threshold no lockout warning is logged");
 
         for (var attempt = 3; attempt <= 8; attempt++)
         {
             await sut.IncrementFailedAttemptsAsync(TestEmail);
         }
 
-        var warning = logged.Should().ContainSingle("only the attempt that first crosses MaxFailedAttempts logs").Subject;
+        var warning = logged.Where(e => e.Level == LogLevel.Warning).Should()
+            .ContainSingle("only the attempt that first crosses MaxFailedAttempts logs the lockout").Subject;
         warning.Level.Should().Be(LogLevel.Warning);
         warning.Message.Should().Contain("lockout tripped");
         warning.Message.Should().Contain("1s", "the lockout seconds of the tripping attempt are logged");

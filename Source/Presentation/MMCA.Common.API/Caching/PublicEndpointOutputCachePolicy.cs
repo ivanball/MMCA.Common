@@ -1,10 +1,11 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using MMCA.Common.API.Authorization;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 
 namespace MMCA.Common.API.Caching;
 
@@ -31,8 +32,10 @@ namespace MMCA.Common.API.Caching;
 /// unpublished rows), pass that role via <c>bypassRoles</c>: callers in a bypass
 /// role skip the cache entirely (no lookup, no storage), so their elevated responses are
 /// never cached and they always read fresh, while every other caller's identical payload
-/// stays cacheable. Responses that set cookies or return non-200 status codes are never
-/// stored.
+/// stays cacheable. When the elevated payload is gated by a permission rather than a fixed role,
+/// pass that permission via <c>bypassPermissions</c> instead: any caller holding it (by claim, by
+/// role, or by a stored grant) skips the cache the same way. Responses that set cookies or return
+/// non-200 status codes are never stored.
 /// </para>
 /// <para>
 /// SECURITY (tenancy): when a tenant has been resolved for the request the cache key varies by it,
@@ -51,13 +54,14 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
 
     private readonly TimeSpan _expiration;
     private readonly string[] _bypassRoles;
+    private readonly string[] _bypassPermissions;
     private readonly string[] _tags;
 
     /// <summary>Initializes the policy with an expiration and invalidation tags.</summary>
     /// <param name="expiration">How long a cached response stays valid.</param>
     /// <param name="tags">Tags for targeted eviction via <c>IOutputCacheStore.EvictByTagAsync</c>.</param>
     public PublicEndpointOutputCachePolicy(TimeSpan expiration, params string[] tags)
-        : this(expiration, [], tags)
+        : this(expiration, [], [], tags)
     {
     }
 
@@ -67,13 +71,34 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
     /// use for roles that receive an elevated, identity-dependent payload from the endpoint.</param>
     /// <param name="tags">Tags for targeted eviction via <c>IOutputCacheStore.EvictByTagAsync</c>.</param>
     public PublicEndpointOutputCachePolicy(TimeSpan expiration, string[] bypassRoles, string[] tags)
+        : this(expiration, bypassRoles, [], tags)
+    {
+    }
+
+    /// <summary>
+    /// Initializes the policy with an expiration, cache-bypassing roles, cache-bypassing permissions,
+    /// and invalidation tags.
+    /// </summary>
+    /// <param name="expiration">How long a cached response stays valid.</param>
+    /// <param name="bypassRoles">Roles whose callers skip the cache entirely (no lookup, no storage).</param>
+    /// <param name="bypassPermissions">
+    /// Permissions whose holders skip the cache entirely (no lookup, no storage), evaluated exactly as
+    /// the permission authorization handler evaluates them: a permission claim on the token, or a role
+    /// the registered <see cref="IPermissionRegistry"/> grants it to (stored grants included). Use it
+    /// when the endpoint's elevated payload is gated by a permission rather than by a fixed role, so a
+    /// role that is granted the permission later is bypassed too.
+    /// </param>
+    /// <param name="tags">Tags for targeted eviction via <c>IOutputCacheStore.EvictByTagAsync</c>.</param>
+    public PublicEndpointOutputCachePolicy(TimeSpan expiration, string[] bypassRoles, string[] bypassPermissions, string[] tags)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiration, TimeSpan.Zero);
         ArgumentNullException.ThrowIfNull(bypassRoles);
+        ArgumentNullException.ThrowIfNull(bypassPermissions);
         ArgumentNullException.ThrowIfNull(tags);
 
         _expiration = expiration;
         _bypassRoles = bypassRoles;
+        _bypassPermissions = bypassPermissions;
         _tags = tags;
     }
 
@@ -82,9 +107,10 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
     {
         // Mirrors the built-in default policy MINUS the Authorization-header / authenticated-
         // identity bail-out: the response is user-independent by contract (see class docs).
-        // Callers in a bypass role get the default-policy behavior back: no lookup, no storage.
+        // Callers in a bypass role, or holding a bypass permission, get the default-policy behavior
+        // back: no lookup, no storage.
         var attemptOutputCaching = IsCacheableRequest(context.HttpContext.Request)
-            && !IsBypassedCaller(context.HttpContext.User);
+            && !IsBypassedCaller(context.HttpContext);
         context.EnableOutputCaching = true;
         context.AllowCacheLookup = attemptOutputCaching;
         context.AllowCacheStorage = attemptOutputCaching;
@@ -143,6 +169,22 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
     // identity's own role claim type, so against an identity provider that emits bare "role"/"roles"
     // claims the permission handler would grant the elevated payload while this check missed the
     // bypass, and that response would be stored under the shared public key.
-    private bool IsBypassedCaller(ClaimsPrincipal user) =>
-        Array.Exists(_bypassRoles, user.HasRole);
+    private bool IsBypassedCaller(HttpContext httpContext)
+    {
+        var user = httpContext.User;
+        if (Array.Exists(_bypassRoles, user.HasRole))
+        {
+            return true;
+        }
+
+        if (_bypassPermissions.Length == 0)
+        {
+            return false;
+        }
+
+        // The same evaluation the permission handler grants the elevated payload by, so a caller the
+        // endpoint answers with that payload is never served from, or stored into, the shared entry.
+        var registry = httpContext.RequestServices?.GetService<IPermissionRegistry>();
+        return Array.Exists(_bypassPermissions, permission => PermissionAuthorizationHandler.Holds(user, registry, permission));
+    }
 }

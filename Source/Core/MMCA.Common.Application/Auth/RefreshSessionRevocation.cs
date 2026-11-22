@@ -39,19 +39,44 @@ public static class RefreshSessionRevocation
             return;
         }
 
-        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
-        var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
-        if (sessions.Count == 0)
+        var revoked = await StageRevokeAllAsync(refreshSessions, timeProvider, userId, cancellationToken).ConfigureAwait(false);
+        if (revoked == 0)
         {
             return;
         }
 
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Revokes every un-revoked session the user holds WITHOUT saving: the store returns tracked rows,
+    /// so the caller's own unit-of-work save persists the revocation together with the account change
+    /// it belongs to. A host that registered no <see cref="IRefreshSessionStore"/> is a no-op.
+    /// </summary>
+    /// <param name="refreshSessions">The session store, or <see langword="null"/> when the host wired none.</param>
+    /// <param name="timeProvider">Clock used to stamp the revocation; defaults to the system clock.</param>
+    /// <param name="userId">The user whose sessions to revoke.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of sessions revoked.</returns>
+    internal static async Task<int> StageRevokeAllAsync(
+        IRefreshSessionStore? refreshSessions,
+        TimeProvider? timeProvider,
+        UserIdentifierType userId,
+        CancellationToken cancellationToken)
+    {
+        if (refreshSessions is null)
+        {
+            return 0;
+        }
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
         foreach (var session in sessions)
         {
             session.Revoke(now, RefreshSession.ReasonSignedOut);
         }
 
-        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return sessions.Count;
     }
 
     /// <summary>

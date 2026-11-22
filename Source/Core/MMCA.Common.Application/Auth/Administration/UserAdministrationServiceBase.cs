@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth.SoftDeletedUsers;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 
 namespace MMCA.Common.Application.Auth.Administration;
 
@@ -38,6 +41,16 @@ namespace MMCA.Common.Application.Auth.Administration;
 /// nothing is revoked, so re-submitting the same value does not sign the account out. A real change
 /// revokes the live refresh sessions, because the role travels in the access token.
 /// </para>
+/// <para>
+/// <b>No administrator grants more than they hold.</b> When a permission registry is supplied, a role
+/// change is refused when the requested role grants any permission the caller does not hold, and a
+/// role change or a lock (or unlock) is refused when the target account's current role grants any
+/// permission the caller does not hold. "Holds" is the evaluation the permission authorization
+/// handler uses: a permission claim on the caller's token, or a caller role the registry grants it
+/// to (stored grants included). The refusal is a <see cref="ErrorType.Forbidden"/> error with the
+/// stable code <c>UserAdministration.PrivilegeCeiling</c> and names no permission. A host that
+/// supplies no registry (a role-only host) keeps the unrestricted behavior.
+/// </para>
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TUserDto">The app's administration-facing user DTO.</typeparam>
@@ -49,14 +62,28 @@ namespace MMCA.Common.Application.Auth.Administration;
 /// <c>AddApplication</c> registers it.
 /// </param>
 /// <param name="logger">Receives one line per administrative change and the marker-failure warnings.</param>
+/// <param name="currentUser">
+/// The signed-in administrator: the identity the privilege ceiling is evaluated for, and the
+/// <c>ActorUserId</c> on each change line. Without it the caller holds no permission, so a host that
+/// supplies a registry supplies this too.
+/// </param>
+/// <param name="permissions">
+/// The host's permission registry, read for the privilege ceiling. <see langword="null"/> (a role-only
+/// host) applies no ceiling.
+/// </param>
 public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
     IUnitOfWork unitOfWork,
     IRefreshSessionStore refreshSessions,
     TimeProvider timeProvider,
     ISoftDeletedUserMarkerWriter markerWriter,
-    ILogger logger) : IUserAdministrationService<TUserDto>
+    ILogger logger,
+    ICurrentUserService? currentUser = null,
+    IPermissionRegistry? permissions = null) : IUserAdministrationService<TUserDto>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>
 {
+    /// <summary>The stable code of the privilege-ceiling refusal.</summary>
+    private const string PrivilegeCeilingCode = "UserAdministration.PrivilegeCeiling";
+
     /// <inheritdoc />
     public async Task<Result<TUserDto>> GetAsync(
         UserIdentifierType userId,
@@ -93,6 +120,12 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
             return Result.Failure(NotFound(nameof(SetLockedAsync)));
         }
 
+        var ceiling = CheckPrivilegeCeiling(GetRole(user), nameof(SetLockedAsync));
+        if (ceiling.IsFailure)
+        {
+            return ceiling;
+        }
+
         var wasLocked = IsLocked(user);
 
         var applied = ApplyLockState(user, locked, timeProvider.GetUtcNow().UtcDateTime);
@@ -116,7 +149,7 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
             await ClearMarkerAsync(userId, cancellationToken).ConfigureAwait(false);
         }
 
-        LogLockChanged(logger, userId, locked);
+        LogLockChanged(logger, userId, locked, currentUser?.UserId);
         return Result.Success();
     }
 
@@ -144,6 +177,12 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
             return Result.Failure(validation.Errors);
         }
 
+        var requestedCeiling = CheckPrivilegeCeiling(requestedRole, nameof(SetRolesAsync));
+        if (requestedCeiling.IsFailure)
+        {
+            return requestedCeiling;
+        }
+
         var user = await unitOfWork
             .GetRepository<TUser, UserIdentifierType>()
             .GetByIdAsync(userId, cancellationToken)
@@ -154,6 +193,12 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
         }
 
         var previousRole = GetRole(user);
+
+        var targetCeiling = CheckPrivilegeCeiling(previousRole, nameof(SetRolesAsync));
+        if (targetCeiling.IsFailure)
+        {
+            return targetCeiling;
+        }
 
         var changed = ApplyRole(user, requestedRole);
         if (changed.IsFailure)
@@ -176,7 +221,7 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
         await RefreshSessionRevocation.RevokeAllAsync(refreshSessions, timeProvider, userId, cancellationToken)
             .ConfigureAwait(false);
 
-        LogRoleChanged(logger, userId, previousRole, newRole);
+        LogRoleChanged(logger, userId, previousRole, newRole, currentUser?.UserId);
         return Result.Success();
     }
 
@@ -238,6 +283,44 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
     /// </remarks>
     protected abstract Error CreateExactlyOneRoleError();
 
+    /// <summary>
+    /// Refuses when <paramref name="role"/> grants any permission the caller does not hold. With no
+    /// registry supplied there is nothing to compare and the check passes.
+    /// </summary>
+    /// <param name="role">The requested role, or the target account's current role.</param>
+    /// <param name="source">The reporting member, for the error payload.</param>
+    /// <returns>A success result, or the <c>UserAdministration.PrivilegeCeiling</c> refusal.</returns>
+    private Result CheckPrivilegeCeiling(string role, string source)
+    {
+        if (permissions is null)
+        {
+            return Result.Success();
+        }
+
+        var granted = permissions.GetPermissions(role);
+        return granted.All(CallerHolds)
+            ? Result.Success()
+            : Result.Failure(Error.Forbidden(
+                PrivilegeCeilingCode,
+                "You cannot assign this role, or administer this account, because it carries permissions you do not hold.",
+                source));
+    }
+
+    /// <summary>
+    /// Whether the signed-in caller holds <paramref name="permission"/>, evaluated as the permission
+    /// authorization handler evaluates it: an authenticated principal with the permission claim, or
+    /// with a role the registry grants it to.
+    /// </summary>
+    /// <param name="permission">The permission.</param>
+    /// <returns><see langword="true"/> when the caller holds it.</returns>
+    private bool CallerHolds(string permission)
+    {
+        var caller = currentUser?.User;
+        return caller?.Identity?.IsAuthenticated == true
+            && (caller.HasPermissionClaim(permission)
+                || permissions?.HasPermission(caller.GetRoleValues(), permission) == true);
+    }
+
     private static Error NotFound(string source) =>
         Error.NotFound.WithSource(source).WithTarget(typeof(TUser).Name);
 
@@ -267,11 +350,11 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} lock state set to {Locked} by an administrator")]
-    private static partial void LogLockChanged(ILogger logger, UserIdentifierType userId, bool locked);
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} lock state set to {Locked} by administrator {ActorUserId}")]
+    private static partial void LogLockChanged(ILogger logger, UserIdentifierType userId, bool locked, UserIdentifierType? actorUserId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} role changed from {PreviousRole} to {NewRole} by an administrator")]
-    private static partial void LogRoleChanged(ILogger logger, UserIdentifierType userId, string previousRole, string newRole);
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} role changed from {PreviousRole} to {NewRole} by administrator {ActorUserId}")]
+    private static partial void LogRoleChanged(ILogger logger, UserIdentifierType userId, string previousRole, string newRole, UserIdentifierType? actorUserId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the lock marker for user {UserId}; the account's already-issued access tokens keep working until they expire")]
     private static partial void LogMarkerWriteFailed(ILogger logger, UserIdentifierType userId, Exception exception);

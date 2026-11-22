@@ -142,6 +142,12 @@ public sealed partial class LoginProtectionService(
                 TimeSpan.FromMinutes(_settings.FailedAttemptWindowMinutes),
                 cancellationToken).ConfigureAwait(false);
 
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                var keyHash = LogKeyHash(email);
+                LogFailedAttemptRecorded(_logger, keyHash, newCount);
+            }
+
             if (newCount >= _settings.MaxFailedAttempts)
             {
                 var excessAttempts = (int)Math.Min(newCount - _settings.MaxFailedAttempts, int.MaxValue);
@@ -272,6 +278,10 @@ public sealed partial class LoginProtectionService(
     // The operation name is logged, never the key: the keys are derived from the email address or client IP.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection could not reach the cache during {Operation}; failing open, so this call applies no lockout and no registration limit.")]
     private static partial void LogCacheUnavailable(ILogger logger, string operation, Exception exception);
+
+    // A truncated hash of the protection key, never the key or the address it is derived from.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Login protection recorded a failed attempt for key {KeyHash}; {AttemptCount} in the current window")]
+    private static partial void LogFailedAttemptRecorded(ILogger logger, string keyHash, long attemptCount);
 
     // A truncated hash of the protection key, never the key or the address it is derived from.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Login protection lockout tripped for key {KeyHash}; locked out for {LockoutSeconds}s")]
