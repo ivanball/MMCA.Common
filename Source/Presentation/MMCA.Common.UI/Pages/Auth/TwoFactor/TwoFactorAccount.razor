@@ -1,0 +1,132 @@
+@page "/profile/two-factor"
+@using Microsoft.AspNetCore.Authorization
+@using MMCA.Common.UI.TwoFactor
+@attribute [Authorize(Policy = TwoFactorPageRequirement.PolicyName)]
+@attribute [StreamRendering(false)]
+
+<PageTitle>@L["Auth.TwoFactor.PageTitle"]</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+@* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-2">@L["Auth.TwoFactor.Title"]</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@L["Auth.TwoFactor.Description"]</MudText>
+
+@if (_recentSignInRequired)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4" role="alert" data-testid="two-factor-recent-sign-in">
+        @L["Auth.TwoFactor.RecentSignIn"]
+        <div class="mt-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="SignInAgainAsync" data-testid="two-factor-sign-in-again">
+                @L["Auth.TwoFactor.SignInAgain"]
+            </MudButton>
+        </div>
+    </MudAlert>
+}
+
+<MudCard Elevation="1">
+    <MudCardContent Class="pa-6">
+        @switch (_state)
+        {
+            case TwoFactorPageState.Loading:
+                <PageLoadingState Label="@L["Auth.TwoFactor.Loading"]" />
+                break;
+
+            case TwoFactorPageState.LoadFailed:
+                <MudText Typo="Typo.body2" Class="mb-2">@L["Auth.TwoFactor.LoadFailed"]</MudText>
+                <ErrorSummary Result="_loadResult" Localizer="L" />
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadStatusAsync" data-testid="two-factor-retry">
+                    @L["Auth.TwoFactor.Retry"]
+                </MudButton>
+                break;
+
+            case TwoFactorPageState.NotEnrolled:
+                @if (Required)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" role="alert" data-testid="two-factor-required">
+                        @L["Auth.TwoFactor.Required"]
+                    </MudAlert>
+                }
+                <MudText Typo="Typo.body1" Class="mb-4" data-testid="two-factor-status">@L["Auth.TwoFactor.StatusOff"]</MudText>
+                @ActionError
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Security"
+                           Disabled="@_isBusy" OnClick="BeginAsync"
+                           aria-busy="@(_isBusy ? "true" : "false")"
+                           data-testid="two-factor-begin">
+                    @L["Auth.TwoFactor.Begin"]
+                </MudButton>
+                break;
+
+            case TwoFactorPageState.Enrolling when _setup is { } setup:
+                <TwoFactorEnrollmentPanel Setup="setup"
+                                          OnConfirmed="OnEnrollmentConfirmed"
+                                          OnCancelled="OnEnrollmentCancelled"
+                                          OnRecentSignInRequired="OnRecentSignInRequired" />
+                break;
+
+            case TwoFactorPageState.RecoveryCodes:
+                <RecoveryCodesPanel Codes="_codes" OnContinue="OnCodesSavedAsync" />
+                break;
+
+            case TwoFactorPageState.Enabled:
+                @if (Required && !_hasMultiFactor)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" role="alert" data-testid="two-factor-required-sign-in-again">
+                        @L["Auth.TwoFactor.RequiredSignInAgain"]
+                        <div class="mt-2">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="SignInAgainAsync">
+                                @L["Auth.TwoFactor.SignInAgain"]
+                            </MudButton>
+                        </div>
+                    </MudAlert>
+                }
+                <MudText Typo="Typo.body1" Class="mb-1" data-testid="two-factor-status">@L["Auth.TwoFactor.StatusOn"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4" data-testid="two-factor-codes-remaining">
+                    @L["Auth.TwoFactor.RecoveryCodesRemaining", _status.RecoveryCodesRemaining]
+                </MudText>
+                @ActionError
+                <MudTextField T="string" @bind-Value="_actionCode"
+                              Label="@L["Auth.TwoFactor.CodeLabel"]"
+                              InputType="InputType.Text" InputMode="InputMode.numeric"
+                              Immediate="true"
+                              Variant="Variant.Outlined" Class="mb-4"
+                              autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
+                              data-testid="two-factor-action-code" />
+                <div class="d-flex flex-column mmca-auth-actions">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Autorenew"
+                               Disabled="@_isBusy" OnClick="RegenerateAsync"
+                               data-testid="two-factor-regenerate">
+                        @L["Auth.TwoFactor.Regenerate"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.LockOpen"
+                               Disabled="@_isBusy" OnClick="DisableAsync"
+                               data-testid="two-factor-disable">
+                        @L["Auth.TwoFactor.Disable"]
+                    </MudButton>
+                </div>
+                break;
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    /// <summary>Gets or sets the page to return to after signing in again; sanitized before use.</summary>
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    // A refusal of the last action, shown above the control that caused it. role="alert": it enters the
+    // DOM after an async call with no navigation, so nothing else announces it (WCAG 4.1.3).
+    private RenderFragment ActionError => __builder =>
+    {
+        if (_actionError is { Length: > 0 })
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert" data-testid="two-factor-action-error">@_actionError</MudAlert>
+        }
+    };
+}

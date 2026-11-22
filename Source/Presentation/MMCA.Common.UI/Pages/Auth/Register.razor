@@ -3,6 +3,7 @@
 @using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.Shared.Auth.Requests
+@using MMCA.Common.Shared.Auth.Responses
 @using MMCA.Common.Shared.ValueObjects.Contact
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
@@ -35,133 +36,158 @@
     </div>
 
     <MudCard Elevation="1">
-        <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
-            <LocalizedDataAnnotationsValidator />
-            <MudCardContent Class="pa-6">
-                @if (!string.IsNullOrWhiteSpace(_errorMessage))
-                {
-                    @* role="alert": the alert only enters the DOM after a failed submit, so nothing
-                       announces it unless it arrives as a live region. *@
-                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert">@_errorMessage</MudAlert>
-                }
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Label="@L["Auth.Field.FirstName"]"
-                                      Immediate="true"
-                                      Variant="Variant.Outlined"
-                                      autocomplete="given-name" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.LastName" For="@(() => _model.LastName)" Label="@L["Auth.Field.LastName"]"
-                                      Immediate="true"
-                                      Variant="Variant.Outlined"
-                                      autocomplete="family-name" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        @* A text input with the email keyboard, not type=email: the browser's email check refuses an
-                           internationalized local part that the API accepts and stores (Run 19 N1). *@
-                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Text" InputMode="InputMode.email"
-                                      Immediate="true"
-                                      Variant="Variant.Outlined"
-                                      Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Email"
-                                      autocapitalize="none" spellcheck="false"
-                                      autocomplete="email" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="@L["Auth.Field.Password"]" InputType="InputType.Password"
-                                      Immediate="true"
-                                      HelperText="@L["Auth.Register.PasswordHelper"]"
-                                      Variant="Variant.Outlined"
-                                      autocomplete="new-password" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.ConfirmPassword" For="@(() => _model.ConfirmPassword)" Label="@L["Auth.Field.ConfirmPassword"]" InputType="InputType.Password"
-                                      Immediate="true"
-                                      Variant="Variant.Outlined"
-                                      autocomplete="new-password" />
-                    </MudItem>
-                </MudGrid>
-
-                @* Offered only when the host collects addresses (RegistrationSettings, on by default):
-                   a host whose user model stores no address must not ask for one. *@
-                @if (CollectAddress)
-                {
-                    <MudExpansionPanels Class="mt-4" Elevation="0">
-                        <MudExpansionPanel Text="@L["Auth.Register.AddressOptional"]">
-                            <MudGrid Spacing="3">
-                                <MudItem xs="12">
-                                    <MudTextField @bind-Value="_model.AddressLine1" Label="@L["Auth.Field.AddressLine1"]"
-                                                  Variant="Variant.Outlined" autocomplete="address-line1" />
-                                </MudItem>
-                                <MudItem xs="12">
-                                    <MudTextField @bind-Value="_model.AddressLine2" Label="@L["Auth.Field.AddressLine2"]"
-                                                  Variant="Variant.Outlined" autocomplete="address-line2" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="_model.City" Label="@L["Auth.Field.City"]"
-                                                  Variant="Variant.Outlined" autocomplete="address-level2" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="_model.State" Label="@L["Auth.Field.State"]"
-                                                  Variant="Variant.Outlined" autocomplete="address-level1" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="_model.ZipCode" Label="@L["Auth.Field.ZipCode"]"
-                                                  Variant="Variant.Outlined" autocomplete="postal-code" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="_model.Country" Label="@L["Auth.Field.Country"]"
-                                                  Variant="Variant.Outlined" autocomplete="country-name" />
-                                </MudItem>
-                            </MudGrid>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
-                }
-
-                @if (RequiresTerms)
-                {
-                    @* Rendered only when the host configures a Terms URL (LegalSettings). The document
-                       names inside the label are links: clicking one opens the document and does not
-                       toggle the box (HTML label activation skips interactive descendants), and the
-                       whole sentence stays the checkbox's accessible name. *@
-                    <div class="mt-4" data-testid="register-accept-terms">
-                        <MudCheckBox T="bool" @bind-Value="_model.AcceptedTerms" Color="Color.Primary" Dense="true">
-                            <MudText Typo="Typo.body2" Inline="true">
-                                @L["Auth.Register.AcceptTerms.Prefix"]
-                                @LegalDocument(Legal.TermsUrl, L["Legal.TermsOfService"])
-                                @L["Auth.Register.AcceptTerms.And"]
-                                @LegalDocument(Legal.PrivacyUrl, L["Legal.PrivacyPolicy"])
-                                @* Razor drops the whitespace around a code block, so the separating
-                                   spaces of this optional phrase are explicit. *@
-                                @if (!string.IsNullOrWhiteSpace(Legal.CodeOfConductUrl))
-                                {
-                                    @($" {L["Auth.Register.AcceptTerms.CodeOfConductPrefix"]} ")
-                                    @LegalDocument(Legal.CodeOfConductUrl, L["Legal.CodeOfConduct"])
-                                }
-                            </MudText>
-                        </MudCheckBox>
-                    </div>
-                }
+        @if (_pendingEmail is not null)
+        {
+            @* The host requires a confirmed address, so registration opened no session: the account
+               exists and the confirmation mail is on its way. The form is not shown again. *@
+            <MudCardContent Class="pa-6" data-testid="register-pending">
+                <div class="d-flex flex-column align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    @* A plain heading element rather than MudText, so it can take focus. *@
+                    <h2 @ref="_pendingHeading" tabindex="-1" class="mud-typography mud-typography-h5 mud-typography-align-center">@L["Auth.Register.Pending.Title"]</h2>
+                </div>
+                <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status" aria-live="polite">
+                    @L["Auth.Register.Pending.Message", _pendingEmail]
+                </MudAlert>
+                <EmailConfirmationResendPrompt Email="@_pendingEmail" />
             </MudCardContent>
-            <MudCardActions Class="d-flex flex-column pa-6 pt-2 mmca-auth-actions">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                           Disabled="@(_isLoading || (RequiresTerms && !_model.AcceptedTerms))" ButtonType="ButtonType.Submit" Size="Size.Large"
-                           aria-busy="@(_isLoading ? "true" : "false")">
-                    @if (_isLoading)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                    }
-                    @L["Auth.Register.CreateAccount"]
+            <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Size="Size.Medium"
+                           OnClick="GoToSignIn" data-testid="register-pending-go-to-sign-in">
+                    @L["Auth.Register.Pending.GoToSignIn"]
                 </MudButton>
-                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                    @L["Auth.Register.AlreadyHaveAccount"]
-                    @* Underline.Always: an in-text link must be distinguishable without relying on colour
-                       alone (WCAG 2.1 AA / axe link-in-text-block). *@
-                    <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
-                </MudText>
             </MudCardActions>
-        </EditForm>
+        }
+        else
+        {
+            <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
+                <LocalizedDataAnnotationsValidator />
+                <MudCardContent Class="pa-6">
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        @* role="alert": the alert only enters the DOM after a failed submit, so nothing
+                           announces it unless it arrives as a live region. *@
+                        <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert">@_errorMessage</MudAlert>
+                    }
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Label="@L["Auth.Field.FirstName"]"
+                                          Immediate="true"
+                                          Variant="Variant.Outlined"
+                                          autocomplete="given-name" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_model.LastName" For="@(() => _model.LastName)" Label="@L["Auth.Field.LastName"]"
+                                          Immediate="true"
+                                          Variant="Variant.Outlined"
+                                          autocomplete="family-name" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            @* A text input with the email keyboard, not type=email: the browser's email check refuses an
+                               internationalized local part that the API accepts and stores (Run 19 N1). *@
+                            <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Text" InputMode="InputMode.email"
+                                          Immediate="true"
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email"
+                                          autocapitalize="none" spellcheck="false"
+                                          autocomplete="email" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="@L["Auth.Field.Password"]" InputType="InputType.Password"
+                                          Immediate="true"
+                                          HelperText="@L["Auth.Register.PasswordHelper"]"
+                                          Variant="Variant.Outlined"
+                                          autocomplete="new-password" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_model.ConfirmPassword" For="@(() => _model.ConfirmPassword)" Label="@L["Auth.Field.ConfirmPassword"]" InputType="InputType.Password"
+                                          Immediate="true"
+                                          Variant="Variant.Outlined"
+                                          autocomplete="new-password" />
+                        </MudItem>
+                    </MudGrid>
+
+                    @* Offered only when the host collects addresses (RegistrationSettings, on by default):
+                       a host whose user model stores no address must not ask for one. *@
+                    @if (CollectAddress)
+                    {
+                        <MudExpansionPanels Class="mt-4" Elevation="0">
+                            <MudExpansionPanel Text="@L["Auth.Register.AddressOptional"]">
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="_model.AddressLine1" Label="@L["Auth.Field.AddressLine1"]"
+                                                      Variant="Variant.Outlined" autocomplete="address-line1" />
+                                    </MudItem>
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="_model.AddressLine2" Label="@L["Auth.Field.AddressLine2"]"
+                                                      Variant="Variant.Outlined" autocomplete="address-line2" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="_model.City" Label="@L["Auth.Field.City"]"
+                                                      Variant="Variant.Outlined" autocomplete="address-level2" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="_model.State" Label="@L["Auth.Field.State"]"
+                                                      Variant="Variant.Outlined" autocomplete="address-level1" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="_model.ZipCode" Label="@L["Auth.Field.ZipCode"]"
+                                                      Variant="Variant.Outlined" autocomplete="postal-code" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField @bind-Value="_model.Country" Label="@L["Auth.Field.Country"]"
+                                                      Variant="Variant.Outlined" autocomplete="country-name" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+
+                    @if (RequiresTerms)
+                    {
+                        @* Rendered only when the host configures a Terms URL (LegalSettings). The document
+                           names inside the label are links: clicking one opens the document and does not
+                           toggle the box (HTML label activation skips interactive descendants), and the
+                           whole sentence stays the checkbox's accessible name. *@
+                        <div class="mt-4" data-testid="register-accept-terms">
+                            <MudCheckBox T="bool" @bind-Value="_model.AcceptedTerms" Color="Color.Primary" Dense="true">
+                                <MudText Typo="Typo.body2" Inline="true">
+                                    @L["Auth.Register.AcceptTerms.Prefix"]
+                                    @LegalDocument(Legal.TermsUrl, L["Legal.TermsOfService"])
+                                    @L["Auth.Register.AcceptTerms.And"]
+                                    @LegalDocument(Legal.PrivacyUrl, L["Legal.PrivacyPolicy"])
+                                    @* Razor drops the whitespace around a code block, so the separating
+                                       spaces of this optional phrase are explicit. *@
+                                    @if (!string.IsNullOrWhiteSpace(Legal.CodeOfConductUrl))
+                                    {
+                                        @($" {L["Auth.Register.AcceptTerms.CodeOfConductPrefix"]} ")
+                                        @LegalDocument(Legal.CodeOfConductUrl, L["Legal.CodeOfConduct"])
+                                    }
+                                </MudText>
+                            </MudCheckBox>
+                        </div>
+                    }
+                </MudCardContent>
+                <MudCardActions Class="d-flex flex-column pa-6 pt-2 mmca-auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Disabled="@(_isLoading || (RequiresTerms && !_model.AcceptedTerms))" ButtonType="ButtonType.Submit" Size="Size.Large"
+                               aria-busy="@(_isLoading ? "true" : "false")">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @L["Auth.Register.CreateAccount"]
+                    </MudButton>
+                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                        @L["Auth.Register.AlreadyHaveAccount"]
+                        @* Underline.Always: an in-text link must be distinguishable without relying on colour
+                           alone (WCAG 2.1 AA / axe link-in-text-block). *@
+                        <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
+                    </MudText>
+                </MudCardActions>
+            </EditForm>
+        }
     </MudCard>
 </MudContainer>
 
@@ -244,6 +270,14 @@
                 }
 
                 _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Register.Failed"];
+                return;
+            }
+
+            // Behind the email gate the account exists but no session was opened: tell the visitor to
+            // open the confirmation link instead of navigating as a signed-in user.
+            if (result.Value.IsConfirmationPending())
+            {
+                ShowPending(submittedEmail);
                 return;
             }
 

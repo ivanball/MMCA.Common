@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Auth.TwoFactor;
 
 namespace MMCA.Common.UI.Services.Auth;
 
@@ -45,6 +48,9 @@ public sealed class AuthDelegatingHandler(
 
     /// <summary>How long a remembered token is kept, in milliseconds: 24 hours, longer than any access token lives.</summary>
     private const long RetentionMs = 24L * 60 * 60 * 1000;
+
+    /// <summary>The media type of an RFC 9457 Problem Details body.</summary>
+    private const string ProblemJsonMediaType = "application/problem+json";
 
     /// <summary>Which storage attached each bearer, so its 401 reaches the instance that holds it.</summary>
     private static readonly ConcurrentDictionary<string, TokenOwner> Owners = new(StringComparer.Ordinal);
@@ -200,8 +206,92 @@ public sealed class AuthDelegatingHandler(
         {
             await ReportRejectedAsync(sentToken, tokenStorageService);
         }
+        else if (response.StatusCode == HttpStatusCode.Forbidden && sentToken is not null)
+        {
+            await ReportMultiFactorRequiredAsync(sentToken, response, tokenStorageService, cancellationToken);
+        }
 
         return response;
+    }
+
+    /// <summary>
+    /// Raises <see cref="MultiFactorRequiredSignal"/> for the storage that attached
+    /// <paramref name="sentToken"/> when the 403 is the coded "second factor required" refusal
+    /// (<see cref="AuthErrorCodes.MultiFactorRequired"/>), so the page scope's listener can send the
+    /// user to set up or use their second factor. The body is read only when that storage has a
+    /// subscriber (a host that never called <c>AddTwoFactorUI()</c> has none, so its 403s are never
+    /// read here) and only when it is a Problem Details payload. It is buffered first, so the caller
+    /// still reads the same response; a body that is not valid JSON is ignored.
+    /// </summary>
+    /// <param name="sentToken">The bearer the refused request carried.</param>
+    /// <param name="response">The 403 response, returned to the caller unchanged.</param>
+    /// <param name="fallbackOwner">The storage to use when no live owner was registered for the token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the body was inspected.</returns>
+    private static async Task ReportMultiFactorRequiredAsync(
+        string sentToken,
+        HttpResponseMessage response,
+        ITokenStorageService fallbackOwner,
+        CancellationToken cancellationToken)
+    {
+        ITokenStorageService owner = Owners.TryGetValue(sentToken, out var tracked) && tracked.Storage.TryGetTarget(out var target)
+            ? target
+            : fallbackOwner;
+        if (!MultiFactorRequiredSignal.HasSubscriber(owner)
+            || !string.Equals(response.Content.Headers.ContentType?.MediaType, ProblemJsonMediaType, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await response.Content.LoadIntoBufferAsync(cancellationToken);
+        var body = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        if (CarriesMultiFactorRequired(body))
+        {
+            MultiFactorRequiredSignal.Raise(owner);
+        }
+    }
+
+    /// <summary>Whether a Problem Details body lists <see cref="AuthErrorCodes.MultiFactorRequired"/> under <c>errors[*].code</c>.</summary>
+    /// <param name="body">The buffered body.</param>
+    /// <returns><see langword="true"/> when the code is present.</returns>
+    private static bool CarriesMultiFactorRequired(byte[] body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var errors = PropertyOf(document.RootElement, "errors");
+            return errors is { ValueKind: JsonValueKind.Array } list
+                && list.EnumerateArray().Any(error =>
+                    error.ValueKind == JsonValueKind.Object
+                    && PropertyOf(error, "code") is { ValueKind: JsonValueKind.String } code
+                    && string.Equals(code.GetString(), AuthErrorCodes.MultiFactorRequired, StringComparison.Ordinal));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The first property of <paramref name="element"/> named <paramref name="name"/>, ignoring case.</summary>
+    /// <param name="element">A JSON object.</param>
+    /// <param name="name">The property name.</param>
+    /// <returns>The property value, or <see langword="null"/> when absent.</returns>
+    private static JsonElement? PropertyOf(JsonElement element, string name)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

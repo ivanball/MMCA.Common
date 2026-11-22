@@ -1,0 +1,27 @@
+@* Offers to send the confirmation link again for an address the sign-in page refused as unconfirmed,
+   or the register page just created behind the email gate. One send per prompt: the server throttles
+   every further request anyway. *@
+<div class="mb-4" data-testid="email-confirmation-resend-prompt">
+    @if (_sent)
+    {
+        @* Worded as "if that address has an unconfirmed account": the endpoint answers 202 either way. *@
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2" role="status" aria-live="polite"
+                  data-testid="email-confirmation-resend-sent">@L["Auth.Confirm.LinkSent"]</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mb-2">@L["Auth.EmailConfirmation.ResendPrompt"]</MudText>
+    }
+    @if (_errorMessage is { Length: > 0 })
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2" role="alert"
+                  data-testid="email-confirmation-resend-error">@_errorMessage</MudAlert>
+    }
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.MarkEmailRead"
+               Disabled="@(_isSending || _sent)" OnClick="ResendAsync"
+               aria-busy="@(_isSending ? "true" : "false")"
+               data-testid="email-confirmation-resend">
+        @L["Auth.Confirm.Resend"]
+    </MudButton>
+</div>
