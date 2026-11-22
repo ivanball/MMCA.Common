@@ -324,8 +324,9 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
     private static partial void LogAdministered(ILogger logger, string action, UserIdentifierType userId, UserIdentifierType? actorUserId);
 
     /// <summary>
-    /// The ceiling for a role change: every requested role first (no load), then the target
-    /// account's current role.
+    /// The ceiling for a role change: the one requested role first (no load), then the target
+    /// account's current role. A request that names zero roles or several passes untouched, so the
+    /// service's exactly-one-role refusal is what the caller receives, with no load ahead of it.
     /// </summary>
     /// <param name="userId">The account the request targets.</param>
     /// <param name="roles">The requested roles.</param>
@@ -334,10 +335,17 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
     private async Task<Result> CheckRoleChangeCeilingAsync(
         UserIdentifierType userId,
         IReadOnlyList<string> roles,
-        CancellationToken cancellationToken) =>
-        roles.All(CallerHoldsEveryPermissionOf)
+        CancellationToken cancellationToken)
+    {
+        if (roles is not [var requestedRole])
+        {
+            return Result.Success();
+        }
+
+        return CallerHoldsEveryPermissionOf(requestedRole)
             ? await CheckTargetCeilingAsync(userId, cancellationToken).ConfigureAwait(false)
             : Result.Failure(PrivilegeCeilingRefused());
+    }
 
     /// <summary>
     /// The ceiling on the target account: refuses when its current role grants a permission the
