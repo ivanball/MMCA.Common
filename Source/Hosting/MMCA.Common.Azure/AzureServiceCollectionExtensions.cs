@@ -109,10 +109,15 @@ public static class AzureServiceCollectionExtensions
         /// <summary>
         /// Registers the Azure Service Bus broker transport, so <c>AddBrokerMessaging</c> can select it
         /// with <c>MessageBus:Provider=AzureServiceBus</c>. Call it BEFORE <c>AddBrokerMessaging</c>,
-        /// which picks the transport while it registers the bus. The connection string resolves the
-        /// usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:rabbitmq</c>, then <c>ConnectionStrings:messaging</c>); one
+        /// which picks the transport while it registers the bus. With
+        /// <c>MessageBus:AzureServiceBus:FullyQualifiedNamespace</c> set, the bus signs in with a
+        /// Microsoft Entra token from <c>DefaultAzureCredential</c> (pinned to
+        /// <c>MessageBus:AzureServiceBus:ManagedIdentityClientId</c> when set), so the namespace can run
+        /// with shared access keys off, and any connection string is ignored. Otherwise the connection
+        /// string resolves the usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:rabbitmq</c>, then <c>ConnectionStrings:messaging</c>); one
         /// carrying <c>UseDevelopmentEmulator=true</c> targets the local emulator and needs
-        /// <c>MessageBus:EmulatorAdminEndpoint</c>. Registration only: a host whose provider is
+        /// <c>MessageBus:EmulatorAdminEndpoint</c>. With neither a namespace nor a connection string,
+        /// <c>AddBrokerMessaging</c> fails naming both. Registration only: a host whose provider is
         /// something else is unaffected.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
