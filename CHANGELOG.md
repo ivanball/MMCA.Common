@@ -8,6 +8,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 **Breaking (net11.0 consumers, EF Core and Npgsql):** on net11.0 the packages now depend on Entity Framework Core 11.0.0 and on Npgsql and Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0; net10.0 stays on EF Core 10.0.15 and Npgsql 10.0.4. A consumer that builds for net11.0 and pins the EF Core packages itself must set its own EF Core version to 11.0.0 for net11.0 in the same upgrade, or restore fails with NU1605 (package downgrade). The fix is in [UPGRADING.md](UPGRADING.md#13150---2026-11-22).
 
+### Added
+
+- **`McpHiddenText`** (MMCA.Common.Mcp): the hidden-text check the endpoint runs over every description at startup (R023), now public so a tool can apply it to the text it returns. `Find` reports each Unicode format character (category Cf), tag character (U+E0000 to U+E007F) and HTML comment opener; `Strip` removes every format and tag character from third-party text (a profile, an abstract) and keeps the visible text verbatim. The startup inspection now calls `Find`, so the two cannot drift.
+
 ### Changed
 
 - **Entity Framework Core 11 on the .NET 11 line** (MMCA.Common.Infrastructure, MMCA.Common.Aspire): `MmcaEfCoreVersion` is 11.0.0 for net11.0 (EF Core 11 ships net11.0 assets only), now that Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0 is stable. Npgsql and its EF Core provider read a new `MmcaNpgsqlVersion` property (10.0.4 on net10.0, 11.0.0 on net11.0), so the readiness-check driver and the provider stay on one build. `Microsoft.Data.Sqlite` follows the EF Core line as before. `ApplicationDbContext` logs `RelationalEventId.MigrationsNotFound` instead of throwing, so a source whose migrations assembly holds no migrations still migrates on net11.0 as it does on net10.0 (EF Core 11 raises that event as an error by default). See Breaking.

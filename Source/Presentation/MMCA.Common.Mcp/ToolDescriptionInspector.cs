@@ -1,55 +1,19 @@
-using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
 namespace MMCA.Common.Mcp;
 
 /// <summary>
-/// Finds text a model reads but a reviewer does not see (R023): a Unicode format character
-/// (category Cf: zero-width characters, bidi controls), a tag character (U+E0000 to U+E007F) or an
-/// HTML comment opener. Run over every tool, parameter and server description before the endpoint
+/// Finds text a model reads but a reviewer does not see (R023, the check lives in
+/// <see cref="McpHiddenText"/>). Run over every tool, parameter and server description before the endpoint
 /// is mapped, so a poisoned description fails startup instead of reaching a client.
 /// </summary>
 internal static class ToolDescriptionInspector
 {
-    private const string HtmlCommentOpener = "<!--";
-
     /// <summary>Returns one finding per hidden-text occurrence in <paramref name="text"/>; empty when clean.</summary>
     /// <param name="text">The description to inspect.</param>
     /// <returns>The findings, each naming the code point or the comment and its position.</returns>
-    public static IReadOnlyList<string> FindHiddenText(string? text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return [];
-        }
-
-        List<string> findings = [];
-        var index = 0;
-        foreach (var rune in text.EnumerateRunes())
-        {
-            if (IsTagCharacter(rune))
-            {
-                findings.Add(string.Create(CultureInfo.InvariantCulture, $"tag character U+{rune.Value:X4} at {index}"));
-            }
-            else if (Rune.GetUnicodeCategory(rune) == UnicodeCategory.Format)
-            {
-                findings.Add(string.Create(CultureInfo.InvariantCulture, $"format character U+{rune.Value:X4} at {index}"));
-            }
-
-            index += rune.Utf16SequenceLength;
-        }
-
-        var comment = text.IndexOf(HtmlCommentOpener, StringComparison.Ordinal);
-        while (comment >= 0)
-        {
-            findings.Add(string.Create(CultureInfo.InvariantCulture, $"HTML comment at {comment}"));
-            comment = text.IndexOf(HtmlCommentOpener, comment + HtmlCommentOpener.Length, StringComparison.Ordinal);
-        }
-
-        return findings;
-    }
+    public static IReadOnlyList<string> FindHiddenText(string? text) => McpHiddenText.Find(text);
 
     /// <summary>
     /// Inspects every tool (name, title, description and each string in its input and output
@@ -93,8 +57,6 @@ internal static class ToolDescriptionInspector
                 + string.Join("; ", problems) + ".");
         }
     }
-
-    private static bool IsTagCharacter(Rune rune) => rune.Value is >= 0xE0000 and <= 0xE007F;
 
     private static void Collect(List<string> problems, string where, string? text)
     {
