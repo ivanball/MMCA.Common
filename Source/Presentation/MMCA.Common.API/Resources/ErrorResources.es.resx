@@ -179,7 +179,7 @@
     <value>No se pudo leer el secreto de autenticación en dos pasos almacenado. Deshabilite la autenticación en dos pasos y vuelva a inscribirse.</value>
   </data>
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
-    <value>Esta operación requiere un segundo factor de autenticación. Vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
+    <value>Esta operación requiere un segundo factor de autenticación. Configure la autenticación en dos pasos o vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
   </data>
   <data name="Authorization.RoleNotFound" xml:space="preserve">
     <value>No se encontró el rol.</value>
