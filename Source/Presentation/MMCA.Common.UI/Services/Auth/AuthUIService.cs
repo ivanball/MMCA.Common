@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
@@ -76,8 +77,13 @@ public sealed class AuthUIService(
         AuthenticateAsync("auth/login", request, cancellationToken);
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Behind the email gate the API answers <c>202 Accepted</c> (account created, confirmation pending,
+    /// no session); that comes back as a success carrying <see cref="RegistrationOutcome.ConfirmationPending"/>,
+    /// with nothing stored and no sign-in.
+    /// </remarks>
     public Task<Result<AuthenticationResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
-        AuthenticateAsync("auth/register", request, cancellationToken);
+        AuthenticateAsync("auth/register", request, cancellationToken, allowConfirmationPending: true);
 
     /// <inheritdoc />
     public Task<Result<AuthenticationResponse>> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default)
@@ -401,21 +407,38 @@ public sealed class AuthUIService(
     /// pair back, persist it, and tell Blazor's auth state about it. Every step that can fail
     /// contributes its own error rather than collapsing into a null.
     /// </summary>
+    /// <param name="relativeUrl">The endpoint, relative to the API client.</param>
+    /// <param name="request">The credential payload.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="allowConfirmationPending">
+    /// Whether a <c>202 Accepted</c> means "registered, confirmation pending, no session" (register
+    /// only). It is then a success carrying <see cref="RegistrationOutcome.ConfirmationPending"/>, read
+    /// without its body and with nothing stored. Every other path keeps treating a token-less success
+    /// as <see cref="MissingAccessTokenCode"/>.
+    /// </param>
     private async Task<Result<AuthenticationResponse>> AuthenticateAsync(
         string relativeUrl,
         object request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool allowConfirmationPending = false)
     {
+        var confirmationPending = false;
         var result = await HttpResultExecutor.ExecuteAsync(
             async () =>
             {
                 using var httpClient = httpClientFactory.CreateClient(ApiClientName);
                 using var response = await httpClient.PostAsJsonAsync(new Uri(relativeUrl, UriKind.Relative), request, cancellationToken);
+                if (allowConfirmationPending && response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    confirmationPending = true;
+                    return Result.Success(RegistrationOutcome.ConfirmationPending);
+                }
+
                 return await ProblemDetailsResultReader.ReadAsync<AuthenticationResponse>(response, cancellationToken: cancellationToken);
             },
             cancellationToken);
 
-        if (!result.IsSuccess)
+        if (!result.IsSuccess || confirmationPending)
         {
             return result;
         }

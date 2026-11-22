@@ -1,0 +1,53 @@
+@using MMCA.Common.UI.Components.Capabilities
+
+@* The one place the shared secret is ever shown. It is held in the parameter for this state only,
+   never logged, never put in the URL. *@
+<div data-testid="two-factor-enrollment">
+    <MudText Typo="Typo.body1" Class="mb-2">@L["Auth.TwoFactor.Scan"]</MudText>
+    <div class="mmca-two-factor-qr mb-4">
+        <QrCodeImage Payload="@Setup.ProvisioningUri"
+                     AltText="@L["Auth.TwoFactor.QrAlt"]"
+                     ErrorCorrection="QrErrorCorrectionLevel.Medium" />
+    </div>
+
+    <MudText Typo="Typo.body2" Class="mb-1">@L["Auth.TwoFactor.KeyLabel"]</MudText>
+    @* role="group" so the element may carry its accessible name: a bare div or code element may not. *@
+    <div role="group" aria-label="@L["Auth.TwoFactor.KeyAria"]" class="mb-2">
+        <code class="mmca-two-factor-key" data-testid="two-factor-shared-key">@GroupedKey</code>
+    </div>
+    @* For a phone, where the QR code cannot be scanned by the device that shows it. *@
+    <div class="mb-4">
+        <ExternalLink Href="@Setup.ProvisioningUri" Underline="Underline.Always">@L["Auth.TwoFactor.OpenInApp"]</ExternalLink>
+    </div>
+
+    @if (_errorMessage is { Length: > 0 })
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert" data-testid="two-factor-enrollment-error">@_errorMessage</MudAlert>
+    }
+
+    <MudTextField T="string" @bind-Value="_code" @ref="_codeField"
+                  Label="@L["Auth.TwoFactor.CodeLabel"]"
+                  InputType="InputType.Text" InputMode="InputMode.numeric"
+                  Immediate="true"
+                  Variant="Variant.Outlined" Class="mb-4"
+                  autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
+                  data-testid="two-factor-enrollment-code" />
+
+    <div class="d-flex flex-column mmca-auth-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@_isBusy" OnClick="ConfirmAsync"
+                   aria-busy="@(_isBusy ? "true" : "false")"
+                   data-testid="two-factor-enrollment-confirm">
+            @if (_isBusy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @L["Auth.TwoFactor.Confirm"]
+        </MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                   Disabled="@_isBusy" OnClick="OnCancelled"
+                   data-testid="two-factor-enrollment-cancel">
+            @L["Auth.TwoFactor.Cancel"]
+        </MudButton>
+    </div>
+</div>
