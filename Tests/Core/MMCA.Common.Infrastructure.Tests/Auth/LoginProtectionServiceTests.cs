@@ -276,6 +276,40 @@ public sealed class LoginProtectionServiceTests
         warning.Message.Should().Contain(EmailIdentity.KeySegment(TestEmail)[..12]);
     }
 
+    // -- Failed-attempt log event (security review 2026-11-21, A4) --
+    // One Information line per recorded failed attempt, carrying the truncated key hash and the count,
+    // never the address.
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_LogsOneInformationLinePerAttemptWithTheKeyHashAndTheCount_AndNeverTheEmail()
+    {
+        var logger = CreateRecordingLogger(out var logged);
+        var sut = new LoginProtectionService(
+            new FakeCacheService(),
+            Options.Create(new LoginProtectionSettings { MaxFailedAttempts = 10, MaxLockoutSeconds = 300 }),
+            logger);
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            await sut.IncrementFailedAttemptsAsync(TestEmail);
+        }
+
+        var lines = logged.Where(e => e.Level == LogLevel.Information).Select(e => e.Message).ToList();
+        lines.Should().HaveCount(3, "each recorded failed attempt writes exactly one Information line");
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            // The hex hash may contain digits of its own, so the count is looked for outside it.
+            lines[attempt - 1].Replace(EmailIdentity.KeySegment(TestEmail)[..12], string.Empty, StringComparison.Ordinal)
+                .Should().Contain(attempt.ToString(System.Globalization.CultureInfo.InvariantCulture), "the line carries the attempt count");
+        }
+
+        foreach (var line in lines)
+        {
+            line.Should().Contain(EmailIdentity.KeySegment(TestEmail)[..12], "the line carries the truncated key hash");
+            line.Should().NotContain(EmailIdentity.KeySegment(TestEmail), "only a truncated prefix of the digest is logged");
+            line.Should().NotContainEquivalentOf(TestEmail).And.NotContainEquivalentOf("example.com");
+        }
+    }
+
     // ── Reset ──
     [Fact]
     public async Task ResetFailedAttemptsAsync_RemovesAttemptCounterAndLockout()
