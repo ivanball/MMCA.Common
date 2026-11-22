@@ -56,7 +56,8 @@ internal sealed class TwoFactorControllerTestHost : IAsyncDisposable
 
     public FakeTwoFactorStore Store { get; } = new();
 
-    public static async Task<TwoFactorControllerTestHost> StartAsync()
+    /// <summary>Starts the host; <paramref name="configureServices"/> adds what a test needs beyond the doubles.</summary>
+    public static async Task<TwoFactorControllerTestHost> StartAsync(Action<IServiceCollection>? configureServices = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.WebHost.UseTestServer();
@@ -69,6 +70,7 @@ internal sealed class TwoFactorControllerTestHost : IAsyncDisposable
         builder.Services.AddSingleton<ICommandHandler<DisableTwoFactorCommand, Result>>(host.Disable);
         builder.Services.AddSingleton<ICommandHandler<RegenerateRecoveryCodesCommand, Result<TwoFactorRecoveryCodesResponse>>>(host.Regenerate);
         builder.Services.AddSingleton<ITwoFactorStore>(host.Store);
+        configureServices?.Invoke(builder.Services);
 
         builder.Services.AddAuthentication(MultiFactorTestPrincipals.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, HeaderClaimsAuthenticationHandler>(MultiFactorTestPrincipals.SchemeName, configureOptions: null);
