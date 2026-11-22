@@ -12,6 +12,8 @@ MMCA.Common.Domain.Attributes.PiiAttribute
 MMCA.Common.Domain.Attributes.PiiAttribute.PiiAttribute() -> void
 MMCA.Common.Domain.Attributes.SensitiveAttribute
 MMCA.Common.Domain.Attributes.SensitiveAttribute.SensitiveAttribute() -> void
+MMCA.Common.Domain.Auth.Credentials.IPasswordClearableUser
+MMCA.Common.Domain.Auth.Credentials.IPasswordClearableUser.ClearPassword() -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.IAuthUser
 MMCA.Common.Domain.Auth.IAuthUser.IsServiceAccount.get -> bool
 MMCA.Common.Domain.Auth.IAuthUser.PasswordHash.get -> byte[]!
