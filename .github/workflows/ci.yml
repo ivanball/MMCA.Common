@@ -714,7 +714,7 @@ jobs:
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
-          curl -fsSL --retry 3 -o "$archive" \n            "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
           echo "${ASPIRE_CLI_SHA512}  ${archive}" | sha512sum -c -
           mkdir -p "$HOME/.aspire/bin"
           tar -xzf "$archive" -C "$HOME/.aspire/bin"
@@ -1304,7 +1304,7 @@ jobs:
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
-          curl -fsSL --retry 3 -o "$archive" \n            "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
           echo "${ASPIRE_CLI_SHA512}  ${archive}" | sha512sum -c -
           mkdir -p "$HOME/.aspire/bin"
           tar -xzf "$archive" -C "$HOME/.aspire/bin"
