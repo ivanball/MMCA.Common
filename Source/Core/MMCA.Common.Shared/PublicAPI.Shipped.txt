@@ -1084,6 +1084,8 @@ const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactor = "mfa" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodPasskey = "passkey" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodRecoveryCode = "recovery" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodTotp = "otp" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorWithheldPermission = "mfa_withheld_permission" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorWithheldRole = "mfa_withheld_role" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Permission = "permission" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.SessionId = "sid" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
@@ -1443,9 +1445,11 @@ static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindAuthTime(this Syste
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindMultiFactorMethod(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindSessionId(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Guid?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindUserIdValue(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetMultiFactorWithheldRoles(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetRoleValues(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetUserId(this System.Security.Claims.ClaimsPrincipal? principal) -> int?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactorWithheldRole(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.IsViewAs(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
