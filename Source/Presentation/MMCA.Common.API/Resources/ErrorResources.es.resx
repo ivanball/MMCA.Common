@@ -172,6 +172,9 @@
   <data name="Authentication.TwoFactorRequired" xml:space="preserve">
     <value>Esta cuenta requiere un segundo factor de autenticación. Introduzca el código de su aplicación de autenticación o un código de recuperación.</value>
   </data>
+  <data name="Authentication.TwoFactorSecretUnreadable" xml:space="preserve">
+    <value>No se pudo leer el secreto de autenticación en dos pasos almacenado. Deshabilite la autenticación en dos pasos y vuelva a inscribirse.</value>
+  </data>
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
     <value>Esta operación requiere un segundo factor de autenticación. Vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
   </data>
