@@ -29,7 +29,9 @@ namespace MMCA.Common.Application.Users.UseCases.SignInLinks;
 /// <para>
 /// This path never creates an account: an address with none gets no email. Creating the account is
 /// what an invitation does, and an invitation is issued by the app with
-/// <see cref="SignInLinkPurpose.Invite"/> through <see cref="ISignInLinkTokenService"/> directly.
+/// <see cref="SignInLinkPurpose.Invite"/> through <see cref="ISignInLinkTokenService"/> directly. An app
+/// that wants a request for such an address to re-issue a pending invitation overrides
+/// <see cref="OnNoAccountAsync"/>; the handler's answer stays the same either way.
 /// </para>
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
@@ -76,6 +78,7 @@ public abstract partial class SendSignInLinkHandlerBase<TUser, TCommand>(
         if (user is null)
         {
             SignInLinkRejected(logger, "no account for the address");
+            await NotifyNoAccountAsync(email, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
 
@@ -120,6 +123,22 @@ public abstract partial class SendSignInLinkHandlerBase<TUser, TCommand>(
     protected abstract Task<TUser?> FindUntrackedByEmailAsync(Email email, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Called when the address holds no account, after the audit line and before the handler answers.
+    /// Does nothing by default. An app whose invitations create the account on first redemption
+    /// overrides it to re-issue the invitation for an address that holds one.
+    /// </summary>
+    /// <remarks>
+    /// The handler's answer does not depend on the override: it still returns
+    /// <see cref="Result.Success()"/>, and an exception the override throws (other than a
+    /// cancellation) is logged and swallowed, so the response stays the same whether or not the
+    /// address exists. Keep the override's own timing and side effects free of that signal too.
+    /// </remarks>
+    /// <param name="email">The normalized address from the request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the override's work is done.</returns>
+    protected virtual Task OnNoAccountAsync(Email email, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
     /// The subject line of the sign-in email, in the recipient's culture (both compose members run with
     /// the current UI culture set to the account's stored preference). Override to rebrand.
     /// </summary>
@@ -141,6 +160,19 @@ public abstract partial class SendSignInLinkHandlerBase<TUser, TCommand>(
             + $"<p>{UserEmailResources.Get("SignInLink.Ignore")}</p>";
     }
 
+    /// <summary>Runs <see cref="OnNoAccountAsync"/> so nothing it throws changes the handler's answer.</summary>
+    private async Task NotifyNoAccountAsync(Email email, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await OnNoAccountAsync(email, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            SignInLinkNoAccountHookFailed(logger, ex);
+        }
+    }
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Sign-in link requested for user {UserId}; sign-in email sent")]
     private static partial void SignInLinkRequested(ILogger logger, UserIdentifierType userId);
 
@@ -150,4 +182,8 @@ public abstract partial class SendSignInLinkHandlerBase<TUser, TCommand>(
     // No address and no account id: the endpoint answers identically whether or not the address exists.
     [LoggerMessage(Level = LogLevel.Information, Message = "Sign-in link request not actioned ({Reason})")]
     private static partial void SignInLinkRejected(ILogger logger, string reason);
+
+    // No address: the override's failure must not identify the address that had no account.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in link no-account extension point failed; the request still answered success")]
+    private static partial void SignInLinkNoAccountHookFailed(ILogger logger, Exception exception);
 }

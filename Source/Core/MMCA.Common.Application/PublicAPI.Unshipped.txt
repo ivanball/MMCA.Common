@@ -1,3 +1,4 @@
 #nullable enable
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequiredCode = "Authentication.TwoFactorRecentSignInRequired" -> string!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.OnNoAccountAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
