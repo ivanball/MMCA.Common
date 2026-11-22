@@ -27,7 +27,9 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Registers a new user account and returns authentication tokens.
+    /// Registers a new user account and returns authentication tokens. When the host requires a
+    /// confirmed address and the new account is unconfirmed, the result is a success carrying
+    /// <see cref="RegistrationOutcome.ConfirmationPending"/> and no session is opened.
     /// </summary>
     /// <param name="request">Registration details.</param>
     /// <param name="ipAddress">Optional client IP address, for rate limiting and the new session.</param>

@@ -383,6 +383,14 @@ public abstract class AuthenticationServiceBase<TUser>(
         // BR-213: count this registration against the caller's IP.
         await loginProtection.IncrementRegistrationCountAsync(ipAddress, cancellationToken).ConfigureAwait(false);
 
+        // Registration opens no session exactly when sign-in would refuse the new account: the same
+        // virtual gate decides both, so a subclass override of it moves them together. The account
+        // exists and the result is a success; the app sends the confirmation mail as it already does.
+        if (CheckEmailConfirmed(tokenUser).IsFailure)
+        {
+            return Result.Success(RegistrationOutcome.ConfirmationPending);
+        }
+
         // The session is opened AFTER the user save because it carries the user id, which a
         // store-generated key only has once the insert has run.
         return await IssueTokensCoreAsync(tokenUser, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
