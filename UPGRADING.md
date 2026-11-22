@@ -32,6 +32,30 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.313.0] - 2026-11-21
+
+**Breaking (MMCA.Common.Application, sign-in links):** redeeming a sign-in link or an invitation for an account that is still unconfirmed and already holds a password now removes that password and revokes the account's refresh sessions in the same save that confirms it; the owner sets a password through forgot password. The link proves the mailbox, not the password that was set before the address was confirmed. A `User` aggregate reachable by sign-in links implements the new `IPasswordClearableUser` (`MMCA.Common.Domain.Auth.Credentials`, one member, `Result ClearPassword()`, which empties the hash and salt); for an aggregate that does not, such a redemption is refused with the generic invalid-link answer and nothing is saved. A subclass of `RedeemSignInLinkHandlerBase<TUser, TCommand>` passes its `IRefreshSessionStore` to the new optional base constructor argument, or no session is revoked. A confirmed account, an account with no password, and the confirm-email link are unchanged.
+
+**Breaking (MMCA.Common.Application, token issuance):** on a host that configured two-factor, `AuthenticationServiceBase.IssueTokensAsync` (the issuance an app-level external login mints through) refuses an account with an enrolled second factor with `Authentication.TwoFactorRequired`. That path has no code parameter yet, so an enrolled account cannot complete an external sign-in on such a host. A host with no two-factor configured is unchanged.
+
+**Breaking (MMCA.Common.Application, two-factor):** `BeginTwoFactorEnrollmentHandlerBase<TCommand>` takes an `ITwoFactorSecretProtector` as its third constructor argument, between the store and the logger; pass the one `AddTwoFactorAuthentication` registers. The framework now hands `ITwoFactorStore.StartEnrollmentAsync` the shared secret in its protected form (ASP.NET Core Data Protection) and expects the store to return it unchanged as `ITwoFactorUserState.TwoFactorSecret`, so a multi-replica host needs a shared key ring. No store in ADC, Store or Helpdesk holds a secret from an earlier release, so there is nothing to migrate.
+
+**Breaking (MMCA.Common.Aspire, gateway rate limiting):** a request that proves the trusted-caller secret and forwards a visitor address in `X-Forwarded-For` (a server-rendered UI host calling the gateway for a visitor) is no longer exempt from the per-IP window and the named route policies: it is counted in that visitor's own window, the one a direct request from the same address uses. Behind a shared NAT that is more traffic per partition than before, so raise `GatewayRateLimiting:PermitLimit` or set `GatewayRateLimiting:TrustedCallerMode` to `Exempt` to restore the previous behavior. A trusted-caller request with no visitor address, and the concurrency ceiling, are unchanged.
+
+**Breaking (MMCA.Common.UI.Web, UI rate limiter):** a path is no longer exempt from the UI host's limiters because its last segment has a file extension. Only the existing exempt prefixes and requests whose matched endpoint is a static asset mapped by `MapStaticAssets` are exempt; any other path (a missing file, or a file served only by `UseStaticFiles` outside those prefixes) is counted by both the per-IP window and the concurrency ceiling.
+
+**Breaking (MMCA.Common.UI, external sign-in):** `OAuthFlowStateStore.TryCompleteAsync` refuses the completion when no device-local storage is registered, instead of accepting it. A host that runs the OAuth flow registers `AddBrowserDeviceCapabilities` (web) or the MAUI store.
+
+**Breaking (MMCA.Common.Mcp):** `MapCommonMcp` refuses to start when a registered tool carries neither `[McpToolPermission]` nor `[McpToolPublic]`, naming the tool. `McpToolAccessDeclarationTestsBase` already enforced the declaration for hosts that adopted it.
+
+**Breaking (MMCA.Common.AI):** `Ai:Endpoint` must be https outside Development; an http endpoint fails options validation at startup.
+
+**Breaking (MMCA.Common.Grpc):** the identity a service token authenticates carries `AuthenticationType` `ServiceToken` (`ServiceTokenDefaults.AuthenticationScheme`) instead of the JwtBearer default. Code that read the authentication type of a service-token principal sees the new value.
+
+**Breaking (MMCA.Common.Aspire.Hosting):** `WithMmcaServiceInfrastructure` no longer marks a backend service's HTTP endpoints external; the gateway and UI helpers still do. An AppHost that relied on reaching a service from outside chains `.WithExternalHttpEndpoints()` after the call.
+
+**Breaking (samples/deployment):** `main.bicep` provisions SQL with Microsoft Entra-only authentication and no longer creates the allow-all-Azure (`0.0.0.0`) firewall rule. The `sqlAdminLogin` and `sqlAdminPassword` parameters are replaced by `sqlEntraAdminLogin`, `sqlEntraAdminObjectId` and `sqlEntraAdminPrincipalType`; the app connects as its managed identity. A consumer who copied the template runs the one-time contained-user step in `DEPLOYMENT.md` and adds a network rule for its own network, since nothing can reach the server until it does.
+
 ## [1.308.0] - 2026-11-19
 
 **Breaking (MMCA.Common.Domain):** the unused `MMCA.Common.Domain.AssemblyReference` and `MMCA.Common.Domain.ClassReference` anchor types are removed. Nothing in the framework or in ADC, Store or Helpdesk resolved the Domain assembly through them. A consumer that did replaces `MMCA.Common.Domain.AssemblyReference.Assembly` with `typeof(MMCA.Common.Domain.Entities.BaseEntity<>).Assembly` (or any other Common.Domain type).
