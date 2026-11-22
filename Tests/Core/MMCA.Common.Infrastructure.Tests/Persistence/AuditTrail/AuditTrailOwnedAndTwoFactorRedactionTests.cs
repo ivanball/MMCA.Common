@@ -168,7 +168,6 @@ public sealed class AuditTrailOwnedAndTwoFactorRedactionTests : IDisposable
         foreach (var member in new[]
         {
             nameof(ITwoFactorUserState.TwoFactorSecret),
-            nameof(ITwoFactorUserState.IsTwoFactorEnabled),
             nameof(ITwoFactorUserState.TwoFactorRecoveryCodeHashes),
         })
         {
@@ -176,6 +175,11 @@ public sealed class AuditTrailOwnedAndTwoFactorRedactionTests : IDisposable
             row.OldValue.Should().Be(PiiRedactor.RedactedToken, member);
             row.NewValue.Should().Be(PiiRedactor.RedactedToken, member);
         }
+
+        // Whether the factor is on is state an administrator must be able to read in the trail.
+        var enabled = rows.Should().ContainSingle(r => r.PropertyName == nameof(ITwoFactorUserState.IsTwoFactorEnabled)).Subject;
+        enabled.OldValue.Should().Be("False");
+        enabled.NewValue.Should().Be("True");
 
         // Redaction is per member, not per entity: an ordinary column still records its values.
         var name = rows.Should().ContainSingle(r => r.PropertyName == nameof(TwoFactorAccount.Name)).Subject;

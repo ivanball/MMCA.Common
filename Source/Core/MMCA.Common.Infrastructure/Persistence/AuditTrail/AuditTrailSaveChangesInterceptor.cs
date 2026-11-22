@@ -133,7 +133,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>
     /// The interfaces whose members carry credential material: the password hash and salt, and the
-    /// two-factor shared secret, enabled flag and recovery-code hashes.
+    /// two-factor shared secret and recovery-code hashes.
     /// </summary>
     private static readonly Type[] CredentialInterfaces = [typeof(IAuthUser), typeof(ITwoFactorUserState)];
 
@@ -703,13 +703,17 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
             foreach (var credentialInterface in CredentialInterfaces.Where(i => i.IsAssignableFrom(type)))
             {
                 var map = type.GetInterfaceMap(credentialInterface);
-                names.UnionWith(map.TargetMethods
-                    .Select(target => Array.Find(properties, p => p.GetMethod?.MethodHandle == target.MethodHandle)?.Name)
+                names.UnionWith(map.InterfaceMethods
+                    .Zip(map.TargetMethods)
+                    .Where(pair => !IsAuditedStateGetter(pair.First))
+                    .Select(pair => Array.Find(properties, p => p.GetMethod?.MethodHandle == pair.Second.MethodHandle)?.Name)
                     .OfType<string>());
 
                 // An explicit implementation is a private, differently named property that EF does
                 // not map; a mapped column then carries the interface member's own name.
-                names.UnionWith(credentialInterface.GetProperties().Select(member => member.Name));
+                names.UnionWith(credentialInterface.GetProperties()
+                    .Where(member => !IsAuditedState(member.Name))
+                    .Select(member => member.Name));
             }
 
             names.UnionWith(properties
@@ -718,6 +722,18 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
             return names;
         });
+
+    /// <summary>
+    /// Whether a credential-interface member is state rather than secret material, and so stays
+    /// readable in the trail: whether the second factor is on is exactly what an administrator
+    /// reviewing an account's history needs to see change.
+    /// </summary>
+    private static bool IsAuditedState(string memberName) =>
+        string.Equals(memberName, nameof(ITwoFactorUserState.IsTwoFactorEnabled), StringComparison.Ordinal);
+
+    /// <summary>Whether an interface accessor is the getter of an <see cref="IsAuditedState"/> member.</summary>
+    private static bool IsAuditedStateGetter(MethodInfo interfaceMethod) =>
+        interfaceMethod.Name.StartsWith("get_", StringComparison.Ordinal) && IsAuditedState(interfaceMethod.Name[4..]);
 
     /// <summary>
     /// Renders a value for storage. Culture-invariant on purpose: a trail read years later, or on a
