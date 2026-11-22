@@ -59,6 +59,24 @@ public sealed class UsersAdminSecondFactorEnrollmentTests
 
         AssertNotEnrolledRefusal(result);
         VerifyNotSaved();
+        VerifyStoreAskedOnlyForTheTarget();
+    }
+
+    [Fact]
+    public async Task ListedRole_CallerEnrolledButTargetNot_IsRefused()
+    {
+        // The caller's own enrollment must not stand in for the target's.
+        ArrangeTargetState(null);
+        _store
+            .Setup(x => x.GetAsync(ActorUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TwoFactorState(IsTwoFactorEnabled: true, "secret", ["h1"]));
+        var sut = CreateController(listed: [Admin], withStore: true);
+
+        ActionResult result = await sut.SetRolesAsync(TargetUserId, new SetUserRolesRequest([Admin]));
+
+        AssertNotEnrolledRefusal(result);
+        VerifyNotSaved();
+        VerifyStoreAskedOnlyForTheTarget();
     }
 
     [Fact]
@@ -71,6 +89,7 @@ public sealed class UsersAdminSecondFactorEnrollmentTests
 
         AssertNotEnrolledRefusal(result);
         VerifyNotSaved();
+        VerifyStoreAskedOnlyForTheTarget();
     }
 
     // -- Allowed --
@@ -84,6 +103,7 @@ public sealed class UsersAdminSecondFactorEnrollmentTests
 
         result.Should().BeOfType<NoContentResult>();
         VerifySavedOnce(Admin);
+        VerifyStoreAskedOnlyForTheTarget();
     }
 
     [Fact]
@@ -188,6 +208,15 @@ public sealed class UsersAdminSecondFactorEnrollmentTests
         _store
             .Setup(x => x.GetAsync(TargetUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(state);
+
+    // The enrollment that counts is the target account's: one read, for the target, never for anyone else.
+    private void VerifyStoreAskedOnlyForTheTarget()
+    {
+        _store.Verify(x => x.GetAsync(TargetUserId, It.IsAny<CancellationToken>()), Times.Once());
+        _store.Verify(
+            x => x.GetAsync(It.Is<UserIdentifierType>(id => id != TargetUserId), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
 
     private void VerifyNotSaved() =>
         _users.Verify(

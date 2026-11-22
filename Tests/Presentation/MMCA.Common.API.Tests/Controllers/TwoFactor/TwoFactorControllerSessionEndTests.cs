@@ -19,7 +19,7 @@ namespace MMCA.Common.API.Tests.Controllers.TwoFactor;
 /// revocation fails (logged without the address) or when the host has no authentication service.
 /// Regenerating recovery codes and a failed confirm or disable revoke nothing.
 /// </summary>
-public sealed class TwoFactorSessionEndTests : IDisposable
+public sealed class TwoFactorControllerSessionEndTests : IDisposable
 {
     private const string Address = "owner@example.com";
     private static readonly TimeSpan Fresh = TimeSpan.FromMinutes(2);
@@ -27,7 +27,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
     private readonly Mock<IAuthenticationService> _authentication = new();
     private readonly RecordingLoggerProvider _logs = new();
 
-    public TwoFactorSessionEndTests() =>
+    public TwoFactorControllerSessionEndTests() =>
         _authentication
             .Setup(x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
@@ -46,7 +46,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<TwoFactorRecoveryCodesResponse>(Ct))!.RecoveryCodes.Should().Equal("code-1", "code-2");
-        VerifyRevoked(Times.Once());
+        VerifyRevokedOnlyForTheSignedInAccount(host.Confirm.Received.Should().ContainSingle().Subject.UserId);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<TwoFactorRecoveryCodesResponse>(Ct))!.RecoveryCodes.Should().Equal("code-1", "code-2");
-        AssertOneWarningWithoutTheAddress();
+        AssertOneWarningWithoutTheAddress(host);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<TwoFactorRecoveryCodesResponse>(Ct))!.RecoveryCodes.Should().Equal("code-1", "code-2");
-        var warning = AssertOneWarningWithoutTheAddress();
+        var warning = AssertOneWarningWithoutTheAddress(host);
         warning.Exception.Should().BeNull("the exception, whose message may carry the address, is not logged");
     }
 
@@ -91,7 +91,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
         using var response = await PostAsync(client, "/disable");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        VerifyRevoked(Times.Once());
+        VerifyRevokedOnlyForTheSignedInAccount(host.Disable.Received.Should().ContainSingle().Subject.UserId);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
         using var response = await PostAsync(client, "/recovery-codes");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        VerifyRevoked(Times.Never());
+        VerifyNothingRevoked();
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
         using var response = await PostAsync(client, "/enrollment/confirm");
 
         response.IsSuccessStatusCode.Should().BeFalse();
-        VerifyRevoked(Times.Never());
+        VerifyNothingRevoked();
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class TwoFactorSessionEndTests : IDisposable
         using var response = await PostAsync(client, "/disable");
 
         response.IsSuccessStatusCode.Should().BeFalse();
-        VerifyRevoked(Times.Never());
+        VerifyNothingRevoked();
     }
 
     [Fact]
@@ -158,14 +158,32 @@ public sealed class TwoFactorSessionEndTests : IDisposable
             services.AddSingleton<ILoggerProvider>(_logs);
         });
 
-    private void VerifyRevoked(Times times) =>
+    // Exactly one revocation, for the account the token names (which is also the account the command
+    // carried), and none for any other id.
+    private void VerifyRevokedOnlyForTheSignedInAccount(UserIdentifierType commandUserId)
+    {
+        commandUserId.Should().Be(TwoFactorControllerTestHost.UserId, "the command carries the signed-in account");
+        _authentication.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()),
+            Times.Once());
         _authentication.Verify(
             x => x.RevokeAllSessionsAsync(TwoFactorControllerTestHost.UserId, It.IsAny<CancellationToken>()),
-            times);
+            Times.Once());
+        _authentication.Verify(
+            x => x.RevokeAllSessionsAsync(
+                It.Is<UserIdentifierType>(id => id != TwoFactorControllerTestHost.UserId),
+                It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
 
-    private LogEntry AssertOneWarningWithoutTheAddress()
+    private void VerifyNothingRevoked() =>
+        _authentication.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+
+    private LogEntry AssertOneWarningWithoutTheAddress(TwoFactorControllerTestHost host)
     {
-        VerifyRevoked(Times.Once());
+        VerifyRevokedOnlyForTheSignedInAccount(host.Confirm.Received.Should().ContainSingle().Subject.UserId);
         var warning = ControllerEntries().Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Subject;
         _logs.Entries.Should().AllSatisfy(entry =>
         {
