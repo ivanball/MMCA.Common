@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.UI.Pages.Auth.Links;
 using MMCA.Common.UI.Services.Capabilities;
 
 namespace MMCA.Common.UI.Pages.Auth;
@@ -50,13 +51,13 @@ public partial class ResetPassword : IAsyncDisposable
         {
             _ = InvokeAsync(async () => PrefillNewLink(await TakeFragmentAsync()));
         }
-        else if (ConfirmEmail.LinkQueryOf(e.Location) is { } query)
+        else if (EmailedLinkReader.LinkQueryOf(e.Location) is { } query)
         {
             // A link that differs only in its query string (Store Run 5 R6b): read it the same way, and
             // take its single-use token out of the address bar as taking a fragment does.
             _ = InvokeAsync(() =>
             {
-                ConfirmEmail.ScrubLinkQuery(Navigation, e.Location);
+                EmailedLinkReader.ScrubLinkQuery(Navigation, e.Location);
                 PrefillNewLink(query);
             });
         }
@@ -85,10 +86,10 @@ public partial class ResetPassword : IAsyncDisposable
             : await module.InvokeOrDefaultAsync<string?>("locationHashTake", [], CancellationToken.None);
     }
 
-    /// <summary>Copies the link's address and token into the form (see <see cref="ConfirmEmail.MergeLinkFragment"/>).</summary>
+    /// <summary>Copies the link's address and token into the form (see <see cref="EmailedLinkReader.MergeLinkFragment"/>).</summary>
     private bool ApplyFragment(string? fragment, bool replace)
     {
-        var (recognized, email, token) = ConfirmEmail.MergeLinkFragment(fragment, replace, _model.Email, _model.Token);
+        var (recognized, email, token) = EmailedLinkReader.MergeLinkFragment(fragment, replace, _model.Email, _model.Token);
         if (recognized)
         {
             _model.Email = email;
