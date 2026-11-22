@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Playwright;
+using MMCA.Common.Testing.E2E.MailDev;
 using Xunit;
 using static Microsoft.Playwright.Assertions;
 
@@ -12,6 +13,10 @@ public abstract class E2ETestBase : IAsyncLifetime
     // and when that read could not answer.
     private const float TermsPromptExpectedTimeoutMs = 15_000;
     private const float TermsPromptFallbackTimeoutMs = 10_000;
+
+    // RegisterNewUserAsync behind the email gate: the English subject of the framework's confirmation
+    // mail (UserEmailResources); the E2E tier runs in the default English culture.
+    private const string ConfirmationMailSubject = "Confirm your email address";
 
     private readonly PlaywrightFixture _fixture;
     private IBrowserContext _context = null!;
@@ -350,6 +355,21 @@ public abstract class E2ETestBase : IAsyncLifetime
     private static readonly System.Text.RegularExpressions.Regex LoginUrlPattern =
         new("/login", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
+    /// <summary>
+    /// Registers a new account through the Register page and returns it signed in, on an interactive
+    /// page, with its credentials.
+    /// </summary>
+    /// <remarks>
+    /// When the host opens a session at registration the page reloads onto the signed-in landing. When
+    /// the host requires a confirmed address the page shows its confirmation-pending state instead; the
+    /// helper then reads the confirmation mail from MailDev (<see cref="MailDevInbox"/>), opens
+    /// its link in the browser (the <c>/confirm-email</c> page redeems it), and signs in through
+    /// <see cref="LoginAsync"/>. A pending registration with no reachable mail catcher fails, naming
+    /// the address it tried.
+    /// </remarks>
+    /// <param name="firstName">The first name, or a generated one.</param>
+    /// <param name="lastName">The last name, or a generated one.</param>
+    /// <returns>The new account's email and password.</returns>
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
         string? firstName = null,
         string? lastName = null)
@@ -377,7 +397,13 @@ public abstract class E2ETestBase : IAsyncLifetime
         // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
         // WaitForBlazorAsync before the result settles: the forceLoad navigation destroys the JS context.
-        await WaitForAuthResultAsync("/register", "Registration").ConfigureAwait(false);
+        // Behind the email gate it stays on /register and shows the confirmation-pending state, which
+        // the same wait races as a fourth signal.
+        var pendingState = Page.GetByTestId("register-pending");
+        if (await WaitForAuthResultAsync("/register", "Registration", pendingState).ConfigureAwait(false))
+        {
+            await ConfirmThroughMailCatcherAndSignInAsync(email, password).ConfigureAwait(false);
+        }
 
         // The forceLoad reload lands on a freshly served "/" whose interactive runtime is still starting
         // (under WebAssembly that is a full CLR boot, slower than a Server circuit). Wait for interactivity
@@ -394,6 +420,39 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
 
         return (email, password);
+    }
+
+    // The pending registration's second half, done the way the account's owner would: read the
+    // confirmation mail, open its link in this browser (the /confirm-email page redeems the address and
+    // token it carries in the fragment on its first interactive render), then sign in. The inbox polls
+    // on its own schedule and the page waits are Playwright's, so nothing here sleeps.
+    private async Task ConfirmThroughMailCatcherAndSignInAsync(string email, string password)
+    {
+        if (await MailDevInbox.UnreachableReasonAsync(Page.APIRequest).ConfigureAwait(false) is { } unreachable)
+        {
+            throw new InvalidOperationException(
+                $"Registration of {email} is waiting for email confirmation, but no mail catcher answers at "
+                + $"{MailDevInbox.BaseUrl} ({unreachable}). Run the suite against a stack with MailDev "
+                + $"(set {MailDevInbox.BaseUrlVariable} when it is not at the default address), or "
+                + "without the confirmed-email requirement.");
+        }
+
+        var message = await MailDevInbox.WaitForMessageAsync(Page.APIRequest, email, ConfirmationMailSubject)
+            .ConfigureAwait(false);
+        var link = MailDevInbox.LinkContaining(message, "/confirm-email");
+
+        await Page.GotoAsync(link.ToString()).ConfigureAwait(false);
+
+        var success = Page.GetByTestId("confirm-email-success");
+        var error = Page.GetByTestId("confirm-email-error");
+        await success.Or(error).First.WaitForAsync(new() { State = WaitForSelectorState.Visible }).ConfigureAwait(false);
+        if (!await success.IsVisibleAsync().ConfigureAwait(false))
+        {
+            var errorText = await error.TextContentAsync().ConfigureAwait(false);
+            throw new InvalidOperationException($"Confirming {email} through its emailed link failed: {errorText}");
+        }
+
+        await LoginAsync(email, password).ConfigureAwait(false);
     }
 
     // Waits for the post-auth page to become interactive; if the wait fails, RELOADS once and waits
@@ -427,7 +486,11 @@ public abstract class E2ETestBase : IAsyncLifetime
     // signal; only an error alert that is still showing ON the auth page after the grace window is a
     // real failure. Strictly safer than waiting on the logout button alone: it declares failure in a
     // subset of the prior conditions, so it cannot turn a passing flow into a failing one.
-    private async Task WaitForAuthResultAsync(string authPagePath, string operation)
+    // With a pendingState locator (the Register page's confirmation-pending card) the race
+    // has a fourth signal: when that state is what settled, the method returns true and the caller
+    // finishes the confirmation. Without one, or when any other signal settled, it behaves exactly as
+    // the three-way race and returns false on success.
+    private async Task<bool> WaitForAuthResultAsync(string authPagePath, string operation, ILocator? pendingState = null)
     {
         var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Logout" });
         var errorAlert = Page.Locator(".mud-alert-text-error");
@@ -440,14 +503,27 @@ public abstract class E2ETestBase : IAsyncLifetime
             new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
         var errorVisible = errorAlert.WaitForAsync(
             new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
+        var pendingVisible = pendingState?.WaitForAsync(
+            new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
 
-        await Task.WhenAny(leftAuthPage, logoutVisible, errorVisible).ConfigureAwait(false);
+        await (pendingVisible is null
+            ? Task.WhenAny(leftAuthPage, logoutVisible, errorVisible)
+            : Task.WhenAny(leftAuthPage, logoutVisible, errorVisible, pendingVisible)).ConfigureAwait(false);
 
         // The losers time out and fault; nothing awaits them, so observe their exceptions here rather
         // than letting them surface as unobserved-task failures in an unrelated test.
         Observe(leftAuthPage);
         Observe(logoutVisible);
         Observe(errorVisible);
+        if (pendingVisible is not null)
+        {
+            Observe(pendingVisible);
+        }
+
+        if (pendingState is not null && await pendingState.IsVisibleAsync().ConfigureAwait(false))
+        {
+            return true;
+        }
 
         var outcome = AuthOutcomeRules.Classify(
             navigatedAway: !Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
@@ -456,14 +532,14 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         if (outcome == AuthOutcome.Succeeded)
         {
-            return;
+            return false;
         }
 
         // Both remaining outcomes get the grace window once: a slow Server-mode success can flash an
         // error alert on its way out, and can also still be finishing when all three waits time out.
         if (await AuthSucceededWithinGraceAsync(authPagePath, logoutButton).ConfigureAwait(false))
         {
-            return;
+            return false;
         }
 
         if (outcome == AuthOutcome.ErrorShown)
