@@ -3,6 +3,7 @@ MMCA.Common.Mcp.CommonMcpOptions
 MMCA.Common.Mcp.CommonMcpOptions.CommonMcpOptions() -> void
 MMCA.Common.Mcp.CommonMcpOptions.ToolAssemblies.get -> System.Collections.Generic.IList<System.Reflection.Assembly!>!
 MMCA.Common.Mcp.CommonMcpOptions.ToolTypes.get -> System.Collections.Generic.IList<System.Type!>!
+MMCA.Common.Mcp.McpHiddenText
 MMCA.Common.Mcp.McpHostingExtensions
 MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
 MMCA.Common.Mcp.McpHostingExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapCommonMcp(string! pattern = "/mcp") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
@@ -26,5 +27,7 @@ MMCA.Common.Mcp.McpToolSettings.PermitsPerMinute.get -> int?
 MMCA.Common.Mcp.McpToolSettings.PermitsPerMinute.set -> void
 const MMCA.Common.Mcp.McpHostingExtensions.DefaultPath = "/mcp" -> string!
 const MMCA.Common.Mcp.McpSettings.SectionName = "Mcp" -> string!
+static MMCA.Common.Mcp.McpHiddenText.Find(string? text) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Mcp.McpHiddenText.Strip(string? text) -> string?
 static MMCA.Common.Mcp.McpHostingExtensions.AddCommonMcpServer(this Microsoft.Extensions.Hosting.IHostApplicationBuilder! builder, System.Action<MMCA.Common.Mcp.CommonMcpOptions!>! configure) -> Microsoft.Extensions.Hosting.IHostApplicationBuilder!
 static MMCA.Common.Mcp.McpHostingExtensions.MapCommonMcp(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! pattern = "/mcp") -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!

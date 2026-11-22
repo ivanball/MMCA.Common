@@ -12,11 +12,13 @@
 
       MmcaFrameworkVersion  ASP.NET Core, the runtime Microsoft.Extensions.* packages and
                             System.Security.Cryptography.Pkcs: they ship with the runtime.
-      MmcaEfCoreVersion     Entity Framework Core. HELD at the 10.0 line on BOTH frameworks: the
-                            only Npgsql.EntityFrameworkCore.PostgreSQL 11 build is 11.0.0-rc.3, which
-                            pins EF Core to exactly that rc (NU1608 against 11.0.0). EF Core 10 runs
-                            on the .NET 11 runtime. Set 11.0.0 in the second group, together with
-                            the Npgsql provider pin, when Npgsql ships its 11.0.0.
+      MmcaEfCoreVersion     Entity Framework Core (and Microsoft.Data.Sqlite, kept aligned with the
+                            EF Core Sqlite provider). EF Core 11 ships net11.0 assets only, so the
+                            .NET 10 line stays on 10.x and only net11.0 takes 11.x.
+      MmcaNpgsqlVersion     Npgsql and Npgsql.EntityFrameworkCore.PostgreSQL (ADR-113), one value so
+                            the readiness-check driver and the EF provider stay on the same build.
+                            The provider follows the EF Core major: 10.x with EF Core 10, 11.x
+                            (net11.0 only) with EF Core 11.
       MmcaOpenApiVersion    Microsoft.OpenApi: ASP.NET Core 10 constrains it below 3.0.0 and
                             ASP.NET Core 11 needs the 3.x line.
       MmcaMauiVersion       Microsoft.Maui.Controls and Microsoft.AspNetCore.Components.WebView.Maui
@@ -43,21 +45,24 @@
   <PropertyGroup>
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
     <MmcaEfCoreVersion>10.0.15</MmcaEfCoreVersion>
-    <MmcaOpenApiVersion>2.13.0</MmcaOpenApiVersion>
+    <MmcaNpgsqlVersion>10.0.4</MmcaNpgsqlVersion>
+    <MmcaOpenApiVersion>2.13.1</MmcaOpenApiVersion>
     <MmcaMauiVersion>10.0.130</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>16.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
-    <MmcaExtensionsVersion>10.11.0</MmcaExtensionsVersion>
+    <MmcaExtensionsVersion>10.11.1</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>10.1.0</MmcaAspNetOAuthVersion>
     <MmcaSerilogAspNetCoreVersion>10.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
+    <MmcaEfCoreVersion>11.0.0</MmcaEfCoreVersion>
+    <MmcaNpgsqlVersion>11.0.0</MmcaNpgsqlVersion>
     <MmcaOpenApiVersion>3.11.1</MmcaOpenApiVersion>
     <MmcaMauiVersion>11.0.10</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>17.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
-    <MmcaExtensionsVersion>11.0.0</MmcaExtensionsVersion>
+    <MmcaExtensionsVersion>11.0.1</MmcaExtensionsVersion>
     <MmcaAspNetOAuthVersion>11.0.0</MmcaAspNetOAuthVersion>
     <MmcaSerilogAspNetCoreVersion>11.0.0</MmcaSerilogAspNetCoreVersion>
   </PropertyGroup>
@@ -106,9 +111,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MmcaEfCoreVersion)" />
     <!-- PostgreSQL provider (ADR-113). Npgsql ships on its own cadence, so its version tracks the EF
-         Core MAJOR (10.x) rather than the exact 10.0.14 patch the Microsoft-owned providers share;
-         10.0.3 is the current stable build for EF Core 10. -->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+         Core MAJOR rather than the exact patch the Microsoft-owned providers share (MmcaNpgsqlVersion
+         above). -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(MmcaNpgsqlVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="3.4.35" />
@@ -162,7 +167,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="13.10.0" />
+    <PackageVersion Include="Anthropic" Version="13.12.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -202,7 +207,7 @@
     <!-- Managed file storage (ADR-045): the MMCA.Common.Azure Blob Storage adapter and its
          Azure.Identity credential. -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.2" />
     <!-- Microsoft Entra token login for Azure Cache for Redis and Azure Managed Redis
          (MMCA.Common.Azure.AddAzureRedisEntraAuthentication), through the core
          IRedisConfigurationOptionsConfigurator extension point. Referenced by MMCA.Common.Azure only;
@@ -216,7 +221,7 @@
          with Amazon.Runtime.Signing.AWSSigV4Signer, which AWSSDK.Core 4.0.3.17 lacks. Direct pin so the
          signer is guaranteed rather than inherited from whichever service package floors highest.
          Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.Core" Version="4.1.1.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.1.1.2" />
     <!-- Secrets Manager configuration source (MMCA.Common.Aws.AddAwsSecretsManagerConfiguration):
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
@@ -228,7 +233,7 @@
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.RDS" Version="4.1.0.2" />
+    <PackageVersion Include="AWSSDK.RDS" Version="4.1.1.1" />
     <!-- SNS mobile push (MMCA.Common.Aws.AddAmazonSnsPush): platform endpoints and
          per-endpoint publishes. Also a transitive dependency of MassTransit.AmazonSQS (which
          floors it at 4.0.100.15); the direct pin must stay at or above that floor so both paths
@@ -237,7 +242,7 @@
     <!-- The native push installation registry (MMCA.Common.Aws.AddAmazonSnsPush): one DynamoDB item
          per installation, a conditional put for the ownership rule and a UserId index for
          user-targeted sends. Low-level client only. Same AWS SDK v4 line as AWSSDK.S3. -->
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0.2" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.1.0.3" />
     <!-- Google Cloud Storage file storage (MMCA.Common.Gcp.AddGoogleCloudStorage): the JSON API
          client over Application Default Credentials (workload identity, no HMAC keys). Brings the
          Google.Apis.* REST stack and Google.Api.Gax.Rest; no gRPC. Apache-2.0. -->
@@ -316,7 +321,7 @@
     <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
          native binary, no network call, no image service, so it renders identically on every head
          including Blazor WebAssembly. -->
-    <PackageVersion Include="QRCoder" Version="1.8.1" />
+    <PackageVersion Include="QRCoder" Version="1.9.0" />
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
@@ -355,7 +360,7 @@
          targets take the same assets (0.10.4 is the newest release and restores against MAUI 11). -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.341" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.342" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -363,7 +368,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.12.1" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.36.0.15337" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.37.0.15768" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.3.180" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
@@ -459,11 +464,11 @@
          transitive pinning, so no PackageVersion entry is required to keep the restore graph valid. -->
     <!-- The SQL Server, PostgreSQL, SQLite and RabbitMQ readiness checks are MMCA.Common.Aspire's own
          IHealthCheck classes (Health/), so the drivers they open a connection with are its direct
-         references: Microsoft.Data.SqlClient (above), Npgsql (the same 10.x build the EF provider uses,
+         references: Microsoft.Data.SqlClient (above), Npgsql (the same build the EF provider uses,
          ADR-113), Microsoft.Data.Sqlite and RabbitMQ.Client. Microsoft.Data.Sqlite follows the EF Core
          line so it stays aligned with Microsoft.EntityFrameworkCore.Sqlite; RabbitMQ.Client matches
          the build MassTransit.RabbitMQ already resolves, so a host carries one client version. -->
-    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="Npgsql" Version="$(MmcaNpgsqlVersion)" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared

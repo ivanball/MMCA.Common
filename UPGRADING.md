@@ -32,6 +32,20 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.315.0] - 2026-11-22
+
+**Breaking (net11.0 consumers, EF Core and Npgsql):** on net11.0 the packages now depend on Entity Framework Core 11.0.0 and on Npgsql and Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0; net10.0 stays on EF Core 10.0.15 and Npgsql 10.0.4. A consumer that builds for net11.0 and pins the EF Core packages itself must set its own EF Core version to 11.0.0 for net11.0 in the same upgrade, or restore fails with NU1605 (package downgrade).
+
+The fix, for a consumer that keeps per-framework versions in `Directory.Packages.props` the way MMCA.Common does: add the EF Core value to the net11.0 property group (and the Npgsql value, if the consumer pins Npgsql).
+
+```xml
+<PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+  <MmcaEfCoreVersion>11.0.0</MmcaEfCoreVersion>
+</PropertyGroup>
+```
+
+Then regenerate the lock files (`dotnet restore <solution> --force-evaluate`). A consumer that builds only for net10.0 needs no change.
+
 ## [1.314.0] - 2026-11-22
 
 **Breaking (MMCA.Common.Application, MMCA.Common.Infrastructure, two-factor):** calling `AddTwoFactorAuthentication` now arms the sign-in second-factor challenge by itself. The container builds `AuthenticationValidators` through a new constructor that carries the registered `ITwoFactorAuthenticator`, and `AuthenticationServiceBase` uses it whenever its own `twoFactor` constructor argument is null; an explicit argument still wins. Before, the call changed nothing about sign-in until the app's `AuthenticationService` passed the authenticator to its base constructor. A host that calls `AddTwoFactorAuthentication` registers its `ITwoFactorStore` (the authenticator cannot be built without one, so sign-in fails to resolve otherwise), and a host that wants the enrollment endpoints without a challenge at sign-in overrides `ChallengeSecondFactorAsync`. The app's `AuthenticationService` constructor does not change. ADC, Store and Helpdesk do not call `AddTwoFactorAuthentication` today, so nothing changes for them until they adopt it.
