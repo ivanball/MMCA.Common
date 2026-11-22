@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Idempotency;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.Passkeys;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.UseCases.Contracts;
@@ -34,6 +36,12 @@ namespace MMCA.Common.API.Controllers.TwoFactor;
 /// account's sign-in will then demand. A refresh never renews <c>auth_time</c>.
 /// </para>
 /// <para>
+/// <b>Turning the factor on or off ends the account's sessions.</b> A confirmed enrollment and a
+/// disable revoke every refresh session of the account (<see cref="IAuthenticationService.RevokeAllSessionsAsync"/>,
+/// resolved from the request's services), so no session signed in under the earlier state keeps
+/// refreshing. The response is returned either way; regenerating recovery codes ends nothing.
+/// </para>
+/// <para>
 /// The commands stay app-side, as on <see cref="UserAccountAuthControllerBase{TChangePasswordCommand, TChangePreferencesCommand}"/>:
 /// the base reads them back only through <see cref="IUserScopedRequest"/> and
 /// <see cref="IUserScopedCommand{TRequest}"/>. A machine client is refused on every action.
@@ -49,7 +57,7 @@ namespace MMCA.Common.API.Controllers.TwoFactor;
 /// <param name="regenerateHandler">Replaces the recovery codes after a code verifies.</param>
 /// <param name="store">The app's two-factor store, read for the status action.</param>
 [RefuseMachineClients]
-public abstract class TwoFactorControllerBase<TBeginCommand, TConfirmCommand, TDisableCommand, TRegenerateCommand>(
+public abstract partial class TwoFactorControllerBase<TBeginCommand, TConfirmCommand, TDisableCommand, TRegenerateCommand>(
     ICommandHandler<TBeginCommand, Result<TwoFactorSetupResponse>> beginHandler,
     ICommandHandler<TConfirmCommand, Result<TwoFactorRecoveryCodesResponse>> confirmHandler,
     ICommandHandler<TDisableCommand, Result> disableHandler,
@@ -165,8 +173,14 @@ public abstract class TwoFactorControllerBase<TBeginCommand, TConfirmCommand, TD
         var result = await ConfirmHandler
             .HandleAsync(CreateConfirmEnrollmentCommand(userId, request), cancellationToken)
             .ConfigureAwait(false);
+        if (result.IsFailure)
+        {
+            return HandleFailure(result.Errors);
+        }
 
-        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+        await EndSessionsAsync(userId, "enrollment", cancellationToken).ConfigureAwait(false);
+
+        return Ok(result.Value);
     }
 
     /// <summary>Replaces the recovery codes after a code verifies.</summary>
@@ -222,8 +236,14 @@ public abstract class TwoFactorControllerBase<TBeginCommand, TConfirmCommand, TD
         var result = await DisableHandler
             .HandleAsync(CreateDisableCommand(userId, request), cancellationToken)
             .ConfigureAwait(false);
+        if (result.IsFailure)
+        {
+            return HandleFailure(result.Errors);
+        }
 
-        return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
+        await EndSessionsAsync(userId, "disable", cancellationToken).ConfigureAwait(false);
+
+        return NoContent();
     }
 
     /// <summary>Builds the app's begin-enrollment command. Implement as <c>=&gt; new(userId);</c>.</summary>
@@ -248,4 +268,42 @@ public abstract class TwoFactorControllerBase<TBeginCommand, TConfirmCommand, TD
     /// <param name="request">The presented code.</param>
     /// <returns>The app command to dispatch through the decorator pipeline.</returns>
     protected abstract TRegenerateCommand CreateRegenerateRecoveryCodesCommand(UserIdentifierType userId, TwoFactorCodeRequest request);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ending the sessions of user {UserId} after a two-factor {Change} failed ({Reason}); the change itself is saved")]
+    private static partial void LogEndSessionsFailed(ILogger logger, UserIdentifierType userId, string change, string reason);
+
+    /// <summary>
+    /// Revokes every refresh session of the account once its second factor was turned on or off, so a
+    /// session signed in under the earlier state cannot keep refreshing. The change is already saved,
+    /// so a failure is logged (no address) and the caller still gets its response. A host without the
+    /// framework's <see cref="IAuthenticationService"/> has no sessions to revoke here.
+    /// </summary>
+    /// <param name="userId">The account whose sessions to end.</param>
+    /// <param name="change">The change that was saved, for the log line.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the revocation was attempted.</returns>
+    private async Task EndSessionsAsync(UserIdentifierType userId, string change, CancellationToken cancellationToken)
+    {
+        var services = HttpContext?.RequestServices;
+        if (services?.GetService<IAuthenticationService>() is not { } authenticationService)
+        {
+            return;
+        }
+
+        string? failure;
+        try
+        {
+            var revoked = await authenticationService.RevokeAllSessionsAsync(userId, cancellationToken).ConfigureAwait(false);
+            failure = revoked.IsFailure ? string.Join(", ", revoked.Errors.Select(error => error.Code)) : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            failure = ex.GetType().Name;
+        }
+
+        if (failure is not null && services.GetService<ILoggerFactory>()?.CreateLogger(GetType()) is { } logger)
+        {
+            LogEndSessionsFailed(logger, userId, change, failure);
+        }
+    }
 }
