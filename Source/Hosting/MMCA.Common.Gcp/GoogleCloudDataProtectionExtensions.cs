@@ -22,7 +22,7 @@ namespace MMCA.Common.Gcp;
 public static class GoogleCloudDataProtectionExtensions
 {
     private const string ObjectUriKey = "DataProtection:GcsObjectUri";
-    private const string KmsKeyNameKey = "DataProtection:GcpKmsKeyName";
+    private const string KmsKeyNameKey = GcpKeyRingAtRestNoticeService.KmsKeyNameKey;
 
     extension<TBuilder>(TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -41,7 +41,8 @@ public static class GoogleCloudDataProtectionExtensions
         ///     object is created on the first key.</item>
         ///   <item><c>DataProtection:GcpKmsKeyName</c> (optional): the full name of the Cloud KMS
         ///     symmetric key that encrypts each key at rest,
-        ///     <c>projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}</c>.</item>
+        ///     <c>projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}</c>. When
+        ///     it is absent outside Development, one Warning at startup names this key.</item>
         ///   <item><c>DataProtection:ApplicationName</c> (optional): the application discriminator
         ///     that isolates one application's keys from another's when several share a key ring.
         ///     Defaults to the host application name, as in the Azure and AWS siblings.</item>
@@ -111,6 +112,12 @@ public static class GoogleCloudDataProtectionExtensions
             if (kmsKeyName is not null)
             {
                 dataProtection.ProtectKeysWithGoogleCloudKms(kmsKeyName);
+            }
+            else if (!builder.Environment.IsDevelopment())
+            {
+                // Not a failure, for the reason the Azure sibling gives; one startup Warning names the
+                // missing key.
+                builder.Services.AddHostedService<GcpKeyRingAtRestNoticeService>();
             }
 
             return builder;
