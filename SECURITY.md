@@ -84,10 +84,12 @@ Some invariants still depend on the consuming application's own code and deploym
 
 - Server-side authorization on every non-public endpoint (UI hiding is not authorization).
 - Secrets in a vault / managed identity, never in source or plain config. The framework ships
-  `AddCommonKeyVaultConfiguration()` (`MMCA.Common.Aspire`), which layers Azure Key Vault over
-  configuration through `DefaultAzureCredential`, but it is a no-op unless `KeyVault:Uri` is set:
-  the consumer must call it, set that key, and provision the vault plus the identity that can read
-  it (the sample binds its secret by Key Vault URL and a user-assigned identity).
+  `builder.AddAzureKeyVaultConfiguration()` (`MMCA.Common.Azure.Startup`, also reachable through
+  `MMCA.Common.Azure`, which references it), which layers Azure Key Vault over configuration
+  through `DefaultAzureCredential`, but it is a no-op unless `KeyVault:Uri` is set: the consumer
+  must call it, set that key, and provision the vault plus the identity that can read it (the
+  sample binds its secret by Key Vault URL and a user-assigned identity). A host that sets
+  `KeyVault:Uri` without the call fails at startup, naming it.
 - A justification recorded beside any `Authentication__JwtBearer__RequireHttpsMetadata=false` in a
   deployment template.
 
