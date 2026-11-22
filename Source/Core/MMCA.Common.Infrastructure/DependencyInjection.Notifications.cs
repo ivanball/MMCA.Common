@@ -31,7 +31,8 @@ public static partial class DependencyInjection
         /// Registers SignalR push notification services, replacing the default <see cref="NullPushNotificationSender"/>
         /// with <see cref="SignalRPushNotificationSender"/> and the default <see cref="NullLiveChannelPublisher"/>
         /// with <see cref="SignalRLiveChannelPublisher"/>. Optionally configures a Redis backplane when a Redis
-        /// connection string is available.
+        /// connection string is available. Logs one startup Warning when no
+        /// <see cref="IChannelJoinAuthorizer"/> is registered.
         /// </summary>
         /// <param name="configuration">Application configuration for binding settings and detecting Redis.</param>
         /// <returns>The service collection for chaining.</returns>
@@ -65,6 +66,11 @@ public static partial class DependencyInjection
             // (NameIdentifier only), so a TryAdd here never took effect and a principal carrying only
             // the raw sub claim got a null UserIdentifier.
             services.Replace(ServiceDescriptor.Singleton<IUserIdProvider, ClaimBasedUserIdProvider>());
+
+            // Channel joins stay open without an IChannelJoinAuthorizer; one startup Warning names
+            // the interface when none is registered. AddHostedService is a TryAddEnumerable, so a
+            // second call adds no second warning.
+            services.AddHostedService<Notifications.ChannelJoinAuthorizerMissingWarningService>();
 
             return services;
         }

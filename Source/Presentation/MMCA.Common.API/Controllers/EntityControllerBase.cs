@@ -490,11 +490,18 @@ public abstract class EntityControllerBase<
                 "Operation failed for {EntityName}: {ErrorCode} - {ErrorMessage}",
                 EntityName,
                 firstError.Code,
-                firstError.Message);
+                SingleLine(firstError.Message));
         }
 
         return base.HandleFailure(errorList);
     }
+
+    /// <summary>
+    /// The value with every carriage return and line feed removed, so a logged message is always
+    /// one line whatever the sink.
+    /// </summary>
+    private static string? SingleLine(string? value) =>
+        value?.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
 
     /// <summary>
     /// Row ceiling used by <see cref="ExportAsync"/> when no host setting supplies one. Matches

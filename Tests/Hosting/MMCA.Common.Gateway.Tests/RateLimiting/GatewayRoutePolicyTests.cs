@@ -142,6 +142,36 @@ public sealed class GatewayRoutePolicyTests
             .PartitionKey.Should().Be("198.51.100.4", because: "only the boolean the edge stamps counts");
     }
 
+    // B3: a trusted call the edge limiter meters per visitor arrives from the UI host's address but is
+    // handed the visitor's address under this Items key (the edge side is pinned in
+    // GatewayTrustedCallerPerVisitorTests). A named route policy then counts it in that visitor's
+    // window: the (N+1)th is refused, the visitor's own direct request shares the window, and another
+    // visitor is unaffected.
+    [Fact]
+    public async Task Partition_ForATrustedCallMeteredPerVisitor_KeysOnTheVisitorAddress()
+    {
+        var policy = new GatewayRoutePolicySettings { PermitLimit = 2, WindowSeconds = 60 };
+        await using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
+            httpContext => GatewayRoutePolicyExtensions.Partition(httpContext, policy));
+        var uiHost = IPAddress.Parse("10.0.0.5");
+        var visitorA = IPAddress.Parse("203.0.113.60");
+        var visitorB = IPAddress.Parse("203.0.113.61");
+
+        using var first = await limiter.AcquireAsync(PerVisitorContext(uiHost, visitorA), 1, CancellationToken.None);
+        using var second = await limiter.AcquireAsync(PerVisitorContext(uiHost, visitorA), 1, CancellationToken.None);
+        using var third = await limiter.AcquireAsync(PerVisitorContext(uiHost, visitorA), 1, CancellationToken.None);
+        using var directFromA = await limiter.AcquireAsync(ContextFor(visitorA), 1, CancellationToken.None);
+        using var otherVisitor = await limiter.AcquireAsync(PerVisitorContext(uiHost, visitorB), 1, CancellationToken.None);
+        using var uiHostDirect = await limiter.AcquireAsync(ContextFor(uiHost), 1, CancellationToken.None);
+
+        first.IsAcquired.Should().BeTrue();
+        second.IsAcquired.Should().BeTrue();
+        third.IsAcquired.Should().BeFalse("the (N+1)th call for one visitor inside a window of N is refused");
+        directFromA.IsAcquired.Should().BeFalse("the visitor's own direct request takes the same window");
+        otherVisitor.IsAcquired.Should().BeTrue("another visitor has a window of its own");
+        uiHostDirect.IsAcquired.Should().BeTrue("the per-visitor calls are not counted against the UI host's address");
+    }
+
     [Fact]
     public void Settings_DefaultsAreTheEdgeShape()
     {
@@ -165,6 +195,13 @@ public sealed class GatewayRoutePolicyTests
     {
         var context = new DefaultHttpContext();
         context.Connection.RemoteIpAddress = remoteIp;
+        return context;
+    }
+
+    private static DefaultHttpContext PerVisitorContext(IPAddress connectingIp, IPAddress visitorIp)
+    {
+        var context = ContextFor(connectingIp);
+        context.Items["MMCA.Common.Gateway.TrustedCallerVisitorIp"] = visitorIp;
         return context;
     }
 }

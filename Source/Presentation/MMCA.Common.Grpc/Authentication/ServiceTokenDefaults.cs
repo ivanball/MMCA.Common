@@ -2,8 +2,9 @@ namespace MMCA.Common.Grpc.Authentication;
 
 /// <summary>
 /// The names shared by both ends of a service-to-service call: the authentication scheme the
-/// receiving service validates service tokens under, the authorization policy that admits either a
-/// user or a service caller, and the claim that marks a token as a service token.
+/// receiving service validates service tokens under, the authorization policies that admit either a
+/// user or a service caller or a service caller alone, and the claim that marks a token as a
+/// service token.
 /// </summary>
 public static class ServiceTokenDefaults
 {
@@ -19,6 +20,13 @@ public static class ServiceTokenDefaults
     /// user JwtBearer scheme or <see cref="AuthenticationScheme"/>.
     /// </summary>
     public const string InternalCallerPolicy = "InternalCaller";
+
+    /// <summary>
+    /// The authorization policy for service-only endpoints: the caller must be authenticated by
+    /// <see cref="AuthenticationScheme"/> and carry the <see cref="ServiceClaimType"/> claim. The user
+    /// JwtBearer scheme is not evaluated, so an end-user token is refused.
+    /// </summary>
+    public const string ServiceCallerPolicy = "ServiceCaller";
 
     /// <summary>
     /// The claim carrying the calling service's name. A token without it is not a service token

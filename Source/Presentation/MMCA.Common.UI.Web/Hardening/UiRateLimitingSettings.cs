@@ -48,7 +48,7 @@ public sealed class UiRateLimitingSettings
     /// <remarks>
     /// 300/minute by default, which no real visitor approaches: a page load costs a handful of
     /// requests once static assets are exempt (they are, see
-    /// <see cref="UiRateLimitingExtensions.IsExempt"/>), and Interactive Auto hands the session to
+    /// <see cref="UiRateLimitingExtensions.IsExempt(Microsoft.AspNetCore.Http.HttpContext, Microsoft.AspNetCore.Http.PathString)"/>), and Interactive Auto hands the session to
     /// the WebAssembly runtime after the first render. It is set well above a single visitor on
     /// purpose, because an office or mobile-carrier NAT presents many visitors as one IP. A host
     /// whose audience sits behind ONE address (a venue's wifi, a single corporate egress) should

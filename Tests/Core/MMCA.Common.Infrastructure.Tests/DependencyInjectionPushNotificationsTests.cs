@@ -1,11 +1,15 @@
+using System.Collections.Concurrent;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Notifications.Live;
 using MMCA.Common.Infrastructure.Notifications.Push;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests;
 
@@ -196,5 +200,94 @@ public sealed class DependencyInjectionPushNotificationsTests
         var act = () => services.AddPushNotifications(config);
 
         act.Should().NotThrow();
+    }
+
+    // -- B6: one startup Warning naming IChannelJoinAuthorizer when none is registered --
+    [Fact]
+    public async Task AddPushNotifications_WithNoChannelJoinAuthorizer_LogsOneStartupWarningNamingTheInterface()
+    {
+        var warnings = await StartAndCollectWarningsAsync(registerAuthorizer: false);
+
+        warnings.Should().ContainSingle(message => message.Contains(nameof(IChannelJoinAuthorizer), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddPushNotifications_CalledTwiceWithNoChannelJoinAuthorizer_StillLogsTheWarningOnce()
+    {
+        var warnings = await StartAndCollectWarningsAsync(registerAuthorizer: false, registrations: 2);
+
+        warnings.Count(message => message.Contains(nameof(IChannelJoinAuthorizer), StringComparison.Ordinal)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AddPushNotifications_WithAChannelJoinAuthorizer_LogsNoWarningAboutIt()
+    {
+        var warnings = await StartAndCollectWarningsAsync(registerAuthorizer: true);
+
+        warnings.Should().NotContain(message => message.Contains(nameof(IChannelJoinAuthorizer), StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Runs every registered hosted service's start the way the host does at startup and returns the
+    /// rendered Warning-or-above lines. The authorizer, when registered, is added AFTER
+    /// <c>AddPushNotifications</c>, the order a host is free to use.
+    /// </summary>
+    private static async Task<List<string>> StartAndCollectWarningsAsync(bool registerAuthorizer, int registrations = 1)
+    {
+        var provider = new WarningCollectingLoggerProvider();
+        var services = new ServiceCollection();
+        services.AddLogging(logging => logging.AddProvider(provider));
+        IConfiguration config = CreateConfigurationWithRedis();
+        for (var i = 0; i < registrations; i++)
+        {
+            services.AddPushNotifications(config);
+        }
+
+        if (registerAuthorizer)
+        {
+            services.AddSingleton(Mock.Of<IChannelJoinAuthorizer>());
+        }
+
+        await using ServiceProvider sp = services.BuildServiceProvider();
+        var hostedServices = sp.GetServices<IHostedService>().ToList();
+        foreach (var hostedService in hostedServices)
+        {
+            await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        }
+
+        foreach (var hostedService in hostedServices)
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+
+        return [.. provider.Warnings];
+    }
+
+    private sealed class WarningCollectingLoggerProvider : ILoggerProvider
+    {
+        public ConcurrentQueue<string> Warnings { get; } = new();
+
+        public ILogger CreateLogger(string categoryName) => new WarningCollectingLogger(Warnings);
+
+        public void Dispose()
+        {
+            // Nothing to release.
+        }
+
+        private sealed class WarningCollectingLogger(ConcurrentQueue<string> warnings) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel >= LogLevel.Warning)
+                {
+                    warnings.Enqueue(formatter(state, exception));
+                }
+            }
+        }
     }
 }

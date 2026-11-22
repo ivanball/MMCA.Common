@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
+MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.extension(System.Security.Claims.ClaimsPrincipal!).IsServiceCaller() -> bool
+const MMCA.Common.Grpc.Authentication.ServiceTokenDefaults.ServiceCallerPolicy = "ServiceCaller" -> string!
+static MMCA.Common.Grpc.Authentication.ServiceCallerClaimsPrincipalExtensions.IsServiceCaller(this System.Security.Claims.ClaimsPrincipal! principal) -> bool

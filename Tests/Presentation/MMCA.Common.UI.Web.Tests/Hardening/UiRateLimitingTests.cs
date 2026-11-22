@@ -64,7 +64,8 @@ public sealed class UiRateLimitingTests
     [InlineData("/api/hubs/notifications", "/api", true)]
     [InlineData("/api/hubs/notifications/negotiate", "/api", true)]
     [InlineData("/api/events", "/api", false)]
-    [InlineData("/app.css", "/api", true)]
+    // B2: an extension alone no longer exempts; a real static asset is exempted by its endpoint.
+    [InlineData("/app.css", "/api", false)]
     [InlineData("/", "/api", false)]
     [InlineData("/login", "/api", false)]
     [InlineData("/_blazor", "/api", false)]

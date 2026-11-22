@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.StaticAssets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -79,41 +80,51 @@ public static class UiRateLimitingExtensions
     private static readonly string[] ExemptPrefixes = ["/health", "/alive", "/_framework", "/_content", "/hubs"];
 
     /// <summary>
-    /// Whether this request is exempt from both limiters.
+    /// Whether this request path is exempt from both limiters by prefix alone.
     /// </summary>
     /// <param name="path">The request path.</param>
     /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix (<c>/api</c> by default).</param>
-    /// <returns><see langword="true"/> when the request must not be limited.</returns>
+    /// <returns><see langword="true"/> when the path must not be limited.</returns>
     /// <remarks>
-    /// Two rules. The prefix list above (plus the proxied hub prefix), matched on whole segments so
-    /// <c>/healthz</c> is not matched by <c>/health</c>; and any path OUTSIDE the proxy prefix whose
-    /// last segment carries a file extension, which is how a static asset is told apart from a page
-    /// route or the SignalR negotiate without depending on middleware ordering. Proxied traffic is
-    /// API traffic whatever its last segment looks like (the proxy serves no static files), so
-    /// <c>/api/report.csv</c> is counted. Static files are served from disk with an ETag and cost almost nothing,
-    /// while a single page load pulls dozens of them: counting those against the window would
-    /// throttle the first visitor rather than an attacker. <c>/_blazor</c> deliberately has NO
-    /// extension and NO exemption from the per-IP window, because the negotiate endpoint is exactly what
-    /// opens a circuit. It is, however, kept out of the concurrency ceiling (see
-    /// <see cref="ConcurrencyPartition"/>): the same prefix carries the circuit WebSocket, whose lease
-    /// would otherwise be held for the whole circuit lifetime.
+    /// The prefix list above (plus the proxied hub prefix), matched on whole segments so
+    /// <c>/healthz</c> is not matched by <c>/health</c>. A file extension alone exempts nothing: a
+    /// path such as <c>/missing.png</c> that maps to no static asset renders the not-found page and
+    /// is counted like any page route (see <see cref="IsExempt(HttpContext, PathString)"/> for the
+    /// static-asset rule). <c>/_blazor</c> deliberately has NO exemption from the per-IP window,
+    /// because the negotiate endpoint is exactly what opens a circuit. It is, however, kept out of
+    /// the concurrency ceiling (see <see cref="ConcurrencyPartition"/>): the same prefix carries the
+    /// circuit WebSocket, whose lease would otherwise be held for the whole circuit lifetime.
     /// <para>
     /// Internal (not private) so the exemption rule is unit-testable via <c>InternalsVisibleTo</c>
     /// rather than only through a full request flood.
     /// </para>
     /// </remarks>
-    internal static bool IsExempt(PathString path, PathString proxyPathPrefix)
-    {
-        if (ExemptPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
-            || path.StartsWithSegments(proxyPathPrefix.Add("/hubs"), StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
+    internal static bool IsExempt(PathString path, PathString proxyPathPrefix) =>
+        ExemptPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
+        || path.StartsWithSegments(proxyPathPrefix.Add("/hubs"), StringComparison.OrdinalIgnoreCase);
 
-        var value = path.Value;
-        return !string.IsNullOrEmpty(value)
-            && !path.StartsWithSegments(proxyPathPrefix, StringComparison.OrdinalIgnoreCase)
-            && Path.HasExtension(value);
+    /// <summary>
+    /// Whether this request is exempt from both limiters: an exempt prefix
+    /// (<see cref="IsExempt(PathString, PathString)"/>), or a request whose matched endpoint is a
+    /// real static asset mapped by <c>MapStaticAssets</c>.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="proxyPathPrefix">The same-origin API proxy's path prefix (<c>/api</c> by default).</param>
+    /// <returns><see langword="true"/> when the request must not be limited.</returns>
+    /// <remarks>
+    /// The static-asset rule reads the endpoint routing selected, which a <c>WebApplication</c>
+    /// resolves ahead of the whole user pipeline (it inserts <c>UseRouting</c> first), so the
+    /// limiter sees it. Static assets are served with an ETag and cost almost nothing, while a
+    /// single page load pulls dozens of them: counting those against the window would throttle the
+    /// first visitor rather than an attacker. Only a path that matches an asset in the static-asset
+    /// manifest qualifies; any other path, extension or not, is counted.
+    /// </remarks>
+    internal static bool IsExempt(HttpContext httpContext, PathString proxyPathPrefix)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        return IsExempt(httpContext.Request.Path, proxyPathPrefix)
+            || httpContext.GetEndpoint()?.Metadata.GetMetadata<StaticAssetDescriptor>() is not null;
     }
 
     /// <summary>
@@ -137,7 +148,7 @@ public static class UiRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (IsExempt(httpContext.Request.Path, proxyPathPrefix))
+        if (IsExempt(httpContext, proxyPathPrefix))
         {
             return RateLimitPartition.GetNoLimiter(ExemptPartitionKey);
         }
@@ -184,7 +195,7 @@ public static class UiRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(settings);
 
         var path = httpContext.Request.Path;
-        return IsExempt(path, proxyPathPrefix) || path.StartsWithSegments(BlazorTransportPrefix, StringComparison.OrdinalIgnoreCase)
+        return IsExempt(httpContext, proxyPathPrefix) || path.StartsWithSegments(BlazorTransportPrefix, StringComparison.OrdinalIgnoreCase)
             ? RateLimitPartition.GetNoLimiter(ExemptPartitionKey)
             : RateLimitPartition.GetConcurrencyLimiter(ConcurrencyPartitionKey, _ => new ConcurrencyLimiterOptions
             {
@@ -230,7 +241,7 @@ public static class UiRateLimitingExtensions
                 return services;
             }
 
-            // The proxy prefix the hub exemption and the extension carve-out key on, read through
+            // The proxy prefix the proxied hub exemption keys on, read through
             // the proxy's own options (Bind plus any Configure<> the host adds), so the limiter and
             // the proxy can never disagree. Resolved once, when the limiter options are built.
             services.AddOptions<RateLimiterOptions>()
