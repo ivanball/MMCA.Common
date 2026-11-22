@@ -4,3 +4,4 @@ MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerMode.init ->
 MMCA.Common.Aspire.Gateway.TrustedCallerMode
 MMCA.Common.Aspire.Gateway.TrustedCallerMode.Exempt = 1 -> MMCA.Common.Aspire.Gateway.TrustedCallerMode
 MMCA.Common.Aspire.Gateway.TrustedCallerMode.PerVisitor = 0 -> MMCA.Common.Aspire.Gateway.TrustedCallerMode
+const MMCA.Common.Aspire.Integrations.HostIntegrationNames.AzureRedisEntraAuthentication = "AzureRedisEntraAuthentication" -> string!

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OutputCaching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +25,15 @@ namespace MMCA.Common.Aspire.Caching;
 /// PING-only check, named <c>redis</c> and tagged <see cref="HealthCheckTags.Optional"/>, from
 /// <c>AddInfrastructureHealthChecks()</c>. A cache the application degrades gracefully without must
 /// be visible on <c>/health</c> and invisible to <c>/health/ready</c>.
+/// </para>
+/// <para>
+/// A Redis configurator registered through <c>AddRedisConfigurationOptionsConfigurator</c>
+/// (MMCA.Common.Infrastructure; for example the Entra token login of
+/// <c>AddAzureRedisEntraAuthentication</c>) reaches every connection these calls open: the client and
+/// the distributed cache over it read their options from the options pipeline the configurator
+/// registration post-configures, and the output-cache store goes through the same steps
+/// (<see cref="RedisConfigurationOptionsPipeline"/>). With none registered, every connection is made
+/// from the connection string alone.
 /// </para>
 /// </summary>
 public static class RedisCachingExtensions
@@ -99,6 +109,18 @@ public static class RedisCachingExtensions
             }
 
             builder.Services.AddStackExchangeRedisOutputCache(options => options.Configuration = connectionString);
+
+            // A registered Redis configurator (RedisConfigurationOptionsPipeline) puts the store on
+            // configured options; with none, the store keeps connecting from the connection string.
+            builder.Services.AddOptions<RedisOutputCacheOptions>()
+                .Configure<IServiceProvider>((options, services) =>
+                {
+                    var configured = RedisConfigurationOptionsPipeline.CreateConfigured(services, connectionString);
+                    if (configured is not null)
+                    {
+                        options.ConfigurationOptions = configured;
+                    }
+                });
 
             return builder;
         }

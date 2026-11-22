@@ -203,6 +203,11 @@
          Azure.Identity credential. -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <!-- Microsoft Entra token login for Azure Cache for Redis and Azure Managed Redis
+         (MMCA.Common.Azure.AddAzureRedisEntraAuthentication), through the core
+         IRedisConfigurationOptionsConfigurator extension point. Referenced by MMCA.Common.Azure only;
+         its StackExchange.Redis floor (2.10.1) sits under the 3.x pin above. -->
+    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.3.1" />
     <!-- S3-compatible file storage (MMCA.Common.Aws.AddS3FileStorage): AWS S3, Cloudflare R2, MinIO
          and the GCS XML API through one client. The 4.x line sends request checksums by default,
          which the adapter turns down to WHEN_REQUIRED for the S3-compatible services. -->

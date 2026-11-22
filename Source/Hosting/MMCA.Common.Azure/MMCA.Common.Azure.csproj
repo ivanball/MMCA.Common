@@ -33,6 +33,9 @@
          Keep the version in step with Microsoft.Data.SqlClient; SqlClientEntraAuthenticationTests pins
          the registration. -->
     <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
+    <!-- Entra token login for Redis (Redis/AzureRedisEntraAuthenticationConfigurator): the token
+         acquisition and the re-authentication of open connections before each token expires. -->
+    <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

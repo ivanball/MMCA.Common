@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using MMCA.Common.Aspire.Caching;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Aspire.Health;
@@ -94,7 +95,17 @@ internal sealed class RedisPingHealthCheck : IHealthCheck, IAsyncDisposable
         await _connectGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            return _ownedMultiplexer ??= await ConnectionMultiplexer.ConnectAsync(_connectionString).ConfigureAwait(false);
+            if (_ownedMultiplexer is null)
+            {
+                // A registered Redis configurator applies here as it does to the DI client; with none,
+                // the connection is made from the connection string alone.
+                var configured = RedisConfigurationOptionsPipeline.CreateConfigured(_services, _connectionString);
+                _ownedMultiplexer = configured is null
+                    ? await ConnectionMultiplexer.ConnectAsync(_connectionString).ConfigureAwait(false)
+                    : await ConnectionMultiplexer.ConnectAsync(configured).ConfigureAwait(false);
+            }
+
+            return _ownedMultiplexer;
         }
         finally
         {

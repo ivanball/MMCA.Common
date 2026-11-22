@@ -43,6 +43,9 @@ public static class HostIntegrationNames
     /// <summary>Registered by <c>AddAzurePostgreSqlEntraAuthentication(configuration)</c> (MMCA.Common.Azure).</summary>
     public const string AzurePostgreSqlEntraAuthentication = "AzurePostgreSqlEntraAuthentication";
 
+    /// <summary>Registered by <c>AddAzureRedisEntraAuthentication(configuration)</c> (MMCA.Common.Azure).</summary>
+    public const string AzureRedisEntraAuthentication = "AzureRedisEntraAuthentication";
+
     /// <summary>Registered by <c>AddAwsRdsIamAuthentication(configuration)</c> (MMCA.Common.Aws).</summary>
     public const string AwsRdsIamAuthentication = "AwsRdsIamAuthentication";
 
