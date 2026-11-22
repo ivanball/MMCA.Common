@@ -99,7 +99,8 @@ public static class McpHostingExtensions
     {
         /// <summary>
         /// Maps the MCP endpoint when <c>Mcp:Enabled</c> is true, after refusing to start if any tool,
-        /// parameter or server description hides text (R023). The endpoint allows anonymous callers
+        /// parameter or server description hides text (R023) or any tool declares neither
+        /// <see cref="McpToolPermissionAttribute"/> nor <see cref="McpToolPublicAttribute"/>. The endpoint allows anonymous callers
         /// (permissioned tools check the caller themselves) and carries the <c>mcp</c> rate-limit
         /// policy from <c>AddCommonRateLimiting</c>. With MCP disabled nothing is mapped, so the path
         /// answers 404.
@@ -107,7 +108,8 @@ public static class McpHostingExtensions
         /// <param name="pattern">The route; <see cref="DefaultPath"/> unless a host needs another.</param>
         /// <returns>The same route builder for chaining.</returns>
         /// <exception cref="InvalidOperationException">
-        /// A description hides text, or <c>Mcp:Enabled</c> is true but <c>AddCommonMcpServer</c> was not called.
+        /// A description hides text, a tool declares no access attribute, or <c>Mcp:Enabled</c> is true
+        /// but <c>AddCommonMcpServer</c> was not called.
         /// </exception>
         public IEndpointRouteBuilder MapCommonMcp(string pattern = DefaultPath)
         {
@@ -125,7 +127,9 @@ public static class McpHostingExtensions
                 return endpoints;
             }
 
-            ToolDescriptionInspector.ThrowIfHiddenText(services.GetRequiredService<IOptions<McpServerOptions>>().Value);
+            var serverOptions = services.GetRequiredService<IOptions<McpServerOptions>>().Value;
+            ToolDescriptionInspector.ThrowIfHiddenText(serverOptions);
+            McpToolGovernance.ThrowIfAccessUndeclared(serverOptions);
 
             endpoints.MapMcp(pattern)
                 .AllowAnonymous()
