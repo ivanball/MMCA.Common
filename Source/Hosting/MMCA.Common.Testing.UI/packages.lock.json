@@ -29,9 +29,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.341, )",
-        "resolved": "3.0.341",
-        "contentHash": "zpogT6IwYBgNRa9+oETzs7aTU6Te3M/Osdkk/HN1TlJTDjz9dZwoUgh/yWqovT3jTofQGGLB1JqEK8I4uA6+yA=="
+        "requested": "[3.0.342, )",
+        "resolved": "3.0.342",
+        "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -74,9 +74,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.36.0.15337, )",
-        "resolved": "10.36.0.15337",
-        "contentHash": "jGLAZUjheSURfe0T/dJYGUrMOrLt1fxaInpChq75YJvrywsxFoUKK/EM6PSfTjkt4pbaq2ywIQjgQzhrmmj5Ow=="
+        "requested": "[10.37.0.15768, )",
+        "resolved": "10.37.0.15768",
+        "contentHash": "73Qo5UF1HSCwUGqiZ9XOKXWNRAe3WN8dfsj3pWIi5oIuenY1Uo9WuMinGibs3up9zcJ5CFk5Ex/Ei/S17mcBvg=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -220,7 +220,7 @@
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
-          "QRCoder": "[1.8.1, )",
+          "QRCoder": "[1.9.0, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -258,9 +258,9 @@
       },
       "QRCoder": {
         "type": "CentralTransitive",
-        "requested": "[1.8.1, )",
-        "resolved": "1.8.1",
-        "contentHash": "aGfRFpU/IPexAtEOEXCNxC3fMCAqgn6kqALRvXt6LxVAW0VolSDGHiyrY+o2CJgTITOsMpsrsDi7svMJaJ9Vfg==",
+        "requested": "[1.9.0, )",
+        "resolved": "1.9.0",
+        "contentHash": "5hLj/PNkFnIcSk9VOJzhBgspByhSkBtF0tAJpWyLOXqZ0c2WE2H8YTWEEOArLkjwXZh5LHfpoqjDwomrJq0mGA==",
         "dependencies": {
           "System.Drawing.Common": "6.0.0"
         }
@@ -313,9 +313,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.341, )",
-        "resolved": "3.0.341",
-        "contentHash": "zpogT6IwYBgNRa9+oETzs7aTU6Te3M/Osdkk/HN1TlJTDjz9dZwoUgh/yWqovT3jTofQGGLB1JqEK8I4uA6+yA=="
+        "requested": "[3.0.342, )",
+        "resolved": "3.0.342",
+        "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -358,9 +358,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.36.0.15337, )",
-        "resolved": "10.36.0.15337",
-        "contentHash": "jGLAZUjheSURfe0T/dJYGUrMOrLt1fxaInpChq75YJvrywsxFoUKK/EM6PSfTjkt4pbaq2ywIQjgQzhrmmj5Ow=="
+        "requested": "[10.37.0.15768, )",
+        "resolved": "10.37.0.15768",
+        "contentHash": "73Qo5UF1HSCwUGqiZ9XOKXWNRAe3WN8dfsj3pWIi5oIuenY1Uo9WuMinGibs3up9zcJ5CFk5Ex/Ei/S17mcBvg=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -504,7 +504,7 @@
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
-          "QRCoder": "[1.8.1, )",
+          "QRCoder": "[1.9.0, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -542,9 +542,9 @@
       },
       "QRCoder": {
         "type": "CentralTransitive",
-        "requested": "[1.8.1, )",
-        "resolved": "1.8.1",
-        "contentHash": "aGfRFpU/IPexAtEOEXCNxC3fMCAqgn6kqALRvXt6LxVAW0VolSDGHiyrY+o2CJgTITOsMpsrsDi7svMJaJ9Vfg==",
+        "requested": "[1.9.0, )",
+        "resolved": "1.9.0",
+        "contentHash": "5hLj/PNkFnIcSk9VOJzhBgspByhSkBtF0tAJpWyLOXqZ0c2WE2H8YTWEEOArLkjwXZh5LHfpoqjDwomrJq0mGA==",
         "dependencies": {
           "System.Drawing.Common": "6.0.0"
         }

@@ -95,6 +95,11 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Data.Sqlite"
         update-types: ["version-update:semver-major"]
+      # Npgsql and its EF Core provider read one MmcaNpgsqlVersion property that follows the EF Core
+      # major per framework (10.x on net10.0, 11.x on net11.0), so a major proposed into the default
+      # group fails the net10.0 restore the same way. Taken by hand with the EF Core major.
+      - dependency-name: "Npgsql*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

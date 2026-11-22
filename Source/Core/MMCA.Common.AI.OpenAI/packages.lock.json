@@ -4,9 +4,9 @@
     "net10.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.341, )",
-        "resolved": "3.0.341",
-        "contentHash": "zpogT6IwYBgNRa9+oETzs7aTU6Te3M/Osdkk/HN1TlJTDjz9dZwoUgh/yWqovT3jTofQGGLB1JqEK8I4uA6+yA=="
+        "requested": "[3.0.342, )",
+        "resolved": "3.0.342",
+        "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -16,11 +16,11 @@
       },
       "Microsoft.Extensions.AI.OpenAI": {
         "type": "Direct",
-        "requested": "[10.11.0, )",
-        "resolved": "10.11.0",
-        "contentHash": "p8fJdcPOrwaUPRrag5dY9SLohaouutY+bqg1Lw+8OOEFqMXvCHGNWQXv2GcUUNPBCkTR4mcBEHoP9LAV2RtxzA==",
+        "requested": "[10.11.1, )",
+        "resolved": "10.11.1",
+        "contentHash": "i7/NS7BfByBF5on8UP0GDjeqWYIjkGG0b6ikQa/KkxXnVvgi/2bq/Z589zZ8UqNNeHjHgHDMviOPu6UStisOpQ==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.11.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.11.1",
           "OpenAI": "2.14.0"
         }
       },
@@ -53,9 +53,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.36.0.15337, )",
-        "resolved": "10.36.0.15337",
-        "contentHash": "jGLAZUjheSURfe0T/dJYGUrMOrLt1fxaInpChq75YJvrywsxFoUKK/EM6PSfTjkt4pbaq2ywIQjgQzhrmmj5Ow=="
+        "requested": "[10.37.0.15768, )",
+        "resolved": "10.37.0.15768",
+        "contentHash": "73Qo5UF1HSCwUGqiZ9XOKXWNRAe3WN8dfsj3pWIi5oIuenY1Uo9WuMinGibs3up9zcJ5CFk5Ex/Ei/S17mcBvg=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -65,8 +65,8 @@
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.11.0",
-        "contentHash": "h4DX/TdJU4fk1GGaf19n6Kujkj6VXbGeL4UEOsQ8+ZJC5fVApPauokCtvBP684BYbczUYZQNfo1mbmyHG4WVSg=="
+        "resolved": "10.11.1",
+        "contentHash": "LcfA+SF7/GYZcI/XIC6WW17g7xytFvMQOzlBvbK5rvcltQKYXqnX47WaE/tvFqNm2GQtqhWnG/EkJC+T5PBKMw=="
       },
       "Microsoft.Extensions.Caching.Abstractions": {
         "type": "Transitive",
@@ -144,16 +144,16 @@
       "mmca.common.ai": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.AI": "[10.11.0, )"
+          "Microsoft.Extensions.AI": "[10.11.1, )"
         }
       },
       "Microsoft.Extensions.AI": {
         "type": "CentralTransitive",
-        "requested": "[10.11.0, )",
-        "resolved": "10.11.0",
-        "contentHash": "PtgeWqaC3gQ8/saMgkUiwKeqCBPfDOcjfqDLcXtwJI//pu79gYZqUMPOh7/bFdFWcJihP/rWq9sgQd2xQtEP0A==",
+        "requested": "[10.11.1, )",
+        "resolved": "10.11.1",
+        "contentHash": "VaQmPXuKSnHcv1tVDAWUx/MDahzTK43ozkurbhGcKMR4BnEA41ktF+fSO+aZNQGcgQg2KYI7D5ca3dTzlrO9/A==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.11.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.11.1",
           "Microsoft.Extensions.Caching.Abstractions": "10.0.13",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.13",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.13",
@@ -186,9 +186,9 @@
     "net11.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.341, )",
-        "resolved": "3.0.341",
-        "contentHash": "zpogT6IwYBgNRa9+oETzs7aTU6Te3M/Osdkk/HN1TlJTDjz9dZwoUgh/yWqovT3jTofQGGLB1JqEK8I4uA6+yA=="
+        "requested": "[3.0.342, )",
+        "resolved": "3.0.342",
+        "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -198,12 +198,12 @@
       },
       "Microsoft.Extensions.AI.OpenAI": {
         "type": "Direct",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "yZcoQnQOU/tUUy+w5/qBuiuTvUjtirVVhvMq12QP7WKH1XLg+LcUJs6GsLNCwwGk07VWbj7O8ZU/lYsGr7vlUg==",
+        "requested": "[11.0.1, )",
+        "resolved": "11.0.1",
+        "contentHash": "BPyxzh96v26MfAM61x/5hj1Gt3FbUpqqnRFuKa9j+FIPewNq4qL4zmJzUJv6csyv8nMNX8tdZBKba3H3XK/OBg==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "11.0.0",
-          "OpenAI": "2.14.0"
+          "Microsoft.Extensions.AI.Abstractions": "11.0.1",
+          "OpenAI": "2.15.0"
         }
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
@@ -235,9 +235,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.36.0.15337, )",
-        "resolved": "10.36.0.15337",
-        "contentHash": "jGLAZUjheSURfe0T/dJYGUrMOrLt1fxaInpChq75YJvrywsxFoUKK/EM6PSfTjkt4pbaq2ywIQjgQzhrmmj5Ow=="
+        "requested": "[10.37.0.15768, )",
+        "resolved": "10.37.0.15768",
+        "contentHash": "73Qo5UF1HSCwUGqiZ9XOKXWNRAe3WN8dfsj3pWIi5oIuenY1Uo9WuMinGibs3up9zcJ5CFk5Ex/Ei/S17mcBvg=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -247,8 +247,8 @@
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Transitive",
-        "resolved": "11.0.0",
-        "contentHash": "UYZTudmTrGykWIRzcO/TKauTx/+L/h4MYpUBODCG7aIybRVkv2y6uhVwG6UHRS6uTzRqg0K8IJprC9/QhMZGsw=="
+        "resolved": "11.0.1",
+        "contentHash": "pG3n1nHRnVcYuMAiqhDPuKefXTtUGAhAtqhBUKpNsZXYef9Vm51iZhUAVfQ2EzYhechFaA5hCcgQgK18jTzuiw=="
       },
       "System.ClientModel": {
         "type": "Transitive",
@@ -271,16 +271,16 @@
       "mmca.common.ai": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.AI": "[11.0.0, )"
+          "Microsoft.Extensions.AI": "[11.0.1, )"
         }
       },
       "Microsoft.Extensions.AI": {
         "type": "CentralTransitive",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "Vn8jo7RCYS3+tD7XOYgwtAPtd6CZIfIpzE20wGkbehAezj+tRY0lZWnEgehP0bLEAno/L54aCa4GnretNoGkXQ==",
+        "requested": "[11.0.1, )",
+        "resolved": "11.0.1",
+        "contentHash": "MP6zzZzPseaXu0DtZFCkPCWPXLTu7JY28ciyxqSoeDOP5Raf+wJT8+HapyLfXaI7F1CXpyr5PgiCQEE0CeVCqw==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "11.0.0",
+          "Microsoft.Extensions.AI.Abstractions": "11.0.1",
           "System.Numerics.Tensors": "11.0.0"
         }
       }
