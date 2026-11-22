@@ -36,12 +36,14 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// </remarks>
 /// <param name="twoFactorService">Verifies codes and matches recovery hashes.</param>
 /// <param name="store">Reads the account's state and spends recovery codes.</param>
+/// <param name="secretProtector">Unprotects the stored secret before a code is verified against it.</param>
 /// <param name="cache">Remembers the last accepted time step per account.</param>
 /// <param name="settings">The bound two-factor settings (period and window size).</param>
 /// <param name="distributedLock">Serializes acceptance of a time step per account.</param>
 internal sealed class TwoFactorAuthenticator(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
+    ITwoFactorSecretProtector secretProtector,
     ICacheService cache,
     IOptions<TwoFactorSettings> settings,
     IDistributedLock distributedLock) : ITwoFactorAuthenticator
@@ -72,7 +74,10 @@ internal sealed class TwoFactorAuthenticator(
                 TwoFactorErrors.TwoFactorRequired(nameof(ChallengeAsync)));
         }
 
-        if (state.TwoFactorSecret is { Length: > 0 } secret
+        // A stored secret this host cannot unprotect verifies no time-based code; the recovery codes
+        // stay usable, so the owner still has a way in.
+        if (state.TwoFactorSecret is { Length: > 0 } storedSecret
+            && secretProtector.Unprotect(storedSecret) is { IsSuccess: true, Value: { Length: > 0 } secret }
             && twoFactorService.VerifyCode(secret, code, out var matchedStep))
         {
             return await AcceptTimeStepOnceAsync(userId, matchedStep, cancellationToken).ConfigureAwait(false);
@@ -88,7 +93,9 @@ internal sealed class TwoFactorAuthenticator(
         string? code,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(secret) || !twoFactorService.VerifyCode(secret, code, out var matchedStep))
+        if (string.IsNullOrWhiteSpace(secret)
+            || secretProtector.Unprotect(secret) is not { IsSuccess: true, Value: { Length: > 0 } plaintext }
+            || !twoFactorService.VerifyCode(plaintext, code, out var matchedStep))
         {
             return false;
         }

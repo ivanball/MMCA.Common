@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Gcp.DataProtection;
@@ -176,5 +177,107 @@ public sealed class GoogleCloudDataProtectionExtensionsTests
         var builder = Host.CreateApplicationBuilder();
         builder.Configuration.AddInMemoryCollection(settings);
         return builder;
+    }
+
+    // -- The shared key ring with no at-rest key: one startup Warning outside Development --
+    private const string AtRestKey = "DataProtection:GcpKmsKeyName";
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public async Task AddGoogleCloudDataProtection_WithoutAKmsKey_OutsideDevelopment_WarnsOnceAtStartup(string environmentName)
+    {
+        var warnings = await StartupWarningsAsync(environmentName, new() { ["DataProtection:GcsObjectUri"] = ObjectUri });
+
+        warnings.Should().ContainSingle(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddGoogleCloudDataProtection_WithAKmsKey_OutsideDevelopment_DoesNotWarn()
+    {
+        var warnings = await StartupWarningsAsync("Production", new()
+        {
+            ["DataProtection:GcsObjectUri"] = ObjectUri,
+            [AtRestKey] = KmsKeyName,
+        });
+
+        warnings.Should().NotContain(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddGoogleCloudDataProtection_WithoutAKmsKey_InDevelopment_DoesNotWarn()
+    {
+        var warnings = await StartupWarningsAsync(Environments.Development, new() { ["DataProtection:GcsObjectUri"] = ObjectUri });
+
+        warnings.Should().NotContain(w => w.Contains(AtRestKey, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Builds and starts a real host over <c>AddGoogleCloudDataProtection</c>, with the in-memory
+    /// Cloud Storage and KMS fakes, and returns every Warning it logged.
+    /// </summary>
+    private static async Task<List<string>> StartupWarningsAsync(string environmentName, Dictionary<string, string?> settings)
+    {
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { EnvironmentName = environmentName });
+        builder.Configuration.AddInMemoryCollection(settings);
+        var capture = new CapturingLoggerProvider();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(capture);
+        builder.Services.AddSingleton<StorageClient>(new InMemoryGcsStorageClient());
+        builder.Services.AddSingleton<KeyManagementServiceClient>(new FakeKeyManagementServiceClient());
+
+        builder.AddGoogleCloudDataProtection();
+
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        return capture.Warnings;
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly List<string> _warnings = [];
+
+        public List<string> Warnings
+        {
+            get
+            {
+                lock (_warnings)
+                {
+                    return [.. _warnings];
+                }
+            }
+        }
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+
+        public void Dispose()
+        {
+        }
+
+        private void Add(string message)
+        {
+            lock (_warnings)
+            {
+                _warnings.Add(message);
+            }
+        }
+
+        private sealed class CapturingLogger(CapturingLoggerProvider owner) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Warning)
+                {
+                    owner.Add(formatter(state, exception));
+                }
+            }
+        }
     }
 }

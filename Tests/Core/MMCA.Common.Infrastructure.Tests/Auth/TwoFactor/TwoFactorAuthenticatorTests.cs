@@ -1,5 +1,6 @@
 using System.Globalization;
 using AwesomeAssertions;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Interfaces;
@@ -157,11 +158,11 @@ public sealed class TwoFactorAuthenticatorTests
     [Fact]
     public async Task VerifyEnrollmentCodeAsync_AcceptsALiveCodeOnce()
     {
-        var (sut, _, secret) = CreateSut(enabled: false);
+        var (sut, store, secret) = CreateSut(enabled: false);
         string code = CodeAt(secret);
 
-        bool first = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
-        bool second = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
+        bool first = await sut.VerifyEnrollmentCodeAsync(TestUserId, store.StoredSecret!, code);
+        bool second = await sut.VerifyEnrollmentCodeAsync(TestUserId, store.StoredSecret!, code);
 
         first.Should().BeTrue();
         second.Should().BeFalse("the confirm step is under the same single-use time-step guard as the challenge");
@@ -170,9 +171,9 @@ public sealed class TwoFactorAuthenticatorTests
     [Fact]
     public async Task VerifyEnrollmentCodeAsync_WithAWrongCode_IsFalse()
     {
-        var (sut, _, secret) = CreateSut(enabled: false);
+        var (sut, store, _) = CreateSut(enabled: false);
 
-        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, "000000");
+        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, store.StoredSecret!, "000000");
 
         verified.Should().BeFalse();
     }
@@ -183,8 +184,9 @@ public sealed class TwoFactorAuthenticatorTests
         var (sut, store, secret) = CreateSut(enabled: false);
         string code = CodeAt(secret);
 
-        bool confirmed = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, code);
-        store.Seed(enabled: true, secret, recoveryCodes: null);
+        string storedSecret = store.StoredSecret!;
+        bool confirmed = await sut.VerifyEnrollmentCodeAsync(TestUserId, storedSecret, code);
+        store.Seed(enabled: true, storedSecret, recoveryCodes: null);
         Result<TwoFactorOutcome> replayed = await sut.ChallengeAsync(TestUserId, code);
 
         confirmed.Should().BeTrue();
@@ -242,9 +244,9 @@ public sealed class TwoFactorAuthenticatorTests
         distributedLock
             .Setup(l => l.TryAcquireAsync(StepLockKey, It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IAsyncDisposable?)null);
-        var (sut, _, secret) = CreateSut(enabled: false, distributedLock: distributedLock.Object);
+        var (sut, store, secret) = CreateSut(enabled: false, distributedLock: distributedLock.Object);
 
-        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, secret, CodeAt(secret));
+        bool verified = await sut.VerifyEnrollmentCodeAsync(TestUserId, store.StoredSecret!, CodeAt(secret));
 
         verified.Should().BeFalse();
     }
@@ -264,15 +266,23 @@ public sealed class TwoFactorAuthenticatorTests
         var service = new TotpTwoFactorService(settings);
         string secret = service.GenerateSecret();
 
+        // The store holds the protected form, as the enrollment workflow hands it over.
+        var protector = new DataProtectionTwoFactorSecretProtector(new EphemeralDataProtectionProvider());
         var store = new FakeTwoFactorStore();
         if (stateExists)
         {
             RecoveryCodeSet? set = recoveryCodeCount > 0 ? service.GenerateRecoveryCodes() : null;
-            store.Seed(enabled, secret, set);
+            store.Seed(enabled, protector.Protect(secret), set);
         }
 
         return (
-            new TwoFactorAuthenticator(service, store, cache ?? new FakeCacheService(), settings, distributedLock ?? new FreeLock()),
+            new TwoFactorAuthenticator(
+                service,
+                store,
+                protector,
+                cache ?? new FakeCacheService(),
+                settings,
+                distributedLock ?? new FreeLock()),
             store,
             secret);
     }
@@ -334,6 +344,8 @@ public sealed class TwoFactorAuthenticatorTests
         public List<string> ConsumedHashes { get; } = [];
 
         public Error? ConsumeFailure { get; set; }
+
+        public string? StoredSecret => _state?.TwoFactorSecret;
 
         public void Seed(bool enabled, string secret, RecoveryCodeSet? recoveryCodes)
         {

@@ -54,7 +54,11 @@ public interface ITwoFactorAuthenticator
     /// cannot be replayed against the first challenge inside its window either.
     /// </remarks>
     /// <param name="userId">The account confirming enrollment.</param>
-    /// <param name="secret">The account's pending secret.</param>
+    /// <param name="secret">
+    /// The account's pending secret as <see cref="ITwoFactorStore"/> holds it, in the form
+    /// <see cref="ITwoFactorSecretProtector.Protect"/> produced; the shipped implementation
+    /// unprotects it before verifying.
+    /// </param>
     /// <param name="code">The code the caller supplied.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns><see langword="true"/> when the code verified and its time step had not been accepted before.</returns>

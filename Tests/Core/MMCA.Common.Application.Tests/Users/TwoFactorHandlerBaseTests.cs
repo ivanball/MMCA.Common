@@ -41,7 +41,7 @@ public sealed class TwoFactorHandlerBaseTests
         result.IsSuccess.Should().BeTrue();
         result.Value.SharedKey.Should().NotBeNullOrWhiteSpace();
         result.Value.ProvisioningUri.Should().Contain("otpauth://totp/");
-        store.State!.TwoFactorSecret.Should().Be(result.Value.SharedKey);
+        store.State!.TwoFactorSecret.Should().Be(StubTwoFactorSecretProtector.ProtectedFormOf(result.Value.SharedKey));
         store.State.IsTwoFactorEnabled.Should().BeFalse("an abandoned enrollment must never gate a later sign-in");
     }
 
@@ -626,9 +626,30 @@ public sealed class RecordingTwoFactorStore : ITwoFactorStore
         IReadOnlyCollection<string> TwoFactorRecoveryCodeHashes) : ITwoFactorUserState;
 }
 
+/// <summary>
+/// Deterministic <see cref="ITwoFactorSecretProtector"/>: the protected form is a fixed prefix over
+/// the plaintext, so a test can tell what the store received.
+/// </summary>
+public sealed class StubTwoFactorSecretProtector : ITwoFactorSecretProtector
+{
+    private const string Prefix = "protected:";
+
+    /// <summary>The protected form this stub produces for a secret.</summary>
+    public static string ProtectedFormOf(string secret) => Prefix + secret;
+
+    /// <inheritdoc />
+    public string Protect(string secret) => ProtectedFormOf(secret);
+
+    /// <inheritdoc />
+    public Result<string> Unprotect(string protectedSecret) =>
+        protectedSecret.StartsWith(Prefix, StringComparison.Ordinal)
+            ? Result.Success(protectedSecret[Prefix.Length..])
+            : Result.Failure<string>(Error.Failure("Test.Unreadable", "Unreadable."));
+}
+
 /// <summary>Concrete begin-enrollment handler supplying the account-label hook.</summary>
 public sealed class TestBeginHandler(ITwoFactorService service, ITwoFactorStore store, string? accountName)
-    : BeginTwoFactorEnrollmentHandlerBase<TestTwoFactorCommand>(service, store, NullLogger.Instance)
+    : BeginTwoFactorEnrollmentHandlerBase<TestTwoFactorCommand>(service, store, new StubTwoFactorSecretProtector(), NullLogger.Instance)
 {
     protected override Task<string?> ResolveAccountNameAsync(UserIdentifierType userId, CancellationToken cancellationToken) =>
         Task.FromResult(accountName);

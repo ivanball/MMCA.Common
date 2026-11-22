@@ -153,7 +153,7 @@ public sealed class ServiceInfrastructureExtensionsTests
     }
 
     [Fact]
-    public void MarksEndpointsExternal()
+    public void LeavesEndpointsInternal()
     {
         var model = Arrange();
 
@@ -161,7 +161,7 @@ public sealed class ServiceInfrastructureExtensionsTests
 
         var endpoints = model.Service.Resource.Annotations.OfType<EndpointAnnotation>().ToList();
         endpoints.Should().NotBeEmpty();
-        endpoints.Should().OnlyContain(static e => e.IsExternal);
+        endpoints.Should().OnlyContain(static e => !e.IsExternal, "a backend service is reached through the gateway");
     }
 
     [Fact]
@@ -172,6 +172,34 @@ public sealed class ServiceInfrastructureExtensionsTests
 
         Apply(http2Only, ServiceEndpointProfile.Http2Only).Should().BeSameAs(http2Only.Service);
         Apply(mixed, ServiceEndpointProfile.Mixed).Should().BeSameAs(mixed.Service);
+    }
+
+    // -- The AppHost shape: only the front door is reachable from outside --
+    [Theory]
+    [InlineData(ServiceEndpointProfile.Http2Only)]
+    [InlineData(ServiceEndpointProfile.Mixed)]
+    public void InTheFullTopology_OnlyTheGatewayAndUiEndpointsAreExternal(ServiceEndpointProfile profile)
+    {
+        var model = Arrange();
+        var gateway = model.Builder.AddResource(new DotnetProjectResource("gateway", "."))
+            .WithHttpEndpoint(name: "http")
+            .WithHttpsEndpoint(name: "https");
+        var ui = model.Builder.AddResource(new DotnetProjectResource("ui", "."))
+            .WithHttpEndpoint(name: "http")
+            .WithHttpsEndpoint(name: "https");
+
+        Apply(model, profile);
+        gateway.WithMmcaGateway(6001, model.Service);
+        ui.WithMmcaUi(gateway, 6002, model.Service);
+
+        var serviceEndpoints = model.Service.Resource.Annotations.OfType<EndpointAnnotation>().ToList();
+        serviceEndpoints.Should().NotBeEmpty();
+        serviceEndpoints.Should().NotContain(static e => e.IsExternal, "a backend service is reached through the gateway, never directly");
+
+        gateway.Resource.Annotations.OfType<EndpointAnnotation>().Should().NotBeEmpty()
+            .And.OnlyContain(static e => e.IsExternal, "the gateway is the API front door");
+        ui.Resource.Annotations.OfType<EndpointAnnotation>().Should().NotBeEmpty()
+            .And.OnlyContain(static e => e.IsExternal, "the UI is the browser front door");
     }
 
     private static IResourceBuilder<DotnetProjectResource> Apply(

@@ -122,6 +122,8 @@ public static class AiServiceCollectionExtensions
 
             services.AddOptions<AiSettings>()
                 .Bind(section)
+                .PostConfigure<IServiceProvider>((options, provider) =>
+                    options.IsDevelopmentHost = provider.GetService<IHostEnvironment>()?.IsDevelopment() == true)
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 

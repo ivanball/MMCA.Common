@@ -85,6 +85,32 @@ internal static class McpToolGovernance
             return await next(context, cancellationToken).ConfigureAwait(false);
         };
 
+    /// <summary>
+    /// Throws when a registered tool declares neither <see cref="McpToolPermissionAttribute"/> nor
+    /// <see cref="McpToolPublicAttribute"/>, so every tool the endpoint serves made its access choice
+    /// on purpose. Runs before the endpoint is mapped, beside the hidden-text inspection.
+    /// </summary>
+    /// <param name="options">The configured server options, tool collection included.</param>
+    /// <exception cref="InvalidOperationException">At least one tool declares no access attribute; the message names each.</exception>
+    public static void ThrowIfAccessUndeclared(McpServerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var undeclared = (options.ToolCollection ?? [])
+            .Where(static tool => !tool.Metadata.OfType<McpToolPermissionAttribute>().Any()
+                && !tool.Metadata.OfType<McpToolPublicAttribute>().Any())
+            .Select(static tool => $"'{tool.ProtocolTool.Name}'")
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (undeclared.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "MCP endpoint refused to start: every tool must declare its access with [McpToolPermission(...)] "
+                + "or [McpToolPublic]. Declare it on: " + string.Join(", ", undeclared) + ".");
+        }
+    }
+
     private static bool IsEnabled(McpSettings settings, string toolName) =>
         !settings.Tools.TryGetValue(toolName, out var tool) || tool.Enabled;
 

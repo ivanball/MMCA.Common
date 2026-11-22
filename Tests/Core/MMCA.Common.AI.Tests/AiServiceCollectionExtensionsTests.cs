@@ -1,6 +1,8 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Options;
 using MMCA.Common.AI.Chat;
 using MMCA.Common.AI.Tests.Fixtures;
@@ -215,5 +217,62 @@ public sealed class AiServiceCollectionExtensionsTests
 
         nullConfiguration.Should().Throw<ArgumentNullException>();
         nullFactory.Should().Throw<ArgumentNullException>();
+    }
+
+    // -- Ai:Endpoint transport: every call carries the API key, so http is Development-only --
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void Enabled_WithAnHttpEndpoint_OutsideDevelopment_FailsValidation(string environmentName)
+    {
+        using var inner = new StubChatClient();
+        using var provider = BuildInEnvironment(
+            environmentName,
+            EnabledConfiguration(("Ai:Endpoint", "http://gateway.example.com/openai/v1/")),
+            inner);
+
+        var act = () => provider.GetRequiredService<IOptions<AiSettings>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*Endpoint*");
+    }
+
+    [Fact]
+    public void Enabled_WithAnHttpEndpoint_InDevelopment_PassesValidation()
+    {
+        using var inner = new StubChatClient();
+        using var provider = BuildInEnvironment(
+            Environments.Development,
+            EnabledConfiguration(("Ai:Endpoint", "http://localhost:11434/v1/")),
+            inner);
+
+        var settings = provider.GetRequiredService<IOptions<AiSettings>>().Value;
+
+        settings.Endpoint.Should().Be(new Uri("http://localhost:11434/v1/"));
+    }
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    [InlineData("Development")]
+    public void Enabled_WithAnHttpsEndpoint_PassesValidationInEveryEnvironment(string environmentName)
+    {
+        using var inner = new StubChatClient();
+        using var provider = BuildInEnvironment(
+            environmentName,
+            EnabledConfiguration(("Ai:Endpoint", "https://gateway.example.com/openai/v1/")),
+            inner);
+
+        var settings = provider.GetRequiredService<IOptions<AiSettings>>().Value;
+
+        settings.Endpoint.Should().Be(new Uri("https://gateway.example.com/openai/v1/"));
+    }
+
+    private static ServiceProvider BuildInEnvironment(string environmentName, IConfiguration configuration, StubChatClient inner)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IHostEnvironment>(new HostingEnvironment { EnvironmentName = environmentName });
+        services.AddMmcaChatClient(configuration, _ => inner);
+        return services.BuildServiceProvider();
     }
 }

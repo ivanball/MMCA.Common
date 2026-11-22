@@ -39,7 +39,8 @@ public static class AzureDataProtectionExtensions
         ///     key ring directory. Defaults to the host application name.</item>
         ///   <item><c>DataProtection:KeyVaultKeyUri</c> (optional): full URI of the Key Vault key
         ///     used to encrypt the key ring at rest, e.g.
-        ///     <c>https://myvault.vault.azure.net/keys/dataprotection</c>.</item>
+        ///     <c>https://myvault.vault.azure.net/keys/dataprotection</c>. When it is absent outside
+        ///     Development, one Warning at startup names this key.</item>
         /// </list>
         /// </para>
         /// <para>
@@ -86,10 +87,15 @@ public static class AzureDataProtectionExtensions
             // Encrypting the key ring at rest is an independent hardening step. Coupling the two
             // would mean a missing or delayed role assignment breaks authentication entirely, turning
             // an optional hardening gap into a total outage.
-            var keyVaultKeyUri = builder.Configuration["DataProtection:KeyVaultKeyUri"];
+            var keyVaultKeyUri = builder.Configuration[AzureKeyRingAtRestNoticeService.KeyVaultKeyUriKey];
             if (!string.IsNullOrWhiteSpace(keyVaultKeyUri))
             {
                 dataProtection.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyUri), credential);
+            }
+            else if (!builder.Environment.IsDevelopment())
+            {
+                // Not a failure, for the reason above; one startup Warning names the missing key.
+                builder.Services.AddHostedService<AzureKeyRingAtRestNoticeService>();
             }
 
             return builder;
