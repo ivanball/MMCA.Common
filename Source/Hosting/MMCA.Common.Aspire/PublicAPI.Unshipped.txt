@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerMode.get -> MMCA.Common.Aspire.Gateway.TrustedCallerMode
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerMode.init -> void
+MMCA.Common.Aspire.Gateway.TrustedCallerMode
+MMCA.Common.Aspire.Gateway.TrustedCallerMode.Exempt = 1 -> MMCA.Common.Aspire.Gateway.TrustedCallerMode
+MMCA.Common.Aspire.Gateway.TrustedCallerMode.PerVisitor = 0 -> MMCA.Common.Aspire.Gateway.TrustedCallerMode

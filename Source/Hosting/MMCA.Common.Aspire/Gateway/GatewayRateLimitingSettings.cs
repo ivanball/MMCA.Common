@@ -152,4 +152,14 @@ public sealed class GatewayRateLimitingSettings
     /// </remarks>
     [StringLength(int.MaxValue, MinimumLength = 32)]
     public string? TrustedCallerSecret { get; init; }
+
+    /// <summary>
+    /// How a request proving <see cref="TrustedCallerSecret"/> is limited.
+    /// <see cref="Gateway.TrustedCallerMode.PerVisitor"/> (the default) counts it against the end
+    /// visitor's own per-IP window and route policies when the caller forwards the visitor's address
+    /// in <c>X-Forwarded-For</c>, and exempts it when no visitor address is present;
+    /// <see cref="Gateway.TrustedCallerMode.Exempt"/> exempts every trusted-caller request. The
+    /// replica-wide concurrency ceiling exempts a trusted caller in both modes.
+    /// </summary>
+    public TrustedCallerMode TrustedCallerMode { get; init; } = TrustedCallerMode.PerVisitor;
 }

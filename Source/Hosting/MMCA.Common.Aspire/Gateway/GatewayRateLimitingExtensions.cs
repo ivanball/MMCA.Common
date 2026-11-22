@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -29,14 +30,17 @@ namespace MMCA.Common.Aspire.Gateway;
 /// the replica will hold at once regardless of who sent it. A request must satisfy both.
 /// </para>
 /// <para>
-/// Four kinds of request take the no-limiter partition on BOTH limiters: an always-bypassed
-/// infrastructure prefix, a host-configured bypass prefix, a synthetic-traffic request proving the
-/// configured secret in the configured header (off unless
-/// <see cref="GatewayRateLimitingSettings.SyntheticTrafficSecret"/> is set), and a trusted internal
+/// Three kinds of request take the no-limiter partition on BOTH limiters: an always-bypassed
+/// infrastructure prefix, a host-configured bypass prefix, and a synthetic-traffic request proving
+/// the configured secret in the configured header (off unless
+/// <see cref="GatewayRateLimitingSettings.SyntheticTrafficSecret"/> is set). A trusted internal
 /// caller proving <see cref="GatewayRateLimitingSettings.TrustedCallerSecret"/> (off unless that is
-/// set). The last exists because a server-rendered UI host makes every back-end call, refreshes
-/// included, from ONE address, which the per-IP window would otherwise collapse into a single
-/// partition and throttle the whole site.
+/// set) skips the concurrency ceiling and, by default
+/// (<see cref="GatewayRateLimitingSettings.TrustedCallerMode"/>), is counted in the per-IP window of
+/// the visitor it forwards in <c>X-Forwarded-For</c> rather than of its own address. That exists
+/// because a server-rendered UI host makes every back-end call, refreshes included, from ONE
+/// address, which the per-IP window would otherwise collapse into a single partition and throttle
+/// the whole site.
 /// </para>
 /// </summary>
 [SuppressMessage(
@@ -63,6 +67,18 @@ public static class GatewayRateLimitingExtensions
     /// no reference to this one, so the proof travels on the request rather than being re-derived.
     /// </summary>
     internal const string TrustedInternalCallerItemKey = "MMCA.Common.Gateway.TrustedInternalCaller";
+
+    /// <summary>
+    /// The <see cref="HttpContext.Items"/> key the per-IP partition stamps with the visitor's
+    /// <see cref="IPAddress"/> when a trusted caller is metered per visitor
+    /// (<see cref="TrustedCallerMode.PerVisitor"/>). The named per-route policies of
+    /// <c>MMCA.Common.Gateway</c> key on it instead of the connecting address (the same literal lives
+    /// there as <c>GatewayRoutePolicyExtensions.TrustedCallerVisitorIpItemKey</c>).
+    /// </summary>
+    internal const string TrustedCallerVisitorIpItemKey = "MMCA.Common.Gateway.TrustedCallerVisitorIp";
+
+    /// <summary>The header a trusted caller forwards the end visitor's address in.</summary>
+    private const string ForwardedForHeaderName = "X-Forwarded-For";
 
     /// <summary>
     /// Wraps a rate limiter's <c>OnRejected</c> callback so every 429 carries a <c>Retry-After</c>
@@ -209,9 +225,10 @@ public static class GatewayRateLimitingExtensions
         || IsTrustedInternalCaller(httpContext, settings);
 
     /// <summary>
-    /// Per-client-IP partition: no limiter for bypassed paths, proven synthetic traffic or a proven
-    /// trusted internal caller, no limiter for an unresolvable IP (fail open), otherwise one fixed
-    /// window per IP.
+    /// Per-client-IP partition: no limiter for bypassed paths or proven synthetic traffic; for a
+    /// proven trusted internal caller, the forwarded visitor's own window under
+    /// <see cref="TrustedCallerMode.PerVisitor"/> when a visitor address is present, otherwise no
+    /// limiter; no limiter for an unresolvable IP (fail open); otherwise one fixed window per IP.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
@@ -230,10 +247,24 @@ public static class GatewayRateLimitingExtensions
 
         if (IsTrustedInternalCaller(httpContext, settings))
         {
-            // Hand the proof to the named per-route policies, which run after this limiter and
-            // cannot see these settings.
-            httpContext.Items[TrustedInternalCallerItemKey] = true;
-            return RateLimitPartition.GetNoLimiter(BypassPartitionKey);
+            var visitorIp = settings.TrustedCallerMode == TrustedCallerMode.PerVisitor
+                ? TrustedCallerVisitorIp(httpContext)
+                : null;
+
+            if (visitorIp is null
+                || IsBypassed(httpContext.Request.Path, settings)
+                || IsSyntheticTraffic(httpContext, settings))
+            {
+                // Hand the proof to the named per-route policies, which run after this limiter and
+                // cannot see these settings.
+                httpContext.Items[TrustedInternalCallerItemKey] = true;
+                return RateLimitPartition.GetNoLimiter(BypassPartitionKey);
+            }
+
+            // The visitor's own window: the same partition key a direct request from that address
+            // takes. The route policies key on the same address through this item.
+            httpContext.Items[TrustedCallerVisitorIpItemKey] = visitorIp;
+            return FixedWindowPartition(visitorIp.ToString(), settings, timeProvider);
         }
 
         if (IsExemptFromLimiters(httpContext, settings))
@@ -249,10 +280,48 @@ public static class GatewayRateLimitingExtensions
             return RateLimitPartition.GetNoLimiter(UnknownIpPartitionKey);
         }
 
+        return FixedWindowPartition(clientIp, settings, timeProvider);
+    }
+
+    /// <summary>
+    /// The end visitor's address a trusted caller forwards: the right-most entry of
+    /// <c>X-Forwarded-For</c> as it reaches the limiter. The forwarded-headers step that runs first
+    /// has already consumed the hop the gateway's own ingress appended, so the right-most remaining
+    /// entry is the one the trusted caller wrote (a server-rendered UI host writes exactly one, the
+    /// visitor's address). <see langword="null"/> when the header is absent or does not parse as an
+    /// address.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <returns>The visitor's address, or <see langword="null"/> when none is present.</returns>
+    /// <remarks>Internal (not private) so the extraction is unit-testable via <c>InternalsVisibleTo</c>.</remarks>
+    internal static IPAddress? TrustedCallerVisitorIp(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        var forwardedFor = httpContext.Request.Headers[ForwardedForHeaderName];
+        if (forwardedFor.Count == 0)
+        {
+            return null;
+        }
+
+        var lastEntry = string.Join(',', forwardedFor.ToArray())
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault();
+
+        return lastEntry is not null && IPEndPoint.TryParse(lastEntry, out var endpoint)
+            ? endpoint.Address
+            : null;
+    }
+
+    /// <summary>One fixed window per partition key, sized by the bound settings.</summary>
+    private static RateLimitPartition<string> FixedWindowPartition(
+        string partitionKey,
+        GatewayRateLimitingSettings settings,
+        TimeProvider? timeProvider) =>
         // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
         // whole window, so the wrapper reports the time actually left in it. The partitioned limiter
         // drives replenishment on its own timer either way (it never lets a partition auto-replenish).
-        return RateLimitPartition.Get(clientIp, _ => new RemainingWindowFixedWindowRateLimiter(
+        RateLimitPartition.Get(partitionKey, _ => new RemainingWindowFixedWindowRateLimiter(
             new FixedWindowRateLimiterOptions
             {
                 PermitLimit = settings.PermitLimit,
@@ -261,12 +330,11 @@ public static class GatewayRateLimitingExtensions
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             },
             timeProvider));
-    }
 
     /// <summary>
     /// Process-wide concurrency partition: one bucket for the whole replica, bypassed for the same
-    /// paths, the same proven synthetic traffic and the same trusted internal caller the per-IP
-    /// window is.
+    /// paths, the same proven synthetic traffic and every proven trusted internal caller (in both
+    /// <see cref="TrustedCallerMode"/> values: the ceiling bounds replica load, not a visitor).
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
