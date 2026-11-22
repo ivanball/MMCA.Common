@@ -61,6 +61,12 @@ internal sealed class FakeGateway : IAsyncDisposable
 
     public TimeSpan RefreshDelay { get; set; } = TimeSpan.Zero;
 
+    /// <summary>The status <c>auth/register</c> answers with (201 by default, 202 for a pending confirmation).</summary>
+    public HttpStatusCode RegisterStatus { get; set; } = HttpStatusCode.Created;
+
+    /// <summary>The exact JSON <c>auth/register</c> answers with; null answers a token pair from the login tokens.</summary>
+    public string? RegisterBody { get; set; }
+
     public string LoginAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(10), "login-user");
 
     public string RotatedAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(15), "rotated-user");
@@ -102,6 +108,9 @@ internal sealed class FakeGateway : IAsyncDisposable
         endpoints.MapPost("/auth/login", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
         endpoints.MapPost("/auth/sign-in-link/redeem", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
         endpoints.MapPost("/auth/passkeys/signin", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
+        endpoints.MapPost("/auth/register", () => RegisterBody is { } body
+            ? Results.Text(body, "application/json", Encoding.UTF8, (int)RegisterStatus)
+            : Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10)), statusCode: (int)RegisterStatus));
 
         endpoints.MapPost("/auth/refresh", async (HttpContext context) =>
         {
