@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
@@ -447,6 +448,13 @@ public abstract class ApplicationDbContext(
             : string.Empty;
 
         ConfigureSensitiveDataLogging(optionsBuilder);
+
+        // Log, never throw, when a migrations assembly holds no migrations: EF Core 11 raises
+        // MigrationsNotFound as an error inside MigrateAsync, where EF Core 10 only logged it. A source
+        // whose migrations assembly has none yet (a new module, a test host) must migrate on both
+        // framework lines alike, so this pins the EF Core 10 behavior. Inert for Cosmos, which has no
+        // migrations.
+        optionsBuilder.ConfigureWarnings(w => w.Log(RelationalEventId.MigrationsNotFound));
 
         // Key EF's model cache by (context type, physical source name, model gates, declared
         // identifier wrappers): the same context class is instantiated once per database, each with a
