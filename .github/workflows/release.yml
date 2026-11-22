@@ -7,23 +7,25 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Two stages per package set. A `pack*` job holds `contents: read` only and does everything that
+# runs repository or package code: restore, build, the vulnerability audit, tests, pack and the
+# SBOM gate. It hands the packed files to the matching `publish*` job as a workflow artifact. The
+# `publish*` job holds the `release` environment and the three write permissions (id-token,
+# attestations, packages) and runs no repository code at all: no checkout, no restore, no build,
+# no test. It downloads the artifact, attests it and pushes it to both registries. So no build-time
+# dependency ever executes in a job that can mint the nuget.org trusted-publishing token.
+#
+# Both publish jobs need BOTH pack jobs: no registry receives any package of the lockstep set until
+# every gate of every package (main set and MMCA.Common.UI.Maui) has passed.
 jobs:
-  publish:
+  pack:
     runs-on: ubuntu-latest
     # About 2x the slowest recent completed tag run (10m28s-12m25s for v1.302.0-v1.304.0, measured
-    # 2026-11-18; v1.305.0 hit the old 15-minute limit in its final cleanup step, after both pushes),
-    # so a hung restore, test or push still fails the job instead of holding a runner for the
-    # 6-hour default.
+    # 2026-11-18, when the pushes still ran in this job), so a hung restore or test still fails the
+    # job instead of holding a runner for the 6-hour default.
     timeout-minutes: 25
-    # Deployment gate for an IRREVERSIBLE action (SEC-Common-64): nuget.org versions can never be
-    # withdrawn (ADR-053), so the publish waits on the `release` environment's protection rules
-    # (required reviewer + a deployment policy limited to v* tags), configured in repo settings.
-    environment: release
     permissions:
-      packages: write
       contents: read
-      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
-      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -35,8 +37,9 @@ jobs:
       # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
       # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
       # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
-      # Pairs with the `release` environment protection rule declared on this job. The checkout above
-      # uses fetch-depth 0, so only the main branch tip still has to be fetched.
+      # Pairs with the `release` environment protection rule on the publish jobs, which need this
+      # job. The checkout above uses fetch-depth 0, so only the main branch tip still has to be
+      # fetched.
       - name: Assert the tagged commit is on merged main
         run: |
           set -euo pipefail
@@ -97,14 +100,6 @@ jobs:
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
-      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
-      # this commit and this repository, stored by GitHub and verifiable by anyone with
-      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
-      - name: Attest build provenance (nupkgs)
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: ./nupkgs/*.nupkg
-
       # Software Bill of Materials for the released packages (CycloneDX).
       # Hard gate (R29 section 32): every published version must ship a verifiable SBOM. The shared
       # composite action fails the release when generation fails OR the BOM lists zero components
@@ -121,6 +116,50 @@ jobs:
           name: sbom
           path: ./sbom
           if-no-files-found: error
+
+      # The packed files are the hand-off to the `publish` job, which attests and pushes exactly
+      # these bytes. Uploaded last, so only a set that passed every gate above is ever handed on.
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: nupkgs
+          path: ./nupkgs
+          if-no-files-found: error
+
+  publish:
+    needs: [pack, pack-maui]
+    runs-on: ubuntu-latest
+    # Download, attest and two pushes; no restore, build or test runs here.
+    timeout-minutes: 10
+    # Deployment gate for an IRREVERSIBLE action (SEC-Common-64): nuget.org versions can never be
+    # withdrawn (ADR-053), so the publish waits on the `release` environment's protection rules
+    # (required reviewer + a deployment policy limited to v* tags), configured in repo settings.
+    environment: release
+    permissions:
+      packages: write
+      contents: read
+      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
+      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nupkgs
+          path: ./nupkgs
+
+      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
+      # this commit and this repository, stored by GitHub and verifiable by anyone with
+      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
+      - name: Attest build provenance (nupkgs)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ./nupkgs/*.nupkg
+
+      # Installs the CLI that runs `dotnet nuget push`. Nothing is checked out in this job, so no
+      # global.json, nuget.config or MSBuild file of the repository is read.
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 11.0.x
 
       - name: Push to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
@@ -188,24 +227,16 @@ jobs:
 
   # MMCA.Common.UI.Maui (the one MAUI-TFM package; the full id list lives in FACTS.md) cannot
   # build on ubuntu (its platform TFMs need the MAUI workloads), so it packs on windows, versioned
-  # from the same tag so the lockstep release stays whole. Same SBOM hard gate as the main job,
-  # scoped to this project.
-  publish-maui:
+  # from the same tag so the lockstep release stays whole. Same locked restore, vulnerability audit
+  # and SBOM hard gate as the main job, scoped to this project.
+  pack-maui:
     runs-on: windows-latest
-    # Kept at 40, not cut to 2x the slowest recent run (11m40s-14m57s, measured 2026-09-30): this
-    # job declares no `needs:` on `publish` and runs in parallel with it, so the main package set is
-    # usually already on nuget.org by the time this job pushes (nothing enforces that order), and a
-    # timeout here leaves a half-published release. No MAUI workload cache on this job, unlike ci.yml
-    # build-maui.
+    # Kept at 40, not cut to 2x the slowest recent run (11m40s-14m57s, measured 2026-09-30, when the
+    # pushes still ran in this job): no MAUI workload cache on this job, unlike ci.yml build-maui,
+    # so the workload install alone varies widely.
     timeout-minutes: 40
-    # Same irreversible-publish gate as the `publish` job (SEC-Common-64); both jobs push to
-    # nuget.org, so both wait on the `release` environment.
-    environment: release
     permissions:
-      packages: write
       contents: read
-      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
-      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -217,8 +248,9 @@ jobs:
       # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
       # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
       # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
-      # Pairs with the `release` environment protection rule declared on this job. The checkout above
-      # uses fetch-depth 0, so only the main branch tip still has to be fetched.
+      # Pairs with the `release` environment protection rule on the publish jobs, which need this
+      # job. The checkout above uses fetch-depth 0, so only the main branch tip still has to be
+      # fetched.
       - name: Assert the tagged commit is on merged main
         shell: bash
         run: |
@@ -255,19 +287,27 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
+      # Same rule as the main job's restore (SEC-ADC-34 / SEC-Common-63): the package pushed to
+      # nuget.org is built from the committed packages.lock.json of this project (every MAUI TFM),
+      # so a feed movement between the PR run and the tag fails here instead of shipping. Runs after
+      # the workload install because the platform TFMs only resolve with the workloads present.
+      - name: Restore
+        run: dotnet restore Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj --locked-mode
+
+      # The same composite action and accept-list as the main job, over this project's own graph,
+      # so an advisory published after the PR run stops this package too (SEC-Common-62, ADR-038).
+      - name: Audit dependencies (fail on known vulnerabilities)
+        uses: ./.github/actions/nuget-vulnerability-audit
+        with:
+          solution: Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj
+          # Restore above already resolved this project's graph in locked mode; read it as-is.
+          no-restore: 'true'
+
       - name: Build (every MAUI TFM)
-        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
+        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
 
       - name: Pack
         run: dotnet pack Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-build -o ./nupkgs-maui -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
-
-      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
-      # this commit and this repository, stored by GitHub and verifiable by anyone with
-      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
-      - name: Attest build provenance (nupkgs)
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: ./nupkgs-maui/*.nupkg
 
       - name: Generate SBOM (CycloneDX)
         # Shared gate (ADR-038): the composite action fails unless the BOM exists AND lists at least
@@ -285,16 +325,57 @@ jobs:
           path: ./sbom-maui
           if-no-files-found: error
 
+      # The hand-off to `publish-maui`, which attests and pushes exactly these bytes.
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: nupkgs-maui
+          path: ./nupkgs-maui
+          if-no-files-found: error
+
+  # Pushes the MMCA.Common.UI.Maui package `pack-maui` built. The package is TFM-specific but the
+  # push is not, so this job runs on ubuntu like `publish`, where bash expands the *.nupkg globs.
+  publish-maui:
+    needs: [pack, pack-maui]
+    runs-on: ubuntu-latest
+    # Download, attest and two pushes; no restore, build or test runs here.
+    timeout-minutes: 10
+    # Same irreversible-publish gate as the `publish` job (SEC-Common-64); both jobs push to
+    # nuget.org, so both wait on the `release` environment.
+    environment: release
+    permissions:
+      packages: write
+      contents: read
+      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
+      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nupkgs-maui
+          path: ./nupkgs-maui
+
+      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
+      # this commit and this repository, stored by GitHub and verifiable by anyone with
+      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
+      - name: Attest build provenance (nupkgs)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ./nupkgs-maui/*.nupkg
+
+      # Installs the CLI that runs `dotnet nuget push`. Nothing is checked out in this job, so no
+      # global.json, nuget.config or MSBuild file of the repository is read.
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 11.0.x
+
       - name: Push to GitHub Packages
-        # bash, not the windows-default pwsh: PowerShell passes *.nupkg through unexpanded and
-        # dotnet nuget push then fails with "File does not exist" on the un-globbed pattern.
-        shell: bash
         run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
-      # Same dual-registry policy and same trusted-publishing exchange as the main job (ADR-053);
-      # same bash-not-pwsh globbing caveat. One nuget.org policy covers both jobs because it is
-      # keyed on the workflow FILE, but each job needs its own id-token permission and its own
-      # exchange: a short-lived key is single-use and cannot cross a job boundary.
+      # Same dual-registry policy and same trusted-publishing exchange as the main job (ADR-053).
+      # One nuget.org policy covers both jobs because it is keyed on the workflow FILE, but each job
+      # needs its own id-token permission and its own exchange: a short-lived key is single-use and
+      # cannot cross a job boundary.
       - name: NuGet login (OIDC to short-lived key)
         if: github.repository_owner == 'ivanball'
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
@@ -304,5 +385,4 @@ jobs:
 
       - name: Push to nuget.org
         if: github.repository_owner == 'ivanball'
-        shell: bash
         run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
