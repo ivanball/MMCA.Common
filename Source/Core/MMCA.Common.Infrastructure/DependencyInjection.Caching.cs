@@ -236,5 +236,31 @@ public static partial class DependencyInjection
 
             return services;
         }
+
+        /// <summary>
+        /// Registers a configurator for the StackExchange.Redis <see cref="ConfigurationOptions"/> of
+        /// every Redis connection the framework opens (the Redis client and distributed cache, the
+        /// output-cache store, the SignalR backplane and the PING health check's own connection), run
+        /// on each connection's options before it connects. Adapter packages call this from their own
+        /// registration method (for example <c>AddAzureRedisEntraAuthentication(configuration)</c>); a
+        /// host calls it directly only for a configurator of its own. Order-independent relative to
+        /// <c>AddInfrastructure</c>, <c>AddPushNotifications</c> and the <c>AddRedis*</c> calls, since
+        /// every connection point reads the configurators when it first connects. Idempotent per
+        /// configurator type.
+        /// </summary>
+        /// <param name="configurator">The configurator instance.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddRedisConfigurationOptionsConfigurator(IRedisConfigurationOptionsConfigurator configurator)
+        {
+            ArgumentNullException.ThrowIfNull(configurator);
+
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IRedisConfigurationOptionsConfigurator>(configurator));
+
+            // The bridge MMCA.Common.Aspire reaches the configurators through (see the type remarks).
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IPostConfigureOptions<ConfigurationOptions>, RedisConfigurationOptionsPostConfigure>());
+
+            return services;
+        }
     }
 }

@@ -1,1 +1,3 @@
 #nullable enable
+MMCA.Common.Azure.AzureServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAzureRedisEntraAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Azure.AzureServiceCollectionExtensions.AddAzureRedisEntraAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -59,6 +59,17 @@
           "Newtonsoft.Json": "13.0.1"
         }
       },
+      "Microsoft.Azure.StackExchangeRedis": {
+        "type": "Direct",
+        "requested": "[3.3.1, )",
+        "resolved": "3.3.1",
+        "contentHash": "2knqrO3yCDX3oerrBfLOYJjgqPTK1BAwBC4oUB2OIJU4R9xFAeIO4SW3SfXsCuD9M+wjtn229wOFpV9A+H0nbg==",
+        "dependencies": {
+          "Microsoft.Extensions.Azure": "1.13.1",
+          "Microsoft.IdentityModel.JsonWebTokens": "8.15.0",
+          "StackExchange.Redis": "2.10.1"
+        }
+      },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
         "requested": "[5.6.0, )",
@@ -306,6 +317,15 @@
         "type": "Transitive",
         "resolved": "10.11.0",
         "contentHash": "aMCm7C6CexZT8W/p8zRp4BoxSnqRs3MmkBF7FvPIXC92b7vqs2SL0J+mVJi5W2Mk9Vb4ZRFWe9sdzFew6zUl1w=="
+      },
+      "Microsoft.Extensions.Azure": {
+        "type": "Transitive",
+        "resolved": "1.13.1",
+        "contentHash": "AIP7ud1rcQTRfzgne5Jw0P+zjx8ojGawwRuBVrYWgA/a+TKW3CaoQK/sYUcrbxYSVv6FT8rSwTlMecC0MwEbOQ==",
+        "dependencies": {
+          "Azure.Core": "1.50.0",
+          "Azure.Identity": "1.17.1"
+        }
       },
       "Microsoft.Extensions.Compliance.Abstractions": {
         "type": "Transitive",
@@ -1180,6 +1200,17 @@
           "Newtonsoft.Json": "13.0.1"
         }
       },
+      "Microsoft.Azure.StackExchangeRedis": {
+        "type": "Direct",
+        "requested": "[3.3.1, )",
+        "resolved": "3.3.1",
+        "contentHash": "2knqrO3yCDX3oerrBfLOYJjgqPTK1BAwBC4oUB2OIJU4R9xFAeIO4SW3SfXsCuD9M+wjtn229wOFpV9A+H0nbg==",
+        "dependencies": {
+          "Microsoft.Extensions.Azure": "1.13.1",
+          "Microsoft.IdentityModel.JsonWebTokens": "8.15.0",
+          "StackExchange.Redis": "2.10.1"
+        }
+      },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
         "requested": "[5.6.0, )",
@@ -1427,6 +1458,15 @@
         "type": "Transitive",
         "resolved": "11.0.0",
         "contentHash": "U01aZIXzeGwE6oRBxULi/IX+RSeoVUwQ3sZ6wF73Lggo50wVjr7Z8CBsfYXkUAAxawdCty7rdqW2xATXK8zdJw=="
+      },
+      "Microsoft.Extensions.Azure": {
+        "type": "Transitive",
+        "resolved": "1.13.1",
+        "contentHash": "AIP7ud1rcQTRfzgne5Jw0P+zjx8ojGawwRuBVrYWgA/a+TKW3CaoQK/sYUcrbxYSVv6FT8rSwTlMecC0MwEbOQ==",
+        "dependencies": {
+          "Azure.Core": "1.50.0",
+          "Azure.Identity": "1.17.1"
+        }
       },
       "Microsoft.Extensions.Compliance.Abstractions": {
         "type": "Transitive",

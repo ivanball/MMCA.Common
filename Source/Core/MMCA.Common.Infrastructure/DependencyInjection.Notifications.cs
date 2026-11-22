@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Notifications.Live;
@@ -56,6 +58,17 @@ public static partial class DependencyInjection
                 var channelPrefix = ApplicationNamespace.Resolve(configuration, environment: null);
                 signalRBuilder.AddStackExchangeRedis(redisConnectionString, options =>
                     options.Configuration.ChannelPrefix = RedisChannel.Literal(channelPrefix));
+
+                // Every registered IRedisConfigurationOptionsConfigurator runs on the backplane's
+                // options before it connects; with none registered the options are untouched.
+                services.AddOptions<RedisOptions>()
+                    .PostConfigure<IEnumerable<IRedisConfigurationOptionsConfigurator>>(static (options, configurators) =>
+                    {
+                        foreach (var configurator in configurators)
+                        {
+                            configurator.Configure(options.Configuration);
+                        }
+                    });
             }
 
             // Replace the default Null implementations with the SignalR-backed ones.
