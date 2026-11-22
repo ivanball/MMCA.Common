@@ -1,4 +1,6 @@
 #nullable enable
+MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions!>? legalAcceptance, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator! twoFactor) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.TwoFactor.get -> MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator?
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequiredCode = "Authentication.TwoFactorRecentSignInRequired" -> string!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.OnNoAccountAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
