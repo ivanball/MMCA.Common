@@ -397,10 +397,9 @@ public abstract class E2ETestBase : IAsyncLifetime
         // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
         // WaitForBlazorAsync before the result settles: the forceLoad navigation destroys the JS context.
-        // Behind the email gate it stays on /register and shows the confirmation-pending state, which
-        // the same wait races as a fourth signal.
-        var pendingState = Page.GetByTestId("register-pending");
-        if (await WaitForAuthResultAsync("/register", "Registration", pendingState).ConfigureAwait(false))
+        // Behind the email gate it stays on /register and shows the confirmation-pending state instead
+        // of signing the user in; the helper then confirms through the mail catcher and signs in.
+        if (await WaitForRegistrationResultAsync().ConfigureAwait(false))
         {
             await ConfirmThroughMailCatcherAndSignInAsync(email, password).ConfigureAwait(false);
         }
@@ -420,6 +419,29 @@ public abstract class E2ETestBase : IAsyncLifetime
         }
 
         return (email, password);
+    }
+
+    // Registration settles one of two ways: the shared auth wait reports a signed-in result (or throws
+    // on a failure), or the Register page shows its confirmation-pending card. Returns true only for
+    // the pending card. The auth wait keeps its own three signals and is not changed by this race; when
+    // the pending card wins, the auth wait is left to finish on its own and its outcome is observed, not
+    // awaited.
+    private async Task<bool> WaitForRegistrationResultAsync()
+    {
+        var pendingVisible = Page.GetByTestId("register-pending").WaitForAsync(
+            new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
+        var authResult = WaitForAuthResultAsync("/register", "Registration");
+
+        var first = await Task.WhenAny(pendingVisible, authResult).ConfigureAwait(false);
+        if (first == pendingVisible && pendingVisible.IsCompletedSuccessfully)
+        {
+            Observe(authResult);
+            return true;
+        }
+
+        Observe(pendingVisible);
+        await authResult.ConfigureAwait(false);
+        return false;
     }
 
     // The pending registration's second half, done the way the account's owner would: read the
@@ -486,11 +508,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     // signal; only an error alert that is still showing ON the auth page after the grace window is a
     // real failure. Strictly safer than waiting on the logout button alone: it declares failure in a
     // subset of the prior conditions, so it cannot turn a passing flow into a failing one.
-    // With a pendingState locator (the Register page's confirmation-pending card) the race
-    // has a fourth signal: when that state is what settled, the method returns true and the caller
-    // finishes the confirmation. Without one, or when any other signal settled, it behaves exactly as
-    // the three-way race and returns false on success.
-    private async Task<bool> WaitForAuthResultAsync(string authPagePath, string operation, ILocator? pendingState = null)
+    private async Task WaitForAuthResultAsync(string authPagePath, string operation)
     {
         var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Logout" });
         var errorAlert = Page.Locator(".mud-alert-text-error");
@@ -503,27 +521,14 @@ public abstract class E2ETestBase : IAsyncLifetime
             new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
         var errorVisible = errorAlert.WaitForAsync(
             new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
-        var pendingVisible = pendingState?.WaitForAsync(
-            new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
 
-        await (pendingVisible is null
-            ? Task.WhenAny(leftAuthPage, logoutVisible, errorVisible)
-            : Task.WhenAny(leftAuthPage, logoutVisible, errorVisible, pendingVisible)).ConfigureAwait(false);
+        await Task.WhenAny(leftAuthPage, logoutVisible, errorVisible).ConfigureAwait(false);
 
         // The losers time out and fault; nothing awaits them, so observe their exceptions here rather
         // than letting them surface as unobserved-task failures in an unrelated test.
         Observe(leftAuthPage);
         Observe(logoutVisible);
         Observe(errorVisible);
-        if (pendingVisible is not null)
-        {
-            Observe(pendingVisible);
-        }
-
-        if (pendingState is not null && await pendingState.IsVisibleAsync().ConfigureAwait(false))
-        {
-            return true;
-        }
 
         var outcome = AuthOutcomeRules.Classify(
             navigatedAway: !Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
@@ -532,14 +537,14 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         if (outcome == AuthOutcome.Succeeded)
         {
-            return false;
+            return;
         }
 
         // Both remaining outcomes get the grace window once: a slow Server-mode success can flash an
         // error alert on its way out, and can also still be finishing when all three waits time out.
         if (await AuthSucceededWithinGraceAsync(authPagePath, logoutButton).ConfigureAwait(false))
         {
-            return false;
+            return;
         }
 
         if (outcome == AuthOutcome.ErrorShown)
