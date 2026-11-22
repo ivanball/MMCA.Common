@@ -428,6 +428,45 @@ public sealed class EntityControllerBaseExportTests : IDisposable
             "the export must query exactly what the paged endpoint would, at the max page size");
     }
 
+    [Fact]
+    public async Task ExportAsync_DefaultSwitches_RequestWithoutIncludeFKs_AsksForNoChildrenAndNoFKs()
+    {
+        SetupPages().ReturnsAsync(Result.Success(Page([Dto(1)], totalItemCount: 1)));
+        ExportTestController sut = CreateController(maxPageSize: 25);
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        _queryServiceMock.Verify(
+            q => q.GetAllAsync(
+                false,
+                false,
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "with both switches at their default the export loads neither children nor foreign keys unless the request asks");
+        _queryServiceMock.Verify(
+            q => q.GetAllAsync(
+                It.IsAny<bool>(),
+                true,
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Scoping hook (fail-closed) ──
     [Fact]
     public async Task ExportAsync_NoScopeAndNoOptIn_IsRefusedAndQueriesNothing()
@@ -857,4 +896,162 @@ public sealed class EntityControllerBaseExportColumnTests : IDisposable
         result.Should().BeOfType<EmptyResult>(because: "the validation gate only rejects the fields the export cannot render");
         BodyLines()[0].Should().Be("id,name");
     }
+}
+
+/// <summary>
+/// Pins security review 2026-11-21 item R5: a controller can make its export load the navigations
+/// its DTO computes a column from. Overriding <c>ExportIncludeChildren</c> loads child collections, so
+/// a count computed from them reaches the CSV while the collection itself still earns no column, and
+/// overriding <c>ExportIncludeFKs</c> loads foreign keys even when the request does not ask.
+/// </summary>
+public sealed class EntityControllerBaseExportNavigationTests : IDisposable
+{
+    private readonly Mock<IEntityQueryService<ExportTestEntity, ExportNavigationTestDTO, int>> _queryServiceMock = new();
+    private readonly Mock<ILogger<EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>>> _loggerMock = new();
+    private readonly MemoryStream _body = new();
+
+    public void Dispose() => _body.Dispose();
+
+    [Fact]
+    public async Task ExportAsync_ControllerOverridingExportIncludeChildren_LoadsChildrenAndWritesTheComputedCount()
+    {
+        SetupDataSource();
+        var sut = Attach(new ChildrenExportTestController(_queryServiceMock.Object, _loggerMock.Object));
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        VerifyQueried(includeFKs: false, includeChildren: true);
+        string[] lines = BodyLines();
+        lines[0].Should().Be(
+            "id,name,commentCount",
+            because: "the computed count is a scalar column and the child collection still produces none");
+        lines[1].Should().Be("1,Ada,3", because: "the count is computed from the children the export now loads");
+    }
+
+    [Fact]
+    public async Task ExportAsync_ControllerOverridingExportIncludeFKs_LoadsForeignKeysWithoutTheRequestAsking()
+    {
+        SetupDataSource();
+        var sut = Attach(new ForeignKeysExportTestController(_queryServiceMock.Object, _loggerMock.Object));
+
+        await sut.ExportAsync(includeFKs: false, cancellationToken: CancellationToken.None);
+
+        VerifyQueried(includeFKs: true, includeChildren: false);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ControllerWithDefaultSwitches_ComputedCountSeesNoChildren()
+    {
+        SetupDataSource();
+        var sut = Attach(new NavigationDefaultExportTestController(_queryServiceMock.Object, _loggerMock.Object));
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        VerifyQueried(includeFKs: false, includeChildren: false);
+        string[] lines = BodyLines();
+        lines[0].Should().Be("id,name,commentCount");
+        lines[1].Should().Be("1,Ada,0", because: "without the override the children are not loaded");
+    }
+
+    private TController Attach<TController>(TController controller)
+        where TController : EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>
+    {
+        var settings = Options.Create(new ApplicationSettings { MaxPageSize = 10, MaxExportRows = 100 });
+
+        var services = new ServiceCollection();
+        services.AddSingleton(settings);
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 11, 21, 9, 0, 0, TimeSpan.Zero)));
+
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        httpContext.Response.Body = _body;
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        return controller;
+    }
+
+    private string[] BodyLines() =>
+        Encoding.UTF8.GetString(_body.ToArray()).TrimStart('﻿').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>
+    /// Stands in for the real data source: the DTO's count is computed from the child collection, which
+    /// is populated only when the query asks for children.
+    /// </summary>
+    private void SetupDataSource()
+    {
+        SetupPage(includeChildren: true, ["first", "second", "third"]);
+        SetupPage(includeChildren: false, []);
+    }
+
+    private void SetupPage(bool includeChildren, IReadOnlyCollection<string> comments) =>
+        _queryServiceMock.Setup(q => q.GetAllAsync(
+                It.IsAny<bool>(),
+                includeChildren,
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedCollectionResult<object>(
+                [new ExportNavigationTestDTO { Id = 1, Name = "Ada", Comments = comments, CommentCount = comments.Count }],
+                new PaginationMetadata(1, pageSize: 10, currentPage: 1))));
+
+    private void VerifyQueried(bool includeFKs, bool includeChildren) =>
+        _queryServiceMock.Verify(
+            q => q.GetAllAsync(
+                includeFKs,
+                includeChildren,
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+}
+
+/// <summary>A DTO with a scalar computed from a child collection, and the collection itself.</summary>
+public sealed record ExportNavigationTestDTO : IBaseDTO<int>
+{
+    public required int Id { get; init; }
+
+    public string? Name { get; init; }
+
+    public IReadOnlyCollection<string> Comments { get; init; } = [];
+
+    public int CommentCount { get; init; }
+}
+
+public sealed class NavigationDefaultExportTestController(
+    IEntityQueryService<ExportTestEntity, ExportNavigationTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>> logger)
+    : EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>(queryService, logger)
+{
+    protected override bool AllowUnscopedExport => true;
+}
+
+public sealed class ChildrenExportTestController(
+    IEntityQueryService<ExportTestEntity, ExportNavigationTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>> logger)
+    : EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>(queryService, logger)
+{
+    protected override bool AllowUnscopedExport => true;
+
+    protected override bool ExportIncludeChildren => true;
+}
+
+public sealed class ForeignKeysExportTestController(
+    IEntityQueryService<ExportTestEntity, ExportNavigationTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>> logger)
+    : EntityControllerBase<ExportTestEntity, ExportNavigationTestDTO, int>(queryService, logger)
+{
+    protected override bool AllowUnscopedExport => true;
+
+    protected override bool ExportIncludeFKs => true;
 }
