@@ -1,5 +1,7 @@
 using System.Text.Json;
 using AwesomeAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.UI.Services.Auth.OAuth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
@@ -122,6 +124,29 @@ public sealed class OAuthFlowStateStoreTests
         Func<Task> act = () => sut.BeginAsync(TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    // B7: a host that registered no device store (AddUIShared alone, neither the browser nor the
+    // native capability set) refuses every completion: one started on this client, one carrying
+    // any value, and one carrying none.
+    [Fact]
+    public async Task WithNoDeviceStoreRegistered_EveryCompletionIsRefused()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddUIShared(new ConfigurationBuilder().Build());
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var sut = scope.ServiceProvider.GetRequiredService<OAuthFlowStateStore>();
+
+        var started = await sut.BeginAsync(TestContext.Current.CancellationToken);
+        var withStarted = await sut.TryCompleteAsync(started, TestContext.Current.CancellationToken);
+        var withAnyValue = await sut.TryCompleteAsync("any-returned-state", TestContext.Current.CancellationToken);
+        var withNone = await sut.TryCompleteAsync(null, TestContext.Current.CancellationToken);
+
+        withStarted.Should().BeFalse("nothing durable binds the completion to this client");
+        withAnyValue.Should().BeFalse();
+        withNone.Should().BeFalse();
     }
 
     private sealed class DroppingCacheStore : ILocalCacheStore
