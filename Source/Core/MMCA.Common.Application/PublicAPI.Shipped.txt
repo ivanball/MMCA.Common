@@ -47,10 +47,12 @@ MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.TokenService.get -
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Application.Auth.AuthenticationValidators
 MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions!>? legalAcceptance = null) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions!>? legalAcceptance, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator! twoFactor) -> void
 MMCA.Common.Application.Auth.AuthenticationValidators.CurrentTermsVersion.get -> string?
 MMCA.Common.Application.Auth.AuthenticationValidators.Login.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>!
 MMCA.Common.Application.Auth.AuthenticationValidators.Refresh.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>!
 MMCA.Common.Application.Auth.AuthenticationValidators.Register.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>!
+MMCA.Common.Application.Auth.AuthenticationValidators.TwoFactor.get -> MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator?
 MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors
 MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings
 MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.ConfirmationUrl.get -> string!
@@ -1710,6 +1712,7 @@ const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.InvalidLinkCode 
 const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.NotSupportedCode = "Authentication.SignInLinkNotSupported" -> string!
 const MMCA.Common.Application.Auth.SignInLinks.SignInLinkErrors.SecondFactorRequiredCode = "Authentication.SignInLinkSecondFactorRequired" -> string!
 const MMCA.Common.Application.Auth.SignInLinks.SignInLinkSettings.SectionName = "Authentication:SignInLinks" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequiredCode = "Authentication.TwoFactorRecentSignInRequired" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissingCode = "Authentication.TwoFactorEnrollmentMissing" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalidCode = "Authentication.TwoFactorInvalid" -> string!
 const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolledCode = "Authentication.TwoFactorNotEnrolled" -> string!
@@ -1913,6 +1916,7 @@ static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> S
 static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDurationFor(System.TimeSpan accessTokenLifetime, System.TimeSpan? clockSkew = null) -> System.TimeSpan
 static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator !=(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
 static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator ==(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
+static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.RecentSignInRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissing(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalid(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolled(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -2148,6 +2152,7 @@ virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandl
 virtual MMCA.Common.Application.Users.UseCases.SignInLinks.RedeemSignInLinkHandlerBase<TUser, TCommand>.ProvisionUser(MMCA.Common.Shared.ValueObjects.Contact.Email! email, MMCA.Common.Application.Auth.SignInLinks.SignInLinkProfile! profile, MMCA.Common.Shared.Auth.Requests.RedeemSignInLinkRequest request) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
 virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.ComposeBody(string! signInLink) -> string!
 virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.ComposeSubject() -> string!
+virtual MMCA.Common.Application.Users.UseCases.SignInLinks.SendSignInLinkHandlerBase<TUser, TCommand>.OnNoAccountAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandlerName.get -> string!

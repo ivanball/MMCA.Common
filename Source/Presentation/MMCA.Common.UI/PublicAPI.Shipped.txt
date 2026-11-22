@@ -179,6 +179,13 @@ MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.get -> Microsoft.Asp
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnChanged.set -> void
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.get -> Microsoft.AspNetCore.Components.EventCallback<MMCA.Common.Shared.Abstractions.Result!>
 MMCA.Common.UI.Components.Auth.ChangePasswordCard.OnFailed.set -> void
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.Dispose() -> void
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.Email.get -> string!
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.Email.set -> void
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.EmailConfirmationResendPrompt() -> void
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.OnSent.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Auth.EmailConfirmationResendPrompt.OnSent.set -> void
 MMCA.Common.UI.Components.Auth.PasskeySignInButton
 MMCA.Common.UI.Components.Auth.PasskeySignInButton.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Components.Auth.PasskeySignInButton.EnableAutofill.get -> bool
@@ -773,6 +780,8 @@ MMCA.Common.UI.Pages.Auth.Login.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.Login.Error.get -> string?
 MMCA.Common.UI.Pages.Auth.Login.Error.set -> void
 MMCA.Common.UI.Pages.Auth.Login.Login() -> void
+MMCA.Common.UI.Pages.Auth.Login.Reason.get -> string?
+MMCA.Common.UI.Pages.Auth.Login.Reason.set -> void
 MMCA.Common.UI.Pages.Auth.Login.ReturnUrl.get -> string?
 MMCA.Common.UI.Pages.Auth.Login.ReturnUrl.set -> void
 MMCA.Common.UI.Pages.Auth.LoginModel
@@ -781,6 +790,8 @@ MMCA.Common.UI.Pages.Auth.LoginModel.Email.set -> void
 MMCA.Common.UI.Pages.Auth.LoginModel.LoginModel() -> void
 MMCA.Common.UI.Pages.Auth.LoginModel.Password.get -> string!
 MMCA.Common.UI.Pages.Auth.LoginModel.Password.set -> void
+MMCA.Common.UI.Pages.Auth.LoginModel.TwoFactorCode.get -> string?
+MMCA.Common.UI.Pages.Auth.LoginModel.TwoFactorCode.set -> void
 MMCA.Common.UI.Pages.Auth.OAuthComplete
 MMCA.Common.UI.Pages.Auth.OAuthComplete.Code.get -> string?
 MMCA.Common.UI.Pages.Auth.OAuthComplete.Code.set -> void
@@ -847,6 +858,32 @@ MMCA.Common.UI.Pages.Auth.Sessions.Sessions() -> void
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.Dispose() -> void
 MMCA.Common.UI.Pages.Auth.SignInLinks.SignInLink.SignInLink() -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.Codes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.Codes.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.ContinueText.get -> string?
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.ContinueText.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.OnContinue.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.OnContinue.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.RecoveryCodesPanel.RecoveryCodesPanel() -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.Required.get -> bool
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.Required.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.ReturnUrl.get -> string?
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.ReturnUrl.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.TwoFactorAccount() -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnCancelled.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnCancelled.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnConfirmed.get -> Microsoft.AspNetCore.Components.EventCallback<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnConfirmed.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnRecentSignInRequired.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.OnRecentSignInRequired.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.Setup.get -> MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.Setup.set -> void
+MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorEnrollmentPanel.TwoFactorEnrollmentPanel() -> void
 MMCA.Common.UI.Pages.Common.CancellablePageBase
 MMCA.Common.UI.Pages.Common.CancellablePageBase.CancellablePageBase() -> void
 MMCA.Common.UI.Pages.Common.CancellablePageBase.Dispose() -> void
@@ -1191,6 +1228,19 @@ MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SessionEnded -> Syst
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher) -> void
 MMCA.Common.UI.Services.Auth.Tokens.WasmTokenStorageService.WasmTokenStorageService(MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, System.TimeProvider? timeProvider) -> void
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService.BeginEnrollmentAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService.ConfirmEnrollmentAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService.DisableAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorStatusResponse>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.ITwoFactorUIService.RegenerateRecoveryCodesAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.BeginEnrollmentAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.ConfirmEnrollmentAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.DisableAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorStatusResponse>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.RegenerateRecoveryCodesAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.UI.Services.Auth.TwoFactor.TwoFactorUIService.TwoFactorUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Capabilities.Accessibility.BrowserAccessibilityAnnouncer
 MMCA.Common.UI.Services.Capabilities.Accessibility.BrowserAccessibilityAnnouncer.AnnounceAsync(string! message, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Accessibility.BrowserAccessibilityAnnouncer.BrowserAccessibilityAnnouncer(MMCA.Common.UI.Services.Capabilities.CapabilitiesJsModule! module) -> void
@@ -1804,6 +1854,14 @@ MMCA.Common.UI.Theme.ThemeService.ToggleAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Theme.ThemeToggle
 MMCA.Common.UI.Theme.ThemeToggle.Dispose() -> void
 MMCA.Common.UI.Theme.ThemeToggle.ThemeToggle() -> void
+MMCA.Common.UI.TwoFactor.DependencyInjection
+MMCA.Common.UI.TwoFactor.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.TwoFactor.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTwoFactorUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.TwoFactor.TwoFactorUIModule
+MMCA.Common.UI.TwoFactor.TwoFactorUIModule.Assembly.get -> System.Reflection.Assembly!
+MMCA.Common.UI.TwoFactor.TwoFactorUIModule.LayoutComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
+MMCA.Common.UI.TwoFactor.TwoFactorUIModule.NavItems.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Common.NavItem!>!
+MMCA.Common.UI.TwoFactor.TwoFactorUIModule.TwoFactorUIModule() -> void
 MMCA.Common.UI.UISharedAssemblyReference
 MMCA.Common.UI.UISharedAssemblyReference.UISharedAssemblyReference() -> void
 MMCA.Common.UI.Validation.AbsoluteUrlAttribute
@@ -1884,6 +1942,7 @@ const MMCA.Common.UI.Theme.BrandColors.PrimaryLight = "#42A5F5" -> string!
 const MMCA.Common.UI.Theme.BrandColors.Secondary = "#00796B" -> string!
 const MMCA.Common.UI.Theme.BrandColors.SecondaryDark = "#00695C" -> string!
 const MMCA.Common.UI.Theme.BrandColors.SecondaryLight = "#4DB6AC" -> string!
+const MMCA.Common.UI.TwoFactor.TwoFactorUIModule.AccountPath = "/profile/two-factor" -> string!
 override MMCA.Common.UI.Common.NavGroup.Equals(object? obj) -> bool
 override MMCA.Common.UI.Common.NavGroup.GetHashCode() -> int
 override MMCA.Common.UI.Common.NavGroup.ToString() -> string!
@@ -1933,13 +1992,16 @@ override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RestoreFilters
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SaveFilters(System.Collections.Generic.Dictionary<string!, string!>! filters) -> void
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Title.get -> string!
 override MMCA.Common.UI.Pages.Auth.ForgotPassword.OnInitialized() -> void
+override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Login.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.OAuthComplete.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Auth.Register.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
 override MMCA.Common.UI.Pages.Auth.Sessions.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.Equals(object? obj) -> bool
 override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.GetHashCode() -> int
 override MMCA.Common.UI.Pages.Common.CreateSubmitOptions.ToString() -> string!
@@ -2095,6 +2157,7 @@ static MMCA.Common.UI.Services.Offline.PendingWrite.operator ==(MMCA.Common.UI.S
 static MMCA.Common.UI.Services.Preferences.UserPreferences.operator !=(MMCA.Common.UI.Services.Preferences.UserPreferences? left, MMCA.Common.UI.Services.Preferences.UserPreferences? right) -> bool
 static MMCA.Common.UI.Services.Preferences.UserPreferences.operator ==(MMCA.Common.UI.Services.Preferences.UserPreferences? left, MMCA.Common.UI.Services.Preferences.UserPreferences? right) -> bool
 static MMCA.Common.UI.Theme.MMCATheme.Instance.get -> MudBlazor.MudTheme!
+static MMCA.Common.UI.TwoFactor.DependencyInjection.AddTwoFactorUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.Validation.ModelValidation.For(object! model, MMCA.Common.UI.Validation.IModelValidator! validator) -> System.Func<object!, string!, System.Collections.Generic.IEnumerable<string!>!>!
 static MMCA.Common.UI.Validation.ModelValidation.ForProperty<TModel, TValue>(TModel! model, System.Linq.Expressions.Expression<System.Func<TModel!, TValue>!>! property, MMCA.Common.UI.Validation.DataAnnotationsModelValidator! validator) -> System.Func<TValue, System.Collections.Generic.IEnumerable<string!>!>!
 static MMCA.Common.UI.Validation.ModelValidation.GetPropertyPath<TModel, TValue>(System.Linq.Expressions.Expression<System.Func<TModel, TValue>!>! property) -> string!
@@ -2133,6 +2196,7 @@ virtual MMCA.Common.UI.Pages.Administration.SupportAccessLog.Dispose(bool dispos
 virtual MMCA.Common.UI.Pages.Auth.Login.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Register.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.CancellablePageBase.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.GridRef.get -> MudBlazor.MudDataGrid<TDto>?
@@ -2217,6 +2281,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Pages.Auth.Register.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Auth.TwoFactor.TwoFactorAccount.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Forbidden.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Home.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.NotFound.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
