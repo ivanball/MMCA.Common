@@ -538,6 +538,10 @@ public sealed class AuthUIService(
         if (!string.IsNullOrWhiteSpace(token))
         {
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // As the base class does: a 401 to this bearer must reach the storage it came from, not the
+            // handler's own instance, so it renews (or ends) the session this page holds.
+            AuthDelegatingHandler.TrackTokenOwner(token, tokenStorageService);
         }
 
         return httpClient;
