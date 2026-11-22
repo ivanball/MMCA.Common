@@ -142,7 +142,7 @@ public sealed partial class ConfirmEmail : IDisposable
     /// <inheritdoc />
     /// <remarks>
     /// Listens for a new link opened in this tab while the page is already showing (for example after
-    /// "send me a new one"): the browser only changes the fragment, so the page is not rebuilt and
+    /// "send me a new one"): only the fragment or the query string changes, so the page is not rebuilt and
     /// <see cref="OnAfterRenderAsync"/> never runs its first-render read again.
     /// </remarks>
     protected override void OnInitialized()
@@ -183,30 +183,73 @@ public sealed partial class ConfirmEmail : IDisposable
     }
 
     /// <summary>
-    /// A navigation within the page that carries a fragment is a new emailed link (Store Run 5 D3): its
-    /// values replace whatever the form held, it is redeemed once exactly like a fresh tab, and taking
-    /// it scrubs the single-use token from the address bar.
+    /// The <c>email</c> and <c>token</c> pairs of <paramref name="location"/>'s query string, the
+    /// fallback shape of an emailed link: the query without its leading <c>?</c> when it carries either
+    /// pair, otherwise <see langword="null"/>. Shared with the reset-password page.
+    /// </summary>
+    /// <param name="location">The absolute location navigated to.</param>
+    /// <returns>The query to merge with <see cref="MergeLinkFragment"/>, or <see langword="null"/>.</returns>
+    internal static string? LinkQueryOf(string location)
+    {
+        var query = new Uri(location, UriKind.Absolute).Query;
+        return query.Length > 1 && MergeLinkFragment(query[1..], replace: true, null, null).Recognized
+            ? query[1..]
+            : null;
+    }
+
+    /// <summary>
+    /// Removes the <c>email</c> and <c>token</c> query parameters from the address bar and the history
+    /// entry, as taking a fragment does, so the single-use token of a link read from the query string
+    /// does not stay in the URL (Store Run 5 R6b). Other parameters and the fragment are kept.
+    /// </summary>
+    /// <param name="navigation">The page's navigation manager.</param>
+    /// <param name="location">The absolute location that carried the link.</param>
+    internal static void ScrubLinkQuery(NavigationManager navigation, string location) =>
+        navigation.NavigateTo(
+            navigation.GetUriWithQueryParameters(location, new Dictionary<string, object?>(StringComparer.Ordinal) { ["email"] = null, ["token"] = null }),
+            replace: true);
+
+    /// <summary>
+    /// A navigation within the page that carries a fragment or a query string with the link's pairs is
+    /// a new emailed link (Store Run 5 D3, R6b): its values replace whatever the form held, it is
+    /// redeemed once exactly like a fresh tab, and reading it scrubs the single-use token from the
+    /// address bar.
     /// </summary>
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (_disposed || !_attempted || !HasFragment(e.Location))
+        if (_disposed || !_attempted)
         {
             return;
         }
 
-        _ = InvokeAsync(async () =>
+        if (HasFragment(e.Location))
         {
-            var fragment = await TakeFragmentAsync();
-            if (_disposed || !ApplyFragment(fragment, replace: true))
+            _ = InvokeAsync(async () => await RedeemNewLinkAsync(await TakeFragmentAsync()));
+        }
+        else if (LinkQueryOf(e.Location) is { } query)
+        {
+            _ = InvokeAsync(() =>
             {
-                return;
-            }
+                ScrubLinkQuery(Navigation, e.Location);
+                return RedeemNewLinkAsync(query);
+            });
+        }
+    }
 
-            _linkSent = false;
-            _errorMessage = null;
-            _state = ConfirmationState.Working;
-            await RedeemOrShowFormAsync();
-        });
+    /// <summary>Replaces the form's values with a new link's and redeems it once, as a fresh tab does.</summary>
+    /// <param name="link">The link's fragment or query, without its leading character.</param>
+    /// <returns>A task that completes when the link was redeemed or the form shown.</returns>
+    private Task RedeemNewLinkAsync(string? link)
+    {
+        if (_disposed || !ApplyFragment(link, replace: true))
+        {
+            return Task.CompletedTask;
+        }
+
+        _linkSent = false;
+        _errorMessage = null;
+        _state = ConfirmationState.Working;
+        return RedeemOrShowFormAsync();
     }
 
     private static bool HasFragment(string location)
