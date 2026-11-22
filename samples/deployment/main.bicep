@@ -2,8 +2,8 @@
 // REFERENCE SAMPLE (rubric §17) — a minimal, single-service deployment that wires the
 // patterns an MMCA.Common-based app uses: Container Apps pulling from ACR via a
 // user-assigned managed identity (no admin creds), runtime secrets in Key Vault (read via
-// the same identity, no plaintext app secrets), workspace-based App Insights, Basic-tier SQL,
-// cost-attribution tags, and a monthly budget with alerts. The full multi-service worked
+// the same identity, no plaintext app secrets), workspace-based App Insights, Basic-tier SQL
+// with Entra-only authentication, cost-attribution tags, and a monthly budget with alerts. The full multi-service worked
 // version is MMCA.ADC/infra/main.bicep. Adapt 'myapp' and add services as needed.
 //
 // Deploy order: foundation.bicep (once) → build & push the image to ACR → main.bicep (per release).
@@ -29,10 +29,12 @@ param containerImage string
 @description('Resource id of the pre-created user-assigned managed identity the app runs as')
 param appIdentityResourceId string
 
-@description('SQL admin login; the password should come from a secure pipeline secret, never committed')
-param sqlAdminLogin string
-@secure()
-param sqlAdminPassword string
+@description('Display name of the Microsoft Entra group that administers the SQL server (a group, so access follows membership)')
+param sqlEntraAdminLogin string
+@description('Object id of that Entra group (or of a user or service principal when sqlEntraAdminPrincipalType says so)')
+param sqlEntraAdminObjectId string
+@allowed([ 'Group', 'User', 'Application' ])
+param sqlEntraAdminPrincipalType string = 'Group'
 
 @description('Set > 0 to create a monthly budget with 80%/100% alerts')
 param monthlyBudgetAmount int = 200
@@ -53,6 +55,14 @@ var commonTags = {
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = { name: acrName }
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = { name: logAnalyticsName }
+
+// The app UAMI, read for its client id (the SQL connection string names it). It may live in another
+// resource group or subscription, so the scope comes from its resource id.
+var appIdentityIdSegments = split(appIdentityResourceId, '/')
+resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: last(appIdentityIdSegments)
+  scope: resourceGroup(appIdentityIdSegments[2], appIdentityIdSegments[4])
+}
 
 // Workspace-based Application Insights. The app ships telemetry here through
 // builder.AddAzureMonitorExporter() (MMCA.Common.Azure), called after AddServiceDefaults(); a host
@@ -83,10 +93,17 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   location: location
   tags: commonTags
   properties: {
-    administratorLogin: sqlAdminLogin
-    administratorLoginPassword: sqlAdminPassword
-    // Harden for production: prefer Entra-only auth + private endpoints. See ADR-004 and the
-    // MMCA.ADC SQL-MANAGED-IDENTITY.md runbook for the staged managed-identity migration.
+    // Entra-only authentication: the server has no SQL login and no password. People connect as
+    // members of the Entra admin group; the app connects as its UAMI, a contained user of its own
+    // database, never a server administrator (the one-time database user step in DEPLOYMENT.md).
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      azureADOnlyAuthentication: true
+      login: sqlEntraAdminLogin
+      sid: sqlEntraAdminObjectId
+      principalType: sqlEntraAdminPrincipalType
+      tenantId: subscription().tenantId
+    }
   }
 }
 
@@ -98,12 +115,15 @@ resource appDb 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   sku: { name: 'Basic', tier: 'Basic' } // §31: cheap tier sized to measured load, not worst case
 }
 
-// The runtime connection string is composed here and stored ONLY in Key Vault. The Container App
-// below binds it by reference (keyVaultUrl + the app UAMI), so the value never lands in the app's
-// configuration as plaintext. Writing the secret needs the DEPLOY principal to hold Key Vault
-// Secrets Officer on the vault; reading it at runtime needs the APP UAMI to hold Key Vault Secrets
-// User (both granted out of band, see DEPLOYMENT.md and the header note above).
-var appSqlConnectionString = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=${appDb.name};User ID=${sqlAdminLogin};Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+// The runtime connection string is composed here and stored ONLY in Key Vault. It carries no
+// password: the app signs in as its UAMI (Authentication=Active Directory Managed Identity, User Id =
+// the UAMI client id), which needs MMCA.Common.Azure referenced for the SqlClient Entra provider. It
+// stays a Key Vault reference so every runtime setting the app treats as sensitive binds the same way.
+// The Container App below binds it by reference (keyVaultUrl + the app UAMI). Writing the secret
+// needs the DEPLOY principal to hold Key Vault Secrets Officer on the vault; reading it at runtime
+// needs the APP UAMI to hold Key Vault Secrets User (both granted out of band, see DEPLOYMENT.md and
+// the header note above).
+var appSqlConnectionString = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=${appDb.name};Authentication=Active Directory Managed Identity;User Id=${appIdentity.properties.clientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
 resource kvSqlConn 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
@@ -111,11 +131,22 @@ resource kvSqlConn 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   properties: { value: appSqlConnectionString }
 }
 
-resource allowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sqlServer
-  name: 'AllowAllAzureIps'
-  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
-}
+// SQL network access: this sample declares NO firewall rule, so nothing can reach the server until
+// you add the rule for YOUR network. Do not use the 0.0.0.0 "allow Azure services" rule: it admits
+// connection attempts from every Azure-hosted machine in every tenant. PLACEHOLDER, pick one:
+//   - Preferred: run the Container Apps environment in a VNet and give the server a private endpoint
+//     (then set publicNetworkAccess: 'Disabled' on sqlServer), or allow the app subnet only:
+//       resource sqlAppSubnetRule 'Microsoft.Sql/servers/virtualNetworkRules@2023-08-01-preview' = {
+//         parent: sqlServer
+//         name: 'app-subnet'
+//         properties: { virtualNetworkSubnetId: '<app subnet resource id>' }
+//       }
+//   - Or allow the environment's fixed egress address (for example a NAT gateway public IP):
+//       resource sqlAppEgressRule 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
+//         parent: sqlServer
+//         name: 'app-egress'
+//         properties: { startIpAddress: '<egress ip>', endIpAddress: '<egress ip>' }
+//       }
 
 resource caEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${prefix}-cae-${resourceToken}'

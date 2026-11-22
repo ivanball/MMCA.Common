@@ -68,7 +68,8 @@ public sealed class AiSettings : IValidatableObject
     /// The provider API key. Required when <see cref="Enabled"/>.
     /// <para>
     /// In production this binds from Key Vault (the configuration provider registered by
-    /// <c>AddCommonKeyVaultConfiguration</c>), never from a checked-in settings file: the value
+    /// <c>AddAzureKeyVaultConfiguration</c> in <c>MMCA.Common.Azure.Startup</c>), never from a
+    /// checked-in settings file: the value
     /// lives in configuration only so that the secret store, and not this package, decides where it
     /// comes from. Local development uses user secrets or an environment variable.
     /// </para>

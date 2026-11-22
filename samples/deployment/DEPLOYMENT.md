@@ -9,7 +9,8 @@ spend attributed from day one. The full, production-proven version is **MMCA.ADC
 Files:
 - [`foundation.bicep`](foundation.bicep) — long-lived resources (Log Analytics + ACR). Deploy once.
 - [`main.bicep`](main.bicep) — per-release: Container App (pulls from ACR via managed identity),
-  SQL, Key Vault, App Insights, cost tags, budget + alerts.
+  SQL (Entra-only authentication, no firewall rule until you add your own), Key Vault, App Insights,
+  cost tags, budget + alerts.
 
 ## One-time bootstrap (out of band)
 
@@ -42,6 +43,44 @@ the Container App declares it as a Key Vault reference:
 with the container env var `ConnectionStrings__SQLServerConnectionString` bound to it via `secretRef`.
 The platform resolves the reference at revision start using the app's identity, so no plaintext
 Container App secret and no value in the deployment output.
+
+## SQL: Entra-only authentication and the one-time database user
+
+The SQL server in `main.bicep` uses **Entra-only authentication** (`azureADOnlyAuthentication: true`):
+it has no SQL login and no password. Its administrator is the Entra group passed as
+`sqlEntraAdminLogin` (display name) and `sqlEntraAdminObjectId` (object id); people who need to
+administer the server join that group. The app connects as its user-assigned managed identity: the
+connection string carries `Authentication=Active Directory Managed Identity;User Id=<UAMI client id>`
+and no secret. That keyword needs the SqlClient Entra provider, which ships in
+`Microsoft.Data.SqlClient.Extensions.Azure`; reference `MMCA.Common.Azure`, which brings it.
+
+The identity is a **contained user of the app's own database**, never a server administrator. Create
+it once, after the first `main.bicep` deploy has created the database and before the app first starts
+against it (until then the app cannot sign in). The T-SQL is data-plane work the deploy principal
+cannot do, so a member of the Entra admin group runs it, connected to the app database (`MyApp`), not
+to `master`:
+
+```bash
+# As a member of the SQL Entra admin group (az login first), from a network the server admits.
+sqlcmd -S <server>.database.windows.net -d MyApp --authentication-method ActiveDirectoryDefault -Q "
+CREATE USER [myapp-prod-apps-identity] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [myapp-prod-apps-identity];
+ALTER ROLE db_datawriter ADD MEMBER [myapp-prod-apps-identity];
+ALTER ROLE db_ddladmin ADD MEMBER [myapp-prod-apps-identity];"
+```
+
+The user name is the managed identity's name from bootstrap step 1. `db_ddladmin` is there only
+because the service applies its own migrations at startup (see Migrations below); a host that
+migrates from a separate step leaves it out. Repeat the statements per database when the app has more
+than one.
+
+**Network access.** `main.bicep` declares no SQL firewall rule, and deliberately not the `0.0.0.0`
+"allow Azure services" rule, which admits connection attempts from every Azure-hosted machine in every
+tenant. Until you add a rule for your own network nothing can reach the server, the app included. The
+commented placeholder next to the SQL resources in `main.bicep` shows the two shapes: a private
+endpoint or virtual network rule for the app subnet (preferred, then set `publicNetworkAccess` to
+`Disabled`), or a firewall rule for the environment's fixed egress address. For the one-time T-SQL
+above, a temporary firewall rule for your own client address is enough; remove it afterwards.
 
 Step 3 is also the only grant `AddAzureKeyVaultConfiguration()` (MMCA.Common.Azure) needs: the app opts
 in by referencing MMCA.Common.Azure, calling `builder.AddAzureKeyVaultConfiguration()` and setting
@@ -82,7 +121,8 @@ jobs:
       - run: |  # build & push the image to ACR (via the deploy identity's AcrPush), then:
           az deployment group create -g $RG -f infra/main.bicep \
             -p environmentName=prod acrName=$ACR logAnalyticsName=$LOGS containerImage=$IMAGE \
-               appIdentityResourceId=$UAMI_ID sqlAdminLogin=$SQL_USER sqlAdminPassword=$SQL_PWD ...
+               appIdentityResourceId=$UAMI_ID sqlEntraAdminLogin=$SQL_ADMIN_GROUP \
+               sqlEntraAdminObjectId=$SQL_ADMIN_GROUP_ID ...
 ```
 
 ## Alerting and its runbook
