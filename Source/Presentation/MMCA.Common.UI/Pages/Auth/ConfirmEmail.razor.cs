@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Pages.Auth.Links;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Capabilities;
@@ -95,54 +96,10 @@ public sealed partial class ConfirmEmail : IDisposable
         _cts.Dispose();
     }
 
-    /// <summary>
-    /// Merges an emailed link's fragment into the address and token a form holds. Shared with the
-    /// reset-password page, whose link has the same shape.
-    /// </summary>
-    /// <param name="fragment">The raw fragment, without its leading hash.</param>
-    /// <param name="replace">
-    /// <see langword="false"/> on the first render: only EMPTY values are filled (the query string and
-    /// the first pair win). <see langword="true"/> for a new link opened on the open page: nothing the
-    /// form held survives a fragment that carries either pair, so an old token is never used under a new
-    /// address (Store Run 5 D3).
-    /// </param>
-    /// <param name="email">The address the form holds.</param>
-    /// <param name="token">The token the form holds.</param>
-    /// <returns>Whether the fragment carried an <c>email</c> or <c>token</c> pair, and the merged values.</returns>
-    internal static (bool Recognized, string Email, string Token) MergeLinkFragment(string? fragment, bool replace, string? email, string? token)
-    {
-        email ??= string.Empty;
-        token ??= string.Empty;
-        if (string.IsNullOrWhiteSpace(fragment))
-        {
-            return (false, email, token);
-        }
-
-        var recognized = false;
-        foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (!TryReadLinkPair(pair, out var isEmail, out var value))
-            {
-                continue;
-            }
-
-            if (replace && !recognized)
-            {
-                email = string.Empty;
-                token = string.Empty;
-            }
-
-            recognized = true;
-            (email, token) = FillEmpty(isEmail, value, email, token);
-        }
-
-        return (recognized, email, token);
-    }
-
     /// <inheritdoc />
     /// <remarks>
     /// Listens for a new link opened in this tab while the page is already showing (for example after
-    /// "send me a new one"): the browser only changes the fragment, so the page is not rebuilt and
+    /// "send me a new one"): only the fragment or the query string changes, so the page is not rebuilt and
     /// <see cref="OnAfterRenderAsync"/> never runs its first-render read again.
     /// </remarks>
     protected override void OnInitialized()
@@ -183,36 +140,46 @@ public sealed partial class ConfirmEmail : IDisposable
     }
 
     /// <summary>
-    /// A navigation within the page that carries a fragment is a new emailed link (Store Run 5 D3): its
-    /// values replace whatever the form held, it is redeemed once exactly like a fresh tab, and taking
-    /// it scrubs the single-use token from the address bar.
+    /// A navigation within the page that carries a fragment or a query string with the link's pairs is
+    /// a new emailed link (Store Run 5 D3, R6b): its values replace whatever the form held, it is
+    /// redeemed once exactly like a fresh tab, and reading it scrubs the single-use token from the
+    /// address bar.
     /// </summary>
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (_disposed || !_attempted || !HasFragment(e.Location))
+        if (_disposed || !_attempted)
         {
             return;
         }
 
-        _ = InvokeAsync(async () =>
+        if (EmailedLinkReader.HasFragment(e.Location))
         {
-            var fragment = await TakeFragmentAsync();
-            if (_disposed || !ApplyFragment(fragment, replace: true))
+            _ = InvokeAsync(async () => await RedeemNewLinkAsync(await TakeFragmentAsync()));
+        }
+        else if (EmailedLinkReader.LinkQueryOf(e.Location) is { } query)
+        {
+            _ = InvokeAsync(() =>
             {
-                return;
-            }
-
-            _linkSent = false;
-            _errorMessage = null;
-            _state = ConfirmationState.Working;
-            await RedeemOrShowFormAsync();
-        });
+                EmailedLinkReader.ScrubLinkQuery(Navigation, e.Location);
+                return RedeemNewLinkAsync(query);
+            });
+        }
     }
 
-    private static bool HasFragment(string location)
+    /// <summary>Replaces the form's values with a new link's and redeems it once, as a fresh tab does.</summary>
+    /// <param name="link">The link's fragment or query, without its leading character.</param>
+    /// <returns>A task that completes when the link was redeemed or the form shown.</returns>
+    private Task RedeemNewLinkAsync(string? link)
     {
-        var hash = location.IndexOf('#', StringComparison.Ordinal);
-        return hash >= 0 && hash < location.Length - 1;
+        if (_disposed || !ApplyFragment(link, replace: true))
+        {
+            return Task.CompletedTask;
+        }
+
+        _linkSent = false;
+        _errorMessage = null;
+        _state = ConfirmationState.Working;
+        return RedeemOrShowFormAsync();
     }
 
     private Task RedeemOrShowFormAsync()
@@ -241,63 +208,13 @@ public sealed partial class ConfirmEmail : IDisposable
             : await module.InvokeOrDefaultAsync<string?>("locationHashTake", [], CancellationToken.None);
     }
 
-    /// <summary>Puts <paramref name="value"/> into the address or the token, only when that one is still empty.</summary>
-    /// <param name="isEmail">Whether the value is the address (otherwise the token).</param>
-    /// <param name="value">The decoded value.</param>
-    /// <param name="email">The address so far.</param>
-    /// <param name="token">The token so far.</param>
-    /// <returns>The address and token after the fill.</returns>
-    private static (string Email, string Token) FillEmpty(bool isEmail, string value, string email, string token)
-    {
-        if (isEmail && string.IsNullOrWhiteSpace(email))
-        {
-            return (value, token);
-        }
-
-        if (!isEmail && string.IsNullOrWhiteSpace(token))
-        {
-            return (email, value);
-        }
-
-        return (email, token);
-    }
-
-    /// <summary>
-    /// Reads one <c>name=value</c> pair of an emailed link's fragment: <see langword="true"/> for an
-    /// <c>email</c> or <c>token</c> pair (names match exactly), with its value decoded.
-    /// </summary>
-    /// <param name="pair">One pair of the fragment.</param>
-    /// <param name="isEmail">Whether the pair is the address (otherwise the token).</param>
-    /// <param name="value">The decoded value.</param>
-    /// <returns>Whether the pair is one the link carries.</returns>
-    private static bool TryReadLinkPair(string pair, out bool isEmail, out string value)
-    {
-        isEmail = false;
-        value = string.Empty;
-        var separator = pair.IndexOf('=', StringComparison.Ordinal);
-        if (separator <= 0)
-        {
-            return false;
-        }
-
-        var name = pair[..separator];
-        isEmail = string.Equals(name, "email", StringComparison.Ordinal);
-        if (!isEmail && !string.Equals(name, "token", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        value = Uri.UnescapeDataString(pair[(separator + 1)..]);
-        return true;
-    }
-
     /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment into the fields.</summary>
     /// <param name="fragment">The raw fragment, without its leading hash.</param>
-    /// <param name="replace">See <see cref="MergeLinkFragment"/>.</param>
+    /// <param name="replace">See <see cref="EmailedLinkReader.MergeLinkFragment"/>.</param>
     /// <returns><see langword="true"/> when the fragment carried an <c>email</c> or <c>token</c> pair.</returns>
     private bool ApplyFragment(string? fragment, bool replace)
     {
-        var (recognized, email, token) = MergeLinkFragment(fragment, replace, _email, _token);
+        var (recognized, email, token) = EmailedLinkReader.MergeLinkFragment(fragment, replace, _email, _token);
         _email = email;
         _token = token;
         return recognized;

@@ -26,4 +26,15 @@ public interface IPasswordHasher
     /// <param name="hash">The stored password hash.</param>
     /// <returns><see langword="true"/> if the hash should be replaced by a fresh <see cref="HashPassword"/> result.</returns>
     bool NeedsRehash(byte[] hash) => false;
+
+    /// <summary>
+    /// Runs one throwaway key derivation of <paramref name="password"/> that costs what verifying the
+    /// most expensive record this hasher can have stored costs, for a sign-in branch that never reaches
+    /// a real verification (an unknown address, an account with no password). A hasher that still
+    /// verifies records derived at an older, higher work factor burns at that factor, so those branches
+    /// cannot be told apart by timing. The default derives one <see cref="HashPassword"/> and discards
+    /// it, which is right for a hasher whose every stored record uses its current parameters.
+    /// </summary>
+    /// <param name="password">The submitted plaintext password; never null or whitespace.</param>
+    void BurnVerificationCost(string password) => _ = HashPassword(password);
 }

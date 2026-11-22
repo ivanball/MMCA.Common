@@ -20,7 +20,9 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// <para>
 /// <b>The recovery code is spent before this returns.</b> Persisting the redemption is what makes the
 /// code single use, so it happens inside the challenge rather than being left to the caller: a
-/// caller that forgot would leave the code live for a second sign-in.
+/// caller that forgot would leave the code live for a second sign-in. The match and the spend run
+/// under the same per-account <see cref="IDistributedLock"/> the time-based path takes, against state
+/// re-read inside it, so one code cannot be redeemed twice by concurrent submissions.
 /// </para>
 /// <para>
 /// <b>A time-based code is accepted once.</b> The matched time step is remembered per account in
@@ -34,12 +36,14 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// </remarks>
 /// <param name="twoFactorService">Verifies codes and matches recovery hashes.</param>
 /// <param name="store">Reads the account's state and spends recovery codes.</param>
+/// <param name="secretProtector">Unprotects the stored secret before a code is verified against it.</param>
 /// <param name="cache">Remembers the last accepted time step per account.</param>
 /// <param name="settings">The bound two-factor settings (period and window size).</param>
 /// <param name="distributedLock">Serializes acceptance of a time step per account.</param>
 internal sealed class TwoFactorAuthenticator(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
+    ITwoFactorSecretProtector secretProtector,
     ICacheService cache,
     IOptions<TwoFactorSettings> settings,
     IDistributedLock distributedLock) : ITwoFactorAuthenticator
@@ -70,28 +74,16 @@ internal sealed class TwoFactorAuthenticator(
                 TwoFactorErrors.TwoFactorRequired(nameof(ChallengeAsync)));
         }
 
-        if (state.TwoFactorSecret is { Length: > 0 } secret
+        // A stored secret this host cannot unprotect verifies no time-based code; the recovery codes
+        // stay usable, so the owner still has a way in.
+        if (state.TwoFactorSecret is { Length: > 0 } storedSecret
+            && secretProtector.Unprotect(storedSecret) is { IsSuccess: true, Value: { Length: > 0 } secret }
             && twoFactorService.VerifyCode(secret, code, out var matchedStep))
         {
             return await AcceptTimeStepOnceAsync(userId, matchedStep, cancellationToken).ConfigureAwait(false);
         }
 
-        if (!twoFactorService.TryMatchRecoveryCode(code, state.TwoFactorRecoveryCodeHashes, out var matchedHash)
-            || matchedHash is null)
-        {
-            return Result.Failure<TwoFactorOutcome>(
-                TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));
-        }
-
-        var consumed = await store
-            .ConsumeRecoveryCodeAsync(userId, matchedHash, cancellationToken)
-            .ConfigureAwait(false);
-
-        // A redemption that could not be persisted is answered as a failed challenge, not a
-        // successful one: letting the sign-in through would hand out a code that is still live.
-        return consumed.IsFailure
-            ? Result.Failure<TwoFactorOutcome>(consumed.Errors)
-            : Result.Success(TwoFactorOutcome.VerifiedRecoveryCode);
+        return await RedeemRecoveryCodeOnceAsync(userId, code, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -101,7 +93,9 @@ internal sealed class TwoFactorAuthenticator(
         string? code,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(secret) || !twoFactorService.VerifyCode(secret, code, out var matchedStep))
+        if (string.IsNullOrWhiteSpace(secret)
+            || secretProtector.Unprotect(secret) is not { IsSuccess: true, Value: { Length: > 0 } plaintext }
+            || !twoFactorService.VerifyCode(plaintext, code, out var matchedStep))
         {
             return false;
         }
@@ -109,6 +103,58 @@ internal sealed class TwoFactorAuthenticator(
         var accepted = await AcceptTimeStepOnceAsync(userId, matchedStep, cancellationToken).ConfigureAwait(false);
         return accepted.IsSuccess;
     }
+
+    /// <summary>
+    /// Matches and spends a recovery code under the account's per-account lock (the one the
+    /// time-based path takes), against state re-read inside the lock, so two concurrent redemptions
+    /// of one code yield exactly one success: the second reads the state after the first spent it.
+    /// A redemption that cannot take the lock is answered as invalid, never as a second success.
+    /// </summary>
+    /// <param name="userId">The account being challenged.</param>
+    /// <param name="code">The presented code.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see cref="TwoFactorOutcome.VerifiedRecoveryCode"/>, or the failure.</returns>
+    private async Task<Result<TwoFactorOutcome>> RedeemRecoveryCodeOnceAsync(
+        UserIdentifierType userId,
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var handle = await distributedLock
+            .TryAcquireAsync($"lock:{StepKey(userId)}", StepLockTimeToLive, StepLockWait, cancellationToken)
+            .ConfigureAwait(false);
+        if (handle is null)
+        {
+            return Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));
+        }
+
+        await using (handle.ConfigureAwait(false))
+        {
+            var state = await store.GetAsync(userId, cancellationToken).ConfigureAwait(false);
+            if (state is null
+                || !state.IsTwoFactorEnabled
+                || !twoFactorService.TryMatchRecoveryCode(code, state.TwoFactorRecoveryCodeHashes, out var matchedHash)
+                || matchedHash is null)
+            {
+                return Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));
+            }
+
+            var consumed = await store
+                .ConsumeRecoveryCodeAsync(userId, matchedHash, cancellationToken)
+                .ConfigureAwait(false);
+
+            // A redemption that could not be persisted is answered as a failed challenge, not a
+            // successful one: letting the sign-in through would hand out a code that is still live.
+            return consumed.IsFailure
+                ? Result.Failure<TwoFactorOutcome>(consumed.Errors)
+                : Result.Success(TwoFactorOutcome.VerifiedRecoveryCode);
+        }
+    }
+
+    /// <summary>The per-account key the last accepted time step lives under; its lock serializes both paths.</summary>
+    /// <param name="userId">The account.</param>
+    /// <returns>The cache key.</returns>
+    private static string StepKey(UserIdentifierType userId) =>
+        string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{userId}");
 
     /// <summary>
     /// Accepts a matched time step only when it is newer than the last one accepted for the account,
@@ -123,7 +169,7 @@ internal sealed class TwoFactorAuthenticator(
         long matchedStep,
         CancellationToken cancellationToken)
     {
-        var key = string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{userId}");
+        var key = StepKey(userId);
 
         // The read, the compare and the write below are one critical section: without it, two
         // submissions of one code that both read before either writes would both pass.

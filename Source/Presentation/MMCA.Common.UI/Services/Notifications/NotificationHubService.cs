@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Notifications;
@@ -616,6 +617,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private async ValueTask<WebSocket> ConnectWebSocketAsync(WebSocketConnectionContext context, CancellationToken cancellationToken)
     {
         var webSocket = new ClientWebSocket();
+        string? accessToken = null;
         try
         {
             webSocket.Options.CollectHttpResponseDetails = true;
@@ -626,7 +628,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
             context.Options.WebSocketConfiguration?.Invoke(webSocket.Options);
 
-            string? accessToken = await _tokenStorageService.GetAccessTokenAsync().ConfigureAwait(false);
+            accessToken = await _tokenStorageService.GetAccessTokenAsync().ConfigureAwait(false);
             if (!string.IsNullOrEmpty(accessToken))
             {
                 webSocket.Options.SetRequestHeader("Authorization", $"Bearer {accessToken}");
@@ -641,6 +643,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             // answer arrived at all, which is a network failure and is rethrown as it is below).
             HttpStatusCode statusCode = webSocket.HttpStatusCode;
             webSocket.Dispose();
+            await ReportRefusedHandshakeAsync(statusCode, accessToken).ConfigureAwait(false);
             throw new HttpRequestException(
                 $"The notification hub refused the WebSocket handshake with HTTP {((int)statusCode).ToString(CultureInfo.InvariantCulture)}.",
                 ex,
@@ -652,6 +655,21 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             throw;
         }
     }
+
+    /// <summary>
+    /// Gives a handshake the hub refused with <c>401</c> the API client's 401 handling (Store Run 5 R6a):
+    /// the bearer it carried goes to the storage it came from for ONE renewal, and a refused renewal ends
+    /// the session, so a locked or revoked user's shell signs out instead of keeping a hub that only
+    /// reconnects into 401s. A 403 (signed in, not allowed) and a handshake that carried no bearer change
+    /// nothing.
+    /// </summary>
+    /// <param name="statusCode">The status the hub answered the upgrade with.</param>
+    /// <param name="accessToken">The bearer the handshake carried, or <see langword="null"/> when none.</param>
+    /// <returns>A task that completes when the renewal attempt has finished.</returns>
+    internal Task ReportRefusedHandshakeAsync(HttpStatusCode statusCode, string? accessToken) =>
+        statusCode == HttpStatusCode.Unauthorized && !string.IsNullOrEmpty(accessToken)
+            ? AuthDelegatingHandler.ReportRejectedAsync(accessToken, _tokenStorageService)
+            : Task.CompletedTask;
 
     /// <summary>
     /// Clears and disposes the connection built for a start attempt that never succeeded, leaving the

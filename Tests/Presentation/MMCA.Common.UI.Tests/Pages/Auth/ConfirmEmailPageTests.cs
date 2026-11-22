@@ -158,6 +158,76 @@ public sealed class ConfirmEmailPageTests : ConfirmEmailPageTestsBase
         JSInterop.Invocations.Count(i => i.Identifier == "locationHashTake").Should().Be(1);
     }
 
+    // Store Run 5 R6b: a new link that differs only in its QUERY STRING, opened on the page already
+    // showing, must be read like a new fragment: its values replace the stale ones, it is redeemed once,
+    // and its email and token leave the address bar (other parameters stay).
+    [Fact]
+    public async Task NewLinkInAChangedQuery_OnTheOpenPage_ReplacesTheStaleValues_IsRedeemedOnce_AndLeavesTheAddressBar()
+    {
+        Confirmation
+            .Setup(x => x.ConfirmEmailAsync("old@example.com", "expired-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Unauthorized("Authentication.InvalidConfirmationToken", "Invalid token.", "Test")));
+        var cut = RenderPage("old@example.com", "expired-1");
+        await cut.WaitForAssertionAsync(() => cut.Find("[data-testid=confirm-email-error]"));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => navigation.NavigateTo("/confirm-email?email=grace%40example.com&token=new-1&x=1"));
+
+        await cut.WaitForAssertionAsync(() => cut.Find("[data-testid=confirm-email-success]"));
+        Confirmation.Verify(
+            x => x.ConfirmEmailAsync("grace@example.com", "new-1", It.IsAny<CancellationToken>()),
+            Times.Once());
+        Confirmation.Verify(
+            x => x.ConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2),
+            "the stale link was redeemed once on the first render and the new one once, nothing more");
+        var query = new Uri(navigation.Uri).Query;
+        query.Should().NotContain("email=").And.NotContain("token=").And.NotContain("new-1");
+        query.Should().Contain("x=1", "only the link's own parameters are taken out of the address bar");
+    }
+
+    [Fact]
+    public async Task NewLinkInAChangedQuery_CarryingOnlyTheAddress_ClearsTheOldTokenAndPostsNothing()
+    {
+        Confirmation
+            .Setup(x => x.ConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Unauthorized("Authentication.InvalidConfirmationToken", "Invalid token.", "Test")));
+        var cut = RenderPage("old@example.com", "expired-1");
+        await cut.WaitForAssertionAsync(() => cut.Find("[data-testid=confirm-email-error]"));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => navigation.NavigateTo("/confirm-email?email=grace%40example.com"));
+
+        await cut.WaitForAssertionAsync(() =>
+            cut.Find("input[data-testid=confirm-email-address]").GetAttribute("value").Should().Be("grace@example.com"));
+        cut.Find("input[data-testid=confirm-email-token]").GetAttribute("value").Should().BeNullOrEmpty("the old link's token must not linger");
+        Confirmation.Verify(
+            x => x.ConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once());
+        new Uri(navigation.Uri).Query.Should().NotContain("email=");
+    }
+
+    [Fact]
+    public async Task LocationChange_WithNeitherAFragmentNorALinkPairInTheQuery_DoesNothing()
+    {
+        Confirmation
+            .Setup(x => x.ConfirmEmailAsync("old@example.com", "expired-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Unauthorized("Authentication.InvalidConfirmationToken", "Invalid token.", "Test")));
+        var cut = RenderPage("old@example.com", "expired-1");
+        await cut.WaitForAssertionAsync(() => cut.Find("[data-testid=confirm-email-error]"));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => navigation.NavigateTo("/confirm-email?x=2"));
+        await cut.InvokeAsync(() => { });
+
+        Confirmation.Verify(
+            x => x.ConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once());
+        cut.Find("[data-testid=confirm-email-error]");
+        cut.Find("input[data-testid=confirm-email-token]").GetAttribute("value").Should().Be("expired-1", "nothing replaced the form's values");
+        navigation.Uri.Should().EndWith("/confirm-email?x=2", "nothing was taken out of the address bar");
+    }
+
     private JSRuntimeInvocationHandler<string?> UseFragmentHandler(string fragment)
     {
         Services.AddScoped<CapabilitiesJsModule>();

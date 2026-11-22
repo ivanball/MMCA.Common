@@ -1,5 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -12,6 +15,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Domain.Auth.Credentials;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
@@ -136,9 +140,10 @@ public abstract class AuthenticationServiceBase<TUser>(
     protected string? CurrentTermsVersion => validators.CurrentTermsVersion;
 
     /// <summary>
-    /// The logger for the best-effort password rehash after a successful sign-in (see
+    /// The logger for the failed password sign-in Warnings (see <see cref="LoginAsync"/>) and the
+    /// best-effort password rehash after a successful sign-in (see
     /// <see cref="IPasswordRehashableUser"/>). Defaults to a no-op logger; an app that wants the log
-    /// line overrides it with its own injected logger (for example
+    /// lines overrides it with its own injected logger (for example
     /// <c>protected override ILogger Logger =&gt; logger;</c>). A virtual property rather than a
     /// constructor argument so the constructor stays within the framework's dependency ceiling and
     /// every existing subclass keeps compiling. A failed rehash is counted on the
@@ -147,6 +152,14 @@ public abstract class AuthenticationServiceBase<TUser>(
     protected virtual ILogger Logger => NullLogger.Instance;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Every call is counted once on the <c>MMCA.Common.Auth</c> meter (<c>mmca.auth.signin</c>, tagged
+    /// by <c>outcome</c>: <c>success</c>, <c>invalid_credentials</c>, <c>locked_out</c>,
+    /// <c>second_factor_required</c>, <c>second_factor_failed</c>, <c>email_not_confirmed</c> or
+    /// <c>rejected</c>), and every outcome but <c>success</c> writes one Warning through
+    /// <see cref="Logger"/> carrying the outcome and a truncated hash of the normalized address, never
+    /// the address. A request that fails validation counts as <c>invalid_credentials</c>.
+    /// </remarks>
     public async Task<Result<AuthenticationResponse>> LoginAsync(
         LoginRequest request,
         string? ipAddress = null,
@@ -156,14 +169,20 @@ public abstract class AuthenticationServiceBase<TUser>(
         var validationResult = await validators.Login.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
-            return Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(LoginAsync)));
+            return SignInFailed(
+                AuthSignInMetrics.InvalidCredentials,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(LoginAsync))));
         }
 
         // ADR-029 / BR-212: exponential-backoff lockout.
         var lockoutResult = await loginProtection.CheckLockoutAsync(request.Email, cancellationToken).ConfigureAwait(false);
         if (lockoutResult.IsFailure)
         {
-            return Result.Failure<AuthenticationResponse>(lockoutResult.Errors);
+            return SignInFailed(
+                AuthSignInMetrics.LockedOut,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(lockoutResult.Errors));
         }
 
         // Normalize to the Email value object so the EF predicate compares same-typed converted
@@ -182,15 +201,21 @@ public abstract class AuthenticationServiceBase<TUser>(
         {
             BurnPasswordVerificationCost(request.Password);
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
-            return Result.Failure<AuthenticationResponse>(
-                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
+            return SignInFailed(
+                AuthSignInMetrics.InvalidCredentials,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(
+                    Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync))));
         }
 
         if (!passwordHasher.VerifyPassword(request.Password, untracked.PasswordHash, untracked.PasswordSalt))
         {
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
-            return Result.Failure<AuthenticationResponse>(
-                Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
+            return SignInFailed(
+                AuthSignInMetrics.InvalidCredentials,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(
+                    Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync))));
         }
 
         // App gate (e.g. deactivated-account rejection) runs AFTER the password check on purpose:
@@ -200,7 +225,10 @@ public abstract class AuthenticationServiceBase<TUser>(
         var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken).ConfigureAwait(false);
         if (candidateResult.IsFailure)
         {
-            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
+            return SignInFailed(
+                AuthSignInMetrics.Rejected,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(candidateResult.Errors));
         }
 
         // Both gates below run AFTER the password check, for the same reason the app gate does: they
@@ -210,14 +238,20 @@ public abstract class AuthenticationServiceBase<TUser>(
         var confirmationResult = CheckEmailConfirmed(untracked);
         if (confirmationResult.IsFailure)
         {
-            return Result.Failure<AuthenticationResponse>(confirmationResult.Errors);
+            return SignInFailed(
+                AuthSignInMetrics.EmailNotConfirmed,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(confirmationResult.Errors));
         }
 
         var secondFactor = await ChallengeSecondFactorCountingFailuresAsync(untracked.Id, request, cancellationToken)
             .ConfigureAwait(false);
         if (secondFactor.IsFailure)
         {
-            return Result.Failure<AuthenticationResponse>(secondFactor.Errors);
+            return SignInFailed(
+                AuthSignInMetrics.ForSecondFactorFailure(secondFactor.Errors),
+                request.Email,
+                Result.Failure<AuthenticationResponse>(secondFactor.Errors));
         }
 
         // Step 2: Tracked re-fetch. Refresh tokens live in their own session rows, so this fetch is
@@ -227,8 +261,12 @@ public abstract class AuthenticationServiceBase<TUser>(
         var user = await Repository.GetByIdAsync(untracked.Id, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            return Result.Failure<AuthenticationResponse>(
-                Error.NotFound.WithSource(nameof(LoginAsync)).WithTarget(typeof(TUser).Name));
+            // The account vanished between the two reads: it reads as an unknown address.
+            return SignInFailed(
+                AuthSignInMetrics.InvalidCredentials,
+                request.Email,
+                Result.Failure<AuthenticationResponse>(
+                    Error.NotFound.WithSource(nameof(LoginAsync)).WithTarget(typeof(TUser).Name)));
         }
 
         // Reset failed attempts and lockout on successful login.
@@ -238,12 +276,20 @@ public abstract class AuthenticationServiceBase<TUser>(
         _multiFactorMethod = MultiFactorMethodFor(secondFactor.Value);
         try
         {
-            issued = await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+            // The challenge above already ran for this request, so the issuance does not repeat it.
+            issued = await IssueTokensCoreAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _multiFactorMethod = null;
         }
+
+        if (issued.IsFailure)
+        {
+            return SignInFailed(AuthSignInMetrics.Rejected, request.Email, issued);
+        }
+
+        AuthSignInMetrics.Record(AuthSignInMetrics.Success);
 
         await RehashPasswordIfNeededAsync(issued, user, request.Password).ConfigureAwait(false);
 
@@ -339,7 +385,7 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         // The session is opened AFTER the user save because it carries the user id, which a
         // store-generated key only has once the insert has run.
-        return await IssueTokensAsync(tokenUser, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        return await IssueTokensCoreAsync(tokenUser, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -527,7 +573,7 @@ public abstract class AuthenticationServiceBase<TUser>(
                 SignInLinks.SignInLinkErrors.SecondFactorRequired(nameof(SignInVerifiedEmailOwnerAsync)));
         }
 
-        return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        return await IssueTokensCoreAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -568,7 +614,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         _multiFactorMethod = AuthClaimTypes.MultiFactorMethodPasskey;
         try
         {
-            return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+            return await IssueTokensCoreAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -618,18 +664,61 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// grant, which opens no session. Every interactive sign-in, the app-level external login included,
     /// mints through here, so the refusal here is the backstop behind the earlier, path-specific ones.
     /// </para>
+    /// <para>
+    /// <b>An enrolled second factor is honored.</b> This is the issuance an app-level sign-in that
+    /// proves no factor (external login) mints through, so it runs the second-factor challenge
+    /// (<see cref="ChallengeSecondFactorAsync"/>) with no code first, exactly as
+    /// <see cref="SignInVerifiedEmailOwnerAsync"/> does: an account with an enrolled factor is refused
+    /// with <c>Authentication.TwoFactorRequired</c> and no session is opened. With no
+    /// <see cref="ITwoFactorAuthenticator"/> the challenge answers <see cref="TwoFactorOutcome.NotEnrolled"/>
+    /// at no cost, so a host that has not adopted two-factor is unaffected.
+    /// </para>
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="ipAddress">Optional client IP recorded on the new session.</param>
     /// <param name="userAgent">Optional client user-agent recorded on the new session.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    protected Task<Result<AuthenticationResponse>> IssueTokensAsync(
+    /// <returns>The token pair, or the refusal.</returns>
+    protected async Task<Result<AuthenticationResponse>> IssueTokensAsync(
         TUser user,
         string? ipAddress = null,
         string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
+        if (!user.IsServiceAccount)
+        {
+            var secondFactor = await ChallengeSecondFactorAsync(user.Id, code: null, cancellationToken).ConfigureAwait(false);
+            if (secondFactor.IsFailure)
+            {
+                return Result.Failure<AuthenticationResponse>(secondFactor.Errors);
+            }
+
+            if (secondFactor.Value != TwoFactorOutcome.NotEnrolled)
+            {
+                return Result.Failure<AuthenticationResponse>(TwoFactorErrors.TwoFactorRequired(nameof(IssueTokensAsync)));
+            }
+        }
+
+        return await IssueTokensCoreAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The issuance itself, for the framework's own sign-in paths that have already settled the
+    /// second factor for this request (password sign-in, registration of a new account, a sign-in
+    /// link, a passkey). Refuses a service account.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="ipAddress">Optional client IP recorded on the new session.</param>
+    /// <param name="userAgent">Optional client user-agent recorded on the new session.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The token pair, or the service-account refusal.</returns>
+    private Task<Result<AuthenticationResponse>> IssueTokensCoreAsync(
+        TUser user,
+        string? ipAddress,
+        string? userAgent,
+        CancellationToken cancellationToken)
+    {
         if (user.IsServiceAccount)
         {
             return Task.FromResult(Result.Failure<AuthenticationResponse>(
@@ -829,8 +918,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// Whether the account carries stored password material at all. An external-OAuth account
     /// carries none (ADR-036), and password login is not a path such an account has.
     /// </summary>
-    private static bool HasStoredCredential(TUser user) =>
-        user.PasswordHash.Length > 0 && user.PasswordSalt.Length > 0;
+    private static bool HasStoredCredential(TUser user) => PasswordCredential.IsStored(user);
 
     /// <summary>
     /// Whether password login is a path this candidate has at all: an account that exists, is not a
@@ -845,17 +933,13 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// in a fraction of the time a real check takes, which is a membership oracle.
     /// </summary>
     /// <remarks>
-    /// The derivation is a <see cref="IPasswordHasher.HashPassword"/> of the submitted password,
-    /// discarded. Hashing and verifying each run the hasher's own key derivation once, so the cost
-    /// matches a real verification for whichever hasher is registered. A verification against fixed
-    /// decoy material would not: a hasher that rejects material of the wrong size before deriving
-    /// anything (the shipped one does) answers it instantly once the decoy's sizes stop matching its
-    /// own, which silently reopens the timing gap.
-    /// <para>
-    /// Hashing always derives at the hasher's CURRENT work factor, so this costs what a verification
-    /// of a current-format record costs. A record still on an older work factor costs that older
-    /// amount until its owner signs in once and <see cref="RehashPasswordIfNeededAsync"/> upgrades it.
-    /// </para>
+    /// The derivation is the hasher's own <see cref="IPasswordHasher.BurnVerificationCost"/>, which
+    /// costs what verifying the most expensive record the hasher can have stored costs (for the shipped
+    /// hasher, the larger of its current and legacy work factors), so an unknown address costs the
+    /// same as an account still on an older record. A verification against fixed decoy material would
+    /// not do: a hasher that rejects material of the wrong size before deriving anything (the shipped
+    /// one does) answers it instantly once the decoy's sizes stop matching its own, which silently
+    /// reopens the timing gap.
     /// </remarks>
     private void BurnPasswordVerificationCost(string password)
     {
@@ -864,7 +948,25 @@ public abstract class AuthenticationServiceBase<TUser>(
             return;
         }
 
-        _ = passwordHasher.HashPassword(password);
+        passwordHasher.BurnVerificationCost(password);
+    }
+
+    /// <summary>
+    /// Records a failed sign-in outcome on the <c>MMCA.Common.Auth</c> meter and writes its one Warning
+    /// line (outcome plus a truncated hash of the normalized address), then hands the failure back.
+    /// </summary>
+    /// <param name="outcome">The outcome tag value.</param>
+    /// <param name="email">The address from the request, hashed before it is logged.</param>
+    /// <param name="failure">The failure to return.</param>
+    /// <returns><paramref name="failure"/>, unchanged.</returns>
+    private Result<AuthenticationResponse> SignInFailed(
+        string outcome,
+        string? email,
+        Result<AuthenticationResponse> failure)
+    {
+        AuthSignInMetrics.Record(outcome);
+        AuthenticationServiceLog.SignInFailed(Logger, outcome, AuthenticationServiceLog.EmailLogHash(email));
+        return failure;
     }
 
     /// <summary>
@@ -934,8 +1036,98 @@ public abstract class AuthenticationServiceBase<TUser>(
 /// </summary>
 internal static partial class AuthenticationServiceLog
 {
+    /// <summary>How many hex characters of the address hash a sign-in log line carries (48 bits).</summary>
+    private const int EmailLogHashLength = 12;
+
     [LoggerMessage(
         Level = LogLevel.Warning,
         Message = "Password rehash for user {UserId} was refused by the aggregate ({ErrorCodes}); the sign-in is unaffected and the stored hash is unchanged")]
     internal static partial void PasswordRehashRejected(ILogger logger, UserIdentifierType userId, string errorCodes);
+
+    // A truncated hash of the normalized address, never the address itself.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Password sign-in failed ({Outcome}) for address hash {EmailHash}")]
+    internal static partial void SignInFailed(ILogger logger, string outcome, string emailHash);
+
+    /// <summary>
+    /// The address as it may appear in a log: the first <see cref="EmailLogHashLength"/> hex characters
+    /// of the SHA-256 of the address normalized the way the <see cref="Email"/> value object normalizes
+    /// it (a malformed address falls back to trim and lowercase), the same digest the login-protection
+    /// counters key on, so the two log streams correlate. A 48-bit prefix matches too many addresses
+    /// to name one.
+    /// </summary>
+    /// <param name="email">The address from the request.</param>
+    /// <returns>Twelve uppercase hex characters.</returns>
+    internal static string EmailLogHash(string? email)
+    {
+        string normalized;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            normalized = string.Empty;
+        }
+        else
+        {
+#pragma warning disable CA1308 // Matches Email's own RFC 5321 lowercase normalization.
+            normalized = Email.Create(email).TryGetValue(out var parsed) ? parsed.Value : email.Trim().ToLowerInvariant();
+#pragma warning restore CA1308
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..EmailLogHashLength];
+    }
+}
+
+/// <summary>
+/// OpenTelemetry instrument for password sign-in outcomes. A host exports it by registering the
+/// <see cref="MeterName"/> meter; the Aspire service defaults (<c>ConfigureOpenTelemetry</c>) already
+/// do. The meter name is duplicated as a literal in MMCA.Common.Aspire because that package has no
+/// reference to Application. Tags carry only the low-cardinality outcome: never an address, a user id
+/// or a client IP.
+/// </summary>
+internal static class AuthSignInMetrics
+{
+    /// <summary>OpenTelemetry meter name for sign-in metrics.</summary>
+    internal const string MeterName = "MMCA.Common.Auth";
+
+    /// <summary>The credentials verified and a token pair was issued.</summary>
+    internal const string Success = "success";
+
+    /// <summary>Unknown address, wrong password, no password credential, or a request that failed validation.</summary>
+    internal const string InvalidCredentials = "invalid_credentials";
+
+    /// <summary>The account is in a lockout window.</summary>
+    internal const string LockedOut = "locked_out";
+
+    /// <summary>The password verified and the account needs a second factor the caller did not supply.</summary>
+    internal const string SecondFactorRequired = "second_factor_required";
+
+    /// <summary>The password verified and the supplied second factor did not.</summary>
+    internal const string SecondFactorFailed = "second_factor_failed";
+
+    /// <summary>The password verified and the address is not confirmed.</summary>
+    internal const string EmailNotConfirmed = "email_not_confirmed";
+
+    /// <summary>The password verified and the app gate (or the issuance) refused the account.</summary>
+    internal const string Rejected = "rejected";
+
+    private static readonly Meter Meter = new(MeterName);
+
+    /// <summary>Password sign-in attempts, one per <c>LoginAsync</c> call, tagged by <c>outcome</c>.</summary>
+    internal static readonly Counter<long> SignIns = Meter.CreateCounter<long>(
+        "mmca.auth.signin",
+        unit: "{attempt}",
+        description: "Count of password sign-in attempts, tagged by outcome.");
+
+    /// <summary>
+    /// The outcome of a failed second-factor challenge: <see cref="SecondFactorRequired"/> when no code
+    /// was supplied, <see cref="SecondFactorFailed"/> for anything else (a wrong code, a replay, a
+    /// redemption that could not be persisted).
+    /// </summary>
+    /// <param name="errors">The challenge's errors.</param>
+    /// <returns>The outcome tag value.</returns>
+    internal static string ForSecondFactorFailure(IEnumerable<Error> errors) =>
+        errors.Any(e => e.Code == TwoFactorErrors.TwoFactorRequiredCode) ? SecondFactorRequired : SecondFactorFailed;
+
+    /// <summary>Records one sign-in attempt with the given outcome.</summary>
+    /// <param name="outcome">One of the outcome constants on this type.</param>
+    internal static void Record(string outcome) =>
+        SignIns.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
 }

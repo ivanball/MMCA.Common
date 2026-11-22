@@ -38,7 +38,10 @@ public interface ITwoFactorStore
     /// abandons half way cannot lock them out of their own account.
     /// </summary>
     /// <param name="userId">The enrolling account.</param>
-    /// <param name="secret">The Base32 shared secret.</param>
+    /// <param name="secret">
+    /// The Base32 shared secret in its protected form (<see cref="ITwoFactorSecretProtector"/>); store
+    /// it as given and return it unchanged from <see cref="GetAsync"/>.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success result, or the aggregate's failure.</returns>
     Task<Result> StartEnrollmentAsync(UserIdentifierType userId, string secret, CancellationToken cancellationToken = default);

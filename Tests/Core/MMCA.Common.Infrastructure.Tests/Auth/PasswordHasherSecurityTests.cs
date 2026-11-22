@@ -1,8 +1,10 @@
 ﻿using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Auth;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
@@ -223,6 +225,61 @@ public sealed class PasswordHasherSecurityTests
 
         _sut.VerifyPassword("correct horse battery staple", hash, salt).Should().BeTrue(
             "the length guard must reject non-canonical material without breaking the real path");
+    }
+
+    // -- Unknown-address burn (security review 2026-11-21, A5-05) --
+    // A sign-in for an address with no account burns one throwaway derivation. It must cost what the
+    // most expensive record this hasher verifies costs, or an unknown address answers faster than an
+    // account still on the legacy shape.
+    [Fact]
+    public void BurnIterations_EqualsTheLargerOfTheCurrentAndLegacyWorkFactors()
+    {
+        var expected = Math.Max(ReadPrivateConstant("Iterations"), ReadPrivateConstant("LegacyIterations"));
+
+        ReadPrivateConstant("BurnIterations").Should().Be(expected);
+        expected.Should().Be(Math.Max(PinnedIterations, PinnedLegacyIterations));
+    }
+
+    [Fact]
+    public void BurnVerificationCost_CostsAsMuchAsVerifyingALegacyRecord()
+    {
+        // Timed against the real derivations, interleaved and taken as medians so machine load hits both
+        // sides alike. The legacy verification runs 600,000 iterations and a current-format hash
+        // 210,000, so a burn at the current factor lands near 0.35 of the legacy cost and fails the
+        // 0.7 floor, while a burn at the legacy factor lands near 1.0.
+        IPasswordHasher hasher = _sut;
+        const string password = "KnownAnswerPassword123";
+        var salt = DeterministicSalt();
+        var legacy = Pbkdf2(password, salt, PinnedLegacyIterations);
+
+        hasher.BurnVerificationCost(password);
+        _sut.VerifyPassword(password, legacy, salt).Should().BeTrue();
+
+        var burns = new List<double>();
+        var verifies = new List<double>();
+        for (var round = 0; round < 5; round++)
+        {
+            var started = Stopwatch.GetTimestamp();
+            hasher.BurnVerificationCost(password);
+            burns.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+
+            started = Stopwatch.GetTimestamp();
+            _ = _sut.VerifyPassword(password, legacy, salt);
+            verifies.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+
+        var ratio = Median(burns) / Median(verifies);
+        ratio.Should().BeGreaterThan(
+            0.7,
+            "the burn must derive at the legacy work factor, not the cheaper current one (measured burn {0:F1} ms, legacy verify {1:F1} ms)",
+            Median(burns),
+            Median(verifies));
+    }
+
+    private static double Median(List<double> values)
+    {
+        var sorted = values.Order().ToList();
+        return sorted[sorted.Count / 2];
     }
 
     private static byte[] Pbkdf2(string password, byte[] salt, int iterations) =>

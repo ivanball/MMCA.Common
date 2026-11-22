@@ -73,6 +73,22 @@ public abstract partial class UserAdministrationServiceBase<TUser, TUserDto>(
     }
 
     /// <inheritdoc />
+    /// <remarks>Reads the account the way <see cref="GetAsync"/> does and returns <see cref="GetRole"/>.</remarks>
+    public async Task<Result<string>> GetRoleAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await unitOfWork
+            .GetReadRepository<TUser, UserIdentifierType>()
+            .GetByIdAsync(userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return user is null
+            ? Result.Failure<string>(NotFound(nameof(GetRoleAsync)))
+            : Result.Success(GetRole(user));
+    }
+
+    /// <inheritdoc />
     /// <remarks>
     /// Loads the account (not found otherwise), applies the state through <see cref="ApplyLockState"/>
     /// (whose failure is returned before anything is saved), saves, then on a lock writes the

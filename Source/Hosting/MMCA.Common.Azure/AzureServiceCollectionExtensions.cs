@@ -11,6 +11,7 @@ using MMCA.Common.Aspire.Integrations;
 using MMCA.Common.Azure.Messaging;
 using MMCA.Common.Azure.Notifications;
 using MMCA.Common.Azure.PostgreSql;
+using MMCA.Common.Azure.Redis;
 using MMCA.Common.Azure.Storage;
 using MMCA.Common.Infrastructure;
 
@@ -109,10 +110,15 @@ public static class AzureServiceCollectionExtensions
         /// <summary>
         /// Registers the Azure Service Bus broker transport, so <c>AddBrokerMessaging</c> can select it
         /// with <c>MessageBus:Provider=AzureServiceBus</c>. Call it BEFORE <c>AddBrokerMessaging</c>,
-        /// which picks the transport while it registers the bus. The connection string resolves the
-        /// usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:rabbitmq</c>, then <c>ConnectionStrings:messaging</c>); one
+        /// which picks the transport while it registers the bus. With
+        /// <c>MessageBus:AzureServiceBus:FullyQualifiedNamespace</c> set, the bus signs in with a
+        /// Microsoft Entra token from <c>DefaultAzureCredential</c> (pinned to
+        /// <c>MessageBus:AzureServiceBus:ManagedIdentityClientId</c> when set), so the namespace can run
+        /// with shared access keys off, and any connection string is ignored. Otherwise the connection
+        /// string resolves the usual way (<c>MessageBus:ConnectionString</c>, then <c>ConnectionStrings:rabbitmq</c>, then <c>ConnectionStrings:messaging</c>); one
         /// carrying <c>UseDevelopmentEmulator=true</c> targets the local emulator and needs
-        /// <c>MessageBus:EmulatorAdminEndpoint</c>. Registration only: a host whose provider is
+        /// <c>MessageBus:EmulatorAdminEndpoint</c>. With neither a namespace nor a connection string,
+        /// <c>AddBrokerMessaging</c> fails naming both. Registration only: a host whose provider is
         /// something else is unaffected.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
@@ -170,6 +176,52 @@ public static class AzureServiceCollectionExtensions
             }
 
             return services.AddNpgsqlDataSourceConfigurator(new AzurePostgreSqlEntraAuthenticationConfigurator());
+        }
+
+        /// <summary>
+        /// Puts every framework Redis connection (the Redis client and distributed cache, the
+        /// output-cache store, the SignalR backplane and the PING health check's own connection) on
+        /// Microsoft Entra token login for Azure Cache for Redis and Azure Managed Redis when
+        /// <c>AzureRedis:EntraAuthentication:Enabled</c> is true, through the core
+        /// <c>IRedisConfigurationOptionsConfigurator</c> extension point and
+        /// Microsoft.Azure.StackExchangeRedis: the connection signs in with an Entra access token from
+        /// <c>DefaultAzureCredential</c>, pinned to the user-assigned managed identity named by
+        /// <c>AzureRedis:EntraAuthentication:ManagedIdentityClientId</c> when it is set, and the library
+        /// re-authenticates open connections before each token expires. Off (absent or false), this
+        /// registers nothing. Order-independent relative to <c>AddInfrastructure</c>,
+        /// <c>AddPushNotifications</c> and the <c>AddRedis*</c> calls.
+        /// <para>
+        /// The connection string keeps the host, port and TLS settings and carries no password (access
+        /// key): one that carries a password, or sets <c>ssl=false</c>, fails when its connection is
+        /// configured, naming the endpoint, because the token is sent as the password.
+        /// </para>
+        /// </summary>
+        /// <param name="configuration">Application configuration providing <c>AzureRedis:EntraAuthentication</c>.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddAzureRedisEntraAuthentication(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration
+                .GetSection(AzureRedisEntraAuthenticationSettings.SectionPath)
+                .Get<AzureRedisEntraAuthenticationSettings>();
+            if (settings is not { Enabled: true })
+            {
+                return services;
+            }
+
+            // The receipt the core startup tripwire checks: the gate set without this call fails the
+            // host instead of letting it sign in with whatever access key the connection string carries.
+            if (!services.Any(static descriptor =>
+                    descriptor.ServiceType == typeof(HostIntegrationMarker)
+                    && descriptor.ImplementationInstance is HostIntegrationMarker marker
+                    && string.Equals(marker.Name, HostIntegrationNames.AzureRedisEntraAuthentication, StringComparison.Ordinal)))
+            {
+                services.AddSingleton(new HostIntegrationMarker(HostIntegrationNames.AzureRedisEntraAuthentication));
+            }
+
+            return services.AddRedisConfigurationOptionsConfigurator(
+                new AzureRedisEntraAuthenticationConfigurator(AzureTokenCredentials.Create(settings.ManagedIdentityClientId)));
         }
     }
 }

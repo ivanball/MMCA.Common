@@ -30,8 +30,9 @@ public interface ITwoFactorUserState
     bool IsTwoFactorEnabled { get; }
 
     /// <summary>
-    /// The Base32 shared secret the account's codes are derived from, or <see langword="null"/> when
-    /// no enrollment has been started.
+    /// The shared secret the account's codes are derived from, in the protected form the framework
+    /// handed the store (never the plaintext Base32 key), or <see langword="null"/> when no
+    /// enrollment has been started.
     /// </summary>
     string? TwoFactorSecret { get; }
 

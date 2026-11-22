@@ -44,11 +44,14 @@ public static class ServiceTokenServiceCollectionExtensions
 
         /// <summary>
         /// Adds the <see cref="ServiceTokenDefaults.AuthenticationScheme"/> JwtBearer scheme and the
-        /// <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> authorization policy. The scheme
+        /// <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> and
+        /// <see cref="ServiceTokenDefaults.ServiceCallerPolicy"/> authorization policies. The scheme
         /// validates issuer, audience, lifetime and signature against the shared key, accepts HS256
         /// only, and refuses a token without the <see cref="ServiceTokenDefaults.ServiceClaimType"/>
-        /// claim. The policy accepts an authenticated caller from either the user scheme
-        /// (<see cref="JwtBearerDefaults.AuthenticationScheme"/>) or the service scheme.
+        /// claim. <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> accepts an authenticated
+        /// caller from either the user scheme (<see cref="JwtBearerDefaults.AuthenticationScheme"/>)
+        /// or the service scheme; <see cref="ServiceTokenDefaults.ServiceCallerPolicy"/> accepts the
+        /// service scheme alone.
         /// <para>
         /// The service scheme is never made the default, so a service token satisfies only an
         /// endpoint that names <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> (or the scheme
@@ -84,7 +87,11 @@ public static class ServiceTokenServiceCollectionExtensions
             services.AddAuthorizationBuilder()
                 .AddPolicy(ServiceTokenDefaults.InternalCallerPolicy, policy => policy
                     .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ServiceTokenDefaults.AuthenticationScheme)
-                    .RequireAuthenticatedUser());
+                    .RequireAuthenticatedUser())
+                .AddPolicy(ServiceTokenDefaults.ServiceCallerPolicy, policy => policy
+                    .AddAuthenticationSchemes(ServiceTokenDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .RequireClaim(ServiceTokenDefaults.ServiceClaimType));
 
             return services;
         }
@@ -142,6 +149,10 @@ public static class ServiceTokenServiceCollectionExtensions
 
             // Pinned so an algorithm-confusion swap cannot pass a token signed some other way.
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+
+            // The identity carries the scheme name, so IsServiceCaller can tell it apart from a
+            // user identity in a principal merged from several schemes.
+            AuthenticationType = ServiceTokenDefaults.AuthenticationScheme,
         };
 
         options.Events = new JwtBearerEvents

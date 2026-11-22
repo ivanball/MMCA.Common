@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -37,6 +38,15 @@ public static class GatewayRoutePolicyExtensions
     /// request is then limited exactly as before.
     /// </summary>
     internal const string TrustedInternalCallerItemKey = "MMCA.Common.Gateway.TrustedInternalCaller";
+
+    /// <summary>
+    /// The <see cref="HttpContext.Items"/> key the edge limiter of <c>MMCA.Common.Aspire</c> stamps
+    /// with the forwarded visitor's <see cref="IPAddress"/> when it meters a trusted internal caller
+    /// per visitor (the literal is repeated there, as above). When present, <see cref="Partition"/>
+    /// keys on that address instead of the connecting one, so the visitor's requests through a
+    /// server-rendered UI host and its direct requests share one window.
+    /// </summary>
+    internal const string TrustedCallerVisitorIpItemKey = "MMCA.Common.Gateway.TrustedCallerVisitorIp";
 
     extension(IServiceCollection services)
     {
@@ -88,9 +98,10 @@ public static class GatewayRoutePolicyExtensions
     /// <summary>
     /// The partition one request falls into under <paramref name="policy"/>: a fixed window keyed by
     /// the policy's partition choice, or no limiter at all when a per-IP policy cannot resolve the
-    /// caller's address or the edge limiter has already validated the request as a trusted internal
-    /// caller (the same exemption the edge limiter grants; a server-rendered UI's sign-ins all leave
-    /// from one address and would otherwise share one per-IP bucket).
+    /// caller's address or the edge limiter has exempted the request as a trusted internal caller
+    /// (the same exemption the edge limiter grants; a server-rendered UI's sign-ins all leave from
+    /// one address and would otherwise share one per-IP bucket). A trusted caller the edge limiter
+    /// meters per visitor is keyed on that visitor's address.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="policy">The named policy's settings.</param>
@@ -107,12 +118,22 @@ public static class GatewayRoutePolicyExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(policy);
 
-        if (httpContext.Items.TryGetValue(TrustedInternalCallerItemKey, out var trusted) && trusted is true)
+        IPAddress? clientIp;
+        if (httpContext.Items.TryGetValue(TrustedCallerVisitorIpItemKey, out var visitor) && visitor is IPAddress visitorIp)
+        {
+            // A trusted caller metered per visitor: the same key the visitor's own request takes.
+            clientIp = visitorIp;
+        }
+        else if (httpContext.Items.TryGetValue(TrustedInternalCallerItemKey, out var trusted) && trusted is true)
         {
             return RateLimitPartition.GetNoLimiter(GatewayRoutePolicySettings.GlobalPartitionKey);
         }
+        else
+        {
+            clientIp = httpContext.Connection.RemoteIpAddress;
+        }
 
-        var key = policy.PartitionKey(httpContext.Connection.RemoteIpAddress);
+        var key = policy.PartitionKey(clientIp);
 
         // Not RateLimitPartition.GetFixedWindowLimiter: the framework limiter's Retry-After is always the
         // whole window, so the wrapper reports the time actually left in it. AutoReplenishment is off

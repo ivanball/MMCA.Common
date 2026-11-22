@@ -133,7 +133,8 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     // True while a page restored from the URL or saved state is not yet on the grid (Store Run 5 D8). The
     // grid's first load starts before the first-render setup can touch the grid, with its page reset to
     // 0 by the RowsPerPage parameter, so while this is set that load asks for the restored page itself
-    // (ResolvePage) instead of rendering page-1 rows under the restored pager and saving p=0.
+    // (ResolvePage) instead of rendering page-1 rows under the restored pager and saving p=0. The first
+    // paged load takes it, so a page the user picks after that is never overridden by the restore.
     private bool _restoredPagePending;
     private string? _savedSortColumn;
     private bool _savedSortDescending;
@@ -699,12 +700,17 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     /// over the first page's rows, and that load saved <c>p=0</c> over the URL (Run 17 O-85). So the
     /// caller reloads whenever this moved the page; the reload cancels the stale first load.
     /// </para>
+    /// <para>
+    /// Only while the restored page is still pending: once a paged load took it (the grid's first load
+    /// fetched it and put the pager on it), the grid's page is the user's, and a page the user moved to
+    /// during the restore window is kept (Store Run 5 R6c).
+    /// </para>
     /// </summary>
     /// <returns><see langword="true"/> when the grid's page was moved, so the caller reloads it.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism.")]
     private bool RestoreCurrentPageAfterRowsPerPageReset()
     {
-        if (_savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
+        if (_restoredPagePending && _savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
         {
             grid.CurrentPage = _savedPage;
             return true;
@@ -720,11 +726,21 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     /// interop round trips later), and on a slow network it otherwise rendered page-1 rows under the
     /// restored pager and saved the URL without <c>p</c> for seconds (Store Run 5 D8). Read when the
     /// load starts, so a restore that completes during the load cannot change what it asked for.
+    /// <para>
+    /// The first paged load takes the pending restore: it is the grid's own load, which runs before the
+    /// pager can be used, and it puts the restored page on the pager with its rows. Any later load is a
+    /// page the grid (the user) asked for, so a "first page" chosen while the first-render setup is still
+    /// waiting on interop wins over the restore (Store Run 5 R6c).
+    /// </para>
     /// </summary>
     /// <param name="gridPage">The page the grid's state carries.</param>
     /// <returns>The page to fetch and save.</returns>
-    private int ResolvePage(int gridPage) =>
-        _restoredPagePending && gridPage == 0 && _savedPage > 0 ? _savedPage : gridPage;
+    private int ResolvePage(int gridPage)
+    {
+        var page = _restoredPagePending && gridPage == 0 && _savedPage > 0 ? _savedPage : gridPage;
+        _restoredPagePending = false;
+        return page;
+    }
 
     private static bool HasListPageState(ListPageState state) =>
         state.Page > 0 || state.PageSize > 0 || state.MobilePage > 1
@@ -1019,6 +1035,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
             var (_, savedColumnFilters) = ResolveColumnFilters(state.FilterDefinitions, restorePendingAtLoadStart);
+            MovePagerToRows(state.Page, pageIndex, pageIndex);
             SaveCurrentState(pageIndex, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase), savedColumnFilters);
             return cached;
         }
@@ -1085,10 +1102,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
                     return FailedFetch(fetched, EmptyGridData);
                 }
 
-                if (fetchedPage != pageIndex)
-                {
-                    MovePagerTo(fetchedPage);
-                }
+                MovePagerToRows(state.Page, pageIndex, fetchedPage);
 
                 var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
                 _lastSuccessfulGridData = gridData;
@@ -1148,9 +1162,27 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     }
 
     /// <summary>
-    /// Puts the pager on <paramref name="pageIndex"/> after a fetch was clamped to it: the bound page, the
-    /// page a pending restore applies, and the rendered grid's own page (which reloads that page once the
-    /// grid's first load is done, answering with the same rows).
+    /// Puts the pager on the page whose rows a load is about to hand the grid, when that is not the page
+    /// the grid asked for: a deep link's restored page (Store Run 5 D8) or a page clamped to the last one
+    /// (O4). Done before the rows are returned, so no render shows them under the range of the page the
+    /// grid asked for: a restored "?p=1&amp;ps=5" read "1-5 of N" over the page-2 rows until the
+    /// first-render restore moved the pager (Store Run 5 R4).
+    /// </summary>
+    /// <param name="gridPage">The 0-based page the grid's state carried when the load started.</param>
+    /// <param name="requestedPage">The 0-based page the load asked for (see <see cref="ResolvePage"/>).</param>
+    /// <param name="rowsPage">The 0-based page the returned rows belong to.</param>
+    private void MovePagerToRows(int gridPage, int requestedPage, int rowsPage)
+    {
+        if (rowsPage != gridPage || rowsPage != requestedPage)
+        {
+            MovePagerTo(rowsPage);
+        }
+    }
+
+    /// <summary>
+    /// Puts the pager on <paramref name="pageIndex"/>: the bound page, the page a pending restore
+    /// applies, and the rendered grid's own page (which reloads that page once the grid's first load is
+    /// done, answering with the same rows).
     /// </summary>
     /// <param name="pageIndex">The 0-based page the fetch returned.</param>
     private void MovePagerTo(int pageIndex)

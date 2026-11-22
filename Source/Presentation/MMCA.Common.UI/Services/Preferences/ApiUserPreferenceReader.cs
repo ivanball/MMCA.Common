@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Preferences;
@@ -45,6 +46,10 @@ public sealed class ApiUserPreferenceReader(
             var client = httpClientFactory.CreateClient("APIClient");
             using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("auth/preferences", UriKind.Relative));
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // As CreateAuthenticatedClientAsync does: the handler's own storage is another instance, so
+            // it is told which one this bearer came from, and a 401 renews (or ends) THIS session.
+            AuthDelegatingHandler.TrackTokenOwner(token!, tokenStorageService);
             using var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {

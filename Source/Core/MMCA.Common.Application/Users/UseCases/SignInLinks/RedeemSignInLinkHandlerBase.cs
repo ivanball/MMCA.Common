@@ -5,6 +5,7 @@ using MMCA.Common.Application.Auth.SignInLinks;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Domain.Auth.Credentials;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
@@ -35,6 +36,16 @@ namespace MMCA.Common.Application.Users.UseCases.SignInLinks;
 /// <b>Redeeming confirms the address.</b> The link proves the caller reads the mailbox, which is the
 /// proof email confirmation asks for, so an <see cref="IEmailConfirmableUser"/> that was unconfirmed is
 /// confirmed in the same save.
+/// </para>
+/// <para>
+/// <b>An unconfirmed account loses its password when a link confirms it.</b> The link proves the
+/// mailbox, not the password that was set on the unconfirmed account, so when such an account holds
+/// password material its refresh sessions are revoked first, then the account save also removes the
+/// password (<see cref="IPasswordClearableUser.ClearPassword"/>); the owner sets a password through
+/// forgot password.
+/// An account type that holds password material but does not implement
+/// <see cref="IPasswordClearableUser"/> is refused with the generic invalid-link answer and nothing
+/// is saved. A confirmed account, and an account with no password, are unaffected.
 /// </para>
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
@@ -204,16 +215,77 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
 
         if (user is IEmailConfirmableUser { IsEmailConfirmed: false })
         {
-            var confirmed = ConfirmIfNeeded(user);
+            var confirmed = await ConfirmExistingAccountAsync(user, cancellationToken).ConfigureAwait(false);
             if (confirmed.IsFailure)
             {
                 return Result.Failure<TUser>(confirmed.Errors);
             }
-
-            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success(user);
+    }
+
+    /// <summary>
+    /// Confirms an existing, unconfirmed account and saves it. When the account holds password
+    /// material, its refresh sessions are revoked first (through
+    /// <see cref="IAuthenticationService.RevokeAllSessionsAsync"/>, its own save), then the same account
+    /// save removes the password and confirms the address. An account type that cannot remove its
+    /// password is refused, and a failed revocation is returned, before the account is mutated.
+    /// </summary>
+    /// <param name="user">The tracked, unconfirmed account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, the invalid-link refusal, or the aggregate's failure.</returns>
+    private async Task<Result> ConfirmExistingAccountAsync(TUser user, CancellationToken cancellationToken)
+    {
+        if (user is not IAuthUser authUser || !PasswordCredential.IsStored(authUser))
+        {
+            return await ConfirmAndSaveAsync(user, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Decided before anything is mutated, so a refusal leaves the tracked account untouched.
+        if (user is not IPasswordClearableUser clearable)
+        {
+            PasswordNotClearable(logger, user.Id);
+            return Result.Failure(SignInLinkErrors.InvalidLink(HandlerName));
+        }
+
+        // Revoked before the account changes: a failure here leaves it unconfirmed with its
+        // password, and a failure after it leaves it unconfirmed with no session to resume.
+        var revoked = await authenticationService.RevokeAllSessionsAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        if (revoked.IsFailure)
+        {
+            return revoked;
+        }
+
+        var cleared = clearable.ClearPassword();
+        if (cleared.IsFailure)
+        {
+            return cleared;
+        }
+
+        var saved = await ConfirmAndSaveAsync(user, cancellationToken).ConfigureAwait(false);
+        if (saved.IsSuccess)
+        {
+            PasswordClearedOnConfirmation(logger, user.Id);
+        }
+
+        return saved;
+    }
+
+    /// <summary>Confirms the address on the tracked account and saves it.</summary>
+    /// <param name="user">The tracked, unconfirmed account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, or the aggregate's failure (nothing saved).</returns>
+    private async Task<Result> ConfirmAndSaveAsync(TUser user, CancellationToken cancellationToken)
+    {
+        var confirmed = ConfirmIfNeeded(user);
+        if (confirmed.IsFailure)
+        {
+            return confirmed;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
     }
 
     private static Result ConfirmIfNeeded(TUser user) =>
@@ -232,6 +304,13 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} created from an invitation link")]
     private static partial void AccountProvisioned(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} confirmed by a sign-in link; its password was removed and its refresh sessions were revoked")]
+    private static partial void PasswordClearedOnConfirmation(ILogger logger, UserIdentifierType userId);
+
+    // Logged only after the token was spent, so the account id reveals nothing the caller did not prove.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in link redemption refused for unconfirmed account {UserId}: it holds a password and its type does not implement IPasswordClearableUser")]
+    private static partial void PasswordNotClearable(ILogger logger, UserIdentifierType userId);
 
     // No address and no account id: the endpoint answers identically whether or not the address exists.
     [LoggerMessage(Level = LogLevel.Information, Message = "Sign-in link redemption not actioned ({Reason})")]

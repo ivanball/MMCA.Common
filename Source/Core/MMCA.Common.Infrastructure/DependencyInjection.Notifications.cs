@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Notifications.Live;
@@ -31,7 +33,8 @@ public static partial class DependencyInjection
         /// Registers SignalR push notification services, replacing the default <see cref="NullPushNotificationSender"/>
         /// with <see cref="SignalRPushNotificationSender"/> and the default <see cref="NullLiveChannelPublisher"/>
         /// with <see cref="SignalRLiveChannelPublisher"/>. Optionally configures a Redis backplane when a Redis
-        /// connection string is available.
+        /// connection string is available. Logs one startup Warning when no
+        /// <see cref="IChannelJoinAuthorizer"/> is registered.
         /// </summary>
         /// <param name="configuration">Application configuration for binding settings and detecting Redis.</param>
         /// <returns>The service collection for chaining.</returns>
@@ -56,6 +59,17 @@ public static partial class DependencyInjection
                 var channelPrefix = ApplicationNamespace.Resolve(configuration, environment: null);
                 signalRBuilder.AddStackExchangeRedis(redisConnectionString, options =>
                     options.Configuration.ChannelPrefix = RedisChannel.Literal(channelPrefix));
+
+                // Every registered IRedisConfigurationOptionsConfigurator runs on the backplane's
+                // options before it connects; with none registered the options are untouched.
+                services.AddOptions<RedisOptions>()
+                    .PostConfigure<IEnumerable<IRedisConfigurationOptionsConfigurator>>(static (options, configurators) =>
+                    {
+                        foreach (var configurator in configurators)
+                        {
+                            configurator.Configure(options.Configuration);
+                        }
+                    });
             }
 
             // Replace the default Null implementations with the SignalR-backed ones.
@@ -65,6 +79,11 @@ public static partial class DependencyInjection
             // (NameIdentifier only), so a TryAdd here never took effect and a principal carrying only
             // the raw sub claim got a null UserIdentifier.
             services.Replace(ServiceDescriptor.Singleton<IUserIdProvider, ClaimBasedUserIdProvider>());
+
+            // Channel joins stay open without an IChannelJoinAuthorizer; one startup Warning names
+            // the interface when none is registered. AddHostedService is a TryAddEnumerable, so a
+            // second call adds no second warning.
+            services.AddHostedService<Notifications.ChannelJoinAuthorizerMissingWarningService>();
 
             return services;
         }

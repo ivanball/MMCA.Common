@@ -220,7 +220,9 @@ public abstract class EntityControllerBase<
     /// </para>
     /// <para>
     /// <b>Child collections.</b> Unlike the paged endpoint this takes no <c>includeChildren</c>: a
-    /// child collection has no faithful representation in a flat CSV cell. For the same reason the
+    /// child collection has no faithful representation in a flat CSV cell. A controller whose DTO
+    /// computes a scalar from a loaded navigation (a count of children, a parent's name) loads it
+    /// through <see cref="ExportIncludeChildren"/> and <see cref="ExportIncludeFKs"/>. For the same reason the
     /// column set drops any DTO property that cannot render a faithful scalar cell (binary tokens
     /// such as <c>rowVersion</c>, and every collection-typed property), so those columns are absent
     /// rather than filled with a type name. A <c>fields=</c> request that names one of them is a
@@ -278,8 +280,8 @@ public abstract class EntityControllerBase<
         var written = await EntityCsvExporter<TEntityDTO>.WriteAsync(
             Response.Body,
             (pageNumber, token) => QueryService.GetAllAsync(
-                includeFKs: includeFKs,
-                includeChildren: false,
+                includeFKs: includeFKs || ExportIncludeFKs,
+                includeChildren: ExportIncludeChildren,
                 specification: specification,
                 filters: filters,
                 sortColumn: sortColumn,
@@ -490,11 +492,18 @@ public abstract class EntityControllerBase<
                 "Operation failed for {EntityName}: {ErrorCode} - {ErrorMessage}",
                 EntityName,
                 firstError.Code,
-                firstError.Message);
+                SingleLine(firstError.Message));
         }
 
         return base.HandleFailure(errorList);
     }
+
+    /// <summary>
+    /// The value with every carriage return and line feed removed, so a logged message is always
+    /// one line whatever the sink.
+    /// </summary>
+    private static string? SingleLine(string? value) =>
+        value?.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
 
     /// <summary>
     /// Row ceiling used by <see cref="ExportAsync"/> when no host setting supplies one. Matches
@@ -538,6 +547,21 @@ public abstract class EntityControllerBase<
     /// </para>
     /// </remarks>
     protected virtual bool AllowUnscopedExport => false;
+
+    /// <summary>
+    /// Whether <see cref="ExportAsync"/> loads child collection navigations for every page. Defaults
+    /// to <see langword="false"/>. Override it to <see langword="true"/> when a DTO column is computed
+    /// from a loaded child collection (a count of children, say); the collections themselves still
+    /// earn no CSV column.
+    /// </summary>
+    protected virtual bool ExportIncludeChildren => false;
+
+    /// <summary>
+    /// Whether <see cref="ExportAsync"/> loads foreign-key navigations for every page, on top of the
+    /// request's own <c>includeFKs</c> value. Defaults to <see langword="false"/>. Override it to
+    /// <see langword="true"/> when a DTO column is computed from a loaded parent (its name, say).
+    /// </summary>
+    protected virtual bool ExportIncludeFKs => false;
 
     /// <summary>
     /// Gets the file name stem for an export download: the routed controller name (so

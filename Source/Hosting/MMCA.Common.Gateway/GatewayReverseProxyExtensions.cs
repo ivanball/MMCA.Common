@@ -18,8 +18,9 @@ namespace MMCA.Common.Gateway;
 /// own <c>HttpRequest</c>, then its <c>ClusterRequestOverrides</c> entry, then
 /// <c>ClusterRequestDefaults</c>, forwarded exactly as resolved: no global switch rewrites the HTTP
 /// version, so a cluster drops to HTTP/1.1 only through its own settings), destination health-check
-/// defaults, route/cluster trace headers, and the named per-route rate-limiter policies YARP routes
-/// reference by name.
+/// defaults, route/cluster trace headers, removal of the edge limiter's trusted-caller and
+/// synthetic-traffic headers from every proxied request, and the named per-route rate-limiter
+/// policies YARP routes reference by name.
 /// <para>
 /// It deliberately does NOT load the route table: <c>LoadFromConfig</c> (or any other
 /// <c>IProxyConfigProvider</c>) stays the host's call, because which section owns the routes, and
@@ -115,7 +116,8 @@ public static class GatewayReverseProxyExtensions
         return builder
             .AddConfigFilter<GatewayClusterProfileConfigFilter>()
             .AddConfigFilter<GatewayHealthCheckDefaultsConfigFilter>()
-            .AddTransforms<GatewayTraceHeaderTransformProvider>();
+            .AddTransforms<GatewayTraceHeaderTransformProvider>()
+            .AddTransforms<GatewayBypassHeaderTransformProvider>();
     }
 
     /// <summary>

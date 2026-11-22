@@ -33,6 +33,16 @@ public interface IUserAdministrationService<TUserDto>
     Task<Result<TUserDto>> GetAsync(UserIdentifierType userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the role the account holds now, or the same not-found failure the other members
+    /// return. <c>UsersAdminControllerBase</c> reads it to refuse administering an account whose role
+    /// grants a permission the caller does not hold.
+    /// </summary>
+    /// <param name="userId">The account to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The account's current role name.</returns>
+    Task<Result<string>> GetRoleAsync(UserIdentifierType userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Locks or unlocks an account.
     /// </summary>
     /// <remarks>

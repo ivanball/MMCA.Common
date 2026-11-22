@@ -83,6 +83,29 @@ public sealed class UserAdministrationServiceBaseTests
         result.Value!.Id.Should().Be(user.Id);
     }
 
+    // ---- GetRoleAsync ----
+    [Fact]
+    public async Task GetRoleAsync_KnownId_ReturnsTheAccountsCurrentRole()
+    {
+        ArrangeUser(role: "Manager");
+
+        var result = await CreateSut().GetRoleAsync(KnownUserId, Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("Manager");
+        VerifyNotSaved();
+    }
+
+    [Fact]
+    public async Task GetRoleAsync_UnknownId_ReturnsTheNotFoundFailure()
+    {
+        var result = await CreateSut().GetRoleAsync(UnknownUserId, Ct);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Type.Should().Be(ErrorType.NotFound);
+        result.Errors[0].Code.Should().Be(Error.NotFound.Code);
+    }
+
     // ---- SetLockedAsync(lock = true) ----
     [Fact]
     public async Task SetLockedAsync_Lock_UnknownId_ReturnsNotFoundAndSavesNothing()

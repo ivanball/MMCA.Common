@@ -256,14 +256,16 @@ public sealed class LoginProtectionServiceTests
             await sut.IncrementFailedAttemptsAsync(TestEmail);
         }
 
-        logged.Should().BeEmpty("below the threshold nothing is logged");
+        // Each recorded attempt writes its own Information line; the lockout Warning is what this pins.
+        logged.Where(e => e.Level == LogLevel.Warning).Should().BeEmpty("below the threshold no lockout warning is logged");
 
         for (var attempt = 3; attempt <= 8; attempt++)
         {
             await sut.IncrementFailedAttemptsAsync(TestEmail);
         }
 
-        var warning = logged.Should().ContainSingle("only the attempt that first crosses MaxFailedAttempts logs").Subject;
+        var warning = logged.Where(e => e.Level == LogLevel.Warning).Should()
+            .ContainSingle("only the attempt that first crosses MaxFailedAttempts logs the lockout").Subject;
         warning.Level.Should().Be(LogLevel.Warning);
         warning.Message.Should().Contain("lockout tripped");
         warning.Message.Should().Contain("1s", "the lockout seconds of the tripping attempt are logged");
@@ -272,6 +274,40 @@ public sealed class LoginProtectionServiceTests
             EmailIdentity.KeySegment(TestEmail),
             "the full digest of a guessable address is as good as the address; only a truncated prefix is logged");
         warning.Message.Should().Contain(EmailIdentity.KeySegment(TestEmail)[..12]);
+    }
+
+    // -- Failed-attempt log event (security review 2026-11-21, A4) --
+    // One Information line per recorded failed attempt, carrying the truncated key hash and the count,
+    // never the address.
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_LogsOneInformationLinePerAttemptWithTheKeyHashAndTheCount_AndNeverTheEmail()
+    {
+        var logger = CreateRecordingLogger(out var logged);
+        var sut = new LoginProtectionService(
+            new FakeCacheService(),
+            Options.Create(new LoginProtectionSettings { MaxFailedAttempts = 10, MaxLockoutSeconds = 300 }),
+            logger);
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            await sut.IncrementFailedAttemptsAsync(TestEmail);
+        }
+
+        var lines = logged.Where(e => e.Level == LogLevel.Information).Select(e => e.Message).ToList();
+        lines.Should().HaveCount(3, "each recorded failed attempt writes exactly one Information line");
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            // The hex hash may contain digits of its own, so the count is looked for outside it.
+            lines[attempt - 1].Replace(EmailIdentity.KeySegment(TestEmail)[..12], string.Empty, StringComparison.Ordinal)
+                .Should().Contain(attempt.ToString(System.Globalization.CultureInfo.InvariantCulture), "the line carries the attempt count");
+        }
+
+        foreach (var line in lines)
+        {
+            line.Should().Contain(EmailIdentity.KeySegment(TestEmail)[..12], "the line carries the truncated key hash");
+            line.Should().NotContain(EmailIdentity.KeySegment(TestEmail), "only a truncated prefix of the digest is logged");
+            line.Should().NotContainEquivalentOf(TestEmail).And.NotContainEquivalentOf("example.com");
+        }
     }
 
     // ── Reset ──

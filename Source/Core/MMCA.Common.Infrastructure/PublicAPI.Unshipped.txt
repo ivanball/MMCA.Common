@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator
+MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator.Configure(StackExchange.Redis.ConfigurationOptions! options) -> void
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddRedisConfigurationOptionsConfigurator(MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.DependencyInjection.AddRedisConfigurationOptionsConfigurator(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Caching.IRedisConfigurationOptionsConfigurator! configurator) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

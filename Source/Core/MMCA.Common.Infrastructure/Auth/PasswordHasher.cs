@@ -57,6 +57,12 @@ public sealed class PasswordHasher : IPasswordHasher
     /// </summary>
     private const int MaxIterations = 2_000_000;
 
+    /// <summary>
+    /// The work factor a throwaway verification burns at: the highest one a record this hasher wrote
+    /// can carry, which is the larger of <see cref="Iterations"/> and <see cref="LegacyIterations"/>.
+    /// </summary>
+    internal const int BurnIterations = Iterations > LegacyIterations ? Iterations : LegacyIterations;
+
     /// <inheritdoc />
     public (byte[] Hash, byte[] Salt) HashPassword(string password)
     {
@@ -98,6 +104,18 @@ public sealed class PasswordHasher : IPasswordHasher
         // FixedTimeEquals prevents timing side-channel attacks by always comparing
         // the full length regardless of where the first difference occurs.
         return CryptographicOperations.FixedTimeEquals(computedHash, expected);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Derives at <see cref="BurnIterations"/> over a fresh salt, so the cost equals verifying a legacy
+    /// record, the most expensive shape this hasher accepts from its own writes.
+    /// </remarks>
+    void IPasswordHasher.BurnVerificationCost(string password)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
+        _ = ComputePbkdf2Hash(password, RandomNumberGenerator.GetBytes(SaltSize), BurnIterations);
     }
 
     /// <inheritdoc />

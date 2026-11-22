@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -26,7 +27,8 @@ public static partial class Extensions
     {
         /// <summary>
         /// Registers all service defaults: OpenTelemetry, health checks, service discovery,
-        /// and HTTP client resilience (Polly). Call this early in <c>Program.cs</c> before
+        /// HTTP client resilience (Polly), and Kestrel with no <c>Server</c> response header. Call
+        /// this early in <c>Program.cs</c> before
         /// adding module-specific services.
         /// </summary>
         /// <returns>The same builder instance for chaining.</returns>
@@ -36,6 +38,10 @@ public static partial class Extensions
             builder.AddDefaultHealthChecks();
             builder.AddWarmupReadiness();
             builder.Services.AddServiceDiscovery();
+
+            // No Server response header on any host: it names the server family to a scanner and
+            // carries nothing a client needs.
+            builder.Services.Configure<KestrelServerOptions>(static kestrel => kestrel.AddServerHeader = false);
 
             // Startup tripwire for vendor integrations the configuration asks for but no adapter
             // call registered (an Application Insights connection string with no exporter, a vault

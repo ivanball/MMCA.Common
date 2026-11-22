@@ -306,6 +306,27 @@ public sealed class EntityControllerBaseTests
             Times.Once);
     }
 
+    // B5 (D-03): a failure message carrying CR or LF is logged on one line, with the code and both
+    // halves of the message still present.
+    [Theory]
+    [InlineData("first line\r\nforged: second line")]
+    [InlineData("first line\nforged: second line")]
+    [InlineData("first line\rforged: second line")]
+    public void HandleFailure_AMessageWithALineBreak_IsLoggedOnOneLine(string message)
+    {
+        var logger = new LineRecordingLogger();
+        var sut = new TestEntityController(_queryServiceMock.Object, logger)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        sut.InvokeHandleFailure([Error.Validation("Test.Code", message)]);
+
+        var line = logger.Lines.Should().ContainSingle().Which;
+        line.Should().NotContain("\r").And.NotContain("\n");
+        line.Should().Contain("Test.Code").And.Contain("first line").And.Contain("forged: second line");
+    }
+
     // ── MaxPageSize ──
     [Fact]
     public void MaxPageSize_UsesSettingsValue()
@@ -325,6 +346,27 @@ public sealed class EntityControllerBaseTests
         int maxPageSize = sut.ExposedMaxPageSize;
 
         maxPageSize.Should().Be(500);
+    }
+
+    /// <summary>Keeps every Warning-or-above line as the sink would render it.</summary>
+    private sealed class LineRecordingLogger : ILogger<EntityControllerBase<TestEntity, TestDTO, int>>
+    {
+        private readonly List<string> _lines = [];
+
+        public IReadOnlyList<string> Lines => _lines;
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Warning)
+            {
+                _lines.Add(formatter(state, exception));
+            }
+        }
     }
 }
 

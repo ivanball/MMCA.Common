@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Hosting;
 
 namespace MMCA.Common.AI;
 
@@ -68,7 +69,8 @@ public sealed class AiSettings : IValidatableObject
     /// The provider API key. Required when <see cref="Enabled"/>.
     /// <para>
     /// In production this binds from Key Vault (the configuration provider registered by
-    /// <c>AddCommonKeyVaultConfiguration</c>), never from a checked-in settings file: the value
+    /// <c>AddAzureKeyVaultConfiguration</c> in <c>MMCA.Common.Azure.Startup</c>), never from a
+    /// checked-in settings file: the value
     /// lives in configuration only so that the secret store, and not this package, decides where it
     /// comes from. Local development uses user secrets or an environment variable.
     /// </para>
@@ -131,11 +133,22 @@ public sealed class AiSettings : IValidatableObject
     public int? PerCallInputTokenBudget { get; init; }
 
     /// <summary>
+    /// Whether the host environment is Development, stamped by <c>AddMmcaChatClient</c> from the
+    /// registered <see cref="IHostEnvironment"/> before options validation runs. Not bound from
+    /// configuration. False (production) when no environment is registered.
+    /// </summary>
+    internal bool IsDevelopmentHost { get; set; }
+
+    /// <summary>
     /// The conditional half of validation: the pieces that are required only once the dependency is
     /// switched on. A host that leaves <see cref="Enabled"/> false is valid with nothing else set,
     /// which is what lets the section ship in every appsettings file.
     /// </summary>
-    /// <param name="validationContext">The validation context (unused: every rule here is local).</param>
+    /// <param name="validationContext">
+    /// The validation context. When it carries a service provider with an
+    /// <see cref="IHostEnvironment"/>, that environment decides whether a non-https
+    /// <see cref="Endpoint"/> is allowed; otherwise <see cref="IsDevelopmentHost"/> does.
+    /// </param>
     /// <returns>One result per violated rule; empty when the settings are usable.</returns>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -167,11 +180,9 @@ public sealed class AiSettings : IValidatableObject
                 [nameof(ApiKey)]);
         }
 
-        if (Endpoint is { IsAbsoluteUri: false })
+        if (ValidateEndpoint(validationContext) is { } endpointProblem)
         {
-            yield return new ValidationResult(
-                $"{SectionName}:{nameof(Endpoint)} must be an absolute URI when set.",
-                [nameof(Endpoint)]);
+            yield return endpointProblem;
         }
 
         if (Timeout <= TimeSpan.Zero)
@@ -188,4 +199,42 @@ public sealed class AiSettings : IValidatableObject
                 [nameof(Timeout)]);
         }
     }
+
+    /// <summary>
+    /// The <see cref="Endpoint"/> rules: absolute when set, and https outside Development, because
+    /// every call carries <see cref="ApiKey"/> in its request headers.
+    /// </summary>
+    /// <param name="validationContext">The validation context, which may carry the host environment.</param>
+    /// <returns>The violated rule, or <see langword="null"/> when the endpoint is unset or acceptable.</returns>
+    private ValidationResult? ValidateEndpoint(ValidationContext? validationContext)
+    {
+        if (Endpoint is { IsAbsoluteUri: false })
+        {
+            return new ValidationResult(
+                $"{SectionName}:{nameof(Endpoint)} must be an absolute URI when set.",
+                [nameof(Endpoint)]);
+        }
+
+        if (Endpoint is not null
+            && !string.Equals(Endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && !IsDevelopment(validationContext))
+        {
+            return new ValidationResult(
+                $"{SectionName}:{nameof(Endpoint)} must be an https URI outside Development: every call carries "
+                + $"{SectionName}:{nameof(ApiKey)} in its request headers.",
+                [nameof(Endpoint)]);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether the host is Development: the validation context's <see cref="IHostEnvironment"/> when
+    /// it carries one, otherwise the stamped <see cref="IsDevelopmentHost"/>. Fails closed: an
+    /// environment that cannot be seen reads as not Development.
+    /// </summary>
+    private bool IsDevelopment(ValidationContext? validationContext) =>
+        validationContext?.GetService(typeof(IHostEnvironment)) is IHostEnvironment environment
+            ? environment.IsDevelopment()
+            : IsDevelopmentHost;
 }

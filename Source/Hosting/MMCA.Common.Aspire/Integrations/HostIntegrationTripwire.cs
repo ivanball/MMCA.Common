@@ -67,6 +67,12 @@ internal sealed class HostIntegrationTripwire(
     /// </summary>
     internal const string GoogleCloudSqlIamAuthenticationEnabledKey = "CloudSql:IamAuthentication:Enabled";
 
+    /// <summary>
+    /// The boolean key that, when it parses true, requires the Azure Redis Entra token configurator. A
+    /// boolean gate, read like <see cref="AzurePostgreSqlEntraAuthenticationEnabledKey"/>.
+    /// </summary>
+    internal const string AzureRedisEntraAuthenticationEnabledKey = "AzureRedis:EntraAuthentication:Enabled";
+
     /// <summary>The key-ring gates of every adapter; a host may set at most one.</summary>
     private static readonly string[] KeyRingKeys =
     [
@@ -142,6 +148,11 @@ internal sealed class HostIntegrationTripwire(
             GoogleCloudSqlIamAuthenticationEnabledKey,
             HostIntegrationNames.GoogleCloudSqlIamAuthentication,
             "no Cloud SQL IAM token configurator is registered, so PostgreSQL connections log in with whatever password the connection string carries. Reference MMCA.Common.Gcp and call services.AddCloudSqlIamAuthentication(configuration)",
+            failures);
+        CheckBooleanGate(
+            AzureRedisEntraAuthenticationEnabledKey,
+            HostIntegrationNames.AzureRedisEntraAuthentication,
+            "no Entra token configurator is registered for Redis, so Redis connections authenticate with whatever access key the connection string carries. Reference MMCA.Common.Azure and call services.AddAzureRedisEntraAuthentication(configuration)",
             failures);
 
         // Two configured key rings is not a stronger setup, it is a split one: whichever registration
