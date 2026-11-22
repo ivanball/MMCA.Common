@@ -201,8 +201,10 @@ public sealed class MultiFactorRoleRequirementTests
         services.AddAuthorizationPolicies();
         services.AddPermissions(grants => grants.Grant(Admin, Permission));
         await using var provider = services.BuildServiceProvider();
+        var user = Authenticated(Role(Admin));
+        MultiFactorRoleWithholding.Apply(user, provider);
 
-        var result = await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(Authenticated(Role(Admin)), Policy);
+        var result = await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, Policy);
 
         result.Failure!.FailureReasons.Should().ContainSingle(r => r.Message == AuthErrorCodes.MultiFactorRequired);
     }
@@ -210,6 +212,9 @@ public sealed class MultiFactorRoleRequirementTests
     private static async Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, params string[] requiredForRoles)
     {
         await using var provider = BuildServices(requiredForRoles);
+
+        // The bearer token validation withholds a listed role before any authorization runs.
+        MultiFactorRoleWithholding.Apply(user, provider);
         return await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, Policy);
     }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -78,8 +79,8 @@ public static class AuthorizationExtensions
             EnsurePermissionRegistry(services);
 
             // Role-level second factor (Authorization:MultiFactor:RequiredForRoles). Inert while the
-            // list is empty: the handler returns before any work and the wrapped result handler
-            // delegates every call.
+            // list is empty: the bearer withholding and the handler return before any work and the
+            // wrapped result handler delegates every call.
             AddMultiFactorRoleRequirement(services);
 
             services.AddOptions<FallbackAuthorizationOptions>();
@@ -142,6 +143,11 @@ public static class AuthorizationExtensions
                 .Configure<IServiceProvider>(static (settings, provider) =>
                     provider.GetService<IConfiguration>()?.GetSection(MultiFactorAuthorizationSettings.SectionName).Bind(settings));
         }
+
+        // Withholds a listed role from a bearer principal without a second factor, on every JWT bearer
+        // scheme, once however often this runs (TryAddEnumerable keys on the implementation type).
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>, MultiFactorBearerWithholding>());
 
         WrapResultHandler(services);
     }

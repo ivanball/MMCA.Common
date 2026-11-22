@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MMCA.Common.API.Authorization.MultiFactor;
 using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Tests.Authorization.MultiFactor;
@@ -59,6 +60,9 @@ internal sealed class HeaderClaimsAuthenticationHandler(
             .Select(pair => pair.Split('=', 2))
             .Select(parts => new Claim(parts[0], parts.Length > 1 ? parts[1] : string.Empty));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, MultiFactorTestPrincipals.SchemeName));
+
+        // What the framework's bearer token validation does to a validated principal before the ticket.
+        MultiFactorRoleWithholding.Apply(principal, Context.RequestServices);
 
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, MultiFactorTestPrincipals.SchemeName)));
     }

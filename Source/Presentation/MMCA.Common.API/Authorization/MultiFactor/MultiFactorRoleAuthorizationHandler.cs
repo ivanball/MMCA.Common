@@ -6,17 +6,26 @@ using MMCA.Common.Shared.Auth.Permissions;
 namespace MMCA.Common.API.Authorization.MultiFactor;
 
 /// <summary>
-/// Fails a <see cref="PermissionRequirement"/> for a caller whose role the host lists under
-/// <see cref="MultiFactorAuthorizationSettings.RequiredForRoles"/> when the session carries no second
-/// factor. It never succeeds a requirement: <see cref="PermissionAuthorizationHandler"/> still grants,
-/// and a policy with any failing handler fails, so this overrides that grant without changing it.
+/// Fails a <see cref="PermissionRequirement"/> with the coded second-factor reason when the permission
+/// was withheld from the caller together with a role the host lists under
+/// <see cref="MultiFactorAuthorizationSettings.RequiredForRoles"/>. It never succeeds a requirement.
 /// </summary>
 /// <remarks>
-/// It fails only a caller who holds the permission (the same <see cref="PermissionAuthorizationHandler.Holds"/>
-/// evaluation), so a caller lacking the capability keeps the plain <c>403</c> and never learns about
-/// the step-up, as in the CQRS authorization gate. Machine clients (<c>token_use=machine</c>) are
-/// exempt, and service tokens carry no role. The failure reason's message is
+/// <para>
+/// The bearer token validation (<see cref="MultiFactorBearerWithholding"/>) already took the listed
+/// role and its permission claims off a principal whose session carries no second factor, so the
+/// permission check alone refuses that caller. This handler only turns the refusal into the coded one:
+/// it fails when the principal carries a <see cref="AuthClaimTypes.MultiFactorWithheldRole"/> marker,
+/// does not hold the permission through what it kept, and the permission is among the withheld
+/// permission markers or the registry grants it to a withheld role. The failure reason's message is
 /// <see cref="AuthErrorCodes.MultiFactorRequired"/>, which the result handler turns into the coded body.
+/// </para>
+/// <para>
+/// A caller whose withheld role would not have granted the permission keeps the plain <c>403</c> and
+/// never learns about the step-up, as in the CQRS authorization gate. A principal with no marker (a
+/// session with the <c>mfa</c> claim, a role that is not listed, a machine client, a service token)
+/// gets exactly the answer the permission check gives.
+/// </para>
 /// </remarks>
 /// <param name="permissionRegistry">The role-to-permission registry.</param>
 /// <param name="settings">The bound role list.</param>
@@ -32,23 +41,25 @@ internal sealed class MultiFactorRoleAuthorizationHandler(
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(requirement);
 
-        var roles = settings.Value.RequiredForRoles;
-        if (roles.Count == 0)
+        if (settings.Value.RequiredForRoles.Count == 0)
         {
             return Task.CompletedTask;
         }
 
         var user = context.User;
         if (user.Identity?.IsAuthenticated != true
-            || user.HasClaim(AuthClaimTypes.TokenUse, AuthClaimTypes.TokenUseMachine)
-            || !PermissionAuthorizationHandler.Holds(user, permissionRegistry, requirement.Permission)
-            || !roles.Any(role => !string.IsNullOrWhiteSpace(role) && user.HasRole(role))
-            || user.HasMultiFactor())
+            || !user.HasMultiFactorWithheldRole()
+            || PermissionAuthorizationHandler.Holds(user, permissionRegistry, requirement.Permission))
         {
             return Task.CompletedTask;
         }
 
-        context.Fail(new AuthorizationFailureReason(this, AuthErrorCodes.MultiFactorRequired));
+        if (user.HasClaim(AuthClaimTypes.MultiFactorWithheldPermission, requirement.Permission)
+            || permissionRegistry.HasPermission(user.GetMultiFactorWithheldRoles(), requirement.Permission))
+        {
+            context.Fail(new AuthorizationFailureReason(this, AuthErrorCodes.MultiFactorRequired));
+        }
+
         return Task.CompletedTask;
     }
 }

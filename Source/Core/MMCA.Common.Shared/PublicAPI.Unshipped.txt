@@ -1,1 +1,5 @@
 #nullable enable
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorWithheldPermission = "mfa_withheld_permission" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorWithheldRole = "mfa_withheld_role" -> string!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetMultiFactorWithheldRoles(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactorWithheldRole(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
