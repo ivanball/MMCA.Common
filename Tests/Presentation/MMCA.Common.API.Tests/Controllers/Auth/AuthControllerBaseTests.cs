@@ -124,6 +124,53 @@ public sealed class AuthControllerBaseTests
         objectResult.Value.Should().BeOfType<ProblemDetails>();
     }
 
+    [Fact]
+    public async Task RegisterAsync_WhenConfirmationIsPending_Returns202WithTheTrimmedAddress_AndNoStore()
+    {
+        var request = new RegisterRequest("  new@example.com ", "Password123!", "John", "Doe");
+        _authServiceMock.Setup(x => x.RegisterAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(RegistrationOutcome.ConfirmationPending));
+        TestAuthController sut = CreateController();
+
+        ActionResult<AuthenticationResponse> result = await sut.RegisterAsync(request, CancellationToken.None);
+
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(StatusCodes.Status202Accepted, "the account exists but no session was opened");
+        objectResult.Value.Should().Be(new RegistrationPendingResponse("new@example.com"));
+        sut.HttpContext.Response.Headers.CacheControl.ToString().Should().Be("no-store");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenASessionWasOpened_Returns201WithoutTheNoStoreHeader()
+    {
+        AuthenticationResponse authResponse = CreateAuthResponse();
+        var request = new RegisterRequest("new@example.com", "Password123!", "John", "Doe");
+        _authServiceMock.Setup(x => x.RegisterAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(authResponse));
+        TestAuthController sut = CreateController();
+
+        ActionResult<AuthenticationResponse> result = await sut.RegisterAsync(request, CancellationToken.None);
+
+        var objectResult = result.Result as ObjectResult;
+        objectResult!.StatusCode.Should().Be(StatusCodes.Status201Created);
+        objectResult.Value.Should().Be(authResponse);
+        objectResult.Value.Should().NotBeOfType<RegistrationPendingResponse>();
+    }
+
+    // A consumer that adopts nothing keeps a byte-identical OpenAPI document: the 202 is declared only
+    // on an adopter's override.
+    [Fact]
+    public void RegisterAsync_TheBaseActionDeclaresNo202Response()
+    {
+        var action = typeof(AuthControllerBase).GetMethod(nameof(AuthControllerBase.RegisterAsync))!;
+
+        action.GetCustomAttributes<ProducesResponseTypeAttribute>()
+            .Should().NotContain(a => a.StatusCode == StatusCodes.Status202Accepted);
+        action.GetCustomAttributes<ProducesResponseTypeAttribute>()
+            .Should().Contain(a => a.StatusCode == StatusCodes.Status201Created);
+    }
+
     // ── RefreshAsync ──
     [Fact]
     public async Task RefreshAsync_Success_ReturnsOkWithAuthResponse()
