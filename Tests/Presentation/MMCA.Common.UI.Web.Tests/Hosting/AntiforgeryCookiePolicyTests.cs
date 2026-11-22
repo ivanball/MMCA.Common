@@ -9,9 +9,10 @@ using Microsoft.Net.Http.Headers;
 namespace MMCA.Common.UI.Web.Tests.Hosting;
 
 /// <summary>
-/// Pins the antiforgery cookie of the composed Blazor web host outside Development (item
-/// B5, D-01) for the deployed shape: TLS ends at an ingress that forwards the original scheme in
-/// <c>X-Forwarded-Proto</c>, and the request reaches the host over plain http.
+/// Pins the antiforgery cookie of the composed Blazor web host (item B5, D-01). In the deployed
+/// shape TLS ends at an ingress that forwards the original scheme in <c>X-Forwarded-Proto</c> and
+/// the request reaches the host over plain http: the cookie is Secure. A request with no forwarded
+/// https scheme still gets its token, with a cookie that follows the plain-http scheme.
 /// </summary>
 public sealed class AntiforgeryCookiePolicyTests
 {
@@ -42,6 +43,29 @@ public sealed class AntiforgeryCookiePolicyTests
         var antiforgeryCookie = SetCookieHeaderValue.ParseList([.. setCookies!]).Should()
             .ContainSingle(cookie => cookie.Name.Value!.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal))
             .Which;
-        antiforgeryCookie.Secure.Should().BeTrue("outside Development the antiforgery cookie is always Secure");
+        antiforgeryCookie.Secure.Should().BeTrue("a request the ingress received over https gets a Secure antiforgery cookie");
+    }
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Development")]
+    public async Task OverPlainHttpWithNoForwardedScheme_TheTokenIsStillIssued(string environmentName)
+    {
+        await using var app = await BlazorWebHostHarness.StartAsync(
+            BlazorWebHostHarness.CreateBuilder(environmentName),
+            afterPipeline: web => web.MapGet(TokenPath, (HttpContext context, IAntiforgery antiforgery) =>
+            {
+                antiforgery.GetAndStoreTokens(context);
+                return Results.Text("ok");
+            }).AllowAnonymous());
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync(new Uri(TokenPath, UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "a host reached without TLS must still render its forms");
+        response.Headers.TryGetValues(HeaderNames.SetCookie, out var setCookies).Should().BeTrue("the antiforgery cookie is issued");
+        SetCookieHeaderValue.ParseList([.. setCookies!]).Should()
+            .ContainSingle(cookie => cookie.Name.Value!.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal))
+            .Which.Secure.Should().BeFalse("the cookie follows the request scheme, and this request is plain http");
     }
 }
