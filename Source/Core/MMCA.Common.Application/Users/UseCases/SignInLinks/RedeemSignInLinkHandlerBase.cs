@@ -40,8 +40,9 @@ namespace MMCA.Common.Application.Users.UseCases.SignInLinks;
 /// <para>
 /// <b>An unconfirmed account loses its password when a link confirms it.</b> The link proves the
 /// mailbox, not the password that was set on the unconfirmed account, so when such an account holds
-/// password material the same save also removes it (<see cref="IPasswordClearableUser.ClearPassword"/>)
-/// and revokes the account's refresh sessions; the owner sets a password through forgot password.
+/// password material its refresh sessions are revoked first, then the account save also removes the
+/// password (<see cref="IPasswordClearableUser.ClearPassword"/>); the owner sets a password through
+/// forgot password.
 /// An account type that holds password material but does not implement
 /// <see cref="IPasswordClearableUser"/> is refused with the generic invalid-link answer and nothing
 /// is saved. A confirmed account, and an account with no password, are unaffected.
@@ -54,20 +55,12 @@ namespace MMCA.Common.Application.Users.UseCases.SignInLinks;
 /// <param name="authenticationService">Opens the session once the account is resolved.</param>
 /// <param name="settings">The bound sign-in-link settings.</param>
 /// <param name="logger">Logger for the sign-in-link audit lines.</param>
-/// <param name="refreshSessions">
-/// The refresh-session store. When a link confirms an unconfirmed account that held a password, every
-/// live session on the account is revoked in the same save that removes the password. A host that
-/// registered no store revokes nothing.
-/// </param>
-/// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ISignInLinkTokenService tokenService,
     IAuthenticationService authenticationService,
     IOptions<SignInLinkSettings> settings,
-    ILogger logger,
-    IRefreshSessionStore? refreshSessions = null,
-    TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result<AuthenticationResponse>>
+    ILogger logger) : ICommandHandler<TCommand, Result<AuthenticationResponse>>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>
     where TCommand : IRedeemSignInLinkCommand
 {
@@ -234,54 +227,64 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
 
     /// <summary>
     /// Confirms an existing, unconfirmed account and saves it. When the account holds password
-    /// material, the same save also removes the password and revokes the account's refresh sessions;
-    /// an account type that cannot remove its password is refused before anything is mutated.
+    /// material, its refresh sessions are revoked first (through
+    /// <see cref="IAuthenticationService.RevokeAllSessionsAsync"/>, its own save), then the same account
+    /// save removes the password and confirms the address. An account type that cannot remove its
+    /// password is refused, and a failed revocation is returned, before the account is mutated.
     /// </summary>
     /// <param name="user">The tracked, unconfirmed account.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success result, the invalid-link refusal, or the aggregate's failure.</returns>
     private async Task<Result> ConfirmExistingAccountAsync(TUser user, CancellationToken cancellationToken)
     {
-        // Decided before anything is mutated, so a refusal leaves the tracked account untouched.
-        var holdsPassword = user is IAuthUser authUser && PasswordCredential.IsStored(authUser);
-        if (holdsPassword)
+        if (user is not IAuthUser authUser || !PasswordCredential.IsStored(authUser))
         {
-            if (user is not IPasswordClearableUser clearable)
-            {
-                PasswordNotClearable(logger, user.Id);
-                return Result.Failure(SignInLinkErrors.InvalidLink(HandlerName));
-            }
-
-            var cleared = clearable.ClearPassword();
-            if (cleared.IsFailure)
-            {
-                return cleared;
-            }
+            return await ConfirmAndSaveAsync(user, cancellationToken).ConfigureAwait(false);
         }
 
+        // Decided before anything is mutated, so a refusal leaves the tracked account untouched.
+        if (user is not IPasswordClearableUser clearable)
+        {
+            PasswordNotClearable(logger, user.Id);
+            return Result.Failure(SignInLinkErrors.InvalidLink(HandlerName));
+        }
+
+        // Revoked before the account changes: a failure here leaves it unconfirmed with its
+        // password, and a failure after it leaves it unconfirmed with no session to resume.
+        var revoked = await authenticationService.RevokeAllSessionsAsync(user.Id, cancellationToken).ConfigureAwait(false);
+        if (revoked.IsFailure)
+        {
+            return revoked;
+        }
+
+        var cleared = clearable.ClearPassword();
+        if (cleared.IsFailure)
+        {
+            return cleared;
+        }
+
+        var saved = await ConfirmAndSaveAsync(user, cancellationToken).ConfigureAwait(false);
+        if (saved.IsSuccess)
+        {
+            PasswordClearedOnConfirmation(logger, user.Id);
+        }
+
+        return saved;
+    }
+
+    /// <summary>Confirms the address on the tracked account and saves it.</summary>
+    /// <param name="user">The tracked, unconfirmed account.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, or the aggregate's failure (nothing saved).</returns>
+    private async Task<Result> ConfirmAndSaveAsync(TUser user, CancellationToken cancellationToken)
+    {
         var confirmed = ConfirmIfNeeded(user);
         if (confirmed.IsFailure)
         {
             return confirmed;
         }
 
-        // The store returns tracked rows, so the revocation commits with the confirmation and the
-        // password removal in the one save below.
-        var revokedSessions = 0;
-        if (holdsPassword)
-        {
-            revokedSessions = await RefreshSessionRevocation
-                .StageRevokeAllAsync(refreshSessions, timeProvider, user.Id, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        if (holdsPassword)
-        {
-            PasswordClearedOnConfirmation(logger, user.Id, revokedSessions);
-        }
-
         return Result.Success();
     }
 
@@ -302,8 +305,8 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
     [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} created from an invitation link")]
     private static partial void AccountProvisioned(ILogger logger, UserIdentifierType userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} confirmed by a sign-in link; its password was removed and {RevokedSessions} refresh session(s) revoked")]
-    private static partial void PasswordClearedOnConfirmation(ILogger logger, UserIdentifierType userId, int revokedSessions);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} confirmed by a sign-in link; its password was removed and its refresh sessions were revoked")]
+    private static partial void PasswordClearedOnConfirmation(ILogger logger, UserIdentifierType userId);
 
     // Logged only after the token was spent, so the account id reveals nothing the caller did not prove.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in link redemption refused for unconfirmed account {UserId}: it holds a password and its type does not implement IPasswordClearableUser")]
