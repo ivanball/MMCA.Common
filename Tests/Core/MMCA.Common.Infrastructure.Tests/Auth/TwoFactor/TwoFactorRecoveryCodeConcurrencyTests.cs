@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Interfaces;
@@ -74,7 +75,10 @@ public sealed class TwoFactorRecoveryCodeConcurrencyTests
             .Setup(c => c.GetFromSharedStoreAsync<long?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((long?)null);
 
-        return (new TwoFactorAuthenticator(service, store, cache.Object, settings, new InProcessKeyedLock()), store);
+        // Recovery-code redemption never reads the shared secret, so the protector only has to exist.
+        var protector = new DataProtectionTwoFactorSecretProtector(new EphemeralDataProtectionProvider());
+
+        return (new TwoFactorAuthenticator(service, store, protector, cache.Object, settings, new InProcessKeyedLock()), store);
     }
 
     /// <summary>A working in-process <see cref="IDistributedLock"/>: one holder per key, waiters queue up to the wait.</summary>
