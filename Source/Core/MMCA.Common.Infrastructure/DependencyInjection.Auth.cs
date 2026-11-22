@@ -21,8 +21,8 @@ public static partial class DependencyInjection
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers the opt-in time-based second factor: the TOTP service, the sign-in challenge, and
-        /// the <c>Authentication:TwoFactor</c> settings.
+        /// Registers the opt-in time-based second factor: the TOTP service, the sign-in challenge, the
+        /// data-protection secret protector, and the <c>Authentication:TwoFactor</c> settings.
         /// </summary>
         /// <param name="configuration">Application configuration for binding the settings section.</param>
         /// <returns>The service collection for chaining.</returns>
@@ -48,6 +48,11 @@ public static partial class DependencyInjection
 
             // Singleton: the service holds only bound settings and is pure over its arguments.
             services.TryAddSingleton<ITwoFactorService, TotpTwoFactorService>();
+
+            // The shared secret reaches the app's store only in its protected form; the key ring is
+            // the host's, so a multi-replica host needs the shared one.
+            services.TryAddSingleton<ITwoFactorSecretProtector, DataProtectionTwoFactorSecretProtector>();
+            services.AddDataProtection();
 
             // Scoped, because the store it challenges through shares the request's unit of work.
             services.TryAddScoped<ITwoFactorAuthenticator, TwoFactorAuthenticator>();

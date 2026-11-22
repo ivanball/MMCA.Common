@@ -24,6 +24,11 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// with, so the path from one secret to another is disable, then enroll again.
 /// </para>
 /// <para>
+/// <b>The store never sees the plaintext secret.</b> The secret is protected through
+/// <see cref="ITwoFactorSecretProtector"/> before <see cref="ITwoFactorStore.StartEnrollmentAsync"/>
+/// receives it; only the account owner gets the plaintext key, once, in the response.
+/// </para>
+/// <para>
 /// The command record stays app-side (<typeparamref name="TCommand"/>), matching
 /// <c>ChangePasswordHandlerBase</c>: the base reads it only through <see cref="IUserScopedRequest"/>.
 /// </para>
@@ -31,10 +36,12 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <typeparam name="TCommand">The app's begin-enrollment command record.</typeparam>
 /// <param name="twoFactorService">Mints the secret and renders the provisioning URI.</param>
 /// <param name="store">Persists the pending secret.</param>
+/// <param name="secretProtector">Protects the secret before the store receives it.</param>
 /// <param name="logger">Logger for the enrollment audit line.</param>
 public abstract partial class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
+    ITwoFactorSecretProtector secretProtector,
     ILogger logger) : ICommandHandler<TCommand, Result<TwoFactorSetupResponse>>
     where TCommand : IUserScopedRequest
 {
@@ -78,7 +85,9 @@ public abstract partial class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
         // could still key an authenticator with.
         var secret = twoFactorService.GenerateSecret();
 
-        var stored = await store.StartEnrollmentAsync(command.UserId, secret, cancellationToken).ConfigureAwait(false);
+        var stored = await store
+            .StartEnrollmentAsync(command.UserId, secretProtector.Protect(secret), cancellationToken)
+            .ConfigureAwait(false);
         if (stored.IsFailure)
         {
             return Result.Failure<TwoFactorSetupResponse>(stored.Errors);

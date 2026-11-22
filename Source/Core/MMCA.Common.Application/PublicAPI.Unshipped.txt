@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorSecretProtector
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorSecretProtector.Protect(string! secret) -> string!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorSecretProtector.Unprotect(string! protectedSecret) -> MMCA.Common.Shared.Abstractions.Result<string!>!
+MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.BeginTwoFactorEnrollmentHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorSecretProtector! secretProtector, Microsoft.Extensions.Logging.ILogger! logger) -> void
+*REMOVED*MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.BeginTwoFactorEnrollmentHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
