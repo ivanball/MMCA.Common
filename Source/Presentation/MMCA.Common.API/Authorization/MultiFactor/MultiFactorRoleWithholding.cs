@@ -95,8 +95,11 @@ internal static class MultiFactorRoleWithholding
         && !principal.HasClaim(AuthClaimTypes.TokenUse, AuthClaimTypes.TokenUseMachine)
         && !principal.HasMultiFactor();
 
+    // The three spellings ClaimsPrincipalExtensions.GetRoleValues reads, plus whatever type the claim's own
+    // identity names as its role claim type (what ClaimsPrincipal.IsInRole reads).
     private static bool IsRoleClaim(Claim claim) =>
-        RoleClaimTypes.Contains(claim.Type, StringComparer.Ordinal);
+        RoleClaimTypes.Contains(claim.Type, StringComparer.Ordinal)
+        || string.Equals(claim.Type, claim.Subject?.RoleClaimType, StringComparison.Ordinal);
 
     private static void AddMarkers(ClaimsIdentity identity, string markerType, IEnumerable<string> values)
     {

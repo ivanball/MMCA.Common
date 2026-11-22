@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Auth;
@@ -47,19 +48,31 @@ internal sealed class MultiFactorRoleAuthorizationHandler(
         }
 
         var user = context.User;
-        if (user.Identity?.IsAuthenticated != true
-            || !user.HasMultiFactorWithheldRole()
-            || PermissionAuthorizationHandler.Holds(user, permissionRegistry, requirement.Permission))
+        if (user.Identity?.IsAuthenticated != true)
         {
             return Task.CompletedTask;
         }
 
-        if (user.HasClaim(AuthClaimTypes.MultiFactorWithheldPermission, requirement.Permission)
-            || permissionRegistry.HasPermission(user.GetMultiFactorWithheldRoles(), requirement.Permission))
+        var holds = PermissionAuthorizationHandler.Holds(user, permissionRegistry, requirement.Permission);
+        if (holds ? HoldsThroughAnUnwithheldListedRole(user) : WasWithheld(user, requirement.Permission))
         {
             context.Fail(new AuthorizationFailureReason(this, AuthErrorCodes.MultiFactorRequired));
         }
 
         return Task.CompletedTask;
     }
+
+    // The permission was taken from this principal when its listed role was withheld.
+    private bool WasWithheld(ClaimsPrincipal user, string permission) =>
+        user.HasMultiFactorWithheldRole()
+        && (user.HasClaim(AuthClaimTypes.MultiFactorWithheldPermission, permission)
+            || permissionRegistry.HasPermission(user.GetMultiFactorWithheldRoles(), permission));
+
+    // A principal that still carries a listed role without a second factor: its token was validated by
+    // a path the withholding did not reach. The permission check refuses it all the same, so this
+    // check never depends on the withholding alone.
+    private bool HoldsThroughAnUnwithheldListedRole(ClaimsPrincipal user) =>
+        !user.HasMultiFactor()
+        && !user.HasClaim(AuthClaimTypes.TokenUse, AuthClaimTypes.TokenUseMachine)
+        && settings.Value.RequiredForRoles.Any(role => !string.IsNullOrWhiteSpace(role) && user.HasRole(role));
 }
