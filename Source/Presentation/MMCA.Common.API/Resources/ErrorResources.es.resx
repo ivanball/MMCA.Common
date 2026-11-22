@@ -316,6 +316,9 @@
   <data name="UserAdministration.PrivilegeCeiling" xml:space="preserve">
     <value>No puede asignar este rol ni administrar esta cuenta, porque otorga permisos que usted no tiene.</value>
   </data>
+  <data name="UserAdministration.SecondFactorNotEnrolled" xml:space="preserve">
+    <value>La cuenta debe activar la autenticación en dos pasos antes de que se le pueda asignar este rol.</value>
+  </data>
   <data name="UserAdministration.Self" xml:space="preserve">
     <value>No puede bloquear, desbloquear ni cambiar los roles de su propia cuenta.</value>
   </data>

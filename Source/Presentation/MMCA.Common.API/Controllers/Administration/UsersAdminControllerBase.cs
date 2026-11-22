@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.API.Authorization;
+using MMCA.Common.API.Authorization.MultiFactor;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Auth.Administration;
+using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Auth.ViewAs;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
@@ -51,6 +53,13 @@ namespace MMCA.Common.API.Controllers.Administration;
 /// permission the caller does not hold, evaluated as the permission authorization handler evaluates
 /// it. The refusal names no permission. A host with no registry (a role-only host) applies no
 /// ceiling. The self-administration refusal is checked first.
+/// </para>
+/// <para>
+/// <b>A listed role goes only to an enrolled account.</b> When a requested role is listed under
+/// <c>Authorization:MultiFactor:RequiredForRoles</c> and the host registers an <see cref="ITwoFactorStore"/>,
+/// the role action is refused with 409 and the stable code
+/// <c>UserAdministration.SecondFactorNotEnrolled</c> unless the target account has turned on two-factor
+/// authentication. It is checked after the privilege ceiling and before anything is saved.
 /// </para>
 /// </remarks>
 /// <typeparam name="TUserDto">The app's administration-facing user DTO.</typeparam>
@@ -291,6 +300,12 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
             return HandleFailure(ceiling.Errors);
         }
 
+        var enrollment = await CheckSecondFactorEnrollmentAsync(userId, request.Roles, cancellationToken).ConfigureAwait(false);
+        if (enrollment.IsFailure)
+        {
+            return HandleFailure(enrollment.Errors);
+        }
+
         var result = await Administration
             .SetRolesAsync(userId, request.Roles, cancellationToken)
             .ConfigureAwait(false);
@@ -319,6 +334,18 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
             "UserAdministration.PrivilegeCeiling",
             "You cannot assign this role, or administer this account, because it carries permissions you do not hold.",
             "userId");
+
+    /// <summary>
+    /// The refusal the role action returns when a requested role is listed under
+    /// <see cref="MultiFactorAuthorizationSettings.RequiredForRoles"/> and the target account has not
+    /// turned on two-factor authentication.
+    /// </summary>
+    /// <returns>The <c>UserAdministration.SecondFactorNotEnrolled</c> error.</returns>
+    private static Error SecondFactorNotEnrolledRefused() =>
+        Error.Conflict(
+            "UserAdministration.SecondFactorNotEnrolled",
+            "The account must turn on two-factor authentication before it can be given this role.",
+            "roles");
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Administrator {ActorUserId} applied {Action} to user {UserId}")]
     private static partial void LogAdministered(ILogger logger, string action, UserIdentifierType userId, UserIdentifierType? actorUserId);
@@ -382,6 +409,47 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
     private bool CallerHoldsEveryPermissionOf(string role) =>
         PermissionRegistry is not { } registry
         || registry.GetPermissions(role).All(permission => PermissionAuthorizationHandler.Holds(User, registry, permission));
+
+    /// <summary>
+    /// The enrollment check for a role change: refuses when a requested role is listed under
+    /// <see cref="MultiFactorAuthorizationSettings.RequiredForRoles"/>, the host registers an
+    /// <see cref="ITwoFactorStore"/>, and the target account's second factor is not on (or the store
+    /// holds no state for it). With the list empty, with no store, or for roles that are not listed it
+    /// passes without a load.
+    /// </summary>
+    /// <param name="userId">The account the request targets.</param>
+    /// <param name="roles">The requested roles.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, or the refusal.</returns>
+    private async Task<Result> CheckSecondFactorEnrollmentAsync(
+        UserIdentifierType userId,
+        IReadOnlyList<string>? roles,
+        CancellationToken cancellationToken)
+    {
+        var services = HttpContext?.RequestServices;
+        if (services is null
+            || !RequestsAListedRole(services, roles)
+            || services.GetService<ITwoFactorStore>() is not { } twoFactorStore)
+        {
+            return Result.Success();
+        }
+
+        var state = await twoFactorStore.GetAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        return state?.IsTwoFactorEnabled == true
+            ? Result.Success()
+            : Result.Failure(SecondFactorNotEnrolledRefused());
+    }
+
+    /// <summary>Whether any requested role is listed under the role-level second-factor rule.</summary>
+    /// <param name="services">The request's services.</param>
+    /// <param name="roles">The requested roles.</param>
+    /// <returns><see langword="true"/> when a requested role is listed (blank entries ignored, case-insensitive).</returns>
+    private static bool RequestsAListedRole(IServiceProvider services, IReadOnlyList<string>? roles) =>
+        roles is { Count: > 0 }
+        && services.GetService<IOptions<MultiFactorAuthorizationSettings>>()?.Value.RequiredForRoles is { Count: > 0 } listed
+        && roles.Any(role => listed.Any(entry =>
+            !string.IsNullOrWhiteSpace(entry) && string.Equals(entry, role, StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>The host's permission registry, or <see langword="null"/> on a role-only host.</summary>
     private IPermissionRegistry? PermissionRegistry => HttpContext?.RequestServices?.GetService<IPermissionRegistry>();
