@@ -4,6 +4,15 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.315.0] - 2026-11-22
+
+**Breaking (net11.0 consumers, EF Core and Npgsql):** on net11.0 the packages now depend on Entity Framework Core 11.0.0 and on Npgsql and Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0; net10.0 stays on EF Core 10.0.15 and Npgsql 10.0.4. A consumer that builds for net11.0 and pins the EF Core packages itself must set its own EF Core version to 11.0.0 for net11.0 in the same upgrade, or restore fails with NU1605 (package downgrade). The fix is in [UPGRADING.md](UPGRADING.md#13150---2026-11-22).
+
+### Changed
+
+- **Entity Framework Core 11 on the .NET 11 line** (MMCA.Common.Infrastructure, MMCA.Common.Aspire): `MmcaEfCoreVersion` is 11.0.0 for net11.0 (EF Core 11 ships net11.0 assets only), now that Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0 is stable. Npgsql and its EF Core provider read a new `MmcaNpgsqlVersion` property (10.0.4 on net10.0, 11.0.0 on net11.0), so the readiness-check driver and the provider stay on one build. `Microsoft.Data.Sqlite` follows the EF Core line as before. See Breaking.
+- **Dependencies:** the dotnet/extensions train (`Microsoft.Extensions.AI`, `AI.OpenAI`, `Caching.Hybrid`, `Http.Resilience`, `ServiceDiscovery`, `TimeProvider.Testing`) 10.11.1 on net10.0 and 11.0.1 on net11.0; `Microsoft.OpenApi` 2.13.1 on net10.0; Anthropic 13.12.0; AWSSDK.Core 4.1.1.2, AWSSDK.RDS 4.1.1.1, AWSSDK.DynamoDBv2 4.1.0.3; Azure.Storage.Blobs 12.30.2; QRCoder 1.9.0; build-time analyzers Meziantou.Analyzer 3.0.342 and SonarAnalyzer.CSharp 10.37.0.15768. `Microsoft.Testing.Platform` stays at 2.5.2 (deprecated as legacy, no advisory) until xunit.v3 resolves 2.5.3.
+
 ## [1.314.0] - 2026-11-22
 
 **Breaking (MMCA.Common.Application, MMCA.Common.Infrastructure, two-factor):** calling `AddTwoFactorAuthentication` now arms the sign-in second-factor challenge by itself. The container builds `AuthenticationValidators` through a new constructor that carries the registered `ITwoFactorAuthenticator`, and `AuthenticationServiceBase` uses it whenever its own `twoFactor` constructor argument is null; an explicit argument still wins. Before, the call changed nothing about sign-in until the app's `AuthenticationService` passed the authenticator to its base constructor. A host that calls `AddTwoFactorAuthentication` registers its `ITwoFactorStore` (the authenticator cannot be built without one, so sign-in fails to resolve otherwise), and a host that wants the enrollment endpoints without a challenge at sign-in overrides `ChallengeSecondFactorAsync`. The app's `AuthenticationService` constructor does not change. ADC, Store and Helpdesk do not call `AddTwoFactorAuthentication` today, so nothing changes for them until they adopt it.
