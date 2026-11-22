@@ -267,9 +267,10 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
 
         // The store returns tracked rows, so the revocation commits with the confirmation and the
         // password removal in the one save below.
+        var revokedSessions = 0;
         if (holdsPassword)
         {
-            await RefreshSessionRevocation
+            revokedSessions = await RefreshSessionRevocation
                 .StageRevokeAllAsync(refreshSessions, timeProvider, user.Id, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -278,7 +279,7 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
 
         if (holdsPassword)
         {
-            PasswordClearedOnConfirmation(logger, user.Id);
+            PasswordClearedOnConfirmation(logger, user.Id, revokedSessions);
         }
 
         return Result.Success();
@@ -301,8 +302,8 @@ public abstract partial class RedeemSignInLinkHandlerBase<TUser, TCommand>(
     [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} created from an invitation link")]
     private static partial void AccountProvisioned(ILogger logger, UserIdentifierType userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} confirmed by a sign-in link; its password was removed and its refresh sessions revoked")]
-    private static partial void PasswordClearedOnConfirmation(ILogger logger, UserIdentifierType userId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Account {UserId} confirmed by a sign-in link; its password was removed and {RevokedSessions} refresh session(s) revoked")]
+    private static partial void PasswordClearedOnConfirmation(ILogger logger, UserIdentifierType userId, int revokedSessions);
 
     // Logged only after the token was spent, so the account id reveals nothing the caller did not prove.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in link redemption refused for unconfirmed account {UserId}: it holds a password and its type does not implement IPasswordClearableUser")]
