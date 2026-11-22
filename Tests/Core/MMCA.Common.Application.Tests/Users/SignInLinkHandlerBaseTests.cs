@@ -11,7 +11,6 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Tests.Auth.SignIn;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users.UseCases.SignInLinks;
-using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Auth.Credentials;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
@@ -19,7 +18,6 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.ValueObjects.Contact;
-using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Users;
@@ -212,29 +210,63 @@ public sealed class SignInLinkHandlerBaseTests
 
     // -- Redeem on an unconfirmed account that already holds a password (security review 2026-11-21, A1) --
     [Fact]
-    public async Task Redeem_OnAnUnconfirmedAccountHoldingAPassword_ConfirmsRemovesThePasswordAndRevokesSessionsInTheSameSave()
+    public async Task Redeem_OnAnUnconfirmedAccountHoldingAPassword_RevokesSessionsBeforeTheSaveThatConfirmsAndRemovesThePassword()
     {
         var user = new ClearablePasswordUser { Id = TestUserId, Confirmed = false };
-        var sessions = new InMemoryRefreshSessionStore();
-        var first = SeedLiveSession(sessions, TestUserId, "squatter-device-1");
-        var second = SeedLiveSession(sessions, TestUserId, "squatter-device-2");
-        var someoneElse = SeedLiveSession(sessions, 99, "other-account");
-        var (sut, mocks) = CreatePasswordAccountRedeemSut(user, sessions);
+        var (sut, mocks) = CreatePasswordAccountRedeemSut(user);
 
-        (bool Confirmed, int HashLength, int SaltLength, bool FirstRevoked, bool SecondRevoked)? atSave = null;
+        var calls = new List<string>();
+        (bool Confirmed, int HashLength, int SaltLength)? atRevoke = null;
+        (bool Confirmed, int HashLength, int SaltLength)? atSave = null;
+        mocks.Auth
+            .Setup(x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                calls.Add("revoke");
+                atRevoke = (user.Confirmed, user.PasswordHash.Length, user.PasswordSalt.Length);
+            })
+            .ReturnsAsync(Result.Success());
         mocks.UnitOfWork
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Callback(() => atSave = (user.Confirmed, user.PasswordHash.Length, user.PasswordSalt.Length, first.IsRevoked, second.IsRevoked))
+            .Callback(() =>
+            {
+                calls.Add("save");
+                atSave = (user.Confirmed, user.PasswordHash.Length, user.PasswordSalt.Length);
+            })
             .ReturnsAsync(1);
 
         Result<AuthenticationResponse> result = await sut.HandleAsync(RedeemCommand());
 
         result.IsSuccess.Should().BeTrue();
+        mocks.Auth.Verify(x => x.RevokeAllSessionsAsync(TestUserId, It.IsAny<CancellationToken>()), Times.Once);
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        atSave.Should().Be(
-            (true, 0, 0, true, true),
-            "the confirmation, the password removal and the session revocation all go out in the one save");
-        someoneElse.IsRevoked.Should().BeFalse("only the redeemed account's sessions are revoked");
+        calls.Should().Equal(["revoke", "save"], "the sessions are revoked before the account save");
+        atRevoke.Should().Be((false, 3, 3), "the account is not mutated before the revocation succeeds");
+        atSave.Should().Be((true, 0, 0), "the confirmation and the password removal go out in the one account save");
+    }
+
+    [Fact]
+    public async Task Redeem_OnAnUnconfirmedAccountHoldingAPassword_WhenTheRevocationFails_ChangesNothingAndSavesNothing()
+    {
+        var user = new ClearablePasswordUser { Id = TestUserId, Confirmed = false };
+        var (sut, mocks) = CreatePasswordAccountRedeemSut(user);
+        var revokeFailure = Error.NotFound.WithSource("RevokeAllSessionsAsync");
+        mocks.Auth
+            .Setup(x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(revokeFailure));
+
+        Result<AuthenticationResponse> result = await sut.HandleAsync(RedeemCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Should().Be(revokeFailure);
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        user.Confirmed.Should().BeFalse();
+        user.ClearPasswordCalls.Should().Be(0);
+        user.PasswordHash.Should().Equal(1, 2, 3);
+        user.PasswordSalt.Should().Equal(4, 5, 6);
+        mocks.Auth.Verify(
+            x => x.SignInVerifiedEmailOwnerAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -269,8 +301,7 @@ public sealed class SignInLinkHandlerBaseTests
             tokenService.Object,
             harness.Sut,
             Options.Create(Settings(enabled: true)),
-            NullLogger.Instance,
-            harness.Sessions)
+            NullLogger.Instance)
         {
             Found = user,
         };
@@ -294,12 +325,12 @@ public sealed class SignInLinkHandlerBaseTests
         // Baseline: the same redemption on an account with no password.
         var baselineLogger = new CapturingLogger();
         var noPassword = new ClearablePasswordUser { Id = TestUserId, Confirmed = false, PasswordHash = [], PasswordSalt = [] };
-        var (baseline, _) = CreatePasswordAccountRedeemSut(noPassword, new InMemoryRefreshSessionStore(), baselineLogger);
+        var (baseline, _) = CreatePasswordAccountRedeemSut(noPassword, baselineLogger);
         (await baseline.HandleAsync(RedeemCommand())).IsSuccess.Should().BeTrue();
 
         var logger = new CapturingLogger();
         var withPassword = new ClearablePasswordUser { Id = TestUserId, Confirmed = false };
-        var (sut, _) = CreatePasswordAccountRedeemSut(withPassword, new InMemoryRefreshSessionStore(), logger);
+        var (sut, _) = CreatePasswordAccountRedeemSut(withPassword, logger);
         (await sut.HandleAsync(RedeemCommand())).IsSuccess.Should().BeTrue();
 
         var baselineInfo = baselineLogger.Lines.Where(l => l.Level == LogLevel.Information).Select(l => l.Message).ToList();
@@ -315,16 +346,17 @@ public sealed class SignInLinkHandlerBaseTests
     public async Task Redeem_OnAConfirmedAccountHoldingAPassword_KeepsThePasswordAndTheSessions()
     {
         var user = new ClearablePasswordUser { Id = TestUserId, Confirmed = true };
-        var sessions = new InMemoryRefreshSessionStore();
-        var live = SeedLiveSession(sessions, TestUserId, "owner-device");
-        var (sut, mocks) = CreatePasswordAccountRedeemSut(user, sessions);
+        var (sut, mocks) = CreatePasswordAccountRedeemSut(user);
 
         Result<AuthenticationResponse> result = await sut.HandleAsync(RedeemCommand());
 
         result.IsSuccess.Should().BeTrue();
         user.PasswordHash.Should().Equal(1, 2, 3);
         user.PasswordSalt.Should().Equal(4, 5, 6);
-        live.IsRevoked.Should().BeFalse("a confirmed account's owner already proved the address, so nothing changes");
+        mocks.Auth.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a confirmed account's owner already proved the address, so nothing changes");
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -332,16 +364,17 @@ public sealed class SignInLinkHandlerBaseTests
     public async Task Redeem_OnAnUnconfirmedAccountWithNoPassword_ConfirmsAndLeavesTheSessionsAlone()
     {
         var user = new ClearablePasswordUser { Id = TestUserId, Confirmed = false, PasswordHash = [], PasswordSalt = [] };
-        var sessions = new InMemoryRefreshSessionStore();
-        var live = SeedLiveSession(sessions, TestUserId, "external-device");
-        var (sut, mocks) = CreatePasswordAccountRedeemSut(user, sessions);
+        var (sut, mocks) = CreatePasswordAccountRedeemSut(user);
 
         Result<AuthenticationResponse> result = await sut.HandleAsync(RedeemCommand());
 
         result.IsSuccess.Should().BeTrue();
         user.Confirmed.Should().BeTrue();
         user.ClearPasswordCalls.Should().Be(0, "an account with no password has nothing to remove");
-        live.IsRevoked.Should().BeFalse("an account with no password keeps today's behavior");
+        mocks.Auth.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "an account with no password keeps today's behavior");
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -349,20 +382,19 @@ public sealed class SignInLinkHandlerBaseTests
     public async Task Redeem_OnAnUnconfirmedPasswordAccountWhoseTypeCannotClearIt_IsRefusedAndSavesNothing()
     {
         var user = new SignInTestUser { Id = TestUserId, Confirmed = false };
-        var sessions = new InMemoryRefreshSessionStore();
-        var live = SeedLiveSession(sessions, TestUserId, "squatter-device");
         var logger = new CapturingLogger();
-        var (sut, mocks) = CreatePasswordAccountRedeemSut(user, sessions, logger);
+        var (sut, mocks) = CreatePasswordAccountRedeemSut(user, logger);
 
         Result<AuthenticationResponse> result = await sut.HandleAsync(RedeemCommand());
 
         result.Errors.Should().ContainSingle(e => e.Code == SignInLinkErrors.InvalidLinkCode,
             "the refusal is the same generic invalid-link answer every other rejection gets");
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        sessions.SaveCount.Should().Be(0);
         user.Confirmed.Should().BeFalse("nothing is mutated on a refused redemption");
         user.PasswordHash.Should().Equal(1, 2, 3);
-        live.IsRevoked.Should().BeFalse();
+        mocks.Auth.Verify(
+            x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         mocks.Auth.Verify(
             x => x.SignInVerifiedEmailOwnerAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -370,15 +402,8 @@ public sealed class SignInLinkHandlerBaseTests
     }
 
     // ── Helpers ──
-    private static RefreshSession SeedLiveSession(InMemoryRefreshSessionStore sessions, UserIdentifierType userId, string token)
-    {
-        var now = DateTime.UtcNow;
-        return sessions.SeedLive(userId, token, now.AddHours(-1), now.AddDays(7));
-    }
-
     private static (PasswordAccountRedeemHandler<TUser> Sut, PasswordAccountMocks<TUser> Mocks) CreatePasswordAccountRedeemSut<TUser>(
         TUser user,
-        InMemoryRefreshSessionStore sessions,
         ILogger? logger = null)
         where TUser : SignInTestUser
     {
@@ -392,14 +417,16 @@ public sealed class SignInLinkHandlerBaseTests
         mocks.Auth
             .Setup(x => x.SignInVerifiedEmailOwnerAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(Issued));
+        mocks.Auth
+            .Setup(x => x.RevokeAllSessionsAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
 
         var sut = new PasswordAccountRedeemHandler<TUser>(
             mocks.UnitOfWork.Object,
             mocks.TokenService.Object,
             mocks.Auth.Object,
             Options.Create(Settings(enabled: true)),
-            logger ?? NullLogger.Instance,
-            sessions)
+            logger ?? NullLogger.Instance)
         {
             Found = user,
         };
@@ -527,8 +554,8 @@ public sealed class ClearablePasswordUser : SignInTestUser, IPasswordClearableUs
 }
 
 /// <summary>
-/// A redeem handler generic over the aggregate, wired with the refresh-session store, so the
-/// password-holding account shapes can be driven through the shared workflow.
+/// A redeem handler generic over the aggregate, so the password-holding account shapes can be
+/// driven through the shared workflow.
 /// </summary>
 /// <typeparam name="TUser">The aggregate.</typeparam>
 public sealed class PasswordAccountRedeemHandler<TUser>(
@@ -536,10 +563,9 @@ public sealed class PasswordAccountRedeemHandler<TUser>(
     ISignInLinkTokenService tokenService,
     IAuthenticationService authenticationService,
     IOptions<SignInLinkSettings> settings,
-    ILogger logger,
-    IRefreshSessionStore refreshSessions)
+    ILogger logger)
     : RedeemSignInLinkHandlerBase<TUser, TestRedeemSignInLinkCommand>(
-        unitOfWork, tokenService, authenticationService, settings, logger, refreshSessions)
+        unitOfWork, tokenService, authenticationService, settings, logger)
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>
 {
     /// <summary>The account the lookup hook resolves.</summary>
