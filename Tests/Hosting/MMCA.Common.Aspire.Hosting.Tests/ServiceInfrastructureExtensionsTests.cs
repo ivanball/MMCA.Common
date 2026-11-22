@@ -153,7 +153,7 @@ public sealed class ServiceInfrastructureExtensionsTests
     }
 
     [Fact]
-    public void MarksEndpointsExternal()
+    public void LeavesEndpointsInternal()
     {
         var model = Arrange();
 
@@ -161,7 +161,7 @@ public sealed class ServiceInfrastructureExtensionsTests
 
         var endpoints = model.Service.Resource.Annotations.OfType<EndpointAnnotation>().ToList();
         endpoints.Should().NotBeEmpty();
-        endpoints.Should().OnlyContain(static e => e.IsExternal);
+        endpoints.Should().OnlyContain(static e => !e.IsExternal, "a backend service is reached through the gateway");
     }
 
     [Fact]

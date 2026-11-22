@@ -7,8 +7,7 @@ namespace MMCA.Common.Aspire.Hosting;
 
 /// <summary>
 /// The per-service infrastructure chain every extracted service repeats in its AppHost (its own SQL
-/// Server database, the cache, the broker, the waits, the startup probe and the external endpoints),
-/// as one call.
+/// Server database, the cache, the broker, the waits and the startup probe), as one call.
 /// </summary>
 [SuppressMessage(
     "Naming",
@@ -23,8 +22,14 @@ public static class ServiceInfrastructureExtensions
         /// <c>DataSources__{logicalName}__SQLServerConnectionString</c> (with a wait on it), a reference
         /// to the cache, the broker (through <paramref name="attachBroker"/>, the delegate
         /// <c>AddSelectedBroker</c> returns), a wait on the cache, a wait on the mail server, the
-        /// startup probe <paramref name="profile"/> selects, and external HTTP endpoints. The resulting
-        /// waits are database, broker, cache, mail.
+        /// startup probe <paramref name="profile"/> selects. The resulting waits are database, broker,
+        /// cache, mail.
+        /// <para>
+        /// The service's endpoints stay internal: a backend service is reached through the gateway,
+        /// so only the gateway and UI helpers (<see cref="GatewayUiExtensions"/>) mark endpoints
+        /// external. A host that needs one service reachable directly chains
+        /// <c>WithExternalHttpEndpoints()</c> after this call.
+        /// </para>
         /// <para>
         /// The probe is always a LIVENESS probe (<c>/alive</c>), never readiness: a startup gate pointed
         /// at a readiness endpoint can deadlock the dependency graph (see
@@ -72,13 +77,11 @@ public static class ServiceInfrastructureExtensions
                 .WaitFor(cache)
                 .WaitFor(mailServer);
 
-            wired = profile == ServiceEndpointProfile.Mixed
+            return profile == ServiceEndpointProfile.Mixed
                 ? wired.WithHttpHealthCheck(H2cHealthCheckExtensions.DefaultProbePath, endpointName: probeEndpointName)
                 : wired.WithH2cHealthCheck(
                     H2cHealthCheckExtensions.DefaultProbePath,
                     probeEndpointName ?? H2cHealthCheckExtensions.DefaultEndpointName);
-
-            return wired.WithExternalHttpEndpoints();
         }
     }
 }
