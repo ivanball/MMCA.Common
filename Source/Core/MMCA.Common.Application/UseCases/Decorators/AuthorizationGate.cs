@@ -62,7 +62,7 @@ internal static class AuthorizationGate
             CqrsMetrics.RecordAuthorizationDenied(requestTypeName);
 
             return Error.Forbidden(
-                "Authorization.MultiFactorRequired",
+                AuthErrorCodes.MultiFactorRequired,
                 "This operation requires a second authentication factor. Sign in again with your authenticator code.",
                 source: requestTypeName);
         }

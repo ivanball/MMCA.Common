@@ -707,9 +707,18 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         env:
           ASPIRE_CLI_VERSION: 17.0.0
+          # SHA-512 published beside the release asset (aspire-cli-linux-x64-17.0.0.tar.gz.sha512). The step
+          # downloads the versioned archive, refuses it unless it matches this value, then extracts it as
+          # the official installer does. Bump the value with the version, from that file.
+          ASPIRE_CLI_SHA512: f9208b531cc324a8612d1ef57bca9914901493b4086af8eb4a18282c4a5b6b31246cb1ce5bad51f08a91fb1658d614362875766aaf0311d83e1362f7d44f253b
         run: |
           set -euo pipefail
-          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          archive="$RUNNER_TEMP/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          echo "${ASPIRE_CLI_SHA512}  ${archive}" | sha512sum -c -
+          mkdir -p "$HOME/.aspire/bin"
+          tar -xzf "$archive" -C "$HOME/.aspire/bin"
+          rm -f "$archive"
           echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
           "$HOME/.aspire/bin/aspire" --version
 
@@ -1288,9 +1297,18 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         env:
           ASPIRE_CLI_VERSION: 17.0.0
+          # SHA-512 published beside the release asset (aspire-cli-linux-x64-17.0.0.tar.gz.sha512). The step
+          # downloads the versioned archive, refuses it unless it matches this value, then extracts it as
+          # the official installer does. Bump the value with the version, from that file.
+          ASPIRE_CLI_SHA512: f9208b531cc324a8612d1ef57bca9914901493b4086af8eb4a18282c4a5b6b31246cb1ce5bad51f08a91fb1658d614362875766aaf0311d83e1362f7d44f253b
         run: |
           set -euo pipefail
-          curl -fsSL https://aspire.dev/install.sh | bash -s -- --version "$ASPIRE_CLI_VERSION" --install-path "$HOME/.aspire/bin" --skip-path
+          archive="$RUNNER_TEMP/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" "https://github.com/microsoft/aspire/releases/download/v${ASPIRE_CLI_VERSION}/aspire-cli-linux-x64-${ASPIRE_CLI_VERSION}.tar.gz"
+          echo "${ASPIRE_CLI_SHA512}  ${archive}" | sha512sum -c -
+          mkdir -p "$HOME/.aspire/bin"
+          tar -xzf "$archive" -C "$HOME/.aspire/bin"
+          rm -f "$archive"
           echo "$HOME/.aspire/bin" >> "$GITHUB_PATH"
           "$HOME/.aspire/bin/aspire" --version
 

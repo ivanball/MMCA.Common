@@ -76,6 +76,26 @@ public static class AuthClaimTypes
     public const string MultiFactorMethodPasskey = "passkey";
 
     /// <summary>
+    /// A marker the API adds to a validated bearer principal for each role it withheld because the role
+    /// is listed under <c>Authorization:MultiFactor:RequiredForRoles</c> and the session carries no
+    /// <see cref="MultiFactor"/> claim. The value is the withheld role. The token itself still carries the
+    /// role; only the request's principal goes without it.
+    /// <para>
+    /// It records why the account is acting without the role, so a reader can tell "signed in, role
+    /// withheld until a second factor" apart from "no such role"
+    /// (<see cref="ClaimsPrincipalExtensions.HasMultiFactorWithheldRole"/>). It never grants anything.
+    /// </para>
+    /// </summary>
+    public const string MultiFactorWithheldRole = "mfa_withheld_role";
+
+    /// <summary>
+    /// A marker the API adds to a validated bearer principal for each <see cref="Permission"/> claim it
+    /// removed together with a withheld role (<see cref="MultiFactorWithheldRole"/>) and did not keep for a
+    /// role the principal still holds. The value is the withheld permission. It never grants anything.
+    /// </summary>
+    public const string MultiFactorWithheldPermission = "mfa_withheld_permission";
+
+    /// <summary>
     /// The claim carrying the instant of the interactive sign-in a token descends from, in seconds since
     /// the Unix epoch (the OpenID Connect <c>auth_time</c> claim). Stamped when a sign-in opens a session
     /// (password, sign-in link, external login, passkey, registration) and carried UNCHANGED across every

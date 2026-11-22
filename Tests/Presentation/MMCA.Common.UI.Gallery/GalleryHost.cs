@@ -9,7 +9,9 @@ using MMCA.Common.UI.Gallery.Stubs;
 using MMCA.Common.UI.Services.Administration;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Auth.TwoFactor;
 using MMCA.Common.UI.Services.Notifications;
+using MMCA.Common.UI.TwoFactor;
 using MMCA.Common.UI.Web.Pwa;
 using MudBlazor.Services;
 
@@ -96,6 +98,22 @@ public static class GalleryHost
         {
             builder.Services.AddScoped<NotificationHubService>();
             builder.Services.AddSingleton<IUIModule, MMCA.Common.UI.Notifications.NotificationUIModule>();
+        }
+
+        // The resend prompt on /login and /register (sign-in refused as unconfirmed, registration behind
+        // the email gate) asks for a fresh confirmation link; the stub accepts it so the prompt reaches
+        // its sent state. Registered before AddUIShared, whose TryAdd defers to it.
+        builder.Services.AddScoped<IEmailConfirmationUIService, StubEmailConfirmationUIService>();
+
+        // The two-factor account page (/profile/two-factor) is routable only in a host that called
+        // AddTwoFactorUI(), so the gallery calls it over a canned client that walks every state by clicks
+        // (off -> set up -> recovery codes -> on). Gallery:TwoFactorUI=false leaves the module out, for
+        // the not-found routing test. The page carries a real policy, so it is scanned signed in through
+        // the gallery_auth cookie like the notification pages.
+        if (builder.Configuration.GetValue("Gallery:TwoFactorUI", defaultValue: true))
+        {
+            builder.Services.AddScoped<ITwoFactorUIService, StubTwoFactorUIService>();
+            builder.Services.AddTwoFactorUI();
         }
 
         // Canned role administration (ADR-116) so the gallery's /admin/roles and /admin/roles/{role}

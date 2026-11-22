@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.OAuth;
+using MMCA.Common.UI.Services.Auth.TwoFactor;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Navigation;
+using MudBlazor;
 
 namespace MMCA.Common.UI.Pages.Auth;
 
@@ -50,6 +53,28 @@ public partial class Login : IDisposable
     private bool _offersPasskeys;
 
     /// <summary>
+    /// Set once the API answered that the password was right and the account needs its second factor:
+    /// the credentials are kept (read-only) and the code field is shown.
+    /// </summary>
+    private bool _awaitingSecondFactor;
+
+    private MudTextField<string>? _codeField;
+
+    /// <summary>Moves focus to the code field on the next render.</summary>
+    private bool _focusCode;
+
+    /// <summary>The address sign-in refused as unconfirmed, for the resend prompt.</summary>
+    private string? _unconfirmedEmail;
+
+    /// <summary>
+    /// Gets or sets why another page sent the visitor here: <c>two-factor-enabled</c> (enrollment ended
+    /// the session) or <c>two-factor-required</c> (the session must be replaced by one with a code). Each
+    /// shows its notice; any other value is ignored.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "reason")]
+    public string? Reason { get; set; }
+
+    /// <summary>
     /// Gets or sets the error code of a refused external sign-in. The OAuth completion endpoint sends
     /// every refusal back here as <c>/login?error={code}</c>: <c>oauth_failed</c>,
     /// <c>missing_claims</c>, or the first domain error code (for example <c>User.LastName.Empty</c>).
@@ -76,6 +101,76 @@ public partial class Login : IDisposable
         _disposed = true;
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusCode && _codeField is not null)
+        {
+            _focusCode = false;
+            await _codeField.FocusAsync();
+        }
+    }
+
+    /// <summary>
+    /// Takes the step a refused sign-in asks for, when it asks for one: the code step for an account
+    /// with a second factor (kept, with the message, when the code did not verify), and the resend
+    /// prompt for an unconfirmed address (shown with the message).
+    /// </summary>
+    /// <param name="result">The failed sign-in result.</param>
+    /// <returns><see langword="true"/> when the refusal was fully handled and no message is needed.</returns>
+    private bool HandleRefusalStep(Result result)
+    {
+        var refusal = LoginRefusals.Classify(result);
+        if (refusal is LoginRefusal.SecondFactorRequired or LoginRefusal.SecondFactorInvalid)
+        {
+            _awaitingSecondFactor = true;
+            _model.TwoFactorCode = null;
+            _focusCode = true;
+            return refusal == LoginRefusal.SecondFactorRequired;
+        }
+
+        if (refusal == LoginRefusal.EmailNotConfirmed)
+        {
+            _unconfirmedEmail = _model.Email?.Trim();
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The sign-in request: the code is sent only while the step is shown, so a first attempt never
+    /// carries a stale one. Null (with the prompt shown) when the step is shown and the code is empty.
+    /// </summary>
+    /// <returns>The request, or <see langword="null"/> when there is nothing to send yet.</returns>
+    private LoginRequest? BuildLoginRequest()
+    {
+        _unconfirmedEmail = null;
+        if (!_awaitingSecondFactor)
+        {
+            return new LoginRequest(_model.Email, _model.Password);
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.TwoFactorCode))
+        {
+            _errorMessage = L["Auth.Login.SecondFactor.CodeRequired"].Value;
+            _focusCode = true;
+            return null;
+        }
+
+        return new LoginRequest(_model.Email, _model.Password) { TwoFactorCode = _model.TwoFactorCode.Trim() };
+    }
+
+    /// <summary>Leaves the code step: clears it, the code and the password, so another account can sign in.</summary>
+    private void StartOver()
+    {
+        _awaitingSecondFactor = false;
+        _focusCode = false;
+        _model.TwoFactorCode = null;
+        _model.Password = string.Empty;
+        _errorMessage = null;
+        _unconfirmedEmail = null;
     }
 
     /// <summary>

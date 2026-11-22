@@ -1087,4 +1087,145 @@
   <data name="OfflineWrites.Synced" xml:space="preserve">
     <value>Se guardaron los cambios que hizo sin conexión.</value>
   </data>
+  <data name="Auth.Login.SecondFactor.Prompt" xml:space="preserve">
+    <value>Introduzca el código de su aplicación de autenticación o uno de sus códigos de recuperación.</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.CodeLabel" xml:space="preserve">
+    <value>Código de autenticación</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.CodeRequired" xml:space="preserve">
+    <value>Introduzca el código de su aplicación de autenticación.</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.Verify" xml:space="preserve">
+    <value>Verificar e iniciar sesión</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.StartOver" xml:space="preserve">
+    <value>Usar otra cuenta</value>
+  </data>
+  <data name="Authentication.TwoFactorInvalid" xml:space="preserve">
+    <value>Ese código no funcionó. Compruebe la hora de su teléfono e inténtelo de nuevo, o use un código de recuperación.</value>
+  </data>
+  <data name="Auth.Login.TwoFactorEnabledNotice" xml:space="preserve">
+    <value>La autenticación en dos pasos está activada. Vuelva a iniciar sesión con su contraseña y el código de su aplicación.</value>
+  </data>
+  <data name="Auth.Login.TwoFactorRequiredNotice" xml:space="preserve">
+    <value>Vuelva a iniciar sesión con su contraseña y el código de su aplicación para continuar.</value>
+  </data>
+  <data name="Auth.EmailConfirmation.ResendPrompt" xml:space="preserve">
+    <value>¿No recibió el correo? Podemos enviarle de nuevo el enlace de confirmación.</value>
+  </data>
+  <data name="Auth.Register.Pending.Title" xml:space="preserve">
+    <value>Revise su correo</value>
+  </data>
+  <data name="Auth.Register.Pending.Message" xml:space="preserve">
+    <value>Enviamos un enlace de confirmación a {0}. Ábralo para confirmar su dirección y después inicie sesión.</value>
+  </data>
+  <data name="Auth.Register.Pending.GoToSignIn" xml:space="preserve">
+    <value>Ir a iniciar sesión</value>
+  </data>
+  <data name="Nav.TwoFactor" xml:space="preserve">
+    <value>Autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.PageTitle" xml:space="preserve">
+    <value>Autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.Title" xml:space="preserve">
+    <value>Autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.Description" xml:space="preserve">
+    <value>Proteja su cuenta con un código de una aplicación de autenticación cada vez que inicie sesión.</value>
+  </data>
+  <data name="Auth.TwoFactor.Loading" xml:space="preserve">
+    <value>Cargando la configuración de la autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.LoadFailed" xml:space="preserve">
+    <value>No se pudo cargar la configuración de la autenticación en dos pasos.</value>
+  </data>
+  <data name="Auth.TwoFactor.Retry" xml:space="preserve">
+    <value>Intentar de nuevo</value>
+  </data>
+  <data name="Auth.TwoFactor.Required" xml:space="preserve">
+    <value>El rol de su cuenta requiere la autenticación en dos pasos. Configúrela para continuar.</value>
+  </data>
+  <data name="Auth.TwoFactor.RequiredSignInAgain" xml:space="preserve">
+    <value>Esta sesión se inició sin el código de su aplicación de autenticación. Vuelva a iniciar sesión con su código para continuar.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecentSignIn" xml:space="preserve">
+    <value>Por su seguridad, vuelva a iniciar sesión antes de cambiar la autenticación en dos pasos.</value>
+  </data>
+  <data name="Auth.TwoFactor.SignInAgain" xml:space="preserve">
+    <value>Cerrar sesión y volver a iniciarla</value>
+  </data>
+  <data name="Auth.TwoFactor.StatusOn" xml:space="preserve">
+    <value>La autenticación en dos pasos está activada.</value>
+  </data>
+  <data name="Auth.TwoFactor.StatusOff" xml:space="preserve">
+    <value>La autenticación en dos pasos está desactivada.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodesRemaining" xml:space="preserve">
+    <value>Códigos de recuperación restantes: {0}</value>
+  </data>
+  <data name="Auth.TwoFactor.Begin" xml:space="preserve">
+    <value>Configurar la autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.Scan" xml:space="preserve">
+    <value>Escanee este código QR con su aplicación de autenticación.</value>
+  </data>
+  <data name="Auth.TwoFactor.QrAlt" xml:space="preserve">
+    <value>Código QR que añade esta cuenta a una aplicación de autenticación. La misma clave se muestra como texto a continuación.</value>
+  </data>
+  <data name="Auth.TwoFactor.KeyLabel" xml:space="preserve">
+    <value>O introduzca esta clave en la aplicación</value>
+  </data>
+  <data name="Auth.TwoFactor.KeyAria" xml:space="preserve">
+    <value>Clave de configuración</value>
+  </data>
+  <data name="Auth.TwoFactor.OpenInApp" xml:space="preserve">
+    <value>Abrir en la aplicación de autenticación</value>
+  </data>
+  <data name="Auth.TwoFactor.CodeLabel" xml:space="preserve">
+    <value>Código de su aplicación</value>
+  </data>
+  <data name="Auth.TwoFactor.Confirm" xml:space="preserve">
+    <value>Activar la autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Title" xml:space="preserve">
+    <value>Guarde sus códigos de recuperación</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Warning" xml:space="preserve">
+    <value>Cada código funciona una sola vez y solo se muestra ahora. Guárdelos en un lugar seguro.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Copy" xml:space="preserve">
+    <value>Copiar códigos</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Copied" xml:space="preserve">
+    <value>Códigos de recuperación copiados.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Saved" xml:space="preserve">
+    <value>He guardado estos códigos</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Continue" xml:space="preserve">
+    <value>Continuar</value>
+  </data>
+  <data name="Auth.TwoFactor.Regenerate" xml:space="preserve">
+    <value>Generar nuevos códigos de recuperación</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable" xml:space="preserve">
+    <value>Desactivar la autenticación en dos pasos</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable.ConfirmTitle" xml:space="preserve">
+    <value>¿Desactivar la autenticación en dos pasos?</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable.ConfirmMessage" xml:space="preserve">
+    <value>Su cuenta quedará protegida solo por su contraseña.</value>
+  </data>
+  <data name="Auth.TwoFactor.Disabled" xml:space="preserve">
+    <value>La autenticación en dos pasos está desactivada.</value>
+  </data>
+  <data name="Auth.TwoFactor.GenericError" xml:space="preserve">
+    <value>Algo salió mal. Inténtelo de nuevo.</value>
+  </data>
 </root>

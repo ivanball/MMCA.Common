@@ -674,6 +674,25 @@ h1:focus:not(:focus-visible) {
     gap: 1rem !important;
 }
 
+/* Two-factor page: the setup key and the recovery codes are read character by character, so they
+   are set in a monospace face and wrap rather than widen a phone-width card. */
+.mmca-two-factor-key,
+.mmca-recovery-codes code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1.05rem;
+    letter-spacing: 0.05em;
+    overflow-wrap: anywhere;
+}
+
+.mmca-recovery-codes {
+    padding-left: 1.5rem;
+}
+
+/* The setup QR code: never wider than the card, centered under its instruction. */
+.mmca-two-factor-qr {
+    max-width: 16rem;
+}
+
 /* NotFound and Forbidden: the large outcome icon above the page heading. */
 .mmca-status-icon {
     font-size: 5rem !important;

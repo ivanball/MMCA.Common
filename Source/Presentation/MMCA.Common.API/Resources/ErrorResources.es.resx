@@ -169,6 +169,9 @@
   <data name="Authentication.TwoFactorNotEnrolled" xml:space="preserve">
     <value>La autenticación en dos pasos no está habilitada para esta cuenta.</value>
   </data>
+  <data name="Authentication.TwoFactorRecentSignInRequired" xml:space="preserve">
+    <value>Vuelva a iniciar sesión antes de cambiar la autenticación en dos pasos.</value>
+  </data>
   <data name="Authentication.TwoFactorRequired" xml:space="preserve">
     <value>Esta cuenta requiere un segundo factor de autenticación. Introduzca el código de su aplicación de autenticación o un código de recuperación.</value>
   </data>
@@ -176,7 +179,7 @@
     <value>No se pudo leer el secreto de autenticación en dos pasos almacenado. Deshabilite la autenticación en dos pasos y vuelva a inscribirse.</value>
   </data>
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
-    <value>Esta operación requiere un segundo factor de autenticación. Vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
+    <value>Esta operación requiere un segundo factor de autenticación. Configure la autenticación en dos pasos o vuelva a iniciar sesión con el código de su aplicación de autenticación.</value>
   </data>
   <data name="Authorization.RoleNotFound" xml:space="preserve">
     <value>No se encontró el rol.</value>
@@ -312,6 +315,9 @@
   </data>
   <data name="UserAdministration.PrivilegeCeiling" xml:space="preserve">
     <value>No puede asignar este rol ni administrar esta cuenta, porque otorga permisos que usted no tiene.</value>
+  </data>
+  <data name="UserAdministration.SecondFactorNotEnrolled" xml:space="preserve">
+    <value>La cuenta debe activar la autenticación en dos pasos antes de que se le pueda asignar este rol.</value>
   </data>
   <data name="UserAdministration.Self" xml:space="preserve">
     <value>No puede bloquear, desbloquear ni cambiar los roles de su propia cuenta.</value>

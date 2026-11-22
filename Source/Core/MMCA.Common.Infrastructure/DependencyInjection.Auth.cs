@@ -34,9 +34,13 @@ public static partial class DependencyInjection
         /// challenge that spends one) ships here.
         /// </para>
         /// <para>
-        /// Calling this alone changes nothing about sign-in. The challenge only runs once the app's
-        /// <c>AuthenticationService</c> passes the resolved <c>ITwoFactorAuthenticator</c> to its base
-        /// constructor, which is the second, explicit half of adopting the feature.
+        /// Calling this together with registering the app's <c>ITwoFactorStore</c> arms the sign-in
+        /// challenge: the container then builds <c>AuthenticationValidators</c> with the registered
+        /// <c>ITwoFactorAuthenticator</c>, and <c>AuthenticationServiceBase</c> uses it whenever its
+        /// own <c>twoFactor</c> argument is null. The app's <c>AuthenticationService</c> constructor
+        /// does not change. Once this is called the store is required: the authenticator cannot be
+        /// built without it. A host that wants the enrollment endpoints but no sign-in challenge
+        /// overrides <c>ChallengeSecondFactorAsync</c>.
         /// </para>
         /// </remarks>
         public IServiceCollection AddTwoFactorAuthentication(IConfiguration configuration)

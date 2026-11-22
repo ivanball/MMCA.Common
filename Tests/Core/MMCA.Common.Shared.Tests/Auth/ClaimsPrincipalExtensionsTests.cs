@@ -69,6 +69,40 @@ public sealed class ClaimsPrincipalExtensionsTests
             "the JWT bearer handler maps sub onto NameIdentifier, and readers must not care which shape arrived");
     }
 
+    [Fact]
+    public void GetMultiFactorWithheldRoles_ReturnsEveryMarkerInOrder_AndNeverReadsTheRoleClaims()
+    {
+        ClaimsPrincipal principal = Principal(
+            new Claim(ClaimTypes.Role, "Member"),
+            new Claim(AuthClaimTypes.MultiFactorWithheldRole, "Admin"),
+            new Claim(AuthClaimTypes.MultiFactorWithheldPermission, "orders:manage"),
+            new Claim(AuthClaimTypes.MultiFactorWithheldRole, "Auditor"));
+
+        principal.GetMultiFactorWithheldRoles().Should().Equal("Admin", "Auditor");
+        principal.HasMultiFactorWithheldRole().Should().BeTrue();
+        principal.HasRole("Admin").Should().BeFalse("a withheld role is not held");
+    }
+
+    [Fact]
+    public void WithheldRoleReaders_WithNoMarker_ReportNone()
+    {
+        ClaimsPrincipal principal = Principal(
+            new Claim(ClaimTypes.Role, "Admin"),
+            new Claim(AuthClaimTypes.MultiFactorWithheldPermission, "orders:manage"));
+
+        principal.GetMultiFactorWithheldRoles().Should().BeEmpty();
+        principal.HasMultiFactorWithheldRole().Should().BeFalse("only a withheld-role marker counts, not a held role or a permission marker");
+    }
+
+    [Fact]
+    public void WithheldRoleReaders_OnANullPrincipal_ReportNone()
+    {
+        ClaimsPrincipal? principal = null;
+
+        principal.GetMultiFactorWithheldRoles().Should().BeEmpty();
+        principal.HasMultiFactorWithheldRole().Should().BeFalse();
+    }
+
     private static ClaimsPrincipal Principal(params Claim[] claims) =>
         new(new ClaimsIdentity(claims, authenticationType: "Test"));
 }

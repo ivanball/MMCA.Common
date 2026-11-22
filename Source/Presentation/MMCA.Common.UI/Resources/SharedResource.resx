@@ -1087,4 +1087,145 @@
   <data name="OfflineWrites.Synced" xml:space="preserve">
     <value>Your offline changes were saved.</value>
   </data>
+  <data name="Auth.Login.SecondFactor.Prompt" xml:space="preserve">
+    <value>Enter the code from your authenticator app, or one of your recovery codes.</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.CodeLabel" xml:space="preserve">
+    <value>Authentication code</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.CodeRequired" xml:space="preserve">
+    <value>Enter the code from your authenticator app.</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.Verify" xml:space="preserve">
+    <value>Verify and sign in</value>
+  </data>
+  <data name="Auth.Login.SecondFactor.StartOver" xml:space="preserve">
+    <value>Use a different account</value>
+  </data>
+  <data name="Authentication.TwoFactorInvalid" xml:space="preserve">
+    <value>That code did not work. Check the time on your phone and try again, or use a recovery code.</value>
+  </data>
+  <data name="Auth.Login.TwoFactorEnabledNotice" xml:space="preserve">
+    <value>Two-factor authentication is on. Sign in again with your password and the code from your app.</value>
+  </data>
+  <data name="Auth.Login.TwoFactorRequiredNotice" xml:space="preserve">
+    <value>Sign in again with your password and the code from your app to continue.</value>
+  </data>
+  <data name="Auth.EmailConfirmation.ResendPrompt" xml:space="preserve">
+    <value>Did not get the email? We can send the confirmation link again.</value>
+  </data>
+  <data name="Auth.Register.Pending.Title" xml:space="preserve">
+    <value>Check your email</value>
+  </data>
+  <data name="Auth.Register.Pending.Message" xml:space="preserve">
+    <value>We sent a confirmation link to {0}. Open it to confirm your address, then sign in.</value>
+  </data>
+  <data name="Auth.Register.Pending.GoToSignIn" xml:space="preserve">
+    <value>Go to sign in</value>
+  </data>
+  <data name="Nav.TwoFactor" xml:space="preserve">
+    <value>Two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.PageTitle" xml:space="preserve">
+    <value>Two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.Title" xml:space="preserve">
+    <value>Two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.Description" xml:space="preserve">
+    <value>Protect your account with a code from an authenticator app each time you sign in.</value>
+  </data>
+  <data name="Auth.TwoFactor.Loading" xml:space="preserve">
+    <value>Loading two-factor settings</value>
+  </data>
+  <data name="Auth.TwoFactor.LoadFailed" xml:space="preserve">
+    <value>Two-factor settings could not be loaded.</value>
+  </data>
+  <data name="Auth.TwoFactor.Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Auth.TwoFactor.Required" xml:space="preserve">
+    <value>Your account's role requires two-factor authentication. Set it up to continue.</value>
+  </data>
+  <data name="Auth.TwoFactor.RequiredSignInAgain" xml:space="preserve">
+    <value>This session was started without your authenticator code. Sign in again with your code to continue.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecentSignIn" xml:space="preserve">
+    <value>For your security, sign in again before changing two-factor authentication.</value>
+  </data>
+  <data name="Auth.TwoFactor.SignInAgain" xml:space="preserve">
+    <value>Sign out and sign in again</value>
+  </data>
+  <data name="Auth.TwoFactor.StatusOn" xml:space="preserve">
+    <value>Two-factor authentication is on.</value>
+  </data>
+  <data name="Auth.TwoFactor.StatusOff" xml:space="preserve">
+    <value>Two-factor authentication is off.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodesRemaining" xml:space="preserve">
+    <value>Recovery codes left: {0}</value>
+  </data>
+  <data name="Auth.TwoFactor.Begin" xml:space="preserve">
+    <value>Set up two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.Scan" xml:space="preserve">
+    <value>Scan this QR code with your authenticator app.</value>
+  </data>
+  <data name="Auth.TwoFactor.QrAlt" xml:space="preserve">
+    <value>QR code that adds this account to an authenticator app. The same key is shown as text below.</value>
+  </data>
+  <data name="Auth.TwoFactor.KeyLabel" xml:space="preserve">
+    <value>Or enter this key in the app</value>
+  </data>
+  <data name="Auth.TwoFactor.KeyAria" xml:space="preserve">
+    <value>Setup key</value>
+  </data>
+  <data name="Auth.TwoFactor.OpenInApp" xml:space="preserve">
+    <value>Open in authenticator app</value>
+  </data>
+  <data name="Auth.TwoFactor.CodeLabel" xml:space="preserve">
+    <value>Code from your app</value>
+  </data>
+  <data name="Auth.TwoFactor.Confirm" xml:space="preserve">
+    <value>Turn on two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Title" xml:space="preserve">
+    <value>Save your recovery codes</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Warning" xml:space="preserve">
+    <value>Each code works once and is shown only now. Store them somewhere safe.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Copy" xml:space="preserve">
+    <value>Copy codes</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Copied" xml:space="preserve">
+    <value>Recovery codes copied.</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Saved" xml:space="preserve">
+    <value>I have saved these codes</value>
+  </data>
+  <data name="Auth.TwoFactor.RecoveryCodes.Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Auth.TwoFactor.Regenerate" xml:space="preserve">
+    <value>Generate new recovery codes</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable" xml:space="preserve">
+    <value>Turn off two-factor authentication</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable.ConfirmTitle" xml:space="preserve">
+    <value>Turn off two-factor authentication?</value>
+  </data>
+  <data name="Auth.TwoFactor.Disable.ConfirmMessage" xml:space="preserve">
+    <value>Your account will be protected by your password only.</value>
+  </data>
+  <data name="Auth.TwoFactor.Disabled" xml:space="preserve">
+    <value>Two-factor authentication is off.</value>
+  </data>
+  <data name="Auth.TwoFactor.GenericError" xml:space="preserve">
+    <value>Something went wrong. Try again.</value>
+  </data>
 </root>

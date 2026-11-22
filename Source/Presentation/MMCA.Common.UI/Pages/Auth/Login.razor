@@ -6,6 +6,7 @@
 @using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Services.Auth
 @using MMCA.Common.UI.Services.Auth.OAuth
+@using MMCA.Common.UI.Services.Auth.TwoFactor
 @using MMCA.Common.UI.Services.Capabilities.Auth
 @using MMCA.Common.UI.Services.Navigation
 @using Microsoft.AspNetCore.Authorization
@@ -41,6 +42,14 @@
         <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
             <LocalizedDataAnnotationsValidator />
             <MudCardContent Class="pa-6">
+                @if (LoginRefusals.ReasonNoticeKey(Reason) is { } reasonNotice)
+                {
+                    @* Sent here by the two-factor page, which ended the session: a status, not an alert. *@
+                    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status"
+                              data-testid="login-reason-notice">
+                        @L[reasonNotice]
+                    </MudAlert>
+                }
                 @if (_existingAccountEmail is not null)
                 {
                     @* Registration sent the visitor here because the address already has an account,
@@ -71,21 +80,47 @@
                        announces it unless it arrives as a live region. *@
                     <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert">@_errorMessage</MudAlert>
                 }
+                @if (_unconfirmedEmail is not null)
+                {
+                    @* Sign-in was refused because the address is unconfirmed: offer the link again here,
+                       rather than only on /confirm-email. *@
+                    <EmailConfirmationResendPrompt Email="@_unconfirmedEmail" />
+                }
+                @if (_awaitingSecondFactor)
+                {
+                    @* A status, not an alert: the password was right and this is the expected next step. *@
+                    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status"
+                              data-testid="login-second-factor-prompt">
+                        @L["Auth.Login.SecondFactor.Prompt"]
+                    </MudAlert>
+                }
                 @* A text input with the email keyboard, not type=email: the browser's email check refuses an
                    internationalized local part that the API accepts and stores (Run 19 N1). *@
                 <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Text" InputMode="InputMode.email"
-                              Immediate="true"
+                              Immediate="true" ReadOnly="@_awaitingSecondFactor"
                               Variant="Variant.Outlined" Class="mb-4"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Email"
                               autocapitalize="none" spellcheck="false"
                               autocomplete="@(_offersPasskeys ? "email webauthn" : "email")" />
                 <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="@L["Auth.Field.Password"]" InputType="InputType.Password"
-                              Immediate="true"
+                              Immediate="true" ReadOnly="@_awaitingSecondFactor"
                               Variant="Variant.Outlined" Class="mb-2"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Key"
                               autocomplete="current-password" />
+                @if (_awaitingSecondFactor)
+                {
+                    @* A text input rather than a numeric one: a recovery code is accepted here too. *@
+                    <MudTextField T="string" @bind-Value="_model.TwoFactorCode" @ref="_codeField"
+                                  Label="@L["Auth.Login.SecondFactor.CodeLabel"]" InputType="InputType.Text"
+                                  Immediate="true"
+                                  Variant="Variant.Outlined" Class="mt-2 mb-2"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Dialpad"
+                                  autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
+                                  data-testid="login-second-factor-code" />
+                }
             </MudCardContent>
             <MudCardActions Class="d-flex flex-column pa-6 pt-0 mmca-auth-actions">
                 @* aria-busy is spelled out as a string, never a bool: Blazor renders a false bool
@@ -95,18 +130,28 @@
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                            Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
                            aria-busy="@(_isLoading ? "true" : "false")"
-                           aria-label="@L["Auth.Login.SignIn.Aria"]">
+                           aria-label="@(_awaitingSecondFactor ? L["Auth.Login.SecondFactor.Verify"] : L["Auth.Login.SignIn.Aria"])">
                     @if (_isLoading)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    @L["Auth.Login.SignIn"]
+                    @(_awaitingSecondFactor ? L["Auth.Login.SecondFactor.Verify"] : L["Auth.Login.SignIn"])
                 </MudButton>
+                @if (_awaitingSecondFactor)
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" Size="Size.Medium"
+                               Disabled="@_isLoading" OnClick="StartOver"
+                               data-testid="login-second-factor-start-over">
+                        @L["Auth.Login.SecondFactor.StartOver"]
+                    </MudButton>
+                }
                 @* Underline.Always: the recovery link must be distinguishable without relying on
                    colour alone (WCAG 2.1 AA / axe link-in-text-block), same rule as Register.razor. *@
                 <MudLink Href="/forgot-password" Typo="Typo.body2" Underline="Underline.Always"
                          Class="align-self-center">@L["Auth.Login.ForgotPassword"]</MudLink>
-                @if (SignInOptions.Value.OfferSignInLink)
+                @* The sign-in link, passkey and external providers are other ways in, hidden while the
+                   password has been proved and only the code is missing. *@
+                @if (SignInOptions.Value.OfferSignInLink && !_awaitingSecondFactor)
                 {
                     @* Opt-in (SignInSettings.OfferSignInLink, ADR-116): a one-time link to the typed
                        address instead of a password. *@
@@ -118,7 +163,7 @@
                         @L["Auth.Login.EmailMeLink"]
                     </MudButton>
                 }
-                @if (_offersPasskeys)
+                @if (_offersPasskeys && !_awaitingSecondFactor)
                 {
                     @* Opt-in (SignInSettings.OfferPasskeys, ADR-139) and only where the head can run
                        WebAuthn (IPasskeyCapability), so a MAUI head never shows it. *@
@@ -132,7 +177,7 @@
                            Href="/register" Size="Size.Medium">
                     @L["Auth.Login.CreateAccount"]
                 </MudButton>
-                @if (_hasExternalProviders)
+                @if (_hasExternalProviders && !_awaitingSecondFactor)
                 {
                     <MudDivider Class="my-1" />
                     <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
@@ -302,16 +347,21 @@
     private async Task HandleLoginAsync()
     {
         _errorMessage = null;
+        if (BuildLoginRequest() is not { } request)
+        {
+            return;
+        }
+
         _isLoading = true;
 
         try
         {
             // The service reports every outcome as a Result, so the only catch left is for a
             // genuine fault in the navigation/preference tail below.
-            var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password), _cts.LifetimeToken());
+            var result = await AuthService.LoginAsync(request, _cts.LifetimeToken());
             if (result.IsFailure)
             {
-                _errorMessage = PasswordLoginErrorMessage(result);
+                _errorMessage = HandleRefusalStep(result) ? null : PasswordLoginErrorMessage(result);
                 return;
             }
 

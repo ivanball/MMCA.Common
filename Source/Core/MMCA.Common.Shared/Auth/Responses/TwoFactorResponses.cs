@@ -39,3 +39,13 @@ public readonly record struct TwoFactorSetupResponse(
 /// </remarks>
 /// <param name="RecoveryCodes">The plaintext codes, in the order they were generated.</param>
 public sealed record TwoFactorRecoveryCodesResponse(IReadOnlyList<string> RecoveryCodes);
+
+/// <summary>
+/// The caller's two-factor state, for an account page that decides between "set it up" and the
+/// enabled actions. Carries no secret and no code.
+/// </summary>
+/// <param name="IsEnabled">Whether the account's second factor is active and demanded at sign-in.</param>
+/// <param name="RecoveryCodesRemaining">
+/// How many unspent recovery codes the account holds; 0 while two-factor authentication is off.
+/// </param>
+public readonly record struct TwoFactorStatusResponse(bool IsEnabled, int RecoveryCodesRemaining);

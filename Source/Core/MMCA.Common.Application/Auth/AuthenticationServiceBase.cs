@@ -60,10 +60,11 @@ namespace MMCA.Common.Application.Auth;
 /// <param name="validators">The request validators for login, registration and refresh.</param>
 /// <param name="sessionIssuer">Issues, rotates and revokes the access/refresh pair behind each device.</param>
 /// <param name="twoFactor">
-/// Optional second-factor challenge. Supplied only by an app that has adopted two-factor
-/// authentication; while it is null the sign-in flow has no second-factor step at all and behaves
-/// exactly as it did before the feature shipped. Optional and defaulted so every existing subclass
-/// keeps compiling untouched (the <c>ChangePasswordHandlerBase</c> precedent).
+/// Optional second-factor challenge. Optional and defaulted so every existing subclass keeps
+/// compiling untouched (the <c>ChangePasswordHandlerBase</c> precedent). While it is null the
+/// challenge comes from <see cref="AuthenticationValidators.TwoFactor"/>, which the container fills
+/// once the host calls <c>AddTwoFactorAuthentication</c>; with neither, the sign-in flow has no
+/// second-factor step at all. An explicit argument wins over the validators' one.
 /// </param>
 /// <param name="emailConfirmationSettings">
 /// Optional email-confirmation options. Supplied only by an app that has adopted confirmation, and
@@ -382,6 +383,14 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         // BR-213: count this registration against the caller's IP.
         await loginProtection.IncrementRegistrationCountAsync(ipAddress, cancellationToken).ConfigureAwait(false);
+
+        // Registration opens no session exactly when sign-in would refuse the new account: the same
+        // virtual gate decides both, so a subclass override of it moves them together. The account
+        // exists and the result is a success; the app sends the confirmation mail as it already does.
+        if (CheckEmailConfirmed(tokenUser).IsFailure)
+        {
+            return Result.Success(RegistrationOutcome.ConfirmationPending);
+        }
 
         // The session is opened AFTER the user save because it carries the user id, which a
         // store-generated key only has once the insert has run.
@@ -833,9 +842,11 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// Runs the second-factor challenge for a candidate whose password has just been proved.
     /// </summary>
     /// <remarks>
-    /// With no <see cref="ITwoFactorAuthenticator"/> injected there is no challenge and no extra
-    /// query: the method answers <see cref="TwoFactorOutcome.NotEnrolled"/> outright, which is what
-    /// keeps the feature free for an app that has not adopted it.
+    /// The authenticator is the constructor's <c>twoFactor</c> argument when one was passed, otherwise
+    /// the one <see cref="AuthenticationValidators.TwoFactor"/> carries (set when the host called
+    /// <c>AddTwoFactorAuthentication</c>). With neither there is no challenge and no extra query: the
+    /// method answers <see cref="TwoFactorOutcome.NotEnrolled"/> outright, which is what keeps the
+    /// feature free for an app that has not adopted it.
     /// </remarks>
     /// <param name="userId">The candidate account.</param>
     /// <param name="code">The second-factor code the caller supplied, if any.</param>
@@ -845,9 +856,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         UserIdentifierType userId,
         string? code,
         CancellationToken cancellationToken) =>
-        twoFactor is null
+        (twoFactor ?? validators.TwoFactor) is not { } authenticator
             ? Task.FromResult(Result.Success(TwoFactorOutcome.NotEnrolled))
-            : twoFactor.ChallengeAsync(userId, code, cancellationToken);
+            : authenticator.ChallengeAsync(userId, code, cancellationToken);
 
     /// <summary>
     /// Runs the second-factor challenge and counts a wrong code against the account exactly like a

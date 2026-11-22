@@ -52,6 +52,9 @@ public sealed class AuthUIServiceTests : IDisposable
     /// <summary>The ASP.NET Core validation-dictionary shape.</summary>
     private const string ValidationProblemBody = """{ "title": "One or more validation errors occurred.", "status": 400, "errors": { "Email": [ "That email address is already registered." ] } }""";
 
+    /// <summary>The register answer behind the email gate (202 Accepted): the address, no tokens.</summary>
+    private const string PendingBody = """{ "email": "user@test.com" }""";
+
     /// <summary>Exactly the camelCase wire shape the sessions endpoint emits.</summary>
     private const string SessionsBody = """[ { "sessionId": "11111111-1111-1111-1111-111111111111", "createdAt": "2026-08-01T09:30:00Z", "expiresAt": "2026-09-01T09:30:00Z", "ipAddress": "203.0.113.7", "userAgent": "Mozilla/5.0 (Windows NT 10.0) Chrome/126.0.0.0", "isCurrent": true }, { "sessionId": "22222222-2222-2222-2222-222222222222", "createdAt": "2026-08-02T11:00:00Z", "expiresAt": "2026-09-02T11:00:00Z", "ipAddress": null, "userAgent": null, "isCurrent": false } ]""";
 
@@ -325,6 +328,81 @@ public sealed class AuthUIServiceTests : IDisposable
         error.Target.Should().Be("Email");
         error.Message.Should().Be("That email address is already registered.");
         error.Type.Should().Be(ErrorType.Validation);
+    }
+
+    // v1.314.0 F3 (design 2.3): behind the email gate the API answers register with 202 Accepted and the
+    // address only. That is a success carrying RegistrationOutcome.ConfirmationPending, with nothing
+    // stored, no auth-state sign-in and no device report; every other token-less success still fails.
+    [Fact]
+    public async Task RegisterAsync_On202_ReturnsConfirmationPending_WithoutTouchingTokenStorageOrAuthState()
+    {
+        var reporter = new Mock<MMCA.Common.UI.Services.Auth.Devices.IDeviceMetadataReporter>();
+        _handler.Dispose();
+        _handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.Accepted, PendingBody));
+        var sut = new AuthUIService(
+            new StubHttpClientFactory(_handler),
+            _tokenStorage.Object,
+            _tokenRefresher.Object,
+            _authStateProvider,
+            _pushRegistration.Object,
+            localCache: _localCache.Object,
+            deviceMetadataReporter: reporter.Object);
+
+        var result = await sut.RegisterAsync(Registration(), Ct);
+
+        result.IsSuccess.Should().BeTrue("the account exists and the confirmation mail is on its way");
+        result.Value.IsConfirmationPending().Should().BeTrue();
+        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/register");
+        _tokenStorage.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Never);
+        _authStates.Should().BeEmpty("no session was opened, so the auth state must not change");
+        reporter.Verify(r => r.ReportAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_On201WithTokens_StillStoresThePairAndSignsIn()
+    {
+        var accessToken = Jwt();
+        var sut = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            Content = JsonContent.Create(new AuthenticationResponse(accessToken, "created-refresh", DateTime.UtcNow.AddMinutes(15))),
+        });
+
+        var result = await sut.RegisterAsync(Registration(), Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsConfirmationPending().Should().BeFalse();
+        _tokenStorage.Verify(s => s.SetTokensAsync(accessToken, "created-refresh"), Times.Once);
+        _authStates.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task RegisterAsync_On201WithoutTokens_IsStillMissingAccessToken()
+    {
+        // Only the 202 means "pending": a 201 that lost its tokens is still a broken answer.
+        var sut = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            Content = JsonContent.Create(new AuthenticationResponse(string.Empty, string.Empty, DateTime.UtcNow)),
+        });
+
+        var result = await sut.RegisterAsync(Registration(), Ct);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be(AuthUIService.MissingAccessTokenCode);
+    }
+
+    [Fact]
+    public async Task LoginAsync_On202_IsStillMissingAccessToken()
+    {
+        // The pending outcome is register-only: a sign-in answered 202 opened no session either.
+        var sut = CreateSut(HttpStatusCode.Accepted, PendingBody);
+
+        var result = await sut.LoginAsync(Credentials(), Ct);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be(AuthUIService.MissingAccessTokenCode);
+        _tokenStorage.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _authStates.Should().BeEmpty();
     }
 
     // ==================== OAuth exchange ====================

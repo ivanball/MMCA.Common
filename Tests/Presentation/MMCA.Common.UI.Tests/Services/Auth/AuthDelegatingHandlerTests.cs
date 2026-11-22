@@ -1,7 +1,9 @@
 using System.Net;
 using AwesomeAssertions;
+using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Auth.TwoFactor;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
 
@@ -15,6 +17,10 @@ namespace MMCA.Common.UI.Tests.Services.Auth;
 /// </summary>
 public sealed class AuthDelegatingHandlerTests
 {
+    /// <summary>The coded "second factor required" refusal the API answers a 403 with (v1.314.0 F2).</summary>
+    private const string MultiFactorProblem =
+        """{ "status": 403, "errors": [ { "code": "Authorization.MultiFactorRequired", "message": "Use your second factor.", "type": "Forbidden" } ] }""";
+
     private static (HttpMessageInvoker Invoker, StubHttpMessageHandler Inner, Mock<ITokenStorageService> TokenStorage) CreateSut(
         string? token,
         HttpStatusCode responseStatusCode = HttpStatusCode.OK)
@@ -213,6 +219,174 @@ public sealed class AuthDelegatingHandlerTests
 
         AuthDelegatingHandler.IsTrackedOwner(token).Should().BeFalse("a storage without the session-aware capability cannot renew");
         AuthDelegatingHandler.IsTrackedOwner("   ").Should().BeFalse();
+    }
+
+    // v1.314.0 F2 (design 2.2.3): a 403 carrying the coded "second factor required" refusal raises the
+    // signal for the storage that attached the bearer, but only when that storage has a listener (a host
+    // that called AddTwoFactorUI) and only for a Problem Details body. Each test uses its own storage and
+    // a unique bearer, so the process-wide owner map and signal table are never shared between tests.
+    [Fact]
+    public async Task SendAsync_On403WithTheMultiFactorCode_AndASubscriber_RaisesTheSignalOnce()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() => ProblemContent(MultiFactorProblem));
+        var raised = 0;
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => raised++);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        raised.Should().Be(1, "the coded refusal is what sends the user to set up or use their second factor");
+    }
+
+    [Fact]
+    public async Task SendAsync_On403_MatchesThePropertyNamesIgnoringCase()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() => ProblemContent(
+            """{ "Errors": [ { "Code": "Authorization.MultiFactorRequired" } ] }"""));
+        var raised = 0;
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => raised++);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        raised.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_On403WithAnotherCode_DoesNotRaise()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() => ProblemContent(
+            """{ "status": 403, "errors": [ { "code": "Authorization.Forbidden", "message": "No." } ] }"""));
+        var raised = 0;
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => raised++);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        raised.Should().Be(0, "a plain forbid is not a second-factor refusal");
+    }
+
+    [Fact]
+    public async Task SendAsync_On403ThatIsNotProblemDetails_DoesNotRaise()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() =>
+            new StringContent(MultiFactorProblem, System.Text.Encoding.UTF8, "application/json"));
+        var raised = 0;
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => raised++);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        raised.Should().Be(0, "only an application/problem+json body is read");
+    }
+
+    [Fact]
+    public async Task SendAsync_On403WithABodyThatIsNotJson_DoesNotThrowOrRaise()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() => ProblemContent("<html>denied</html>"));
+        var raised = 0;
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => raised++);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        raised.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SendAsync_On403WithNoSubscriber_NeverReadsTheBody()
+    {
+        // A host that never called AddTwoFactorUI has no listener: its 403 bodies are never touched.
+        var content = new ThrowOnReadContent();
+        var (invoker, _) = CreateForbiddenSut(() => content);
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        content.ReadAttempts.Should().Be(0, "without a subscriber the handler must return without reading the content");
+    }
+
+    [Fact]
+    public async Task SendAsync_On403_AfterRaising_TheCallerCanStillReadTheSameBody()
+    {
+        var (invoker, storage) = CreateForbiddenSut(() => ProblemContent(MultiFactorProblem));
+        using var subscription = MultiFactorRequiredSignal.Subscribe(storage, () => { });
+        using var request = CreateRequest();
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        body.Should().Be(MultiFactorProblem, "the body is buffered, so the service still reads the coded refusal");
+    }
+
+    [Fact]
+    public async Task SendAsync_On403_ToABearerAServiceAttached_RaisesForTheStorageThatHeldIt()
+    {
+        // Same owner rule as the 401 path: the handler's own scope storage is not the page's.
+        var componentStorage = new WasmTokenStorageService(SucceedingCookieSync(), new Mock<ISessionAwareTokenRefresher>().Object);
+        await componentStorage.SetTokensAsync(CreateUniqueJwt(), "refresh-token");
+        var handlerScopeStorage = new StubTokenStorageService($"handler-{Guid.NewGuid():N}");
+        var componentRaised = 0;
+        var handlerRaised = 0;
+        using var componentSubscription = MultiFactorRequiredSignal.Subscribe(componentStorage, () => componentRaised++);
+        using var handlerSubscription = MultiFactorRequiredSignal.Subscribe(handlerScopeStorage, () => handlerRaised++);
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient("APIClient")).Returns(() =>
+            new HttpClient(new AuthDelegatingHandler(handlerScopeStorage)
+            {
+                InnerHandler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = ProblemContent(MultiFactorProblem) }),
+            })
+            {
+                BaseAddress = new Uri("https://api.test/"),
+            });
+        var service = new ProfileService(factory.Object, componentStorage);
+
+        var status = await service.GetProfileStatusAsync(TestContext.Current.CancellationToken);
+
+        status.Should().Be(HttpStatusCode.Forbidden);
+        componentRaised.Should().Be(1, "the page whose storage attached the bearer is the one redirected");
+        handlerRaised.Should().Be(0);
+    }
+
+    private static (HttpMessageInvoker Invoker, StubTokenStorageService Storage) CreateForbiddenSut(Func<HttpContent> content)
+    {
+        var storage = new StubTokenStorageService($"mfa-{Guid.NewGuid():N}");
+        var inner = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = content() });
+        var handler = new AuthDelegatingHandler(storage) { InnerHandler = inner };
+        return (new HttpMessageInvoker(handler, disposeHandler: true), storage);
+    }
+
+    private static StringContent ProblemContent(string json) =>
+        new(json, System.Text.Encoding.UTF8, "application/problem+json");
+
+    /// <summary>A problem+json body that counts and refuses every attempt to read it.</summary>
+    private sealed class ThrowOnReadContent : HttpContent
+    {
+        public ThrowOnReadContent() =>
+            Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/problem+json");
+
+        public int ReadAttempts { get; private set; }
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            ReadAttempts++;
+            throw new InvalidOperationException("The 403 body must not be read without a subscriber.");
+        }
+
+        protected override Task<Stream> CreateContentReadStreamAsync()
+        {
+            ReadAttempts++;
+            throw new InvalidOperationException("The 403 body must not be read without a subscriber.");
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 
     private static ISessionCookieSync SucceedingCookieSync()

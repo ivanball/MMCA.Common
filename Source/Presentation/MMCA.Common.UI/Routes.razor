@@ -3,6 +3,7 @@
 @using MMCA.Common.UI.Pages
 @using MMCA.Common.UI.Layout
 @using MMCA.Common.UI.Notifications
+@using MMCA.Common.UI.TwoFactor
 @inject IEnumerable<IUIModule> UIModules
 @inject IStringLocalizer<SharedResource> L
 
@@ -11,10 +12,11 @@
             AdditionalAssemblies="UIModules.Select(m => m.Assembly)"
             NotFoundPage="typeof(Pages.NotFound)">
         <Found Context="routeData">
-            @if (NotificationPageGate.Hides(routeData.PageType, UIModules))
+            @if (NotificationPageGate.Hides(routeData.PageType, UIModules) || TwoFactorPageGate.Hides(routeData.PageType, UIModules))
             {
-                @* A host that never called AddNotificationUI() answers the notification routes with
-                   the not-found page rather than serving pages whose services it never registered. *@
+                @* A host that never called AddNotificationUI() (or AddTwoFactorUI()) answers those
+                   routes with the not-found page rather than serving pages whose services it never
+                   registered. *@
                 <LayoutView Layout="typeof(Layout.MainLayout)">
                     <MMCA.Common.UI.Pages.NotFound />
                 </LayoutView>

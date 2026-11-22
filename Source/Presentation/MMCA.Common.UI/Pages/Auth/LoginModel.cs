@@ -20,4 +20,11 @@ public sealed class LoginModel
 
     [Required(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.PasswordRequired))]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the second-factor code (from the authenticator app, or a recovery code). Carries no
+    /// validation attribute: it is asked for only once the API answers that the account needs one, and
+    /// the page checks it in code while that step is shown.
+    /// </summary>
+    public string? TwoFactorCode { get; set; }
 }

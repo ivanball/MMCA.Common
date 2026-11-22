@@ -1,8 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.API.Authorization.Fallback;
+using MMCA.Common.API.Authorization.MultiFactor;
 using MMCA.Common.Shared.Auth.Permissions;
 
 namespace MMCA.Common.API.Authorization;
@@ -73,6 +78,11 @@ public static class AuthorizationExtensions
                 ServiceDescriptor.Transient<IAuthorizationPolicyProvider, PermissionPolicyProvider>());
             EnsurePermissionRegistry(services);
 
+            // Role-level second factor (Authorization:MultiFactor:RequiredForRoles). Inert while the
+            // list is empty: the bearer withholding and the handler return before any work and the
+            // wrapped result handler delegates every call.
+            AddMultiFactorRoleRequirement(services);
+
             services.AddOptions<FallbackAuthorizationOptions>();
             if (configureFallback is not null)
             {
@@ -113,6 +123,69 @@ public static class AuthorizationExtensions
         }
     }
 
+    // Registers the role-level second-factor handler, binds its settings from the host's
+    // configuration, and wraps the registered authorization result handler so the refusal carries a
+    // coded body. Idempotent: AddAuthorizationPolicies runs more than once in a Blazor web host.
+    private static void AddMultiFactorRoleRequirement(IServiceCollection services)
+    {
+        var alreadyRegistered = services.Any(descriptor =>
+            !descriptor.IsKeyedService
+            && descriptor.ServiceType == typeof(IAuthorizationHandler)
+            && descriptor.ImplementationType == typeof(MultiFactorRoleAuthorizationHandler));
+        if (!alreadyRegistered)
+        {
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IAuthorizationHandler, MultiFactorRoleAuthorizationHandler>());
+
+            // GetService, not GetRequiredService: a host with no IConfiguration binds nothing and the
+            // rule stays off. Bound once, so the list is not appended to twice.
+            services.AddOptions<MultiFactorAuthorizationSettings>()
+                .Configure<IServiceProvider>(static (settings, provider) =>
+                    provider.GetService<IConfiguration>()?.GetSection(MultiFactorAuthorizationSettings.SectionName).Bind(settings));
+        }
+
+        // Withholds a listed role from a bearer principal without a second factor, on every JWT bearer
+        // scheme, once however often this runs (TryAddEnumerable keys on the implementation type).
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>, MultiFactorBearerWithholding>());
+
+        WrapResultHandler(services);
+    }
+
+    // Replaces the last registered IAuthorizationMiddlewareResultHandler with the multi-factor
+    // wrapper around it, keeping its lifetime. services.AddAuthorization() has already TryAdded the
+    // framework default, so there is always one to wrap. A descriptor that is already the wrapper is
+    // left alone.
+    private static void WrapResultHandler(IServiceCollection services)
+    {
+        var index = -1;
+        for (var i = services.Count - 1; i >= 0; i--)
+        {
+            if (!services[i].IsKeyedService && services[i].ServiceType == typeof(IAuthorizationMiddlewareResultHandler))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        var original = services[index];
+        if (original.ImplementationFactory?.Target is ResultHandlerWrapper)
+        {
+            return;
+        }
+
+        var wrapper = new ResultHandlerWrapper(original);
+        services[index] = ServiceDescriptor.Describe(
+            typeof(IAuthorizationMiddlewareResultHandler),
+            wrapper.Create,
+            original.Lifetime);
+    }
+
     // Ensures a single shared PermissionRegistryBuilder (and the IPermissionRegistry built from it)
     // are registered, returning the builder so callers can accumulate grants into it. The registry
     // is built lazily on first resolve, after all modules have contributed.
@@ -136,5 +209,26 @@ public static class AuthorizationExtensions
         services.AddSingleton<IPermissionCatalog>(sp => sp.GetRequiredService<PermissionRegistry>());
 
         return builder;
+    }
+
+    /// <summary>
+    /// Builds the originally registered result handler the way its descriptor says (instance,
+    /// factory or type) and wraps it in <see cref="MultiFactorRefusalResultHandler"/>. Its own type is
+    /// also the marker that a descriptor has already been wrapped.
+    /// </summary>
+    /// <param name="original">The descriptor being replaced.</param>
+    private sealed class ResultHandlerWrapper(ServiceDescriptor original)
+    {
+        public MultiFactorRefusalResultHandler Create(IServiceProvider provider)
+        {
+            var inner = original.ImplementationInstance as IAuthorizationMiddlewareResultHandler
+                ?? original.ImplementationFactory?.Invoke(provider) as IAuthorizationMiddlewareResultHandler
+                ?? (IAuthorizationMiddlewareResultHandler)ActivatorUtilities.CreateInstance(provider, original.ImplementationType!);
+
+            var logger = provider.GetService<ILogger<MultiFactorRefusalResultHandler>>()
+                ?? NullLogger<MultiFactorRefusalResultHandler>.Instance;
+
+            return new MultiFactorRefusalResultHandler(inner, logger);
+        }
     }
 }

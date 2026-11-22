@@ -114,9 +114,42 @@ public abstract class AuthControllerBase(
             .RegisterAsync(request, ClientIpAddress, ClientUserAgent, cancellationToken)
             .ConfigureAwait(false);
 
-        return result.IsFailure
-            ? HandleFailure(result.Errors)
-            : StatusCode(StatusCodes.Status201Created, result.Value);
+        return RegistrationResult(result, request.Email);
+    }
+
+    /// <summary>
+    /// Maps a registration result to its response: <c>201 Created</c> with the token pair when a
+    /// session was opened, <c>202 Accepted</c> with a <see cref="RegistrationPendingResponse"/> (and
+    /// <c>Cache-Control: no-store</c>) when the account was created but the host requires a confirmed
+    /// address first (<see cref="RegistrationOutcome.IsConfirmationPending"/>), and the Problem Details
+    /// failure otherwise. A derived controller that overrides <see cref="RegisterAsync"/> returns this
+    /// instead of writing the <c>201</c> itself, so the pending case never answers a token-less
+    /// <c>201</c>.
+    /// </summary>
+    /// <param name="result">The result of <see cref="IAuthenticationService.RegisterAsync"/>.</param>
+    /// <param name="email">The address from the registration request.</param>
+    /// <returns>The action result for the register endpoint.</returns>
+    protected ActionResult<AuthenticationResponse> RegistrationResult(Result<AuthenticationResponse> result, string email)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(email);
+
+        if (result.IsFailure)
+        {
+            return HandleFailure(result.Errors);
+        }
+
+        if (result.Value.IsConfirmationPending())
+        {
+            if (HttpContext is { } httpContext)
+            {
+                httpContext.Response.Headers.CacheControl = "no-store";
+            }
+
+            return StatusCode(StatusCodes.Status202Accepted, new RegistrationPendingResponse(email.Trim()));
+        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Value);
     }
 
     /// <summary>

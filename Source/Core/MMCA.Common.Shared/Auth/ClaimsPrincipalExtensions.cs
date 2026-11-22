@@ -148,6 +148,33 @@ public static class ClaimsPrincipalExtensions
         principal?.FindFirst(AuthClaimTypes.MultiFactor)?.Value;
 
     /// <summary>
+    /// Returns the roles withheld from this request's principal until the account signs in with a
+    /// second factor (the <see cref="AuthClaimTypes.MultiFactorWithheldRole"/> markers), or an empty
+    /// list when none was withheld.
+    /// </summary>
+    /// <remarks>
+    /// A withheld role is not held: <see cref="GetRoleValues"/> and <see cref="HasRole"/> do not see it.
+    /// This member exists so a caller can say "set up two-factor authentication to use this role"
+    /// instead of treating the account as one without the role.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal yields an empty list.</param>
+    /// <returns>The withheld roles, in the order they were recorded.</returns>
+    public static IReadOnlyList<string> GetMultiFactorWithheldRoles(this ClaimsPrincipal? principal) =>
+        principal is null
+            ? []
+            : [.. principal.FindAll(AuthClaimTypes.MultiFactorWithheldRole).Select(claim => claim.Value)];
+
+    /// <summary>
+    /// Whether a role was withheld from this request's principal until the account signs in with a
+    /// second factor, that is whether it carries an <see cref="AuthClaimTypes.MultiFactorWithheldRole"/>
+    /// marker.
+    /// </summary>
+    /// <param name="principal">The principal to read; a null principal has no withheld role.</param>
+    /// <returns><see langword="true"/> when at least one role was withheld.</returns>
+    public static bool HasMultiFactorWithheldRole(this ClaimsPrincipal? principal) =>
+        principal?.FindFirst(AuthClaimTypes.MultiFactorWithheldRole) is not null;
+
+    /// <summary>
     /// Returns the instant of the interactive sign-in the token descends from (the
     /// <see cref="AuthClaimTypes.AuthTime"/> claim, Unix seconds), or <see langword="null"/> when the
     /// principal carries none (a token minted before the claim shipped, or a view-as token).

@@ -96,6 +96,102 @@ public sealed class SignInLinkHandlerBaseTests
         result.IsSuccess.Should().BeTrue("reporting the send failure to the caller would be an oracle");
     }
 
+    // ── Send: the no-account extension point ──
+    [Fact]
+    public async Task Send_WhenTheAddressIsUnknown_AwaitsTheNoAccountExtensionPointWithTheNormalizedAddress()
+    {
+        var pending = new TaskCompletionSource();
+        var (sut, mocks) = CreateNoAccountSut((_, _) => pending.Task);
+
+        Task<Result> handling = sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest("  User@Example.com ")));
+
+        handling.IsCompleted.Should().BeFalse("the handler answers only after the extension point's work completes");
+        pending.SetResult();
+        Result result = await handling;
+
+        result.IsSuccess.Should().BeTrue();
+        sut.NoAccountCalls.Should().ContainSingle().Which.Should().Be(Email.Create("  User@Example.com ").Value!.Value);
+        mocks.TokenService.Verify(
+            x => x.IssueAsync(It.IsAny<string>(), It.IsAny<SignInLinkPurpose>(), It.IsAny<SignInLinkProfile?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        VerifyNoEmail(mocks);
+    }
+
+    [Fact]
+    public async Task Send_ForAKnownAccount_DoesNotCallTheNoAccountExtensionPoint()
+    {
+        var (sut, mocks) = CreateNoAccountSut((_, _) => Task.CompletedTask);
+        sut.Found = new ConfirmableUser { Id = TestUserId };
+
+        Result result = await sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(KnownEmail)));
+
+        result.IsSuccess.Should().BeTrue();
+        sut.NoAccountCalls.Should().BeEmpty();
+        mocks.SentTo.Should().Be(KnownEmail);
+    }
+
+    [Theory]
+    [InlineData(false, KnownEmail)]
+    [InlineData(true, "not-an-address")]
+    public async Task Send_WhenDisabledOrTheAddressIsMalformed_DoesNotCallTheNoAccountExtensionPoint(bool enabled, string address)
+    {
+        var (sut, _) = CreateNoAccountSut((_, _) => Task.CompletedTask, enabled);
+
+        Result result = await sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(address)));
+
+        result.IsSuccess.Should().BeTrue();
+        sut.NoAccountCalls.Should().BeEmpty("the extension point runs only for a well-formed address that holds no account");
+    }
+
+    [Fact]
+    public async Task Send_WhenTheNoAccountExtensionPointThrows_StillSucceeds_AndLogsAWarningWithoutTheAddress()
+    {
+        var (sut, mocks) = CreateNoAccountSut((_, _) => throw new InvalidOperationException("invitation store is down"));
+
+        Result result = await sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(KnownEmail)));
+
+        result.IsSuccess.Should().BeTrue("the answer must not depend on what the override does");
+        result.Errors.Should().BeEmpty();
+        sut.NoAccountCalls.Should().ContainSingle();
+        var warning = sut.Log.Lines.Should().ContainSingle(line => line.Level == LogLevel.Warning).Subject;
+        warning.Message.Should().NotContainEquivalentOf(KnownEmail, "the failure line must not identify the address that had no account");
+        sut.Log.Lines.Should().OnlyContain(line => !line.Message.Contains(KnownEmail, StringComparison.OrdinalIgnoreCase));
+        VerifyNoEmail(mocks);
+    }
+
+    [Fact]
+    public async Task Send_WhenTheNoAccountExtensionPointFaultsAsynchronously_StillSucceeds()
+    {
+        var (sut, _) = CreateNoAccountSut((_, _) => Task.FromException(new InvalidOperationException("faulted")));
+
+        Result result = await sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(KnownEmail)));
+
+        result.IsSuccess.Should().BeTrue();
+        sut.Log.Lines.Should().ContainSingle(line => line.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Send_WhenTheNoAccountExtensionPointIsCancelled_LetsTheCancellationThrough()
+    {
+        var (sut, _) = CreateNoAccountSut((_, _) => throw new OperationCanceledException());
+
+        Func<Task> act = () => sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(KnownEmail)));
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Send_TheDefaultNoAccountExtensionPoint_LeavesTheUnknownAddressAnswerUnchanged()
+    {
+        var (sut, mocks) = CreateSendSut();
+
+        Result result = await sut.HandleAsync(new TestSendSignInLinkCommand(new SendSignInLinkRequest(KnownEmail)));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        VerifyNoEmail(mocks);
+    }
+
     // ── Redeem ──
     [Fact]
     public async Task Redeem_ForAnExistingAccount_ConfirmsTheAddressAndOpensASession()
@@ -481,6 +577,35 @@ public sealed class SignInLinkHandlerBaseTests
         return (sut, mocks);
     }
 
+    private static (NoAccountSendSignInLinkHandler Sut, HandlerMocks Mocks) CreateNoAccountSut(
+        Func<Email, CancellationToken, Task> onNoAccount,
+        bool enabled = true)
+    {
+        var mocks = new HandlerMocks();
+        mocks.TokenService
+            .Setup(x => x.IssueAsync(It.IsAny<string>(), It.IsAny<SignInLinkPurpose>(), It.IsAny<SignInLinkProfile?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(IssuedToken));
+        mocks.EmailSender
+            .Setup(x => x.SendAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Callback((string to, string _, string body, bool _, CancellationToken _) =>
+            {
+                mocks.SentTo = to;
+                mocks.SentBody = body;
+            })
+            .Returns(Task.CompletedTask);
+
+        var sut = new NoAccountSendSignInLinkHandler(
+            mocks.UnitOfWork.Object,
+            mocks.TokenService.Object,
+            mocks.EmailSender.Object,
+            Options.Create(Settings(enabled)),
+            onNoAccount,
+            new CapturingLogger());
+
+        return (sut, mocks);
+    }
+
     private static (TestRedeemSignInLinkHandler Sut, HandlerMocks Mocks) CreateRedeemSut(
         ConfirmableUser? user,
         SignInLinkGrant? grant,
@@ -602,6 +727,41 @@ public sealed class TestSendSignInLinkHandler(
     {
         LookupCount++;
         return Task.FromResult(Found);
+    }
+}
+
+/// <summary>
+/// A send handler that overrides the no-account extension point (an app re-issuing a pending
+/// invitation) and records every log line.
+/// </summary>
+public sealed class NoAccountSendSignInLinkHandler(
+    IUnitOfWork unitOfWork,
+    ISignInLinkTokenService tokenService,
+    IEmailSender emailSender,
+    IOptions<SignInLinkSettings> settings,
+    Func<Email, CancellationToken, Task> onNoAccount,
+    CapturingLogger log)
+    : SendSignInLinkHandlerBase<ConfirmableUser, TestSendSignInLinkCommand>(
+        unitOfWork, tokenService, emailSender, settings, log)
+{
+    private readonly List<string> _noAccountCalls = [];
+
+    /// <summary>Every log line this handler wrote.</summary>
+    public CapturingLogger Log { get; } = log;
+
+    /// <summary>The account the lookup hook resolves, or <see langword="null"/> for an unknown address.</summary>
+    public ConfirmableUser? Found { get; set; }
+
+    /// <summary>The address each call of the extension point received.</summary>
+    public IReadOnlyList<string> NoAccountCalls => _noAccountCalls;
+
+    protected override Task<ConfirmableUser?> FindUntrackedByEmailAsync(Email email, CancellationToken cancellationToken) =>
+        Task.FromResult(Found);
+
+    protected override Task OnNoAccountAsync(Email email, CancellationToken cancellationToken)
+    {
+        _noAccountCalls.Add(email.Value);
+        return onNoAccount(email, cancellationToken);
     }
 }
 

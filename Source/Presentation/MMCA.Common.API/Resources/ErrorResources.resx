@@ -169,6 +169,9 @@
   <data name="Authentication.TwoFactorNotEnrolled" xml:space="preserve">
     <value>Two-factor authentication is not enabled for this account.</value>
   </data>
+  <data name="Authentication.TwoFactorRecentSignInRequired" xml:space="preserve">
+    <value>Sign in again before changing two-factor authentication.</value>
+  </data>
   <data name="Authentication.TwoFactorRequired" xml:space="preserve">
     <value>This account requires a second authentication factor. Supply the code from your authenticator app or a recovery code.</value>
   </data>
@@ -176,7 +179,7 @@
     <value>The stored two-factor secret could not be read. Disable two-factor authentication and enroll again.</value>
   </data>
   <data name="Authorization.MultiFactorRequired" xml:space="preserve">
-    <value>This operation requires a second authentication factor. Sign in again with your authenticator code.</value>
+    <value>This operation requires a second authentication factor. Set up two-factor authentication, or sign in again with your authenticator code.</value>
   </data>
   <data name="Authorization.RoleNotFound" xml:space="preserve">
     <value>The role was not found.</value>
@@ -312,6 +315,9 @@
   </data>
   <data name="UserAdministration.PrivilegeCeiling" xml:space="preserve">
     <value>You cannot assign this role, or administer this account, because it carries permissions you do not hold.</value>
+  </data>
+  <data name="UserAdministration.SecondFactorNotEnrolled" xml:space="preserve">
+    <value>The account must turn on two-factor authentication before it can be given this role.</value>
   </data>
   <data name="UserAdministration.Self" xml:space="preserve">
     <value>You cannot lock, unlock or change the roles of your own account.</value>

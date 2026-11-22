@@ -26,6 +26,12 @@ public static class TwoFactorErrors
     /// <summary>Code returned when confirming an enrollment that was never started.</summary>
     public const string TwoFactorEnrollmentMissingCode = "Authentication.TwoFactorEnrollmentMissing";
 
+    /// <summary>
+    /// Code returned when starting or confirming enrollment from a session whose interactive sign-in
+    /// is older than the recent-sign-in window (its <c>auth_time</c>).
+    /// </summary>
+    public const string RecentSignInRequiredCode = "Authentication.TwoFactorRecentSignInRequired";
+
     /// <summary>The "supply a code and retry" failure.</summary>
     /// <param name="source">The reporting member, for the error payload.</param>
     /// <returns>An unauthorized error.</returns>
@@ -61,5 +67,18 @@ public static class TwoFactorErrors
     public static Error TwoFactorEnrollmentMissing(string? source = null) => Error.Conflict(
         TwoFactorEnrollmentMissingCode,
         "No two-factor enrollment is in progress for this account. Start one before confirming it.",
+        source);
+
+    /// <summary>The "sign in again before changing two-factor authentication" failure.</summary>
+    /// <param name="source">The reporting member, for the error payload.</param>
+    /// <returns>A forbidden error.</returns>
+    /// <remarks>
+    /// Enrollment adds a way into the account's sign-in, so it asks for the same recent interactive
+    /// sign-in as registering a passkey. A refresh never renews <c>auth_time</c>, so only a new
+    /// sign-in clears it.
+    /// </remarks>
+    public static Error RecentSignInRequired(string? source = null) => Error.Forbidden(
+        RecentSignInRequiredCode,
+        "Sign in again before changing two-factor authentication.",
         source);
 }

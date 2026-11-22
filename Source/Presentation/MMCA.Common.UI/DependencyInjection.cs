@@ -23,6 +23,7 @@ using MMCA.Common.UI.Services.Navigation;
 using MMCA.Common.UI.Services.Offline;
 using MMCA.Common.UI.Services.Preferences;
 using MMCA.Common.UI.Theme;
+using MMCA.Common.UI.TwoFactor;
 using MudBlazor.Services;
 
 namespace MMCA.Common.UI;
@@ -87,9 +88,19 @@ public static class DependencyInjection
                 options.AddPolicy(
                     NotificationPageRequirement.ManagePolicyName,
                     policy => policy.AddRequirements(new NotificationPageRequirement(NotificationPermissions.Manage)));
+
+                // The two-factor account page's policy, on the same rule: signed in, except that a
+                // host without the two-factor UI (no AddTwoFactorUI) lets the request reach the router,
+                // which answers 404. Registered unconditionally so the page's attribute resolves in
+                // every host.
+                options.AddPolicy(
+                    TwoFactorPageRequirement.PolicyName,
+                    policy => policy.AddRequirements(new TwoFactorPageRequirement()));
             });
             services.TryAddEnumerable(
                 ServiceDescriptor.Transient<IAuthorizationHandler, NotificationPageAuthorizationHandler>());
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IAuthorizationHandler, TwoFactorPageAuthorizationHandler>());
 
             // Page permission guards ([HasPagePermission], ADR-020): one policy per permission a page
             // declares, discovered from the registered UI modules when the options are first built,

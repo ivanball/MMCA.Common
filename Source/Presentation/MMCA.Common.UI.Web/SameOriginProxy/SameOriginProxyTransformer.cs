@@ -112,8 +112,7 @@ internal sealed class SameOriginProxyTransformer(
 
         if (mode == ProxyResponseMode.TokenIssuing && proxyResponse is { IsSuccessStatusCode: true })
         {
-            await RewriteTokenResponseAsync(httpContext, proxyResponse, cancellationToken).ConfigureAwait(false);
-            return false;
+            return await CompleteTokenIssuingAsync(httpContext, proxyResponse, copyBody, cancellationToken).ConfigureAwait(false);
         }
 
         if (mode == ProxyResponseMode.ViewAsGrant && proxyResponse is { IsSuccessStatusCode: true })
@@ -126,6 +125,36 @@ internal sealed class SameOriginProxyTransformer(
     }
 
     /// <summary>
+    /// Finishes a successful response on a token-issuing path. A response that opened a session has
+    /// its tokens moved into the session cookies. A success that opened none (a registration that
+    /// awaits confirmation answers 202) is copied through as it is: no cookie is written and the
+    /// response is never cached.
+    /// </summary>
+    private async ValueTask<bool> CompleteTokenIssuingAsync(
+        HttpContext httpContext,
+        HttpResponseMessage proxyResponse,
+        bool copyBody,
+        CancellationToken cancellationToken)
+    {
+        if (IssuedSession(proxyResponse))
+        {
+            await RewriteTokenResponseAsync(httpContext, proxyResponse, cancellationToken).ConfigureAwait(false);
+            return false;
+        }
+
+        httpContext.Response.Headers.CacheControl = "no-store";
+        httpContext.Response.Headers.Pragma = "no-cache";
+        return copyBody;
+    }
+
+    /// <summary>
+    /// Whether a token-issuing path actually opened a session: only a 200 or a 201 carries the token
+    /// pair. Any other success (a 202 for a registration that awaits confirmation) opened none.
+    /// </summary>
+    private static bool IssuedSession(HttpResponseMessage? proxyResponse) =>
+        proxyResponse?.StatusCode is HttpStatusCode.OK or HttpStatusCode.Created;
+
+    /// <summary>
     /// The overlay goes when the view ends (whatever the upstream said, like a sign-out), when the
     /// staff user signs out or anyone signs in, when it had already expired, and when the upstream
     /// refused its bearer (an ended or expired grant): a view-as token is never refreshed or replayed.
@@ -134,7 +163,7 @@ internal sealed class SameOriginProxyTransformer(
         overlay.OverlayPresent
         && (overlay.DeleteOverlay
             || mode is ProxyResponseMode.ViewAsEnd or ProxyResponseMode.Revoke
-            || mode == ProxyResponseMode.TokenIssuing && proxyResponse is { IsSuccessStatusCode: true }
+            || mode == ProxyResponseMode.TokenIssuing && IssuedSession(proxyResponse)
             || overlay.ForwardsOverlayBearer && proxyResponse?.StatusCode == HttpStatusCode.Unauthorized);
 
     /// <summary>

@@ -1,0 +1,32 @@
+@* The one place recovery codes are ever shown: the store keeps only their hashes, so they cannot be
+   shown again. They are held in memory by the page for this state only. *@
+<div data-testid="two-factor-recovery-codes">
+    @* A plain heading element rather than MudText, so it can take focus when the codes appear. *@
+    <h2 @ref="_heading" tabindex="-1" class="mud-typography mud-typography-h5 mb-2">@L["Auth.TwoFactor.RecoveryCodes.Title"]</h2>
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">@L["Auth.TwoFactor.RecoveryCodes.Warning"]</MudAlert>
+
+    <ol class="mmca-recovery-codes mb-4" data-testid="two-factor-recovery-code-list">
+        @foreach (var recoveryCode in Codes)
+        {
+            <li><code>@recoveryCode</code></li>
+        }
+    </ol>
+
+    <div class="d-flex flex-column mmca-auth-actions">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                   OnClick="CopyAsync"
+                   data-testid="two-factor-recovery-codes-copy">
+            @L["Auth.TwoFactor.RecoveryCodes.Copy"]
+        </MudButton>
+        <MudCheckBox T="bool" @bind-Value="_saved" Color="Color.Primary" Dense="true"
+                     Label="@L["Auth.TwoFactor.RecoveryCodes.Saved"]"
+                     data-testid="two-factor-recovery-codes-saved" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(!_saved)"
+                   OnClick="OnContinue"
+                   data-testid="two-factor-recovery-codes-continue">
+            @(ContinueText ?? L["Auth.TwoFactor.RecoveryCodes.Continue"].Value)
+        </MudButton>
+    </div>
+</div>
