@@ -33,8 +33,7 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
     /// <summary>
     /// Whether the binding can be enforced on this host. False only where no device-local storage
     /// exists at all (a host that registered neither the browser nor the native capability set);
-    /// there the completion keeps its previous behavior because nothing durable can be written
-    /// across the redirect.
+    /// there nothing durable can be written across the redirect, so every completion is refused.
     /// </summary>
     public bool IsEnforced => store.IsAvailable;
 
@@ -76,7 +75,9 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
     /// Consumes the pending attempt and reports whether <paramref name="returnedState"/> may be
     /// exchanged. The attempt is removed either way, so a value is good for exactly one completion.
     /// When a pending attempt exists the redirect must carry its value back: an absent or empty
-    /// <paramref name="returnedState"/> is refused, since every legitimate flow round-trips it.
+    /// <paramref name="returnedState"/> is refused, since every legitimate flow round-trips it. On a
+    /// host with no device-local storage (<see cref="IsEnforced"/> is false) the completion cannot be
+    /// bound to an attempt and is always refused.
     /// </summary>
     /// <param name="returnedState">The state the completion redirect carried, if any.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -85,7 +86,9 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
     {
         if (!store.IsAvailable)
         {
-            return true;
+            // Fail closed: with nowhere to keep the attempt, no completion can be shown to belong
+            // to this client.
+            return false;
         }
 
         var pending = await store.GetAsync<PendingAttempt>(StorageKey, cancellationToken).ConfigureAwait(false);

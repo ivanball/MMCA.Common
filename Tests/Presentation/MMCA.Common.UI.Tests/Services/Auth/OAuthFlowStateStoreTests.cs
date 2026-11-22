@@ -102,14 +102,14 @@ public sealed class OAuthFlowStateStoreTests
     }
 
     [Fact]
-    public async Task OnAHostWithNoDurableStorage_TheBindingIsNotEnforced()
+    public async Task OnAHostWithNoDurableStorage_TheCompletionIsRefused()
     {
         var sut = new OAuthFlowStateStore(new FakeCacheStore { IsAvailable = false }, _time);
 
         sut.IsEnforced.Should().BeFalse();
         (await sut.BeginAsync(TestContext.Current.CancellationToken)).Should().BeNull();
-        (await sut.TryCompleteAsync(null, TestContext.Current.CancellationToken)).Should().BeTrue(
-            "nothing durable can be written across the redirect there, so sign-in keeps its old behaviour");
+        (await sut.TryCompleteAsync(null, TestContext.Current.CancellationToken)).Should().BeFalse(
+            "nothing durable can be written across the redirect there, so no completion can be bound to this client");
     }
 
     // M188: a store that reports itself available but drops the write (quota, blocked site data,
