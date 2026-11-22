@@ -169,6 +169,9 @@
   <data name="Authentication.TwoFactorNotEnrolled" xml:space="preserve">
     <value>Two-factor authentication is not enabled for this account.</value>
   </data>
+  <data name="Authentication.TwoFactorRecentSignInRequired" xml:space="preserve">
+    <value>Sign in again before changing two-factor authentication.</value>
+  </data>
   <data name="Authentication.TwoFactorRequired" xml:space="preserve">
     <value>This account requires a second authentication factor. Supply the code from your authenticator app or a recovery code.</value>
   </data>
