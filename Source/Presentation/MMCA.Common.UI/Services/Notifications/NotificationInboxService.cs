@@ -16,8 +16,8 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// </summary>
 /// <remarks>
 /// The two reads go through <see cref="SendReadWithAuthRefreshAsync"/>: a badge poll or an inbox load
-/// that lands on an access token the server has already rejected gets one forced token refresh and a
-/// replay, instead of surfacing as an empty inbox or a blanked badge.
+/// that lands on an access token the server has already rejected gets one token renewal and a replay,
+/// instead of surfacing as an empty inbox or a blanked badge (see <see cref="ReplayTokenAsync"/>).
 /// </remarks>
 /// <param name="httpClientFactory">Factory for the named APIClient.</param>
 /// <param name="tokenStorageService">Circuit-scoped access-token storage.</param>
@@ -131,17 +131,19 @@ public sealed class NotificationInboxService(
         CancellationToken cancellationToken)
     {
         HttpResponseMessage response;
+        string? sentToken;
         using (HttpClient httpClient = await CreateAuthenticatedClientAsync())
         {
+            sentToken = httpClient.DefaultRequestHeaders.Authorization?.Parameter;
             response = await RetryPolicy.ExecuteAsync(_ => send(httpClient, cancellationToken), cancellationToken);
         }
 
-        if (response.StatusCode != HttpStatusCode.Unauthorized || tokenRefresher is null)
+        if (response.StatusCode != HttpStatusCode.Unauthorized)
         {
             return response;
         }
 
-        string? refreshedToken = await TryAcquireRefreshedTokenAsync(cancellationToken);
+        string? refreshedToken = await ReplayTokenAsync(sentToken, cancellationToken);
         if (refreshedToken is null)
         {
             return response;
@@ -151,6 +153,27 @@ public sealed class NotificationInboxService(
 
         using HttpClient retryClient = CreateClientWithToken(refreshedToken);
         return await RetryPolicy.ExecuteAsync(_ => send(retryClient, cancellationToken), cancellationToken);
+    }
+
+    /// <summary>
+    /// The token to replay a read the API refused with, at the cost of exactly ONE renewal per 401
+    /// (Store Run 5 R6a). A storage that renews refused tokens has already been asked to by the API
+    /// client's <see cref="Auth.AuthDelegatingHandler"/>, which also ended the session if the refresh was
+    /// refused, so the replay takes what that storage holds now; forcing a refresh of our own here was a
+    /// second rotation for the same 401. Only a storage without that capability falls back to the
+    /// forced refresh through the optional <see cref="ITokenRefresher"/>.
+    /// </summary>
+    /// <param name="rejectedToken">The bearer the refused read carried.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The token to replay with, or <see langword="null"/> to surface the 401.</returns>
+    private Task<string?> ReplayTokenAsync(string? rejectedToken, CancellationToken cancellationToken)
+    {
+        if (StorageRenewsRejectedTokens)
+        {
+            return ReadRenewedAccessTokenAsync(rejectedToken);
+        }
+
+        return tokenRefresher is null ? Task.FromResult<string?>(null) : TryAcquireRefreshedTokenAsync(cancellationToken);
     }
 
     /// <summary>

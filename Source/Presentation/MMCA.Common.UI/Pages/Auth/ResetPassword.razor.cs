@@ -28,9 +28,9 @@ public partial class ResetPassword : IAsyncDisposable
     /// <inheritdoc />
     /// <remarks>
     /// A new link opened in this tab while the page is already showing (for example after "send me a new
-    /// one") only changes the fragment, so the page is not rebuilt and the first-render read never runs
-    /// again. Its values replace the stale ones, exactly as in a fresh tab, and taking it scrubs the new
-    /// single-use token from the address bar.
+    /// one") only changes the fragment or the query string, so the page is not rebuilt and the
+    /// first-render read never runs again. Its values replace the stale ones, exactly as in a fresh tab,
+    /// and reading it scrubs the new single-use token from the address bar.
     /// </remarks>
     protected override void OnInitialized()
     {
@@ -40,23 +40,40 @@ public partial class ResetPassword : IAsyncDisposable
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        var hash = e.Location.IndexOf('#', StringComparison.Ordinal);
-        if (_disposed || !_fragmentRead || hash < 0 || hash == e.Location.Length - 1)
+        if (_disposed || !_fragmentRead)
         {
             return;
         }
 
-        _ = InvokeAsync(async () =>
+        var hash = e.Location.IndexOf('#', StringComparison.Ordinal);
+        if (hash >= 0 && hash < e.Location.Length - 1)
         {
-            if (_disposed || !ApplyFragment(await TakeFragmentAsync(), replace: true))
+            _ = InvokeAsync(async () => PrefillNewLink(await TakeFragmentAsync()));
+        }
+        else if (ConfirmEmail.LinkQueryOf(e.Location) is { } query)
+        {
+            // A link that differs only in its query string (Store Run 5 R6b): read it the same way, and
+            // take its single-use token out of the address bar as taking a fragment does.
+            _ = InvokeAsync(() =>
             {
-                return;
-            }
+                ConfirmEmail.ScrubLinkQuery(Navigation, e.Location);
+                PrefillNewLink(query);
+            });
+        }
+    }
 
-            _isCompleted = false;
-            _errorMessage = null;
-            StateHasChanged();
-        });
+    /// <summary>Replaces the form's address and token with a new link's, as a fresh tab prefills them.</summary>
+    /// <param name="link">The link's fragment or query, without its leading character.</param>
+    private void PrefillNewLink(string? link)
+    {
+        if (_disposed || !ApplyFragment(link, replace: true))
+        {
+            return;
+        }
+
+        _isCompleted = false;
+        _errorMessage = null;
+        StateHasChanged();
     }
 
     /// <summary>Reads the fragment through the capabilities module, which also scrubs it; null without the module.</summary>

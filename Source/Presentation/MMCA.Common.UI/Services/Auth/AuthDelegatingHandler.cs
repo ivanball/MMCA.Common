@@ -198,7 +198,7 @@ public sealed class AuthDelegatingHandler(
 
         if (response.StatusCode == HttpStatusCode.Unauthorized && sentToken is not null)
         {
-            await ReportRejectedAsync(sentToken);
+            await ReportRejectedAsync(sentToken, tokenStorageService);
         }
 
         return response;
@@ -207,9 +207,17 @@ public sealed class AuthDelegatingHandler(
     /// <summary>
     /// Hands a refused bearer to the storage that holds it for one refresh attempt. Best effort: the
     /// 401 reaches the caller whatever happens here, so a failure is swallowed rather than replacing
-    /// the server's answer with an exception.
+    /// the server's answer with an exception. Also the 401 handling of a bearer attached outside this
+    /// pipeline (the notification hub's WebSocket handshake), so every refusal of the session's bearer
+    /// gets the same single renewal and the same session end (Store Run 5 R6a).
     /// </summary>
-    private async Task ReportRejectedAsync(string rejectedToken)
+    /// <param name="rejectedToken">The bearer the server refused.</param>
+    /// <param name="fallbackOwner">
+    /// The storage to report to when no live owner was registered for the token (this handler's own,
+    /// or the storage the caller attached the bearer from).
+    /// </param>
+    /// <returns>A task that completes when the renewal attempt has finished.</returns>
+    internal static async Task ReportRejectedAsync(string rejectedToken, ITokenStorageService fallbackOwner)
     {
         if (RenewedTokens.ContainsKey(rejectedToken))
         {
@@ -219,7 +227,7 @@ public sealed class AuthDelegatingHandler(
 
         var owner = Owners.TryGetValue(rejectedToken, out var tracked) && tracked.Storage.TryGetTarget(out var target)
             ? target
-            : tokenStorageService as ISessionAwareTokenStorage;
+            : fallbackOwner as ISessionAwareTokenStorage;
         if (owner is null)
         {
             return;

@@ -91,6 +91,37 @@ public abstract class AuthenticatedServiceBase(
     }
 
     /// <summary>
+    /// Gets a value indicating whether the storage this service attaches its bearer from renews a token
+    /// the API refused (<see cref="ISessionAwareTokenStorage"/>). When it does, the
+    /// <see cref="Auth.AuthDelegatingHandler"/> in the client's pipeline has already made the ONE renewal a
+    /// 401 earns, on that storage, before the 401 reaches the caller; a caller replaying the request reads
+    /// the renewed token (<see cref="ReadRenewedAccessTokenAsync"/>) instead of refreshing a second time.
+    /// </summary>
+    private protected bool StorageRenewsRejectedTokens => _tokenStorageService is ISessionAwareTokenStorage;
+
+    /// <summary>
+    /// Reads the token the storage holds after the API refused <paramref name="rejectedToken"/> and the
+    /// handler's renewal ran (see <see cref="StorageRenewsRejectedTokens"/>).
+    /// </summary>
+    /// <param name="rejectedToken">The bearer the refused request carried, or <see langword="null"/> when it carried none.</param>
+    /// <returns>
+    /// The renewed token, or <see langword="null"/> when there is nothing to replay with: no bearer was
+    /// sent, the refused renewal ended the session, or the storage still holds the refused token.
+    /// </returns>
+    private protected async Task<string?> ReadRenewedAccessTokenAsync(string? rejectedToken)
+    {
+        if (rejectedToken is null)
+        {
+            return null;
+        }
+
+        var current = await _tokenStorageService.GetAccessTokenAsync();
+        return string.IsNullOrWhiteSpace(current) || string.Equals(current, rejectedToken, StringComparison.Ordinal)
+            ? null
+            : current;
+    }
+
+    /// <summary>
     /// Creates an APIClient carrying an explicit bearer token rather than the one currently held by
     /// <see cref="Auth.Tokens.ITokenStorageService"/>. Used to replay a request the API answered
     /// <c>401 Unauthorized</c> with a token acquired straight from
