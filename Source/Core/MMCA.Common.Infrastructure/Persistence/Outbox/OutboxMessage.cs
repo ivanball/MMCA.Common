@@ -76,6 +76,15 @@ public sealed class OutboxMessage
     public string? SpanId { get; init; }
 
     /// <summary>
+    /// Gets the W3C trace flags (<see cref="ActivityTraceFlags"/>) of the activity current when the
+    /// domain event was raised: the request's sampling decision. The processor rebuilds the parent
+    /// context with these flags, so a parent-based sampler exports the delivery span only when the
+    /// request itself was sampled. Null (no ambient activity, or a row written before this column
+    /// existed) reads as not sampled.
+    /// </summary>
+    public byte? TraceFlags { get; init; }
+
+    /// <summary>
     /// Gets the ordered-delivery key copied from an event implementing
     /// <see cref="IHasOrderingKey"/>, or <see langword="null"/> for the unordered default.
     /// <para>
@@ -150,6 +159,7 @@ public sealed class OutboxMessage
             OccurredOn = domainEvent.DateOccurred,
             TraceId = activity?.TraceId.ToString(),
             SpanId = activity?.SpanId.ToString(),
+            TraceFlags = activity is null ? null : (byte)activity.ActivityTraceFlags,
             TenantId = origin.TenantId,
             UserId = origin.UserId,
             UserRoles = origin.UserRoles,

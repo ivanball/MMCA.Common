@@ -14,7 +14,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <remarks>
 /// The mirror of <c>InternalCommandOrigin</c>, deliberately: the two hops capture the same values
 /// through the same helper so they cannot drift. It carries no trace context, because
-/// <see cref="OutboxMessage.TraceId"/> and <see cref="OutboxMessage.SpanId"/> already do and are
+/// <see cref="OutboxMessage.TraceId"/>, <see cref="OutboxMessage.SpanId"/> and
+/// <see cref="OutboxMessage.TraceFlags"/> already do and are
 /// stamped from the ambient <see cref="System.Diagnostics.Activity"/> rather than from a scope.
 /// <para>
 /// A <see langword="default"/> value means "nothing was captured", which is exactly what a caller with no

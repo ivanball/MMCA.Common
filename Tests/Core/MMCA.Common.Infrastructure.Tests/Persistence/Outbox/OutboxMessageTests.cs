@@ -337,4 +337,39 @@ public sealed class OutboxMessageTests
             .Which.Name.Should().Be("Hello");
         message.UserRoles.Should().BeNull("a user holding no roles stores nothing rather than an empty string");
     }
+
+    // -- The request's sampling decision rides on the row beside its trace and span ids, so the
+    //    processor can rebuild the parent with the same flags (ADR-003, Amendment 2026-11-23) --
+    [Theory]
+    [InlineData(ActivityTraceFlags.Recorded)]
+    [InlineData(ActivityTraceFlags.None)]
+    public void FromDomainEvent_CapturesTheAmbientTraceFlags(ActivityTraceFlags flags)
+    {
+        using var activity = new Activity("raise").Start();
+        activity.ActivityTraceFlags = flags;
+
+        var message = OutboxMessage.FromDomainEvent(new TestDomainEvent());
+
+        message.TraceId.Should().Be(activity.TraceId.ToString());
+        message.SpanId.Should().Be(activity.SpanId.ToString());
+        message.TraceFlags.Should().Be((byte)flags);
+    }
+
+    [Fact]
+    public void FromDomainEvent_StoresNoTraceFlags_WhenNoActivityIsCurrent()
+    {
+        var previous = Activity.Current;
+        Activity.Current = null;
+        try
+        {
+            var message = OutboxMessage.FromDomainEvent(new TestDomainEvent());
+
+            message.TraceId.Should().BeNull();
+            message.TraceFlags.Should().BeNull("no ambient activity means no sampling decision to carry");
+        }
+        finally
+        {
+            Activity.Current = previous;
+        }
+    }
 }

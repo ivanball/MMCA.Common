@@ -187,3 +187,7 @@ static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.R
 virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.EqualityContract.get -> System.Type!
 virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? other) -> bool
 virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.PrintMembers(System.Text.StringBuilder! builder) -> bool
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceFlags.get -> byte?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceFlags.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.get -> byte?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.init -> void
