@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -30,12 +31,15 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 /// <param name="outboxOptions">Outbox settings supplying <c>MaxRetries</c> and the publish target.</param>
 /// <param name="tableTargets">Decides which databases (and per-tenant copies) hold an outbox table this host owns.</param>
 /// <param name="outboxSignal">Signal that wakes the processor as soon as a replay lands.</param>
+/// <param name="messageBusOptions">Message-bus settings; <see cref="RepublishProcessedAsync"/> refuses
+/// to run unless the consumer inbox is enabled.</param>
 public sealed partial class OutboxAdministration(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxAdministration> logger,
     IOptions<OutboxSettings> outboxOptions,
     FrameworkTableTargets tableTargets,
-    IOutboxSignal outboxSignal) : IOutboxAdministration
+    IOutboxSignal outboxSignal,
+    IOptions<MessageBusSettings> messageBusOptions) : IOutboxAdministration
 {
     /// <summary>Upper bound on one page, so an admin call cannot ask for the whole table at once.</summary>
     private const int MaxPageSize = 500;
@@ -58,7 +62,13 @@ public sealed partial class OutboxAdministration(
     private static readonly Error RepublishWindowTooWideError =
         Error.Validation("Outbox.RepublishWindowTooWide", "The republish window must not exceed 7 days.");
 
+    private static readonly Error RepublishRequiresInboxError =
+        Error.Conflict(
+            "Outbox.RepublishRequiresInbox",
+            "Republishing processed integration events needs the consumer inbox (MessageBus:EnableInbox, on by default for a broker transport). Without it every republished event runs its handlers again.");
+
     private readonly OutboxSettings _settings = outboxOptions.Value;
+    private readonly bool _inboxEnabled = messageBusOptions.Value.IsInboxEnabled;
 
     /// <inheritdoc />
     public async Task<Result<IReadOnlyList<OutboxDeadLetter>>> ListDeadLettersAsync(
@@ -198,6 +208,12 @@ public sealed partial class OutboxAdministration(
         DateTime toUtc,
         CancellationToken cancellationToken)
     {
+        // The inbox is what turns a republish into a harmless duplicate. Without it (the in-process
+        // bus default, or a broker host that set MessageBus:EnableInbox=false) every republished
+        // event would run its handlers again, so the call is refused before anything is touched.
+        if (!_inboxEnabled)
+            return Result.Failure<int>([RepublishRequiresInboxError]);
+
         var windowError = ValidateRepublishWindow(fromUtc, toUtc);
         if (windowError is not null)
             return Result.Failure<int>([windowError]);
