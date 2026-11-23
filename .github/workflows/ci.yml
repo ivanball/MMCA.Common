@@ -153,6 +153,15 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: dotnet tool install --global dotnet-coverage --version 18.11.0
 
+      # Every test host that builds configuration from a JSON file takes an inotify instance for its
+      # reload watcher, and ubuntu runners cap a user at 128. The per-framework leg starts that many
+      # hosts in one test process wave (run 45092597262: eight MMCA.Common.Aspire.Tests failed with
+      # "The configured user limit (128) on the number of inotify instances has been reached"), so
+      # the leg raises the cap before testing instead of changing what the tests exercise.
+      - name: Raise the inotify instance limit
+        if: needs.changes.outputs.code == 'true'
+        run: sudo sysctl -w fs.inotify.max_user_instances=1024
+
       - name: Test (${{ matrix.tfm }}, with coverage)
         if: needs.changes.outputs.code == 'true'
         # dotnet-coverage wraps the MTP run and emits cobertura; it returns the test exit code so a
