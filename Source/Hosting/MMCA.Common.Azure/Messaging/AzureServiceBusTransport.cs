@@ -1,6 +1,6 @@
 using Azure.Core;
-using MassTransit;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Azure.Messaging;
@@ -17,10 +17,10 @@ namespace MMCA.Common.Azure.Messaging;
 /// registration fails naming both.
 /// </para>
 /// <para>
-/// Second-level delayed redelivery is applied UNCONDITIONALLY: Azure Service Bus schedules messages
-/// natively, so there is no plugin to install and no configuration in which it can fail at bus start.
-/// <c>MessageBus:EnableDelayedRedelivery</c> is deliberately not consulted here, because it exists
-/// only to gate the RabbitMQ plugin requirement.
+/// PLACEHOLDER on <c>feat/native-messaging</c>: the native Azure.Messaging.ServiceBus implementation
+/// (a topic per event, a subscription per host queue forwarding to it, scheduled redelivery and the
+/// native dead-letter queue) replaces <see cref="Register"/> before the branch merges. The namespace
+/// and credential resolution below is kept for it.
 /// </para>
 /// </summary>
 internal sealed class AzureServiceBusTransport : IBrokerTransport
@@ -48,61 +48,35 @@ internal sealed class AzureServiceBusTransport : IBrokerTransport
     public string Name => ProviderName;
 
     /// <inheritdoc />
-    /// <exception cref="InvalidOperationException">
-    /// Neither a fully qualified namespace nor a connection string is configured, or the namespace is
-    /// not a host name.
-    /// </exception>
-    public void Configure(IBusRegistrationConfigurator configurator, BrokerTransportContext context)
+    public TimeSpan? MaxRedeliveryDelay => null;
+
+    /// <inheritdoc />
+    public void Register(IServiceCollection services, BrokerTransportContext context)
     {
-        ArgumentNullException.ThrowIfNull(configurator);
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(context);
 
-        var settings = context.Settings;
-        var connectionString = context.ConnectionString;
-        var serviceBusSettings = context.Configuration.GetSection(AzureServiceBusTransportSettings.SectionName).Get<AzureServiceBusTransportSettings>()
+        throw new NotSupportedException("Azure Service Bus transport: native implementation pending on feat/native-messaging");
+    }
+
+    /// <summary>Creates the Entra credential for the configured managed identity, through the injected factory.</summary>
+    /// <param name="managedIdentityClientId">The user-assigned managed identity client id, or <see langword="null"/>.</param>
+    /// <returns>The token credential.</returns>
+    internal TokenCredential CreateCredential(string? managedIdentityClientId) => _credentialFactory(managedIdentityClientId);
+
+    /// <summary>Binds <c>MessageBus:AzureServiceBus</c>, or the defaults when the section is absent.</summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <returns>The bound settings.</returns>
+    internal static AzureServiceBusTransportSettings ReadSettings(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return configuration.GetSection(AzureServiceBusTransportSettings.SectionName).Get<AzureServiceBusTransportSettings>()
             ?? new AzureServiceBusTransportSettings();
-
-        // Checked HERE, while AddBrokerMessaging runs, rather than inside the bus-factory callback,
-        // which only runs when the bus is first resolved.
-        var namespaceAddress = ResolveNamespaceAddress(serviceBusSettings.FullyQualifiedNamespace);
-        if (namespaceAddress is null && string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException(
-                $"MessageBus:Provider is '{ProviderName}', but no namespace is configured. Set {FullyQualifiedNamespaceKey} "
-                + "(for example 'contoso.servicebus.windows.net') to sign in with a Microsoft Entra token (managed identity, optionally "
-                + $"{AzureServiceBusTransportSettings.SectionName}:ManagedIdentityClientId), or a connection string "
-                + "(MessageBus:ConnectionString, ConnectionStrings:rabbitmq or ConnectionStrings:messaging).");
-        }
-
-        var credential = namespaceAddress is null ? null : _credentialFactory(serviceBusSettings.ManagedIdentityClientId);
-
-        configurator.UsingAzureServiceBus((busContext, cfg) =>
-        {
-            if (namespaceAddress is not null)
-            {
-                cfg.Host(namespaceAddress, h => h.TokenCredential = credential);
-            }
-            else if (ServiceBusEmulatorSupport.IsEmulatorConnectionString(connectionString))
-            {
-                // The emulator branch exists so a development stack can run the SAME transport
-                // production runs. It is entered only when the connection string carries
-                // UseDevelopmentEmulator=true, a token no real namespace emits, so the production
-                // connection-string path below is a single unconditional Host(connectionString).
-                ServiceBusEmulatorSupport.ConfigureEmulatorHost(
-                    cfg, connectionString!, settings.EmulatorAdminEndpoint);
-            }
-            else
-            {
-                cfg.Host(connectionString);
-            }
-
-            BrokerTransportPolicies.ApplyReceivePolicies(cfg, settings, applyDelayedRedelivery: true);
-            cfg.ConfigureEndpoints(busContext);
-        });
     }
 
     /// <summary>
-    /// The bus host address for a configured namespace: <c>sb://{namespace}/</c>, or
+    /// The namespace host address for a configured namespace: <c>sb://{namespace}/</c>, or
     /// <see langword="null"/> when none is configured.
     /// </summary>
     /// <param name="fullyQualifiedNamespace">A host name such as <c>contoso.servicebus.windows.net</c>, or an <c>sb://</c> address.</param>

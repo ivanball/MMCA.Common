@@ -6,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Messaging;
-using MMCA.Common.Infrastructure.Messaging.Transports;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
@@ -15,18 +14,12 @@ namespace MMCA.Common.Infrastructure.Configuration;
 /// <summary>
 /// Writes one Information line at host start naming the posture the host actually resolved: the
 /// MMCA.Common version, the database engines it configures, the message bus transport (with its
-/// <c>EnableDelayedRedelivery</c> value), the cache mode and the tenancy mode. A support question
+/// <c>ProvisionTopology</c> value), the cache mode and the tenancy mode. A support question
 /// ("which version, which bus, which cache?") is then answered by the first lines of the log rather
 /// than by reading the deployed configuration.
 /// <para>
 /// Only names, enum values and flags are logged. Connection strings, keys and every other secret
 /// stay out: the engines are derived from WHETHER a connection string is set, never from its text.
-/// </para>
-/// <para>
-/// Also emits the one Warning a RabbitMQ host with delayed redelivery off has been missing: without
-/// it, a handler failure that outlasts the in-process retries dead-letters instead of being
-/// rescheduled through the broker. Azure Service Bus applies redelivery unconditionally, so the
-/// warning is RabbitMQ-only.
 /// </para>
 /// <para>
 /// Registered by <c>AddInfrastructure</c> through <c>TryAddEnumerable</c>, so a host whose modules
@@ -74,14 +67,9 @@ internal sealed partial class StartupConfigurationSummaryService(
                 FrameworkVersion,
                 engineNames,
                 bus.Provider,
-                bus.EnableDelayedRedelivery,
+                bus.ProvisionTopology,
                 cacheMode,
                 tenancyMode);
-        }
-
-        if (MessageBusProviders.IsRabbitMq(bus.Provider) && !bus.EnableDelayedRedelivery)
-        {
-            LogRabbitMqDelayedRedeliveryOff(logger, bus.RetryLimit);
         }
 
         return Task.CompletedTask;
@@ -137,18 +125,13 @@ internal sealed partial class StartupConfigurationSummaryService(
 
     [LoggerMessage(
         Level = LogLevel.Information,
-        Message = "MMCA.Common {FrameworkVersion} configuration: data sources {DataSourceEngines}; message bus {MessageBusProvider} (EnableDelayedRedelivery={EnableDelayedRedelivery}); cache {CacheMode}; tenancy {TenancyMode}.")]
+        Message = "MMCA.Common {FrameworkVersion} configuration: data sources {DataSourceEngines}; message bus {MessageBusProvider} (ProvisionTopology={ProvisionTopology}); cache {CacheMode}; tenancy {TenancyMode}.")]
     private static partial void LogConfigurationSummary(
         ILogger logger,
         string frameworkVersion,
         string dataSourceEngines,
         string messageBusProvider,
-        bool enableDelayedRedelivery,
+        bool provisionTopology,
         string cacheMode,
         string tenancyMode);
-
-    [LoggerMessage(
-        Level = LogLevel.Warning,
-        Message = "MessageBus:Provider is RabbitMq and MessageBus:EnableDelayedRedelivery is false, so broker-level delayed redelivery is OFF: a message whose handler still fails after the {RetryLimit} in-process retries is dead-lettered instead of being rescheduled through the broker, and an outage longer than the retry window loses the event to the error queue. Install the rabbitmq_delayed_message_exchange plugin on the broker and set MessageBus:EnableDelayedRedelivery=true. The Aspire development container does not ship the plugin, so a local stack is expected to show this warning.")]
-    private static partial void LogRabbitMqDelayedRedeliveryOff(ILogger logger, int retryLimit);
 }

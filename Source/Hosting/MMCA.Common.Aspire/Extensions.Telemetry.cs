@@ -81,6 +81,7 @@ public static partial class Extensions
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
                         .AddSource("MMCA.Common.Outbox")
+                        .AddSource("MMCA.Common.Messaging")
                         .AddSource("MMCA.Common.InternalCommands")
                         .AddSource(AiTelemetryName);
 

@@ -22,16 +22,18 @@ public sealed class BrokerTopology
         ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
         ArgumentNullException.ThrowIfNull(subscriptions);
 
-        _byEventName = new Dictionary<string, BrokerSubscription>(StringComparer.Ordinal);
-        foreach (var subscription in subscriptions)
+        var duplicate = subscriptions
+            .GroupBy(s => s.EventName, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Skip(1).Any())
+            ?.Last();
+        if (duplicate is not null)
         {
-            if (!_byEventName.TryAdd(subscription.EventName, subscription))
-            {
-                throw new InvalidOperationException(
-                    $"The integration event '{subscription.EventName}' ({subscription.EventType.FullName}) is registered with the broker twice. "
-                    + "Register each event once: RegisterIntegrationEventConsumer for the current contract, or RegisterUpcastedIntegrationEventConsumer for a retired one, never both.");
-            }
+            throw new InvalidOperationException(
+                $"The integration event '{duplicate.EventName}' ({duplicate.EventType.FullName}) is registered with the broker twice. "
+                + "Register each event once: RegisterIntegrationEventConsumer for the current contract, or RegisterUpcastedIntegrationEventConsumer for a retired one, never both.");
         }
+
+        _byEventName = subscriptions.ToDictionary(s => s.EventName, StringComparer.Ordinal);
 
         ApplicationNamespace = applicationNamespace;
         QueueName = queueName;

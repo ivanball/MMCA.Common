@@ -1,5 +1,4 @@
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Attributes;
@@ -19,12 +18,7 @@ public sealed class IntegrationEventConsumerTests
 
     private const string NamedEventIdentity = "MMCA.Tests.NamedIntegrationEvent.v1";
 
-    private static Mock<ConsumeContext<TestIntegrationEvent>> ContextFor(TestIntegrationEvent evt)
-    {
-        var context = new Mock<ConsumeContext<TestIntegrationEvent>>();
-        context.SetupGet(c => c.Message).Returns(evt);
-        return context;
-    }
+    private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
 
     /// <summary>
     /// An inbox whose <c>TryBeginAsync</c> answers <paramref name="alreadyProcessed"/>. The consume
@@ -49,7 +43,7 @@ public sealed class IntegrationEventConsumerTests
         var sut = new IntegrationEventConsumer<TestIntegrationEvent>(
             [handler.Object], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<TestIntegrationEvent>>>());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         handler.Verify(x => x.HandleAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
         inbox.Verify(
@@ -69,7 +63,7 @@ public sealed class IntegrationEventConsumerTests
         var sut = new IntegrationEventConsumer<TestIntegrationEvent>(
             [handler.Object], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<TestIntegrationEvent>>>());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         handler.Verify(x => x.HandleAsync(It.IsAny<TestIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
         inbox.Verify(
@@ -81,7 +75,7 @@ public sealed class IntegrationEventConsumerTests
     public async Task Consume_HandlerThrows_AbandonsTheStagedRowAndRethrows()
     {
         // The staged row must be discarded on the way out: left behind it would either poison the
-        // scope's context with a rejected insert or make MassTransit's redelivery look like a
+        // scope's context with a rejected insert or make the pipeline's retry look like a
         // duplicate, silently swallowing the retry the throw is asking for.
         var evt = new TestIntegrationEvent();
         var handler = new Mock<IIntegrationEventHandler<TestIntegrationEvent>>();
@@ -92,7 +86,7 @@ public sealed class IntegrationEventConsumerTests
         var sut = new IntegrationEventConsumer<TestIntegrationEvent>(
             [handler.Object], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<TestIntegrationEvent>>>());
 
-        var consume = async () => await sut.Consume(ContextFor(evt).Object);
+        var consume = async () => await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
         await consume.Should().ThrowAsync<InvalidOperationException>();
 
         inbox.Verify(x => x.Abandon(evt.MessageId), Times.Once);
@@ -113,7 +107,7 @@ public sealed class IntegrationEventConsumerTests
         var sut = new IntegrationEventConsumer<TestIntegrationEvent>(
             [], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<TestIntegrationEvent>>>());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         inbox.Verify(
             x => x.TryBeginAsync(evt.MessageId, nameof(TestIntegrationEvent), It.IsAny<CancellationToken>()),
@@ -131,13 +125,10 @@ public sealed class IntegrationEventConsumerTests
         inbox.Setup(x => x.TryBeginAsync(evt.MessageId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var context = new Mock<ConsumeContext<NamedIntegrationEvent>>();
-        context.SetupGet(c => c.Message).Returns(evt);
-
         var sut = new IntegrationEventConsumer<NamedIntegrationEvent>(
             [], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<NamedIntegrationEvent>>>());
 
-        await sut.Consume(context.Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         inbox.Verify(
             x => x.TryBeginAsync(evt.MessageId, NamedEventIdentity, It.IsAny<CancellationToken>()),

@@ -1,21 +1,18 @@
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Messaging;
 using MMCA.Common.Azure.Messaging;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Azure.Tests.Messaging;
 
 /// <summary>
 /// The Azure Service Bus transport against the core broker-transport extension point: registered by
-/// <c>AddAzureServiceBusTransport()</c>, selected by <c>MessageBus:Provider=AzureServiceBus</c>, and
-/// building a real bus without opening a connection. The emulator branch is pinned by
-/// <see cref="ServiceBusEmulatorSupportTests"/>; nothing here enters it, because it rewrites
-/// process-global MassTransit defaults.
+/// <c>AddAzureServiceBusTransport()</c> and selected by <c>MessageBus:Provider=AzureServiceBus</c>. Its
+/// <c>Register</c> is a placeholder on <c>feat/native-messaging</c> until the native transport lands.
 /// </summary>
 public sealed class AzureServiceBusTransportTests
 {
@@ -28,12 +25,17 @@ public sealed class AzureServiceBusTransportTests
             {
                 ["MessageBus:Provider"] = provider,
                 ["MessageBus:ConnectionString"] = NamespaceConnectionString,
+                ["applicationName"] = "Azure.Tests.Service",
             })
             .Build();
 
     [Fact]
     public void Name_IsTheConfiguredProviderValue() =>
         new AzureServiceBusTransport().Name.Should().Be("AzureServiceBus");
+
+    [Fact]
+    public void MaxRedeliveryDelay_IsUncapped() =>
+        new AzureServiceBusTransport().MaxRedeliveryDelay.Should().BeNull();
 
     [Fact]
     public void AddAzureServiceBusTransport_RegistersTheTransportOnce()
@@ -49,16 +51,14 @@ public sealed class AzureServiceBusTransportTests
     }
 
     [Fact]
-    public async Task AddBrokerMessaging_AfterTheTransport_BuildsAnAzureServiceBusBus()
+    public void AddBrokerMessaging_AfterTheTransport_SelectsIt()
     {
         var services = new ServiceCollection().AddLogging();
-
         services.AddAzureServiceBusTransport();
-        services.AddBrokerMessaging(ConfigurationFor("AzureServiceBus"));
-        await using var provider = services.BuildServiceProvider();
 
-        services.Should().Contain(d => d.ServiceType == typeof(IMessageBus) && d.ImplementationType == typeof(BrokerMessageBus));
-        provider.GetRequiredService<IBusControl>().Address.Host.Should().Be("mmca-test.servicebus.windows.net");
+        var act = () => services.AddBrokerMessaging(ConfigurationFor("AzureServiceBus"));
+
+        act.Should().Throw<NotSupportedException>().WithMessage("Azure Service Bus transport*");
     }
 
     [Fact]
@@ -71,15 +71,16 @@ public sealed class AzureServiceBusTransportTests
     }
 
     [Fact]
-    public void Configure_RejectsNullArguments()
+    public void Register_RejectsNullArguments()
     {
         var transport = new AzureServiceBusTransport();
-        var context = new BrokerTransportContext(new MessageBusSettings(), null, new ConfigurationBuilder().Build());
+        var context = new BrokerTransportContext(
+            new MessageBusSettings(), null, new ConfigurationBuilder().Build(), new BrokerTopology("demo", "orders", []));
 
-        var noConfigurator = () => transport.Configure(null!, context);
-        var noContext = () => transport.Configure(Moq.Mock.Of<IBusRegistrationConfigurator>(), null!);
+        var noServices = () => transport.Register(null!, context);
+        var noContext = () => transport.Register(new ServiceCollection(), null!);
 
-        noConfigurator.Should().Throw<ArgumentNullException>();
+        noServices.Should().Throw<ArgumentNullException>();
         noContext.Should().Throw<ArgumentNullException>();
     }
 }

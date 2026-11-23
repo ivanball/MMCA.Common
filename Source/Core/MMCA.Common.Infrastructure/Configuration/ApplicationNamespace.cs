@@ -70,7 +70,7 @@ public static partial class ApplicationNamespace
 
     /// <summary>
     /// Reduces a name to characters every one of its consumers accepts. A Redis key tolerates
-    /// almost anything, a MassTransit queue name and a SignalR channel prefix do not, and the whole
+    /// almost anything, a broker queue or topic name and a SignalR channel prefix do not, and the whole
     /// point is one value shared by all of them.
     /// </summary>
     /// <param name="name">The raw name.</param>

@@ -48,12 +48,12 @@ public sealed class LocalStackFixture : IAsyncLifetime
     };
 
     /// <summary>The <c>MessageBus</c> keys selecting the SQS transport against LocalStack.</summary>
-    /// <param name="endpointPrefix">A per-test queue prefix, so tests never share a queue.</param>
+    /// <param name="queueName">A per-test queue name, so tests never share a queue.</param>
     /// <returns>The configuration keys.</returns>
-    public Dictionary<string, string?> MessageBusSettings(string endpointPrefix) => new()
+    public Dictionary<string, string?> MessageBusSettings(string queueName) => new()
     {
         ["MessageBus:Provider"] = "AmazonSqs",
-        ["MessageBus:EndpointPrefix"] = endpointPrefix,
+        ["MessageBus:QueueName"] = queueName,
         ["MessageBus:AmazonSqs:Region"] = Region,
         ["MessageBus:AmazonSqs:ServiceUrl"] = ServiceUrl.AbsoluteUri,
         ["MessageBus:AmazonSqs:AccessKeyId"] = DummyKey,

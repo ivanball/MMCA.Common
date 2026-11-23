@@ -362,7 +362,7 @@ public static partial class DependencyInjection
             // IMessageBus is the transport abstraction integration events are published through:
             // OutboxProcessor drains outbox rows through it. The default registration is
             // InProcessMessageBus; a service host calls AddBrokerMessaging(...) from its Program.cs
-            // to swap in the MassTransit-backed BrokerMessageBus for microservice deployments.
+            // to swap in the broker-backed BrokerMessageBus for microservice deployments.
             services.TryAddScoped<IMessageBus, InProcessMessageBus>();
 
             services.TryAddSingleton(TimeProvider.System);

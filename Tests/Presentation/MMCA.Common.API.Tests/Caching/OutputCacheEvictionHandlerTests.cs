@@ -79,7 +79,7 @@ public sealed class OutputCacheEvictionHandlerTests
         logger.Warnings.Should().ContainSingle().Which.Should().Contain("broken");
     }
 
-    // Host shutdown must stay a cancellation so MassTransit sees the shutdown rather than an acked
+    // Host shutdown must stay a cancellation so the broker receive pipeline sees the shutdown rather than a completed
     // message, so this exception type is deliberately NOT part of the best-effort swallow.
     [Fact]
     public async Task HandleAsync_WhenCancelled_PropagatesTheCancellation()

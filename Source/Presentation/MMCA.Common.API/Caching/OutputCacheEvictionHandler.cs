@@ -11,7 +11,7 @@ namespace MMCA.Common.API.Caching;
 /// standard broker path: the host calls
 /// <c>RegisterOutputCacheEvictionConsumer()</c> inside its <c>AddBrokerMessaging</c> configuration,
 /// which wires the generic <c>IntegrationEventConsumer&lt;OutputCacheEvictionRequested&gt;</c> onto
-/// this handler. No MassTransit type appears here, so the handler is equally reachable from the
+/// this handler. No broker type appears here, so the handler is equally reachable from the
 /// in-process dispatcher.
 /// </summary>
 /// <remarks>
@@ -24,7 +24,7 @@ namespace MMCA.Common.API.Caching;
 /// </para>
 /// <para>
 /// <b>Cancellation is not swallowed.</b> An <see cref="OperationCanceledException"/> from host
-/// shutdown propagates, so MassTransit sees the shutdown rather than an acked message.
+/// shutdown propagates, so the broker receive pipeline sees the shutdown rather than a completed message.
 /// </para>
 /// </remarks>
 /// <param name="outputCacheStore">This host's output-cache store.</param>

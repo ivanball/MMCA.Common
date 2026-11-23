@@ -1,5 +1,4 @@
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
@@ -8,11 +7,8 @@ using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Messaging.Consumers;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
+using MMCA.Common.Shared.Messaging;
 using Moq;
-
-// Aliased for the same reason the consumer itself aliases it: MassTransit ships its own static
-// MessageHeaders, so the bare name is ambiguous here.
-using MessageHeaders = MMCA.Common.Shared.Messaging.MessageHeaders;
 
 namespace MMCA.Common.Infrastructure.Tests.Messaging.Consumers;
 
@@ -39,23 +35,26 @@ public sealed class IntegrationEventConsumerContextTests
         return services.BuildServiceProvider();
     }
 
-    private static Mock<ConsumeContext<TestIntegrationEvent>> ContextFor(
-        TestIntegrationEvent evt,
+    private static Dictionary<string, string> HeadersFor(
         string? tenantId = null,
         string? userId = null,
         string? userRoles = null,
         string? correlationId = null)
     {
-        var headers = new Mock<Headers>();
-        headers.Setup(h => h.Get<string>(MessageHeaders.TenantId, null)).Returns(tenantId);
-        headers.Setup(h => h.Get<string>(MessageHeaders.UserId, null)).Returns(userId);
-        headers.Setup(h => h.Get<string>(MessageHeaders.UserRoles, null)).Returns(userRoles);
-        headers.Setup(h => h.Get<string>(MessageHeaders.CorrelationId, null)).Returns(correlationId);
+        Dictionary<string, string> headers = [];
+        AddIfPresent(headers, MessageHeaders.TenantId, tenantId);
+        AddIfPresent(headers, MessageHeaders.UserId, userId);
+        AddIfPresent(headers, MessageHeaders.UserRoles, userRoles);
+        AddIfPresent(headers, MessageHeaders.CorrelationId, correlationId);
+        return headers;
+    }
 
-        var context = new Mock<ConsumeContext<TestIntegrationEvent>>();
-        context.SetupGet(c => c.Message).Returns(evt);
-        context.SetupGet(c => c.Headers).Returns(headers.Object);
-        return context;
+    private static void AddIfPresent(Dictionary<string, string> headers, string name, string? value)
+    {
+        if (value is not null)
+        {
+            headers[name] = value;
+        }
     }
 
     private static Mock<IInboxStore> InboxFor(TestIntegrationEvent evt)
@@ -85,7 +84,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, InboxFor(evt).Object);
 
-        await sut.Consume(ContextFor(evt, "tenant-a", "42", "Admin,Manager", "correlation-1").Object);
+        await sut.ConsumeAsync(evt, HeadersFor("tenant-a", "42", "Admin,Manager", "correlation-1"), CancellationToken.None);
 
         scope.ServiceProvider.GetRequiredService<ITenantContext>().TenantId.Should().Be("tenant-a");
         scope.ServiceProvider.GetRequiredService<ICorrelationContext>().CorrelationId.Should().Be("correlation-1");
@@ -114,7 +113,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, inbox.Object);
 
-        await sut.Consume(ContextFor(evt, tenantId: "tenant-b").Object);
+        await sut.ConsumeAsync(evt, HeadersFor(tenantId: "tenant-b"), CancellationToken.None);
 
         tenantAtInbox.Should().Be("tenant-b");
     }
@@ -130,7 +129,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, InboxFor(evt).Object);
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, HeadersFor(), CancellationToken.None);
 
         scope.ServiceProvider.GetRequiredService<ITenantContext>().IsResolved.Should().BeFalse();
         scope.ServiceProvider.GetRequiredService<ScopedUserOverride>().Principal.Should().BeNull();
@@ -152,7 +151,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, InboxFor(evt).Object, handler.Object);
 
-        await sut.Consume(ContextFor(evt, correlationId: "correlation-9").Object);
+        await sut.ConsumeAsync(evt, HeadersFor(correlationId: "correlation-9"), CancellationToken.None);
 
         correlationInHandler.Should().Be("correlation-9");
     }
@@ -169,7 +168,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, inbox.Object);
 
-        await sut.Consume(ContextFor(evt, userId: "not-a-number").Object);
+        await sut.ConsumeAsync(evt, HeadersFor(userId: "not-a-number"), CancellationToken.None);
 
         scope.ServiceProvider.GetRequiredService<ScopedUserOverride>().Principal.Should().BeNull();
         inbox.Verify(

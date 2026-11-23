@@ -9,7 +9,7 @@ namespace MMCA.Common.Infrastructure.Messaging.Broker;
 /// <see cref="BrokerHeaders.EventName"/>, deserializes, runs the inbox-guarded handlers with in-process
 /// exponential retry (a fresh scope per attempt), and decides between completing, a second-level
 /// redelivery and dead-lettering. It never throws for a handler or payload failure; it throws only
-/// <see cref="OperationCanceledException"/> when <paramref name="cancellationToken"/> fires, and the
+/// <see cref="OperationCanceledException"/> when the host's cancellation token fires, and the
 /// transport then leaves the message unacknowledged so the broker delivers it again.
 /// </para>
 /// </summary>

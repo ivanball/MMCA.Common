@@ -1,186 +1,57 @@
-#pragma warning disable CA2263 // The SUT deliberately calls the non-generic Publish(object, Type, CancellationToken) overload; mock setups and verifies must match that exact overload.
-
+using System.Diagnostics;
 using System.Security.Claims;
+using System.Text.Json;
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Consumers;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
+using MMCA.Common.Shared.Messaging;
 using Moq;
-
-// Aliased for the same reason the bus itself aliases it: MassTransit ships its own static
-// MessageHeaders, so the bare name is ambiguous here.
-using MessageHeaders = MMCA.Common.Shared.Messaging.MessageHeaders;
 
 namespace MMCA.Common.Infrastructure.Tests.Messaging;
 
 /// <summary>
-/// Tests for <see cref="BrokerMessageBus"/>: a thin adapter over MassTransit's
-/// <see cref="IPublishEndpoint"/>. The contract under guard is publish-by-runtime-type
-/// (so the broker routes by the concrete event class, not the interface), payload
-/// passthrough by reference, token propagation, and unwrapped exception propagation.
-/// Broker topology behavior itself is integration-tier and deliberately not tested here.
+/// Tests for <see cref="BrokerMessageBus"/>: the runtime type decides the topic, the wire name and the
+/// body; the <see cref="BrokerHeaders"/> transport headers and the <see cref="MessageHeaders"/> origin
+/// headers are stamped; the W3C trace context travels as headers; and a publisher failure surfaces
+/// unwrapped to the outbox processor.
 /// </summary>
 public sealed class BrokerMessageBusTests
 {
-    public sealed record class TestIntegrationEvent : BaseIntegrationEvent;
+    private const string Namespace = "bus-tests";
 
+    public sealed record class TestIntegrationEvent(string Sku = "sku-1") : BaseIntegrationEvent;
+
+    [EventName("Orders.OrderShipped.v1")]
     public sealed record class OtherIntegrationEvent : BaseIntegrationEvent;
 
-    // ── Mocks ──
-    private sealed record Mocks(Mock<IPublishEndpoint> PublishEndpoint);
+    private static BrokerTopology Topology { get; } = new(Namespace, "bus-tests-queue", []);
 
-    // ── Factory ──
-    private static (BrokerMessageBus Sut, Mocks Mocks) CreateSut()
+    private static (BrokerMessageBus Sut, List<OutgoingBrokerMessage> Published, Mock<IBrokerPublisher> Publisher) CreateSut(
+        ICurrentUserService? currentUser = null,
+        ITenantContext? tenantContext = null,
+        ICorrelationContext? correlationContext = null)
     {
-        var publishEndpoint = new Mock<IPublishEndpoint>();
-        publishEndpoint
-            .Setup(p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), It.IsAny<CancellationToken>()))
+        List<OutgoingBrokerMessage> published = [];
+        var publisher = new Mock<IBrokerPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<OutgoingBrokerMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingBrokerMessage, CancellationToken>((message, _) => published.Add(message))
             .Returns(Task.CompletedTask);
 
-        return (new BrokerMessageBus(publishEndpoint.Object), new Mocks(publishEndpoint));
+        return (new BrokerMessageBus(publisher.Object, Topology, currentUser, tenantContext, correlationContext), published, publisher);
     }
 
-    // ── Null guard: single event ──
-    [Fact]
-    public async Task PublishAsync_NullEvent_ThrowsArgumentNullException()
-    {
-        var (sut, _) = CreateSut();
-
-        Func<Task> act = () => sut.PublishAsync((IIntegrationEvent)null!);
-
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .WithParameterName("integrationEvent");
-    }
-
-    // ── Null guard: batch overload ──
-    [Fact]
-    public async Task PublishAsync_NullEventCollection_ThrowsArgumentNullException()
-    {
-        var (sut, _) = CreateSut();
-
-        Func<Task> act = () => sut.PublishAsync((IEnumerable<IIntegrationEvent>)null!);
-
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .WithParameterName("integrationEvents");
-    }
-
-    // ── Single event: same instance published under its concrete runtime type ──
-    [Fact]
-    public async Task PublishAsync_SingleEvent_PublishesSameInstanceWithRuntimeType()
-    {
-        var (sut, mocks) = CreateSut();
-        var integrationEvent = new TestIntegrationEvent();
-
-        await sut.PublishAsync(integrationEvent, CancellationToken.None);
-
-        mocks.PublishEndpoint.Verify(
-            p => p.Publish(
-                It.Is<object>(m => ReferenceEquals(m, integrationEvent)),
-                typeof(TestIntegrationEvent),
-                CancellationToken.None),
-            Times.Once);
-        mocks.PublishEndpoint.VerifyNoOtherCalls();
-    }
-
-    // ── Single event: exact token forwarded to the endpoint ──
-    [Fact]
-    public async Task PublishAsync_SingleEvent_PropagatesCancellationToken()
-    {
-        var (sut, mocks) = CreateSut();
-        var integrationEvent = new TestIntegrationEvent();
-        using var cts = new CancellationTokenSource();
-
-        await sut.PublishAsync(integrationEvent, cts.Token);
-
-        mocks.PublishEndpoint.Verify(
-            p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), cts.Token),
-            Times.Once);
-    }
-
-    // ── Single event: a broker failure propagates unwrapped (no swallowing, no mapping) ──
-    [Fact]
-    public async Task PublishAsync_SingleEvent_WhenBrokerPublishFaults_PropagatesSameException()
-    {
-        var (sut, mocks) = CreateSut();
-        var brokerFailure = new InvalidOperationException("broker unavailable");
-        mocks.PublishEndpoint
-            .Setup(p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.FromException(brokerFailure));
-
-        Func<Task> act = () => sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
-
-        var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
-        thrown.Which.Should().BeSameAs(brokerFailure);
-    }
-
-    // ── Batch: each event published in order, each under its own runtime type ──
-    [Fact]
-    public async Task PublishBatch_PublishesEachEventInOrderWithItsOwnRuntimeType()
-    {
-        var (sut, mocks) = CreateSut();
-        var published = new List<(object Message, Type MessageType, CancellationToken Token)>();
-        mocks.PublishEndpoint
-            .Setup(p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), It.IsAny<CancellationToken>()))
-            .Callback<object, Type, CancellationToken>((m, t, ct) => published.Add((m, t, ct)))
-            .Returns(Task.CompletedTask);
-        var first = new TestIntegrationEvent();
-        var second = new OtherIntegrationEvent();
-        using var cts = new CancellationTokenSource();
-
-        await sut.PublishAsync([first, second], cts.Token);
-
-        published.Should().HaveCount(2);
-        published[0].Message.Should().BeSameAs(first);
-        published[0].MessageType.Should().Be<TestIntegrationEvent>();
-        published[1].Message.Should().BeSameAs(second);
-        published[1].MessageType.Should().Be<OtherIntegrationEvent>();
-        published.Should().AllSatisfy(p => p.Token.Should().Be(cts.Token));
-    }
-
-    // ── Batch: sequential publishing stops at the first failure ──
-    [Fact]
-    public async Task PublishBatch_WhenFirstEventFaults_DoesNotPublishSubsequentEvents()
-    {
-        var (sut, mocks) = CreateSut();
-        var first = new TestIntegrationEvent();
-        var second = new OtherIntegrationEvent();
-        mocks.PublishEndpoint
-            .Setup(p => p.Publish(first, typeof(TestIntegrationEvent), It.IsAny<CancellationToken>()))
-            .Returns(Task.FromException(new InvalidOperationException("broker unavailable")));
-
-        Func<Task> act = () => sut.PublishAsync(new IIntegrationEvent[] { first, second }, CancellationToken.None);
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        mocks.PublishEndpoint.Verify(
-            p => p.Publish(second, typeof(OtherIntegrationEvent), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    // ── Empty batch: nothing hits the endpoint ──
-    [Fact]
-    public async Task PublishBatch_EmptyCollection_DoesNotPublish()
-    {
-        var (sut, mocks) = CreateSut();
-
-        await sut.PublishAsync(Array.Empty<IIntegrationEvent>(), CancellationToken.None);
-
-        mocks.PublishEndpoint.VerifyNoOtherCalls();
-    }
-
-    // ── Header stamping ──
-
-    /// <summary>
-    /// Builds a bus over the ambient context a scope would supply, and captures the publish pipe the
-    /// stamping path hands MassTransit so a test can run it against a stand-in message.
-    /// </summary>
-    private static (BrokerMessageBus Sut, Mock<IPublishEndpoint> Endpoint, List<IPipe<PublishContext>> Pipes) CreateStampingSut(
+    private static BrokerMessageBus CreateStampingSut(
+        List<OutgoingBrokerMessage> published,
         int? userId = 42,
         string[]? roles = null,
         string? tenantId = "tenant-a",
@@ -201,61 +72,136 @@ public sealed class BrokerMessageBusTests
         var correlationContext = new Mock<ICorrelationContext>();
         correlationContext.SetupGet(c => c.CorrelationId).Returns(correlationId!);
 
-        List<IPipe<PublishContext>> pipes = [];
-        var publishEndpoint = new Mock<IPublishEndpoint>();
-        publishEndpoint
-            .Setup(p => p.Publish(
-                It.IsAny<object>(),
-                It.IsAny<Type>(),
-                It.IsAny<IPipe<PublishContext>>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<object, Type, IPipe<PublishContext>, CancellationToken>((_, _, pipe, _) => pipes.Add(pipe))
-            .Returns(Task.CompletedTask);
-        publishEndpoint
-            .Setup(p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), It.IsAny<CancellationToken>()))
+        var publisher = new Mock<IBrokerPublisher>();
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<OutgoingBrokerMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<OutgoingBrokerMessage, CancellationToken>((message, _) => published.Add(message))
             .Returns(Task.CompletedTask);
 
-        var sut = new BrokerMessageBus(
-            publishEndpoint.Object,
-            currentUser.Object,
-            tenantContext.Object,
-            correlationContext.Object);
-
-        return (sut, publishEndpoint, pipes);
+        return new BrokerMessageBus(publisher.Object, Topology, currentUser.Object, tenantContext.Object, correlationContext.Object);
     }
 
-    /// <summary>Runs one captured pipe against a stand-in message and returns the headers it wrote.</summary>
-    private static async Task<Dictionary<string, string>> HeadersWrittenByAsync(IPipe<PublishContext> pipe)
+    [Fact]
+    public async Task PublishAsync_NullEvent_ThrowsArgumentNullException()
     {
-        var written = new Dictionary<string, string>(StringComparer.Ordinal);
+        var (sut, _, _) = CreateSut();
 
-        var headers = new Mock<SendHeaders>();
-        headers.Setup(h => h.Set(It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string>((key, value) => written[key] = value);
+        Func<Task> act = () => sut.PublishAsync((IIntegrationEvent)null!);
 
-        var publishContext = new Mock<PublishContext>();
-        publishContext.SetupGet(c => c.Headers).Returns(headers.Object);
+        await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("integrationEvent");
+    }
 
-        await pipe.Send(publishContext.Object);
+    [Fact]
+    public async Task PublishAsync_NullEventCollection_ThrowsArgumentNullException()
+    {
+        var (sut, _, _) = CreateSut();
 
-        return written;
+        Func<Task> act = () => sut.PublishAsync((IEnumerable<IIntegrationEvent>)null!);
+
+        await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("integrationEvents");
+    }
+
+    [Fact]
+    public async Task PublishAsync_PublishesOnTheRuntimeTypesTopic_WithTheTransportHeaders()
+    {
+        var (sut, published, _) = CreateSut();
+        var integrationEvent = new TestIntegrationEvent("sku-9");
+
+        await sut.PublishAsync(integrationEvent, TestContext.Current.CancellationToken);
+
+        var message = published.Should().ContainSingle().Subject;
+        var eventName = BrokerNaming.EventName(typeof(TestIntegrationEvent));
+        message.EventName.Should().Be(eventName);
+        message.Topic.Should().Be(BrokerNaming.Topic(Namespace, eventName));
+        message.MessageId.Should().Be(integrationEvent.MessageId);
+        message.Headers[BrokerHeaders.EventName].Should().Be(eventName);
+        message.Headers[BrokerHeaders.MessageId].Should().Be(integrationEvent.MessageId.ToString("D"));
+        message.Headers[BrokerHeaders.ContentType].Should().Be(BrokerHeaders.JsonContentType);
+        message.Headers.Should().NotContainKey(BrokerHeaders.RedeliveryCount, "a first delivery carries no count");
+    }
+
+    [Fact]
+    public async Task PublishAsync_BodyIsTheJsonOfTheRuntimeType_AndRoundTrips()
+    {
+        var (sut, published, _) = CreateSut();
+        var integrationEvent = new TestIntegrationEvent("sku-round-trip");
+
+        await sut.PublishAsync(integrationEvent, TestContext.Current.CancellationToken);
+
+        var body = published.Should().ContainSingle().Subject.Body;
+        var read = JsonSerializer.Deserialize<TestIntegrationEvent>(body.Span);
+        read.Should().NotBeNull();
+        read!.Sku.Should().Be("sku-round-trip");
+        read.MessageId.Should().Be(integrationEvent.MessageId);
+    }
+
+    [Fact]
+    public async Task PublishAsync_ADeclaredEventName_DecidesTheTopic()
+    {
+        var (sut, published, _) = CreateSut();
+
+        await sut.PublishAsync(new OtherIntegrationEvent(), TestContext.Current.CancellationToken);
+
+        published.Should().ContainSingle().Which.Topic.Should().Be("bus-tests-orders-order-shipped-v1");
+    }
+
+    [Fact]
+    public async Task PublishAsync_ForwardsTheTokenAndSurfacesAPublisherFailureUnwrapped()
+    {
+        var (sut, _, publisher) = CreateSut();
+        using var cts = new CancellationTokenSource();
+        var failure = new InvalidOperationException("broker refused");
+        publisher
+            .Setup(p => p.PublishAsync(It.IsAny<OutgoingBrokerMessage>(), cts.Token))
+            .ThrowsAsync(failure);
+
+        Func<Task> act = () => sut.PublishAsync(new TestIntegrationEvent(), cts.Token);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(failure);
+    }
+
+    [Fact]
+    public async Task PublishAsync_Batch_PublishesEachEventInOrder()
+    {
+        var (sut, published, _) = CreateSut();
+        var first = new TestIntegrationEvent("a");
+        var second = new OtherIntegrationEvent();
+
+        await sut.PublishAsync([first, second], TestContext.Current.CancellationToken);
+
+        published.Select(m => m.MessageId).Should().Equal(first.MessageId, second.MessageId);
     }
 
     [Fact]
     public async Task PublishAsync_StampsTheAmbientContextAsHeaders()
     {
-        var (sut, _, pipes) = CreateStampingSut();
+        List<OutgoingBrokerMessage> published = [];
+        var sut = CreateStampingSut(published);
 
-        await sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
+        await sut.PublishAsync(new TestIntegrationEvent(), TestContext.Current.CancellationToken);
 
-        var written = await HeadersWrittenByAsync(pipes.Should().ContainSingle().Subject);
-        written.Should().BeEquivalentTo(new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            [MessageHeaders.TenantId] = "tenant-a",
-            [MessageHeaders.UserId] = "42",
-            [MessageHeaders.UserRoles] = "Admin,Manager",
-            [MessageHeaders.CorrelationId] = "correlation-1",
-        });
+        var headers = published.Should().ContainSingle().Subject.Headers;
+        headers[MessageHeaders.TenantId].Should().Be("tenant-a");
+        headers[MessageHeaders.UserId].Should().Be("42");
+        headers[MessageHeaders.UserRoles].Should().Be("Admin,Manager");
+        headers[MessageHeaders.CorrelationId].Should().Be("correlation-1");
+    }
+
+    [Fact]
+    public async Task PublishAsync_OmitsEveryOriginHeaderWhoseValueIsAbsent()
+    {
+        // An absent header reads on the consumer side as "the publisher had nothing to say". Writing
+        // an empty one would turn a non-answer into a false answer.
+        List<OutgoingBrokerMessage> published = [];
+        var sut = CreateStampingSut(published, userId: null, roles: [], tenantId: null);
+
+        await sut.PublishAsync(new TestIntegrationEvent(), TestContext.Current.CancellationToken);
+
+        var headers = published.Should().ContainSingle().Subject.Headers;
+        headers.Should().NotContainKey(MessageHeaders.TenantId);
+        headers.Should().NotContainKey(MessageHeaders.UserId);
+        headers.Should().NotContainKey(MessageHeaders.UserRoles);
+        headers[MessageHeaders.CorrelationId].Should().Be("correlation-1");
     }
 
     // L181: a publish authorized ONLY through a Permission claim stamps the claims as a header, and
@@ -267,17 +213,14 @@ public sealed class BrokerMessageBusTests
         (await DeferredPermissionGate.EvaluateAsync(new DeferredPermissionGate.FixedCurrentUserService(principal)))
             .IsSuccess.Should().BeTrue("control: the publishing request is authorized by the claim alone");
 
-        var (sut, _, pipes) = CreateStampingSut(roles: [], user: principal);
-        await sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
-        var written = await HeadersWrittenByAsync(pipes.Should().ContainSingle().Subject);
-
-        var headers = new Mock<Headers>();
-        headers.Setup(h => h.Get<string>(It.IsAny<string>(), null))
-            .Returns((string key, string? _) => written.TryGetValue(key, out var value) ? value : null);
+        List<OutgoingBrokerMessage> published = [];
+        var sut = CreateStampingSut(published, roles: [], user: principal);
+        await sut.PublishAsync(new TestIntegrationEvent(), TestContext.Current.CancellationToken);
+        var headers = published.Should().ContainSingle().Subject.Headers;
 
         await using var provider = new ServiceCollection().AddScoped<ScopedUserOverride>().BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
-        using (ConsumerOriginRestore.Apply(headers.Object, scope.ServiceProvider, "Broker"))
+        using (ConsumerOriginRestore.Apply(headers, scope.ServiceProvider, "Broker"))
         {
             var consumingUser = new ImpersonatingCurrentUserService(
                 new DeferredPermissionGate.FixedCurrentUserService(new ClaimsPrincipal()),
@@ -289,72 +232,52 @@ public sealed class BrokerMessageBusTests
     }
 
     [Fact]
-    public async Task PublishAsync_OmitsEveryHeaderWhoseValueIsAbsent()
+    public async Task PublishAsync_WithAListener_StartsAProducerSpanAndPropagatesIt()
     {
-        // An absent header reads on the consumer side as "the publisher had nothing to say". Writing
-        // an empty one would turn a non-answer into a false answer.
-        var (sut, _, pipes) = CreateStampingSut(userId: null, roles: [], tenantId: null);
-
-        await sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
-
-        var written = await HeadersWrittenByAsync(pipes.Should().ContainSingle().Subject);
-        written.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(
-                new KeyValuePair<string, string>(MessageHeaders.CorrelationId, "correlation-1"));
-    }
-
-    [Fact]
-    public async Task PublishAsync_StampsTheRuntimeTypeAlongsideTheHeaders()
-    {
-        var (sut, endpoint, _) = CreateStampingSut();
+        var (sut, published, _) = CreateSut();
+        List<Activity> started = [];
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "MMCA.Common.Messaging",
+            Sample = static (ref _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = activity =>
+            {
+                lock (started)
+                {
+                    started.Add(activity);
+                }
+            },
+        };
+        ActivitySource.AddActivityListener(listener);
         var integrationEvent = new TestIntegrationEvent();
 
-        await sut.PublishAsync(integrationEvent, CancellationToken.None);
+        await sut.PublishAsync(integrationEvent, TestContext.Current.CancellationToken);
 
-        endpoint.Verify(
-            p => p.Publish(
-                It.Is<object>(m => ReferenceEquals(m, integrationEvent)),
-                typeof(TestIntegrationEvent),
-                It.IsAny<IPipe<PublishContext>>(),
-                CancellationToken.None),
-            Times.Once,
-            "routing by the concrete class is unchanged by the stamping path");
-    }
-
-    [Fact]
-    public async Task PublishAsync_WithNothingToStamp_TakesThePlainOverload()
-    {
-        // A host that resolved no ambient context must not pay a pipe allocation per message for
-        // headers it never writes.
-        var (sut, mocks) = CreateSut();
-
-        await sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
-
-        mocks.PublishEndpoint.Verify(
-            p => p.Publish(It.IsAny<object>(), It.IsAny<Type>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-        mocks.PublishEndpoint.Verify(
-            p => p.Publish(
-                It.IsAny<object>(),
-                It.IsAny<Type>(),
-                It.IsAny<IPipe<PublishContext>>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task PublishBatch_StampsEveryMessageOfTheBatch()
-    {
-        var (sut, _, pipes) = CreateStampingSut();
-
-        await sut.PublishAsync([new TestIntegrationEvent(), new OtherIntegrationEvent()], CancellationToken.None);
-
-        pipes.Should().HaveCount(2);
-        foreach (var pipe in pipes)
+        var message = published.Should().ContainSingle().Subject;
+        Activity producer;
+        lock (started)
         {
-            var written = await HeadersWrittenByAsync(pipe);
-            written.Should().ContainKey(MessageHeaders.CorrelationId)
-                .WhoseValue.Should().Be("correlation-1");
+            producer = started.Should().ContainSingle(a =>
+                a.Kind == ActivityKind.Producer
+                && Equals(a.GetTagItem("messaging.message.id"), integrationEvent.MessageId.ToString("D"))).Subject;
         }
+
+        message.Headers[BrokerHeaders.TraceParent].Should().Be(producer.Id);
+        producer.GetTagItem("messaging.destination.name").Should().Be(message.Topic);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WithNoListener_PropagatesTheAmbientTraceContext()
+    {
+        var (sut, published, _) = CreateSut();
+        using var ambient = new Activity("outbox-row").SetIdFormat(ActivityIdFormat.W3C);
+        ambient.TraceStateString = "vendor=1";
+        ambient.Start();
+
+        await sut.PublishAsync(new TestIntegrationEvent(), TestContext.Current.CancellationToken);
+
+        var headers = published.Should().ContainSingle().Subject.Headers;
+        headers[BrokerHeaders.TraceParent].Should().Contain(ambient.TraceId.ToHexString());
+        headers[BrokerHeaders.TraceState].Should().Be("vendor=1");
     }
 }

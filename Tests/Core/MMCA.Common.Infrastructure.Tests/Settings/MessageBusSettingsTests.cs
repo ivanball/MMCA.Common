@@ -11,9 +11,8 @@ public class MessageBusSettingsTests
 
     // EnableInbox and EnableOutbox default to unset, so the transport decides (see the
     // IsInboxEnabled/IsOutboxEnabled theories below).
-    // EnableDelayedRedelivery: default-off is load-bearing, not incidental: RabbitMQ needs the
-    // delayed-message-exchange plugin, which the Aspire development container does not ship, so a
-    // default-on flag would fail bus start on every local run.
+    // QueueName: unset derives the queue from the host application name.
+    // ProvisionTopology: on by default, so a fresh environment creates its broker entities.
     // RedeliveryIntervalsSeconds: unset must stay null so the transport default applies. The binder
     // appends a configured list to a non-null initializer, so a default living on the property would
     // make the intervals impossible to replace by configuration.
@@ -21,7 +20,8 @@ public class MessageBusSettingsTests
     [InlineData(nameof(MessageBusSettings.Provider), "InProcess")]
     [InlineData(nameof(MessageBusSettings.EnableInbox), null)]
     [InlineData(nameof(MessageBusSettings.EnableOutbox), null)]
-    [InlineData(nameof(MessageBusSettings.EnableDelayedRedelivery), false)]
+    [InlineData(nameof(MessageBusSettings.QueueName), null)]
+    [InlineData(nameof(MessageBusSettings.ProvisionTopology), true)]
     [InlineData(nameof(MessageBusSettings.RedeliveryIntervalsSeconds), null)]
     public void Default_PropertyHasTheDocumentedValue(string property, object? expected) =>
         typeof(MessageBusSettings).GetProperty(property)!.GetValue(new MessageBusSettings()).Should().Be(expected);
@@ -77,12 +77,14 @@ public class MessageBusSettingsTests
         var sut = new MessageBusSettings
         {
             EnableInbox = true,
-            EnableDelayedRedelivery = true,
+            QueueName = "orders",
+            ProvisionTopology = false,
             RedeliveryIntervalsSeconds = [5, 15],
         };
 
         sut.EnableInbox.Should().BeTrue();
-        sut.EnableDelayedRedelivery.Should().BeTrue();
+        sut.QueueName.Should().Be("orders");
+        sut.ProvisionTopology.Should().BeFalse();
         sut.RedeliveryIntervalsSeconds.Should().Equal(5, 15);
     }
 }

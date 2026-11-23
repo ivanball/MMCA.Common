@@ -34,7 +34,7 @@ public sealed record CrossServiceDataSource(string LogicalName, string DatabaseN
 /// <c>Default</c> source), which is why hosts must be booted <b>strictly sequentially</b> in
 /// <see cref="BootHostsAsync"/>, calling <see cref="SetHostConnectionString"/> between boots: a host
 /// snapshots its connection at boot (DataSource resolver, DbContext factory, outbox processor and the
-/// MassTransit bus are all built during <c>StartAsync</c>), so mutating the environment for the next host
+/// broker receiver are all built during <c>StartAsync</c>), so mutating the environment for the next host
 /// cannot disturb an already-booted one.
 /// </para>
 /// <para><b>Host isolation.</b> Every host shares this process, so the default AppDomain scan would hand each

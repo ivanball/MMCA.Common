@@ -1,5 +1,4 @@
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Events;
@@ -15,10 +14,10 @@ namespace MMCA.Common.Infrastructure.Tests.Messaging.Consumers;
 /// Tests for <see cref="UpcastingIntegrationEventConsumer{TEvent}"/> (ADR-090): the draining consumer
 /// bound to a RETIRED contract. It dedups on the ORIGINAL message id, upcasts to the terminal
 /// contract, dispatches to the handlers registered for THAT contract, rethrows a handler failure so
-/// MassTransit can retry, and records the inbox row only after every handler succeeded.
+/// the receive pipeline can retry, and records the inbox row only after every handler succeeded.
 /// <para>
-/// Harness mirrors <see cref="IntegrationEventConsumerTests"/>: a mocked
-/// <see cref="ConsumeContext{T}"/>, a mocked <see cref="IInboxStore"/>, and Moq handlers, plus a real
+/// Harness mirrors <see cref="IntegrationEventConsumerTests"/>: plain headers,
+/// a mocked <see cref="IInboxStore"/>, and Moq handlers, plus a real
 /// service provider because this consumer resolves its handlers non-generically at runtime. The V1/V2
 /// contracts live in this TEST assembly only.
 /// </para>
@@ -39,17 +38,10 @@ public sealed class UpcastingIntegrationEventConsumerTests
             new(integrationEvent.Sku, "upcasted");
     }
 
-    private static Mock<ConsumeContext<RetiredOrderPlaced>> ContextFor(RetiredOrderPlaced evt)
-    {
-        var context = new Mock<ConsumeContext<RetiredOrderPlaced>>();
-        context.SetupGet(c => c.Message).Returns(evt);
-
-        // Empty but present, as a real delivery always is: the consumer reads the publisher's
-        // context off the headers before it touches the inbox, and an empty set means "the publisher
-        // had nothing to say" rather than a missing collection.
-        context.SetupGet(c => c.Headers).Returns(Mock.Of<Headers>());
-        return context;
-    }
+    // Empty but present, as a real delivery always is: the consumer reads the publisher's context
+    // off the headers before it touches the inbox, and an empty set means "the publisher had nothing
+    // to say" rather than a missing collection.
+    private static readonly IReadOnlyDictionary<string, string> NoHeaders = new Dictionary<string, string>();
 
     private static Mock<IInboxStore> InboxFor(RetiredOrderPlaced evt, bool alreadyProcessed = false)
     {
@@ -85,7 +77,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object, new RetiredToV2Upcaster());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         terminalHandler.Verify(
             x => x.HandleAsync(
@@ -110,7 +102,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object, new RetiredToV2Upcaster());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         terminalHandler.Verify(
             x => x.HandleAsync(It.IsAny<OrderPlacedV2>(), It.IsAny<CancellationToken>()),
@@ -120,7 +112,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
             Times.Never);
     }
 
-    // ── Handler failure: rethrown for the MassTransit retry policy, inbox left un-recorded ──
+    // ── Handler failure: rethrown for the receive pipeline's retry, inbox left un-recorded ──
     [Fact]
     public async Task Consume_WhenHandlerThrows_RethrowsAndLeavesTheMessageUnrecorded()
     {
@@ -137,7 +129,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object, new RetiredToV2Upcaster());
 
-        Func<Task> act = () => sut.Consume(ContextFor(evt).Object);
+        Func<Task> act = () => sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
         thrown.Which.Should().BeSameAs(failure);
@@ -158,7 +150,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object, new RetiredToV2Upcaster());
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         inbox.Verify(
             x => x.CompleteAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
@@ -178,7 +170,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object);
 
-        await sut.Consume(ContextFor(evt).Object);
+        await sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         retiredHandler.Verify(x => x.HandleAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
         inbox.Verify(
@@ -197,7 +189,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         var sut = CreateSut(provider, inbox.Object, new RetiredToV2Upcaster());
 
-        Func<Task> act = () => sut.Consume(ContextFor(evt).Object);
+        Func<Task> act = () => sut.ConsumeAsync(evt, NoHeaders, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
         inbox.Verify(
@@ -207,15 +199,15 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
     // ── Null guard ──
     [Fact]
-    public async Task Consume_WithNullContext_ThrowsArgumentNullException()
+    public async Task Consume_WithNullEvent_ThrowsArgumentNullException()
     {
         var services = new ServiceCollection();
         await using ServiceProvider provider = services.BuildServiceProvider();
 
         var sut = CreateSut(provider, Mock.Of<IInboxStore>(), new RetiredToV2Upcaster());
 
-        Func<Task> act = () => sut.Consume(null!);
+        Func<Task> act = () => sut.ConsumeAsync(null!, NoHeaders, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("context");
+        await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("integrationEvent");
     }
 }

@@ -167,11 +167,6 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -610,9 +605,6 @@
         "dependencies": {
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.12, )",
-          "MassTransit.RabbitMQ": "[8.5.12, )",
-          "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -683,27 +675,6 @@
         "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
         "dependencies": {
           "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
         }
       },
       "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": {
@@ -1173,11 +1144,6 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -1627,9 +1593,6 @@
         "dependencies": {
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.12, )",
-          "MassTransit.RabbitMQ": "[8.5.12, )",
-          "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1699,27 +1662,6 @@
         "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
         "dependencies": {
           "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
         }
       },
       "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": {

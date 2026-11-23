@@ -17,7 +17,7 @@ namespace MMCA.Common.Application.Messaging;
 ///     Used by the modular monolith deployment.
 ///   </item>
 ///   <item>
-///     <c>BrokerMessageBus</c> — publishes via MassTransit to an external broker
+///     <c>BrokerMessageBus</c>: publishes through the selected broker transport
 ///     (RabbitMQ in development, Azure Service Bus in production). Used by extracted
 ///     microservices. The transactional outbox semantics are preserved by
 ///     <c>OutboxProcessor</c>, which drains <c>OutboxMessage</c> entries through

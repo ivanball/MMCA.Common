@@ -100,7 +100,7 @@ public sealed class StartupConfigurationSummaryServiceTests
         summary.Should().Contain(StartupConfigurationSummaryService.FrameworkVersion);
         summary.Should().Contain("SQLServer").And.Contain("PostgreSQL");
         summary.Should().Contain("AzureServiceBus");
-        summary.Should().Contain("EnableDelayedRedelivery=False");
+        summary.Should().Contain("ProvisionTopology=True");
         summary.Should().Contain("cache memory");
         summary.Should().Contain("tenancy shared-database");
     }
@@ -127,25 +127,15 @@ public sealed class StartupConfigurationSummaryServiceTests
     }
 
     [Fact]
-    public async Task RabbitMqWithDelayedRedeliveryOff_WarnsOnce()
-    {
-        var recorder = await StartSummaryAsync(("MessageBus:Provider", "RabbitMq"));
-
-        var warning = recorder.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning).Which.Message;
-        warning.Should().Contain("MessageBus:EnableDelayedRedelivery");
-        warning.Should().Contain("rabbitmq_delayed_message_exchange", "the warning carries its own remedy");
-    }
-
-    [Fact]
-    public async Task RabbitMqWithDelayedRedeliveryOn_DoesNotWarn()
+    public async Task RabbitMq_DoesNotWarn_RedeliveryNeedsNoPlugin()
     {
         var recorder = await StartSummaryAsync(
             ("MessageBus:Provider", "RabbitMq"),
-            ("MessageBus:EnableDelayedRedelivery", "true"));
+            ("MessageBus:ProvisionTopology", "false"));
 
         recorder.Entries.Should().NotContain(e => e.Level == LogLevel.Warning);
         recorder.Entries.Should().ContainSingle(e => e.Level == LogLevel.Information)
-            .Which.Message.Should().Contain("EnableDelayedRedelivery=True");
+            .Which.Message.Should().Contain("ProvisionTopology=False");
     }
 
     [Theory]

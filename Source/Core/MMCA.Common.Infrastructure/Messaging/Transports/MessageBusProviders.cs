@@ -15,11 +15,11 @@ public static class MessageBusProviders
     /// </summary>
     public const string InProcess = "InProcess";
 
-    /// <summary>MassTransit on RabbitMQ, the development microservice deployment and the test tier.</summary>
+    /// <summary>RabbitMQ, the development microservice deployment and the test tier.</summary>
     public const string RabbitMq = "RabbitMq";
 
     /// <summary>
-    /// MassTransit's SQL transport on PostgreSQL: queues, topics and scheduled messages live in tables
+    /// The PostgreSQL transport: queues, topics and scheduled messages live in tables
     /// of a PostgreSQL database, so any managed PostgreSQL (Cloud SQL, Amazon RDS, Azure Database for
     /// PostgreSQL) or a self-hosted one is the broker. Built in and cloud-neutral: it needs a
     /// database, not a cloud service.
