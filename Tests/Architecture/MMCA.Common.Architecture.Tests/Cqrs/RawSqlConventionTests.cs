@@ -26,8 +26,8 @@ public sealed class RawSqlConventionTests : RawSqlConventionTestsBase
     [
         // SET IDENTITY_INSERT [schema].[table] ON/OFF. A T-SQL identifier cannot be a command
         // parameter, so this statement has no parameterized form; the two names are read off EF model
-        // metadata (entityType.GetSchema()/GetTableName()), never off caller input, and the call site
-        // carries the matching S2077 suppression with the same reasoning.
+        // metadata (entityType.GetSchema()/GetTableName()), never off caller input. DbContextFactory
+        // carries the matching CA2100 suppression (on SaveChangesAsync) with the same reasoning.
         "DbContextFactory.cs",
     ];
 }

@@ -83,7 +83,8 @@ public static partial class ArchitectureRules
     /// Aggregate roots across the WHOLE Domain layer (framework + module) expose no public constructor —
     /// construction goes through the static <c>Create(...)</c> factory. This is the minimal-base
     /// counterpart to <see cref="AggregateRootsHaveNoPublicConstructors"/>, which scopes to per-module
-    /// domains only and so is vacuous in a module-less framework repo (MMCA.Common). Pairs with
+    /// domains only and so is vacuous in a module-less repo unless its map registers the domain as a
+    /// module (MMCA.Common does, for its own entity convention run). Pairs with
     /// <see cref="AggregateRootsHaveResultFactory"/> to fully pin the private-ctor + Result-factory
     /// construction invariant.
     /// </summary>

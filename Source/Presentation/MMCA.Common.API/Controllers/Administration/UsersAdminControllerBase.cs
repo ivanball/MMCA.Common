@@ -142,7 +142,8 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
     /// Starts a read-only, 15-minute view of the app as this account (ADR-137) and returns its token.
     /// Requires <see cref="AdministrationPermissions.ViewAsUsers"/> on top of the class's
     /// <see cref="AdministrationPermissions.ManageUsers"/>, and a reason. Refused for the caller's own
-    /// account, a deleted account, and an account that itself holds <c>users:view-as</c>.
+    /// account, an account that does not exist, a deleted account, a machine client's service
+    /// account, a locked account, and an account that itself holds <c>users:view-as</c>.
     /// </summary>
     /// <remarks>
     /// 404 while <c>ViewAs:Enabled</c> is false, so a host that has not opted in serves nothing here,

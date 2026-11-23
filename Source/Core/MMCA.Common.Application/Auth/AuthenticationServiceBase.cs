@@ -589,7 +589,8 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <remarks>
     /// <para>
     /// Runs the app gate a password sign-in runs once the credential is proved
-    /// (<see cref="ValidateLoginCandidateAsync"/>), then mints through <see cref="IssueTokensAsync"/>,
+    /// (<see cref="ValidateLoginCandidateAsync"/>), then mints through the same private issuance a
+    /// password sign-in uses (<c>IssueTokensCoreAsync</c>, the core of <see cref="IssueTokensAsync"/>),
     /// so the session, the cap and the <c>sid</c> claim are exactly a password sign-in's.
     /// </para>
     /// <para>
@@ -670,8 +671,10 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <para>
     /// <b>Never for a service account.</b> A machine client's service account (ADR-140,
     /// <see cref="IAuthUser.IsServiceAccount"/>) obtains tokens only through the client credentials
-    /// grant, which opens no session. Every interactive sign-in, the app-level external login included,
-    /// mints through here, so the refusal here is the backstop behind the earlier, path-specific ones.
+    /// grant, which opens no session. Every interactive sign-in mints through the private issuance core
+    /// this method ends in: app-level flows (external login) through this method, the framework's own
+    /// sign-ins (password, registration, sign-in link, passkey) directly. The service-account refusal
+    /// lives in that core, so it is the backstop behind the earlier, path-specific ones on every path.
     /// </para>
     /// <para>
     /// <b>An enrolled second factor is honored.</b> This is the issuance an app-level sign-in that

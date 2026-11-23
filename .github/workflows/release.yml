@@ -33,9 +33,9 @@ jobs:
           fetch-depth: 0 # MinVer needs full history
 
       # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
-      # flow, and this workflow re-runs only restore/build/test/SBOM. So refuse to publish unless the
-      # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
-      # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
+      # flow, and this workflow re-runs only restore/build/vulnerability audit/test/SBOM. So refuse to
+      # publish unless the tagged commit is actually reachable from origin/main: that is what makes the
+      # checks which ran only on the merged PR (FACTS drift gate, Helpdesk consumer canary,
       # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
       # Pairs with the `release` environment protection rule on the publish jobs, which need this
       # job. The checkout above uses fetch-depth 0, so only the main branch tip still has to be
@@ -96,7 +96,8 @@ jobs:
           no-restore: 'true'
 
       - name: Test
-        # Same floor as ci.yml build-and-test: a discovery/filter regression that silently drops
+        # Both frameworks in one run, so twice the per-framework floor ci.yml build-and-test applies
+        # to each leg (11250): a discovery/filter regression that silently drops
         # thousands of tests must fail the release, not publish behind a near-empty green run.
         run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 22500
 
@@ -247,9 +248,9 @@ jobs:
           fetch-depth: 0 # MinVer needs full history
 
       # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
-      # flow, and this workflow re-runs only restore/build/test/SBOM. So refuse to publish unless the
-      # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
-      # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
+      # flow, and this workflow re-runs only restore/build/vulnerability audit/test/SBOM. So refuse to
+      # publish unless the tagged commit is actually reachable from origin/main: that is what makes the
+      # checks which ran only on the merged PR (FACTS drift gate, Helpdesk consumer canary,
       # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
       # Pairs with the `release` environment protection rule on the publish jobs, which need this
       # job. The checkout above uses fetch-depth 0, so only the main branch tip still has to be
@@ -315,7 +316,7 @@ jobs:
       - name: Generate SBOM (CycloneDX)
         # Shared gate (ADR-038): the composite action fails unless the BOM exists AND lists at least
         # one component, the same check the ADC and Store deploy.yml run through
-        # ivanball/MMCA.Common/.github/actions/cyclonedx-sbom@main.
+        # ivanball/MMCA.Common/.github/actions/cyclonedx-sbom, pinned to a release commit SHA.
         uses: ./.github/actions/cyclonedx-sbom
         with:
           solution: Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj

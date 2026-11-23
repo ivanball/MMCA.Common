@@ -146,8 +146,9 @@
          referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
-         MIT, .NET Foundation. Pinned exactly: it parses attacker-supplied CBOR/COSE, so a bump is a
-         reviewed change, never a floating range. Referenced from the opt-in MMCA.Common.Passkeys
+         MIT, .NET Foundation. Held to one version: it parses attacker-supplied CBOR/COSE, so a bump is a
+         reviewed change. The bare Version is a NuGet floor ("[4.3.3, )"); the committed
+         packages.lock.json plus the CI locked-mode restore are what hold it to exactly this version. Referenced from the opt-in MMCA.Common.Passkeys
          package alone (it pulls NSec.Cryptography and the native libsodium), so a host that does not
          reference that package carries none of it; EnforcePasskeysBoundary keeps it there. -->
     <PackageVersion Include="Fido2" Version="4.3.3" />
@@ -326,8 +327,8 @@
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="$(MmcaMauiVersion)" />
-    <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
-         net10 TFM set before bumping (14.x is the net10 line). -->
+    <!-- Local (on-device) notifications for UI.Maui; this one pin serves both the net10 and the net11
+         MAUI lines, so verify both TFM sets before bumping. -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
     <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (16.x requires Controls >= 10.0.90),
          bump together with Microsoft.Maui.Controls. -->
@@ -375,11 +376,12 @@
     <PackageVersion Include="bunit" Version="2.15.2" />
     <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
          1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
-         2.13.3 now floors it at 1.8.6. CPM does not pin transitives, so the two bUnit-referencing projects
-         keep a direct PackageReference to hold it at this central version.
-         1.8.6 adds an IHtmlSelectElement member that bUnit 2.12.5's generated HtmlSelectElementWrapper
-         does not implement (TypeLoadException on set_SelectedIndex in every bUnit Find), so 1.8.6 moved
-         only together with bUnit 2.13.3, which declares it as its own dependency. Keep the two in step. -->
+         2.15.2 now floors it at 1.10.1, and this pin sits above that floor. CPM does not pin transitives,
+         so the two bUnit-referencing projects keep a direct PackageReference to hold it at this central
+         version. AngleSharp and bUnit are coupled: 1.8.6 added an IHtmlSelectElement member that bUnit
+         2.12.5's generated HtmlSelectElementWrapper did not implement (TypeLoadException on
+         set_SelectedIndex in every bUnit Find), so 1.8.6 could move only together with bUnit 2.13.3.
+         Before raising this pin, confirm the current bUnit still loads against it. -->
     <PackageVersion Include="AngleSharp" Version="1.10.5" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin

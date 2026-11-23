@@ -35,7 +35,8 @@ public static partial class DependencyInjection
         /// </para>
         /// <para>
         /// Calling this together with registering the app's <c>ITwoFactorStore</c> arms the sign-in
-        /// challenge: the container then builds <c>AuthenticationValidators</c> with the registered
+        /// challenge: provided the app registers <c>AuthenticationValidators</c> by type (the framework
+        /// does not register it), the container then builds it with the registered
         /// <c>ITwoFactorAuthenticator</c>, and <c>AuthenticationServiceBase</c> uses it whenever its
         /// own <c>twoFactor</c> argument is null. The app's <c>AuthenticationService</c> constructor
         /// does not change. Once this is called the store is required: the authenticator cannot be

@@ -63,7 +63,7 @@ namespace MMCA.Common.AI;
 /// first request.
 /// </para>
 /// <para>
-/// <b>What it registers when disabled: nothing.</b> A host with <c>Ai:Enabled</c> false gets the
+/// <b>What it registers when disabled: settings only.</b> A host with <c>Ai:Enabled</c> false gets the
 /// bound-and-validated <see cref="AiSettings"/> and no <c>IChatClient</c> at all, so consuming code
 /// gates on <c>GetService&lt;IChatClient&gt;()</c> returning <see langword="null"/> rather than on a
 /// flag. A feature that cannot resolve a client is off by construction, which is the behavior a

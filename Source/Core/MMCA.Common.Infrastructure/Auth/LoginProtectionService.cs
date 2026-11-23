@@ -165,8 +165,9 @@ public sealed partial class LoginProtectionService(
                     lockoutDuration,
                     cancellationToken).ConfigureAwait(false);
 
-                // Only the attempt that first reaches the threshold logs, so a credential-stuffing run
-                // that keeps guessing past it cannot flood the log (one line per locked account).
+                // Only the attempt that first reaches the threshold logs the lockout Warning, so a
+                // credential-stuffing run that keeps guessing past it adds one lockout line per locked
+                // account. Each failed attempt still writes its own Information line above.
                 if (newCount == _settings.MaxFailedAttempts)
                 {
                     LogLockoutTripped(_logger, LogKeyHash(email), lockoutSeconds);

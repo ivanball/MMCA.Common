@@ -118,8 +118,10 @@ public sealed class GatewayRateLimitingSettings
     public string? SyntheticTrafficSecret { get; init; }
 
     /// <summary>
-    /// Name of the request header a TRUSTED INTERNAL caller presents to claim the same no-limiter
-    /// partition. Only the name lives here; the header is worthless without
+    /// Name of the request header a TRUSTED INTERNAL caller presents to claim the trusted-caller
+    /// treatment <see cref="TrustedCallerMode"/> selects (the no-limiter partition, or the forwarded
+    /// visitor's own window under the default per-visitor mode). Only the name lives here; the
+    /// header is worthless without
     /// <see cref="TrustedCallerSecret"/>.
     /// </summary>
     [Required]

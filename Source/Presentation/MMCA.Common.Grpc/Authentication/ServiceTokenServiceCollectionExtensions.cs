@@ -54,8 +54,8 @@ public static class ServiceTokenServiceCollectionExtensions
         /// service scheme alone.
         /// <para>
         /// The service scheme is never made the default, so a service token satisfies only an
-        /// endpoint that names <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> (or the scheme
-        /// itself); a plain <c>[Authorize]</c> endpoint still authenticates the user scheme alone.
+        /// endpoint that names <see cref="ServiceTokenDefaults.InternalCallerPolicy"/> or
+        /// <see cref="ServiceTokenDefaults.ServiceCallerPolicy"/> (or the scheme itself); a plain <c>[Authorize]</c> endpoint still authenticates the user scheme alone.
         /// Register the user scheme as well (<c>AddCommonAuthentication</c> or
         /// <c>AddForwardedJwtBearer</c>): ASP.NET Core falls back to a lone registered scheme as the
         /// default, so a host where the service scheme would end up the default fails at startup.

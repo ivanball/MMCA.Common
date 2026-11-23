@@ -12,9 +12,10 @@ namespace MMCA.Common.Infrastructure.Persistence;
 /// <see cref="SqlException"/>, so the chain is walked rather than the outermost exception alone.
 /// The two numbers that matter are 2601 (duplicate key rejected by a unique INDEX) and 2627
 /// (duplicate key violating a PRIMARY KEY or UNIQUE constraint); every other SQL Server error (a
-/// foreign-key failure, a deadlock victim, a timeout) is deliberately NOT a unique violation and
-/// must keep propagating, because treating those as a collision would either loop or hide a real
-/// fault.
+/// foreign-key failure, a deadlock victim, a timeout) is deliberately NOT a unique violation by
+/// number and must keep propagating, because treating those as a collision would either loop or
+/// hide a real fault. The only way such a link still classifies is the message fallback below,
+/// which every link (a <see cref="SqlException"/> with another number included) passes through.
 /// </para>
 /// <para>
 /// This is also the default registration for hosts running another engine. The number check simply
@@ -54,7 +55,8 @@ public sealed class SqlServerUniqueConstraintViolationDetector : IUniqueConstrai
             }
 
             // Fallback, and ONLY a fallback: it exists so a link in the chain that is not a
-            // SqlException still classifies. A wrapper that captured the provider failure as text
+            // SqlException still classifies, though it runs on every link, a SqlException whose
+            // number did not match included. A wrapper that captured the provider failure as text
             // (a retry decorator re-throwing its own type, another engine's provider, a test double
             // standing in for the provider) carries the number nowhere but the message, and both
             // 2601 and 2627 report "Cannot insert duplicate key". The numbers themselves are never

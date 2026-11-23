@@ -38,7 +38,7 @@ using MMCA.Common.Shared.Identifiers;
 namespace MMCA.Common.Infrastructure;
 
 /// <summary>
-/// Infrastructure layer DI registration. Uses C# preview extension types to add methods
+/// Infrastructure layer DI registration. Uses C# extension blocks (<c>extension(T)</c>) to add methods
 /// directly to <see cref="IServiceCollection"/>.
 /// </summary>
 [SuppressMessage(

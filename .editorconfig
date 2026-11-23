@@ -3,9 +3,10 @@ root = true
 # =============================================================================
 # SHARED ANALYZER BASELINE
 # Everything above the "REPO-SPECIFIC DELTAS" marker near the bottom of this
-# file is byte-identical across MMCA.Common, MMCA.Store, MMCA.ADC and
-# MMCA.Helpdesk. Edit it in all four repos in the same pass and verify with
-# the workspace script: Tools\Scripts\compare-analyzer-config.ps1
+# file holds the same lines in MMCA.Common, MMCA.Store, MMCA.ADC and
+# MMCA.Helpdesk (the check ignores case and line order, so keep the order
+# identical by hand). Edit it in all four repos in the same pass and verify
+# with the workspace script: Tools\Scripts\compare-analyzer-config.ps1
 # =============================================================================
 
 ###############################################################################
@@ -797,7 +798,8 @@ dotnet_diagnostic.IDE0130.severity = none
 # REPO-SPECIFIC DELTAS
 # Documented deviations from the shared baseline only. Everything above this
 # marker must stay byte-identical across the four repos
-# (verify: Tools\Scripts\compare-analyzer-config.ps1).
+# (Tools\Scripts\compare-analyzer-config.ps1 checks only that the same lines
+# are present, case- and order-insensitively, not byte identity).
 ###############################################################################
 
 # CA2007: MMCA.Common ships as NuGet libraries; packaged non-UI code must not
