@@ -26,7 +26,7 @@
     interfaces (Result<>, AuditableAggregateRootEntity<>, IIntegrationEvent, IAnonymizable, IConcurrencyAware,
     ValueObject, ICommandHandler<,>, ControllerBase, …) by full-name string matching over the
     assemblies each repo supplies through IArchitectureMap. This keeps the package free of the
-    framework's heavy transitive graph (EF Core, MassTransit, SQLite, …) so a consumer's
+    framework's heavy transitive graph (EF Core, RabbitMQ.Client, SQLite, …) so a consumer's
     *.Architecture.Tests project only pulls the test tooling.
   -->
   <ItemGroup>

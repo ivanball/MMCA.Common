@@ -45,6 +45,36 @@ public static partial class ArchitectureRules
         major.Should().BeLessThan(exclusiveMajorCeiling, because: reason);
     }
 
+    /// <summary>
+    /// No <c>PackageVersion</c> in the repo's <c>Directory.Packages.props</c> (found by walking up from the
+    /// test output folder) has an id starting with <paramref name="packageIdPrefix"/>.
+    /// </summary>
+    /// <param name="packageIdPrefix">The banned package-id prefix, matched case-insensitively as NuGet ids are.</param>
+    /// <param name="reason">Why the packages are banned, shown on failure.</param>
+    public static void NoPackageVersionWithPrefix(string packageIdPrefix, string reason) =>
+        NoPackageVersionWithPrefix(FindUpwards("Directory.Packages.props"), packageIdPrefix, reason);
+
+    /// <summary>
+    /// No <c>PackageVersion</c> in the given central package file has an id starting with
+    /// <paramref name="packageIdPrefix"/>.
+    /// </summary>
+    /// <param name="propsPath">Path of the <c>Directory.Packages.props</c> file to read.</param>
+    /// <param name="packageIdPrefix">The banned package-id prefix, matched case-insensitively as NuGet ids are.</param>
+    /// <param name="reason">Why the packages are banned, shown on failure.</param>
+    public static void NoPackageVersionWithPrefix(string propsPath, string packageIdPrefix, string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propsPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageIdPrefix);
+
+        var offending = XDocument.Load(propsPath)
+            .Descendants("PackageVersion")
+            .Select(e => (string?)e.Attribute("Include") ?? string.Empty)
+            .Where(id => id.StartsWith(packageIdPrefix, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        offending.Should().BeEmpty(because: reason);
+    }
+
     private static bool HasPiiProperty(Type type) =>
         type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Any(p => p.GetCustomAttributes(inherit: true).Any(a => string.Equals(a.GetType().Name, "PiiAttribute", StringComparison.Ordinal)));

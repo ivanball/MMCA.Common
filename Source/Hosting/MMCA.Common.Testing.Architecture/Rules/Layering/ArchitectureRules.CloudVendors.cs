@@ -7,8 +7,10 @@ public static partial class ArchitectureRules
     /// cloud-neutral assembly may name: the Azure, AWS and Google Cloud SDKs (<c>Google</c> covers
     /// <c>Google.Cloud.*</c>, <c>Google.Apis.*</c>, <c>Google.Api.Gax</c> and the <c>Google</c>
     /// namespace itself, where <c>GoogleApiException</c> lives; <c>FirebaseAdmin</c> and
-    /// <c>Grpc.Auth</c>, the Google credential bridge for gRPC, sit outside it), the MassTransit
-    /// transports for their brokers, and the adapters that hold them (<c>MMCA.Common.Azure</c>,
+    /// <c>Grpc.Auth</c>, the Google credential bridge for gRPC, sit outside it; <c>Azure</c> and
+    /// <c>Amazon</c> cover the Service Bus and SQS/SNS clients the native broker transports run on), the
+    /// retired MassTransit vendor transports (still refused, ADR-118), and the adapters that hold the
+    /// vendor code (<c>MMCA.Common.Azure</c>,
     /// <c>MMCA.Common.Azure.Startup</c>, <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>,
     /// <c>MMCA.Common.Testing.Azure</c>).
     /// <para>
@@ -43,7 +45,7 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// Assembly-name prefixes a cloud-neutral assembly may not reference: the vendor SDK assemblies,
-    /// the vendor broker transports, and the adapter packages. Plain string prefixes, so the trailing
+    /// the retired MassTransit vendor transports, and the adapter packages. Plain string prefixes, so the trailing
     /// dot keeps <c>Google.</c> off an unrelated <c>GoogleGson</c>-style name.
     /// </summary>
     public static readonly IReadOnlyList<string> CloudVendorAssemblyPrefixes =
@@ -128,7 +130,7 @@ public static partial class ArchitectureRules
         }
     }
 
-    /// <summary>Whether an assembly name is a vendor SDK, a vendor broker transport or an adapter.</summary>
+    /// <summary>Whether an assembly name is a vendor SDK, a retired vendor broker transport or an adapter.</summary>
     /// <param name="assemblyName">The referenced assembly's simple name.</param>
     /// <returns><see langword="true"/> for a cloud-vendor assembly.</returns>
     private static bool IsCloudVendorAssembly(string assemblyName) =>
