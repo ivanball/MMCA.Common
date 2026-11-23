@@ -180,28 +180,15 @@
          EXACTLY: the SDK moved 1.x to 2.x within a year and its filter and transport surface changed
          between minors, so a bump is a deliberate re-read of the filter API, never a float. -->
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
-    <!-- Messaging (MassTransit) -->
-    <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
-         license check at startup ("License must be specified with SetLicense/SetLicenseLocation
-         or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
-         enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
-         and reintroduced the crash: do NOT bump past v8 without configuring a license. -->
-    <PackageVersion Include="MassTransit" Version="8.5.12" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.12" />
-    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.12" />
-    <!-- Amazon SQS/SNS transport (MMCA.Common.Aws), Apache-2.0 like the rest of the v8 line. Same
-         version as every MassTransit pin above: the transports and the core bump together. -->
-    <PackageVersion Include="MassTransit.AmazonSQS" Version="8.5.12" />
-    <!-- PostgreSQL SQL transport, the built-in cloud-neutral broker in MMCA.Common.Infrastructure
-         (MessageBus:Provider=PostgreSql): queues, topics and scheduling in tables of a PostgreSQL
-         database, so any managed Postgres (Cloud SQL, RDS, Azure Database) is a broker. Apache-2.0,
-         same v8 line and version as every MassTransit pin above. Brings Dapper; its Npgsql floor
-         resolves to the Npgsql pin below. -->
-    <PackageVersion Include="MassTransit.SqlTransport.PostgreSQL" Version="8.5.12" />
-    <!-- Azure Service Bus transport (MMCA.Common.Azure) and its emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing.Azure): the two
-         clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
-         working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older
-         transitive MassTransit.Azure.ServiceBus.Core would otherwise resolve. -->
+    <!-- Messaging: the broker transports are framework code over the vendor SDKs (ADR-118). No
+         messaging library is referenced, and DependencyVersionTests fails the build on any
+         MassTransit* PackageVersion. RabbitMQ.Client (the built-in RabbitMQ transport) is pinned
+         with the other database and broker drivers below; the PostgreSQL transport runs on Npgsql. -->
+    <!-- Native Azure Service Bus transport (MMCA.Common.Azure: ServiceBusClient for publish, receive
+         and scheduled redelivery, ServiceBusAdministrationClient for topic, subscription and queue
+         provisioning) and its emulator test tier (ServiceBusEmulatorFixtureBase in
+         MMCA.Common.Testing.Azure). 7.20.2 is the first line with working emulator admin-plane
+         support (>= 7.20.1 required). -->
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
     <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
@@ -471,8 +458,9 @@
          IHealthCheck classes (Health/), so the drivers they open a connection with are its direct
          references: Microsoft.Data.SqlClient (above), Npgsql (the same build the EF provider uses,
          ADR-113), Microsoft.Data.Sqlite and RabbitMQ.Client. Microsoft.Data.Sqlite follows the EF Core
-         line so it stays aligned with Microsoft.EntityFrameworkCore.Sqlite; RabbitMQ.Client matches
-         the build MassTransit.RabbitMQ already resolves, so a host carries one client version. -->
+         line so it stays aligned with Microsoft.EntityFrameworkCore.Sqlite; RabbitMQ.Client is also
+         the client the built-in RabbitMQ broker transport in MMCA.Common.Infrastructure runs on, so
+         a host carries one client version. -->
     <PackageVersion Include="Npgsql" Version="$(MmcaNpgsqlVersion)" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
