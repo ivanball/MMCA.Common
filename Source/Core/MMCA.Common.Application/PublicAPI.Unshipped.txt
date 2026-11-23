@@ -1,1 +1,2 @@
 #nullable enable
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IOutboxAdministration.RepublishProcessedAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!

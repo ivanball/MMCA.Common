@@ -191,3 +191,4 @@ MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.T
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceFlags.init -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.get -> byte?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.RepublishProcessedAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
