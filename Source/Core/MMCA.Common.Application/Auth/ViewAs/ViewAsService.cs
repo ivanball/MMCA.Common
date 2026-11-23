@@ -181,8 +181,9 @@ public sealed class ViewAsService(
         }
 
         // A lock writes the soft-deleted-user marker, which every host answers with 401 for this user
-        // id, so a token minted for a locked account could never be used. Refused here, before the
-        // grant row is written.
+        // id while it lives (it expires after the longer of the access-token lifetime plus clock skew
+        // and 20 minutes), so a token minted for a recently locked account would be unusable. Refused
+        // here, however old the lock, before the grant row is written.
         if (subject.IsLocked)
         {
             return Error.Validation("ViewAs.TargetLocked", "A locked account cannot be viewed.");

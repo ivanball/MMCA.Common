@@ -7,10 +7,11 @@
   </PropertyGroup>
 
   <!--
-    DELIBERATELY OUTSIDE MMCA.Common.slnx: an AppHost's committed lock file carries a RID-specific
-    Aspire.Dashboard.Sdk RID-specific entry, so a lock committed from Windows fails the solution's
-    locked-mode restore on ubuntu, and the fast solution-wide unit loop must not build an
-    orchestrator. The apphost-testing CI job restores and builds this by path.
+    DELIBERATELY OUTSIDE MMCA.Common.slnx: the fast solution-wide unit loop must not build an
+    orchestrator. (Earlier Aspire versions also put a RID-specific Aspire.Dashboard.Sdk entry in an
+    AppHost lock, so a lock committed from Windows failed locked-mode restore on ubuntu; the current
+    packages.lock.json carries only the net11.0 section.) The apphost-testing CI job restores and
+    builds this by path.
 
     A C# AppHost is a Microsoft.NET.Sdk project (Aspire 17 retired the Aspire.AppHost.Sdk project
     SDK): Aspire.Hosting.AppHost brings the AppHost build targets (including the Projects marker for

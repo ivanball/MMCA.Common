@@ -157,8 +157,11 @@ public static class GatewayRateLimitingExtensions
     }
 
     /// <summary>
-    /// Whether this request proves the configured trusted-internal-caller secret and is therefore
-    /// exempt from BOTH edge limiters. Always <see langword="false"/> when no secret is configured.
+    /// Whether this request proves the configured trusted-internal-caller secret. A proven caller is
+    /// exempt from the concurrency ceiling; on the per-IP window it is exempt under
+    /// <see cref="TrustedCallerMode.Exempt"/> or when no visitor address is forwarded, and otherwise
+    /// counts against the visitor's own window (<see cref="TrustedCallerMode.PerVisitor"/>, the
+    /// default). Always <see langword="false"/> when no secret is configured.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
@@ -213,8 +216,10 @@ public static class GatewayRateLimitingExtensions
     }
 
     /// <summary>
-    /// Whether this request takes the no-limiter partition on both edge limiters: a bypassed path,
-    /// proven synthetic traffic, or a proven trusted internal caller.
+    /// Whether this request takes the no-limiter partition: a bypassed path, proven synthetic
+    /// traffic, or a proven trusted internal caller. The concurrency ceiling applies it as is; the
+    /// per-IP window decides a trusted caller first, by <see cref="TrustedCallerMode"/>, so there
+    /// this exemption reaches only bypassed paths and synthetic traffic.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>

@@ -18,7 +18,7 @@ public abstract class ClockReadTestsBase
 
     /// <summary>
     /// Type full names (<c>MMCA.X.Sales.Domain.Orders.Order</c>), namespace prefixes, or single
-    /// members (<c>MMCA.X.Sales.Domain.Orders.Order.RepublishFulfillment</c>) where reading the clock
+    /// members (<c>MMCA.X.Sales.Domain.Orders.Order.SomeMethod</c>) where reading the clock
     /// is the deliberate, reviewed choice. Empty by default.
     /// </summary>
     protected virtual IReadOnlyCollection<string> AllowedClockReaders => [];

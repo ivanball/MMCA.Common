@@ -55,7 +55,8 @@ public sealed partial class OutputCacheEvictionHandler(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Deliberately broad (CA1031/S2221 are suggestions here): an eviction store that
+                // Deliberately broad (CA1031 stays at error but does not flag a filtered catch, and
+                // S2221 is a suggestion): an eviction store that
                 // throws must not turn a coherence hint into a dead-lettered message.
                 OutputCacheMetrics.RecordEvictionFailure(tag);
                 LogEvictionFailed(logger, tag, ex);

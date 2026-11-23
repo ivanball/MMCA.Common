@@ -138,7 +138,9 @@ public static class AuthorizationExtensions
                 ServiceDescriptor.Singleton<IAuthorizationHandler, MultiFactorRoleAuthorizationHandler>());
 
             // GetService, not GetRequiredService: a host with no IConfiguration binds nothing and the
-            // rule stays off. Bound once, so the list is not appended to twice.
+            // rule stays off. Bound once, so the list is not appended to twice. No ValidateDataAnnotations
+            // or ValidateOnStart: the settings carry one role list and no annotations, and every value,
+            // the empty default included, is valid (empty means the rule is off).
             services.AddOptions<MultiFactorAuthorizationSettings>()
                 .Configure<IServiceProvider>(static (settings, provider) =>
                     provider.GetService<IConfiguration>()?.GetSection(MultiFactorAuthorizationSettings.SectionName).Bind(settings));

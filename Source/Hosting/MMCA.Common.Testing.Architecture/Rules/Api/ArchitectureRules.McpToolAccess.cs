@@ -9,8 +9,9 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// Every method declared an MCP tool (<c>[McpServerTool]</c>) says who may call it: exactly one of
-    /// <c>[McpToolPermission]</c> or <c>[McpToolPublic]</c>. A tool with neither is public by default, a
-    /// choice nobody has to make out loud today; with both, the permission gate wins silently and the
+    /// <c>[McpToolPermission]</c> or <c>[McpToolPublic]</c>. A tool with neither already fails the host
+    /// at startup (<c>MapCommonMcp</c> refuses it); this rule catches it at build time instead. With
+    /// both, the permission gate wins silently and the
     /// public mark is a lie. <c>[McpServerTool]</c> is read with inheritance, so an override of a tool
     /// is a tool; the two declarations are read only where declared, so that override states its own.
     /// </summary>

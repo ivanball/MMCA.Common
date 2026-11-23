@@ -15,15 +15,15 @@ using MMCA.Common.Testing.Architecture;
 namespace MMCA.Common.Architecture.Tests.Domain;
 
 /// <summary>
-/// Runs the shipped delete-behavior fitness functions against the framework's OWN finalized models,
-/// on both relational contexts a consumer can host (<c>SqliteDbContext</c> and
-/// <c>SQLServerDbContext</c>): nothing MMCA.Common maps may cascade without an explicit
-/// <c>OnDelete(DeleteBehavior.Cascade)</c>, and everything the convention touched restricts.
+/// Runs the shipped delete-behavior fitness functions against the framework's OWN finalized models:
+/// the default Sqlite and SQL Server models (<c>SqliteDbContext</c> and <c>SQLServerDbContext</c>),
+/// plus a SQL Server model with every optional framework table mapped (audit trail, scheduled jobs,
+/// refresh sessions, permission grants, view-as grants, feature-flag overrides, passkey
+/// credentials, machine clients, webhook subscriptions). Nothing MMCA.Common maps may cascade
+/// without an explicit <c>OnDelete(DeleteBehavior.Cascade)</c>, and everything the convention
+/// touched restricts.
 /// <para>
-/// The framework's own tables (outbox, inbox, internal commands, scheduler, audit trail, refresh
-/// sessions, permission grants, notifications) declare no relationships between each other, so today
-/// both rules pass over a model whose only foreign keys are ownership ones. That is the point of the
-/// gate: the day a framework table gains a relationship, this test decides whether its delete
+/// The point of the gate: the day a framework table gains a relationship, this test decides whether its delete
 /// behavior was a decision or an accident, before the consumers inherit it in a migration.
 /// </para>
 /// </summary>

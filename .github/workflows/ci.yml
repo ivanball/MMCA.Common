@@ -222,7 +222,8 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Fails CLOSED (SEC-Common-62) and honours the NuGetAuditSuppress accept-list in
         # Directory.Build.props. The logic lives in the composite action so this repository and its
-        # consumers (ADC and Store deploy.yml, via ivanball/MMCA.Common/.github/actions/...@main) run
+        # consumers (ADC and Store deploy.yml, via ivanball/MMCA.Common/.github/actions/... pinned to
+        # a release commit SHA) run
         # ONE implementation instead of a per-repository copy that drifts (ADR-038).
         uses: ./.github/actions/nuget-vulnerability-audit
         with:
@@ -340,7 +341,7 @@ jobs:
         browser: [chromium, firefox, webkit]
     # All three engines are required merge gates (§22): firefox promoted 2026-07-12 after a clean
     # observed streak, webkit promoted 2026-07-16 after 11 consecutive green main runs since its
-    # last flake (2026-07-12 00:45). Add the webkit check to branch protection alongside the others.
+    # last flake (2026-07-12 00:45). All three checks sit in main branch protection.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
