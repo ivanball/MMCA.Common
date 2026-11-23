@@ -18,11 +18,7 @@
     <PackageReference Include="AWSSDK.Core" />
     <!-- The native Amazon SQS/SNS broker transport (AddAmazonSqsTransport): receive, redeliver and
          dead-letter on SQS; it publishes through AWSSDK.SimpleNotificationService below. -->
-    <!-- TEMPORARY: no code here uses MassTransit any more. This reference stays only because it is
-         what brings AWSSDK.SQS (4.0.100.14, transitively) while Directory.Packages.props has no
-         AWSSDK.SQS pin. Replace it with <PackageReference Include="AWSSDK.SQS" /> once that pin
-         is added. -->
-    <PackageReference Include="MassTransit.AmazonSQS" />
+    <PackageReference Include="AWSSDK.SQS" />
     <!-- Secrets Manager as a configuration source (AddAwsSecretsManagerConfiguration). -->
     <PackageReference Include="AWSSDK.SecretsManager" />
     <!-- The shared DataProtection key ring in Systems Manager Parameter Store (AddAwsDataProtection). -->
