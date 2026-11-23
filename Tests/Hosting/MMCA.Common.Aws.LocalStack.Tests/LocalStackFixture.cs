@@ -3,6 +3,7 @@ using Amazon.Runtime;
 using Amazon.SecretsManager;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleSystemsManagement;
+using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Testcontainers.LocalStack;
 
@@ -101,6 +102,11 @@ public sealed class LocalStackFixture : IAsyncLifetime
         ["NativePush:Sns:AccessKeyId"] = DummyKey,
         ["NativePush:Sns:SecretAccessKey"] = DummyKey,
     };
+
+    /// <summary>An SQS client on LocalStack, for asserting the broker transport's queues and sending raw messages.</summary>
+    /// <returns>The client; the caller disposes it.</returns>
+    public AmazonSQSClient CreateSqsClient() =>
+        new(Credentials, new AmazonSQSConfig { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region });
 
     /// <summary>An SNS client on LocalStack, for arranging platform applications and asserting endpoints.</summary>
     /// <returns>The client; the caller disposes it.</returns>

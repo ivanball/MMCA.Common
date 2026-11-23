@@ -8,8 +8,9 @@
          This tier exists because the unit tier can only assert the requests the adapter BUILDS: that
          the S3-compatible API accepts them with the checksum posture and addressing style the adapter
          picks, that Content-Type and Content-Disposition come back on the object, and that the
-         ambient MMCA-* headers survive SNS + SQS (whose 10-attribute cap MassTransit does not police)
-         are claims only a real endpoint can settle. -->
+         native SQS/SNS transport's topology, raw delivery, delayed redelivery and error queue work, with
+         every header packed into one message attribute under the 10-attribute cap, are claims only a
+         real endpoint can settle. -->
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
