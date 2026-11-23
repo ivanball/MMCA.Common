@@ -1,1 +1,9 @@
 #nullable enable
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminEndpoint.get -> string!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConnectionString.get -> string!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.RecordConsumed<TEvent>(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder! consumers, Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Services.get -> System.IServiceProvider!
+static MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ComposeHostConfiguration(string! connectionString, string! adminEndpoint, string! queueName) -> System.Collections.Generic.Dictionary<string!, string?>!
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureConsumers(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder! consumers, Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureHost(System.Collections.Generic.IDictionary<string!, string?>! configuration) -> void

@@ -20,11 +20,9 @@
     <PackageReference Include="Azure.Storage.Blobs" />
     <!-- Native push (ADR-044): Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageReference Include="Microsoft.Azure.NotificationHubs" />
-    <!-- Azure Service Bus transport. Azure.Messaging.ServiceBus is direct for the emulator's
-         custom-clients Host() overload and to lift the older transitive the MassTransit transport
-         would otherwise resolve; see the pin note in Directory.Packages.props. -->
+    <!-- Azure Service Bus transport (Messaging/AzureServiceBusTransport): the data-plane client, the
+         processor and the administration client the topology is provisioned through. -->
     <PackageReference Include="Azure.Messaging.ServiceBus" />
-    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />
     <!-- SqlClient 7.0 moved the Entra ID providers (Active Directory Managed Identity, Default, ...)
          out of the core driver into this extension package, which registers them on load. Without it a
          production host whose connection string says Authentication=Active Directory Managed Identity

@@ -1,26 +1,37 @@
 using Azure.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Azure.Messaging;
 
 /// <summary>
 /// The Azure Service Bus broker transport (<c>MessageBus:Provider=AzureServiceBus</c>), registered by
-/// <c>AddAzureServiceBusTransport()</c> and selected by <c>AddBrokerMessaging</c>.
+/// <c>AddAzureServiceBusTransport()</c> and selected by <c>AddBrokerMessaging</c>, on the
+/// Azure.Messaging.ServiceBus SDK alone.
+/// <para>
+/// Topology: a topic per event (<see cref="AzureServiceBusEntityNames.Topic"/>), the host's queue
+/// (<see cref="AzureServiceBusEntityNames.Queue"/>), and on each consumed topic one subscription named
+/// after the queue (<see cref="AzureServiceBusEntityNames.Subscription"/>) that forwards every message
+/// to it. With <c>MessageBus:ProvisionTopology</c> on (the default) the receiver creates them
+/// idempotently when it starts and the publisher creates a missing topic on its first publish.
+/// Redelivery schedules a copy on the queue (Service Bus schedules arbitrarily far ahead, so
+/// <see cref="MaxRedeliveryDelay"/> is <see langword="null"/>), and dead-lettering uses the queue's
+/// native dead-letter queue.
+/// </para>
 /// <para>
 /// Two ways onto a namespace. <c>MessageBus:AzureServiceBus:FullyQualifiedNamespace</c> signs in with a
 /// Microsoft Entra token from <c>DefaultAzureCredential</c> (pinned to the user-assigned managed
 /// identity named by <c>MessageBus:AzureServiceBus:ManagedIdentityClientId</c> when it is set), so the
 /// namespace can run with shared access keys switched off; it wins when a connection string is also
-/// present. Otherwise the resolved broker connection string is used exactly as before. With neither,
-/// registration fails naming both.
-/// </para>
-/// <para>
-/// PLACEHOLDER on <c>feat/native-messaging</c>: the native Azure.Messaging.ServiceBus implementation
-/// (a topic per event, a subscription per host queue forwarding to it, scheduled redelivery and the
-/// native dead-letter queue) replaces <see cref="Register"/> before the branch merges. The namespace
-/// and credential resolution below is kept for it.
+/// present. Otherwise the resolved broker connection string is used. With neither, registration fails
+/// naming both. A connection string carrying <c>UseDevelopmentEmulator=true</c> targets the local
+/// emulator, whose management plane is reached through <c>MessageBus:EmulatorAdminEndpoint</c>
+/// (<see cref="ServiceBusEmulatorSupport"/>).
 /// </para>
 /// </summary>
 internal sealed class AzureServiceBusTransport : IBrokerTransport
@@ -51,12 +62,102 @@ internal sealed class AzureServiceBusTransport : IBrokerTransport
     public TimeSpan? MaxRedeliveryDelay => null;
 
     /// <inheritdoc />
+    /// <exception cref="InvalidOperationException">
+    /// Neither a fully qualified namespace nor a connection string is configured, the namespace is not
+    /// a host name, or an emulator connection string has no valid <c>MessageBus:EmulatorAdminEndpoint</c>.
+    /// </exception>
     public void Register(IServiceCollection services, BrokerTransportContext context)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(context);
 
-        throw new NotSupportedException("Azure Service Bus transport: native implementation pending on feat/native-messaging");
+        // Resolved HERE, while AddBrokerMessaging runs, so a configuration error fails startup rather
+        // than the first publish.
+        var endpoint = ResolveEndpoint(context);
+        var settings = context.Settings;
+        var topology = context.Topology;
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(_ => new AzureServiceBusConnection(endpoint));
+
+        if (settings.ProvisionTopology)
+        {
+            services.AddSingleton(sp => new AzureServiceBusTopologyProvisioner(
+                sp.GetRequiredService<AzureServiceBusConnection>().Administration,
+                endpoint.IsEmulator,
+                LoggerFor<AzureServiceBusTopologyProvisioner>(sp)));
+        }
+
+        services.AddSingleton<IBrokerPublisher>(sp => new AzureServiceBusPublisher(
+            sp.GetRequiredService<AzureServiceBusConnection>().Client,
+            sp.GetService<AzureServiceBusTopologyProvisioner>()));
+
+        services.AddHostedService(sp => new AzureServiceBusReceiver(
+            sp.GetRequiredService<AzureServiceBusConnection>(),
+            topology,
+            new AzureServiceBusDeliveryHandler(
+                sp.GetRequiredService<IBrokerReceivePipeline>(),
+                sp.GetRequiredService<TimeProvider>(),
+                LoggerFor<AzureServiceBusDeliveryHandler>(sp)),
+            sp.GetService<AzureServiceBusTopologyProvisioner>(),
+            settings,
+            LoggerFor<AzureServiceBusReceiver>(sp)));
+    }
+
+    /// <summary>
+    /// Resolves where the transport connects: the token-signed namespace when one is configured,
+    /// otherwise the connection string, with the emulator's management-plane connection string derived
+    /// from <c>MessageBus:EmulatorAdminEndpoint</c> when the connection string targets the emulator.
+    /// </summary>
+    /// <param name="context">The registration context.</param>
+    /// <returns>The validated endpoint.</returns>
+    /// <exception cref="InvalidOperationException">The configuration names no usable namespace.</exception>
+    internal AzureServiceBusEndpoint ResolveEndpoint(BrokerTransportContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var serviceBusSettings = ReadSettings(context.Configuration);
+        var connectionString = context.ConnectionString;
+
+        var namespaceAddress = ResolveNamespaceAddress(serviceBusSettings.FullyQualifiedNamespace);
+        if (namespaceAddress is not null)
+        {
+            return new AzureServiceBusEndpoint(
+                namespaceAddress.Host,
+                CreateCredential(serviceBusSettings.ManagedIdentityClientId),
+                connectionString: null,
+                administrationConnectionString: null,
+                isEmulator: false);
+        }
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"MessageBus:Provider is '{ProviderName}', but no namespace is configured. Set {FullyQualifiedNamespaceKey} "
+                + "(for example 'contoso.servicebus.windows.net') to sign in with a Microsoft Entra token (managed identity, optionally "
+                + $"{AzureServiceBusTransportSettings.SectionName}:ManagedIdentityClientId), or a connection string "
+                + "(MessageBus:ConnectionString, ConnectionStrings:rabbitmq or ConnectionStrings:messaging).");
+        }
+
+        // The emulator branch exists so a development stack can run the SAME transport production
+        // runs. It is entered only when the connection string carries UseDevelopmentEmulator=true, a
+        // token no real namespace emits.
+        if (ServiceBusEmulatorSupport.IsEmulatorConnectionString(connectionString))
+        {
+            return new AzureServiceBusEndpoint(
+                fullyQualifiedNamespace: null,
+                credential: null,
+                connectionString,
+                ServiceBusEmulatorSupport.BuildAdminConnectionString(connectionString, context.Settings.EmulatorAdminEndpoint),
+                isEmulator: true);
+        }
+
+        return new AzureServiceBusEndpoint(
+            fullyQualifiedNamespace: null,
+            credential: null,
+            connectionString,
+            connectionString,
+            isEmulator: false);
     }
 
     /// <summary>Creates the Entra credential for the configured managed identity, through the injected factory.</summary>
@@ -107,4 +208,7 @@ internal sealed class AzureServiceBusTransport : IBrokerTransport
         && string.Equals(address.Scheme, "sb", StringComparison.OrdinalIgnoreCase)
             ? address.Host
             : null;
+
+    private static ILogger LoggerFor<T>(IServiceProvider services) =>
+        (services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger<T>();
 }

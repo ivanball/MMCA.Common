@@ -10,8 +10,8 @@ namespace MMCA.Common.Aspire.Hosting;
 /// <para>
 /// The resource publishes two endpoints because the emulator serves two planes on two protocols:
 /// AMQP on 5672 (the data plane every publish and consume flows through) and HTTP on 5300 (the
-/// management plane that creates topics, subscriptions and queues). MassTransit provisions its own
-/// topology at bus start, so a broker with no admin plane is not usable at all: the admin plane
+/// management plane that creates topics, subscriptions and queues). The Azure Service Bus transport
+/// provisions its own topology when its receiver starts, so a broker with no admin plane is not usable at all: the admin plane
 /// shipped in emulator 2.0.0, which is why the image tag floor is 2.x.
 /// </para>
 /// <para>
@@ -25,8 +25,8 @@ namespace MMCA.Common.Aspire.Hosting;
 /// <para>
 /// No health check is declared. A <c>WaitFor</c> on this resource therefore gates on the container
 /// running, not on the emulator having finished its warm-up; the consuming service absorbs the
-/// remainder, because MassTransit starts its bus in the background and reconnects rather than
-/// failing host startup.
+/// remainder, because the transport's receiver provisions and connects in the background,
+/// retrying, rather than failing host startup.
 /// </para>
 /// </summary>
 public sealed class ServiceBusEmulatorResource : ContainerResource, IResourceWithConnectionString
@@ -70,7 +70,8 @@ public sealed class ServiceBusEmulatorResource : ContainerResource, IResourceWit
     /// <summary>
     /// Gets the management-plane base address as a URL. A consumer hands this to
     /// <c>MessageBus:EmulatorAdminEndpoint</c>, which is what lets the infrastructure layer build the
-    /// second (administration) client MassTransit v8 needs to provision topology on the emulator.
+    /// second (administration) client the Azure Service Bus transport provisions topology through on
+    /// the emulator.
     /// <para>
     /// The scheme is read off the allocated endpoint rather than written literally, so the value
     /// tracks whatever the endpoint was declared as (<c>http</c> today: the emulator's management

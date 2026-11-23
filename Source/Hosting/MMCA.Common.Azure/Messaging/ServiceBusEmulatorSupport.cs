@@ -5,8 +5,8 @@ namespace MMCA.Common.Azure.Messaging;
 
 /// <summary>
 /// The pieces the Azure Service Bus transport needs to run against the OFFICIAL local emulator
-/// instead of a real namespace, kept in one place so the production path in
-/// <c>AzureServiceBusTransport</c> never branches on them.
+/// instead of a real namespace, kept in one place so the production path reads only one flag
+/// (<c>AzureServiceBusEndpoint.IsEmulator</c>), set from the connection string.
 /// <para>
 /// The emulator is entered only when the resolved connection string carries
 /// <c>UseDevelopmentEmulator=true</c> (<see cref="IsEmulatorConnectionString"/>). A real Azure
