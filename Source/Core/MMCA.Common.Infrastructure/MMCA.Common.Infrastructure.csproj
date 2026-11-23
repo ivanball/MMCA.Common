@@ -17,6 +17,9 @@
     <!-- Docker-gated SQL Server tier (outside the .slnx): asserts what the SqlClient provider emits
          against a real server, for the same reason as the PostgreSQL tier. -->
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.SQLServer.Tests" />
+    <!-- Docker-gated RabbitMQ tier (outside the .slnx): drives the built-in RabbitMQ transport against
+         a real broker (exchanges, delay queues, the error queue, competing consumers). -->
+    <InternalsVisibleTo Include="MMCA.Common.Infrastructure.RabbitMq.Tests" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -52,6 +55,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <!-- The built-in RabbitMQ broker transport (Messaging/Transports/RabbitMq). Same build the
+         MMCA.Common.Aspire readiness check uses, so a host carries one client version. -->
+    <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="StackExchange.Redis" />
     <!-- Two-level caching behind the opt-in AddCommonHybridCache (HybridCacheService). Referenced
          unconditionally so the type is available to hosts that call it; a host that does not is

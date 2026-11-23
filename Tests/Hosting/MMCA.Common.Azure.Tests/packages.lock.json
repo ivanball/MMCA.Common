@@ -775,6 +775,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
+          "RabbitMQ.Client": "[7.2.2, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.15, )"
@@ -2066,6 +2067,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
+          "RabbitMQ.Client": "[7.2.2, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }

@@ -5,6 +5,8 @@ using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Transports;
+using MMCA.Common.Infrastructure.Messaging.Transports.PostgreSql;
+using MMCA.Common.Infrastructure.Messaging.Transports.RabbitMq;
 
 namespace MMCA.Common.Infrastructure.Tests.Messaging.Transports;
 
@@ -117,16 +119,21 @@ public sealed class BrokerTransportRegistrationTests
     }
 
     [Theory]
-    [InlineData("RabbitMq", "RabbitMQ transport")]
-    [InlineData("rabbitmq", "RabbitMQ transport")]
-    [InlineData("PostgreSql", "PostgreSQL transport")]
-    public void AddBrokerMessaging_BuiltInProviders_ResolveToTheBuiltInTransports(string provider, string transportName)
+    [InlineData("RabbitMq", "amqp://guest:guest@localhost:5672", typeof(RabbitMqPublisher))]
+    [InlineData("rabbitmq", "amqp://guest:guest@localhost:5672", typeof(RabbitMqPublisher))]
+    [InlineData("PostgreSql", "Host=localhost;Database=broker;Username=u;Password=p", typeof(PostgreSqlPublisher))]
+    [InlineData("postgresql", "Host=localhost;Database=broker;Username=u;Password=p", typeof(PostgreSqlPublisher))]
+    public async Task AddBrokerMessaging_BuiltInProviders_ResolveToTheBuiltInTransports(string provider, string connectionString, Type publisherType)
     {
-        // The built-in transports are still placeholders on this branch: selecting one by name reaches
-        // its Register, which says so. Replaced by real registration tests when the transports land.
-        var act = () => new ServiceCollection().AddBrokerMessaging(ConfigurationFor(provider));
+        var services = new ServiceCollection();
+        services.AddLogging();
 
-        act.Should().Throw<NotSupportedException>().WithMessage($"{transportName}*");
+        services.AddBrokerMessaging(ConfigurationFor(provider, connectionString));
+
+        // Resolving the publisher opens nothing: both transports connect on first use.
+        await using var serviceProvider = services.BuildServiceProvider();
+        serviceProvider.GetRequiredService<IBrokerPublisher>().Should().BeOfType(publisherType);
+        services.Should().Contain(d => d.ServiceType == typeof(IMessageBus) && d.ImplementationType == typeof(BrokerMessageBus));
     }
 
     [Fact]
