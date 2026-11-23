@@ -24,9 +24,13 @@ inputs:
     required: false
     default: ""
   tool-version:
+    # 6.2.1 or later: 6.2.0 crashes ("Sequence contains more than one matching element") when two
+    # versions of one package sit in the merged solution graph and a dependency range matches both,
+    # which the per-framework EF Core and Npgsql lines (10.x on net10.0, 11.x on net11.0) produce
+    # (CycloneDX/cyclonedx-dotnet#1110, fixed in 6.2.1).
     description: CycloneDX .NET tool version to install.
     required: false
-    default: 6.2.0
+    default: 6.2.1
 
 outputs:
   bom-path:
