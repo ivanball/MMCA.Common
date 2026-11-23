@@ -9,6 +9,8 @@ using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Consumers;
 using MMCA.Common.Infrastructure.Messaging.Transports;
+using MMCA.Common.Infrastructure.Messaging.Transports.PostgreSql;
+using MMCA.Common.Infrastructure.Messaging.Transports.RabbitMq;
 
 namespace MMCA.Common.Infrastructure;
 

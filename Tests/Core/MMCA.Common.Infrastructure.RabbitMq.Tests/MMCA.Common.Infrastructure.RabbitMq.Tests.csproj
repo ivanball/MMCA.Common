@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Exercises the built-in RabbitMQ broker transport against a REAL RabbitMQ via Testcontainers. NOT
+         shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker daemon, kept out of the fast
+         solution-wide unit feedback loop (same posture as MMCA.Common.Infrastructure.Redis.Tests and
+         MMCA.Common.Infrastructure.PostgreSQL.Tests).
+
+         This tier exists because the unit tier fakes the broker operations: only a real broker can say
+         that a fanout exchange fans out, that a delay queue's message TTL dead-letters the copy back to
+         the host queue, that a mandatory publish to a missing queue is refused, and that competing
+         consumers on one queue each get a message once. -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The broker transport conformance scenarios shared with the PostgreSQL tier. -->
+    <Compile Include="..\..\Shared\Messaging\BrokerTransportConformanceTestsBase.cs" Link="Shared\Messaging\BrokerTransportConformanceTestsBase.cs" />
+    <Compile Include="..\..\Shared\Messaging\ScriptedReceivePipeline.cs" Link="Shared\Messaging\ScriptedReceivePipeline.cs" />
+  </ItemGroup>
+</Project>

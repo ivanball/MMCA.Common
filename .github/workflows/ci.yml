@@ -621,12 +621,12 @@ jobs:
   # Coverage risk ratchet (ADR-147). NOT a required check, and deliberately separate from the required
   # `coverage` job above: that job's `needs` must stay [changes, build-and-test], because a failed
   # non-required integration job in its `needs` would SKIP it, and a skipped required check posts
-  # green, silently passing the line floor. This job merges the unit report with the six Testcontainers
-  # tiers' reports and fails only on NEW risk: a method not in .github/coverage-baselines/crap.txt
+  # green, silently passing the line floor. This job merges the unit report with the eight Testcontainers
+  # and emulator tiers' reports and fails only on NEW risk: a method not in .github/coverage-baselines/crap.txt
   # above CRAP 30, or a baselined method whose CRAP rose. Promote it to required after about ten green
   # runs. Regenerate the baseline by running the action with mode: write-baseline on a downloaded set.
   coverage-risk:
-    needs: [changes, build-and-test, redis-integration, postgresql-integration, sqlserver-integration, aws-integration, gcp-integration, azure-integration]
+    needs: [changes, build-and-test, redis-integration, postgresql-integration, rabbitmq-integration, sqlserver-integration, aws-integration, gcp-integration, azure-integration]
     if: always() && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -1084,8 +1084,8 @@ jobs:
     # assertion cannot express it: a partial-index predicate written the SQL Server way
     # ([ProcessedOn] IS NULL), a soft-delete predicate comparing a boolean to 0, and a DateTime whose
     # Kind is not UTC all build a perfectly valid EF model and are rejected by the server. This tier
-    # runs the shipped PostgreSQLDbContext, and the built-in PostgreSql broker transport (MassTransit's
-    # SQL transport), against a real PostgreSQL. Ubuntu runners ship a Docker
+    # runs the shipped PostgreSQLDbContext, and the built-in PostgreSql broker transport (the
+    # framework's own Npgsql transport), against a real PostgreSQL. Ubuntu runners ship a Docker
     # daemon, so Testcontainers works with no extra setup.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -1113,17 +1113,17 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (9) and
-        # PostgreSqlBrokerTransportTests.cs (3: the built-in PostgreSql broker's header round trip,
-        # delayed redelivery and shared data-source authentication), 12 on 2026-11-08; adding a test
-        # means raising this number in the same PR.
+        # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (9),
+        # InternalCommandLanePostgreSqlTests.cs (2) and PostgreSqlBrokerTransportTests.cs (7: the six
+        # shared broker conformance scenarios of Tests/Shared/Messaging plus the schema migration),
+        # 18 on 2026-11-23; adding a test means raising this number in the same PR.
         # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
         # the cobertura file feeds the non-required coverage-risk job (ADR-147).
         run: |
           dotnet tool install --global dotnet-coverage --version 18.11.0
           export PATH="$PATH:$HOME/.dotnet/tools"
           dotnet-coverage collect -f cobertura -o coverage.integration-postgresql.cobertura.xml \
-            "dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 12"
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 18"
 
       - name: Upload integration coverage
         if: always() && needs.changes.outputs.code == 'true'
@@ -1133,6 +1133,59 @@ jobs:
           # must stay exactly as it was.
           name: integration-coverage-postgresql
           path: coverage.integration-postgresql.cobertura.xml
+          if-no-files-found: warn
+
+  rabbitmq-integration:
+    name: RabbitMQ integration (Testcontainers)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The built-in RabbitMQ broker transport is where the BROKER's behaviour matters and the unit tier
+    # fakes it: that a fanout exchange fans out, that a delay queue's message TTL dead-letters the copy
+    # back to the host queue (redelivery with no plugin), that the error queue receives dead letters,
+    # and that competing consumers on one queue each get a message once. This tier runs the shared
+    # broker conformance scenarios (Tests/Shared/Messaging) against a real RabbitMQ. Ubuntu runners
+    # ship a Docker daemon, so Testcontainers works with no extra setup.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          # SDK 11 builds both target frameworks (global.json pins it); the 10.0 line is installed
+          # as well because the net10.0 test assemblies run on the .NET 10 runtime.
+          dotnet-version: |
+            10.0.x
+            11.0.x
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run RabbitMQ integration tests
+        # Code-guarded like every other heavy job (see postgresql-integration).
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx, so build/run this project directly by path, like
+        # postgresql-integration. Floor = the exact [Fact] count in the project (the six shared broker
+        # conformance scenarios plus 2 RabbitMQ-specific tests), 8 on 2026-11-23; adding a test means
+        # raising this number in the same PR.
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.11.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet-coverage collect -f cobertura -o coverage.integration-rabbitmq.cobertura.xml \
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.RabbitMq.Tests/MMCA.Common.Infrastructure.RabbitMq.Tests.csproj -c Release --minimum-expected-tests 8"
+
+      - name: Upload integration coverage
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # integration-coverage-*, NOT coverage-*: the required coverage job downloads coverage-* and
+          # must stay exactly as it was.
+          name: integration-coverage-rabbitmq
+          path: coverage.integration-rabbitmq.cobertura.xml
           if-no-files-found: warn
 
   sqlserver-integration:
