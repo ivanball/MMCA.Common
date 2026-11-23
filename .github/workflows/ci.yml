@@ -90,12 +90,24 @@ jobs:
           echo "code=$code"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-  build-and-test:
+  # The unit, architecture and bUnit tiers, one leg per target framework, in parallel. Each leg runs
+  # the FULL locked restore: a single-framework restore fails --locked-mode with NU1004, because every
+  # lock file lists both frameworks. The leg then builds and tests its framework alone through
+  # -p:TargetFramework and --framework, which every project in MMCA.Common.slnx supports (the
+  # single-target projects all sit outside the slnx). Analyzers run in both legs, so each framework's
+  # #if branches are analyzed exactly as before. The required context is the `build-and-test` job
+  # below, which aggregates these legs and the facts + audit job.
+  build-and-test-tfm:
+    name: build-and-test (${{ matrix.tfm }})
     needs: changes
     runs-on: ubuntu-latest
-    # About 2x the slowest of four recent code PR runs (5m11s-6m36s, measured 2026-09-30), so a
-    # hung restore or test host fails the job instead of holding a runner for the 6-hour default.
+    # The combined job took 13.7 min (Build 9.1, Test 2.6, Audit 1.0; measured 2026-11-22), so a
+    # one-framework leg is well under that; 15 still fails a hung restore or test host early.
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tfm: [net10.0, net11.0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -122,14 +134,6 @@ jobs:
             **/packages.lock.json
             Directory.Packages.props
 
-      # Fast, dependency-free drift gate: FACTS.md must match what `build/facts` computes from source
-      # (version from the git tag, package count, fitness-method/base counts; the ADR count and range are owned by the Website ADR index). Fails the
-      # build if the committed FACTS.md is stale — regenerate with `dotnet run --project build/facts -- .`.
-      - name: Verify FACTS.md is current
-        # NOT code-guarded: FACTS.md is markdown, so a docs-only PR is exactly the kind of change
-        # that can make it drift. This gate must run even when everything else is skipped.
-        run: dotnet run --project build/facts -- . --check
-
       - name: Restore
         if: needs.changes.outputs.code == 'true'
         # --locked-mode (SEC-Common-63 / SEC-ADC-34): restore from the committed packages.lock.json
@@ -141,9 +145,69 @@ jobs:
         # are outside the slnx and are unaffected.
         run: dotnet restore MMCA.Common.slnx --locked-mode
 
-      - name: Build
+      - name: Build (${{ matrix.tfm }})
         if: needs.changes.outputs.code == 'true'
-        run: dotnet build MMCA.Common.slnx -c Release --no-restore
+        run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:TargetFramework=${{ matrix.tfm }}
+
+      - name: Install coverage tool
+        if: needs.changes.outputs.code == 'true'
+        run: dotnet tool install --global dotnet-coverage --version 18.11.0
+
+      - name: Test (${{ matrix.tfm }}, with coverage)
+        if: needs.changes.outputs.code == 'true'
+        # dotnet-coverage wraps the MTP run and emits cobertura; it returns the test exit code so a
+        # test failure still gates. Coverage is report-only (see the `coverage` job).
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          # Floor about 10 percent under one framework's measured suite (12579 on net10.0 locally,
+          # 2026-11-22; the two frameworks run the same tests, 25161 in all): a discovery/filter
+          # regression that silently drops a whole test project must fail the leg, not pass green.
+          # Ratchet it up as the suite grows; lower it only in the PR that deliberately deletes tests.
+          # release.yml keeps the two-framework floor (22500) for its single combined run.
+          dotnet-coverage collect -f cobertura -o coverage.unit.${{ matrix.tfm }}.cobertura.xml \
+            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --framework ${{ matrix.tfm }} --minimum-expected-tests 11250"
+
+      - name: Upload coverage (unit + architecture + bUnit, ${{ matrix.tfm }})
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: coverage-unit-${{ matrix.tfm }}
+          path: coverage.unit.${{ matrix.tfm }}.cobertura.xml
+          if-no-files-found: warn
+
+  # The two gates that need no build, beside the framework legs instead of in front of them.
+  build-and-test-checks:
+    name: build-and-test (facts + audit)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # build/facts derives the version from the latest reachable tag
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            10.0.x
+            11.0.x
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      # Fast, dependency-free drift gate: FACTS.md must match what `build/facts` computes from source
+      # (version from the git tag, package count, fitness-method/base counts; the ADR count and range are owned by the Website ADR index). Fails the
+      # build if the committed FACTS.md is stale: regenerate with `dotnet run --project build/facts -- .`.
+      - name: Verify FACTS.md is current
+        # NOT code-guarded: FACTS.md is markdown, so a docs-only PR is exactly the kind of change
+        # that can make it drift. This gate must run even when everything else is skipped.
+        run: dotnet run --project build/facts -- . --check
+
+      - name: Restore
+        if: needs.changes.outputs.code == 'true'
+        run: dotnet restore MMCA.Common.slnx --locked-mode
 
       - name: Audit dependencies (fail on known vulnerabilities)
         if: needs.changes.outputs.code == 'true'
@@ -157,30 +221,26 @@ jobs:
           # Restore above already resolved this solution's graph in locked mode; read it as-is.
           no-restore: 'true'
 
-      - name: Install coverage tool
-        if: needs.changes.outputs.code == 'true'
-        run: dotnet tool install --global dotnet-coverage --version 18.11.0
-
-      - name: Test (with coverage)
-        if: needs.changes.outputs.code == 'true'
-        # dotnet-coverage wraps the MTP run and emits cobertura; it returns the test exit code so a
-        # test failure still gates. Coverage is report-only (see the `coverage` job).
+  # The required context (branch protection names `build-and-test`). It runs after every leg, even a
+  # failed one, and fails unless all of them succeeded, so a red or cancelled leg can never leave the
+  # required check skipped (a skipped required check posts green).
+  build-and-test:
+    needs: [changes, build-and-test-tfm, build-and-test-checks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every build-and-test leg succeeded
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          TFM_LEGS: ${{ needs.build-and-test-tfm.result }}
+          CHECKS: ${{ needs.build-and-test-checks.result }}
         run: |
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          # Floor about 5 percent under the measured suite (total: 23687 across both target frameworks,
-          # run 44203486525, 2026-11-18): a discovery/filter regression that silently drops a whole
-          # test project or one framework's run must fail the job, not pass green. Ratchet it up as the
-          # suite grows; lower it only in the PR that deliberately deletes tests. release.yml matches.
-          dotnet-coverage collect -f cobertura -o coverage.unit.cobertura.xml \
-            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 22500"
-
-      - name: Upload coverage (unit + architecture + bUnit)
-        if: always() && needs.changes.outputs.code == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: coverage-unit
-          path: coverage.unit.cobertura.xml
-          if-no-files-found: warn
+          echo "changes=$CHANGES framework legs=$TFM_LEGS facts+audit=$CHECKS"
+          if [ "$CHANGES" != success ] || [ "$TFM_LEGS" != success ] || [ "$CHECKS" != success ]; then
+            echo "::error::A build-and-test leg did not succeed (framework legs: $TFM_LEGS, facts + audit: $CHECKS)."
+            exit 1
+          fi
 
   # The MAUI multi-target package (MMCA.Common.UI.Maui) cannot build on ubuntu — its platform TFMs
   # (android/ios/maccatalyst/windows) need the MAUI workloads — so it builds in its own
@@ -536,8 +596,12 @@ jobs:
         # failure shouldn't add a confusing secondary coverage failure.
         if: success() && needs.changes.outputs.code == 'true' && needs.build-and-test.result == 'success'
         run: |
-          unit="coverage/coverage.unit.cobertura.xml"
-          test -f "$unit" || { echo "::error::unit coverage report not found ($unit)"; exit 1; }
+          # One cobertura file per framework leg; reportgenerator merges them, so a line covered on
+          # either framework counts once, as the single combined run counted it.
+          for tfm in net10.0 net11.0; do
+            test -f "coverage/coverage.unit.$tfm.cobertura.xml" || { echo "::error::unit coverage report not found for $tfm"; exit 1; }
+          done
+          unit="coverage/coverage.unit.net10.0.cobertura.xml;coverage/coverage.unit.net11.0.cobertura.xml"
           export PATH="$PATH:$HOME/.dotnet/tools"
           reportgenerator -reports:"$unit" -targetdir:coverage-unit-report -reporttypes:TextSummary -assemblyfilters:'+MMCA.*;-*.Tests' -filefilters:'-**/*.generated.cs;-**/*.g.cs'
           line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' coverage-unit-report/Summary.txt | head -1)
@@ -564,11 +628,12 @@ jobs:
       - name: Ratchet self-test
         run: pwsh -NoProfile -File .github/actions/coverage-ratchet/test/Test-Ratchet.ps1
 
-      - name: Download unit coverage
+      - name: Download unit coverage (both framework legs)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: coverage-unit
+          pattern: coverage-unit-*
           path: coverage-risk
+          merge-multiple: true
 
       - name: Download integration coverage
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8

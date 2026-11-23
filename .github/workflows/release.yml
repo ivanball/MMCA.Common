@@ -78,8 +78,11 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
+      # Analyzers off: a release tag only ever names a merged main commit, and main requires an
+      # up-to-date branch with squash merges, so this exact tree already passed the analyzer-enforcing
+      # build-and-test legs of ci.yml. Re-running the five analyzers here would only repeat that work.
       - name: Build
-        run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
+        run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }} -p:RunAnalyzers=false
 
       # The same gate ci.yml build-and-test runs, re-run on the tag build: the graph that gets packed
       # is restored from the lock files here, and an advisory published between the PR run and the
