@@ -16,7 +16,12 @@
     <PackageReference Include="AWSSDK.S3" />
     <!-- The SigV4 signer behind AddAwsTelemetryExporter (Amazon.Runtime.Signing.AWSSigV4Signer). -->
     <PackageReference Include="AWSSDK.Core" />
-    <!-- Amazon SQS/SNS transport. It brings AWSSDK.SQS and AWSSDK.SimpleNotificationService. -->
+    <!-- The native Amazon SQS/SNS broker transport (AddAmazonSqsTransport): receive, redeliver and
+         dead-letter on SQS; it publishes through AWSSDK.SimpleNotificationService below. -->
+    <!-- TEMPORARY: no code here uses MassTransit any more. This reference stays only because it is
+         what brings AWSSDK.SQS (4.0.100.14, transitively) while Directory.Packages.props has no
+         AWSSDK.SQS pin. Replace it with <PackageReference Include="AWSSDK.SQS" /> once that pin
+         is added. -->
     <PackageReference Include="MassTransit.AmazonSQS" />
     <!-- Secrets Manager as a configuration source (AddAwsSecretsManagerConfiguration). -->
     <PackageReference Include="AWSSDK.SecretsManager" />
@@ -24,8 +29,7 @@
     <PackageReference Include="Amazon.AspNetCore.DataProtection.SSM" />
     <!-- RDS IAM database authentication tokens for PostgreSQL (AddAwsRdsIamAuthentication). -->
     <PackageReference Include="AWSSDK.RDS" />
-    <!-- SNS mobile push (AddAmazonSnsPush). Referenced directly, not left to MassTransit.AmazonSQS:
-         the push code calls it on its own, and the pin keeps it at or above the transport's floor. -->
+    <!-- SNS: the broker transport's topics (one per event) and SNS mobile push (AddAmazonSnsPush). -->
     <PackageReference Include="AWSSDK.SimpleNotificationService" />
     <!-- The DynamoDB installation registry behind SNS mobile push (AddAmazonSnsPush). -->
     <PackageReference Include="AWSSDK.DynamoDBv2" />

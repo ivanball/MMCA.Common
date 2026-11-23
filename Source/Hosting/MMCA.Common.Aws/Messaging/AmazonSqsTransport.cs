@@ -2,23 +2,39 @@ using Amazon;
 using Amazon.Runtime;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Transports;
 
 namespace MMCA.Common.Aws.Messaging;
 
 /// <summary>
 /// The Amazon SQS/SNS broker transport (<c>MessageBus:Provider=AmazonSqs</c>), registered by
-/// <c>AddAmazonSqsTransport()</c> and selected by <c>AddBrokerMessaging</c>: one SNS topic per event,
-/// the host's SQS queue subscribed to each with raw delivery.
+/// <c>AddAmazonSqsTransport()</c> and selected by <c>AddBrokerMessaging</c>, on the AWS SDK SQS and SNS
+/// clients alone.
 /// <para>
-/// SQS caps a message delay at 15 minutes, which is what <see cref="MaxRedeliveryDelay"/> declares:
-/// the framework's receive pipeline shortens every second-level redelivery interval to it.
+/// Topology: an SNS topic per event (<see cref="AmazonSqsEntityNames.Topic"/>), the host's SQS queue
+/// (<see cref="AmazonSqsEntityNames.Queue"/>) subscribed to each consumed topic with raw message
+/// delivery, a queue policy allowing exactly those topics to send to it, and a
+/// <c>{queue}-error</c> queue (<see cref="AmazonSqsEntityNames.ErrorQueue"/>) for dead letters. With
+/// <c>MessageBus:ProvisionTopology</c> on (the default) the receiver creates them idempotently when it
+/// starts and the publisher creates a missing topic on its first publish
+/// (<see cref="AmazonSqsTopologyProvisioner"/>). Every header travels packed in one message attribute
+/// (<see cref="AmazonSqsMessageMapping"/>), so the 10-attribute cap never applies.
 /// </para>
 /// <para>
-/// PLACEHOLDER on <c>feat/native-messaging</c>: the native AWS SDK implementation (publish to SNS,
-/// receive from SQS, <c>SendMessage</c> with <c>DelaySeconds</c> for redelivery and a
-/// <c>{queue}-error</c> queue) replaces <see cref="Register"/> before the branch merges. The region
-/// resolution below is kept for it.
+/// Redelivery sends a copy to the queue with <c>DelaySeconds</c>. SQS caps a message delay at 15
+/// minutes, which is what <see cref="MaxRedeliveryDelay"/> declares: the framework's receive pipeline
+/// shortens every second-level redelivery interval to it.
+/// </para>
+/// <para>
+/// Configuration (<c>MessageBus:AmazonSqs</c>, <see cref="AmazonSqsTransportSettings"/>): <c>Region</c>
+/// (else the AWS SDK fallback chain, else registration fails naming the key), <c>ServiceUrl</c> (one
+/// endpoint override for both SQS and SNS, e.g. LocalStack) and <c>AccessKeyId</c> +
+/// <c>SecretAccessKey</c> (both or neither; neither uses the AWS default credential chain). All of it is
+/// validated in <see cref="Register"/>, while <c>AddBrokerMessaging</c> runs.
 /// </para>
 /// </summary>
 internal sealed class AmazonSqsTransport : IBrokerTransport
@@ -49,12 +65,59 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
     public TimeSpan? MaxRedeliveryDelay => TimeSpan.FromSeconds(MaxDelaySeconds);
 
     /// <inheritdoc />
+    /// <exception cref="InvalidOperationException">
+    /// No region is configured or resolvable, or only one half of the access key pair is set.
+    /// </exception>
     public void Register(IServiceCollection services, BrokerTransportContext context)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(context);
 
-        throw new NotSupportedException("Amazon SQS transport: native implementation pending on feat/native-messaging");
+        // Resolved HERE, while AddBrokerMessaging runs, so a configuration error fails startup rather
+        // than the first publish.
+        var sqsSettings = ReadSettings(context.Configuration);
+        var region = ResolveRegion(sqsSettings.Region, _fallbackRegion);
+        var credentials = AwsStaticCredentials.Resolve(
+            sqsSettings.AccessKeyId, sqsSettings.SecretAccessKey, AmazonSqsTransportSettings.SectionName);
+        var serviceUrl = sqsSettings.ServiceUrl is { IsAbsoluteUri: true } url ? url : null;
+        var settings = context.Settings;
+        var topology = context.Topology;
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(_ => new AmazonSqsConnection(region, serviceUrl, credentials));
+
+        services.AddSingleton(sp =>
+        {
+            var connection = sp.GetRequiredService<AmazonSqsConnection>();
+            return new AmazonSqsTopologyProvisioner(
+                connection.Sqs, connection.Sns, settings.ProvisionTopology, LoggerFor<AmazonSqsTopologyProvisioner>(sp));
+        });
+
+        services.AddSingleton<IBrokerPublisher>(sp => new AmazonSqsPublisher(
+            sp.GetRequiredService<AmazonSqsConnection>().Sns,
+            sp.GetRequiredService<AmazonSqsTopologyProvisioner>()));
+
+        services.AddHostedService(sp => new AmazonSqsReceiver(
+            sp.GetRequiredService<AmazonSqsConnection>().Sqs,
+            topology,
+            new AmazonSqsDeliveryHandler(
+                sp.GetRequiredService<IBrokerReceivePipeline>(),
+                sp.GetRequiredService<TimeProvider>(),
+                LoggerFor<AmazonSqsDeliveryHandler>(sp)),
+            sp.GetRequiredService<AmazonSqsTopologyProvisioner>(),
+            settings,
+            LoggerFor<AmazonSqsReceiver>(sp)));
+    }
+
+    /// <summary>Binds <c>MessageBus:AmazonSqs</c>, or the defaults when the section is absent.</summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <returns>The bound settings.</returns>
+    internal static AmazonSqsTransportSettings ReadSettings(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return configuration.GetSection(AmazonSqsTransportSettings.SectionName).Get<AmazonSqsTransportSettings>()
+            ?? new AmazonSqsTransportSettings();
     }
 
     /// <summary>
@@ -64,15 +127,8 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
     /// <param name="configuration">The application configuration.</param>
     /// <returns>The region endpoint.</returns>
     /// <exception cref="InvalidOperationException">No region is configured or resolvable.</exception>
-    internal RegionEndpoint ResolveRegion(IConfiguration configuration)
-    {
-        ArgumentNullException.ThrowIfNull(configuration);
-
-        var settings = configuration.GetSection(AmazonSqsTransportSettings.SectionName).Get<AmazonSqsTransportSettings>()
-            ?? new AmazonSqsTransportSettings();
-
-        return ResolveRegion(settings.Region, _fallbackRegion);
-    }
+    internal RegionEndpoint ResolveRegion(IConfiguration configuration) =>
+        ResolveRegion(ReadSettings(configuration).Region, _fallbackRegion);
 
     /// <summary>
     /// Resolves the region: the configured system name, else the AWS SDK fallback chain, else a
@@ -95,4 +151,7 @@ internal sealed class AmazonSqsTransport : IBrokerTransport
             ?? throw new InvalidOperationException(
                 $"The {ProviderName} transport needs an AWS region: set {AmazonSqsTransportSettings.SectionName}:Region, or AWS_REGION for the AWS SDK fallback chain.");
     }
+
+    private static ILogger LoggerFor<T>(IServiceProvider services) =>
+        (services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger<T>();
 }

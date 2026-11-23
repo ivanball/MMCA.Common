@@ -2,6 +2,7 @@ using Amazon;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MMCA.Common.Aws.Messaging;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Messaging;
@@ -13,8 +14,7 @@ namespace MMCA.Common.Aws.Tests.Messaging;
 /// <summary>
 /// The Amazon SQS/SNS transport against the core broker-transport extension point: registered by
 /// <c>AddAmazonSqsTransport()</c>, selected by <c>MessageBus:Provider=AmazonSqs</c>, declaring the SQS
-/// delay cap, and resolving its region. Its <c>Register</c> is a placeholder on
-/// <c>feat/native-messaging</c> until the native transport lands.
+/// delay cap, and validating its configuration (region, key pair) while <c>AddBrokerMessaging</c> runs.
 /// </summary>
 public sealed class AmazonSqsTransportTests
 {
@@ -25,11 +25,16 @@ public sealed class AmazonSqsTransportTests
     {
         ["MessageBus:Provider"] = "AmazonSqs",
         ["MessageBus:QueueName"] = "mmca-test",
+        ["MessageBus:EnableInbox"] = "false",
+        ["Application:Namespace"] = "mmca-test",
         ["MessageBus:AmazonSqs:Region"] = "eu-west-1",
         ["MessageBus:AmazonSqs:ServiceUrl"] = "http://localhost:4566",
         ["MessageBus:AmazonSqs:AccessKeyId"] = "test",
         ["MessageBus:AmazonSqs:SecretAccessKey"] = "test",
     };
+
+    private static BrokerTransportContext ContextWith(Dictionary<string, string?> settings) =>
+        new(new MessageBusSettings(), null, ConfigurationWith(settings), new BrokerTopology("demo", "orders", []));
 
     [Fact]
     public void Name_IsTheConfiguredProviderValue() =>
@@ -58,14 +63,20 @@ public sealed class AmazonSqsTransportTests
     }
 
     [Fact]
-    public void AddBrokerMessaging_AfterTheTransport_SelectsIt()
+    public async Task AddBrokerMessaging_AfterTheTransport_RegistersTheSnsPublisherAndTheSqsReceiver()
     {
         var services = new ServiceCollection().AddLogging();
         services.AddAmazonSqsTransport();
 
-        var act = () => services.AddBrokerMessaging(ConfigurationWith(SqsSettings()));
+        services.AddBrokerMessaging(ConfigurationWith(SqsSettings()));
 
-        act.Should().Throw<NotSupportedException>().WithMessage("Amazon SQS transport*");
+        await using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IBrokerPublisher>().Should().BeOfType<AmazonSqsPublisher>();
+        provider.GetServices<IHostedService>().OfType<AmazonSqsReceiver>().Should().ContainSingle();
+        var connection = provider.GetRequiredService<AmazonSqsConnection>();
+        connection.Sqs.Config.ServiceURL.Should().Be("http://localhost:4566/");
+        connection.Sns.Config.ServiceURL.Should().Be("http://localhost:4566/");
+        connection.Sqs.Config.AuthenticationRegion.Should().Be("eu-west-1");
     }
 
     [Fact]
@@ -75,6 +86,63 @@ public sealed class AmazonSqsTransportTests
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*MMCA.Common.Aws*AddAmazonSqsTransport()*");
+    }
+
+    [Theory]
+    [InlineData("test", null)]
+    [InlineData(null, "test")]
+    public void Register_WithHalfAKeyPair_FailsNamingBothKeys(string? accessKeyId, string? secret)
+    {
+        var settings = SqsSettings();
+        settings["MessageBus:AmazonSqs:AccessKeyId"] = accessKeyId;
+        settings["MessageBus:AmazonSqs:SecretAccessKey"] = secret;
+
+        var act = () => new AmazonSqsTransport(() => null).Register(new ServiceCollection(), ContextWith(settings));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*MessageBus:AmazonSqs:AccessKeyId and MessageBus:AmazonSqs:SecretAccessKey must be set together*");
+    }
+
+    [Theory]
+    [InlineData("test", null)]
+    [InlineData(null, "test")]
+    public void AddBrokerMessaging_WithHalfAKeyPair_FailsAtStartup(string? accessKeyId, string? secret)
+    {
+        var settings = SqsSettings();
+        settings["MessageBus:AmazonSqs:AccessKeyId"] = accessKeyId;
+        settings["MessageBus:AmazonSqs:SecretAccessKey"] = secret;
+        var services = new ServiceCollection().AddLogging();
+        services.AddAmazonSqsTransport();
+
+        var act = () => services.AddBrokerMessaging(ConfigurationWith(settings));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*must be set together*");
+    }
+
+    [Fact]
+    public async Task Register_WithNoKeyPair_UsesTheDefaultCredentialChain()
+    {
+        var settings = SqsSettings();
+        settings.Remove("MessageBus:AmazonSqs:AccessKeyId");
+        settings.Remove("MessageBus:AmazonSqs:SecretAccessKey");
+        var services = new ServiceCollection().AddLogging();
+        services.AddAmazonSqsTransport();
+
+        services.AddBrokerMessaging(ConfigurationWith(settings));
+
+        await using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IBrokerPublisher>().Should().BeOfType<AmazonSqsPublisher>();
+    }
+
+    [Fact]
+    public void Register_WithNoRegionAnywhere_FailsNamingTheKey()
+    {
+        var settings = SqsSettings();
+        settings.Remove("MessageBus:AmazonSqs:Region");
+
+        var act = () => new AmazonSqsTransport(() => null).Register(new ServiceCollection(), ContextWith(settings));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*MessageBus:AmazonSqs:Region*");
     }
 
     [Fact]
@@ -103,11 +171,27 @@ public sealed class AmazonSqsTransportTests
     }
 
     [Fact]
+    public void ReadSettings_BindsTheSection_OrDefaults()
+    {
+        var bound = AmazonSqsTransport.ReadSettings(ConfigurationWith(SqsSettings()));
+        bound.Region.Should().Be("eu-west-1");
+        bound.ServiceUrl.Should().Be(new Uri("http://localhost:4566"));
+
+        AmazonSqsTransport.ReadSettings(ConfigurationWith([])).Region.Should().BeNull();
+    }
+
+    [Fact]
+    public void Connection_WithoutAServiceUrl_TargetsTheRegionEndpoint()
+    {
+        AmazonSqsConnection.CreateSqsConfig(RegionEndpoint.USEast2, null).RegionEndpoint.Should().Be(RegionEndpoint.USEast2);
+        AmazonSqsConnection.CreateSnsConfig(RegionEndpoint.USEast2, null).RegionEndpoint.Should().Be(RegionEndpoint.USEast2);
+    }
+
+    [Fact]
     public void Register_RejectsNullArguments()
     {
         var transport = new AmazonSqsTransport();
-        var context = new BrokerTransportContext(
-            new MessageBusSettings(), null, new ConfigurationBuilder().Build(), new BrokerTopology("demo", "orders", []));
+        var context = ContextWith(SqsSettings());
 
         var noServices = () => transport.Register(null!, context);
         var noContext = () => transport.Register(new ServiceCollection(), null!);
