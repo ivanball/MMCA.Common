@@ -29,7 +29,7 @@ internal sealed class HostIntegrationTripwire(
     internal const string SecretsManagerNamePrefixKey = "SecretsManager:NamePrefix";
 
     /// <summary>The configuration key whose presence requires the AWS DataProtection key ring.</summary>
-    internal const string DataProtectionSsmParameterPrefixKey = "DataProtection:SsmParameterPrefix";
+    internal const string DataProtectionS3ObjectUriKey = "DataProtection:S3ObjectUri";
 
     /// <summary>
     /// The configuration key whose presence requires the Google Secret Manager configuration source.
@@ -77,7 +77,7 @@ internal sealed class HostIntegrationTripwire(
     private static readonly string[] KeyRingKeys =
     [
         DataProtectionBlobStorageUriKey,
-        DataProtectionSsmParameterPrefixKey,
+        DataProtectionS3ObjectUriKey,
         DataProtectionGcsObjectUriKey,
     ];
 
@@ -109,7 +109,7 @@ internal sealed class HostIntegrationTripwire(
             "no Secrets Manager configuration source was added, so every secret under that prefix is missing from configuration. Reference MMCA.Common.Aws and call builder.AddAwsSecretsManagerConfiguration() early in Program.cs",
             failures);
         Check(
-            DataProtectionSsmParameterPrefixKey,
+            DataProtectionS3ObjectUriKey,
             HostIntegrationNames.AwsDataProtection,
             "the AWS DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Aws and call builder.AddAwsDataProtection()",
             failures);
