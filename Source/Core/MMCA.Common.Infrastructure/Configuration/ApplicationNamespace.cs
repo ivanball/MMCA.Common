@@ -7,8 +7,8 @@ namespace MMCA.Common.Infrastructure.Configuration;
 /// <summary>
 /// The one name every piece of SHARED infrastructure is namespaced by: Redis cache keys,
 /// distributed-lock keys, distributed rate-limit counter keys, the Redis output-cache
-/// <c>InstanceName</c>, the SignalR Redis backplane channel prefix and the message broker's
-/// endpoint (queue) prefix.
+/// <c>InstanceName</c>, the SignalR Redis backplane channel prefix and the message broker's topic
+/// prefix.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,10 +20,16 @@ namespace MMCA.Common.Infrastructure.Configuration;
 /// delivered to the other application's clients holding the same numeric user id. Nothing warned.
 /// </para>
 /// <para>
-/// The default is now the host's application name, which is distinct per deployed app and needs no
-/// configuration. Set <c>Application:Namespace</c> to override it: use that when two hosts of the
-/// SAME application must share a keyspace (a web head and a worker draining one backplane), and
-/// keep it different everywhere else.
+/// The default is now the host's application name, which is distinct per deployed app. Set
+/// <c>Application:Namespace</c> to override it: use that when two hosts of the SAME application must
+/// share a keyspace (a web head and a worker draining one backplane), and keep it different
+/// everywhere else.
+/// </para>
+/// <para>
+/// A broker host must set it. Every broker topic is prefixed with this value, so every service of one
+/// application must carry the SAME value or its publishers and consumers end up on different topics;
+/// <c>AddBrokerMessaging</c> therefore refuses a broker transport when <c>Application:Namespace</c> is
+/// not configured, rather than falling back to the per-host application name.
 /// </para>
 /// </remarks>
 public static partial class ApplicationNamespace
