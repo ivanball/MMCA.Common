@@ -39,15 +39,6 @@
         "resolved": "3.0.342",
         "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
-      "Microsoft.Azure.NotificationHubs": {
-        "type": "Direct",
-        "requested": "[4.2.0, )",
-        "resolved": "4.2.0",
-        "contentHash": "LOCxFB/sB1frfuXjecdDRDKEHkH+I1qKRatS5NyWIgYhpKhIcAlPNIJajcwLgQBShckdc3hMG9E+75CnL3qDhQ==",
-        "dependencies": {
-          "Newtonsoft.Json": "13.0.1"
-        }
-      },
       "Microsoft.Azure.StackExchangeRedis": {
         "type": "Direct",
         "requested": "[3.3.1, )",
@@ -84,12 +75,6 @@
         "requested": "[18.12.1, )",
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -616,6 +601,11 @@
         "resolved": "10.0.10",
         "contentHash": "roR+5AeOpflUxJQlqSfsZs/Bvi1uw4KBuTkIgF1e8l0RdalG4AUn84+sjJLclEfOV85gAjc8+Pp540qjDE5UIg=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -625,7 +615,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -637,7 +627,7 @@
         "dependencies": {
           "Aspire.StackExchange.Redis": "[17.0.0, )",
           "Aspire.StackExchange.Redis.DistributedCaching": "[17.0.0, )",
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.Data.Sqlite": "[10.0.15, )",
@@ -649,13 +639,11 @@
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.21.0, )",
-          "OpenTelemetry.Instrumentation.Runtime": "[1.21.0, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
-          "StackExchange.Redis": "[3.4.35, )",
-          "System.Security.Cryptography.Pkcs": "[10.0.15, )"
+          "StackExchange.Redis": "[3.4.35, )"
         }
       },
       "mmca.common.azure.startup": {
@@ -667,20 +655,20 @@
           "Azure.Identity": "[1.21.0, )",
           "Azure.Monitor.OpenTelemetry.AspNetCore": "[1.6.0, )",
           "Azure.Storage.Blobs": "[12.30.2, )",
-          "MMCA.Common.Aspire": "[1.0.0, )"
+          "MMCA.Common.Aspire": "[0.0.0-dev, )"
         }
       },
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -691,12 +679,10 @@
           "Microsoft.Extensions.Http.Resilience": "[10.11.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
-          "System.Security.Cryptography.Pkcs": "[10.0.15, )"
+          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
       "mmca.common.shared": {
@@ -987,21 +973,6 @@
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.21.0, 2.0.0)"
         }
       },
-      "OpenTelemetry.Instrumentation.Runtime": {
-        "type": "CentralTransitive",
-        "requested": "[1.21.0, )",
-        "resolved": "1.21.0",
-        "contentHash": "CpkfBbVIHR6Jn8QrGwt7RtOEDyKOHL2rs9HL+5ckzvlsvQiJ5lHD/qvB7NqJuFZIvXnACSYB7AD0ycXITPQFPg==",
-        "dependencies": {
-          "OpenTelemetry.Api": "[1.21.0, 2.0.0)"
-        }
-      },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
-      },
       "Polly.Core": {
         "type": "CentralTransitive",
         "requested": "[8.9.1, )",
@@ -1081,12 +1052,6 @@
         "requested": "[1.7.4, )",
         "resolved": "1.7.4",
         "contentHash": "2VJGKUdPjA59aqv/ehvBS+oVoFQqqsiVZlbcyDmuwypgy96Ss1/b8U13Yufk0TXtzveMWAPQAfnZzH+bs1r7Vw=="
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "4jEv/lXDuQkh60lPU3hlwASErXdv1ZMKmsxVuBfZWiVKT5Q2QGo58kTa6rN519+PU+m4Hsj1m3yT8fN+Xw0XZw=="
       }
     },
     "net11.0": {
@@ -1127,15 +1092,6 @@
         "resolved": "3.0.342",
         "contentHash": "g8p2VDRGOui0eTVEOG0MOS6ib4IPNVDwSSier3o95S1xeJltMF8ntpuBWzzmn6A6Y5a0VcEmeGkrMLNXPs/QeQ=="
       },
-      "Microsoft.Azure.NotificationHubs": {
-        "type": "Direct",
-        "requested": "[4.2.0, )",
-        "resolved": "4.2.0",
-        "contentHash": "LOCxFB/sB1frfuXjecdDRDKEHkH+I1qKRatS5NyWIgYhpKhIcAlPNIJajcwLgQBShckdc3hMG9E+75CnL3qDhQ==",
-        "dependencies": {
-          "Newtonsoft.Json": "13.0.1"
-        }
-      },
       "Microsoft.Azure.StackExchangeRedis": {
         "type": "Direct",
         "requested": "[3.3.1, )",
@@ -1172,12 +1128,6 @@
         "requested": "[18.12.1, )",
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -1725,7 +1675,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -1737,7 +1687,7 @@
         "dependencies": {
           "Aspire.StackExchange.Redis": "[17.0.0, )",
           "Aspire.StackExchange.Redis.DistributedCaching": "[17.0.0, )",
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.Data.Sqlite": "[11.0.0, )",
@@ -1749,7 +1699,6 @@
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.21.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.21.0, )",
-          "OpenTelemetry.Instrumentation.Runtime": "[1.21.0, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "Serilog.AspNetCore": "[11.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
@@ -1766,20 +1715,20 @@
           "Azure.Identity": "[1.21.0, )",
           "Azure.Monitor.OpenTelemetry.AspNetCore": "[1.6.0, )",
           "Azure.Storage.Blobs": "[12.30.2, )",
-          "MMCA.Common.Aspire": "[1.0.0, )"
+          "MMCA.Common.Aspire": "[0.0.0-dev, )"
         }
       },
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1790,7 +1739,6 @@
           "Microsoft.Extensions.Http.Resilience": "[11.0.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
@@ -2079,21 +2027,6 @@
         "dependencies": {
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.21.0, 2.0.0)"
         }
-      },
-      "OpenTelemetry.Instrumentation.Runtime": {
-        "type": "CentralTransitive",
-        "requested": "[1.21.0, )",
-        "resolved": "1.21.0",
-        "contentHash": "CpkfBbVIHR6Jn8QrGwt7RtOEDyKOHL2rs9HL+5ckzvlsvQiJ5lHD/qvB7NqJuFZIvXnACSYB7AD0ycXITPQFPg==",
-        "dependencies": {
-          "OpenTelemetry.Api": "[1.21.0, 2.0.0)"
-        }
-      },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "CentralTransitive",

@@ -708,6 +708,11 @@
         "resolved": "6.0.1",
         "contentHash": "IQ4NXP/B3Ayzvw0rDQzVTYsCKyy0Jp9KI6aYcK7UnGVlR9+Awz++TIPCQtPYfLJfOpm8ajowMR09V7quD3sEHw=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -782,7 +787,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.Extensions.Configuration.Json": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
@@ -793,14 +798,14 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -811,12 +816,10 @@
           "Microsoft.Extensions.Http.Resilience": "[10.11.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
-          "System.Security.Cryptography.Pkcs": "[10.0.15, )"
+          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
       "mmca.common.shared": {
@@ -1043,12 +1046,6 @@
           "Npgsql": "10.0.4"
         }
       },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
-      },
       "Polly.Core": {
         "type": "CentralTransitive",
         "requested": "[8.9.1, )",
@@ -1100,12 +1097,6 @@
         "requested": "[1.7.4, )",
         "resolved": "1.7.4",
         "contentHash": "2VJGKUdPjA59aqv/ehvBS+oVoFQqqsiVZlbcyDmuwypgy96Ss1/b8U13Yufk0TXtzveMWAPQAfnZzH+bs1r7Vw=="
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "4jEv/lXDuQkh60lPU3hlwASErXdv1ZMKmsxVuBfZWiVKT5Q2QGo58kTa6rN519+PU+m4Hsj1m3yT8fN+Xw0XZw=="
       },
       "Testcontainers": {
         "type": "CentralTransitive",
@@ -1752,6 +1743,11 @@
         "resolved": "6.0.1",
         "contentHash": "IQ4NXP/B3Ayzvw0rDQzVTYsCKyy0Jp9KI6aYcK7UnGVlR9+Awz++TIPCQtPYfLJfOpm8ajowMR09V7quD3sEHw=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -1826,7 +1822,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.Extensions.Configuration.Json": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
@@ -1837,14 +1833,14 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1855,7 +1851,6 @@
           "Microsoft.Extensions.Http.Resilience": "[11.0.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
@@ -2042,12 +2037,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[11.0.0, 12.0.0)",
           "Npgsql": "11.0.0"
         }
-      },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "CentralTransitive",

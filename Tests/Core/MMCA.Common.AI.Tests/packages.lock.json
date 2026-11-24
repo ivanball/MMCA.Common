@@ -190,13 +190,13 @@
         "type": "Project",
         "dependencies": {
           "Anthropic": "[13.13.0, )",
-          "MMCA.Common.AI": "[1.0.0, )"
+          "MMCA.Common.AI": "[0.0.0-dev, )"
         }
       },
       "mmca.common.ai.openai": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.AI": "[1.0.0, )",
+          "MMCA.Common.AI": "[0.0.0-dev, )",
           "Microsoft.Extensions.AI.OpenAI": "[10.11.1, )",
           "OpenAI": "[2.15.0, )"
         }
@@ -204,7 +204,7 @@
       "mmca.common.ai.testing": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.AI": "[1.0.0, )",
+          "MMCA.Common.AI": "[0.0.0-dev, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },
@@ -445,13 +445,13 @@
         "type": "Project",
         "dependencies": {
           "Anthropic": "[13.13.0, )",
-          "MMCA.Common.AI": "[1.0.0, )"
+          "MMCA.Common.AI": "[0.0.0-dev, )"
         }
       },
       "mmca.common.ai.openai": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.AI": "[1.0.0, )",
+          "MMCA.Common.AI": "[0.0.0-dev, )",
           "Microsoft.Extensions.AI.OpenAI": "[11.0.1, )",
           "OpenAI": "[2.15.0, )"
         }
@@ -459,7 +459,7 @@
       "mmca.common.ai.testing": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.AI": "[1.0.0, )",
+          "MMCA.Common.AI": "[0.0.0-dev, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
       },

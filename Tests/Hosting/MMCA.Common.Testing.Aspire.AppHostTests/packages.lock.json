@@ -426,6 +426,14 @@
         "resolved": "11.0.0",
         "contentHash": "rveyIUtr/2aYv4J5EEZr+0+p5kXzEMYVwVr5o6Bvt3J86+uRjgKn7J2rw9uUdpGRHaVn9NqbZvhUkJOMD4N0tA=="
       },
+      "Microsoft.AspNetCore.WebUtilities": {
+        "type": "Transitive",
+        "resolved": "11.0.0",
+        "contentHash": "KDKLMtwYNLKx20HXhMMKeD1ge5BO+8vHSqr6iSNhLYdUHA3tHVGzVeLd1MfeCeXTSB6NgoX1LCFSqQ8EaerSPw==",
+        "dependencies": {
+          "Microsoft.Net.Http.Headers": "11.0.0"
+        }
+      },
       "Microsoft.Azure.Cosmos": {
         "type": "Transitive",
         "resolved": "3.63.2",
@@ -868,6 +876,11 @@
         "resolved": "18.4.0",
         "contentHash": "iQWOKi3L5QStmWqDjDubcr1KlTDy88qBTe88I0etlUUo1l0zSNebGJXl1Xetyl+ACA+ujP3YUtxo3Nz54JPriw=="
       },
+      "Microsoft.OpenApi": {
+        "type": "Transitive",
+        "resolved": "3.11.0",
+        "contentHash": "kvQz+mL/fnDw2VaE8zMyQhbMv7FmOYUydIhCVNKxQdrLu9XiMT/07DHwJ5YkRO2uzcxTFvMAKFKKywxoyLKHcA=="
+      },
       "Microsoft.SqlServer.Server": {
         "type": "Transitive",
         "resolved": "1.0.0",
@@ -1130,6 +1143,11 @@
         "resolved": "6.0.1",
         "contentHash": "IQ4NXP/B3Ayzvw0rDQzVTYsCKyy0Jp9KI6aYcK7UnGVlR9+Awz++TIPCQtPYfLJfOpm8ajowMR09V7quD3sEHw=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "4jEv/lXDuQkh60lPU3hlwASErXdv1ZMKmsxVuBfZWiVKT5Q2QGo58kTa6rN519+PU+m4Hsj1m3yT8fN+Xw0XZw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -1212,15 +1230,14 @@
           "Asp.Versioning.Mvc.ApiExplorer": "[10.2.1, )",
           "AspNet.Security.OAuth.Apple": "[11.0.0, )",
           "AspNet.Security.OAuth.GitHub": "[11.0.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
-          "MMCA.Common.Infrastructure": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
+          "MMCA.Common.Infrastructure": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Authentication.Google": "[11.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
-          "Microsoft.OpenApi": "[3.11.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -1229,7 +1246,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.Extensions.Configuration.Json": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
@@ -1248,21 +1265,20 @@
           "Aspire.Hosting.SqlServer": "[17.0.0, )",
           "OpenTelemetry.Api": "[1.21.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
-          "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
-          "System.Security.Cryptography.Pkcs": "[11.0.0, )"
+          "OpenTelemetry.Extensions.Hosting": "[1.21.0, )"
         }
       },
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1273,7 +1289,6 @@
           "Microsoft.Extensions.Http.Resilience": "[11.0.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
@@ -1287,8 +1302,8 @@
         "type": "Project",
         "dependencies": {
           "AwesomeAssertions": "[9.6.0, )",
-          "MMCA.Common.API": "[1.0.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.API": "[0.0.0-dev, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1309,7 +1324,7 @@
           "Aspire.Hosting.Dotnet": "[17.0.0, )",
           "Aspire.Hosting.Testing": "[17.0.0, )",
           "AwesomeAssertions": "[9.6.0, )",
-          "MMCA.Common.Testing": "[1.0.0, )",
+          "MMCA.Common.Testing": "[0.0.0-dev, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "xunit.v3.extensibility.core": "[4.0.3, )"
         }
@@ -1319,7 +1334,7 @@
         "dependencies": {
           "Aspire.Hosting.AppHost": "[17.0.0, )",
           "Aspire.Hosting.Dotnet": "[17.0.0, )",
-          "MMCA.Common.Aspire.Hosting": "[1.0.0, )"
+          "MMCA.Common.Aspire.Hosting": "[0.0.0-dev, )"
         }
       },
       "Asp.Versioning.Mvc": {
@@ -1764,15 +1779,6 @@
           "StackExchange.Redis": "2.7.27"
         }
       },
-      "Microsoft.AspNetCore.WebUtilities": {
-        "type": "CentralTransitive",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "KDKLMtwYNLKx20HXhMMKeD1ge5BO+8vHSqr6iSNhLYdUHA3tHVGzVeLd1MfeCeXTSB6NgoX1LCFSqQ8EaerSPw==",
-        "dependencies": {
-          "Microsoft.Net.Http.Headers": "11.0.0"
-        }
-      },
       "Microsoft.Data.SqlClient": {
         "type": "CentralTransitive",
         "requested": "[7.1.2, )",
@@ -1893,12 +1899,6 @@
           "Microsoft.FeatureManagement": "4.8.0"
         }
       },
-      "Microsoft.OpenApi": {
-        "type": "CentralTransitive",
-        "requested": "[3.11.1, )",
-        "resolved": "3.11.1",
-        "contentHash": "WZL9g2+9NPICW4Es6zjIBj4mmKxAnI8RCru3gAZUliCMZPnuaxRynXq4cXoU+IYvI7kXY4ydSrrJ1R9EEHr+Lw=="
-      },
       "MiniProfiler.AspNetCore.Mvc": {
         "type": "CentralTransitive",
         "requested": "[4.5.4, )",
@@ -1974,12 +1974,6 @@
           "OpenTelemetry": "1.21.0"
         }
       },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
-      },
       "Polly.Core": {
         "type": "CentralTransitive",
         "requested": "[8.9.1, )",
@@ -2044,12 +2038,6 @@
         "requested": "[1.7.4, )",
         "resolved": "1.7.4",
         "contentHash": "2VJGKUdPjA59aqv/ehvBS+oVoFQqqsiVZlbcyDmuwypgy96Ss1/b8U13Yufk0TXtzveMWAPQAfnZzH+bs1r7Vw=="
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "CentralTransitive",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "G8mTjSWrwaPJ2bJRbKuI4ZqdKUYcANK0KtNH3s8/va3nXiF/Pk/yhv2R17rv5PBKJO5+ZXDyhTnZXh0W9v0J8w=="
       },
       "Testcontainers": {
         "type": "CentralTransitive",
