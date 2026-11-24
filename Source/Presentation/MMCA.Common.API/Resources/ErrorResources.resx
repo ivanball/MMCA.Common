@@ -244,6 +244,18 @@
   <data name="Outbox.InvalidTake" xml:space="preserve">
     <value>Take must be between 1 and 500.</value>
   </data>
+  <data name="Outbox.RepublishWindowNotUtc" xml:space="preserve">
+    <value>The republish window bounds must be UTC.</value>
+  </data>
+  <data name="Outbox.InvalidRepublishWindow" xml:space="preserve">
+    <value>The republish window must end after it starts.</value>
+  </data>
+  <data name="Outbox.RepublishWindowTooWide" xml:space="preserve">
+    <value>The republish window must not exceed 7 days.</value>
+  </data>
+  <data name="Outbox.RepublishRequiresInbox" xml:space="preserve">
+    <value>Republishing processed integration events needs the consumer inbox; without it every republished event runs its handlers again.</value>
+  </data>
   <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
     <value>The role-administration permission cannot be granted by a stored row. Grant it in code, through the host's permission registry.</value>
   </data>
