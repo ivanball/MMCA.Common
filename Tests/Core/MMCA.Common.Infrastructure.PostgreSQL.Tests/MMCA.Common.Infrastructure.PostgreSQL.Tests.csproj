@@ -29,5 +29,8 @@
     <!-- Stubs and the BatchedDelete scenario shared by the SQL Server and PostgreSQL provider tiers. -->
     <Compile Include="..\..\Shared\Persistence\PersistenceTestDoubles.cs" Link="Shared\Persistence\PersistenceTestDoubles.cs" />
     <Compile Include="..\..\Shared\Persistence\BatchedDeleteScenario.cs" Link="Shared\Persistence\BatchedDeleteScenario.cs" />
+    <!-- The broker transport conformance scenarios shared with the RabbitMQ tier. -->
+    <Compile Include="..\..\Shared\Messaging\BrokerTransportConformanceTestsBase.cs" Link="Shared\Messaging\BrokerTransportConformanceTestsBase.cs" />
+    <Compile Include="..\..\Shared\Messaging\ScriptedReceivePipeline.cs" Link="Shared\Messaging\ScriptedReceivePipeline.cs" />
   </ItemGroup>
 </Project>

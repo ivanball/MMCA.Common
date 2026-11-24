@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-11-23 (framework v1.315.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-11-24 (framework v1.315.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
@@ -84,7 +84,7 @@ references are not repeated; a package with **(none)** depends on no other `MMCA
 | `MMCA.Common.Testing` | `MMCA.Common.Application`, `MMCA.Common.API` |
 | `MMCA.Common.Testing.Architecture` | (none) |
 | `MMCA.Common.Testing.Aspire` | `MMCA.Common.Testing` |
-| `MMCA.Common.Testing.Azure` | (none) |
+| `MMCA.Common.Testing.Azure` | `MMCA.Common.Azure` |
 | `MMCA.Common.Testing.E2E` | (none) |
 | `MMCA.Common.Testing.UI` | `MMCA.Common.UI` |
 | `MMCA.Common` | `MMCA.Common.Application`, `MMCA.Common.Domain`, `MMCA.Common.Infrastructure`, `MMCA.Common.Shared`, `MMCA.Common.API`, `MMCA.Common.Aspire` |
@@ -98,7 +98,7 @@ it owns the range/count and the one-line summaries. Do not restate the `(001-NNN
 - **186 test methods across 74 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **754** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **761** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

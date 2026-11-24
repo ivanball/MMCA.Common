@@ -136,7 +136,7 @@ MMCA.Common.Infrastructure.Context.TenantContext.TenantId.get -> string?
 MMCA.Common.Infrastructure.DependencyInjection
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAuditTrail(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddBrokerMessaging(Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<MassTransit.IBusRegistrationConfigurator!>? configureConsumers = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddBrokerMessaging(Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!>? configureConsumers = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddBrokerTransport(MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport! transport) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCaching(Microsoft.Extensions.Configuration.IConfiguration? configuration = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonHybridCache(System.Action<Microsoft.Extensions.Caching.Hybrid.HybridCacheOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -188,27 +188,104 @@ MMCA.Common.Infrastructure.Mail.SmtpSettings.To.init -> void
 MMCA.Common.Infrastructure.Mail.SmtpSettings.Username.get -> string!
 MMCA.Common.Infrastructure.Mail.SmtpSettings.Username.init -> void
 MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind.Current = 0 -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind.Upcasted = 1 -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.BrokerDisposition() -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.BrokerDisposition(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition! original) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.Completed() -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.DeadLetter(string! Reason, string? Detail) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Deconstruct(out string! Reason, out string? Detail) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Detail.get -> string?
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Detail.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Reason.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Reason.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Deconstruct(out System.TimeSpan Delay, out int RedeliveryCount) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Delay.get -> System.TimeSpan
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Delay.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Redeliver(System.TimeSpan Delay, int RedeliveryCount) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.RedeliveryCount.get -> int
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.RedeliveryCount.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.BrokerSubscription(string! EventName, System.Type! EventType, string! Topic, MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind Kind) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Deconstruct(out string! EventName, out System.Type! EventType, out string! Topic, out MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind Kind) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.EventName.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.EventName.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.EventType.get -> System.Type!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.EventType.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Kind.get -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerConsumerKind
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Kind.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Topic.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Topic.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.ApplicationNamespace.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.BrokerTopology(string! applicationNamespace, string! queueName, System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription!>! subscriptions) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.QueueName.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.Subscriptions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription!>!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.TopicFor(System.Type! eventType) -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology.TryGetSubscription(string! eventName, out MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? subscription) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder.RegisterIntegrationEventConsumer<TEvent>() -> MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder.RegisterUpcastedIntegrationEventConsumer<TEvent>() -> MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerPublisher
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerPublisher.PublishAsync(MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage! message, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerReceivePipeline
+MMCA.Common.Infrastructure.Messaging.Broker.IBrokerReceivePipeline.ProcessAsync(MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage! message, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition!>!
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage!
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Body.get -> System.ReadOnlyMemory<byte>
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Body.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.BrokerMessageId.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.BrokerMessageId.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Deconstruct(out System.ReadOnlyMemory<byte> Body, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers, out string! BrokerMessageId) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Equals(MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.EventName.get -> string?
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Headers.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.IncomingBrokerMessage(System.ReadOnlyMemory<byte> Body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers, string! BrokerMessageId) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.RedeliveryCount.get -> int
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage!
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Body.get -> System.ReadOnlyMemory<byte>
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Body.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Deconstruct(out string! Topic, out string! EventName, out System.Guid MessageId, out System.ReadOnlyMemory<byte> Body, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Equals(MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage? other) -> bool
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.EventName.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.EventName.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Headers.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.MessageId.get -> System.Guid
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.MessageId.init -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.OutgoingBrokerMessage(string! Topic, string! EventName, System.Guid MessageId, System.ReadOnlyMemory<byte> Body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers) -> void
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Topic.get -> string!
+MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Topic.init -> void
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus.BrokerEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions) -> void
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerMessageBus
-MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.BrokerMessageBus(MassTransit.IPublishEndpoint! publishEndpoint, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUserService = null, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null, MMCA.Common.Application.Interfaces.ICorrelationContext? correlationContext = null) -> void
+MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.BrokerMessageBus(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerPublisher! publisher, MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology! topology, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUserService = null, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null, MMCA.Common.Application.Interfaces.ICorrelationContext? correlationContext = null) -> void
 MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent>
-MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<MassTransit.Fault<TEvent!>!>! context) -> System.Threading.Tasks.Task!
-MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent>.FaultIntegrationEventConsumer(Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent!>!>! logger) -> void
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<TEvent!>! context) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.ConsumeAsync(TEvent! integrationEvent, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! headers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.IntegrationEventConsumer(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TEvent!>!>! handlers, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent!>!>! logger, System.IServiceProvider? serviceProvider = null) -> void
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!)
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true, System.Action<MassTransit.IEndpointRegistrationConfigurator!>? configureEndpoint = null) -> MassTransit.IBusRegistrationConfigurator!
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterOutputCacheEvictionConsumer(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterUpcastedIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true, System.Action<MassTransit.IEndpointRegistrationConfigurator!>? configureEndpoint = null) -> MassTransit.IBusRegistrationConfigurator!
+MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!)
+MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!).RegisterOutputCacheEvictionConsumer() -> MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!
 MMCA.Common.Infrastructure.Messaging.Consumers.UpcastingIntegrationEventConsumer<TEvent>
-MMCA.Common.Infrastructure.Messaging.Consumers.UpcastingIntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<TEvent!>! context) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Messaging.Consumers.UpcastingIntegrationEventConsumer<TEvent>.ConsumeAsync(TEvent! integrationEvent, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! headers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.Consumers.UpcastingIntegrationEventConsumer<TEvent>.UpcastingIntegrationEventConsumer(MMCA.Common.Application.Interfaces.Events.IEventUpcasterRegistry! upcasters, System.IServiceProvider! serviceProvider, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.UpcastingIntegrationEventConsumer<TEvent!>!>! logger) -> void
 MMCA.Common.Infrastructure.Messaging.InProcessEventBus
 MMCA.Common.Infrastructure.Messaging.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, System.TimeProvider! timeProvider, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Messaging.MessageBusSettings!>? messageBusOptions = null) -> void
@@ -225,23 +302,21 @@ MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ConnectionString.get -> 
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ConnectionString.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EmulatorAdminEndpoint.get -> string?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EmulatorAdminEndpoint.init -> void
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableDelayedRedelivery.get -> bool
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableDelayedRedelivery.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableInbox.get -> bool?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableInbox.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableOutbox.get -> bool?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableOutbox.init -> void
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EndpointPrefix.get -> string?
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EndpointPrefix.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.IsInboxEnabled.get -> bool
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.IsOutboxEnabled.get -> bool
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.MessageBusSettings() -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PrefetchCount.get -> int?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PrefetchCount.init -> void
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.get -> bool
-MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.Provider.get -> string!
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.Provider.init -> void
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ProvisionTopology.get -> bool
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ProvisionTopology.init -> void
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.QueueName.get -> string?
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.QueueName.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RedeliveryIntervalsSeconds.get -> System.Collections.Generic.IReadOnlyList<int>?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RedeliveryIntervalsSeconds.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RetryLimit.get -> int
@@ -251,14 +326,16 @@ MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RetryMaxIntervalSeconds.
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RetryMinIntervalSeconds.get -> int
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.RetryMinIntervalSeconds.init -> void
 MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext
-MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.BrokerTransportContext(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, string? connectionString, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.BrokerTransportContext(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, string? connectionString, Microsoft.Extensions.Configuration.IConfiguration! configuration, MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology! topology) -> void
 MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.Configuration.get -> Microsoft.Extensions.Configuration.IConfiguration!
 MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.ConnectionString.get -> string?
 MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.Settings.get -> MMCA.Common.Infrastructure.Messaging.MessageBusSettings!
+MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext.Topology.get -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerTopology!
 MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies
 MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport
-MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.Configure(MassTransit.IBusRegistrationConfigurator! configurator, MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext! context) -> void
+MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.MaxRedeliveryDelay.get -> System.TimeSpan?
 MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.Name.get -> string!
+MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport.Register(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportContext! context) -> void
 MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders
 MMCA.Common.Infrastructure.Notifications.Live.NullLiveChannelPublisher
 MMCA.Common.Infrastructure.Notifications.Live.NullLiveChannelPublisher.NullLiveChannelPublisher() -> void
@@ -721,6 +798,8 @@ MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.S
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.SpanId.init -> void
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TenantId.get -> string?
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TenantId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceFlags.get -> byte?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceFlags.init -> void
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceId.get -> string?
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceId.init -> void
 MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserId.get -> int?
@@ -743,8 +822,9 @@ MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBuilderE
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.ListDeadLettersAsync(string? dataSource, int skip, int take, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.OutboxDeadLetter!>!>!>!
-MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.OutboxAdministration(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, MMCA.Common.Infrastructure.Persistence.DataSources.FrameworkTableTargets! tableTargets, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.OutboxAdministration(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, MMCA.Common.Infrastructure.Persistence.DataSources.FrameworkTableTargets! tableTargets, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Messaging.MessageBusSettings!>! messageBusOptions) -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.ReplayDeadLettersAsync(string? dataSource, System.Collections.Generic.IReadOnlyCollection<System.Guid>? ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxAdministration.RepublishProcessedAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService.OutboxCleanupService(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Messaging.MessageBusSettings!>! messageBusOptions, MMCA.Common.Infrastructure.Persistence.DataSources.FrameworkTableTargets! tableTargets, System.TimeProvider! timeProvider) -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings
@@ -800,6 +880,8 @@ MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.SpanId.get -> string
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.SpanId.init -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TenantId.get -> string?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TenantId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.get -> byte?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceFlags.init -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceId.get -> string?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceId.init -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserId.get -> int?
@@ -941,6 +1023,7 @@ MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension
 MMCA.Common.Infrastructure.Webhooks.WebhookServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWebhooks(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteCycleAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.Interval.get -> System.TimeSpan
+abstract MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.SeedAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.Accounts.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount!>!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.CreateUser(MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount! account, byte[]! passwordHash, byte[]! passwordSalt) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
@@ -950,6 +1033,13 @@ const MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.SectionName = "Ca
 const MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.ConfigurationKey = "Application:Namespace" -> string!
 const MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.Fallback = "app" -> string!
 const MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.EnableSslConfigKey = "Smtp:EnableSsl" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.ContentType = "content-type" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.EventName = "mmca-event-name" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.JsonContentType = "application/json" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.MessageId = "mmca-message-id" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.RedeliveryCount = "mmca-redelivery-count" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.TraceParent = "traceparent" -> string!
+const MMCA.Common.Infrastructure.Messaging.Broker.BrokerHeaders.TraceState = "tracestate" -> string!
 const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.InProcess = "InProcess" -> string!
 const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.PostgreSql = "PostgreSql" -> string!
 const MMCA.Common.Infrastructure.Messaging.Transports.MessageBusProviders.RabbitMq = "RabbitMq" -> string!
@@ -980,6 +1070,30 @@ const MMCA.Common.Infrastructure.Persistence.MachineClients.MachineClientModelBu
 const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TableName = "WebhookSubscriptions" -> string!
 const MMCA.Common.Infrastructure.Persistence.Webhooks.WebhookSubscriptionModelBuilderExtensions.TenantIndexName = "IX_WebhookSubscriptions_TenantId_IsDeleted" -> string!
 override MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.<Clone>$() -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.ToString() -> string!
+override MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.Equals(object? obj) -> bool
+override MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.GetHashCode() -> int
+override MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.ToString() -> string!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnConnectedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnDisconnectedAsync(System.Exception? exception) -> System.Threading.Tasks.Task!
 override MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSaveChangesInterceptor.SavedChanges(Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesCompletedEventData! eventData, int result) -> int
@@ -1013,13 +1127,16 @@ override MMCA.Common.Infrastructure.Persistence.Interceptors.TenantSaveChangesIn
 override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.GetHashCode() -> int
 override MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.GeneratesTemporaryValues.get -> bool
 override MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.Next(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry! entry) -> int
+override sealed MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? other) -> bool
+override sealed MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? other) -> bool
+override sealed MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? other) -> bool
 static MMCA.Common.Infrastructure.Caching.CacheOptions.Create(System.TimeSpan? expiration) -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
 static MMCA.Common.Infrastructure.Caching.CacheOptions.DefaultDuration.get -> System.TimeSpan
 static MMCA.Common.Infrastructure.Caching.CacheOptions.DefaultExpiration.get -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
 static MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.Resolve(Microsoft.Extensions.Configuration.IConfiguration? configuration, Microsoft.Extensions.Hosting.IHostEnvironment? environment) -> string!
 static MMCA.Common.Infrastructure.Configuration.ApplicationNamespace.Sanitize(string! name) -> string!
 static MMCA.Common.Infrastructure.DependencyInjection.AddAuditTrail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Infrastructure.DependencyInjection.AddBrokerMessaging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<MassTransit.IBusRegistrationConfigurator!>? configureConsumers = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.DependencyInjection.AddBrokerMessaging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!>? configureConsumers = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddBrokerTransport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Infrastructure.Messaging.Transports.IBrokerTransport! transport) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddCaching(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddCommonHybridCache(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.Extensions.Caching.Hybrid.HybridCacheOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -1046,16 +1163,33 @@ static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsAcceptableTargetU
 static MMCA.Common.Infrastructure.Http.OutboundAddressPolicy.IsPublicAddress(System.Net.IPAddress! address) -> bool
 static MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.Resolve(MMCA.Common.Infrastructure.Mail.SmtpSettings! settings, Microsoft.Extensions.Configuration.IConfiguration? configuration, Microsoft.Extensions.Hosting.IHostEnvironment? environment, Microsoft.Extensions.Logging.ILogger? logger) -> bool
 static MMCA.Common.Infrastructure.Mail.SmtpTransportSecurity.Resolve(Microsoft.Extensions.Configuration.IConfiguration? configuration, Microsoft.Extensions.Hosting.IHostEnvironment? environment) -> bool
-static MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.RegisterIntegrationEventConsumer<TEvent>(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true, System.Action<MassTransit.IEndpointRegistrationConfigurator!>? configureEndpoint = null) -> MassTransit.IBusRegistrationConfigurator!
-static MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.RegisterOutputCacheEvictionConsumer(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
-static MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.RegisterUpcastedIntegrationEventConsumer<TEvent>(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true, System.Action<MassTransit.IEndpointRegistrationConfigurator!>? configureEndpoint = null) -> MassTransit.IBusRegistrationConfigurator!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Complete.get -> MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Completed? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.DeadLetter? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Redeliver? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming.EventName(System.Type! eventType) -> string!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming.Fit(string! name, int maxLength) -> string!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming.Kebab(string! value) -> string!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming.Queue(string? configuredQueueName, string? applicationName) -> string!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerNaming.Topic(string! applicationNamespace, string! eventName) -> string!
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? left, MMCA.Common.Infrastructure.Messaging.Broker.BrokerSubscription? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage? left, MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage? left, MMCA.Common.Infrastructure.Messaging.Broker.IncomingBrokerMessage? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.operator !=(MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage? left, MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage.operator ==(MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage? left, MMCA.Common.Infrastructure.Messaging.Broker.OutgoingBrokerMessage? right) -> bool
+static MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.RegisterOutputCacheEvictionConsumer(this MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder! builder) -> MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder!
 static MMCA.Common.Infrastructure.Messaging.MessageBusSettings.DefaultRedeliveryIntervalsSeconds.get -> System.Collections.Generic.IReadOnlyList<int>!
-static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyBackpressure(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> void
-static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyMessageRetry(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> void
-static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyReceivePolicies(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.Collections.Generic.IReadOnlyList<System.TimeSpan>! redeliveryIntervals) -> void
-static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ApplyReceivePolicies(MassTransit.IBusFactoryConfigurator! cfg, MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, bool applyDelayedRedelivery) -> void
 static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> System.TimeSpan[]!
-static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.Collections.Generic.IReadOnlyList<int>! defaultIntervalsSeconds) -> System.TimeSpan[]!
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.BuildRedeliveryIntervals(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, System.TimeSpan? maxRedeliveryDelay) -> System.TimeSpan[]!
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ResolveConcurrentMessageLimit(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> int?
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.ResolvePrefetchCount(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings) -> int?
+static MMCA.Common.Infrastructure.Messaging.Transports.BrokerTransportPolicies.RetryDelay(MMCA.Common.Infrastructure.Messaging.MessageBusSettings! settings, int retryNumber) -> System.TimeSpan
 static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildApnsPayload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
 static MMCA.Common.Infrastructure.Notifications.Push.NativePushPayloads.BuildFcmV1Payload(string! title, string! body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? metadata = null) -> string!
 static MMCA.Common.Infrastructure.Persistence.Auth.PasskeyCredentialModelBuilderExtensions.ApplyPasskeyCredentialConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
@@ -1111,6 +1245,9 @@ static readonly MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.SectionN
 virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.IsEnabled.get -> bool
 virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.LogCycleFailure(System.Exception! exception) -> void
 virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.StartupDelay.get -> System.TimeSpan
+virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.Equals(MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition? other) -> bool
+virtual MMCA.Common.Infrastructure.Messaging.Broker.BrokerDisposition.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationBase<TEntity, TIdentifierType>.Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder) -> void
 ~override MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Equals(object obj) -> bool
 ~override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.Equals(object obj) -> bool

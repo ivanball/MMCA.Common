@@ -17,6 +17,9 @@
     <!-- Docker-gated SQL Server tier (outside the .slnx): asserts what the SqlClient provider emits
          against a real server, for the same reason as the PostgreSQL tier. -->
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.SQLServer.Tests" />
+    <!-- Docker-gated RabbitMQ tier (outside the .slnx): drives the built-in RabbitMQ transport against
+         a real broker (exchanges, delay queues, the error queue, competing consumers). -->
+    <InternalsVisibleTo Include="MMCA.Common.Infrastructure.RabbitMq.Tests" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -46,18 +49,15 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="MassTransit" />
-    <PackageReference Include="MassTransit.RabbitMQ" />
-    <!-- The built-in PostgreSQL broker (MessageBus:Provider=PostgreSql, PostgreSqlBrokerTransport).
-         Cloud-neutral: it needs a PostgreSQL database, not a cloud service, so it is core rather than
-         an adapter. Referenced unconditionally like RabbitMQ. -->
-    <PackageReference Include="MassTransit.SqlTransport.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <!-- The built-in RabbitMQ broker transport (Messaging/Transports/RabbitMq). Same build the
+         MMCA.Common.Aspire readiness check uses, so a host carries one client version. -->
+    <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="StackExchange.Redis" />
     <!-- Two-level caching behind the opt-in AddCommonHybridCache (HybridCacheService). Referenced
          unconditionally so the type is available to hosts that call it; a host that does not is

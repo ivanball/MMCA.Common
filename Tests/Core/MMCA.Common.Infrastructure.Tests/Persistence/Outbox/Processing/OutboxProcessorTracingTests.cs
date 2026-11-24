@@ -29,6 +29,11 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.Outbox.Processing;
 /// so the asynchronous hop stays on the request's trace. A row written without a trace context (or
 /// with only half of one) gets no span and is still delivered.
 /// <para>
+/// The parent is rebuilt with the row's STORED trace flags, so under a parent-based sampler (the
+/// listener below) the span is recorded only when the raising request was sampled; a row with no
+/// stored flags (written before the column existed) reads as not sampled.
+/// </para>
+/// <para>
 /// The <c>MMCA.Common.Outbox</c> source is process-wide, so other tests in this assembly emit spans
 /// on it too: every assertion filters by this test's own message id.
 /// </para>
@@ -50,7 +55,13 @@ public sealed class OutboxProcessorTracingTests : IDisposable
         _listener = new ActivityListener
         {
             ShouldListenTo = source => string.Equals(source.Name, "MMCA.Common.Outbox", StringComparison.Ordinal),
-            Sample = static (ref _) => ActivitySamplingResult.AllDataAndRecorded,
+            // Parent-based, as the OpenTelemetry default sampler is: a root follows the listener, a
+            // child follows its parent's recorded flag (PropagationData still creates the activity,
+            // so an unsampled delivery is observable here as a span that is not recorded).
+            Sample = static (ref options) =>
+                options.Parent == default || options.Parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded)
+                    ? ActivitySamplingResult.AllDataAndRecorded
+                    : ActivitySamplingResult.PropagationData,
             ActivityStopped = activity => _spans.Enqueue(activity),
         };
         ActivitySource.AddActivityListener(_listener);
@@ -114,11 +125,13 @@ public sealed class OutboxProcessorTracingTests : IDisposable
             .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
             .Callback(() => traceSeenByHandler = Activity.Current?.TraceId)
             .Returns(Task.CompletedTask);
-        var message = await SeedAsync(TraceId, SpanId);
+        var message = await SeedAsync(TraceId, SpanId, (byte)ActivityTraceFlags.Recorded);
 
         await _sut.ProcessPendingMessagesAsync(TestContext.Current.CancellationToken);
 
         var span = SpansFor(message.Id).Should().ContainSingle().Which;
+        span.Recorded.Should().BeTrue("the raising request was sampled");
+        span.HasRemoteParent.Should().BeTrue("the parent was rebuilt from the row, not taken from this process");
         span.Kind.Should().Be(ActivityKind.Consumer);
         span.TraceId.ToHexString().Should().Be(TraceId, "the hop continues the original request's trace");
         span.ParentSpanId.ToHexString().Should().Be(SpanId);
@@ -148,6 +161,34 @@ public sealed class OutboxProcessorTracingTests : IDisposable
             .ProcessedOn.Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task RowFromASampledRequest_IsDeliveredInsideARecordedSpan()
+    {
+        var message = await SeedAsync(TraceId, SpanId, (byte)ActivityTraceFlags.Recorded);
+
+        await _sut.ProcessPendingMessagesAsync(TestContext.Current.CancellationToken);
+
+        SpansFor(message.Id).Should().ContainSingle().Which.Recorded.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData((byte)0)]
+    [InlineData(null)]
+    public async Task RowFromAnUnsampledRequestOrWithNoStoredFlags_GetsNoRecordedSpan_AndIsStillDelivered(byte? traceFlags)
+    {
+        var message = await SeedAsync(TraceId, SpanId, traceFlags);
+
+        await _sut.ProcessPendingMessagesAsync(TestContext.Current.CancellationToken);
+
+        SpansFor(message.Id).Should().ContainSingle().Which.Recorded.Should().BeFalse(
+            "a parent-based sampler drops the delivery span of a request it did not sample, so no orphan trace is exported");
+        _dispatcher.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        (await _dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync(m => m.Id == message.Id, TestContext.Current.CancellationToken))
+            .ProcessedOn.Should().NotBeNull();
+    }
+
     private Activity[] SpansFor(Guid messageId) =>
     [
         .. _spans.Where(a =>
@@ -155,7 +196,7 @@ public sealed class OutboxProcessorTracingTests : IDisposable
             && string.Equals(a.GetTagItem("messaging.outbox.message_id") as string, messageId.ToString(), StringComparison.Ordinal)),
     ];
 
-    private async Task<OutboxMessage> SeedAsync(string? traceId, string? spanId)
+    private async Task<OutboxMessage> SeedAsync(string? traceId, string? spanId, byte? traceFlags = null)
     {
         var message = new OutboxMessage
         {
@@ -167,6 +208,7 @@ public sealed class OutboxProcessorTracingTests : IDisposable
             RetryCount = 0,
             TraceId = traceId,
             SpanId = spanId,
+            TraceFlags = traceFlags,
         };
         await _dbContext.Set<OutboxMessage>().AddAsync(message, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

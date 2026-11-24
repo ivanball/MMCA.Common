@@ -143,7 +143,8 @@ public static class Extensions
     /// <summary>
     /// Emulator image tag. Pinned to a 2.x build on purpose: the HTTP management plane (port 5300)
     /// that lets a client create its own topics, subscriptions and queues shipped in 2.0.0, and
-    /// MassTransit provisions its whole topology at bus start. A silent downgrade to a 1.x image
+    /// the Azure Service Bus transport provisions its whole topology through it when its receiver
+    /// starts. A silent downgrade to a 1.x image
     /// would leave the broker unusable rather than merely older.
     /// </summary>
     public const string ServiceBusEmulatorImageTag = "2.0.1";
@@ -242,8 +243,8 @@ public static class Extensions
         /// Both planes are published: AMQP (container port
         /// <see cref="ServiceBusEmulatorResource.AmqpTargetPort"/>) carries every publish and
         /// consume, and the HTTP management plane (container port
-        /// <see cref="ServiceBusEmulatorResource.AdminTargetPort"/>) is what MassTransit provisions
-        /// topology through. Host ports are left to Aspire: nothing outside the stack dials these,
+        /// <see cref="ServiceBusEmulatorResource.AdminTargetPort"/>) is what the Azure Service Bus
+        /// transport provisions topology through. Host ports are left to Aspire: nothing outside the stack dials these,
         /// so fixing them would only invite a collision with a stray container.
         /// </para>
         /// <para>
@@ -324,7 +325,7 @@ public static class Extensions
         /// Wires a service to the local Azure Service Bus emulator instead of RabbitMQ, so the
         /// development stack runs the production transport. Sets
         /// <c>MessageBus:Provider=AzureServiceBus</c>, the AMQP connection string, and the
-        /// management-plane address the Azure Service Bus transport needs to build MassTransit v8's
+        /// management-plane address the Azure Service Bus transport needs to build its
         /// administration client. Adds a wait-for so the service does not start before the emulator
         /// container is up.
         /// <para>

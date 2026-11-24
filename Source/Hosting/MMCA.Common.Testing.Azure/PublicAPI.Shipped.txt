@@ -1,19 +1,24 @@
 #nullable enable
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
-MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminEndpoint.get -> string!
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConnectionString.get -> string!
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.RecordConsumed<TEvent>(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder! consumers, Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
 MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
+MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.Services.get -> System.IServiceProvider!
 const MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
 const MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
 static MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
+static MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ComposeHostConfiguration(string! connectionString, string! adminEndpoint, string! queueName) -> System.Collections.Generic.Dictionary<string!, string?>!
 virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
 virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureConsumers(MMCA.Common.Infrastructure.Messaging.Broker.IBrokerConsumerBuilder! consumers, Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureHost(System.Collections.Generic.IDictionary<string!, string?>! configuration) -> void
 virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
 virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
 virtual MMCA.Common.Testing.Azure.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?

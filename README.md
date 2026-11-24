@@ -84,7 +84,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Aws` | The AWS adapter: S3-compatible file storage (Amazon S3, Cloudflare R2, MinIO, the GCS XML API), the Amazon SQS/SNS broker transport, Secrets Manager configuration, the Parameter Store DataProtection key ring, SNS native push and RDS IAM authentication for PostgreSQL |
 | `MMCA.Common.Gcp` | The Google Cloud adapter: Google Cloud Storage file storage, Secret Manager configuration, the Cloud Storage DataProtection key ring with optional Cloud KMS, FCM native push over a Firestore installation registry, Cloud SQL IAM authentication for PostgreSQL and the Telemetry (OTLP) API exporter for traces and logs |
 | `MMCA.Common.Testing` | Integration test base, JWT generator, fixtures |
-| `MMCA.Common.Testing.Azure` | The Azure Service Bus emulator broker-parity fixture base (Testcontainers + the MassTransit v8 custom-clients host) |
+| `MMCA.Common.Testing.Azure` | The Azure Service Bus emulator broker-parity fixture base (Testcontainers + a host on the native Service Bus transport) |
 | `MMCA.Common.Testing.Aspire` | AppHost integration testing on `Aspire.Hosting.Testing`: collection fixture with per-resource readiness waits, a precondition gate, and typed health/JWKS/h2c/data-source assertions |
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
 | `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers |

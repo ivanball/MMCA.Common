@@ -29,8 +29,8 @@ namespace MMCA.Common.Application.DomainEvents;
 /// a log line to show for it. Letting the exception through hands the decision to the delivery
 /// mechanism, which is built for exactly this: on the outbox path the message keeps its retry
 /// count, backs off, and dead-letters after <c>Outbox:MaxRetries</c> attempts; on the broker path
-/// the inbox row stays unprocessed and MassTransit redelivers and then moves the message to the
-/// error queue. Delivery is therefore at-least-once and subclasses must be idempotent.
+/// the inbox row stays unprocessed and the broker receive pipeline retries, redelivers and then moves the message to the
+/// dead-letter queue. Delivery is therefore at-least-once and subclasses must be idempotent.
 /// </para>
 /// </summary>
 /// <typeparam name="TIntegrationEvent">The integration event type this handler processes.</typeparam>

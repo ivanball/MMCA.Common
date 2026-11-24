@@ -1,16 +1,18 @@
 using AwesomeAssertions;
-using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using MMCA.Common.Infrastructure.Messaging.Transports;
+using MMCA.Common.Infrastructure.Messaging.Transports.PostgreSql;
+using MMCA.Common.Infrastructure.Messaging.Transports.RabbitMq;
 
 namespace MMCA.Common.Infrastructure.Tests.Messaging.Transports;
 
 /// <summary>
 /// The registration-time broker-transport extension point: <c>AddBrokerMessaging</c> resolves
-/// <c>MessageBus:Provider</c> to the built-in RabbitMQ transport or to an adapter-registered
+/// <c>MessageBus:Provider</c> to a built-in transport or to an adapter-registered
 /// <see cref="IBrokerTransport"/>, and a name with no transport fails at registration naming the
 /// package and the call that would supply it.
 /// </summary>
@@ -23,6 +25,8 @@ public sealed class BrokerTransportRegistrationTests
                 ["MessageBus:Provider"] = provider,
                 ["MessageBus:ConnectionString"] = connectionString,
                 ["MessageBus:RetryLimit"] = "3",
+                ["applicationName"] = "Demo.Orders.Service",
+                ["Application:Namespace"] = "demo",
             })
             .Build();
 
@@ -35,7 +39,7 @@ public sealed class BrokerTransportRegistrationTests
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*'AzureServiceBus'*MMCA.Common.Azure*AddAzureServiceBusTransport()*BEFORE AddBrokerMessaging*");
-        services.Should().BeEmpty("the transport is resolved before AddMassTransit, so a failure leaves no half-registered bus");
+        services.Should().BeEmpty("the transport is resolved before anything is registered, so a failure leaves nothing half-registered");
     }
 
     [Fact]
@@ -46,11 +50,11 @@ public sealed class BrokerTransportRegistrationTests
         var act = () => services.AddBrokerMessaging(ConfigurationFor("Kafka"));
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*'Kafka'*AddBrokerTransport(...)*Available providers: InProcess, RabbitMq*");
+            .WithMessage("*'Kafka'*AddBrokerTransport(...)*Available providers: InProcess, RabbitMq, PostgreSql*");
     }
 
     [Fact]
-    public void AddBrokerMessaging_RegisteredTransport_IsConfiguredOnceWithTheResolvedContext()
+    public void AddBrokerMessaging_RegisteredTransport_IsRegisteredOnceWithTheResolvedContext()
     {
         var services = new ServiceCollection();
         var transport = new RecordingTransport("Fake");
@@ -63,7 +67,21 @@ public sealed class BrokerTransportRegistrationTests
         transport.Context!.ConnectionString.Should().Be("fake://broker");
         transport.Context.Settings.RetryLimit.Should().Be(3);
         transport.Context.Configuration.Should().BeSameAs(configuration);
+        transport.Context.Topology.QueueName.Should().Be("demo-orders");
         services.Should().Contain(d => d.ServiceType == typeof(IMessageBus) && d.ImplementationType == typeof(BrokerMessageBus));
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_TheTransportRegistersLast_AfterTheTopologyAndThePipeline()
+    {
+        var services = new ServiceCollection();
+        var transport = new RecordingTransport("Fake");
+
+        services.AddBrokerTransport(transport);
+        services.AddBrokerMessaging(ConfigurationFor("Fake"));
+
+        transport.ServicesAtRegister.Should().Contain(typeof(BrokerTopology));
+        transport.ServicesAtRegister.Should().Contain(typeof(IBrokerReceivePipeline));
     }
 
     [Fact]
@@ -76,6 +94,8 @@ public sealed class BrokerTransportRegistrationTests
             {
                 ["MessageBus:Provider"] = "Fake",
                 ["ConnectionStrings:messaging"] = "fake://from-aspire",
+                ["applicationName"] = "Demo",
+                ["Application:Namespace"] = "demo",
             })
             .Build();
 
@@ -101,26 +121,21 @@ public sealed class BrokerTransportRegistrationTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AddBrokerMessaging_RabbitMq_BuildsTheBusWithoutConnecting(bool enableDelayedRedelivery)
+    [InlineData("RabbitMq", "amqp://guest:guest@localhost:5672", typeof(RabbitMqPublisher))]
+    [InlineData("rabbitmq", "amqp://guest:guest@localhost:5672", typeof(RabbitMqPublisher))]
+    [InlineData("PostgreSql", "Host=localhost;Database=broker;Username=u;Password=p", typeof(PostgreSqlPublisher))]
+    [InlineData("postgresql", "Host=localhost;Database=broker;Username=u;Password=p", typeof(PostgreSqlPublisher))]
+    public async Task AddBrokerMessaging_BuiltInProviders_ResolveToTheBuiltInTransports(string provider, string connectionString, Type publisherType)
     {
-        // Building the bus runs the transport's factory callback (host, receive policies, endpoints)
-        // but opens no connection, so the built-in transport is exercised end to end without a broker.
-        var services = new ServiceCollection().AddLogging();
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["MessageBus:Provider"] = "RabbitMq",
-                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
-                ["MessageBus:EnableDelayedRedelivery"] = enableDelayedRedelivery ? "true" : "false",
-            })
-            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
 
-        services.AddBrokerMessaging(configuration);
-        await using var provider = services.BuildServiceProvider();
+        services.AddBrokerMessaging(ConfigurationFor(provider, connectionString));
 
-        provider.GetRequiredService<IBusControl>().Address.Scheme.Should().Be("rabbitmq");
+        // Resolving the publisher opens nothing: both transports connect on first use.
+        await using var serviceProvider = services.BuildServiceProvider();
+        serviceProvider.GetRequiredService<IBrokerPublisher>().Should().BeOfType(publisherType);
+        services.Should().Contain(d => d.ServiceType == typeof(IMessageBus) && d.ImplementationType == typeof(BrokerMessageBus));
     }
 
     [Fact]
@@ -153,29 +168,37 @@ public sealed class BrokerTransportRegistrationTests
     }
 
     [Fact]
-    public void BrokerTransportContext_RejectsMissingSettingsOrConfiguration()
+    public void BrokerTransportContext_RejectsMissingSettingsConfigurationOrTopology()
     {
         var configuration = new ConfigurationBuilder().Build();
+        var topology = new BrokerTopology("demo", "orders", []);
 
-        var noSettings = () => new BrokerTransportContext(null!, null, configuration);
-        var noConfiguration = () => new BrokerTransportContext(new MessageBusSettings(), null, null!);
+        var noSettings = () => new BrokerTransportContext(null!, null, configuration, topology);
+        var noConfiguration = () => new BrokerTransportContext(new MessageBusSettings(), null, null!, topology);
+        var noTopology = () => new BrokerTransportContext(new MessageBusSettings(), null, configuration, null!);
 
         noSettings.Should().Throw<ArgumentNullException>();
         noConfiguration.Should().Throw<ArgumentNullException>();
+        noTopology.Should().Throw<ArgumentNullException>();
     }
 
     private class RecordingTransport(string name) : IBrokerTransport
     {
         public string Name { get; } = name;
 
+        public TimeSpan? MaxRedeliveryDelay => null;
+
         public int Calls { get; private set; }
 
         public BrokerTransportContext? Context { get; private set; }
 
-        public void Configure(IBusRegistrationConfigurator configurator, BrokerTransportContext context)
+        public IReadOnlyList<Type> ServicesAtRegister { get; private set; } = [];
+
+        public void Register(IServiceCollection services, BrokerTransportContext context)
         {
             Calls++;
             Context = context;
+            ServicesAtRegister = [.. services.Select(d => d.ServiceType)];
         }
     }
 

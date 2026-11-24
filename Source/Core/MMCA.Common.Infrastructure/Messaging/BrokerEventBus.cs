@@ -14,7 +14,7 @@ namespace MMCA.Common.Infrastructure.Messaging;
 /// integration events to the outbox and signals the <see cref="OutboxProcessor"/> to drain
 /// them, but does NOT dispatch in-process. The <c>OutboxProcessor</c> picks up the entries
 /// and publishes via <see cref="MMCA.Common.Application.Messaging.IMessageBus"/>, which in
-/// broker mode is wired to <see cref="BrokerMessageBus"/> → MassTransit → broker.
+/// broker mode is wired to <see cref="BrokerMessageBus"/>, which publishes through the selected broker transport.
 /// <para>
 /// Replaces <see cref="InProcessEventBus"/> when <c>AddBrokerMessaging</c> is called.
 /// The two implementations differ only in whether they dispatch synchronously after

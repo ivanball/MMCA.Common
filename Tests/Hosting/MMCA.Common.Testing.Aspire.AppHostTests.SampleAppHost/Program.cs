@@ -50,6 +50,10 @@ if (builder.Configuration.GetValue("SampleAppHost:Outage", false))
     builder.AddDotnetProject("sample-outage", sampleServiceProject)
         .WithSQLServerDataSource(sampleDb, "Sample")
         .WithBroker(broker)
+
+        // A broker host must name its application: every topic is prefixed with Application:Namespace,
+        // which all services of one application share, and AddBrokerMessaging refuses to start without it.
+        .WithEnvironment("Application__Namespace", "sample")
         .WithEnvironment("SampleService__Outage", "true")
         .WithEnvironment("Outbox__PollingIntervalSeconds", "1")
         .WithEnvironment("Outbox__ProcessingDelaySeconds", "0")

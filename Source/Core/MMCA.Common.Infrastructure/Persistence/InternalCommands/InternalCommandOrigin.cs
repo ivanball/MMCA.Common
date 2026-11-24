@@ -14,6 +14,10 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 /// <param name="CorrelationId">The scheduling request's correlation id, or null.</param>
 /// <param name="TraceId">The W3C trace id current at schedule time, or null.</param>
 /// <param name="SpanId">The W3C span id current at schedule time, or null.</param>
+/// <param name="TraceFlags">
+/// The W3C trace flags current at schedule time (the scheduling request's sampling decision), or
+/// null when no activity was current.
+/// </param>
 internal readonly record struct InternalCommandOrigin(
     UserIdentifierType? UserId,
     string? UserRoles,
@@ -21,4 +25,5 @@ internal readonly record struct InternalCommandOrigin(
     string? TenantId,
     string? CorrelationId,
     string? TraceId,
-    string? SpanId);
+    string? SpanId,
+    byte? TraceFlags);

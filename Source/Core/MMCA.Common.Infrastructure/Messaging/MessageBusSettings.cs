@@ -38,68 +38,63 @@ public sealed class MessageBusSettings
     /// leave it unset for a real Azure Service Bus namespace, which serves both planes on one
     /// endpoint and needs nothing here.
     /// <para>
-    /// It exists because MassTransit is pinned to v8, which has no vendor emulator mode (that
-    /// arrived in v9, excluded by the commercial-license policy). The only v8 path onto the emulator
-    /// is the custom-clients <c>Host</c> overload, which takes a data-plane client AND a
-    /// management-plane client; the emulator serves those on two different ports, so the management
-    /// client cannot be derived from <see cref="ConnectionString"/> alone. An Aspire AppHost gets
-    /// this value for free from the emulator <c>WithBroker</c> overload.
+    /// The emulator serves the data plane (AMQP) and the management plane (HTTP) on two different
+    /// ports, so the administration client that provisions topics, subscriptions and queues cannot be
+    /// derived from <see cref="ConnectionString"/> alone. An Aspire AppHost gets this value for free
+    /// from the emulator <c>WithBroker</c> overload.
     /// </para>
     /// <para>
     /// The setting is read only when <see cref="ConnectionString"/> carries
     /// <c>UseDevelopmentEmulator=true</c>; when it does, a missing or malformed value fails at
-    /// registration rather than at the first publish, because a bus with no management client cannot
-    /// provision the topology it needs to run at all.
+    /// registration rather than at the first publish, because a transport with no management client
+    /// cannot provision the topology it needs to run at all.
     /// </para>
     /// </summary>
     [StringLength(2048)]
     public string? EmulatorAdminEndpoint { get; init; }
 
     /// <summary>
-    /// Gets the endpoint name prefix used to namespace queues per service (e.g. <c>store-catalog</c>).
-    /// When set, the broker registration installs a kebab-case endpoint name formatter carrying this
-    /// prefix, so a consumer named <c>OrderPlacedConsumer</c> in a service prefixed
-    /// <c>store-catalog</c> binds the queue <c>store-catalog-order-placed</c> instead of the bare
-    /// <c>order-placed</c>. That is what lets several services with the same consumer type names
-    /// coexist on one broker without silently sharing a queue (competing consumers across service
-    /// boundaries, where each event reaches only one of them).
+    /// Gets the name of the ONE queue this host receives on, or <see langword="null"/> (the default)
+    /// to derive it from the host application name: lower kebab case with a trailing
+    /// <c>-service</c> removed, so <c>MMCA.ADC.Engagement.Service</c> receives on
+    /// <c>mmca-adc-engagement</c> (see <c>BrokerNaming.Queue</c>). Every integration event the host
+    /// consumes is bound to this queue, so two services consuming the same event each get their own
+    /// copy instead of competing for one.
     /// <para>
-    /// The consumer's namespace is deliberately left out of the generated name: the prefix is the
-    /// only namespacing applied, so a queue name stays readable and survives a type moving between
-    /// folders.
-    /// </para>
-    /// <para>
-    /// Unset means the APPLICATION NAMESPACE (see
-    /// <see cref="MMCA.Common.Infrastructure.Configuration.ApplicationNamespace"/>), not "no prefix"
-    /// (SEC-Common-53): two applications on one broker used to derive identical queue names from
-    /// identical consumer type names and became competing consumers of each other's events. Set the
-    /// value explicitly only to pin a name two hosts of the same application must share.
+    /// Set it explicitly only to pin a name that must survive a host rename, or when two hosts of the
+    /// same service must share one queue as competing consumers (replicas always do, because they run
+    /// under the same application name). A configured value is converted to kebab case but never
+    /// trimmed; a transport whose broker limits name length shortens it deterministically.
     /// </para>
     /// </summary>
-    [StringLength(64)]
-    public string? EndpointPrefix { get; init; }
+    [StringLength(50)]
+    public string? QueueName { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the broker keeps MassTransit's default endpoint names (no
-    /// prefix, default formatter), which is what every release before 1.188.0 produced when
-    /// <see cref="EndpointPrefix"/> was unset. Set to <see langword="true"/> on an existing deployment so queue
-    /// and subscription names stay stable across the upgrade; the per-application prefix
-    /// (<see cref="EndpointPrefix"/>, or the resolved application namespace) applies only when this
-    /// is <see langword="false"/>. Defaults to <see langword="false"/>.
+    /// Gets a value indicating whether the transport creates the broker entities it needs: the topic
+    /// per published or consumed event, this host's queue, and the topic-to-queue bindings. Creation
+    /// is idempotent and happens when the receiver starts (and on the first publish to a missing
+    /// topic). Defaults to <see langword="true"/>.
+    /// <para>
+    /// Set it to <see langword="false"/> where the broker entities are provisioned out of band (an
+    /// infrastructure-as-code deployment, or an identity that may send and receive but not manage),
+    /// and the transport then assumes every entity exists.
+    /// </para>
     /// </summary>
-    public bool PreserveDefaultEndpointNames { get; init; }
+    public bool ProvisionTopology { get; init; } = true;
 
     /// <summary>
-    /// Gets the maximum number of in-process redelivery attempts MassTransit makes (via
-    /// <c>UseMessageRetry</c>) before a faulted message is moved to the <c>_error</c> queue.
-    /// Applies to every broker receive endpoint. Set to <c>0</c> to disable retries.
+    /// Gets the number of in-process retries the receive pipeline makes after a handler failure,
+    /// each in a fresh DI scope with an exponential delay, before the message is handed to
+    /// second-level redelivery (or dead-lettered when none is left). A message is therefore attempted
+    /// up to <c>RetryLimit + 1</c> times per delivery. Set to <c>0</c> to disable in-process retries.
     /// Defaults to <c>5</c>.
     /// </summary>
     [Range(0, 20)]
     public int RetryLimit { get; init; } = 5;
 
     /// <summary>
-    /// Gets the first retry interval, in seconds. Subsequent intervals grow exponentially up to
+    /// Gets the first retry interval, in seconds. Subsequent intervals double, up to
     /// <see cref="RetryMaxIntervalSeconds"/>. Defaults to <c>1</c>.
     /// </summary>
     [Range(0, 300)]
@@ -185,78 +180,54 @@ public sealed class MessageBusSettings
     public bool IsOutboxEnabled => EnableOutbox ?? !MessageBusProviders.IsInProcess(Provider);
 
     /// <summary>
-    /// Gets a value indicating whether second-level (broker-scheduled) redelivery is applied on
-    /// top of the in-process <c>UseMessageRetry</c> policy. When <see langword="true"/>, a message
-    /// that exhausts its immediate retries is scheduled back onto the queue after each interval in
-    /// <see cref="RedeliveryIntervalsSeconds"/> instead of dead-lettering right away, which is what
-    /// carries a consumer through an outage measured in minutes or hours rather than seconds.
-    /// <para>
-    /// Defaults to <see langword="false"/> because on RabbitMQ this requires the
-    /// <c>rabbitmq_delayed_message_exchange</c> plugin, and the Aspire development RabbitMQ
-    /// container does not ship it: enabling it against a plugin-less broker fails at bus start.
-    /// Set it to <see langword="true"/> only on a broker where the plugin is installed.
-    /// </para>
-    /// <para>
-    /// This flag is read by the RabbitMQ transport only. A transport whose broker schedules
-    /// natively (Azure Service Bus from <c>MMCA.Common.Azure</c>, Amazon SQS from
-    /// <c>MMCA.Common.Aws</c>) ignores it and always applies
-    /// <see cref="RedeliveryIntervalsSeconds"/>.
-    /// </para>
-    /// </summary>
-    public bool EnableDelayedRedelivery { get; init; }
-
-    /// <summary>
     /// Gets the framework's default second-level redelivery intervals, in seconds:
     /// <c>[60, 600, 3600]</c> (one minute, ten minutes, one hour), a spread wide enough to ride out
     /// a dependency restart, a failover and a short incident without an operator replaying the
-    /// error queue by hand. A transport applies it when <see cref="RedeliveryIntervalsSeconds"/> is
-    /// not configured, unless it passes a default of its own to
-    /// <see cref="BrokerTransportPolicies.BuildRedeliveryIntervals(MessageBusSettings, IReadOnlyList{int})"/>
-    /// (a broker with a shorter delay cap does).
+    /// dead-letter queue by hand. The receive pipeline applies it when
+    /// <see cref="RedeliveryIntervalsSeconds"/> is not configured, clamping each step to the
+    /// transport's <see cref="IBrokerTransport.MaxRedeliveryDelay"/> when it declares one.
     /// </summary>
     public static IReadOnlyList<int> DefaultRedeliveryIntervalsSeconds { get; } = [60, 600, 3600];
 
     /// <summary>
     /// Gets the configured second-level redelivery intervals, in seconds, or <see langword="null"/>
-    /// (the default) to use the transport's default, which is
-    /// <see cref="DefaultRedeliveryIntervalsSeconds"/> unless the transport declares its own. Each
-    /// entry is one scheduled redelivery attempt after the in-process retry policy is exhausted; the
-    /// message dead-letters only after the last interval also fails. A configured list REPLACES the
-    /// default; it is never merged with it. Non-positive entries are dropped, so <c>[0]</c> turns
-    /// second-level redelivery off (an empty array cannot be expressed in configuration).
+    /// (the default) to use <see cref="DefaultRedeliveryIntervalsSeconds"/>. Each entry is one
+    /// redelivery the receive pipeline schedules on the host's queue after the in-process retries
+    /// are exhausted; the message dead-letters only after the last interval also fails. A configured
+    /// list REPLACES the default; it is never merged with it. Non-positive entries are dropped, so
+    /// <c>[0]</c> turns second-level redelivery off (an empty array cannot be expressed in
+    /// configuration). An interval longer than the transport's
+    /// <see cref="IBrokerTransport.MaxRedeliveryDelay"/> is shortened to it (Amazon SQS caps a
+    /// message delay at 15 minutes).
     /// <para>
     /// The property has no initializer on purpose: the configuration binder appends a configured
     /// list to an existing collection instead of replacing it, so a non-null default would make the
     /// defaults impossible to shorten by configuration.
     /// </para>
     /// <para>
-    /// Applied only when <see cref="EnableDelayedRedelivery"/> is <see langword="true"/> on
-    /// <see cref="MessageBusProviders.RabbitMq"/> (needs the delayed-message-exchange plugin); a
-    /// transport whose broker schedules natively (the built-in <see cref="MessageBusProviders.PostgreSql"/>,
-    /// Azure Service Bus from <c>MMCA.Common.Azure</c>, Amazon SQS from <c>MMCA.Common.Aws</c>) applies
-    /// it unconditionally.
+    /// Every transport applies it: RabbitMQ through per-interval delay queues (no plugin), PostgreSQL
+    /// through the row's visibility time, Azure Service Bus and Amazon SQS through their native
+    /// scheduling.
     /// </para>
     /// </summary>
     public IReadOnlyList<int>? RedeliveryIntervalsSeconds { get; init; }
 
     /// <summary>
     /// Gets the number of messages the transport may hold locally ahead of the consumer, or
-    /// <see langword="null"/> (the default) to leave the transport's own default in place. Applied to
-    /// every broker receive endpoint. A prefetch window larger than the work a consumer can finish
-    /// inside the lock or lease is what turns a slow consumer into redeliveries; a window of one
-    /// serializes the endpoint. Values of zero or less are ignored rather than pushed to the
-    /// transport, because the binder never validates this section (see
-    /// <c>AddBrokerMessaging</c>), so the guard has to live in code.
+    /// <see langword="null"/> (the default) to leave the transport's own default in place. A prefetch
+    /// window larger than the work a consumer can finish inside the lock or lease is what turns a slow
+    /// consumer into redeliveries; a window of one serializes the queue. Values of zero or less are
+    /// ignored rather than pushed to the transport, because the binder never validates this section
+    /// (see <c>AddBrokerMessaging</c>), so the guard has to live in code.
     /// </summary>
     public int? PrefetchCount { get; init; }
 
     /// <summary>
-    /// Gets the maximum number of messages consumed concurrently on a receive endpoint, or
-    /// <see langword="null"/> (the default) to leave the transport's own default in place. Applied to
-    /// every broker receive endpoint. This is the backpressure knob: it caps how much work the
-    /// service takes on at once, and therefore how many database connections and downstream calls one
-    /// burst of events can open. Values of zero or less are ignored, same as
-    /// <see cref="PrefetchCount"/>.
+    /// Gets the maximum number of messages consumed concurrently from the host's queue, or
+    /// <see langword="null"/> (the default) to leave the transport's own default in place. This is the
+    /// backpressure knob: it caps how much work the service takes on at once, and therefore how many
+    /// database connections and downstream calls one burst of events can open. Values of zero or less
+    /// are ignored, same as <see cref="PrefetchCount"/>.
     /// </summary>
     public int? ConcurrentMessageLimit { get; init; }
 }

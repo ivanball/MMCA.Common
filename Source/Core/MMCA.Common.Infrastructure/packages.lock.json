@@ -8,36 +8,6 @@
         "resolved": "0.13.0",
         "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
       },
-      "MassTransit": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
-        "dependencies": {
-          "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
-        }
-      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.342, )",
@@ -207,6 +177,12 @@
         "resolved": "8.9.1",
         "contentHash": "L0vfggkkI2nDAW9lCFYSqX9g/+3TkVXhAq+sh6owBq656X9XW0kE2NG+dPYGNQGeK66HS1rKHRPWMm1bMv91kw=="
       },
+      "RabbitMQ.Client": {
+        "type": "Direct",
+        "requested": "[7.2.2, )",
+        "resolved": "7.2.2",
+        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA=="
+      },
       "Roslynator.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.1, )",
@@ -261,11 +237,6 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -275,11 +246,6 @@
         "type": "Transitive",
         "resolved": "2.14.1",
         "contentHash": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw=="
-      },
-      "MassTransit.Abstractions": {
-        "type": "Transitive",
-        "resolved": "8.5.12",
-        "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
       "MessagePack": {
         "type": "Transitive",
@@ -766,12 +732,6 @@
         "resolved": "10.0.4",
         "contentHash": "m2VCpcU9MKD8lLxTn+YaNIRWd+Gz3y/9wIaM+2ifDF24xZ2Kvvjx4CDB2BIgobr1Gj6a/gsdmfz1sQ+kmd7liw=="
       },
-      "RabbitMQ.Client": {
-        "type": "CentralTransitive",
-        "requested": "[7.2.2, )",
-        "resolved": "7.2.2",
-        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA=="
-      },
       "Scrutor": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
@@ -794,36 +754,6 @@
         "requested": "[0.13.0, )",
         "resolved": "0.13.0",
         "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
-      },
-      "MassTransit": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
-        "dependencies": {
-          "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
-        }
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
@@ -988,6 +918,12 @@
         "resolved": "8.9.1",
         "contentHash": "L0vfggkkI2nDAW9lCFYSqX9g/+3TkVXhAq+sh6owBq656X9XW0kE2NG+dPYGNQGeK66HS1rKHRPWMm1bMv91kw=="
       },
+      "RabbitMQ.Client": {
+        "type": "Direct",
+        "requested": "[7.2.2, )",
+        "resolved": "7.2.2",
+        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA=="
+      },
       "Roslynator.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.1, )",
@@ -1042,11 +978,6 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
@@ -1056,11 +987,6 @@
         "type": "Transitive",
         "resolved": "3.0.10",
         "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
-      },
-      "MassTransit.Abstractions": {
-        "type": "Transitive",
-        "resolved": "8.5.12",
-        "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
       "MessagePack": {
         "type": "Transitive",
@@ -1565,12 +1491,6 @@
         "requested": "[11.0.0, )",
         "resolved": "11.0.0",
         "contentHash": "ozQ8GJcEAiW6XSKz2RUpdJDvM4l380BdHx/MRB7QJHL2cTH/0js7f/cisCaYMrZvVUj4/HIW80UjXxI+ikQQzQ=="
-      },
-      "RabbitMQ.Client": {
-        "type": "CentralTransitive",
-        "requested": "[7.2.2, )",
-        "resolved": "7.2.2",
-        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

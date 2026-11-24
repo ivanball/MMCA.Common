@@ -54,6 +54,33 @@ public interface IOutboxAdministration
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Returns the INTEGRATION-event rows processed inside <c>[fromUtc, toUtc)</c> to the pending
+    /// pool, across every outbox source this host owns, so the processor publishes them again: the
+    /// processed stamp, the retry count and the claim lease are cleared in one set-based update per
+    /// source. <c>LastError</c> and <c>OccurredOn</c> are untouched, so a republished row keeps its
+    /// place in its ordering key.
+    /// <para>
+    /// For a broker-side loss after a successful publish (and for a transport cutover, where the
+    /// old revision may have published to entities nothing consumes any more). Delivery is
+    /// at-least-once, so consumers absorb the duplicates through the inbox (ADR-021). Domain-event
+    /// rows are never reset: their handlers run in-process with no inbox, and they already ran.
+    /// Without the consumer inbox (the in-process message bus default, or a broker host that set
+    /// <c>MessageBus:EnableInbox=false</c>) a republish would run those handlers again, so the call
+    /// is refused with <c>Outbox.RepublishRequiresInbox</c> and nothing is touched.
+    /// </para>
+    /// </summary>
+    /// <param name="fromUtc">Start of the processed-on window, inclusive. Must be UTC.</param>
+    /// <param name="toUtc">End of the processed-on window, exclusive. Must be UTC, after <paramref name="fromUtc"/>,
+    /// and at most seven days after it.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of rows returned to the pending pool, a validation failure for an invalid window,
+    /// or a conflict failure when the consumer inbox is disabled.</returns>
+    Task<Result<int>> RepublishProcessedAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Counts rows still awaiting dispatch (unprocessed, retries not exhausted) across every outbox
     /// source this host owns or just the one named. Unlike the <c>outbox.pending.depth</c> gauge,
     /// which reports what the processor last observed, this counts the tables at the moment of the

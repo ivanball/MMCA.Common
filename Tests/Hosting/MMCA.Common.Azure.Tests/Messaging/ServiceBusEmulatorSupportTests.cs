@@ -102,5 +102,5 @@ public sealed class ServiceBusEmulatorSupportTests
     public void EmulatorEntityQuota_SitsAtTheEmulatorsOneHourCeiling() =>
         ServiceBusEmulatorSupport.EmulatorEntityQuota.Should().Be(TimeSpan.FromHours(1),
             because: "the emulator rejects any entity whose TTL or auto-delete-on-idle exceeds one hour, "
-                + "and MassTransit v8 defaults to 366 days TTL and 427 days auto-delete");
+                + "so every entity the transport provisions there must stay beneath it");
 }

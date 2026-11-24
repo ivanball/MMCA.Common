@@ -36,6 +36,7 @@ internal sealed class InternalCommandOriginCapture(
             tenantContext.TenantId,
             correlationContext.CorrelationId,
             activity?.TraceId.ToString(),
-            activity?.SpanId.ToString());
+            activity?.SpanId.ToString(),
+            activity is null ? null : (byte)activity.ActivityTraceFlags);
     }
 }

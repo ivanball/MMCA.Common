@@ -76,11 +76,11 @@ public static class AwsServiceCollectionExtensions
         /// picks the transport while it registers the bus. Reads <c>MessageBus:AmazonSqs</c>:
         /// <c>Region</c> (else the AWS SDK fallback chain), <c>ServiceUrl</c> (an endpoint override for
         /// both SQS and SNS, e.g. LocalStack) and <c>AccessKeyId</c> + <c>SecretAccessKey</c> (else the
-        /// AWS default credential chain). The broker connection string is not used. An unconfigured
-        /// <c>MessageBus:RedeliveryIntervalsSeconds</c> defaults to <c>[60, 300, 900]</c> on this
-        /// transport; a configured value over 900 (the SQS delay cap) makes <c>AddBrokerMessaging</c>
-        /// throw naming the interval. Registration only: a host whose provider is something else is
-        /// unaffected.
+        /// AWS default credential chain). The broker connection string is not used. SQS caps a message
+        /// delay at 15 minutes, so every second-level redelivery interval longer than that is shortened
+        /// to it. With <c>MessageBus:ProvisionTopology</c> on (the default) the transport creates the
+        /// SNS topics, the host's queue, its <c>{queue}-error</c> queue and the subscriptions itself.
+        /// Registration only: a host whose provider is something else is unaffected.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAmazonSqsTransport() =>

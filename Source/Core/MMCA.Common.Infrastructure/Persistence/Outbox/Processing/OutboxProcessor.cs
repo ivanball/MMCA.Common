@@ -804,7 +804,7 @@ public sealed partial class OutboxProcessor(
 
     /// <summary>
     /// Delivers one deserialized event. Integration events route through <see cref="IMessageBus"/>
-    /// so the registered transport (in-process for the monolith, MassTransit broker for extracted
+    /// so the registered transport (in-process for the monolith, a broker transport for extracted
     /// services) determines delivery; pure domain events keep the in-process dispatch.
     /// </summary>
     private async Task DeliverAsync(IDomainEvent domainEvent, IServiceProvider rowServices, CancellationToken cancellationToken)
@@ -1132,6 +1132,12 @@ public sealed partial class OutboxProcessor(
     /// Starts a new <see cref="Activity"/> linked to the original request's trace context
     /// stored in the outbox message. Returns <see langword="null"/> when no trace context
     /// was captured (e.g., messages written before this feature was added).
+    /// <para>
+    /// The parent carries the STORED trace flags (null reads as <see cref="ActivityTraceFlags.None"/>)
+    /// and is marked remote, so a parent-based sampler records the delivery span exactly when the
+    /// raising request was sampled. A hardcoded recorded flag exported a processor span for every
+    /// request the sampler had dropped: an orphan trace joined to nothing.
+    /// </para>
     /// </summary>
     private static Activity? StartOutboxActivity(OutboxMessage message, DataSourceKey source)
     {
@@ -1143,7 +1149,8 @@ public sealed partial class OutboxProcessor(
         var parentContext = new ActivityContext(
             ActivityTraceId.CreateFromString(message.TraceId),
             ActivitySpanId.CreateFromString(message.SpanId),
-            ActivityTraceFlags.Recorded);
+            (ActivityTraceFlags)(message.TraceFlags ?? 0),
+            isRemote: true);
 
         var activity = OutboxActivitySource.StartActivity(
             "OutboxProcess",

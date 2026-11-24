@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Only the SDKs start-up needs: a gateway or any host that wants vault configuration, the
-         exporter and the shared key ring references this package and carries no EF Core, MassTransit,
+         exporter and the shared key ring references this package and carries no EF Core, broker client,
          Service Bus, Notification Hubs or blob file-storage adapter (EnforceAzureStartupBoundary in
          Source/Build/MMCA.Common.LayerEnforcement.targets and AzureStartupPackageBoundaryTests hold
          that line). The Blob SDK below stays: the key ring itself is stored in a blob.

@@ -2,7 +2,15 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using MassTransit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Messaging;
+using MMCA.Common.Azure;
+using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure;
+using MMCA.Common.Infrastructure.Messaging.Broker;
 using Testcontainers.ServiceBus;
 using Xunit;
 
@@ -11,52 +19,47 @@ namespace MMCA.Common.Testing.Azure.Fixtures;
 /// <summary>
 /// Shared scaffolding for the Azure Service Bus emulator <b>broker-parity</b> test tier: a collection
 /// fixture that starts ONE warm emulator (plus its companion SQL Server container, provisioned
-/// automatically by <c>Testcontainers.ServiceBus</c>) for the whole tier and, optionally, owns the one
-/// MassTransit bus every test publishes through. One shared container respects the emulator's
-/// 10-connection namespace quota and its roughly one-admin-operation-per-second throttle: each bus
-/// start provisions topology through the admin plane, so serial tests against one warm emulator are
-/// the stable shape.
+/// automatically by <c>Testcontainers.ServiceBus</c>) for the whole tier and, optionally, runs the
+/// framework's REAL Azure Service Bus transport against it: a host built with
+/// <c>AddAzureServiceBusTransport()</c> and <c>AddBrokerMessaging</c>, publishing through the
+/// framework's <see cref="IMessageBus"/> and receiving through its receive pipeline. One shared
+/// container respects the emulator's 10-connection namespace quota and its roughly
+/// one-admin-operation-per-second throttle: the transport provisions its topology through the admin
+/// plane, so serial tests against one warm emulator are the stable shape.
 /// <para>
 /// The image is pinned (<see cref="DefaultEmulatorImage"/>): the admin plane
 /// (<see cref="ServiceBusAdministrationClient"/> over HTTP port 5300) shipped in emulator 2.0.0 and is
-/// what lets MassTransit v8 create its own topics, subscriptions and queues, so a silent downgrade to a
-/// 1.x image would break the tier's whole premise. The static constructor lowers MassTransit's
-/// process-global entity defaults beneath the emulator's one-hour maximum TTL quota (v8's defaults,
-/// 366d TTL / 427d auto-delete, are rejected by the emulator); that override is process-wide, which is
-/// why this tier belongs in its OWN test process.
+/// what lets the transport create its own topics, subscriptions and queue, so a silent downgrade to a
+/// 1.x image would break the tier's whole premise.
 /// </para>
 /// <para>
-/// <b>The bus lives on the FIXTURE, never on the test class.</b> A test class implementing
-/// <see cref="IAsyncLifetime"/> is re-instantiated per <c>[Fact]</c>, so a bus created there starts once
-/// PER TEST and every start re-provisions the whole topology (a topic per message type, a subscription
-/// each, and the receive-endpoint queue) through that throttled admin plane. With two contracts and two
-/// tests that was four provisioning cycles per run, and MMCA.ADC's job hung and was killed at its
-/// timeout on 7 of 7 scheduled runs (2026-07-21 to 2026-07-24). Hoisting the bus here makes it one cycle
-/// per run. For the same reason the base provisions exactly ONE receive endpoint
-/// (<see cref="ReceiveQueueName"/>) and lets a subclass add only handlers to it
-/// (<see cref="ConfigureReceiveEndpoint"/>): every extra contract then costs a topic and a subscription
-/// rather than another queue.
+/// <b>The host lives on the FIXTURE, never on the test class.</b> A test class implementing
+/// <see cref="IAsyncLifetime"/> is re-instantiated per <c>[Fact]</c>, so a host created there starts once
+/// PER TEST and every start re-provisions the topology through that throttled admin plane (MMCA.ADC's
+/// job hung and was killed at its timeout on 7 of 7 scheduled runs, 2026-07-21 to 2026-07-24, in that
+/// shape). Hoisting the host here makes it one provisioning cycle per run, and the transport's one
+/// queue per host means every extra contract costs a topic and a subscription, not another queue.
 /// </para>
 /// <para>
 /// Both startup phases are wall-clock bounded. The point is not only to fail sooner: a step killed by
-/// the JOB timeout has its output discarded, so a hang leaves no evidence of WHICH phase hung, which is
-/// exactly what left that hang unlocalized for a week. A bounded phase throws a named
-/// <see cref="TimeoutException"/> instead, the step completes, and its log survives. <c>WaitAsync</c>
-/// rather than a <see cref="CancellationToken"/>, because the observed hang does not honour
-/// cancellation; bounding the await is what makes the limit enforceable.
+/// the JOB timeout has its output discarded, so a hang leaves no evidence of WHICH phase hung. A bounded
+/// phase throws a named <see cref="TimeoutException"/> instead, the step completes, and its log survives.
+/// <c>WaitAsync</c> rather than a <see cref="CancellationToken"/>, because the observed hang does not
+/// honour cancellation; bounding the await is what makes the limit enforceable.
 /// </para>
 /// <para>
 /// Stays in the subclass: the sealed fixture itself, its <c>[CollectionDefinition]</c> class (a
-/// collection definition is per test assembly by construction), the integration-event contracts, and
-/// the assertions.
+/// collection definition is per test assembly by construction), the integration-event contracts
+/// (<see cref="ConfigureConsumers"/>, usually one <see cref="RecordConsumed{TEvent}"/> per contract),
+/// and the assertions.
 /// </para>
 /// </summary>
 public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
 {
     /// <summary>
-    /// The pinned emulator image. 2.x on purpose: the HTTP management plane MassTransit provisions its
-    /// topology through shipped in 2.0.0, so a 1.x image would leave the broker unusable rather than
-    /// merely older.
+    /// The pinned emulator image. 2.x on purpose: the HTTP management plane the transport provisions
+    /// its topology through shipped in 2.0.0, so a 1.x image would leave the broker unusable rather
+    /// than merely older.
     /// </summary>
     public const string DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1";
 
@@ -65,16 +68,8 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
 
     private ServiceBusContainer? _container;
     private ServiceBusClient? _client;
-    private IBusControl? _busControl;
-
-    static ServiceBusEmulatorFixtureBase()
-    {
-        // The emulator rejects entities whose TTL/auto-delete exceed its 1h quota; MassTransit v8's
-        // defaults are far above it. Process-global by design (MassTransit statics).
-        MassTransit.AzureServiceBusTransport.Defaults.DefaultMessageTimeToLive = TimeSpan.FromHours(1);
-        MassTransit.AzureServiceBusTransport.Defaults.BasicMessageTimeToLive = TimeSpan.FromHours(1);
-        MassTransit.AzureServiceBusTransport.Defaults.AutoDeleteOnIdle = TimeSpan.FromHours(1);
-    }
+    private string? _connectionString;
+    private IHost? TransportHost { get; set; }
 
     /// <summary>AMQP (data-plane) client bound to the running emulator.</summary>
     public ServiceBusClient Client =>
@@ -87,23 +82,37 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
     public ServiceBusAdministrationClient AdminClient { get; private set; } = null!;
 
     /// <summary>
-    /// The one bus for the whole tier, started once with its topology already provisioned. Named
-    /// BusControl rather than Bus so it does not shadow MassTransit's static <c>Bus.Factory</c>. Only
-    /// available when <see cref="ReceiveQueueName"/> names a queue; a fixture that wants the clients
-    /// alone never touches it.
+    /// The emulator's AMQP connection string (it carries <c>UseDevelopmentEmulator=true</c>), for a
+    /// test that wires a host of its own as <c>MessageBus:ConnectionString</c>.
     /// </summary>
-    public IBusControl BusControl =>
-        _busControl ?? throw new InvalidOperationException(
-            "No bus was started. Override ReceiveQueueName to have this fixture host one.");
+    public string ConnectionString =>
+        _connectionString ?? throw new InvalidOperationException("The Service Bus emulator has not started yet.");
 
     /// <summary>
-    /// Everything the receive endpoint consumed this run. Shared across the tier because the bus is:
-    /// each test matches on a value unique to itself, so one bag cannot cross-contaminate.
+    /// The emulator's management-plane base address (<c>http://host:port</c>), for a test that wires a
+    /// host of its own as <c>MessageBus:EmulatorAdminEndpoint</c>.
+    /// </summary>
+    public string AdminEndpoint
+    {
+        get => field ?? throw new InvalidOperationException("The Service Bus emulator has not started yet.");
+        private set;
+    }
+
+    /// <summary>
+    /// The services of the one transport host for the whole tier, started once with its topology
+    /// provisioned. Only available when <see cref="ReceiveQueueName"/> names a queue; a fixture that
+    /// wants the clients alone never touches it.
+    /// </summary>
+    public IServiceProvider Services =>
+        TransportHost?.Services ?? throw new InvalidOperationException(
+            "No transport host was started. Override ReceiveQueueName to have this fixture host one.");
+
+    /// <summary>
+    /// Everything the host consumed this run, added by the handlers <see cref="RecordConsumed{TEvent}"/>
+    /// registers. Shared across the tier because the host is: each test matches on a value unique to
+    /// itself, so one bag cannot cross-contaminate.
     /// </summary>
     public ConcurrentBag<object> Consumed { get; } = [];
-
-    /// <summary>The host address MassTransit's custom-clients <c>Host()</c> overload is anchored to.</summary>
-    public Uri HostAddress { get; } = new("sb://localhost/");
 
     /// <summary>
     /// The emulator image, overridable only to pin a different 2.x build (or, in a hardening test, to
@@ -117,16 +126,20 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
     /// </summary>
     protected virtual TimeSpan ContainerStartTimeout => TimeSpan.FromMinutes(4);
 
-    /// <summary>Budget for PHASE 2, MassTransit provisioning its topology through the admin plane.</summary>
+    /// <summary>
+    /// Budget for PHASE 2, the transport host starting and its topology (the queue, a topic and a
+    /// subscription per consumed contract) existing on the emulator.
+    /// </summary>
     protected virtual TimeSpan BusStartTimeout => TimeSpan.FromMinutes(3);
 
-    /// <summary>Budget for stopping the bus on teardown, after which the container is torn down anyway.</summary>
+    /// <summary>Budget for stopping the transport host on teardown, after which the container is torn down anyway.</summary>
     protected virtual TimeSpan BusStopTimeout => TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// The single receive-endpoint queue every contract in the tier is bound to, or
+    /// The host's queue (<c>MessageBus:QueueName</c>) every contract in the tier is bound to, or
     /// <see langword="null"/> (the default) for a fixture that wants only <see cref="Client"/> and
-    /// <see cref="AdminClient"/> and no bus at all.
+    /// <see cref="AdminClient"/> and no transport host at all. Also used as the application namespace
+    /// topics are prefixed with, so two tiers on one emulator never share a topic.
     /// </summary>
     protected virtual string? ReceiveQueueName => null;
 
@@ -146,6 +159,48 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
         string.Create(
             CultureInfo.InvariantCulture,
             $"Endpoint=sb://{hostname}:{mappedAdminPort};SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
+
+    /// <summary>
+    /// The <c>MessageBus</c> configuration the transport host runs with: the Azure Service Bus provider
+    /// on the emulator, the receive queue, the inbox off (the tier has no database; the transport, not
+    /// the inbox, is under test) and the outbox left to the host. Pure and static so the composition is
+    /// unit-testable without a container.
+    /// </summary>
+    /// <param name="connectionString">The emulator AMQP connection string.</param>
+    /// <param name="adminEndpoint">The emulator management-plane base address.</param>
+    /// <param name="queueName">The receive queue.</param>
+    /// <returns>The configuration entries.</returns>
+    public static Dictionary<string, string?> ComposeHostConfiguration(string connectionString, string adminEndpoint, string queueName) =>
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["applicationName"] = queueName,
+            ["Application:Namespace"] = queueName,
+            ["MessageBus:Provider"] = "AzureServiceBus",
+            ["MessageBus:ConnectionString"] = connectionString,
+            ["MessageBus:EmulatorAdminEndpoint"] = adminEndpoint,
+            ["MessageBus:QueueName"] = queueName,
+            ["MessageBus:EnableInbox"] = "false",
+        };
+
+    /// <summary>
+    /// Publishes <paramref name="integrationEvent"/> through the host's <see cref="IMessageBus"/>, the
+    /// same path the outbox processor drains through in production.
+    /// </summary>
+    /// <param name="integrationEvent">The event to publish.</param>
+    /// <param name="cancellationToken">Cancels the publish.</param>
+    /// <returns>A task that completes when the emulator accepted the message.</returns>
+    public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+
+        var scope = Services.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+                .PublishAsync(integrationEvent, cancellationToken)
+                .ConfigureAwait(false);
+        }
+    }
 
     /// <inheritdoc />
     public async ValueTask InitializeAsync()
@@ -171,9 +226,11 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
                 ex);
         }
 
-        _client = new ServiceBusClient(_container.GetConnectionString());
-        AdminClient = new ServiceBusAdministrationClient(
-            ComposeAdminConnectionString(_container.Hostname, _container.GetMappedPublicPort(AdminPlanePort)));
+        var mappedAdminPort = _container.GetMappedPublicPort(AdminPlanePort);
+        _connectionString = _container.GetConnectionString();
+        AdminEndpoint = $"http://{_container.Hostname}:{mappedAdminPort}";
+        _client = new ServiceBusClient(_connectionString);
+        AdminClient = new ServiceBusAdministrationClient(ComposeAdminConnectionString(_container.Hostname, mappedAdminPort));
 
         var queueName = ReceiveQueueName;
         if (string.IsNullOrWhiteSpace(queueName))
@@ -181,29 +238,17 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
             return;
         }
 
-        _busControl = Bus.Factory.CreateUsingAzureServiceBus(cfg =>
-        {
-            // The v8 custom-clients overload: the only v8 path onto the emulator (vendor emulator
-            // support shipped in v9, excluded by the MassTransit-v8 policy pin). Both clients are
-            // pre-built against the emulator's mapped ports above.
-            cfg.Host(HostAddress, Client, AdminClient);
-
-            // ONE receive endpoint for the whole tier, so the queue is provisioned once and each
-            // contract the subclass binds adds only its own topic plus subscription.
-            cfg.ReceiveEndpoint(queueName, ConfigureReceiveEndpoint);
-        });
-
         try
         {
-            await _busControl.StartAsync().WaitAsync(BusStartTimeout).ConfigureAwait(false);
+            await StartHostAsync(queueName).WaitAsync(BusStartTimeout).ConfigureAwait(false);
         }
         catch (TimeoutException ex)
         {
             throw new TimeoutException(
-                $"PHASE 2 (topology): the container started, but MassTransit did not finish provisioning the " +
+                $"PHASE 2 (topology): the container started, but the transport host did not finish provisioning the " +
                 $"topology within {BusStartTimeout.TotalMinutes.ToString("0", CultureInfo.InvariantCulture)} minutes. The container is therefore NOT " +
                 "the culprit; the admin plane is. Provisioning is already down to one cycle per run, so the next " +
-                "lever is fewer entities (one contract) or an explicit pre-provision before the bus starts.",
+                "lever is fewer entities (one contract) or an explicit pre-provision before the host starts.",
                 ex);
         }
     }
@@ -215,15 +260,25 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
 
         // Best effort, in reverse order of creation. A failure here must not mask a real test failure,
         // and on either InitializeAsync timeout path the later members were never assigned.
-        if (_busControl is not null)
+        if (TransportHost is not null)
         {
             try
             {
-                await _busControl.StopAsync().WaitAsync(BusStopTimeout).ConfigureAwait(false);
+                await TransportHost.StopAsync().WaitAsync(BusStopTimeout).ConfigureAwait(false);
             }
             catch (TimeoutException)
             {
                 // The container is torn down next, which takes the whole namespace with it.
+            }
+
+            // Asynchronously: the transport's clients are async-disposable only.
+            if (TransportHost is IAsyncDisposable asyncHost)
+            {
+                await asyncHost.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                TransportHost.Dispose();
             }
         }
 
@@ -239,12 +294,92 @@ public abstract class ServiceBusEmulatorFixtureBase : IAsyncLifetime
     }
 
     /// <summary>
-    /// Binds the tier's contracts to the single receive endpoint: one
-    /// <c>endpoint.Handler&lt;TContract&gt;</c> per contract, each adding its message to
-    /// <see cref="Consumed"/>. Defaults to no handler, which provisions the queue and nothing else.
+    /// Declares the tier's contracts: usually one <see cref="RecordConsumed{TEvent}"/> per contract,
+    /// each adding its message to <see cref="Consumed"/>, or a <c>RegisterIntegrationEventConsumer</c>
+    /// plus handlers of the subclass's own. Defaults to none, which provisions nothing and runs no
+    /// receiver (the host can still publish).
     /// </summary>
-    /// <param name="endpoint">The receive-endpoint configurator for <see cref="ReceiveQueueName"/>.</param>
-    protected virtual void ConfigureReceiveEndpoint(IServiceBusReceiveEndpointConfigurator endpoint)
+    /// <param name="consumers">The broker consumer builder of the host.</param>
+    /// <param name="services">The host's services, for handlers.</param>
+    protected virtual void ConfigureConsumers(IBrokerConsumerBuilder consumers, IServiceCollection services)
     {
+    }
+
+    /// <summary>
+    /// Adjusts the host's configuration before it is built, for example the retry and redelivery
+    /// settings under <c>MessageBus</c>. Defaults to <see cref="ComposeHostConfiguration"/> unchanged.
+    /// </summary>
+    /// <param name="configuration">The configuration entries, editable in place.</param>
+    protected virtual void ConfigureHost(IDictionary<string, string?> configuration)
+    {
+    }
+
+    /// <summary>
+    /// Subscribes the host to <typeparamref name="TEvent"/> and registers a handler that adds every
+    /// delivered message to <see cref="Consumed"/>.
+    /// </summary>
+    /// <typeparam name="TEvent">The integration event contract.</typeparam>
+    /// <param name="consumers">The broker consumer builder passed to <see cref="ConfigureConsumers"/>.</param>
+    /// <param name="services">The services passed to <see cref="ConfigureConsumers"/>.</param>
+    protected void RecordConsumed<TEvent>(IBrokerConsumerBuilder consumers, IServiceCollection services)
+        where TEvent : class, IIntegrationEvent
+    {
+        ArgumentNullException.ThrowIfNull(consumers);
+        ArgumentNullException.ThrowIfNull(services);
+
+        consumers.RegisterIntegrationEventConsumer<TEvent>();
+        services.AddSingleton<IIntegrationEventHandler<TEvent>>(new RecordingHandler<TEvent>(Consumed));
+    }
+
+    /// <summary>
+    /// Builds and starts the transport host, then waits until the queue and every consumed topic's
+    /// subscription exist: the receiver provisions in the background, and a message published before
+    /// its subscription exists would be dropped by the topic.
+    /// </summary>
+    private async Task StartHostAsync(string queueName)
+    {
+        var configuration = ComposeHostConfiguration(ConnectionString, AdminEndpoint, queueName);
+        ConfigureHost(configuration);
+
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings { ApplicationName = queueName });
+        builder.Configuration.AddInMemoryCollection(configuration);
+        builder.Services.AddLogging();
+        builder.Services.AddAzureServiceBusTransport();
+
+        var services = builder.Services;
+        builder.Services.AddBrokerMessaging(builder.Configuration, consumers => ConfigureConsumers(consumers, services));
+
+        TransportHost = builder.Build();
+        await TransportHost.StartAsync().ConfigureAwait(false);
+
+        var topology = TransportHost.Services.GetRequiredService<BrokerTopology>();
+        foreach (var subscription in topology.Subscriptions)
+        {
+            await WaitForSubscriptionAsync(subscription.Topic, topology.QueueName).ConfigureAwait(false);
+        }
+    }
+
+    private async Task WaitForSubscriptionAsync(string topic, string queueName)
+    {
+        // The transport's entity names: a topic or queue path fits 260 characters, a subscription
+        // (named after the queue) 50.
+        var topicPath = BrokerNaming.Fit(topic, 260);
+        var subscriptionName = BrokerNaming.Fit(queueName, 50);
+
+        while (!(await AdminClient.SubscriptionExistsAsync(topicPath, subscriptionName).ConfigureAwait(false)).Value)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds every delivered message to the fixture's <see cref="Consumed"/> bag.</summary>
+    private sealed class RecordingHandler<TEvent>(ConcurrentBag<object> consumed) : IIntegrationEventHandler<TEvent>
+        where TEvent : IIntegrationEvent
+    {
+        public Task HandleAsync(TEvent integrationEvent, CancellationToken cancellationToken = default)
+        {
+            consumed.Add(integrationEvent);
+            return Task.CompletedTask;
+        }
     }
 }

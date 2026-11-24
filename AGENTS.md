@@ -33,7 +33,7 @@ There is no `push: main` trigger: `main` requires an up-to-date branch, so the P
 - **performance-smoke**: `build/perfgate` against `perf-baseline.json` (ADR-060). Moving a number deliberately means updating the baseline in the same PR.
 - **coverage**: the unit tier must stay >= 68.3% line.
 - **coverage-risk** (ADR-147, not required): merges unit and Testcontainers coverage and fails on a new method above CRAP 30 that is missing from `.github/coverage-baselines/crap.txt`, or on a baselined method whose CRAP rose.
-- Also run, none of them a required check: **sample-deployment-validate**, the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack) and **gcp-integration** (emulators), all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run).
+- Also run, none of them a required check: **sample-deployment-validate**, the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack), **gcp-integration** (emulators), **azure-integration** (the Service Bus emulator) and **rabbitmq-integration**, all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run).
 - The 8 required contexts are build-and-test, build-maui, the three ui-e2e engines, coverage, consumer-source-build and performance-smoke; `gh api repos/ivanball/MMCA.Common/branches/main/protection --jq '.required_status_checks.contexts[]'` is authoritative. `load-tests.yml` runs `Tests/Performance/MMCA.Common.LoadTests` weekly as a trend signal, not a gate.
 
 A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version with MinVer skipped, and MinVer versions every other build from git history (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs in a separate `pack-maui` job off the same tag and is pushed by `publish-maui`. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
@@ -42,7 +42,7 @@ Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive.
 - Every test project needs at least one test or MTP fails the build (exit code 8).
 - Lock files are committed (`--force-evaluate` to regenerate); `nuget.config` is nuget.org only, so building Common needs NO GitHub token.
-- **MassTransit is pinned to v8 by policy** (v9 is commercially licensed); `DependencyVersionTests` fails the build if the major reaches 9. Consumers inherit the pin transitively and deliberately do not subclass `DependencyVersionTestsBase`.
+- **MassTransit is banned** (ADR-118): the broker transports are framework code, and `DependencyVersionTests` fails the build on any `MassTransit*` PackageVersion.
 
 ## Source Layout
 
@@ -148,7 +148,7 @@ Every entity resolves to a `DataSourceKey(Engine, Name)`. Engine comes from the 
 
 The invariant: **application and domain code talks to abstractions; transport choices live at the edges.**
 
-- **Message bus**: Application/Domain/Shared never reference MassTransit (`MicroserviceExtractionTests`). `IMessageBus` is selected by the string `MessageBus:Provider`; `InProcess`, `RabbitMq` and `PostgreSql` are built in, and any other value names an `IBrokerTransport` an adapter registers BEFORE `AddBrokerMessaging` (ADR-066, ADR-118). Retry, redelivery and backpressure live once in `BrokerTransportPolicies`, shared by every transport.
+- **Message bus**: Application/Domain/Shared never reference a broker client (`MicroserviceExtractionTests`). `IMessageBus` is selected by the string `MessageBus:Provider`; `InProcess`, `RabbitMq` and `PostgreSql` are built in, and any other value names an `IBrokerTransport` an adapter registers BEFORE `AddBrokerMessaging` (ADR-066, ADR-118). Retry, redelivery, dead-lettering and backpressure live once in `BrokerTransportPolicies` and the framework receive pipeline, shared by every transport.
 - **gRPC**: **consuming modules never touch generated protobuf types**; a hand-written adapter implementing the module's own interface wraps the typed client and IS the Anti-Corruption Layer (ADR-007, ADR-012). `AddTypedGrpcClient<TClient>` dials over h2c, so a target service must serve HTTP/2 on its cleartext endpoint. The monolith-to-service move follows Strangler Fig (ADR-008).
 - **Cross-service auth**: signing keys are served at `/.well-known/jwks.json`; `AddForwardedJwtBearer` honors a configured `RequireHttpsMetadata=false` outside Development (with one startup warning) because ACA internal ingress needs it.
 - **`.Contracts` convention** (a repo-level `Directory.Build.props` block, not shipped in a package; each consumer keeps its own copy): any project named `*.Contracts` gets `Grpc.Tools`, `Google.Protobuf` and `Grpc.Net.ClientFactory` and compiles `Protos/**/*.proto` with `GrpcServices="Both"`.

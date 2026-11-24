@@ -34,7 +34,7 @@ public sealed record CrossServiceDataSource(string LogicalName, string DatabaseN
 /// <c>Default</c> source), which is why hosts must be booted <b>strictly sequentially</b> in
 /// <see cref="BootHostsAsync"/>, calling <see cref="SetHostConnectionString"/> between boots: a host
 /// snapshots its connection at boot (DataSource resolver, DbContext factory, outbox processor and the
-/// MassTransit bus are all built during <c>StartAsync</c>), so mutating the environment for the next host
+/// broker receiver are all built during <c>StartAsync</c>), so mutating the environment for the next host
 /// cannot disturb an already-booted one.
 /// </para>
 /// <para><b>Host isolation.</b> Every host shares this process, so the default AppDomain scan would hand each
@@ -49,6 +49,9 @@ public abstract class CrossServiceFixtureBase : IAsyncLifetime
     // Never fetched: the factories re-point real validation at the committed test key. It only has to be
     // present so AddForwardedJwtBearer's authority guard passes.
     private const string DummyBearerAuthority = "http://localhost";
+
+    // The Application:Namespace every host of the fixture shares (see SetSharedEnvironment).
+    private const string CrossServiceApplicationNamespace = "cross-service-tests";
 
     private readonly Dictionary<string, string?> _originalEnvironment = [];
 
@@ -159,8 +162,8 @@ public abstract class CrossServiceFixtureBase : IAsyncLifetime
 
     /// <summary>
     /// Pushes the app-specific shared settings (test JWT/JWKS key material, throttle lifts, third-party
-    /// client stubs) after the base has pushed the environment, the named data sources, the broker and the
-    /// dummy Bearer authority. Every variable pushed through <paramref name="setEnvironmentVariable"/> is
+    /// client stubs) after the base has pushed the environment, the named data sources, the broker, the
+    /// shared <c>Application:Namespace</c> and the dummy Bearer authority. Every variable pushed through <paramref name="setEnvironmentVariable"/> is
     /// restored on disposal.
     /// </summary>
     /// <param name="setEnvironmentVariable">The base's snapshot-taking environment setter.</param>
@@ -254,6 +257,11 @@ public abstract class CrossServiceFixtureBase : IAsyncLifetime
         // Real broker transport (identical for every host, no collision).
         SetEnvironmentVariable("MessageBus__Provider", "RabbitMq");
         SetEnvironmentVariable("ConnectionStrings__rabbitmq", RabbitMqConnectionString);
+
+        // The hosts are the services of ONE application, so they share the namespace every broker topic
+        // is prefixed with; a broker host refuses to start without it, and each host's own application
+        // name would put every service on topics of its own. ConfigureSharedEnvironment may override it.
+        SetEnvironmentVariable("Application__Namespace", CrossServiceApplicationNamespace);
 
         // Dummy authority so a host's AddForwardedJwtBearer does not throw on a missing
         // Authentication:JwtBearer:Authority. Real validation is re-pointed at the committed test key by

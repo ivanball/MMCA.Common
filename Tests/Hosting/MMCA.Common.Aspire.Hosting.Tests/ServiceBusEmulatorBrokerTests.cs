@@ -19,8 +19,8 @@ public sealed class ServiceBusEmulatorBrokerTests
     [Fact]
     public void AddServiceBusEmulatorBroker_PinsTheImageToATwoPointXEmulator()
     {
-        // The HTTP management plane shipped in emulator 2.0.0, and MassTransit provisions its whole
-        // topology through it at bus start. A silent downgrade to a 1.x image would leave the broker
+        // The HTTP management plane shipped in emulator 2.0.0, and the Azure Service Bus transport
+        // provisions its whole topology through it when its receiver starts. A silent downgrade to a 1.x image would leave the broker
         // unusable rather than merely older.
         var builder = DistributedApplication.CreateBuilder([]);
 
@@ -36,7 +36,7 @@ public sealed class ServiceBusEmulatorBrokerTests
     [Fact]
     public void AddServiceBusEmulatorBroker_PublishesBothPlanes()
     {
-        // AMQP carries every publish and consume; the management plane is what MassTransit creates
+        // AMQP carries every publish and consume; the management plane is what the transport creates
         // its topics, subscriptions and queues through. A broker with only the first is not usable.
         var builder = DistributedApplication.CreateBuilder([]);
 

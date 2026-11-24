@@ -1,21 +1,21 @@
+using System.Diagnostics;
 using System.Globalization;
-using MassTransit;
+using System.Text.Json;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
-
-// Aliased, not imported: MassTransit ships its own static MessageHeaders (its well-known transport
-// header names), so the bare name is ambiguous in any file that speaks both vocabularies.
-using MessageHeaders = MMCA.Common.Shared.Messaging.MessageHeaders;
+using MMCA.Common.Infrastructure.Messaging.Broker;
+using MMCA.Common.Shared.Messaging;
 
 namespace MMCA.Common.Infrastructure.Messaging;
 
 /// <summary>
-/// <see cref="IMessageBus"/> implementation backed by MassTransit. Publishes integration events
-/// to the broker <c>MessageBus:Provider</c> selects (RabbitMQ and PostgreSQL are built in; an adapter
-/// such as MMCA.Common.Azure or MMCA.Common.Aws registers its own transport). Used by extracted
-/// microservices in place of <see cref="InProcessMessageBus"/>.
+/// <see cref="IMessageBus"/> implementation that publishes integration events to the broker
+/// <c>MessageBus:Provider</c> selects (RabbitMQ and PostgreSQL are built in; an adapter such as
+/// MMCA.Common.Azure or MMCA.Common.Aws registers its own transport), through the transport's
+/// <see cref="IBrokerPublisher"/>. Used by extracted microservices in place of
+/// <see cref="InProcessMessageBus"/>.
 /// <para>
 /// This bus does NOT itself write to the outbox. The transactional outbox semantics are preserved
 /// by the existing <c>OutboxProcessor</c>: integration events are persisted to <c>OutboxMessage</c>
@@ -24,49 +24,67 @@ namespace MMCA.Common.Infrastructure.Messaging;
 /// calling this bus.
 /// </para>
 /// <para>
-/// MassTransit automatically propagates the current <see cref="System.Diagnostics.Activity"/>
-/// trace context as <c>traceparent</c>/<c>tracestate</c> message headers, so distributed tracing
-/// continues across the broker hop. The request context it does NOT know about (who raised the
-/// event, their roles, the tenant, the correlation id) is stamped here as the
-/// <see cref="MessageHeaders"/> headers, and read back by <c>IntegrationEventConsumer</c> on the
-/// other side. The outbox processor restores each row's captured context onto this bus's scope
-/// before it publishes, so the headers describe the original request rather than the background
-/// poll that delivered it.
+/// Each event is serialized as its RUNTIME type (System.Text.Json, the options the outbox uses) and
+/// published on its topic (<see cref="BrokerTopology.TopicFor"/>) with the
+/// <see cref="BrokerHeaders"/> transport headers (event name, message id, content type), a Producer
+/// span on the <c>MMCA.Common.Messaging</c> source whose W3C <c>traceparent</c>/<c>tracestate</c>
+/// travel as headers, and the request context as the <see cref="MessageHeaders"/> origin headers (who
+/// raised the event, their roles, the tenant, the correlation id), read back by
+/// <c>IntegrationEventConsumer</c> on the other side. The outbox processor restores each row's
+/// captured context onto this bus's scope before it publishes, so the headers describe the original
+/// request rather than the background poll that delivered it.
 /// </para>
 /// </summary>
-/// <param name="publishEndpoint">MassTransit endpoint the events are published through.</param>
+/// <param name="publisher">The transport's publisher.</param>
+/// <param name="topology">The host's topology, which names the topic of each event type.</param>
 /// <param name="currentUserService">
 /// Supplies the principal stamped on the message. Defaulted, so a host or test that constructs this
-/// bus with the endpoint alone keeps the previous behavior and publishes no identity headers.
+/// bus without it publishes no identity headers.
 /// </param>
 /// <param name="tenantContext">Supplies the tenant stamped on the message, defaulted for the same reason.</param>
 /// <param name="correlationContext">Supplies the correlation id stamped on the message, defaulted for the same reason.</param>
 public sealed class BrokerMessageBus(
-    IPublishEndpoint publishEndpoint,
+    IBrokerPublisher publisher,
+    BrokerTopology topology,
     ICurrentUserService? currentUserService = null,
     ITenantContext? tenantContext = null,
     ICorrelationContext? correlationContext = null) : IMessageBus
 {
     /// <inheritdoc />
-    public Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
-        var headers = CaptureHeaders();
+        // The runtime type, not IIntegrationEvent: the topic, the wire name and the body all describe
+        // the concrete event class the consumers subscribe to.
+        var eventType = integrationEvent.GetType();
+        var eventName = BrokerNaming.EventName(eventType);
+        var topic = topology.TopicFor(eventType);
+        var messageId = integrationEvent.MessageId;
 
-        // Publish using the runtime type so MassTransit routes by the concrete event class
-        // rather than the IIntegrationEvent base interface (which has no consumers bound to it).
-        //
-        // A publish with nothing to stamp takes the plain overload it always took: the pipe is an
-        // allocation per message, and a host that resolved no ambient context (a seeder, a worker
-        // raising system events) would pay it for headers it never writes.
-        return headers.Count == 0
-            ? publishEndpoint.Publish(integrationEvent, integrationEvent.GetType(), cancellationToken)
-            : publishEndpoint.Publish(
-                integrationEvent,
-                integrationEvent.GetType(),
-                Pipe.Execute<PublishContext>(context => Stamp(context, headers)),
-                cancellationToken);
+        var headers = CaptureHeaders();
+        headers[BrokerHeaders.EventName] = eventName;
+        headers[BrokerHeaders.MessageId] = messageId.ToString("D", CultureInfo.InvariantCulture);
+        headers[BrokerHeaders.ContentType] = BrokerHeaders.JsonContentType;
+
+        using var activity = BrokerWire.ActivitySource.StartActivity(topic + " publish", ActivityKind.Producer);
+        if (activity is not null)
+        {
+            activity.SetTag("messaging.system", BrokerWire.MessagingSystem);
+            activity.SetTag("messaging.operation.type", "send");
+            activity.SetTag("messaging.destination.name", topic);
+            activity.SetTag("messaging.message.id", headers[BrokerHeaders.MessageId]);
+        }
+
+        // The producer span when one was started; otherwise the ambient one (the outbox row's), so a
+        // publish with no listener attached still carries the trace across the broker.
+        InjectTraceContext(activity ?? Activity.Current, headers);
+
+        var body = JsonSerializer.SerializeToUtf8Bytes(integrationEvent, eventType, BrokerWire.JsonOptions);
+
+        await publisher.PublishAsync(
+            new OutgoingBrokerMessage(topic, eventName, messageId, body, headers),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -81,14 +99,33 @@ public sealed class BrokerMessageBus(
     }
 
     /// <summary>
+    /// Writes the W3C trace context of <paramref name="activity"/> as headers. Only a W3C id is
+    /// written: a hierarchical id has no <c>traceparent</c> form, and a consumer reading a malformed
+    /// one would start a fresh trace anyway.
+    /// </summary>
+    private static void InjectTraceContext(Activity? activity, Dictionary<string, string> headers)
+    {
+        if (activity is null || activity.IdFormat != ActivityIdFormat.W3C || activity.Id is not { } id)
+        {
+            return;
+        }
+
+        headers[BrokerHeaders.TraceParent] = id;
+        if (activity.TraceStateString is { Length: > 0 } traceState)
+        {
+            headers[BrokerHeaders.TraceState] = traceState;
+        }
+    }
+
+    /// <summary>
     /// Snapshots the ambient context as the header pairs to stamp. Only values that are actually
     /// present are collected: an absent header reads on the consumer side as "the publisher had
     /// nothing to say", which is exactly what an older publisher or a system-raised event means, so
     /// writing an empty one would turn a non-answer into a false answer.
     /// </summary>
-    private List<KeyValuePair<string, string>> CaptureHeaders()
+    private Dictionary<string, string> CaptureHeaders()
     {
-        List<KeyValuePair<string, string>> headers = [];
+        Dictionary<string, string> headers = [with(StringComparer.Ordinal)];
 
         AddIfPresent(headers, MessageHeaders.TenantId, tenantContext?.TenantId);
         AddIfPresent(
@@ -108,20 +145,11 @@ public sealed class BrokerMessageBus(
     }
 
     /// <summary>Adds a header only when it has something to say (see <see cref="CaptureHeaders"/>).</summary>
-    private static void AddIfPresent(List<KeyValuePair<string, string>> headers, string name, string? value)
+    private static void AddIfPresent(Dictionary<string, string> headers, string name, string? value)
     {
         if (value is { Length: > 0 })
         {
-            headers.Add(new KeyValuePair<string, string>(name, value));
-        }
-    }
-
-    /// <summary>Writes the captured pairs onto the outgoing message.</summary>
-    private static void Stamp(PublishContext context, List<KeyValuePair<string, string>> headers)
-    {
-        foreach ((string name, string value) in headers)
-        {
-            context.Headers.Set(name, value);
+            headers[name] = value;
         }
     }
 }

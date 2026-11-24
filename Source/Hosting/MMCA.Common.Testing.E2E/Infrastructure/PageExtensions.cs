@@ -17,10 +17,6 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
     "Naming",
     "CA1708:Identifiers should differ by more than case",
     Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
-[SuppressMessage(
-    "Style",
-    "IDE0051:Remove unused private members",
-    Justification = "The private consts below are consumed only from inside the extension(T) blocks of this class. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports them as unused. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
 public static class PageExtensions
 {
     /// <summary>
@@ -543,10 +539,6 @@ public static class PageExtensions
 
     // Collapses a violating node's markup to a single trimmed line so the failure message points at the
     // exact offending element (e.g. which low-contrast text node) without dumping multi-line HTML.
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string CompactHtml(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))
@@ -560,10 +552,6 @@ public static class PageExtensions
 
     // Appends axe's own check messages (for color-contrast: the measured ratio and the foreground and
     // background colors), so an intermittent violation can be diagnosed from the failure text alone.
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from AssertNoAccessibilityViolationsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string DescribeChecks(AxeResultNode node)
     {
         var messages = (node.Any ?? []).Concat(node.All ?? []).Concat(node.None ?? [])
@@ -575,10 +563,6 @@ public static class PageExtensions
 
     // One close-then-wait round: closes every matching snackbar on screen and waits out the hide
     // transition. True when none is left (including when there was none to begin with).
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static async Task<bool> CloseSnackbarRoundAsync(ILocator snackbars)
     {
         var count = await snackbars.CountAsync().ConfigureAwait(false);
@@ -601,10 +585,6 @@ public static class PageExtensions
     }
 
     // The final bounded wait after the close rounds; throws naming what is still on screen.
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static async Task WaitOutRemainingSnackbarsAsync(ILocator snackbars, string? text)
     {
         var remaining = await E2EPolling.PollUntilAsync(
@@ -620,10 +600,6 @@ public static class PageExtensions
 
     // The failure text for WaitOutRemainingSnackbarsAsync: how many matching toasts are left and which
     // close shapes were tried.
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string DescribeRemainingSnackbars(int remaining, string? text)
     {
         var which = text is null ? string.Empty : $" containing \"{text}\"";
@@ -636,10 +612,6 @@ public static class PageExtensions
     // Clicks one snackbar's close icon, or its content-action button when it has no close icon. A toast
     // with neither is left to time out (the caller's wait covers it), and a toast that detaches under the
     // click is the outcome wanted.
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from DismissSnackbarsAsync inside the extension(IPage page) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static async Task CloseSnackbarAsync(ILocator snackbar)
     {
         try

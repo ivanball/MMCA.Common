@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Exercises the native Azure Service Bus transport (MMCA.Common.Azure) against the official
+         Service Bus emulator via Testcontainers, through ServiceBusEmulatorFixtureBase
+         (MMCA.Common.Testing.Azure), so the fixture base consumers derive from is exercised too.
+         NOT shipped and deliberately NOT in MMCA.Common.slnx: it needs a Docker daemon and runs in its
+         own CI job (azure-integration), kept out of the fast solution-wide unit feedback loop (same
+         posture as the Redis, PostgreSQL, SQL Server, AWS and Google Cloud tiers).
+
+         The unit tier asserts the messages, options and dispositions the transport BUILDS; only a real
+         broker settles whether the management plane accepts the topology, whether a subscription
+         forwards to the queue, whether a scheduled redelivery comes back with its count and whether a
+         dead-lettered message lands in the native dead-letter queue with its reason. -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Matches the FrameworkReference on MMCA.Common.Azure itself. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Azure\MMCA.Common.Testing.Azure.csproj" />
+  </ItemGroup>
+</Project>

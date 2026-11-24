@@ -21,7 +21,8 @@
     .UI              may reference .Shared and .UI projects only
 
   Shared, Domain and Application are the core layers: they may not take Entity Framework Core,
-  ASP.NET Core, MassTransit, Grpc.*, Google.Protobuf, or the MMCA.Common.Infrastructure, .API,
+  ASP.NET Core, a broker client (MassTransit*, RabbitMQ.Client, Azure.Messaging.ServiceBus,
+  AWSSDK.SQS, AWSSDK.SimpleNotificationService), Grpc.*, Google.Protobuf, or the MMCA.Common.Infrastructure, .API,
   .AI, .Grpc, .UI, .Aspire or .Gateway packages. Shared and Domain may not take
   MMCA.Common.Application either.
 
@@ -117,6 +118,10 @@
                AND ($([System.String]::new('%(Identity)').StartsWith('Microsoft.EntityFrameworkCore'))
                  OR $([System.String]::new('%(Identity)').StartsWith('Microsoft.AspNetCore'))
                  OR $([System.String]::new('%(Identity)').StartsWith('MassTransit'))
+                 OR '%(Identity)' == 'RabbitMQ.Client'
+                 OR '%(Identity)' == 'Azure.Messaging.ServiceBus'
+                 OR '%(Identity)' == 'AWSSDK.SQS'
+                 OR '%(Identity)' == 'AWSSDK.SimpleNotificationService'
                  OR $([System.String]::new('%(Identity)').StartsWith('Grpc.'))
                  OR $([System.String]::new('%(Identity)').StartsWith('Google.Protobuf'))
                  OR '%(Identity)' == 'MMCA.Common.Infrastructure'

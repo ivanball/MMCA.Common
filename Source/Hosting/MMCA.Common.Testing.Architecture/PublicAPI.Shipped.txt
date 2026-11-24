@@ -96,7 +96,7 @@ MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.ConventionDel
 MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.DeleteBehaviorConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.DependencyVersionTestsBase
 MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.DependencyVersionTestsBase() -> void
-MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransit_MustNotExceed_MajorVersion8() -> void
+MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransit_MustNotBeReferenced() -> void
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlerSaveTestsBase() -> void
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlers_ShouldNotReach_SaveChanges() -> void
@@ -608,6 +608,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(M
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamedPermissionsAreGranted(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, System.Collections.Generic.IReadOnlyCollection<string!>! declaredPermissions, System.Collections.Generic.IEnumerable<string!>? additionalReferencedPermissions = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamespacesHaveNoDependencyCycles(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? allowedCycleNamespaces = null) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.NoPackageVersionWithPrefix(string! packageIdPrefix, string! reason) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.NoPackageVersionWithPrefix(string! propsPath, string! packageIdPrefix, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PageE2EAllowlistHasNoStaleEntries(string! repoRoot, string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! e2eSourceRoots, System.Collections.Generic.IReadOnlyCollection<string!>! allowedUntestedRoutes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PageHeadingViolation(string! relativePath, string! razor, System.Collections.Generic.IReadOnlyCollection<string!>! headingComponents, int? expectedOwnHeadings = null) -> string?
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PageRouteCount(string! repoRoot, string! sourceRoot) -> int
@@ -615,6 +617,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.PagesHaveE2ETests(stri
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiInventoryRowsMapToPiiMembers(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PiiMembersHaveInventoryRows(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies, string! privacyPolicyMarkdown) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! packageId, int exclusiveMajorCeiling, string! reason) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! propsPath, string! packageId, int exclusiveMajorCeiling, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PostActionsDeclareIdempotencyIntent(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PropertiesOverwrittenByAnonymizeCarryPii(System.Collections.Generic.IReadOnlyDictionary<System.Type!, System.Func<object!>!>! samples) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ProtoContractsMatchFrozenList(System.Collections.Generic.IReadOnlyCollection<string!>! protoRelativePaths, System.Collections.Generic.IReadOnlyCollection<string!>! frozenContracts, string! repoRootSolutionFileName) -> void
@@ -690,7 +693,6 @@ virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.BicepResourc
 virtual MMCA.Common.Testing.Architecture.CostTagConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.CrossModuleReferenceTestsBase.ModulesFolder.get -> string!
 virtual MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ForbiddenResidencyClaims.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransitPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.AllowedSavingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.MaxCallDepth.get -> int
 virtual MMCA.Common.Testing.Architecture.DomainPurityTestsBase.ExtraForbiddenDomainDependencies.get -> System.Collections.Generic.IEnumerable<string!>!

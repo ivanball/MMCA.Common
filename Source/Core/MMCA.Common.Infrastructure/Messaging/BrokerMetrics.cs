@@ -3,8 +3,8 @@ using System.Diagnostics.Metrics;
 namespace MMCA.Common.Infrastructure.Messaging;
 
 /// <summary>
-/// OpenTelemetry instruments for the broker transport: consumer faults observed by
-/// <c>FaultIntegrationEventConsumer&lt;TEvent&gt;</c> and circuit-breaker openings observed by
+/// OpenTelemetry instruments for the broker transport: dead-lettered messages counted by the
+/// broker receive pipeline and circuit-breaker openings observed by
 /// the outbox publish path. A host exports them by registering the <see cref="MeterName"/> meter:
 /// the Aspire service defaults (<c>ConfigureOpenTelemetry</c>) already do. The meter name is
 /// duplicated as a literal in MMCA.Common.Aspire because that package has no reference to
@@ -23,14 +23,14 @@ internal static class BrokerMetrics
     private static readonly Meter Meter = new(MeterName);
 
     /// <summary>
-    /// Messages that exhausted their retry policy and were published as a MassTransit
-    /// <c>Fault&lt;TEvent&gt;</c>, tagged by <c>event_type</c>. A non-zero rate here means events
-    /// are being lost to the error queue, so it is the natural alert target for consumer health.
+    /// Messages that exhausted their in-process retries and second-level redeliveries and were
+    /// dead-lettered, tagged by <c>event_type</c> and <c>queue</c>. A non-zero rate here means events
+    /// are being lost to the dead-letter location, so it is the natural alert target for consumer health.
     /// </summary>
     internal static readonly Counter<long> FaultCounter = Meter.CreateCounter<long>(
         "broker.fault.count",
         unit: "messages",
-        description: "Number of integration events that exhausted retries and faulted, tagged by event type.");
+        description: "Number of integration events that exhausted retries and redeliveries and were dead-lettered, tagged by event type and queue.");
 
     /// <summary>
     /// Times the outbox broker-publish circuit breaker rejected a publish because the circuit was

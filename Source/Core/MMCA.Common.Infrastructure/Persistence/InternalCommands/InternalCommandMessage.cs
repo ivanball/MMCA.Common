@@ -108,6 +108,15 @@ public sealed class InternalCommandMessage
     public string? SpanId { get; init; }
 
     /// <summary>
+    /// Gets the W3C trace flags (<see cref="System.Diagnostics.ActivityTraceFlags"/>) captured at
+    /// schedule time: the scheduling request's sampling decision. The processor rebuilds the parent
+    /// context with these flags, so a parent-based sampler exports the execution span only when the
+    /// scheduling request was sampled. Null (no ambient activity, or a row written before this column
+    /// existed) reads as not sampled.
+    /// </summary>
+    public byte? TraceFlags { get; init; }
+
+    /// <summary>
     /// Gets the id of the user who scheduled the command, restored onto the execution scope's
     /// <c>ICurrentUserService</c> so the authorization decorator and the audit stamps see the same
     /// principal a synchronous execution would have seen. Null for work scheduled by the system.
@@ -161,6 +170,7 @@ public sealed class InternalCommandMessage
             CorrelationId = context.CorrelationId,
             TraceId = context.TraceId,
             SpanId = context.SpanId,
+            TraceFlags = context.TraceFlags,
             UserId = context.UserId,
             UserRoles = context.UserRoles,
             UserPermissions = context.UserPermissions,

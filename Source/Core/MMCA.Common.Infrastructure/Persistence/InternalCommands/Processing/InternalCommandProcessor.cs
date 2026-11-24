@@ -715,6 +715,11 @@ public sealed partial class InternalCommandProcessor(
     /// Starts an activity linked to the trace context captured at schedule time, so the deferred
     /// execution appears under the request that asked for it. Returns null when no trace context was
     /// captured (a row scheduled outside any activity).
+    /// <para>
+    /// The parent carries the STORED trace flags (null reads as <see cref="ActivityTraceFlags.None"/>)
+    /// and is marked remote, so a parent-based sampler records the execution span exactly when the
+    /// scheduling request was sampled, as the outbox processor does.
+    /// </para>
     /// </summary>
     internal static Activity? StartExecutionActivity(InternalCommandMessage row, string sourceName)
     {
@@ -726,7 +731,8 @@ public sealed partial class InternalCommandProcessor(
         var parentContext = new ActivityContext(
             ActivityTraceId.CreateFromString(row.TraceId),
             ActivitySpanId.CreateFromString(row.SpanId),
-            ActivityTraceFlags.Recorded);
+            (ActivityTraceFlags)(row.TraceFlags ?? 0),
+            isRemote: true);
 
         var activity = InternalCommandActivitySource.StartActivity(
             "InternalCommandExecute",

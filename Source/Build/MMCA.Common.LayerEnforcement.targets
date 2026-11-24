@@ -75,6 +75,28 @@
            Text="Layer violation: MMCA.Common.Infrastructure must not reference %(_ForbiddenInfraRefs.Filename). Infrastructure must not depend on API/Presentation." />
   </Target>
 
+  <!-- Transport boundary for the core layers (Shared, Domain, Application): no broker client and no
+       gRPC/protobuf runtime. The broker transports are framework code in Infrastructure (RabbitMQ,
+       PostgreSQL) and in the vendor adapters (Azure Service Bus, Amazon SQS/SNS); application code
+       publishes through IEventBus. MassTransit stays banned here as everywhere (ADR-118). The runtime
+       half is MicroserviceExtractionTestsBase (ArchitectureRules.TransportDoesNotLeakIntoCoreLayers). -->
+  <Target Name="EnforceCoreTransportBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Shared' OR $(MSBuildProjectName) == 'MMCA.Common.Domain' OR $(MSBuildProjectName) == 'MMCA.Common.Application'">
+    <ItemGroup>
+      <_ForbiddenCoreTransportRefs Include="@(PackageReference)"
+        Condition="$([System.String]::new('%(Identity)').StartsWith('MassTransit'))
+                OR '%(Identity)' == 'RabbitMQ.Client'
+                OR '%(Identity)' == 'Azure.Messaging.ServiceBus'
+                OR '%(Identity)' == 'AWSSDK.SQS'
+                OR '%(Identity)' == 'AWSSDK.SimpleNotificationService'
+                OR $([System.String]::new('%(Identity)').StartsWith('Grpc.'))
+                OR $([System.String]::new('%(Identity)').StartsWith('Google.Protobuf'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenCoreTransportRefs->Count()) &gt; 0"
+           Text="Transport boundary violation: $(MSBuildProjectName) must not reference the package %(_ForbiddenCoreTransportRefs.Identity). Shared, Domain and Application stay transport-agnostic: broker clients belong to the transports in Infrastructure or a vendor adapter, gRPC to the edge." />
+  </Target>
+
   <!-- AI: the language-model boundary. It is an Infrastructure-TIER concern (it owns an external
        SDK and a provider credential) but it takes no core-layer reference at all: everything it
        governs is expressed in Microsoft.Extensions.AI primitives, so a host can install it without
@@ -100,7 +122,8 @@
   </Target>
 
   <!-- Cloud vendor boundary: the core packages are cloud-neutral. Every Azure, AWS or Google Cloud
-       SDK (and every MassTransit transport for one) lives in an adapter package - MMCA.Common.Azure,
+       SDK (including the broker clients the native Service Bus and SQS/SNS transports run on) lives
+       in an adapter package - MMCA.Common.Azure,
        MMCA.Common.Azure.Startup, MMCA.Common.Aws, MMCA.Common.Gcp, MMCA.Common.Testing.Azure - that
        references the core, never
        the other way round. A vendor reference in a core package would force that cloud's SDK,
@@ -110,7 +133,8 @@
        Matched on the PACKAGE ID of every PackageReference this project carries: an Azure.* /
        Microsoft.Azure.* / AWSSDK.* / Google.* prefix (Google.Cloud.*, Google.Apis.*, Google.Api.Gax.*),
        FirebaseAdmin, Grpc.Auth (the Google credential bridge for gRPC), a MassTransit.Azure* /
-       MassTransit.AmazonSQS transport, or a ".Azure" segment anywhere in the id
+       MassTransit.AmazonSQS transport id (retired with MassTransit, ADR-118, and still refused), or a
+       ".Azure" segment anywhere in the id
        (Microsoft.Data.SqlClient.Extensions.Azure, Aspire.Hosting.Azure.*, Microsoft.Extensions.Azure).
        Google.* also matches Google.Protobuf, the protobuf runtime; no core project declares it today
        (it only arrives transitively through Grpc.AspNetCore), so it is not exempt.

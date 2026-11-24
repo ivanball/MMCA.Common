@@ -680,7 +680,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         var rowsLogger = new RecordingLogger<InternalCommandProcessor>();
         var lane = CreateLane(logger: logger, rowsLogger: rowsLogger);
         _probes.Fail("x");
-        var origin = new InternalCommandOrigin(null, null, null, tenantMarker, null, null, null);
+        var origin = new InternalCommandOrigin(null, null, null, tenantMarker, null, null, null, null);
         SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-2), origin);
         SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-1), origin);
 
@@ -924,7 +924,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         await OpenCooldownAsync(lane, "x");
         var traceId = ActivityTraceId.CreateRandom();
         var origin = new InternalCommandOrigin(
-            null, null, null, null, null, traceId.ToHexString(), ActivitySpanId.CreateRandom().ToHexString());
+            null, null, null, null, null, traceId.ToHexString(), ActivitySpanId.CreateRandom().ToHexString(), null);
         SeedWithOrigin(new LaneProbeCommand("x", "to-charge"), Now.AddSeconds(-1), origin);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         using var listener = new ActivityListener
@@ -1006,7 +1006,7 @@ public sealed class InternalCommandLaneProcessorTests : IDisposable
         var lane = CreateLane(logger: logger);
         await OpenCooldownAsync(lane, "x");
         var linesBefore = logger.Entries.Count;
-        var origin = new InternalCommandOrigin(null, null, null, tenantMarker, null, null, null);
+        var origin = new InternalCommandOrigin(null, null, null, tenantMarker, null, null, null, null);
         SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-2), origin);
         SeedWithOrigin(new LaneProbeCommand("x", payloadMarker), Now.AddSeconds(-1), origin);
 

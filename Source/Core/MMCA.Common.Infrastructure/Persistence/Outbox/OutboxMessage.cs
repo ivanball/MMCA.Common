@@ -76,6 +76,15 @@ public sealed class OutboxMessage
     public string? SpanId { get; init; }
 
     /// <summary>
+    /// Gets the W3C trace flags (<see cref="ActivityTraceFlags"/>) of the activity current when the
+    /// domain event was raised: the request's sampling decision. The processor rebuilds the parent
+    /// context with these flags, so a parent-based sampler exports the delivery span only when the
+    /// request itself was sampled. Null (no ambient activity, or a row written before this column
+    /// existed) reads as not sampled.
+    /// </summary>
+    public byte? TraceFlags { get; init; }
+
+    /// <summary>
     /// Gets the ordered-delivery key copied from an event implementing
     /// <see cref="IHasOrderingKey"/>, or <see langword="null"/> for the unordered default.
     /// <para>
@@ -150,6 +159,7 @@ public sealed class OutboxMessage
             OccurredOn = domainEvent.DateOccurred,
             TraceId = activity?.TraceId.ToString(),
             SpanId = activity?.SpanId.ToString(),
+            TraceFlags = activity is null ? null : (byte)activity.ActivityTraceFlags,
             TenantId = origin.TenantId,
             UserId = origin.UserId,
             UserRoles = origin.UserRoles,
@@ -196,9 +206,19 @@ public sealed class OutboxMessage
     /// processor grants an unresolvable row really scans again.
     /// </summary>
     /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
-    private Type? ResolveEventType()
+    private Type? ResolveEventType() => ResolveStoredEventType(EventType);
+
+    /// <summary>
+    /// Resolves a stored <see cref="EventType"/> value to a CLR type through the same cache and the
+    /// same lookup order a row's own deserialization uses, so a caller deciding something about a
+    /// stored name (the republish window keeps only integration events) sees exactly the type the
+    /// processor would deliver.
+    /// </summary>
+    /// <param name="storedName">The stored <see cref="EventType"/> value.</param>
+    /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
+    internal static Type? ResolveStoredEventType(string storedName)
     {
-        if (EventTypeCache.TryGetValue(EventType, out var cached))
+        if (EventTypeCache.TryGetValue(storedName, out var cached))
         {
             return cached;
         }
@@ -206,10 +226,10 @@ public sealed class OutboxMessage
         // Order is load-bearing. Type.GetType stays first, so a row storing an assembly-qualified
         // name resolves by a direct lookup; the attribute scan only runs for a stored name that is
         // not a CLR name.
-        var resolved = Type.GetType(EventType) ?? EventNameResolver.FindTypeByDeclaredName(EventType);
+        var resolved = Type.GetType(storedName) ?? EventNameResolver.FindTypeByDeclaredName(storedName);
         if (resolved is not null)
         {
-            EventTypeCache[EventType] = resolved;
+            EventTypeCache[storedName] = resolved;
         }
 
         return resolved;

@@ -96,7 +96,7 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// This package carries no EF Core reference on purpose (see the csproj comment): the rule library
-    /// must not drag EF Core, MassTransit and the provider stack into every consumer's
+    /// must not drag EF Core, the broker clients and the provider stack into every consumer's
     /// <c>*.Architecture.Tests</c> project just to read a handful of members off a model. The members read here
     /// (<c>GetEntityTypes</c>, <c>GetDeclaredForeignKeys</c>, <c>IsOwnership</c>, <c>DeleteBehavior</c>,
     /// <c>Properties</c>, <c>FindAnnotation</c>) are EF's stable public metadata surface; a missing one

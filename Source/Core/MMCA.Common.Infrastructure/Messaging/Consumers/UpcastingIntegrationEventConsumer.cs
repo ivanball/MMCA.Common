@@ -1,6 +1,3 @@
-using System.Collections.Concurrent;
-using System.Linq.Expressions;
-using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Events;
@@ -11,15 +8,15 @@ using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 namespace MMCA.Common.Infrastructure.Messaging.Consumers;
 
 /// <summary>
-/// Draining consumer for a RETIRED integration-event contract: binds the broker queue to
-/// <typeparamref name="TEvent"/>, upcasts each message to its terminal contract through
+/// Draining consumer for a RETIRED integration-event contract: receives <typeparamref name="TEvent"/>
+/// from the host's queue, upcasts each message to its terminal contract through
 /// <see cref="IEventUpcasterRegistry"/>, and invokes the handlers registered for THAT contract.
 /// <para>
 /// It exists so handlers are written once, against the newest event type, while producers that still
 /// publish the old one (and messages already queued at the upgrade) keep being delivered. Register it
 /// per retired type through <c>RegisterUpcastedIntegrationEventConsumer&lt;TEvent&gt;</c>; the current
-/// contract keeps using the plain <see cref="IntegrationEventConsumer{TEvent}"/>. Do NOT register both
-/// consumers for the same type: they would compete for one queue and run the handlers twice.
+/// contract keeps using the plain <see cref="IntegrationEventConsumer{TEvent}"/>. The builder refuses to
+/// register both kinds for the same type.
 /// </para>
 /// <para>
 /// Deduplication stays keyed on the ORIGINAL message id: the registry preserves the envelope across
@@ -33,19 +30,9 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
     IEventUpcasterRegistry upcasters,
     IServiceProvider serviceProvider,
     IInboxStore inbox,
-    ILogger<UpcastingIntegrationEventConsumer<TEvent>> logger) : IConsumer<TEvent>
+    ILogger<UpcastingIntegrationEventConsumer<TEvent>> logger) : IBrokerMessageConsumer
     where TEvent : class, IIntegrationEvent
 {
-    /// <summary>
-    /// Caches the closed handler interface and its compiled invoker per terminal event type. The
-    /// terminal type is only known at runtime (it depends on which upcasters the host registered), so
-    /// handler resolution is non-generic; the compiled expression keeps reflection off the per-message
-    /// path exactly as <c>DomainEventDispatcher</c> does for the in-process path.
-    /// </summary>
-    private static readonly ConcurrentDictionary<
-        Type,
-        (Type ClosedHandlerType, Func<object, object, CancellationToken, Task> Invoker)> DispatchCache = new();
-
     /// <summary>
     /// Authentication type stamped on the identity rebuilt from the message headers. The same value
     /// <see cref="IntegrationEventConsumer{TEvent}"/> uses: an upcast changes the contract, never the
@@ -53,19 +40,28 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
     /// </summary>
     internal const string PrincipalAuthenticationType = IntegrationEventConsumer<TEvent>.PrincipalAuthenticationType;
 
-    /// <inheritdoc />
-    public async Task Consume(ConsumeContext<TEvent> context)
+    /// <summary>
+    /// Consumes one delivered message of the retired contract: restores the publisher's origin,
+    /// dedups on the original message id, upcasts to the terminal contract and runs its handlers.
+    /// </summary>
+    /// <param name="integrationEvent">The deserialized event of the retired contract.</param>
+    /// <param name="headers">The delivered message's headers (origin headers included).</param>
+    /// <param name="cancellationToken">Fires when the host is stopping.</param>
+    /// <returns>A task that completes when every handler has run.</returns>
+    public async Task ConsumeAsync(
+        TEvent integrationEvent,
+        IReadOnlyDictionary<string, string> headers,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
-        var integrationEvent = context.Message;
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+        ArgumentNullException.ThrowIfNull(headers);
 
         // BEFORE the inbox is touched, exactly as IntegrationEventConsumer does it and for the same
         // reason: under database-per-tenant the inbox store's routing is decided by the tenant this
         // restores. A retired contract is delivered with the same headers as a current one, so a
         // consumer that skipped this would run its handlers anonymous while its sibling did not.
         // Held for the whole consume, so a handler's own scope inherits the origin too.
-        using var origin = ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
+        using var origin = ConsumerOriginRestore.Apply(headers, serviceProvider, PrincipalAuthenticationType);
 
         // Dedup on the ORIGINAL message id, before any upcasting: the envelope survives every hop, so
         // this is the same id a plain IntegrationEventConsumer<TEvent> would have recorded.
@@ -77,7 +73,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
 
         // TryBegin also stages the inbox row in the scope's unit of work; it is written by
         // CompleteAsync once every handler has succeeded (see IntegrationEventConsumer).
-        if (!await inbox.TryBeginAsync(messageId, eventTypeName, context.CancellationToken).ConfigureAwait(false))
+        if (!await inbox.TryBeginAsync(messageId, eventTypeName, cancellationToken).ConfigureAwait(false))
         {
             LogDuplicateSkipped(logger, eventTypeName, messageId);
             return;
@@ -98,11 +94,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
             LogUpcasted(logger, eventTypeName, terminalType.Name, messageId);
         }
 
-        var (closedHandlerType, invoker) = DispatchCache.GetOrAdd(
-            terminalType,
-            static eventType => (
-                typeof(IIntegrationEventHandler<>).MakeGenericType(eventType),
-                BuildInvoker(eventType)));
+        var (closedHandlerType, invoker) = UpcastDispatch.For(terminalType);
 
         var handlerCount = 0;
 
@@ -117,7 +109,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
 
             try
             {
-                await invoker(handler, terminalEvent, context.CancellationToken).ConfigureAwait(false);
+                await invoker(handler, terminalEvent, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -125,9 +117,8 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
                 // clean and the redelivery is reprocessed rather than skipped as a duplicate.
                 inbox.Abandon(messageId);
 
-                // Rethrow so MassTransit applies the UseMessageRetry policy configured in
-                // BrokerTransportPolicies.ApplyMessageRetry before the message is dead-lettered. Logging here gives
-                // operators visibility into which handler failed without losing the exception.
+                // Rethrow so the receive pipeline retries in a fresh scope, then redelivers or
+                // dead-letters. Logging here gives operators visibility into which handler failed without losing the exception.
                 LogHandlerFailure(logger, ex, terminalType.Name, handler.GetType().FullName ?? "<unknown>");
                 throw;
             }
@@ -135,45 +126,22 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
 
         if (handlerCount == 0)
         {
-            // No handler registered for the terminal contract in this process. Returning normally lets
-            // MassTransit ack the message; the broker will not retry.
+            // No handler registered for the terminal contract in this process. Returning normally
+            // completes the message; the broker will not retry.
             LogNoHandlers(logger, terminalType.Name, eventTypeName);
         }
 
         // Persist the staged row unless a handler's own save already committed it. Either way the
         // message is recorded only on a successful consume: the failure path above rethrows.
-        await inbox.CompleteAsync(messageId, eventTypeName, context.CancellationToken).ConfigureAwait(false);
+        await inbox.CompleteAsync(messageId, eventTypeName, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Builds a compiled delegate that invokes <c>HandleAsync</c> on
-    /// <c>IIntegrationEventHandler&lt;TTerminal&gt;</c> without boxing or reflection at call time. The
-    /// expression tree casts the <see langword="object"/> parameters to their concrete types, then
-    /// calls the strongly-typed method directly.
-    /// </summary>
-    /// <param name="eventType">The terminal event type to build the invoker for.</param>
-    /// <returns>A delegate that accepts (handler, event, cancellationToken) as objects.</returns>
-    private static Func<object, object, CancellationToken, Task> BuildInvoker(Type eventType)
-    {
-        var closedHandlerType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
-        var method = closedHandlerType.GetMethod("HandleAsync")
-            ?? throw new InvalidOperationException($"HandleAsync method not found on {closedHandlerType.Name}");
-
-        // Build: (object handler, object integrationEvent, CancellationToken ct) =>
-        //     ((IIntegrationEventHandler<TEvent>)handler).HandleAsync((TEvent)integrationEvent, ct)
-        var handlerParam = Expression.Parameter(typeof(object), "handler");
-        var eventParam = Expression.Parameter(typeof(object), "integrationEvent");
-        var ctParam = Expression.Parameter(typeof(CancellationToken), "ct");
-
-        var call = Expression.Call(
-            Expression.Convert(handlerParam, closedHandlerType),
-            method,
-            Expression.Convert(eventParam, eventType),
-            ctParam);
-
-        return Expression.Lambda<Func<object, object, CancellationToken, Task>>(
-            call, handlerParam, eventParam, ctParam).Compile();
-    }
+    /// <inheritdoc />
+    Task IBrokerMessageConsumer.ConsumeAsync(
+        IIntegrationEvent integrationEvent,
+        IReadOnlyDictionary<string, string> headers,
+        CancellationToken cancellationToken) =>
+        ConsumeAsync((TEvent)integrationEvent, headers, cancellationToken);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Integration event {EventType} (message {MessageId}) already processed, skipping (idempotent inbox)")]
     private static partial void LogDuplicateSkipped(ILogger logger, string eventType, Guid messageId);
@@ -184,9 +152,9 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
     [LoggerMessage(Level = LogLevel.Information, Message = "No IEventUpcaster registered for {EventType}; UpcastingIntegrationEventConsumer is dispatching to handlers of the original contract")]
     private static partial void LogNoUpcaster(ILogger logger, string eventType);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "No IIntegrationEventHandler<{TerminalEventType}> registered in this process for upcasted {EventType}, broker message acked without action")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "No IIntegrationEventHandler<{TerminalEventType}> registered in this process for upcasted {EventType}, broker message completed without action")]
     private static partial void LogNoHandlers(ILogger logger, string terminalEventType, string eventType);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Integration event handler {HandlerType} failed for {EventType}; MassTransit will apply the configured retry policy before dead-lettering")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Integration event handler {HandlerType} failed for {EventType}; the broker receive pipeline will retry and redeliver before dead-lettering")]
     private static partial void LogHandlerFailure(ILogger logger, Exception ex, string eventType, string handlerType);
 }

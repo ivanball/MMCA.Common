@@ -820,6 +820,11 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.LastError).HasMaxLength(4000);
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+
+            // The request's sampling decision (W3C trace flags), nullable so the column is
+            // expand-only (ADR-057): a row written before it existed reads as not sampled. tinyint on
+            // SQL Server, smallint on PostgreSQL, INTEGER on SQLite. Same on InternalCommands below.
+            entity.Property(e => e.TraceFlags);
             entity.Property(e => e.OrderingKey).HasMaxLength(200).IsUnicode(false);
 
             // The captured ambient context, restored around delivery. Same widths and unicode
@@ -917,6 +922,7 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.TraceFlags);
             entity.Property(e => e.UserRoles).HasMaxLength(512).IsUnicode(false);
             entity.Property(e => e.UserPermissions);
             entity.Property(e => e.TenantId).HasMaxLength(TenantIdMaxLength).IsUnicode(false);

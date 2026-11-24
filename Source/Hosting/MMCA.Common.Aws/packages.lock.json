@@ -67,15 +67,13 @@
           "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
-      "MassTransit.AmazonSQS": {
+      "AWSSDK.SQS": {
         "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "O78/23QqOCKtyXqDuRyWz6ultsjNBbk4Vk9/gisJN3tvLGra4YWNT5eeVan5ybC+7IHHR4DH+avRm73QOb/Q+A==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "clZzwfg/mOaW+q28fAcT92UO0XoFIdJiJ2DDfO1bGCC1UVm+aJTlSgpeE3W2tEvLnDNXXCp4O3JQAnXJ4/HefQ==",
         "dependencies": {
-          "AWSSDK.SQS": "4.0.100.14",
-          "AWSSDK.SimpleNotificationService": "4.0.100.15",
-          "MassTransit": "8.5.12"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "Meziantou.Analyzer": {
@@ -149,14 +147,6 @@
           "AWSSDK.Core": "[4.0.3.17, 5.0.0)"
         }
       },
-      "AWSSDK.SQS": {
-        "type": "Transitive",
-        "resolved": "4.0.100.14",
-        "contentHash": "bFMwWy14LyVocTM9kVfyVRgjbgJBkBXEJXi8i6KLVJV2PXVnVeTfwlxClMFTMDOPhYWlpmHzO2aHuaBdVlaFzg==",
-        "dependencies": {
-          "AWSSDK.Core": "[4.0.102.6, 5.0.0)"
-        }
-      },
       "Azure.Core": {
         "type": "Transitive",
         "resolved": "1.44.1",
@@ -167,20 +157,10 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
         "contentHash": "DR3lFbdnKucaaj1/8zMNOACMz/64igzox1yVZSFVsLxYB5mxAB+wFP1WZ8fjwrZnbU1KA1DoMzHKYKxUfuZ4wQ=="
-      },
-      "MassTransit.Abstractions": {
-        "type": "Transitive",
-        "resolved": "8.5.12",
-        "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
       "MessagePack": {
         "type": "Transitive",
@@ -610,9 +590,6 @@
         "dependencies": {
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.12, )",
-          "MassTransit.RabbitMQ": "[8.5.12, )",
-          "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -625,6 +602,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
+          "RabbitMQ.Client": "[7.2.2, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.15, )"
@@ -674,36 +652,6 @@
         "contentHash": "QpKXgiO9E6wXCh19X2Musn8MZM0xt7KQt/QrD6GDBn3MCUfy8a+rkhCzrYJNCfoxTsTRQ7bpKP8T3geTnJNNeQ==",
         "dependencies": {
           "FluentValidation": "12.2.0"
-        }
-      },
-      "MassTransit": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
-        "dependencies": {
-          "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
         }
       },
       "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": {
@@ -1073,15 +1021,13 @@
           "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
-      "MassTransit.AmazonSQS": {
+      "AWSSDK.SQS": {
         "type": "Direct",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "O78/23QqOCKtyXqDuRyWz6ultsjNBbk4Vk9/gisJN3tvLGra4YWNT5eeVan5ybC+7IHHR4DH+avRm73QOb/Q+A==",
+        "requested": "[4.1.0.2, )",
+        "resolved": "4.1.0.2",
+        "contentHash": "clZzwfg/mOaW+q28fAcT92UO0XoFIdJiJ2DDfO1bGCC1UVm+aJTlSgpeE3W2tEvLnDNXXCp4O3JQAnXJ4/HefQ==",
         "dependencies": {
-          "AWSSDK.SQS": "4.0.100.14",
-          "AWSSDK.SimpleNotificationService": "4.0.100.15",
-          "MassTransit": "8.5.12"
+          "AWSSDK.Core": "[4.1.1.1, 5.0.0)"
         }
       },
       "Meziantou.Analyzer": {
@@ -1155,14 +1101,6 @@
           "AWSSDK.Core": "[4.0.3.17, 5.0.0)"
         }
       },
-      "AWSSDK.SQS": {
-        "type": "Transitive",
-        "resolved": "4.0.100.14",
-        "contentHash": "bFMwWy14LyVocTM9kVfyVRgjbgJBkBXEJXi8i6KLVJV2PXVnVeTfwlxClMFTMDOPhYWlpmHzO2aHuaBdVlaFzg==",
-        "dependencies": {
-          "AWSSDK.Core": "[4.0.102.6, 5.0.0)"
-        }
-      },
       "Azure.Core": {
         "type": "Transitive",
         "resolved": "1.44.1",
@@ -1173,20 +1111,10 @@
           "System.Memory.Data": "6.0.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.1.89",
-        "contentHash": "1VjFE664wnxvuhlgP8kS4PeFFF4jqD3VkbIHW6Zlc52zuibgcz5ICnIHcQXlTp6pURpPNGLV0ZpNe5x9KePJnA=="
-      },
       "FluentValidation": {
         "type": "Transitive",
         "resolved": "12.2.0",
         "contentHash": "DR3lFbdnKucaaj1/8zMNOACMz/64igzox1yVZSFVsLxYB5mxAB+wFP1WZ8fjwrZnbU1KA1DoMzHKYKxUfuZ4wQ=="
-      },
-      "MassTransit.Abstractions": {
-        "type": "Transitive",
-        "resolved": "8.5.12",
-        "contentHash": "NauNyaQsJVfLSY3Jw/zr26POQpEnfjerHCrrK3kUmkCDIpC63PZD1AjihGFgq0KH5eGagMJ7GRHN74w8mI69Kg=="
       },
       "MessagePack": {
         "type": "Transitive",
@@ -1627,9 +1555,6 @@
         "dependencies": {
           "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.12, )",
-          "MassTransit.RabbitMQ": "[8.5.12, )",
-          "MassTransit.SqlTransport.PostgreSQL": "[8.5.12, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1642,6 +1567,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
+          "RabbitMQ.Client": "[7.2.2, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -1690,36 +1616,6 @@
         "contentHash": "QpKXgiO9E6wXCh19X2Musn8MZM0xt7KQt/QrD6GDBn3MCUfy8a+rkhCzrYJNCfoxTsTRQ7bpKP8T3geTnJNNeQ==",
         "dependencies": {
           "FluentValidation": "12.2.0"
-        }
-      },
-      "MassTransit": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "qpesi9ZPcT3+1w7HLw4rtkS0MRiX90WSaFNp3CXdaTGKhdmZn3nIozysvEpdoVfLM4Bwq9Kx7okGxRvLBY9Qcw==",
-        "dependencies": {
-          "MassTransit.Abstractions": "8.5.12"
-        }
-      },
-      "MassTransit.RabbitMQ": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "j8MQni+zMmUpAQ8VKIcuBakJ2ptZy0wSahd1LCVyRUvFrI8Bg0YtFsRk6w0/R1hdD3u0TuMvPKQAaNIZe8nSxQ==",
-        "dependencies": {
-          "MassTransit": "8.5.12",
-          "RabbitMQ.Client": "7.2.2"
-        }
-      },
-      "MassTransit.SqlTransport.PostgreSQL": {
-        "type": "CentralTransitive",
-        "requested": "[8.5.12, )",
-        "resolved": "8.5.12",
-        "contentHash": "BUeSTNizavmN1Xwhy+ZVmxmuUkhFx54w+hxgRapwvXkPoL0y0iU0iDz9R9mmvBNtuqBdvq9K7/7GtP1wnHnpaA==",
-        "dependencies": {
-          "Dapper": "2.1.89",
-          "MassTransit": "8.5.12",
-          "Npgsql": "8.0.7"
         }
       },
       "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": {

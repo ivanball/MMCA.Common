@@ -12,7 +12,7 @@ namespace MMCA.Common.API.Caching;
 /// <summary>
 /// Registration extension for <see cref="OutputCacheEvictionHandler"/>: the DI half of the
 /// cross-service output-cache eviction path. The broker half is
-/// <c>RegisterOutputCacheEvictionConsumer()</c> on the MassTransit bus configurator; a host that
+/// <c>RegisterOutputCacheEvictionConsumer()</c> on the broker consumer builder; a host that
 /// wants the behaviour calls both.
 /// <para>
 /// Also carries the multi-tag eviction helpers a mutating controller reaches for after a write: one

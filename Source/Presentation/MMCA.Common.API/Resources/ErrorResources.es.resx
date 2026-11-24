@@ -244,6 +244,18 @@
   <data name="Outbox.InvalidTake" xml:space="preserve">
     <value>Take debe estar entre 1 y 500.</value>
   </data>
+  <data name="Outbox.RepublishWindowNotUtc" xml:space="preserve">
+    <value>Los límites de la ventana de republicación deben estar en UTC.</value>
+  </data>
+  <data name="Outbox.InvalidRepublishWindow" xml:space="preserve">
+    <value>La ventana de republicación debe terminar después de comenzar.</value>
+  </data>
+  <data name="Outbox.RepublishWindowTooWide" xml:space="preserve">
+    <value>La ventana de republicación no puede superar 7 días.</value>
+  </data>
+  <data name="Outbox.RepublishRequiresInbox" xml:space="preserve">
+    <value>Republicar eventos de integración ya procesados requiere la bandeja de entrada del consumidor; sin ella, cada evento republicado vuelve a ejecutar sus manejadores.</value>
+  </data>
   <data name="PermissionGrant.ManageRolesMustBeCompiled" xml:space="preserve">
     <value>El permiso de administración de roles no se puede conceder mediante una fila almacenada. Concédalo en el código, a través del registro de permisos del host.</value>
   </data>

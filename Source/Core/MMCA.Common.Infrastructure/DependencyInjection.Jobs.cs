@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,10 +138,6 @@ public static partial class DependencyInjection
     /// </remarks>
     /// <param name="services">The collection being configured.</param>
     /// <param name="configuration">Application configuration for binding the section.</param>
-    [SuppressMessage(
-        "Style",
-        "IDE0051:Remove unused private members",
-        Justification = "Called from AddInfrastructure inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static void AddInternalCommands(IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<Persistence.InternalCommands.Administration.InternalCommandsSettings>()
