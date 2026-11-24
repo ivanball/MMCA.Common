@@ -1,7 +1,1 @@
 #nullable enable
-*REMOVED*MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransit_MustNotExceed_MajorVersion8() -> void
-*REMOVED*virtual MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransitPackageIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
-MMCA.Common.Testing.Architecture.DependencyVersionTestsBase.MassTransit_MustNotBeReferenced() -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.NoPackageVersionWithPrefix(string! packageIdPrefix, string! reason) -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.NoPackageVersionWithPrefix(string! propsPath, string! packageIdPrefix, string! reason) -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! propsPath, string! packageId, int exclusiveMajorCeiling, string! reason) -> void
