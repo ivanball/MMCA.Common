@@ -25,10 +25,9 @@ public static partial class ArchitectureRules
         var forbidden = ForbiddenDomainDependencies.Concat(extra ?? []).ToArray();
         foreach (var domain in map.OfLayer(Layer.Domain))
         {
-            var result = Types.InAssembly(domain)
+            var result = ArchitectureTypes.InAssembly(domain)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{domain.GetName().Name}: Domain must be framework-independent — only pure C# and Shared contracts");
@@ -40,10 +39,9 @@ public static partial class ArchitectureRules
         var forbidden = ForbiddenDomainDependencies.Concat(extra ?? []).ToArray();
         foreach (var shared in map.OfLayer(Layer.Shared))
         {
-            var result = Types.InAssembly(shared)
+            var result = ArchitectureTypes.InAssembly(shared)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{shared.GetName().Name}: Shared must be framework-independent — only foundational abstractions");
@@ -54,10 +52,9 @@ public static partial class ArchitectureRules
     {
         foreach (var application in map.OfLayer(Layer.Application))
         {
-            var result = Types.InAssembly(application)
+            var result = ArchitectureTypes.InAssembly(application)
                 .ShouldNot()
-                .HaveDependencyOnAny("Microsoft.EntityFrameworkCore")
-                .GetResult();
+                .HaveDependencyOnAny("Microsoft.EntityFrameworkCore");
 
             ArchitectureAssert.NoViolations(result,
                 $"{application.GetName().Name}: Application must not depend on EF Core — use IRepository/IUnitOfWork");
@@ -68,10 +65,9 @@ public static partial class ArchitectureRules
     {
         foreach (var application in map.OfLayer(Layer.Application))
         {
-            var result = Types.InAssembly(application)
+            var result = ArchitectureTypes.InAssembly(application)
                 .ShouldNot()
-                .HaveDependencyOnAny("Microsoft.AspNetCore")
-                .GetResult();
+                .HaveDependencyOnAny("Microsoft.AspNetCore");
 
             ArchitectureAssert.NoViolations(result,
                 $"{application.GetName().Name}: Application must remain host-agnostic — no ASP.NET Core");

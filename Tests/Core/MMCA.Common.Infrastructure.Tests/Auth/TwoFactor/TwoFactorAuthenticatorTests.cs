@@ -8,7 +8,6 @@ using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
-using OtpNet;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.TwoFactor;
 
@@ -288,7 +287,7 @@ public sealed class TwoFactorAuthenticatorTests
     }
 
     private static string CodeAt(string secret) =>
-        new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp(DateTime.UtcNow);
+        Totp.Compute(Base32.Decode(secret), DateTime.UtcNow, periodSeconds: 30, digits: 6);
 
     /// <summary>An uncontended <see cref="IDistributedLock"/>: every acquire succeeds.</summary>
     private sealed class FreeLock : IDistributedLock, IAsyncDisposable

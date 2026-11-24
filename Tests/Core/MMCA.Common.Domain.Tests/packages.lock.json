@@ -160,7 +160,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {
@@ -335,7 +335,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {

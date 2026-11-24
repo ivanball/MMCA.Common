@@ -1,11 +1,7 @@
-﻿using System.Runtime.CompilerServices;
 using AwesomeAssertions;
-using Microsoft.Azure.NotificationHubs;
-using Microsoft.Azure.NotificationHubs.Messaging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Azure.Notifications;
 using MMCA.Common.Shared.Abstractions;
-using Moq;
 
 namespace MMCA.Common.Azure.Tests.Notifications;
 
@@ -20,32 +16,18 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
     private const UserIdentifierType Owner = 42;
     private const UserIdentifierType Stranger = 99;
 
-    private readonly Mock<INotificationHubClient> _hubClient = new();
+    private readonly FakeNotificationHubRestClient _hubClient = new();
     private readonly AzureNotificationHubDeviceRegistrar _sut;
 
     public AzureNotificationHubDeviceRegistrarTests() =>
         _sut = new AzureNotificationHubDeviceRegistrar(
-            _hubClient.Object,
+            _hubClient,
             NullLogger<AzureNotificationHubDeviceRegistrar>.Instance);
 
-    /// <summary>
-    /// The SDK's messaging exceptions have no public constructors, so a thrown instance has to be
-    /// materialized without running one.
-    /// </summary>
-    private static T CreateSdkException<T>()
-        where T : Exception =>
-        (T)RuntimeHelpers.GetUninitializedObject(typeof(T));
+    private void SetupInstallation(params string[] tags) => _hubClient.AddInstallation(InstallationId, tags);
 
-    private void SetupInstallation(params string[] tags) =>
-        _hubClient
-            .Setup(x => x.GetInstallationAsync(InstallationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Installation
-            {
-                InstallationId = InstallationId,
-                Platform = NotificationPlatform.FcmV1,
-                PushChannel = "fcm-registration-token",
-                Tags = [.. tags],
-            });
+    private static NotificationHubRegistrationPage Page(string? continuationToken, params string[][] registrations) =>
+        new([.. registrations.Select(tags => (IReadOnlySet<string>)new HashSet<string>(tags, StringComparer.OrdinalIgnoreCase))], continuationToken);
 
     [Fact]
     public async Task DeleteAsync_WhenTheCallerOwnsTheInstallation_Deletes()
@@ -55,9 +37,7 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         var result = await _sut.DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(InstallationId, It.IsAny<CancellationToken>()),
-            Times.Once);
+        _hubClient.Deletes.Should().Equal(InstallationId);
     }
 
     [Fact]
@@ -69,10 +49,7 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
 
         result.IsSuccess.Should().BeTrue(
             "not-yours answers exactly like unknown-id, so the endpoint is not an existence oracle");
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "another user's device must survive a delete aimed at its installation id");
+        _hubClient.Deletes.Should().BeEmpty("another user's device must survive a delete aimed at its installation id");
     }
 
     [Fact]
@@ -85,9 +62,7 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         var result = await _sut.DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _hubClient.Deletes.Should().BeEmpty();
     }
 
     [Fact]
@@ -98,32 +73,22 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         var result = await _sut.DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _hubClient.Deletes.Should().BeEmpty();
     }
 
     [Fact]
     public async Task DeleteAsync_WhenTheInstallationIsUnknown_SucceedsIdempotently()
     {
-        _hubClient
-            .Setup(x => x.GetInstallationAsync(InstallationId, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(CreateSdkException<MessagingEntityNotFoundException>());
-
         var result = await _sut.DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _hubClient.Deletes.Should().BeEmpty();
     }
 
     [Fact]
     public async Task DeleteAsync_WhenTheHubFails_ReturnsFailure()
     {
-        _hubClient
-            .Setup(x => x.GetInstallationAsync(InstallationId, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(CreateSdkException<MessagingException>());
+        _hubClient.GetFailure = FakeNotificationHubRestClient.ServerBusy();
 
         var result = await _sut.DeleteAsync(Owner, InstallationId, TestContext.Current.CancellationToken);
 
@@ -135,65 +100,51 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
     public async Task DeleteAllForUserAsync_DeletesEveryInstallationFoundUnderTheOwnerTag_AcrossPages()
     {
         const string second = "second-installation";
-        _hubClient
-            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Page("page-2", Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
-        _hubClient
-            .Setup(x => x.GetRegistrationsByTagAsync("user:42", "page-2", It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Page(
-                string.Empty,
-                Registration("user:42", $"$installationid:{{{second}}}"),
-                Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
+        _hubClient.Pages[string.Empty] = Page("page-2", ["user:42", $"$InstallationId:{{{InstallationId}}}"]);
+        _hubClient.Pages["page-2"] = Page(
+            string.Empty,
+            ["user:42", $"$installationid:{{{second}}}"],
+            ["user:42", $"$InstallationId:{{{InstallationId}}}"]);
         SetupInstallation("user:42");
-        SetupInstallationWithId(second, "user:42");
+        _hubClient.AddInstallation(second, "user:42");
 
         var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(x => x.DeleteInstallationAsync(InstallationId, It.IsAny<CancellationToken>()), Times.Once,
-            "an installation seen on two registrations is still deleted once");
-        _hubClient.Verify(x => x.DeleteInstallationAsync(second, It.IsAny<CancellationToken>()), Times.Once,
-            "the second page is read, and the system tag matches case-insensitively as the SDK does");
+        _hubClient.ListedTags.Should().Equal("user:42", "user:42");
+        _hubClient.Deletes.Should().BeEquivalentTo(
+            [InstallationId, second],
+            "an installation seen on two registrations is still deleted once, the second page is read, and the system tag matches case-insensitively as the hub does");
     }
 
     [Fact]
     public async Task DeleteAllForUserAsync_WhenAnInstallationChangedHandsMeanwhile_LeavesIt()
     {
-        _hubClient
-            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Page(string.Empty, Registration("user:42", $"$InstallationId:{{{InstallationId}}}")));
+        _hubClient.Pages[string.Empty] = Page(string.Empty, ["user:42", $"$InstallationId:{{{InstallationId}}}"]);
         SetupInstallation("user:99");
 
         var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
+        _hubClient.Deletes.Should().BeEmpty(
             "each delete re-checks the owner tag on the installation itself, so a handed-over device survives");
     }
 
     [Fact]
     public async Task DeleteAllForUserAsync_WithNoRegistrations_SucceedsWithoutDeleting()
     {
-        _hubClient
-            .Setup(x => x.GetRegistrationsByTagAsync("user:42", string.Empty, It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Page(string.Empty, Registration("user:42")));
+        _hubClient.Pages[string.Empty] = Page(null, ["user:42"]);
 
         var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue("a registration with no installation system tag names nothing to delete");
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _hubClient.Deletes.Should().BeEmpty();
     }
 
     [Fact]
     public async Task DeleteAllForUserAsync_WhenListingFails_ReturnsFailure()
     {
-        _hubClient
-            .Setup(x => x.GetRegistrationsByTagAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(CreateSdkException<MessagingException>());
+        _hubClient.ListFailure = FakeNotificationHubRestClient.ServerBusy();
 
         var result = await _sut.DeleteAllForUserAsync(Owner, TestContext.Current.CancellationToken);
 
@@ -201,37 +152,9 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         result.Errors.Should().ContainSingle(e => e.Code == "PushDevice.DeleteFailed");
     }
 
-    private static FcmV1RegistrationDescription Registration(params string[] tags) =>
-        new("fcm-registration-token", tags);
-
-    private static ICollectionQueryResult<RegistrationDescription> Page(string continuationToken, params RegistrationDescription[] registrations)
-    {
-        var page = new Mock<ICollectionQueryResult<RegistrationDescription>>();
-        page.SetupGet(x => x.ContinuationToken).Returns(continuationToken);
-        page.Setup(x => x.GetEnumerator()).Returns(() => ((IEnumerable<RegistrationDescription>)registrations).GetEnumerator());
-        return page.Object;
-    }
-
-    private void SetupInstallationWithId(string installationId, params string[] tags) =>
-        _hubClient
-            .Setup(x => x.GetInstallationAsync(installationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Installation
-            {
-                InstallationId = installationId,
-                Platform = NotificationPlatform.FcmV1,
-                PushChannel = "fcm-registration-token",
-                Tags = [.. tags],
-            });
-
     [Fact]
     public async Task UpsertAsync_StampsTheOwnerTagTheDeleteChecksFor()
     {
-        Installation? captured = null;
-        _hubClient
-            .Setup(x => x.CreateOrUpdateInstallationAsync(It.IsAny<Installation>(), It.IsAny<CancellationToken>()))
-            .Callback<Installation, CancellationToken>((installation, _) => captured = installation)
-            .Returns(Task.CompletedTask);
-
         var result = await _sut.UpsertAsync(
             Owner,
             new()
@@ -243,8 +166,48 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        captured.Should().NotBeNull();
-        captured!.Tags.Should().Contain("user:42", "the delete's ownership check reads this tag back");
+        var upsert = _hubClient.Upserts.Should().ContainSingle().Subject;
+        upsert.Should().Be(new NotificationHubInstallation(InstallationId, NotificationHubPlatform.FcmV1, "fcm-registration-token", upsert.Tags));
+        upsert.Tags.Should().Equal(["user:42"], "the delete's ownership check reads this tag back");
+    }
+
+    [Theory]
+    [InlineData("apns", "Apns")]
+    [InlineData("fcmv1", "FcmV1")]
+    public async Task UpsertAsync_MapsThePlatformCaseInsensitively(string platform, string expected)
+    {
+        var result = await _sut.UpsertAsync(
+            Owner,
+            new() { InstallationId = InstallationId, Platform = platform, PushChannel = "channel" },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        _hubClient.Upserts.Should().ContainSingle().Which.Platform.ToString().Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task UpsertAsync_AnUnsupportedPlatform_IsAValidationFailureWithoutAHubCall()
+    {
+        var result = await _sut.UpsertAsync(
+            Owner,
+            new() { InstallationId = InstallationId, Platform = "wns", PushChannel = "channel" },
+            TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle(e => e.Code == "PushDevice.UnsupportedPlatform" && e.Type == ErrorType.Validation);
+        _hubClient.Upserts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpsertAsync_WhenTheHubFails_ReturnsFailure()
+    {
+        _hubClient.UpsertFailure = FakeNotificationHubRestClient.ServerBusy();
+
+        var result = await _sut.UpsertAsync(
+            Owner,
+            new() { InstallationId = InstallationId, Platform = "FCMV1", PushChannel = "channel" },
+            TestContext.Current.CancellationToken);
+
+        result.Errors.Should().ContainSingle(e => e.Code == "PushDevice.UpsertFailed");
     }
 
     // L176: the upsert is a full overwrite, so it must apply the same ownership check as the delete.
@@ -269,10 +232,7 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
         result.IsFailure.Should().BeTrue("the caller must learn the id is taken so it can mint a new one");
         result.Errors.Should().ContainSingle(e =>
             e.Code == "PushDevice.InstallationConflict" && e.Type == ErrorType.Conflict);
-        _hubClient.Verify(
-            x => x.CreateOrUpdateInstallationAsync(It.IsAny<Installation>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "re-tagging another user's installation would redirect their pushes to the caller");
+        _hubClient.Upserts.Should().BeEmpty("re-tagging another user's installation would redirect their pushes to the caller");
     }
 
     // L176 review (R1): the installation id is per DEVICE (the MAUI client persists it in device
@@ -295,11 +255,8 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.CreateOrUpdateInstallationAsync(
-                It.Is<Installation>(i => i.Tags.Contains("user:99") && !i.Tags.Contains("user:42")),
-                It.IsAny<CancellationToken>()),
-            Times.Once,
+        _hubClient.Upserts.Should().ContainSingle().Which.Tags.Should().Equal(
+            ["user:99"],
             "the device now belongs to the signed-in user, and the previous owner's pushes must stop");
     }
 
@@ -319,10 +276,6 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.CreateOrUpdateInstallationAsync(
-                It.Is<Installation>(i => i.PushChannel == "rotated-registration-token"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        _hubClient.Upserts.Should().ContainSingle().Which.PushChannel.Should().Be("rotated-registration-token");
     }
 }

@@ -63,12 +63,6 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Riok.Mapperly": {
         "type": "Direct",
         "requested": "[4.3.1, )",
@@ -240,7 +234,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {
@@ -311,12 +305,6 @@
         "requested": "[4.5.4, )",
         "resolved": "4.5.4",
         "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA=="
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
       },
       "Riok.Mapperly": {
         "type": "Direct",
@@ -423,7 +411,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {

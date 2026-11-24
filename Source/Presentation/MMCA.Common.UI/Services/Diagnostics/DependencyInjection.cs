@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MMCA.Common.UI.Services.Diagnostics;
 
@@ -25,11 +26,16 @@ public static class DependencyInjection
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddInAppDiagnostics(Action<InAppDiagnosticsOptions>? configure = null)
         {
-            var options = services.AddOptions<InAppDiagnosticsOptions>().ValidateDataAnnotations();
+            var options = services.AddOptions<InAppDiagnosticsOptions>();
             if (configure is not null)
             {
                 options.Configure(configure);
             }
+
+            // The [Range] on Capacity, checked by the source-generated validator when the options are
+            // first read. TryAddEnumerable keeps a repeated call from validating twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<InAppDiagnosticsOptions>, InAppDiagnosticsOptionsValidator>());
 
             services.TryAddSingleton(TimeProvider.System);
             services.TryAddSingleton<InAppLogBuffer>();

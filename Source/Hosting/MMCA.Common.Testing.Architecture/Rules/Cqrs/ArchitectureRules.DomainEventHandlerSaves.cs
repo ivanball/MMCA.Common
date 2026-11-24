@@ -1,10 +1,10 @@
-using Mono.Cecil;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
 public static partial class ArchitectureRules
 {
-    /// <summary>The framework's domain-event-handler interface, with Cecil's generic-arity marker.</summary>
+    /// <summary>The framework's domain-event-handler interface, with its metadata generic-arity marker.</summary>
     private const string DomainEventHandlerInterfaceFullName =
         "MMCA.Common.Application.Interfaces.Events.IDomainEventHandler`1";
 
@@ -36,8 +36,8 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>How it looks.</b> Neither NetArchTest nor reflection can see a CALL inside a method body, so
-    /// the rule reads IL (through the Mono.Cecil already carried by NetArchTest) and walks the call
+    /// <b>How it looks.</b> Reflection cannot see a CALL inside a method body, so the rule reads IL
+    /// straight from the assembly files (<c>System.Reflection.Metadata</c>) and walks the call
     /// graph breadth-first from every handler method. Callees are matched by full name, so the package
     /// keeps its deliberate zero-reference stance toward EF Core and the framework.
     /// </para>
@@ -82,39 +82,23 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(allowedTypesAndNamespaces);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxCallDepth, 1);
 
-        var modules = new List<ModuleDefinition>();
-        try
-        {
-            foreach (var location in ScannableAssemblyLocations(map))
-            {
-                modules.Add(ModuleDefinition.ReadModule(location));
-            }
+        var index = new CallGraphIndex(ScannableAssemblyLocations(map).Select(MetadataModule.Load));
 
-            var index = new CallGraphIndex(modules);
+        var violations = index.Types
+            .Where(type => index.Implements(type, DomainEventHandlerInterfaceFullName)
+                && !IsAllowed(type.FullName, allowedTypesAndNamespaces))
+            .Select(type => (Handler: type, Path: FindSavePath(type, index, allowedTypesAndNamespaces, maxCallDepth)))
+            .Where(found => found.Path is not null)
+            .Select(found => $"  - {found.Handler.FullName}: {found.Path}")
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
-            var violations = index.Types
-                .Where(type => index.Implements(type, DomainEventHandlerInterfaceFullName)
-                    && !IsAllowed(type.FullName, allowedTypesAndNamespaces))
-                .Select(type => (Handler: type, Path: FindSavePath(type, index, allowedTypesAndNamespaces, maxCallDepth)))
-                .Where(found => found.Path is not null)
-                .Select(found => $"  - {found.Handler.FullName}: {found.Path}")
-                .Order(StringComparer.Ordinal)
-                .ToList();
-
-            ArchitectureAssert.NoViolations(violations,
-                "a domain event handler runs inside the save that raised the event, so it must not "
-                    + "reach SaveChanges/SaveChangesAsync itself or through anything it calls. Mutate "
-                    + "state and let the owning unit of work flush it, or move the independent write "
-                    + "onto the outbox. Each line shows the handler, the call chain, and the save it "
-                    + "reaches");
-        }
-        finally
-        {
-            foreach (var module in modules)
-            {
-                module.Dispose();
-            }
-        }
+        ArchitectureAssert.NoViolations(violations,
+            "a domain event handler runs inside the save that raised the event, so it must not "
+                + "reach SaveChanges/SaveChangesAsync itself or through anything it calls. Mutate "
+                + "state and let the owning unit of work flush it, or move the independent write "
+                + "onto the outbox. Each line shows the handler, the call chain, and the save it "
+                + "reaches");
     }
 
     /// <summary>
@@ -123,13 +107,13 @@ public static partial class ArchitectureRules
     /// cycle-safe and reports the shortest path it can.
     /// </summary>
     private static string? FindSavePath(
-        TypeDefinition handler,
+        MetadataType handler,
         CallGraphIndex index,
         IReadOnlyCollection<string> allowedTypesAndNamespaces,
         int maxCallDepth)
     {
         var visited = new HashSet<string>(StringComparer.Ordinal);
-        var pending = new Queue<(MethodDefinition Method, int Depth, string Path)>();
+        var pending = new Queue<(MetadataMethod Method, int Depth, string Path)>();
 
         foreach (var method in handler.Methods.Where(m => visited.Add(m.FullName)))
         {
@@ -159,11 +143,11 @@ public static partial class ArchitectureRules
 
     /// <summary>Queues the unvisited, non-allowlisted implementations one call could land on.</summary>
     private static void EnqueueTargets(
-        MethodReference callee,
+        MethodOperand callee,
         CallGraphIndex index,
         IReadOnlyCollection<string> allowedTypesAndNamespaces,
         HashSet<string> visited,
-        Queue<(MethodDefinition Method, int Depth, string Path)> pending,
+        Queue<(MetadataMethod Method, int Depth, string Path)> pending,
         int depth,
         string path)
     {
@@ -178,13 +162,13 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>Every method a method's IL references, its state machine's IL included.</summary>
-    private static IEnumerable<MethodReference> Callees(MethodDefinition method, CallGraphIndex index)
+    private static IEnumerable<MethodOperand> Callees(MetadataMethod method, CallGraphIndex index)
     {
         foreach (var body in BodyMethods(method, index))
         {
-            foreach (var instruction in body.Body.Instructions)
+            foreach (var instruction in body.Instructions)
             {
-                if (instruction.Operand is MethodReference callee)
+                if (instruction.Operand is MethodOperand callee)
                 {
                     yield return callee;
                 }
@@ -197,7 +181,7 @@ public static partial class ArchitectureRules
     /// compiler-generated state machine an <see langword="async"/> or iterator method rewrites its body into. The
     /// visible method only starts the machine, so a walk that stops there sees an empty handler.
     /// </summary>
-    private static IEnumerable<MethodDefinition> BodyMethods(MethodDefinition method, CallGraphIndex index)
+    private static IEnumerable<MetadataMethod> BodyMethods(MetadataMethod method, CallGraphIndex index)
     {
         if (method.HasBody)
         {
@@ -217,22 +201,30 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>The state-machine type an async/iterator method compiles into, or null.</summary>
-    private static TypeDefinition? StateMachineOf(MethodDefinition method, CallGraphIndex index)
+    private static MetadataType? StateMachineOf(MetadataMethod method, CallGraphIndex index)
     {
-        var attribute = method.CustomAttributes.FirstOrDefault(a =>
-            a.AttributeType.FullName is "System.Runtime.CompilerServices.AsyncStateMachineAttribute"
+        var attribute = method.Attributes.FirstOrDefault(a =>
+            a.FullName is "System.Runtime.CompilerServices.AsyncStateMachineAttribute"
                 or "System.Runtime.CompilerServices.IteratorStateMachineAttribute");
 
-        if (attribute is null || attribute.ConstructorArguments.Count == 0)
-        {
-            return null;
-        }
+        return attribute?.LeadingStringArgument is { } serializedName
+            ? index.Find(MetadataFullName(serializedName))
+            : null;
+    }
 
-        return attribute.ConstructorArguments[0].Value is TypeReference reference ? index.Find(reference) : null;
+    /// <summary>
+    /// The metadata full name of a type an attribute argument serializes by its reflection name: the
+    /// assembly qualifier dropped and each nested-type <c>+</c> spelled <c>/</c>
+    /// (<c>Ns.Handler+&lt;HandleAsync&gt;d__3, Asm</c> to <c>Ns.Handler/&lt;HandleAsync&gt;d__3</c>).
+    /// </summary>
+    private static string MetadataFullName(string serializedName)
+    {
+        var comma = serializedName.IndexOf(',', StringComparison.Ordinal);
+        return (comma >= 0 ? serializedName[..comma] : serializedName).Replace('+', '/');
     }
 
     /// <summary>True when the callee flushes pending changes to the database.</summary>
-    private static bool IsSaveCall(MethodReference callee)
+    private static bool IsSaveCall(MethodOperand callee)
     {
         if (!SaveMemberNames.Contains(callee.Name, StringComparer.Ordinal))
         {
@@ -255,7 +247,7 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>The type's simple name with the generic-arity marker stripped.</summary>
-    private static string SimpleTypeName(TypeReference type)
+    private static string SimpleTypeName(TypeSig type)
     {
         var name = type.Name;
         var tick = name.IndexOf('`', StringComparison.Ordinal);
@@ -266,7 +258,7 @@ public static partial class ArchitectureRules
     /// A readable node for the reported chain. Compiler-generated nested types (lambda closures, state
     /// machines) are collapsed onto the type that declares them, so the chain reads like source.
     /// </summary>
-    private static string Describe(MethodDefinition method)
+    private static string Describe(MetadataMethod method)
     {
         var declaringType = method.DeclaringType;
         while (declaringType.DeclaringType is not null && declaringType.Name.AsSpan().StartsWith('<'))

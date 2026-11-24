@@ -30,7 +30,7 @@ public sealed class PasskeysIsolationTests
     {
         var result = DependencyAssertions.NoDependencyOnAny(Load(assemblyName), ForbiddenNamespaces);
 
-        (result.FailingTypes ?? []).Select(type => type.FullName).Should().BeEmpty(
+        result.FailingTypeNames.Should().BeEmpty(
             "{0} must reach passkeys only through IPasskeyCeremony and IPasskeyService; WebAuthn types live in MMCA.Common.Passkeys",
             assemblyName);
     }

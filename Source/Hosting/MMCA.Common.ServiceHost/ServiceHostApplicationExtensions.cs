@@ -23,7 +23,8 @@ public static class ServiceHostApplicationExtensions
         /// <summary>
         /// Checks that the host registered its OpenAPI document, then initializes the database (migrate
         /// and seed; skipped only for the Development design-time OpenAPI run), then maps the health
-        /// endpoints, applies the shared middleware pipeline, maps the OpenAPI document and, in
+        /// endpoints, applies the shared middleware pipeline (with the MiniProfiler step after tenant
+        /// resolution when <c>ApplicationSettings:UseMiniProfiler</c> is true), maps the OpenAPI document and, in
         /// Development only, the gRPC reflection service. Registers the disposal of the bootstrap logger
         /// factory on <c>ApplicationStopped</c>.
         /// <para>
@@ -53,7 +54,15 @@ public static class ServiceHostApplicationExtensions
             await app.InitializeDatabaseUnlessDesignTimeAsync(host.ModuleHost, cancellationToken).ConfigureAwait(false);
 
             app.MapDefaultEndpoints();
-            app.UseCommonMiddlewarePipeline();
+            if (host.ModuleHost.ApplicationSettings.UseMiniProfiler)
+            {
+                app.UseCommonMiddlewarePipeline(ServiceHostProfiling.InsertMiddleware);
+            }
+            else
+            {
+                app.UseCommonMiddlewarePipeline();
+            }
+
             app.MapCommonOpenApi();
 
             if (app.Environment.IsDevelopment())

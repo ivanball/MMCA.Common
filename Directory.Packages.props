@@ -10,8 +10,8 @@
     The empty-TargetFramework guard matters: the outer build of a multi-targeted project evaluates
     this file with no TargetFramework, and IsTargetFrameworkCompatible rejects an empty moniker.
 
-      MmcaFrameworkVersion  ASP.NET Core, the runtime Microsoft.Extensions.* packages and
-                            System.Security.Cryptography.Pkcs: they ship with the runtime.
+      MmcaFrameworkVersion  ASP.NET Core and the runtime Microsoft.Extensions.* packages: they ship
+                            with the runtime.
       MmcaEfCoreVersion     Entity Framework Core (and Microsoft.Data.Sqlite, kept aligned with the
                             EF Core Sqlite provider). EF Core 11 ships net11.0 assets only, so the
                             .NET 10 line stays on 10.x and only net11.0 takes 11.x.
@@ -19,8 +19,6 @@
                             the readiness-check driver and the EF provider stay on the same build.
                             The provider follows the EF Core major: 10.x with EF Core 10, 11.x
                             (net11.0 only) with EF Core 11.
-      MmcaOpenApiVersion    Microsoft.OpenApi: ASP.NET Core 10 constrains it below 3.0.0 and
-                            ASP.NET Core 11 needs the 3.x line.
       MmcaMauiVersion       Microsoft.Maui.Controls and Microsoft.AspNetCore.Components.WebView.Maui
                             (MMCA.Common.UI.Maui only). MAUI majors follow the .NET major, and a
                             consumer head pins the same value for its own framework.
@@ -46,7 +44,6 @@
     <MmcaFrameworkVersion>10.0.15</MmcaFrameworkVersion>
     <MmcaEfCoreVersion>10.0.15</MmcaEfCoreVersion>
     <MmcaNpgsqlVersion>10.0.4</MmcaNpgsqlVersion>
-    <MmcaOpenApiVersion>2.13.1</MmcaOpenApiVersion>
     <MmcaMauiVersion>10.0.130</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>16.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.30</MmcaAndroidBiometricVersion>
@@ -58,7 +55,6 @@
     <MmcaFrameworkVersion>11.0.0</MmcaFrameworkVersion>
     <MmcaEfCoreVersion>11.0.0</MmcaEfCoreVersion>
     <MmcaNpgsqlVersion>11.0.0</MmcaNpgsqlVersion>
-    <MmcaOpenApiVersion>3.11.1</MmcaOpenApiVersion>
     <MmcaMauiVersion>11.0.10</MmcaMauiVersion>
     <MmcaMauiToolkitVersion>17.0.0</MmcaMauiToolkitVersion>
     <MmcaAndroidBiometricVersion>1.1.0.33</MmcaAndroidBiometricVersion>
@@ -71,8 +67,8 @@
     PackageReferences only. So lifting a transitive package (a security bump, most often) takes TWO
     edits, never one: a PackageVersion entry here AND a direct PackageReference in a project that
     flows that package onward, otherwise the pin is inert and the vulnerable version still resolves.
-    Worked exemplars below: the Microsoft.OpenApi and System.Security.Cryptography.Pkcs pins, each
-    with its own note.
+    Retire such a pin as soon as the upstream package floors a patched version itself; the CI
+    restore runs NuGetAudit with warnings as errors, so a pin removed too early fails the build.
   -->
   <ItemGroup>
     <!-- API -->
@@ -86,13 +82,6 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(MmcaFrameworkVersion)" />
-    <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
-         to the first patched version for GHSA-v5pm-xwqc-g5wc (circular-schema-reference DoS in OpenAPI
-         parsing); referenced directly in MMCA.Common.API so the pin takes effect (no transitive pinning). -->
-    <!-- HELD on the 2.x line (latest 2.x taken): NU1608 vs Microsoft.AspNetCore.OpenApi 10.0.x, which
-         constrains Microsoft.OpenApi to (>= 2.7.5 && < 3.0.0).
-         The 3.x line cannot be taken until the ASP.NET Core 10 OpenAPI stack moves off the 2.x range. -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="$(MmcaOpenApiVersion)" />
     <!-- Application -->
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
@@ -114,7 +103,6 @@
          Core MAJOR rather than the exact patch the Microsoft-owned providers share (MmcaNpgsqlVersion
          above). -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(MmcaNpgsqlVersion)" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(MmcaEfCoreVersion)" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="3.4.35" />
     <!-- Two-level cache (L1 in-process + L2 distributed) behind AddCommonHybridCache
@@ -138,13 +126,6 @@
          idiom, the DI scope-per-execution pattern, the OpenTelemetry meters). The only piece the
          framework lacked was the cron grammar, so that is the only piece taken as a dependency. -->
     <PackageVersion Include="Cronos" Version="0.13.0" />
-    <!-- RFC 6238 TOTP grammar behind the opt-in two-factor second factor (MMCA.Common.Infrastructure).
-         MIT and zero-dependency (netstandard2.0), and it does exactly one thing the BCL has no
-         primitive for: derive and verify a time-stepped one-time code, plus the Base32 alphabet the
-         authenticator apps key from. The rest of the feature (secret storage, recovery codes, the
-         claim) is framework code, so this is the only piece taken as a dependency, and it is
-         referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
-    <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
          MIT, .NET Foundation. Held to one version: it parses attacker-supplied CBOR/COSE, so a bump is a
          reviewed change. The bare Version is a NuGet floor ("[4.3.3, )"); the committed
@@ -190,8 +171,6 @@
          MMCA.Common.Testing.Azure). 7.20.2 is the first line with working emulator admin-plane
          support (>= 7.20.1 required). -->
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
-    <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
-    <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage (ADR-045): the MMCA.Common.Azure Blob Storage adapter and its
          Azure.Identity credential. -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
@@ -214,10 +193,6 @@
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
     <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1.2" />
-    <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
-         SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
-         AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
-    <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.3" />
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
@@ -267,13 +242,6 @@
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.5" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.5" />
-    <!-- Pinned directly to lift the transitive off GHSA-846f-f764-76mx / GHSA-2fmv-rv2c-59x7
-         (NU1903/NU1902, every version up to 9.0.20 and 10.0.12): Microsoft.Data.SqlClient 7.x pulls
-         9.0.13 or 9.0.18 and Aspire.Hosting.SqlServer pulls 10.0.12. The shared framework does not
-         carry this package, so nothing prunes it. Lifted by direct references in the four projects
-         that take those packages directly (Infrastructure, Testing, Aspire, Aspire.Hosting); everything else
-         inherits it through a project reference. -->
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(MmcaFrameworkVersion)" />
     <!-- Azure Key Vault as a configuration source (MMCA.Common.Azure.AddAzureKeyVaultConfiguration).
          Opt-in and gated on KeyVault:Uri, so an unconfigured host never contacts a vault and local
          development stays Azure-free. Reuses the Azure.Identity pin above for the
@@ -290,17 +258,12 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(MmcaFrameworkVersion)" />
-    <!-- Direct dependency of Common.UI: QueryHelpers (Services/ListPageQueryStateService). It is the
-         standalone package, not the shared framework, because Common.UI is consumed by Blazor
-         WebAssembly clients and cannot take <FrameworkReference Include="Microsoft.AspNetCore.App" />. -->
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MmcaFrameworkVersion)" />
     <!-- Direct dependency of Common.UI: IConfiguration appears in its public API. -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <!-- Direct dependency of Common.UI: IHostEnvironment (Globalization/CultureSwitcher.razor). -->
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="MudBlazor" Version="9.14.0" />
     <PackageVersion Include="Polly" Version="8.9.1" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
@@ -364,14 +327,14 @@
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
     <PackageVersion Include="bunit" Version="2.15.2" />
-    <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
-         1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
-         2.15.2 now floors it at 1.10.1, and this pin sits above that floor. CPM does not pin transitives,
-         so the two bUnit-referencing projects keep a direct PackageReference to hold it at this central
-         version. AngleSharp and bUnit are coupled: 1.8.6 added an IHtmlSelectElement member that bUnit
-         2.12.5's generated HtmlSelectElementWrapper did not implement (TypeLoadException on
-         set_SelectedIndex in every bUnit Find), so 1.8.6 could move only together with bUnit 2.13.3.
-         Before raising this pin, confirm the current bUnit still loads against it. -->
+    <!-- AngleSharp is transitive through bUnit, and a compatibility hold rather than a security pin:
+         bUnit 2.15.2 already floors it at 1.10.1, above the CVE-2026-54570 fix (1.5.2). The two
+         bUnit-referencing projects keep a direct PackageReference because their test helpers use
+         AngleSharp DOM types, and that reference holds it at this central version. AngleSharp and
+         bUnit are coupled: 1.8.6 added an IHtmlSelectElement member that bUnit 2.12.5's generated
+         HtmlSelectElementWrapper did not implement (TypeLoadException on set_SelectedIndex in every
+         bUnit Find), so 1.8.6 could move only together with bUnit 2.13.3. Before raising this
+         version, confirm the current bUnit still loads against it. -->
     <PackageVersion Include="AngleSharp" Version="1.10.5" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.14.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
@@ -409,7 +372,6 @@
          Same Testcontainers family version. -->
     <PackageVersion Include="Testcontainers.Firestore" Version="4.17.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(MmcaFrameworkVersion)" />
-    <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <!-- Benchmark smoke harness only (Tests/Performance, outside the .slnx) — rubric §12. -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -480,7 +442,6 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.21.0" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
@@ -515,7 +476,5 @@
          AppHost of the apphost-testing CI tier, outside MMCA.Common.slnx. -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
     <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
-    <!-- Versioning -->
-    <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 </Project>

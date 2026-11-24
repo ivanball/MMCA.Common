@@ -11,10 +11,6 @@
          its Ai:Provider is Anthropic. -->
     <ProjectReference Include="..\MMCA.Common.AI\MMCA.Common.AI.csproj" />
     <PackageReference Include="Anthropic" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

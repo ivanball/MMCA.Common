@@ -10,7 +10,7 @@
     up here. Four stages, run in order by -Stage All (the local default); CI calls one stage per step
     so each keeps its own step name and log:
 
-      Pack      dotnet pack MMCA.Common.slnx -c Release into -FeedDir, MinVer skipped with an explicit
+      Pack      dotnet pack MMCA.Common.slnx -c Release into -FeedDir, with an explicit
                 -Version (the same mechanism release.yml uses), so the consumer can pin it exactly.
       Scaffold  writes -ConsumerDir: a nuget.config mapping MMCA.Common.* to the local feed and
                 everything else to nuget.org, a classlib referencing the meta set (API +
@@ -144,7 +144,7 @@ function Invoke-PackStage {
     Invoke-InDirectory -Path $RepoRoot -Action {
         Invoke-Dotnet -FailureMessage 'dotnet pack MMCA.Common.slnx failed' -Arguments @(
             'pack', 'MMCA.Common.slnx', '-c', 'Release', '-o', $FeedDir,
-            '-p:MinVerSkip=true', "-p:Version=$Version", "-p:PackageVersion=$Version")
+            "-p:Version=$Version", "-p:PackageVersion=$Version")
     }
 }
 

@@ -63,10 +63,6 @@
          Ships lib assets only (no build/buildTransitive targets), so unlike WebView.Maui above it
          cannot turn this Razor-SDK project into a static-web-asset producer. -->
     <PackageReference Include="ZXing.Net.Maui.Controls" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">

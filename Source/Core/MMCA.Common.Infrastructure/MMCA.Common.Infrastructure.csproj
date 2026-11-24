@@ -31,9 +31,6 @@
          itself is registered by MMCA.Common.Aspire's AddRedisOutputCaching. -->
     <PackageReference Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
-    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
-         vulnerable 9.0.13 (NU1903); see the pin note in Directory.Packages.props. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
@@ -45,16 +42,8 @@
          every other engine: a host that configures no PostgreSQL connection string never builds the
          context, so the only cost is one entry in the consumer's lock file. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <!-- The built-in RabbitMQ broker transport (Messaging/Transports/RabbitMq). Same build the
          MMCA.Common.Aspire readiness check uses, so a host carries one client version. -->
     <PackageReference Include="RabbitMQ.Client" />
@@ -68,11 +57,6 @@
          Referenced unconditionally so the types are available to hosts that call AddScheduledJobs;
          a host that does not call it registers no runner and maps no table. -->
     <PackageReference Include="Cronos" />
-    <!-- RFC 6238 TOTP behind the opt-in AddTwoFactorAuthentication (TotpTwoFactorService). MIT and
-         zero-dependency, like Cronos. Referenced unconditionally so the type is available to hosts
-         that call it; a host that registers no two-factor service has no second-factor step in its
-         sign-in flow at all. -->
-    <PackageReference Include="Otp.NET" />
     <!-- Circuit breaker guarding the OutboxProcessor's broker-publish call: on a dead broker the
          processor fails fast instead of stacking a publish timeout per row. Polly.Core only (the
          v8 resilience-pipeline API); the v7 compatibility shim in the Polly meta-package is not

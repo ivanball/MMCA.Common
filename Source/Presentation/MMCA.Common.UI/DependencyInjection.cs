@@ -42,11 +42,13 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddUIShared(IConfiguration configuration)
         {
-            // Bind and validate API settings at startup to fail fast on missing configuration
+            // Bind and validate API settings at startup to fail fast on missing configuration. The
+            // data annotations are checked by the source-generated ApiSettingsValidator, which needs
+            // no reflection and no Options.DataAnnotations package on a WebAssembly client.
             services.AddOptions<ApiSettings>()
                 .Bind(configuration.GetSection(ApiSettings.SectionName))
-                .ValidateDataAnnotations()
                 .ValidateOnStart();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<ApiSettings>, ApiSettingsValidator>());
 
             // Bind layout settings (footer text, etc.) — optional, defaults to empty values
             services.AddOptions<LayoutSettings>()
@@ -150,7 +152,7 @@ public static class DependencyInjection
             var apiClient = services.AddHttpClient("APIClient", (serviceProvider, client) =>
             {
                 // No endpoint guard here: resolving IOptions<ApiSettings>.Value runs the
-                // ValidateDataAnnotations rules registered above, so a missing [Required] ApiEndpoint
+                // ApiSettingsValidator registered above, so a missing [Required] ApiEndpoint
                 // already fails as an OptionsValidationException (at startup via ValidateOnStart, and
                 // again here for any host that skips the startup validator). A second hand-written
                 // check would only give the same failure a different, less informative exception.

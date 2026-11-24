@@ -12,7 +12,7 @@ _As of: 2026-11-24 (framework v1.317.0) — **generated from source by `build/fa
 
 ## Framework version
 - **Current: `v1.317.0`** (the latest release tag reachable from `main` HEAD; `release.yml` packs with
-  that tag as the version and skips MinVer).
+  that tag as the version).
 - All consumers (**MMCA.ADC**, **MMCA.Store**, MMCA.Helpdesk) track this version in **lockstep** — every
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
@@ -98,7 +98,7 @@ it owns the range/count and the one-line summaries. Do not restate the `(001-NNN
 - **186 test methods across 74 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **761** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **767** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

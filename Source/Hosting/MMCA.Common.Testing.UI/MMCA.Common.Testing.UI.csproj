@@ -25,10 +25,6 @@
          MMCA.Common.Testing.Architecture already follows), so a consumer keeps a one-line subclass. -->
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="xunit.v3.extensibility.core" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- The UiHttpServiceHarness token-storage stub implements MMCA.Common.UI's ITokenStorageService

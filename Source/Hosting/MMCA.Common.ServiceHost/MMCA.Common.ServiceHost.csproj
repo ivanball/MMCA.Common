@@ -9,10 +9,6 @@
   <ItemGroup>
     <!-- No other PackageReference: OpenAPI, JwtBearer, Serilog and Grpc arrive through the three
          project references below. -->
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- The composed host sits above API (which brings Application and Infrastructure), the Aspire

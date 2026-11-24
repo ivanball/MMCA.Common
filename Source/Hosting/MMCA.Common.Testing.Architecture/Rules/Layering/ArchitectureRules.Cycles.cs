@@ -28,7 +28,7 @@ public static partial class ArchitectureRules
     /// </para>
     /// <para>
     /// <b>Limitation - method-body blindness.</b> The rule is pure reflection over signatures (it does
-    /// not use the Mono.Cecil IL reader the call-graph rules use). A reference that exists ONLY inside a method body (a
+    /// not use the IL reader the call-graph rules use). A reference that exists ONLY inside a method body (a
     /// local variable, a constructor call, a static call) is invisible to it, so the rule catches
     /// STRUCTURAL cycles (the ones that show up in the type surface) and cannot claim a clean report
     /// means zero coupling. Compiler-generated types (closure/iterator classes, which do leak some body

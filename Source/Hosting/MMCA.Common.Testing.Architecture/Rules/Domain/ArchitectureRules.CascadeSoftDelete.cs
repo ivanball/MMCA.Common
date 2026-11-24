@@ -1,11 +1,11 @@
-using Mono.Cecil;
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
 public static partial class ArchitectureRules
 {
-    /// <summary>The aggregate-root base, without Cecil's generic-arity marker.</summary>
+    /// <summary>The aggregate-root base, without the metadata generic-arity marker.</summary>
     private const string AggregateRootBaseFullName = "MMCA.Common.Domain.Entities.AuditableAggregateRootEntity";
 
     /// <summary>The auditable-entity base every child of an aggregate derives from, arity stripped.</summary>
@@ -51,9 +51,9 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>How it looks.</b> Neither NetArchTest nor reflection can see a CALL inside a method body, so
-    /// the rule reads the IL of every assembly the map registers (through the Mono.Cecil already
-    /// carried by NetArchTest) and inspects the <c>Delete()</c> override's <c>call</c>/<c>callvirt</c>
+    /// <b>How it looks.</b> Reflection cannot see a CALL inside a method body, so the rule reads the IL
+    /// of every assembly the map registers straight from its file (<c>System.Reflection.Metadata</c>)
+    /// and inspects the <c>Delete()</c> override's <c>call</c>/<c>callvirt</c>
     /// operands. Bases and callees are matched by full NAME with the generic arity stripped, so the
     /// package keeps its deliberate zero-reference stance toward the framework it governs, and an
     /// aggregate whose base lives in an assembly the map does not register is still recognized.
@@ -104,55 +104,39 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(allowedTypes);
 
-        var modules = new List<ModuleDefinition>();
-        try
-        {
-            foreach (var location in ScannableAssemblyLocations(map))
-            {
-                modules.Add(ModuleDefinition.ReadModule(location));
-            }
+        var index = new CallGraphIndex(ScannableAssemblyLocations(map).Select(MetadataModule.Load));
 
-            var index = new CallGraphIndex(modules);
+        var violations = index.Types
+            .Where(type => type is { IsClass: true, IsAbstract: false }
+                && !IsAllowed(type.FullName, allowedTypes)
+                && DerivesFrom(index, type, AggregateRootBaseFullName))
+            .Select(type => (Aggregate: type, Collections: ChildCollectionsOf(type, index)))
+            .Where(found => found.Collections.Count > 0)
+            .Select(found => DescribeCascadeGap(found.Aggregate, found.Collections))
+            .OfType<string>()
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
-            var violations = index.Types
-                .Where(type => type is { IsClass: true, IsAbstract: false }
-                    && !IsAllowed(type.FullName, allowedTypes)
-                    && DerivesFrom(index, type, AggregateRootBaseFullName))
-                .Select(type => (Aggregate: type, Collections: ChildCollectionsOf(type, index)))
-                .Where(found => found.Collections.Count > 0)
-                .Select(found => DescribeCascadeGap(found.Aggregate, found.Collections))
-                .OfType<string>()
-                .Order(StringComparer.Ordinal)
-                .ToList();
-
-            ArchitectureAssert.NoViolations(violations,
-                "a soft-delete is an ordinary UPDATE, so it does not cascade: an aggregate root that "
-                    + "owns children must delete them in its own Delete() override, through "
-                    + "DeleteChildren<TChild, TChildId>(...) or by calling each child's Delete(). "
-                    + "Without it the root disappears behind the query filter and its child rows stay "
-                    + "active and orphaned, invisible to every read through the root but still present "
-                    + "for exports, reports and erasure requests");
-        }
-        finally
-        {
-            foreach (var module in modules)
-            {
-                module.Dispose();
-            }
-        }
+        ArchitectureAssert.NoViolations(violations,
+            "a soft-delete is an ordinary UPDATE, so it does not cascade: an aggregate root that "
+                + "owns children must delete them in its own Delete() override, through "
+                + "DeleteChildren<TChild, TChildId>(...) or by calling each child's Delete(). "
+                + "Without it the root disappears behind the query filter and its child rows stay "
+                + "active and orphaned, invisible to every read through the root but still present "
+                + "for exports, reports and erasure requests");
     }
 
     /// <summary>
     /// The violation line for an aggregate that owns children, or null when it cascades correctly.
     /// </summary>
-    private static string? DescribeCascadeGap(TypeDefinition aggregate, IReadOnlyCollection<string> collections)
+    private static string? DescribeCascadeGap(MetadataType aggregate, IReadOnlyCollection<string> collections)
     {
         var names = string.Join(", ", collections);
 
         var deleteOverride = aggregate.Methods.FirstOrDefault(m =>
             !m.IsStatic
             && m.HasBody
-            && m.Parameters.Count == 0
+            && m.ParameterTypes.Length == 0
             && string.Equals(m.Name, DeleteMemberName, StringComparison.Ordinal));
 
         if (deleteOverride is null)
@@ -169,9 +153,9 @@ public static partial class ArchitectureRules
     /// True when the override's own IL cascades: a call to the <c>DeleteChildren</c> helper, or a
     /// zero-argument <c>Delete</c> invoked on something other than <see langword="this"/>.
     /// </summary>
-    private static bool CascadesToChildren(MethodDefinition deleteOverride) =>
-        deleteOverride.Body.Instructions.Any(instruction =>
-            instruction.Operand is MethodReference callee
+    private static bool CascadesToChildren(MetadataMethod deleteOverride) =>
+        deleteOverride.Instructions.Any(instruction =>
+            instruction.Operand is MethodOperand callee
             && (string.Equals(callee.Name, CascadeHelperName, StringComparison.Ordinal)
                 || IsChildDeleteCall(instruction, callee)));
 
@@ -180,34 +164,34 @@ public static partial class ArchitectureRules
     /// <c>base.Delete()</c> is the one thing C# compiles to a non-virtual <c>call</c> on a virtual
     /// member, so excluding that opcode separates "delete myself" from "delete my children" exactly.
     /// </summary>
-    private static bool IsChildDeleteCall(Instruction instruction, MethodReference callee) =>
+    private static bool IsChildDeleteCall(IlInstruction instruction, MethodOperand callee) =>
         string.Equals(callee.Name, DeleteMemberName, StringComparison.Ordinal)
-        && callee.Parameters.Count == 0
+        && callee.ParameterTypes.Length == 0
         && instruction.OpCode == OpCodes.Callvirt;
 
     /// <summary>
     /// The names of the aggregate's own child-entity collections, with auto-property backing fields
     /// reported under their property name.
     /// </summary>
-    private static IReadOnlyCollection<string> ChildCollectionsOf(TypeDefinition aggregate, CallGraphIndex index) =>
+    private static IReadOnlyCollection<string> ChildCollectionsOf(MetadataType aggregate, CallGraphIndex index) =>
         [.. aggregate.Fields
-            .Where(field => !field.IsStatic && IsChildEntityCollection(field.FieldType, index))
+            .Where(field => !field.IsStatic && IsChildEntityCollection(field.Type, index))
             .Select(field => DeclaredMemberName(field.Name))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
         ];
 
     /// <summary>True when the type is a generic collection over an auditable child entity.</summary>
-    private static bool IsChildEntityCollection(TypeReference fieldType, CallGraphIndex index)
+    private static bool IsChildEntityCollection(TypeSig fieldType, CallGraphIndex index)
     {
-        if (fieldType is not GenericInstanceType collection
-            || collection.GenericArguments.Count != 1
-            || !ChildCollectionTypeNames.Contains(collection.ElementType.FullName, StringComparer.Ordinal))
+        if (fieldType.Kind != TypeSigKind.GenericInstance
+            || fieldType.Arguments.Length != 1
+            || !ChildCollectionTypeNames.Contains(fieldType.Element!.FullName, StringComparer.Ordinal))
         {
             return false;
         }
 
-        var element = index.Find(collection.GenericArguments[0]);
+        var element = index.Find(fieldType.Arguments[0]);
         return element is not null && DerivesFrom(index, element, AuditableEntityBaseFullName);
     }
 
@@ -216,7 +200,7 @@ public static partial class ArchitectureRules
     /// generic-arity marker is stripped. The comparison is by NAME, so a base declared in an assembly
     /// outside the scan is still recognized; only the walk THROUGH such a base stops.
     /// </summary>
-    private static bool DerivesFrom(CallGraphIndex index, TypeDefinition type, string baseFullName)
+    private static bool DerivesFrom(CallGraphIndex index, MetadataType type, string baseFullName)
     {
         for (var current = type; current?.BaseType is not null; current = index.Find(current.BaseType))
         {
@@ -229,7 +213,7 @@ public static partial class ArchitectureRules
         return false;
     }
 
-    /// <summary>A full name with Cecil's generic-arity marker removed (<c>Foo`1</c> to <c>Foo</c>).</summary>
+    /// <summary>A full name with the metadata generic-arity marker removed (<c>Foo`1</c> to <c>Foo</c>).</summary>
     private static string WithoutArity(string fullName)
     {
         var tick = fullName.IndexOf('`', StringComparison.Ordinal);

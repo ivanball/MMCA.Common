@@ -10,7 +10,7 @@ public static partial class ArchitectureRules
     /// <remarks>
     /// The two uses need two values. An assembly NAME is matched with a plain string
     /// <c>StartsWith</c>, where the trailing dot is what keeps <c>MMCA.Common.API</c> out. A type's
-    /// NAMESPACE is matched by NetArchTest as whole segments, where an entry ending in a dot matches
+    /// NAMESPACE is matched by <see cref="ArchitectureTypes"/> as whole segments, where an entry ending in a dot matches
     /// nothing at all (the rule would pass vacuously); the type-level rule therefore uses
     /// <see cref="GovernedAiPackageNamespace"/>, whose undotted root matches <c>MMCA.Common.AI</c> and
     /// every <c>MMCA.Common.AI.*</c> namespace but never <c>MMCA.Common.API</c>, because <c>API</c>
@@ -19,7 +19,7 @@ public static partial class ArchitectureRules
     public const string GovernedAiPackagePrefix = "MMCA.Common.AI.";
 
     /// <summary>
-    /// The governed language-model package's namespace root, matched by NetArchTest as whole
+    /// The governed language-model package's namespace root, matched by <see cref="ArchitectureTypes"/> as whole
     /// namespace segments (see <see cref="GovernedAiPackagePrefix"/> for why it carries no dot).
     /// </summary>
     public const string GovernedAiPackageNamespace = "MMCA.Common.AI";
@@ -55,10 +55,9 @@ public static partial class ArchitectureRules
 
         foreach (var layerRef in map.Layers.Where(layer => !IsModelBoundaryAssembly(layer.Assembly)))
         {
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{layerRef.RootNamespace}: {layerRef.Layer} must not name a language-model SDK type. "
@@ -78,10 +77,9 @@ public static partial class ArchitectureRules
 
         foreach (var layerRef in map.Layers.Where(layer => !IsModelBoundaryAssembly(layer.Assembly)))
         {
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(GovernedAiPackageNamespace)
-                .GetResult();
+                .HaveDependencyOnAny(GovernedAiPackageNamespace);
 
             ArchitectureAssert.NoViolations(result,
                 $"{layerRef.RootNamespace}: {layerRef.Layer} must not reference MMCA.Common.AI. The governed "

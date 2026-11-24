@@ -26,8 +26,8 @@ public sealed class AzureStartupPackageBoundaryTests
         "MMCA.Common.Shared",
     ];
 
-    // Rule 21.3 and the 21(c) list: no persistence, messaging, Service Bus, Notification Hubs or
-    // Blob SDK assembly may appear in the start-up package's reference list.
+    // Rule 21.3 and the 21(c) list: no persistence, messaging, Service Bus or Blob SDK assembly may
+    // appear in the start-up package's reference list.
     private static readonly string[] ForbiddenReferencePrefixes =
     [
         "MMCA.Common.Infrastructure",
@@ -38,7 +38,6 @@ public sealed class AzureStartupPackageBoundaryTests
         "MassTransit",
         "Azure.Messaging",
         "Azure.Storage",
-        "Microsoft.Azure.NotificationHubs",
     ];
 
     [Fact]

@@ -288,7 +288,9 @@ public static partial class Extensions
         }
         else
         {
-            metrics.AddRuntimeInstrumentation();
+            // The runtime publishes these instruments itself on the System.Runtime meter (.NET 9
+            // and later), the same dotnet.* names OpenTelemetry.Instrumentation.Runtime forwarded.
+            metrics.AddMeter("System.Runtime");
         }
 
         // MMCA.Common meters (literal names, because Aspire has no reference to the

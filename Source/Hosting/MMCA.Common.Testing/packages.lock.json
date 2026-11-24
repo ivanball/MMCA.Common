@@ -68,12 +68,6 @@
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Moq": {
         "type": "Direct",
         "requested": "[4.21.0, )",
@@ -116,12 +110,6 @@
           "Microsoft.IdentityModel.JsonWebTokens": "8.23.0",
           "Microsoft.IdentityModel.Tokens": "8.23.0"
         }
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "Direct",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "4jEv/lXDuQkh60lPU3hlwASErXdv1ZMKmsxVuBfZWiVKT5Q2QGo58kTa6rN519+PU+m4Hsj1m3yT8fN+Xw0XZw=="
       },
       "Testcontainers.MsSql": {
         "type": "Direct",
@@ -477,6 +465,11 @@
         "resolved": "17.6.3",
         "contentHash": "N0ZIanl1QCgvUumEL1laasU0a7sOE5ZwLZVTn0pAePnfhq8P7SvTjF8Axq+CnavuQkmdQpGNXQ1efZtu5kDFbA=="
       },
+      "Microsoft.OpenApi": {
+        "type": "Transitive",
+        "resolved": "2.13.0",
+        "contentHash": "wavlgBYnn7uU/ZGhFHNl0UlDOlwz+6KRduKkqdCCbfxxANaQ1rmBpETVGdwXanAM6twQOxsvI3CBEGF4OScbeQ=="
+      },
       "Microsoft.SqlServer.Server": {
         "type": "Transitive",
         "resolved": "1.0.0",
@@ -582,6 +575,11 @@
         "resolved": "6.0.0",
         "contentHash": "ntFHArH3I4Lpjf5m4DCXQHJuGwWPNVJPaAvM95Jy/u+2Yzt2ryiyIN04LAogkjP9DeRcEOiviAjQotfmPq/FrQ=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -602,15 +600,14 @@
           "Asp.Versioning.Mvc.ApiExplorer": "[10.2.1, )",
           "AspNet.Security.OAuth.Apple": "[10.1.0, )",
           "AspNet.Security.OAuth.GitHub": "[10.1.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
-          "MMCA.Common.Infrastructure": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
+          "MMCA.Common.Infrastructure": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Authentication.Google": "[10.0.15, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.15, )",
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "[10.0.15, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
-          "Microsoft.OpenApi": "[2.13.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -619,7 +616,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -629,14 +626,14 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.15, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -647,12 +644,10 @@
           "Microsoft.Extensions.Http.Resilience": "[10.11.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
-          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
-          "System.Security.Cryptography.Pkcs": "[10.0.15, )"
+          "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
       "mmca.common.shared": {
@@ -808,12 +803,6 @@
           "Microsoft.FeatureManagement": "4.8.0"
         }
       },
-      "Microsoft.OpenApi": {
-        "type": "CentralTransitive",
-        "requested": "[2.13.1, )",
-        "resolved": "2.13.1",
-        "contentHash": "qPyM4L+CQvM7ljcJN15e3lTx3439fBZoGs03OlpfxiUUxxhPJX+7h8BCJQO1z6ANQbxBAirMA4JkHq7j/naA/A=="
-      },
       "MiniProfiler.AspNetCore.Mvc": {
         "type": "CentralTransitive",
         "requested": "[4.5.4, )",
@@ -855,12 +844,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.15, 11.0.0)",
           "Npgsql": "10.0.4"
         }
-      },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "CentralTransitive",
@@ -978,12 +961,6 @@
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Moq": {
         "type": "Direct",
         "requested": "[4.21.0, )",
@@ -1026,12 +1003,6 @@
           "Microsoft.IdentityModel.JsonWebTokens": "8.23.0",
           "Microsoft.IdentityModel.Tokens": "8.23.0"
         }
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "Direct",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "G8mTjSWrwaPJ2bJRbKuI4ZqdKUYcANK0KtNH3s8/va3nXiF/Pk/yhv2R17rv5PBKJO5+ZXDyhTnZXh0W9v0J8w=="
       },
       "Testcontainers.MsSql": {
         "type": "Direct",
@@ -1396,6 +1367,11 @@
         "resolved": "17.6.3",
         "contentHash": "N0ZIanl1QCgvUumEL1laasU0a7sOE5ZwLZVTn0pAePnfhq8P7SvTjF8Axq+CnavuQkmdQpGNXQ1efZtu5kDFbA=="
       },
+      "Microsoft.OpenApi": {
+        "type": "Transitive",
+        "resolved": "3.11.0",
+        "contentHash": "kvQz+mL/fnDw2VaE8zMyQhbMv7FmOYUydIhCVNKxQdrLu9XiMT/07DHwJ5YkRO2uzcxTFvMAKFKKywxoyLKHcA=="
+      },
       "Microsoft.SqlServer.Server": {
         "type": "Transitive",
         "resolved": "1.0.0",
@@ -1529,15 +1505,14 @@
           "Asp.Versioning.Mvc.ApiExplorer": "[10.2.1, )",
           "AspNet.Security.OAuth.Apple": "[11.0.0, )",
           "AspNet.Security.OAuth.GitHub": "[11.0.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
-          "MMCA.Common.Infrastructure": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
+          "MMCA.Common.Infrastructure": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Authentication.Google": "[11.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[11.0.0, )",
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "[11.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.8.0, )",
-          "Microsoft.OpenApi": "[3.11.1, )",
           "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -1546,7 +1521,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -1556,14 +1531,14 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Cronos": "[0.13.0, )",
-          "MMCA.Common.Application": "[1.0.0, )",
+          "MMCA.Common.Application": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[11.0.0, )",
           "Microsoft.Data.SqlClient": "[7.1.2, )",
@@ -1574,7 +1549,6 @@
           "Microsoft.Extensions.Http.Resilience": "[11.0.1, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
-          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
           "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
@@ -1733,12 +1707,6 @@
           "Microsoft.FeatureManagement": "4.8.0"
         }
       },
-      "Microsoft.OpenApi": {
-        "type": "CentralTransitive",
-        "requested": "[3.11.1, )",
-        "resolved": "3.11.1",
-        "contentHash": "WZL9g2+9NPICW4Es6zjIBj4mmKxAnI8RCru3gAZUliCMZPnuaxRynXq4cXoU+IYvI7kXY4ydSrrJ1R9EEHr+Lw=="
-      },
       "MiniProfiler.AspNetCore.Mvc": {
         "type": "CentralTransitive",
         "requested": "[4.5.4, )",
@@ -1780,12 +1748,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[11.0.0, 12.0.0)",
           "Npgsql": "11.0.0"
         }
-      },
-      "Otp.NET": {
-        "type": "CentralTransitive",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "CentralTransitive",

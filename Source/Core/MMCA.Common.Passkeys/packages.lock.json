@@ -33,12 +33,6 @@
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Roslynator.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.1, )",
@@ -287,7 +281,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.Extensions.Configuration.Json": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
@@ -298,7 +292,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {
@@ -418,12 +412,6 @@
         "requested": "[18.12.1, )",
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -594,7 +582,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.Extensions.Configuration.Json": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
@@ -605,7 +593,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {

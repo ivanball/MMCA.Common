@@ -112,7 +112,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -276,7 +275,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -355,7 +353,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -523,7 +520,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -710,7 +706,6 @@ jobs:
         with:
           persist-credentials: false
           path: MMCA.Common
-          fetch-depth: 0 # MinVer needs full history
 
       # Coordinated-break support: a deliberate breaking framework change cannot land while the
       # canary pins Helpdesk main (Helpdesk cannot adapt first, because its own CI builds against
@@ -925,7 +920,7 @@ jobs:
   # restore + build a minimal throwaway consumer against those nupkgs. Catches pack breaks (NU5xxx)
   # and package-mode-only restore/analyzer/reference failures BEFORE a release: source-mode builds
   # (local.props, and the consumer-source-build job above) bind ProjectReferences, so this failure
-  # mode has shipped twice without CI seeing it. MinVer is skipped with an explicit CI-only version
+  # mode has shipped twice without CI seeing it. The packages carry an explicit CI-only version
   # (the same mechanism release.yml uses), so the consumer can pin the packed version exactly; its
   # nuget.config maps MMCA.Common.* to the local feed and everything else to nuget.org. The
   # throwaway consumer lives in RUNNER_TEMP, outside the repo checkout, so it does NOT inherit
@@ -942,7 +937,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1034,7 +1028,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1100,7 +1093,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1160,7 +1152,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1216,7 +1207,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1276,7 +1266,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1343,7 +1332,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1405,7 +1393,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -1472,7 +1459,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:

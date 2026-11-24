@@ -30,10 +30,9 @@ public static partial class ArchitectureRules
 
         foreach (var layerRef in map.Layers.Where(l => coreLayers.Contains(l.Layer)))
         {
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{layerRef.RootNamespace}: {layerRef.Layer} must stay transport-agnostic — depend on "

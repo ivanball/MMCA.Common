@@ -459,14 +459,6 @@
           "Microsoft.JSInterop": "10.0.13"
         }
       },
-      "Microsoft.Net.Http.Headers": {
-        "type": "Transitive",
-        "resolved": "10.0.15",
-        "contentHash": "g3xR6vyq+3mmiZxsET77UAWC3fZo49Zan5/cqmN2XoryMOWIC4AwINwYowJao/3cx5D/L6lQSWXbHQmprvW/wg==",
-        "dependencies": {
-          "Microsoft.Extensions.Primitives": "10.0.15"
-        }
-      },
       "Microsoft.Testing.Extensions.Telemetry": {
         "type": "Transitive",
         "resolved": "2.5.2",
@@ -593,7 +585,7 @@
         "dependencies": {
           "AngleSharp": "[1.10.5, )",
           "AwesomeAssertions": "[9.6.0, )",
-          "MMCA.Common.UI": "[1.0.0, )",
+          "MMCA.Common.UI": "[0.0.0-dev, )",
           "Moq": "[4.21.0, )",
           "MudBlazor": "[9.14.0, )",
           "bunit": "[2.15.2, )",
@@ -603,16 +595,14 @@
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Components.Authorization": "[10.0.15, )",
           "Microsoft.AspNetCore.Components.Web": "[10.0.15, )",
           "Microsoft.AspNetCore.SignalR.Client": "[10.0.15, )",
-          "Microsoft.AspNetCore.WebUtilities": "[10.0.15, )",
           "Microsoft.Extensions.Configuration.Abstractions": "[10.0.15, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.15, )",
           "Microsoft.Extensions.Http": "[10.0.15, )",
           "Microsoft.Extensions.Localization": "[10.0.15, )",
-          "Microsoft.Extensions.Options.DataAnnotations": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
@@ -652,15 +642,6 @@
         "dependencies": {
           "Microsoft.AspNetCore.Http.Connections.Client": "10.0.15",
           "Microsoft.AspNetCore.SignalR.Client.Core": "10.0.15"
-        }
-      },
-      "Microsoft.AspNetCore.WebUtilities": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "lDIvpCk/2sQqf7WRF0C2gW1oOnLsCMey4c11LkUVHJNnqhm3gGlKRdAXPhAKDNbrzK3e5izfWvRwzWtKkG2GCw==",
-        "dependencies": {
-          "Microsoft.Net.Http.Headers": "10.0.15"
         }
       },
       "Microsoft.Extensions.Configuration.Abstractions": {
@@ -720,16 +701,6 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15",
           "Microsoft.Extensions.Localization.Abstractions": "10.0.15",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.15",
-          "Microsoft.Extensions.Options": "10.0.15"
-        }
-      },
-      "Microsoft.Extensions.Options.DataAnnotations": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "+GMY+kh3kCqLOYiE76yBA1yoz+LfQUHh1Vpp7gIhzMO0/kR+YcgdT8fpVPj7xNw49VDHsSSGxAhfVmCHDjo5Zg==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15",
           "Microsoft.Extensions.Options": "10.0.15"
         }
       },
@@ -1191,11 +1162,6 @@
           "Microsoft.JSInterop": "11.0.0"
         }
       },
-      "Microsoft.Net.Http.Headers": {
-        "type": "Transitive",
-        "resolved": "11.0.0",
-        "contentHash": "iFKpGbnlORjL+gsfQhaFLnSyuztQgmj1WkbwgqbBmwunVtXLzam7QnzPonZA9fyCzRCmr4TFf8gtB1oYT2JBLQ=="
-      },
       "Microsoft.Testing.Extensions.Telemetry": {
         "type": "Transitive",
         "resolved": "2.5.2",
@@ -1322,7 +1288,7 @@
         "dependencies": {
           "AngleSharp": "[1.10.5, )",
           "AwesomeAssertions": "[9.6.0, )",
-          "MMCA.Common.UI": "[1.0.0, )",
+          "MMCA.Common.UI": "[0.0.0-dev, )",
           "Moq": "[4.21.0, )",
           "MudBlazor": "[9.14.0, )",
           "bunit": "[2.15.2, )",
@@ -1332,14 +1298,12 @@
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.Components.Authorization": "[11.0.0, )",
           "Microsoft.AspNetCore.Components.Web": "[11.0.0, )",
           "Microsoft.AspNetCore.SignalR.Client": "[11.0.0, )",
-          "Microsoft.AspNetCore.WebUtilities": "[11.0.0, )",
           "Microsoft.Extensions.Http": "[11.0.0, )",
           "Microsoft.Extensions.Localization": "[11.0.0, )",
-          "Microsoft.Extensions.Options.DataAnnotations": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",
           "Polly": "[8.9.1, )",
@@ -1380,15 +1344,6 @@
           "Microsoft.AspNetCore.SignalR.Client.Core": "11.0.0"
         }
       },
-      "Microsoft.AspNetCore.WebUtilities": {
-        "type": "CentralTransitive",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "KDKLMtwYNLKx20HXhMMKeD1ge5BO+8vHSqr6iSNhLYdUHA3tHVGzVeLd1MfeCeXTSB6NgoX1LCFSqQ8EaerSPw==",
-        "dependencies": {
-          "Microsoft.Net.Http.Headers": "11.0.0"
-        }
-      },
       "Microsoft.Extensions.Configuration.Json": {
         "type": "CentralTransitive",
         "requested": "[11.0.0, )",
@@ -1417,12 +1372,6 @@
         "dependencies": {
           "Microsoft.Extensions.Localization.Abstractions": "11.0.0"
         }
-      },
-      "Microsoft.Extensions.Options.DataAnnotations": {
-        "type": "CentralTransitive",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "qfBLNujVonPnJ07emPvup6ncY8LS8JqrV7qm/Ig4UMrQBGhL/1ZFnwq+l692JoKkQI7fuUrck3c1e2sxTBE4bQ=="
       },
       "Microsoft.FeatureManagement": {
         "type": "CentralTransitive",

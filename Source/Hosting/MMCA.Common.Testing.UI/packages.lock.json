@@ -45,12 +45,6 @@
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Moq": {
         "type": "Direct",
         "requested": "[4.21.0, )",
@@ -215,7 +209,7 @@
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.SignalR.Client": "[10.0.15, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",
@@ -328,12 +322,6 @@
         "requested": "[18.12.1, )",
         "resolved": "18.12.1",
         "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
-      },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
       },
       "Moq": {
         "type": "Direct",
@@ -499,7 +487,7 @@
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )",
+          "MMCA.Common.Shared": "[0.0.0-dev, )",
           "Microsoft.AspNetCore.SignalR.Client": "[11.0.0, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MudBlazor": "[9.14.0, )",

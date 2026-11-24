@@ -38,10 +38,6 @@
          through the package), so an E2E suite can run with retries without pinning Retry itself
          and drifting from the xunit.v3 / Microsoft.Testing.Platform pair. -->
     <PackageReference Include="Microsoft.Testing.Extensions.Retry" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>
   <ItemGroup>

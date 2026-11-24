@@ -28,10 +28,6 @@
          ChatOptions, UsageDetails, ChatClientMetadata) plus the pipeline pieces this package
          composes: UseLogging, UseOpenTelemetry and UseDistributedCache. -->
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

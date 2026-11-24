@@ -14,7 +14,7 @@ MMCA.Common is a NuGet package framework for modular monolith applications (DDD,
 dotnet build MMCA.Common.slnx -c Release
 dotnet test --solution MMCA.Common.slnx -c Release
 dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- --filter-method "*IdempotencyFilterTests*"
-dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests     # NetArchTest layer rules (fast, no DB)
+dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests     # architecture rules (fast, no DB)
 dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj   # NOT in slnx; needs `playwright install chromium` once
 dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks -- --filter "*"   # add --job Dry for a fast pass; without --filter BDN prompts and hangs headless
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
@@ -36,7 +36,7 @@ There is no `push: main` trigger: `main` requires an up-to-date branch, so the P
 - Also run, none of them a required check: **sample-deployment-validate**, the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack), **gcp-integration** (emulators), **azure-integration** (the Service Bus emulator) and **rabbitmq-integration**, all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run).
 - The 8 required contexts are build-and-test, build-maui, the three ui-e2e engines, coverage, consumer-source-build and performance-smoke; `gh api repos/ivanball/MMCA.Common/branches/main/protection --jq '.required_status_checks.contexts[]'` is authoritative. `load-tests.yml` runs `Tests/Performance/MMCA.Common.LoadTests` weekly as a trend signal, not a gate.
 
-A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version with MinVer skipped, and MinVer versions every other build from git history (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs in a separate `pack-maui` job off the same tag and is pushed by `publish-maui`. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
+A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version; every other build carries the `0.0.0-dev` placeholder from `Directory.Build.props`, so no build depends on git history. `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs in a separate `pack-maui` job off the same tag and is pushed by `publish-maui`. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
 
 Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive.
@@ -46,7 +46,7 @@ Gotchas:
 
 ## Source Layout
 
-All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, MinVer otherwise). Every one except `MMCA.Common.UI.Maui` declares its surface in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`: a new or changed public member goes into `PublicAPI.Unshipped.txt` in the same change, or RS0016/RS0017 fail the build.
+All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, `0.0.0-dev` otherwise). Every one except `MMCA.Common.UI.Maui` declares its surface in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`: a new or changed public member goes into `PublicAPI.Unshipped.txt` in the same change, or RS0016/RS0017 fail the build.
 
 ```
 Source/
@@ -85,7 +85,7 @@ Strict layered flow: `API -> Infrastructure -> Application -> Domain -> Shared`.
 
 **Two enforcement gates for this repo; add new rules in BOTH:**
 1. Compile-time: `Source/Build/MMCA.Common.LayerEnforcement.targets` fails the build on a forbidden `ProjectReference`.
-2. Runtime: `Tests/Architecture/` (NetArchTest). Rule bodies live once in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` parameterized by `IArchitectureMap`); Store, ADC and Helpdesk subclass the same bases, so changing a base is a consumer-facing change.
+2. Runtime: `Tests/Architecture/` (the metadata-based `ArchitectureTypes` engine in `MMCA.Common.Testing.Architecture`). Rule bodies live once in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` parameterized by `IArchitectureMap`); Store, ADC and Helpdesk subclass the same bases, so changing a base is a consumer-facing change.
 
 A third, consumer-facing compile-time gate is `Source/Build/MMCA.Common.Shared.targets`, shipped in the Shared package's `buildTransitive/`: it applies the layer rules to every `{App}.{Module}.{Layer}` consumer project (ADR-058). A new consumer-facing layer rule goes there as well as into `ArchitectureRules`, and never forbids more than the runtime suite does.
 
@@ -112,7 +112,7 @@ The positions are deliberate; keep them when adding or moving a decorator:
 - **Validating** runs before the transaction opens; the query decorator sits inside Caching (a cached entry was validated when produced).
 - **Transactional** rolls back on an exception AND on `Result.Failure`, and defers in-process domain event dispatch until after commit. Queries have no Transactional decorator.
 
-An optional `Profiling` pair (`AddApplicationProfiling()`) is not wired by any host today.
+An optional `Profiling` pair (`AddApplicationProfiling()`) wraps the closed pipeline as its outermost layer; `AddMmcaServiceHost` adds it, with the MiniProfiler services and middleware, only when `ApplicationSettings:UseMiniProfiler` is true (off by default; the `/profiler` results answer only in Development).
 
 ### Module System
 
@@ -161,7 +161,7 @@ Every piece below is opt-in, so a consumer adopting none changes nothing; keep n
 - **Native push and file storage** default to inert `Null*` implementations that a vendor adapter call replaces (ADR-044, ADR-045). Every `IFileStorageService` implements the options-carrying `UploadAsync` overload and honors its headers; the upload sniffers accept only when the BYTES and the extension agree.
 - **Installable web app** (ADR-136): **the service worker never caches a page or a response**, because server-rendered pages carry the signed-in user's data. `Pwa:ServiceWorker:Enabled=false` is the kill switch.
 - **Idempotency** (ADR-017): the replay cache key is a SHA-256 of subject, method, route and client key, **never the bare client key**. A duplicate that cannot take the lock within `LockWait` gets 409, not a replay; non-2xx is never cached.
-- **AI packages** (ADR-120): **the AI packages take no MMCA.Common project reference and nothing in the framework references them** (`AiDependencyIsolationTestsBase` + `EnforceAiLayerBoundary`; a dotted NetArchTest namespace entry matches nothing, so match on the `MMCA.Common.AI` segment). The provider is an adapter package (`MMCA.Common.AI.Anthropic`, `MMCA.Common.AI.OpenAI`), never a type the governed package names. `Ai:RequireGuardrail` defaults to true, so an enabled host with no prompt-injection guardrail (a registration whose implementation is marked `IPromptInjectionGuardrail`, such as `AddContentPolicyGuardrail`; the PII redactor alone does not count) throws at registration. With `Ai:Enabled` false only the bound and validated `AiSettings` is registered, never an `IChatClient`: gate on `GetService<IChatClient>()`, not on a flag.
+- **AI packages** (ADR-120): **the AI packages take no MMCA.Common project reference and nothing in the framework references them** (`AiDependencyIsolationTestsBase` + `EnforceAiLayerBoundary`; a dotted `ArchitectureTypes` namespace entry matches nothing, so match on the `MMCA.Common.AI` segment). The provider is an adapter package (`MMCA.Common.AI.Anthropic`, `MMCA.Common.AI.OpenAI`), never a type the governed package names. `Ai:RequireGuardrail` defaults to true, so an enabled host with no prompt-injection guardrail (a registration whose implementation is marked `IPromptInjectionGuardrail`, such as `AddContentPolicyGuardrail`; the PII redactor alone does not count) throws at registration. With `Ai:Enabled` false only the bound and validated `AiSettings` is registered, never an `IChatClient`: gate on `GetService<IChatClient>()`, not on a flag.
 - **Cloud vendor adapters** (ADR-134): **the core packages reference no cloud vendor SDK**. Vendor code lives in `MMCA.Common.Azure`, `MMCA.Common.Azure.Startup` (Key Vault, the Azure Monitor exporter and the DataProtection key ring with no persistence or messaging dependency; `MMCA.Common.Azure` references and type-forwards it), `MMCA.Common.Aws`, `MMCA.Common.Gcp` and `MMCA.Common.Testing.Azure`, one registration call per capability, and adapters reference the core, never the reverse (`CloudVendorIsolationTestsBase` + `EnforceCloudVendorBoundary`). Exactly two references are exempt, both database engines: `Microsoft.EntityFrameworkCore.Cosmos` in Infrastructure and `Aspire.Hosting.Azure.CosmosDB` in Aspire.Hosting. **Configuration that asks for a vendor capability without its adapter call fails startup, naming the call** (`AddInfrastructure`, `AddServiceDefaults()`); give any new vendor-gated config key the same check. PostgreSQL connection customization goes through `AddNpgsqlDataSourceConfigurator`.
 - **Aspire package** (ADR-041): call vendor exporters (`AddAzureMonitorExporter()`, `AddGoogleCloudTelemetryExporter()`) after `AddServiceDefaults()` so the filter processors run first. Aspire subscribes the `MMCA.Common.AI` trace source by literal name because it may not reference the AI package.
 - **Testing packages**: `IntegrationTestBase<TFixture>`, `MMCA.Common.Testing.E2E` (Playwright + axe-core, engine from `E2E_BROWSER`) and `MMCA.Common.Testing.Aspire` (ADR-117). In the AppHost tier a missing precondition is a skip with a reason, not a wedge, and **never gate a startup wait on readiness**: `/alive` is the startup signal.

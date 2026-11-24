@@ -1,21 +1,18 @@
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// Shared assertion helpers for architecture fitness functions. One overload reports a
-/// NetArchTest <c>TestResult</c>; the other reports a reflection-derived violation list.
+/// Shared assertion helpers for architecture fitness functions. One overload reports an
+/// <see cref="ArchitectureRuleResult"/> from the dependency rules (<see cref="ArchitectureTypes"/>);
+/// the other reports a reflection- or IL-derived violation list.
 /// </summary>
 public static class ArchitectureAssert
 {
-    /// <summary>Assert a NetArchTest result passed, listing the failing types on failure.</summary>
-    public static void NoViolations(NetArchTest.Rules.TestResult result, string reason)
+    /// <summary>Assert a dependency rule passed, listing the failing types on failure.</summary>
+    public static void NoViolations(ArchitectureRuleResult result, string reason)
     {
-        if (result.IsSuccessful)
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(result);
 
-        var failingTypes = result.FailingTypes ?? [];
-        var violationList = string.Join(Environment.NewLine, failingTypes.Select(t => $"  - {t.FullName}"));
+        var violationList = string.Join(Environment.NewLine, result.FailingTypeNames.Select(name => $"  - {name}"));
 
         result.IsSuccessful.Should().BeTrue(
             because: $"{reason}. Violations:{Environment.NewLine}{violationList}");

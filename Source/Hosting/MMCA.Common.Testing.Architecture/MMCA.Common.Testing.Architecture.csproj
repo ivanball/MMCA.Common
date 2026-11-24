@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Testing.Architecture</PackageId>
-    <Description>MMCA framework architecture fitness-function infrastructure: IArchitectureMap abstraction, reusable NetArchTest rule library, and abstract xUnit test bases consumed by each repo's *.Architecture.Tests project</Description>
+    <Description>MMCA framework architecture fitness-function infrastructure: IArchitectureMap abstraction, reusable architecture rule library (read from assembly metadata), and abstract xUnit test bases consumed by each repo's *.Architecture.Tests project</Description>
     <!--
       This package ships abstract xUnit [Fact] bases, so it carries test-style member names
       (underscores). Relax the documentation analyzers exactly as the sibling MMCA.Common.Testing
@@ -13,11 +13,6 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="NetArchTest.eNhancedEdition" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>

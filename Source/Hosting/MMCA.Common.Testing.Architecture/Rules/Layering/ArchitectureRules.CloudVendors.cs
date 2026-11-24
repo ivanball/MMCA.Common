@@ -14,7 +14,7 @@ public static partial class ArchitectureRules
     /// <c>MMCA.Common.Azure.Startup</c>, <c>MMCA.Common.Aws</c>, <c>MMCA.Common.Gcp</c>,
     /// <c>MMCA.Common.Testing.Azure</c>).
     /// <para>
-    /// NetArchTest matches these as whole namespace segments: <c>Google</c> matches <c>Google</c> and
+    /// <see cref="ArchitectureTypes"/> matches these as whole namespace segments: <c>Google</c> matches <c>Google</c> and
     /// every <c>Google.*</c> namespace, while an entry with a trailing dot (<c>Google.</c>) matches
     /// nothing. <c>Google</c> also matches <c>Google.Protobuf</c>, the protobuf runtime gRPC contracts
     /// compile against. No cloud-neutral assembly names or references it today; if one ever has to,
@@ -27,7 +27,7 @@ public static partial class ArchitectureRules
     /// </summary>
     public static readonly IReadOnlyList<string> CloudVendorDependencies =
     [
-        // Whole namespace roots, no trailing dot: NetArchTest matches by namespace segment, so an entry
+        // Whole namespace roots, no trailing dot: ArchitectureTypes matches by namespace segment, so an entry
         // ending in "." matches nothing and the type-level rule would pass vacuously.
         "Azure",
         "Microsoft.Azure",
@@ -87,13 +87,12 @@ public static partial class ArchitectureRules
         {
             var name = assembly.GetName().Name ?? string.Empty;
             var subjects = allowedPrefixes.TryGetValue(name, out var allowed) && allowed.Count > 0
-                ? Types.InAssembly(assembly).That().DoNotHaveDependencyOnAny([.. allowed])
-                : Types.InAssembly(assembly).That().ArePublic().Or().AreNotPublic();
+                ? ArchitectureTypes.InAssembly(assembly).That().DoNotHaveDependencyOnAny([.. allowed])
+                : ArchitectureTypes.InAssembly(assembly);
 
             var result = subjects
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{name} must stay cloud-neutral: move the vendor dependency into the adapter package "

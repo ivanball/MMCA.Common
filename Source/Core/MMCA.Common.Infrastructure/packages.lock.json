@@ -107,15 +107,6 @@
           "System.Security.Cryptography.Pkcs": "10.0.13"
         }
       },
-      "Microsoft.EntityFrameworkCore.Tools": {
-        "type": "Direct",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "Bt4XAuvcawtLn61wzS2wOC5iVO4PnY37A7LgrmogYNW/iwl8bnb7CD9hi89OIU1n9d+wiPzCW3WubbDU4KwXog==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.Design": "10.0.15"
-        }
-      },
       "Microsoft.Extensions.Caching.Hybrid": {
         "type": "Direct",
         "requested": "[10.11.1, )",
@@ -148,12 +139,6 @@
           "MiniProfiler.Shared": "4.5.4"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "Direct",
         "requested": "[10.0.4, )",
@@ -164,12 +149,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.15, 11.0.0)",
           "Npgsql": "10.0.4"
         }
-      },
-      "Otp.NET": {
-        "type": "Direct",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "Direct",
@@ -220,12 +199,6 @@
           "Microsoft.IdentityModel.JsonWebTokens": "8.23.0",
           "Microsoft.IdentityModel.Tokens": "8.23.0"
         }
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "Direct",
-        "requested": "[10.0.15, )",
-        "resolved": "10.0.15",
-        "contentHash": "4jEv/lXDuQkh60lPU3hlwASErXdv1ZMKmsxVuBfZWiVKT5Q2QGo58kTa6rN519+PU+m4Hsj1m3yT8fN+Xw0XZw=="
       },
       "Azure.Core": {
         "type": "Transitive",
@@ -680,6 +653,11 @@
         "resolved": "6.0.0",
         "contentHash": "ntFHArH3I4Lpjf5m4DCXQHJuGwWPNVJPaAvM95Jy/u+2Yzt2ryiyIN04LAogkjP9DeRcEOiviAjQotfmPq/FrQ=="
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "9.0.21",
@@ -689,7 +667,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -699,7 +677,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {
@@ -851,12 +829,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[11.0.0, 12.0.0-a)"
         }
       },
-      "Microsoft.EntityFrameworkCore.Tools": {
-        "type": "Direct",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "mhTDLNxH23ha4OqeoeUNcom0vMRLWGRtYrVN0HXiWmBnPs5tAIFrupabkidKDgesI8fPQbUiD01J51haSWONRA=="
-      },
       "Microsoft.Extensions.Caching.Hybrid": {
         "type": "Direct",
         "requested": "[11.0.1, )",
@@ -889,12 +861,6 @@
           "MiniProfiler.Shared": "4.5.4"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
-      },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "Direct",
         "requested": "[11.0.0, )",
@@ -905,12 +871,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "[11.0.0, 12.0.0)",
           "Npgsql": "11.0.0"
         }
-      },
-      "Otp.NET": {
-        "type": "Direct",
-        "requested": "[1.4.1, )",
-        "resolved": "1.4.1",
-        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "Direct",
@@ -961,12 +921,6 @@
           "Microsoft.IdentityModel.JsonWebTokens": "8.23.0",
           "Microsoft.IdentityModel.Tokens": "8.23.0"
         }
-      },
-      "System.Security.Cryptography.Pkcs": {
-        "type": "Direct",
-        "requested": "[11.0.0, )",
-        "resolved": "11.0.0",
-        "contentHash": "G8mTjSWrwaPJ2bJRbKuI4ZqdKUYcANK0KtNH3s8/va3nXiF/Pk/yhv2R17rv5PBKJO5+ZXDyhTnZXh0W9v0J8w=="
       },
       "Azure.Core": {
         "type": "Transitive",
@@ -1449,7 +1403,7 @@
         "type": "Project",
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
-          "MMCA.Common.Domain": "[1.0.0, )",
+          "MMCA.Common.Domain": "[0.0.0-dev, )",
           "Microsoft.FeatureManagement": "[4.8.0, )",
           "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
@@ -1459,7 +1413,7 @@
       "mmca.common.domain": {
         "type": "Project",
         "dependencies": {
-          "MMCA.Common.Shared": "[1.0.0, )"
+          "MMCA.Common.Shared": "[0.0.0-dev, )"
         }
       },
       "mmca.common.shared": {

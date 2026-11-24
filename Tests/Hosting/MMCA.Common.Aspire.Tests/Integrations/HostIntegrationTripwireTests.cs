@@ -20,7 +20,7 @@ public sealed class HostIntegrationTripwireTests
         { "KeyVault:Uri", HostIntegrationNames.AzureKeyVaultConfiguration, "AddAzureKeyVaultConfiguration()", "MMCA.Common.Azure" },
         { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "AddAzureDataProtection()", "MMCA.Common.Azure" },
         { "SecretsManager:NamePrefix", HostIntegrationNames.AwsSecretsManagerConfiguration, "AddAwsSecretsManagerConfiguration()", "MMCA.Common.Aws" },
-        { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "AddAwsDataProtection()", "MMCA.Common.Aws" },
+        { "DataProtection:S3ObjectUri", HostIntegrationNames.AwsDataProtection, "AddAwsDataProtection()", "MMCA.Common.Aws" },
         { "GoogleSecretManager:NamePrefix", HostIntegrationNames.GoogleSecretManagerConfiguration, "AddGoogleSecretManagerConfiguration()", "MMCA.Common.Gcp" },
         { "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection, "AddGoogleCloudDataProtection()", "MMCA.Common.Gcp" },
         { "GoogleCloudTelemetry:ProjectId", HostIntegrationNames.GoogleCloudTelemetryExporter, "AddGoogleCloudTelemetryExporter()", "MMCA.Common.Gcp" },
@@ -29,9 +29,9 @@ public sealed class HostIntegrationTripwireTests
 
     public static TheoryData<string, string, string, string> KeyRingPairs => new()
     {
-        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection },
+        { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "DataProtection:S3ObjectUri", HostIntegrationNames.AwsDataProtection },
         { "DataProtection:BlobStorageUri", HostIntegrationNames.AzureDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
-        { "DataProtection:SsmParameterPrefix", HostIntegrationNames.AwsDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
+        { "DataProtection:S3ObjectUri", HostIntegrationNames.AwsDataProtection, "DataProtection:GcsObjectUri", HostIntegrationNames.GoogleCloudDataProtection },
     };
 
     // The AWS RDS and Google Cloud SQL IAM gates are boolean gates read exactly like the Entra one
@@ -98,6 +98,20 @@ public sealed class HostIntegrationTripwireTests
     }
 
     [Fact]
+    public void RetiredSsmParameterPrefix_Fails_NamingTheS3Key_EvenWithTheAdapterCall()
+    {
+        // The AWS key ring moved from Parameter Store to S3; a host still carrying the old gate would
+        // otherwise run every replica on its own in-memory keys with no error at all.
+        var result = Validate(
+            new() { ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection" },
+            HostIntegrationNames.AwsDataProtection);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle()
+            .Which.Should().Contain("DataProtection:SsmParameterPrefix").And.Contain("DataProtection:S3ObjectUri");
+    }
+
+    [Fact]
     public void BothDataProtectionKeyRings_Fail_EvenWithBothAdapterCalls()
     {
         // Two configured key rings is the split-brain the shared key ring exists to prevent: some
@@ -106,14 +120,14 @@ public sealed class HostIntegrationTripwireTests
             new()
             {
                 ["DataProtection:BlobStorageUri"] = "https://blob.example.invalid/keys/keys.xml",
-                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+                ["DataProtection:S3ObjectUri"] = "s3://adc-prod-keys/dataprotection/keys.xml",
             },
             HostIntegrationNames.AzureDataProtection,
             HostIntegrationNames.AwsDataProtection);
 
         result.Failed.Should().BeTrue();
         result.Failures.Should().ContainSingle()
-            .Which.Should().Contain("DataProtection:BlobStorageUri").And.Contain("DataProtection:SsmParameterPrefix");
+            .Which.Should().Contain("DataProtection:BlobStorageUri").And.Contain("DataProtection:S3ObjectUri");
     }
 
     [Theory]
@@ -142,7 +156,7 @@ public sealed class HostIntegrationTripwireTests
             new()
             {
                 ["DataProtection:BlobStorageUri"] = "https://blob.example.invalid/keys/keys.xml",
-                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+                ["DataProtection:S3ObjectUri"] = "s3://adc-prod-keys/dataprotection/keys.xml",
                 ["DataProtection:GcsObjectUri"] = "gs://mmca-keys/keys.xml",
             },
             HostIntegrationNames.AzureDataProtection,
@@ -150,7 +164,7 @@ public sealed class HostIntegrationTripwireTests
             HostIntegrationNames.GoogleCloudDataProtection);
 
         result.Failures.Should().ContainSingle()
-            .Which.Should().Contain("(DataProtection:BlobStorageUri and DataProtection:SsmParameterPrefix and DataProtection:GcsObjectUri)");
+            .Which.Should().Contain("(DataProtection:BlobStorageUri and DataProtection:S3ObjectUri and DataProtection:GcsObjectUri)");
     }
 
     [Fact]
@@ -166,7 +180,7 @@ public sealed class HostIntegrationTripwireTests
             new()
             {
                 ["DataProtection:BlobStorageUri"] = "  ",
-                ["DataProtection:SsmParameterPrefix"] = string.Empty,
+                ["DataProtection:S3ObjectUri"] = string.Empty,
                 ["DataProtection:GcsObjectUri"] = "gs://mmca-keys/keys.xml",
             },
             HostIntegrationNames.GoogleCloudDataProtection)
@@ -178,7 +192,7 @@ public sealed class HostIntegrationTripwireTests
             new()
             {
                 ["DataProtection:BlobStorageUri"] = "  ",
-                ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection",
+                ["DataProtection:S3ObjectUri"] = "s3://adc-prod-keys/dataprotection/keys.xml",
             },
             HostIntegrationNames.AwsDataProtection)
             .Succeeded.Should().BeTrue("a blank placeholder for the other cloud's key ring is not a second key ring");

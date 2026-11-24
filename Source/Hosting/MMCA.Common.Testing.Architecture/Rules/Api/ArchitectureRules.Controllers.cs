@@ -17,10 +17,9 @@ public static partial class ArchitectureRules
         foreach (var apiRef in map.Layers.Where(l => l.Layer == Layer.Api && l.Module.Length > 0))
         {
             var forbidden = map.RootNamespace(apiRef.Module, Layer.Infrastructure);
-            var result = Types.InAssembly(apiRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(apiRef.Assembly)
                 .That().HaveNameEndingWith("Controller")
-                .ShouldNot().HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .ShouldNot().HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{apiRef.RootNamespace}: controllers must not depend on Infrastructure — use Application handlers");
@@ -32,10 +31,9 @@ public static partial class ArchitectureRules
     {
         foreach (var apiRef in map.Layers.Where(l => l.Layer == Layer.Api && l.Module.Length > 0))
         {
-            var result = Types.InAssembly(apiRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(apiRef.Assembly)
                 .That().HaveNameEndingWith("Controller")
-                .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore")
-                .GetResult();
+                .ShouldNot().HaveDependencyOnAny("Microsoft.EntityFrameworkCore");
 
             ArchitectureAssert.NoViolations(result,
                 $"{apiRef.RootNamespace}: controllers must not depend on EF Core — data access belongs in Infrastructure");

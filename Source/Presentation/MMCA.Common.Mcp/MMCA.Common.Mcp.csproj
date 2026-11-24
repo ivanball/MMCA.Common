@@ -10,10 +10,6 @@
          HTTP endpoint's [HasPermission] is checked by. -->
     <ProjectReference Include="..\MMCA.Common.API\MMCA.Common.API.csproj" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MMCA.Common.Mcp.Tests" />
