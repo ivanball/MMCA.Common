@@ -3,12 +3,11 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
-using OtpNet;
 
 namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 
 /// <summary>
-/// RFC 6238 implementation of <see cref="ITwoFactorService"/> over <c>Otp.NET</c>, plus the recovery
+/// RFC 6238 implementation of <see cref="ITwoFactorService"/> over <see cref="Totp"/>, plus the recovery
 /// codes and their hash-at-rest treatment.
 /// </summary>
 /// <remarks>
@@ -25,10 +24,9 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// time does not say how many codes were checked before a match.
 /// </para>
 /// <para>
-/// The provisioning URI is composed here rather than taken from the library, because its exact shape
-/// (the <c>issuer:account</c> label AND the redundant <c>issuer</c> parameter, which is what older
-/// authenticator apps read) is part of what a user's app has to accept, and building it in one visible
-/// place is what keeps that true across a library upgrade.
+/// The provisioning URI is composed here in one visible place, because its exact shape (the
+/// <c>issuer:account</c> label AND the redundant <c>issuer</c> parameter, which is what older
+/// authenticator apps read) is part of what a user's app has to accept.
 /// </para>
 /// </remarks>
 /// <param name="settings">The bound two-factor settings.</param>
@@ -38,7 +36,7 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
 
     /// <inheritdoc />
     public string GenerateSecret() =>
-        Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(_settings.SecretByteLength));
+        Base32.Encode(RandomNumberGenerator.GetBytes(_settings.SecretByteLength));
 
     /// <inheritdoc />
     public string BuildProvisioningUri(string secret, string accountName)
@@ -69,7 +67,7 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
         byte[] key;
         try
         {
-            key = Base32Encoding.ToBytes(secret);
+            key = Base32.Decode(secret);
         }
         catch (ArgumentException)
         {
@@ -79,12 +77,21 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
             return false;
         }
 
-        var totp = new Totp(key, step: _settings.PeriodSeconds, mode: OtpHashMode.Sha1, totpSize: _settings.Digits);
-        var window = new VerificationWindow(
-            previous: _settings.VerificationWindowSteps,
-            future: _settings.VerificationWindowSteps);
+        if (key.Length == 0)
+        {
+            // Padding alone, or fewer than eight bits of secret: there is no key to mint a code with,
+            // so it verifies nothing, for the same reason as above.
+            return false;
+        }
 
-        return totp.VerifyTotp(NormalizeCode(code), out matchedStep, window);
+        return Totp.Verify(
+            key,
+            NormalizeCode(code),
+            DateTime.UtcNow,
+            _settings.PeriodSeconds,
+            _settings.Digits,
+            _settings.VerificationWindowSteps,
+            out matchedStep);
     }
 
     /// <inheritdoc />
@@ -97,9 +104,7 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
         {
             // Base32 rather than Base64: the alphabet has no case ambiguity and no characters a user
             // has to guess at while copying a code off paper.
-            var code = Base32Encoding
-                .ToString(RandomNumberGenerator.GetBytes(_settings.RecoveryCodeByteLength))
-                .TrimEnd('=');
+            var code = Base32.Encode(RandomNumberGenerator.GetBytes(_settings.RecoveryCodeByteLength)).TrimEnd('=');
 
             codes.Add(code);
             hashes.Add(HashRecoveryCode(code));
