@@ -87,7 +87,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Testing.Azure` | The Azure Service Bus emulator broker-parity fixture base (Testcontainers + a host on the native Service Bus transport) |
 | `MMCA.Common.Testing.Aspire` | AppHost integration testing on `Aspire.Hosting.Testing`: collection fixture with per-resource readiness waits, a precondition gate, and typed health/JWKS/h2c/data-source assertions |
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
-| `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers |
+| `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers, and the navigation fitness bases (`NavigationContractTestsBase`, `NavItemGuardContractTestsBase`) |
 | `MMCA.Common.AI.Testing` | Provider-neutral evaluation harness for `MMCA.Common.AI`: a `ReplayChatClient` over recorded `ChatResponse` JSON, `GoldenReplayTestsBase` and `PromptContractPinTestsBase`, so a golden-replay gate and a prompt-change protocol run in a consumer's CI |
 | `MMCA.Common.Testing.Architecture` | `IArchitectureMap` + reusable NetArchTest rule library + abstract test bases (consumed by each repo's `*.Architecture.Tests`) |
 

@@ -1,1 +1,51 @@
 #nullable enable
+const MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.AnonymousAccess = "Anonymous" -> string!
+const MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.AuthenticatedAccess = "Authenticated" -> string!
+const MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.PermissionAccessPrefix = "Permission: " -> string!
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.DiscoverPageRoutes() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.UI.Navigation.NavigationPage!>!
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.EveryContractAccess_MatchesThePageGuard() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.EveryRoutablePage_DeclaresARecognizedAccessAttribute() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.EveryRoutablePage_IsInTheRouteContract_AndEveryContractRoute_Exists() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.NavigationContractTestsBase() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.RoutablePages_AreDiscovered_GateIsNotVacuous() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.RouteContractTable_IsWellFormed() -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Access.get -> string?
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Access.init -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Deconstruct(out string! Route, out string! RelativePath, out string! PageName, out string? Access, out string? Violation) -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Equals(MMCA.Common.Testing.UI.Navigation.NavigationPage? other) -> bool
+MMCA.Common.Testing.UI.Navigation.NavigationPage.NavigationPage(string! Route, string! RelativePath, string! PageName, string? Access, string? Violation) -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.PageName.get -> string!
+MMCA.Common.Testing.UI.Navigation.NavigationPage.PageName.init -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.RelativePath.get -> string!
+MMCA.Common.Testing.UI.Navigation.NavigationPage.RelativePath.init -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Route.get -> string!
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Route.init -> void
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Violation.get -> string?
+MMCA.Common.Testing.UI.Navigation.NavigationPage.Violation.init -> void
+MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase
+MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.EveryNavItem_IsNoLooserThanTheGuardOfThePageItOpens() -> void
+MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.EveryNavItem_OpensARoutablePage() -> void
+MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.NavItemGuardContractTestsBase() -> void
+MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.NavItems_AreReadFromEveryUIModule_GateIsNotVacuous() -> void
+abstract MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.DocEnvironmentVariable.get -> string!
+abstract MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.DocFileName.get -> string!
+abstract MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.MinimumRoutes.get -> int
+abstract MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.RepoRoot.get -> string!
+abstract MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.RoleNamesType.get -> System.Type!
+abstract MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.NavigationContract.get -> MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase!
+abstract MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.RepoRoot.get -> string!
+abstract MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.RoleNamesType.get -> System.Type!
+override MMCA.Common.Testing.UI.Navigation.NavigationPage.Equals(object? obj) -> bool
+override MMCA.Common.Testing.UI.Navigation.NavigationPage.GetHashCode() -> int
+override MMCA.Common.Testing.UI.Navigation.NavigationPage.ToString() -> string!
+static MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.ReadConstants(System.Type! type) -> System.Collections.Generic.IReadOnlyCollection<string!>!
+static MMCA.Common.Testing.UI.Navigation.NavigationPage.operator !=(MMCA.Common.Testing.UI.Navigation.NavigationPage? left, MMCA.Common.Testing.UI.Navigation.NavigationPage? right) -> bool
+static MMCA.Common.Testing.UI.Navigation.NavigationPage.operator ==(MMCA.Common.Testing.UI.Navigation.NavigationPage? left, MMCA.Common.Testing.UI.Navigation.NavigationPage? right) -> bool
+virtual MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.DefaultDocPath.get -> string!
+virtual MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.PageRoles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.PermissionConstantsType.get -> System.Type?
+virtual MMCA.Common.Testing.UI.Navigation.NavigationContractTestsBase.SourceRoot.get -> string!
+virtual MMCA.Common.Testing.UI.Navigation.NavItemGuardContractTestsBase.SourceRoot.get -> string!
+MMCA.Common.Testing.UI.Navigation.NavigationPage.<Clone>$() -> MMCA.Common.Testing.UI.Navigation.NavigationPage!
