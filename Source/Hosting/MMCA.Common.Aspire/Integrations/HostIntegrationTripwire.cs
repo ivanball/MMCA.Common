@@ -32,6 +32,13 @@ internal sealed class HostIntegrationTripwire(
     internal const string DataProtectionS3ObjectUriKey = "DataProtection:S3ObjectUri";
 
     /// <summary>
+    /// The retired AWS key-ring gate (the Systems Manager Parameter Store prefix). The adapter now reads
+    /// <see cref="DataProtectionS3ObjectUriKey"/> instead, so a host still carrying this key would
+    /// otherwise start on per-replica in-memory keys with no error; it fails startup naming the new key.
+    /// </summary>
+    internal const string RetiredDataProtectionSsmParameterPrefixKey = "DataProtection:SsmParameterPrefix";
+
+    /// <summary>
     /// The configuration key whose presence requires the Google Secret Manager configuration source.
     /// The adapter's gate is this prefix AND <c>GoogleSecretManager:ProjectId</c>; the prefix is the
     /// one checked because it is what declares that this host reads its settings from Secret Manager
@@ -113,6 +120,11 @@ internal sealed class HostIntegrationTripwire(
             HostIntegrationNames.AwsDataProtection,
             "the AWS DataProtection key ring was not registered, so each replica keeps its own in-memory keys and cookies minted by one cannot be read by another. Reference MMCA.Common.Aws and call builder.AddAwsDataProtection()",
             failures);
+        if (IsSet(RetiredDataProtectionSsmParameterPrefixKey))
+        {
+            failures.Add(
+                $"{RetiredDataProtectionSsmParameterPrefixKey} is set, but the AWS DataProtection key ring no longer lives in Parameter Store and nothing reads this key, so each replica would keep its own in-memory keys. Set {DataProtectionS3ObjectUriKey} (s3://bucket/path/keys.xml) instead and remove {RetiredDataProtectionSsmParameterPrefixKey} (see UPGRADING.md).");
+        }
         Check(
             GoogleSecretManagerNamePrefixKey,
             HostIntegrationNames.GoogleSecretManagerConfiguration,

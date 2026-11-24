@@ -98,6 +98,20 @@ public sealed class HostIntegrationTripwireTests
     }
 
     [Fact]
+    public void RetiredSsmParameterPrefix_Fails_NamingTheS3Key_EvenWithTheAdapterCall()
+    {
+        // The AWS key ring moved from Parameter Store to S3; a host still carrying the old gate would
+        // otherwise run every replica on its own in-memory keys with no error at all.
+        var result = Validate(
+            new() { ["DataProtection:SsmParameterPrefix"] = "/adc/prod/dataprotection" },
+            HostIntegrationNames.AwsDataProtection);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle()
+            .Which.Should().Contain("DataProtection:SsmParameterPrefix").And.Contain("DataProtection:S3ObjectUri");
+    }
+
+    [Fact]
     public void BothDataProtectionKeyRings_Fail_EvenWithBothAdapterCalls()
     {
         // Two configured key rings is the split-brain the shared key ring exists to prevent: some
