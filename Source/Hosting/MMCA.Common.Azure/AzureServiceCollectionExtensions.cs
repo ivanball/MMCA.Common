@@ -114,6 +114,10 @@ public static class AzureServiceCollectionExtensions
                         serviceProvider.GetRequiredService<NotificationHubConnection>(),
                         serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System,
                         NotificationHubRetryPolicy.Default))
+                // The default factory loggers write every request URI at Information, and the hub's
+                // URIs carry user tags (tags/user:{id}) and installation ids. The sender and registrar
+                // log their own outcomes, so this client logs nothing per request.
+                .RemoveAllLoggers()
                 .ConfigureAdditionalHttpMessageHandlers(static (handlers, _) =>
                 {
                     // What RemoveAllResilienceHandlers() does, written against the stable API because

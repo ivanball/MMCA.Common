@@ -119,6 +119,30 @@ public sealed class AzureServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddAzureNotificationHubsPush_HubClient_LogsNoRequestUris()
+    {
+        // The hub's request URIs carry user tags (tags/user:{id}) and installation ids, which the
+        // factory's default loggers would write at Information on every call.
+        var services = new ServiceCollection().AddLogging();
+        services.AddAzureNotificationHubsPush(ConfigurationWith(new()
+        {
+            ["NativePush:Enabled"] = "true",
+            ["NativePush:ConnectionString"] = "Endpoint=sb://hub.servicebus.windows.net/;SharedAccessKeyName=DefaultFullSharedAccessSignature;SharedAccessKey=dGVzdA==",
+            ["NativePush:HubName"] = "mmca-hub",
+        }));
+        services.AddHttpClient("control");
+
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IHttpMessageHandlerFactory>();
+
+        HandlerChain(factory.CreateHandler(nameof(INotificationHubRestClient)))
+            .Should().NotContain(h => h is Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler
+                || h is Microsoft.Extensions.Http.Logging.LoggingScopeHttpMessageHandler);
+        HandlerChain(factory.CreateHandler("control"))
+            .Should().Contain(h => h is Microsoft.Extensions.Http.Logging.LoggingHttpMessageHandler, "other clients keep the default loggers");
+    }
+
+    [Fact]
     public void AddAzureNotificationHubsPush_AMalformedConnectionString_FailsOnFirstUse_NotAtRegistration()
     {
         var services = new ServiceCollection().AddLogging();
