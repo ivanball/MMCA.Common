@@ -980,7 +980,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.4, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
-          "RabbitMQ.Client": "[7.2.2, )",
+          "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )",
           "System.Security.Cryptography.Pkcs": "[10.0.15, )"
@@ -1320,9 +1320,9 @@
       },
       "RabbitMQ.Client": {
         "type": "CentralTransitive",
-        "requested": "[7.2.2, )",
-        "resolved": "7.2.2",
-        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA==",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "6bAg8jxUdOw6exxmaOIpE9QiNr8+rUAaJZrAezxf3RaRJ+YnHgOh7pqqsMaTNHPL7wj8FSNAOtzGoWxSHuqsqw==",
         "dependencies": {
           "System.Threading.RateLimiting": "8.0.0"
         }
@@ -2257,7 +2257,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[11.0.0, )",
           "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.9.1, )",
-          "RabbitMQ.Client": "[7.2.2, )",
+          "RabbitMQ.Client": "[7.3.0, )",
           "StackExchange.Redis": "[3.4.35, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
@@ -2564,9 +2564,9 @@
       },
       "RabbitMQ.Client": {
         "type": "CentralTransitive",
-        "requested": "[7.2.2, )",
-        "resolved": "7.2.2",
-        "contentHash": "k4b6RnTXpLbsF96V93ooNYxgPMnoA2tEm24B6AXNJr1mG8wwNYdA1XJtgU66L5xqeGyveS7SJriRzlX3cbqQNA==",
+        "requested": "[7.3.0, )",
+        "resolved": "7.3.0",
+        "contentHash": "6bAg8jxUdOw6exxmaOIpE9QiNr8+rUAaJZrAezxf3RaRJ+YnHgOh7pqqsMaTNHPL7wj8FSNAOtzGoWxSHuqsqw==",
         "dependencies": {
           "System.Threading.RateLimiting": "8.0.0"
         }

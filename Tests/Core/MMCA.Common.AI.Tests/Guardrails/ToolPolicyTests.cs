@@ -228,7 +228,7 @@ public sealed class ToolPolicyTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddPiiRedactionGuardrail();
+        services.AddContentPolicyGuardrail(EnabledConfiguration());
         using var inner = new StubChatClient();
 
         var act = () => services.AddMmcaChatClient(EnabledConfiguration(("Ai:AllowTools", "true")), _ => inner);
@@ -243,7 +243,7 @@ public sealed class ToolPolicyTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddPiiRedactionGuardrail();
+        services.AddContentPolicyGuardrail(EnabledConfiguration());
         services.AddSingleton<IChatToolPolicy>(new StubToolPolicy());
         using var inner = new StubChatClient();
 
@@ -259,7 +259,7 @@ public sealed class ToolPolicyTests
         var policy = new StubToolPolicy(ToolAuthorization.Denied);
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddPiiRedactionGuardrail();
+        services.AddContentPolicyGuardrail(EnabledConfiguration());
         services.AddSingleton<IChatToolPolicy>(policy);
         using var inner = new StubChatClient();
         services.AddMmcaChatClient(EnabledConfiguration(("Ai:AllowTools", "true")), _ => inner);

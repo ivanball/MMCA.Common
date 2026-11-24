@@ -18,7 +18,8 @@ namespace MMCA.Common.AI.Guardrails;
 /// <para>
 /// Like <see cref="PiiRedactionGuardrail"/> it implements both halves, and for the same reason: the
 /// redactor rewrites what goes out, the guardrail answers yes or no, and they are two faces of one
-/// decision. Registering it therefore also satisfies <see cref="AiSettings.RequireGuardrail"/>.
+/// decision. It is also the <see cref="IPromptInjectionGuardrail"/> this framework ships, so
+/// registering it is what satisfies <see cref="AiSettings.RequireGuardrail"/>.
 /// </para>
 /// </summary>
 /// <remarks>
@@ -61,7 +62,7 @@ namespace MMCA.Common.AI.Guardrails;
 /// guardrail.
 /// </para>
 /// </remarks>
-public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatRequestRedactor
+public sealed partial class ContentPolicyGuardrail : IChatGuardrail, IChatRequestRedactor, IPromptInjectionGuardrail
 {
     /// <summary>The options every configured pattern is compiled with, matching the built-ins.</summary>
     internal const RegexOptions ConfiguredPatternOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;

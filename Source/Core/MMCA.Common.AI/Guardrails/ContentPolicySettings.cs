@@ -19,6 +19,16 @@ namespace MMCA.Common.AI.Guardrails;
 /// off rather than editing it in a settings file. What IS configurable is the part that depends on
 /// the application: extra request patterns for the vocabulary of its own domain, and response
 /// patterns for the strings its answers must never contain.
+/// <para>
+/// <b>Why <see cref="BlockedResponsePatterns"/> ships empty.</b> What an answer must never say is
+/// a fact about the application, not about language models: an internal project code name, a
+/// customer identifier format, a price the model must not quote. There is no response pattern the
+/// framework could ship that is right for every host and wrong for none, and a guessed default
+/// would refuse legitimate answers in one application while protecting nothing in another. So the
+/// framework ships the mechanism (the buffered and streamed response inspection, the index-only
+/// block reason, the startup validation) and each host supplies its own patterns here, or registers
+/// its own response <see cref="Chat.IChatGuardrail"/> when a regular expression is the wrong tool.
+/// </para>
 /// </remarks>
 public sealed class ContentPolicySettings : IValidatableObject
 {
@@ -53,6 +63,14 @@ public sealed class ContentPolicySettings : IValidatableObject
     /// thing cannot unsay it, so the only available answer is to refuse the response. The block
     /// reason names the pattern by index and never echoes the text that matched, because the reason
     /// reaches the caller and the point of the rule was that the text should not.
+    /// <para>
+    /// Empty by design, not by omission: response patterns are domain-specific (what one
+    /// application's answers must never contain is ordinary text in another), so the framework
+    /// ships the mechanism and no patterns. Each host supplies the patterns for its own domain
+    /// here, or registers its own response <see cref="Chat.IChatGuardrail"/> when a regular
+    /// expression is the wrong tool. The prompt-injection half of the policy does not depend on
+    /// this list and runs either way.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<string> BlockedResponsePatterns { get; init; } = [];
 

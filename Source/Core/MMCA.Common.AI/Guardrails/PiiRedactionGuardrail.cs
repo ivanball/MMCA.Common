@@ -18,9 +18,11 @@ namespace MMCA.Common.AI.Guardrails;
 /// </para>
 /// <para>
 /// It implements both halves deliberately. As an <see cref="IChatRequestRedactor"/> it rewrites the
-/// messages; as an <see cref="IChatGuardrail"/> it allows everything, so that registering it is
-/// enough to satisfy <see cref="AiSettings.RequireGuardrail"/> without also pretending to be a
-/// content policy it is not.
+/// messages; as an <see cref="IChatGuardrail"/> it allows everything, so it never pretends to be a
+/// content policy it is not. For the same reason it is NOT an
+/// <see cref="IPromptInjectionGuardrail"/>: registering it alone does not satisfy
+/// <see cref="AiSettings.RequireGuardrail"/>, which asks for a defense against injected
+/// instructions (<see cref="ContentPolicyGuardrail"/>).
 /// </para>
 /// </summary>
 /// <remarks>
