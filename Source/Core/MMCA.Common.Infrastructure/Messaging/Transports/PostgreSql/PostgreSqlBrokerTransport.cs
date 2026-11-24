@@ -35,6 +35,22 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports.PostgreSql;
 /// </summary>
 internal sealed class PostgreSqlBrokerTransport : IBrokerTransport
 {
+    private readonly Func<PostgreSqlReceiverOptions, PostgreSqlReceiverOptions>? _tuneReceiver;
+
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlBrokerTransport"/> class.</summary>
+    public PostgreSqlBrokerTransport()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PostgreSqlBrokerTransport"/> class whose receiver
+    /// options are adjusted after they are resolved from configuration. Not a configuration surface:
+    /// it lets a test run the receiver with a lease, renewal and poll interval short enough to observe.
+    /// </summary>
+    /// <param name="tuneReceiver">Returns the options the receiver runs with, given the resolved ones.</param>
+    internal PostgreSqlBrokerTransport(Func<PostgreSqlReceiverOptions, PostgreSqlReceiverOptions>? tuneReceiver) =>
+        _tuneReceiver = tuneReceiver;
+
     /// <inheritdoc />
     public string Name => MessageBusProviders.PostgreSql;
 
@@ -67,7 +83,8 @@ internal sealed class PostgreSqlBrokerTransport : IBrokerTransport
             return;
         }
 
-        var options = PostgreSqlReceiverOptions.From(context.Settings, migrateOnStartup);
+        var resolved = PostgreSqlReceiverOptions.From(context.Settings, migrateOnStartup);
+        var options = _tuneReceiver?.Invoke(resolved) ?? resolved;
         services.AddHostedService(sp => new PostgreSqlReceiver(
             topology,
             sp.GetRequiredService<IBrokerReceivePipeline>(),

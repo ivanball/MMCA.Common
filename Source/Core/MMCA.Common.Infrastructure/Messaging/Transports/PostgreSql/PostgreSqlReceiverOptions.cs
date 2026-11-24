@@ -5,7 +5,8 @@ namespace MMCA.Common.Infrastructure.Messaging.Transports.PostgreSql;
 /// <param name="ClaimBatchSize">The most rows one claim takes (never more than the free slots).</param>
 /// <param name="MigrateOnStartup">Whether to wait for the schema migration before receiving.</param>
 /// <param name="ProvisionTopology">Whether to bind the queue's topics in <c>subscriptions</c> at start.</param>
-/// <param name="Lease">How long a claim holds; renewed every third of it while the row is in flight.</param>
+/// <param name="Lease">How long a claim holds.</param>
+/// <param name="RenewInterval">How often the leases of in-flight rows are renewed; shorter than <paramref name="Lease"/>.</param>
 /// <param name="PollInterval">The longest the receiver sleeps without a notification before it looks again.</param>
 internal sealed record PostgreSqlReceiverOptions(
     int Concurrency,
@@ -13,10 +14,14 @@ internal sealed record PostgreSqlReceiverOptions(
     bool MigrateOnStartup,
     bool ProvisionTopology,
     TimeSpan Lease,
+    TimeSpan RenewInterval,
     TimeSpan PollInterval)
 {
     /// <summary>The default lease: long enough to ride out a renewal missed to a database blip.</summary>
     internal static readonly TimeSpan DefaultLease = TimeSpan.FromSeconds(60);
+
+    /// <summary>The default renewal: every third of the default lease, so one missed renewal does not lose the claim.</summary>
+    internal static readonly TimeSpan DefaultRenewInterval = TimeSpan.FromSeconds(20);
 
     /// <summary>The default polling fallback when no notification arrives.</summary>
     internal static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(5);
@@ -42,6 +47,7 @@ internal sealed record PostgreSqlReceiverOptions(
             migrateOnStartup,
             settings.ProvisionTopology,
             DefaultLease,
+            DefaultRenewInterval,
             DefaultPollInterval);
     }
 }

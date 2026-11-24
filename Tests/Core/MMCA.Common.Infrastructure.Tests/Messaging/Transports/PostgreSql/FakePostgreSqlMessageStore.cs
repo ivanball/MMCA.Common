@@ -29,6 +29,8 @@ internal sealed class FakePostgreSqlMessageStore : IPostgreSqlMessageStore
 
     public ConcurrentQueue<PostgreSqlClaimedMessage> Released { get; } = new();
 
+    public ConcurrentQueue<(long[] Ids, TimeSpan Lease)> Renewed { get; } = new();
+
     public bool SettleResult { get; set; } = true;
 
     public PostgreSqlClaimedMessage Enqueue(string eventName = "order-placed")
@@ -97,8 +99,11 @@ internal sealed class FakePostgreSqlMessageStore : IPostgreSqlMessageStore
         return Task.FromResult(true);
     }
 
-    public Task RenewAsync(IReadOnlyCollection<PostgreSqlClaimedMessage> messages, TimeSpan lease, CancellationToken cancellationToken) =>
-        Task.CompletedTask;
+    public Task RenewAsync(IReadOnlyCollection<PostgreSqlClaimedMessage> messages, TimeSpan lease, CancellationToken cancellationToken)
+    {
+        Renewed.Enqueue(([.. messages.Select(m => m.Id)], lease));
+        return Task.CompletedTask;
+    }
 
     public Task<TimeSpan?> NextDueAsync(string queue, CancellationToken cancellationToken) =>
         Task.FromResult<TimeSpan?>(_pending.IsEmpty ? null : TimeSpan.Zero);

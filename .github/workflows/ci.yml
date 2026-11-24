@@ -1114,16 +1114,17 @@ jobs:
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
         # Floor = the exact [Fact] count across PostgreSQLPersistenceTests.cs (9),
-        # InternalCommandLanePostgreSqlTests.cs (2) and PostgreSqlBrokerTransportTests.cs (7: the six
-        # shared broker conformance scenarios of Tests/Shared/Messaging plus the schema migration),
-        # 18 on 2026-11-23; adding a test means raising this number in the same PR.
+        # InternalCommandLanePostgreSqlTests.cs (2), PostgreSqlBrokerTransportTests.cs (7: the six
+        # shared broker conformance scenarios of Tests/Shared/Messaging plus the schema migration) and
+        # PostgreSqlLeaseRenewalTests.cs (2), 20 on 2026-11-23; adding a test means raising this number
+        # in the same PR.
         # dotnet-coverage wraps the run and returns its exit code, so a test failure still fails the step;
         # the cobertura file feeds the non-required coverage-risk job (ADR-147).
         run: |
           dotnet tool install --global dotnet-coverage --version 18.11.0
           export PATH="$PATH:$HOME/.dotnet/tools"
           dotnet-coverage collect -f cobertura -o coverage.integration-postgresql.cobertura.xml \
-            "dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 18"
+            "dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 20"
 
       - name: Upload integration coverage
         if: always() && needs.changes.outputs.code == 'true'

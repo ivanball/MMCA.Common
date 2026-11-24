@@ -26,7 +26,7 @@ public sealed class PostgreSqlReceiverTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static PostgreSqlReceiverOptions Options(bool migrate = true, bool provision = true) =>
-        new(Concurrency: 2, ClaimBatchSize: 2, migrate, provision, Lease: TimeSpan.FromSeconds(30), PollInterval: TimeSpan.FromMilliseconds(50));
+        new(Concurrency: 2, ClaimBatchSize: 2, migrate, provision, Lease: TimeSpan.FromSeconds(30), RenewInterval: TimeSpan.FromSeconds(10), PollInterval: TimeSpan.FromMilliseconds(50));
 
     private static PostgreSqlReceiver Receiver(FakePostgreSqlMessageStore store, IBrokerReceivePipeline pipeline, PostgreSqlReceiverOptions? options = null) =>
         new(Topology, pipeline, store, options ?? Options(), NullLogger<PostgreSqlReceiver>.Instance);
@@ -137,6 +137,38 @@ public sealed class PostgreSqlReceiverTests
     }
 
     [Fact]
+    public async Task ARowStillInFlight_HasItsLeaseRenewedEveryRenewInterval()
+    {
+        var store = new FakePostgreSqlMessageStore();
+        var row = store.Enqueue();
+        var pipeline = new Mock<IBrokerReceivePipeline>();
+        pipeline.Setup(p => p.ProcessAsync(It.IsAny<IncomingBrokerMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(async (IncomingBrokerMessage _, CancellationToken token) =>
+            {
+                // Held until two renewals have gone out for it.
+                while (store.Renewed.Count < 2)
+                {
+                    await Task.Delay(10, token);
+                }
+
+                return BrokerDisposition.Complete;
+            });
+        var options = Options() with { Lease = TimeSpan.FromSeconds(3), RenewInterval = TimeSpan.FromMilliseconds(100) };
+        using var receiver = Receiver(store, pipeline.Object, options);
+
+        await receiver.StartAsync(Ct);
+        await WaitUntilAsync(() => !store.Completed.IsEmpty);
+        await receiver.StopAsync(Ct);
+
+        store.Renewed.Should().HaveCountGreaterThanOrEqualTo(2).And.AllSatisfy(renewal =>
+        {
+            renewal.Ids.Should().Equal(row.Id);
+            renewal.Lease.Should().Be(TimeSpan.FromSeconds(3), "each renewal extends the claim by the full lease");
+        });
+        store.Completed.Should().ContainSingle().Which.Should().BeSameAs(row);
+    }
+
+    [Fact]
     public async Task APipelineThatThrows_ReleasesTheClaimForAnotherAttempt()
     {
         var store = new FakePostgreSqlMessageStore();
@@ -166,6 +198,8 @@ public sealed class PostgreSqlReceiverTests
         options.ProvisionTopology.Should().BeFalse();
         options.MigrateOnStartup.Should().BeTrue();
         options.Lease.Should().Be(PostgreSqlReceiverOptions.DefaultLease);
+        options.RenewInterval.Should().Be(PostgreSqlReceiverOptions.DefaultRenewInterval);
+        options.RenewInterval.Should().BeLessThan(options.Lease, "a lease is renewed before it lapses");
     }
 
     [Fact]

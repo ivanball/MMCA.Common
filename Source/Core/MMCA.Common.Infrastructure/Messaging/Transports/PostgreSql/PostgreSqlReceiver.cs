@@ -317,7 +317,7 @@ internal sealed partial class PostgreSqlReceiver : BackgroundService
 
     private async Task RenewLoopAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(_options.Lease / 3);
+        using var timer = new PeriodicTimer(_options.RenewInterval);
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
@@ -334,7 +334,7 @@ internal sealed partial class PostgreSqlReceiver : BackgroundService
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException && !stoppingToken.IsCancellationRequested)
                 {
-                    LogStepFailed(_logger, ex, "renew", _topology.QueueName, _options.Lease / 3);
+                    LogStepFailed(_logger, ex, "renew", _topology.QueueName, _options.RenewInterval);
                 }
             }
         }
