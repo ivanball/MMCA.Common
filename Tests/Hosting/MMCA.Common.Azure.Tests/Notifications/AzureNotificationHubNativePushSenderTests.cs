@@ -1,9 +1,8 @@
 using AwesomeAssertions;
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Azure.Notifications;
-using Moq;
+using MMCA.Common.Infrastructure.Notifications.Push;
 
 namespace MMCA.Common.Azure.Tests.Notifications;
 
@@ -14,23 +13,17 @@ namespace MMCA.Common.Azure.Tests.Notifications;
 /// </summary>
 public sealed class AzureNotificationHubNativePushSenderTests
 {
-    private readonly Mock<INotificationHubClient> _hubClient = new();
-    private readonly List<(string Platform, string TagExpression)> _sends = [];
+    private readonly FakeNotificationHubRestClient _hubClient = new();
 
-    private AzureNotificationHubNativePushSender CreateSut(Func<Notification, string, Exception?> failure)
+    private IEnumerable<(string Format, string TagExpression)> Sends =>
+        _hubClient.Sends.Select(s => (s.Notification.Format, s.TagExpression));
+
+    private static bool IsApple(NotificationHubNotification notification) => notification.Format == "apple";
+
+    private AzureNotificationHubNativePushSender CreateSut(Func<NotificationHubNotification, string, Exception?> failure)
     {
-        _hubClient
-            .Setup(x => x.SendNotificationAsync(It.IsAny<Notification>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns<Notification, string, CancellationToken>((notification, tagExpression, _) =>
-            {
-                _sends.Add((notification is AppleNotification ? "apns" : "fcmv1", tagExpression));
-                var exception = failure(notification, tagExpression);
-                return exception is null
-                    ? Task.FromResult(new NotificationOutcome())
-                    : Task.FromException<NotificationOutcome>(exception);
-            });
-
-        return new AzureNotificationHubNativePushSender(_hubClient.Object, NullLogger<AzureNotificationHubNativePushSender>.Instance);
+        _hubClient.SendFailure = failure;
+        return new AzureNotificationHubNativePushSender(_hubClient, NullLogger<AzureNotificationHubNativePushSender>.Instance);
     }
 
     // 25 users span two OR-chunks at the hub's 20-tag cap.
@@ -46,8 +39,8 @@ public sealed class AzureNotificationHubNativePushSenderTests
 
         var outcome = await sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
-        _sends.Select(s => s.Platform).Should().Equal("fcmv1", "apns", "fcmv1", "apns");
-        _sends.Select(s => s.TagExpression).Distinct().Should().HaveCount(2);
+        Sends.Select(s => s.Format).Should().Equal("fcmv1", "apple", "fcmv1", "apple");
+        Sends.Select(s => s.TagExpression).Distinct().Should().HaveCount(2);
         outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
         outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
         outcome.Unit.Should().Be(NativePushDeliveryUnit.Batch);
@@ -64,7 +57,7 @@ public sealed class AzureNotificationHubNativePushSenderTests
         var sut = CreateSut((notification, tagExpression) =>
         {
             firstChunk ??= tagExpression;
-            return notification is AppleNotification && tagExpression == firstChunk
+            return IsApple(notification) && tagExpression == firstChunk
                 ? new InvalidOperationException("APNs rejected the send")
                 : null;
         });
@@ -75,20 +68,20 @@ public sealed class AzureNotificationHubNativePushSenderTests
         outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 1));
         outcome.FirstFailure.Should().BeOfType<InvalidOperationException>().Which.Message.Should().Be("APNs rejected the send");
         outcome.HasFailures.Should().BeTrue();
-        _sends.Should().HaveCount(6, "every chunk still sends on both platforms after the failure");
+        Sends.Should().HaveCount(6, "every chunk still sends on both platforms after the failure");
     }
 
     [Fact]
     public async Task SendToUsersAsync_SeveralFailures_AreCountedPerPlatform_AndTheFirstIsReturned()
     {
-        var sut = CreateSut((notification, _) => notification is AppleNotification ? new InvalidOperationException("APNs down") : null);
+        var sut = CreateSut((notification, _) => IsApple(notification) ? new InvalidOperationException("APNs down") : null);
 
         var outcome = await sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
 
         outcome.Android.Should().Be(new NativePushPlatformCounts(Sent: 2, Failed: 0));
         outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 0, Failed: 2));
         outcome.FirstFailure.Should().BeOfType<InvalidOperationException>();
-        _sends.Should().HaveCount(4);
+        Sends.Should().HaveCount(4);
     }
 
     [Fact]
@@ -101,7 +94,7 @@ public sealed class AzureNotificationHubNativePushSenderTests
         outcome.Android.Should().BeNull();
         outcome.Apple.Should().BeNull();
         outcome.HasFailures.Should().BeFalse();
-        _sends.Should().BeEmpty();
+        Sends.Should().BeEmpty();
     }
 
     [Fact]
@@ -117,6 +110,31 @@ public sealed class AzureNotificationHubNativePushSenderTests
         var act = () => sut.SendToUsersAsync(TwoChunksOfUsers(), "Hello", "World", cancellationToken: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-        _sends.Should().ContainSingle();
+        Sends.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_SendsTheSharedPlatformPayloads_ToTheUserTagExpression()
+    {
+        var sut = CreateSut((_, _) => null);
+        var metadata = new Dictionary<string, string> { ["route"] = "/events/1" };
+
+        await sut.SendToUsersAsync([7, 8], "Hello", "World", metadata, TestContext.Current.CancellationToken);
+
+        _hubClient.Sends.Should().HaveCount(2);
+        _hubClient.Sends[0].TagExpression.Should().Be("user:7 || user:8");
+        _hubClient.Sends[0].Notification.Should().Be(NotificationHubNotification.FcmV1(NativePushPayloads.BuildFcmV1Payload("Hello", "World", metadata)));
+        _hubClient.Sends[1].Notification.Should().Be(NotificationHubNotification.Apple(NativePushPayloads.BuildApnsPayload("Hello", "World", metadata)));
+    }
+
+    [Fact]
+    public async Task SendToUsersAsync_AHubFailure_IsCountedNotThrown()
+    {
+        var sut = CreateSut((notification, _) => IsApple(notification) ? FakeNotificationHubRestClient.ServerBusy() : null);
+
+        var outcome = await sut.SendToUsersAsync([1], "Hello", "World", cancellationToken: TestContext.Current.CancellationToken);
+
+        outcome.Apple.Should().Be(new NativePushPlatformCounts(Sent: 0, Failed: 1));
+        outcome.FirstFailure.Should().BeOfType<NotificationHubException>();
     }
 }

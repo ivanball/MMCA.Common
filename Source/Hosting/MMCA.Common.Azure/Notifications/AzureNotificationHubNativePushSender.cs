@@ -1,4 +1,3 @@
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
@@ -18,9 +17,13 @@ namespace MMCA.Common.Azure.Notifications;
 /// returned in <see cref="NativePushOutcome.FirstFailure"/> rather than thrown. The caller's own
 /// cancellation stops the loop and propagates.
 /// </para>
+/// <para>
+/// Talks to the hub through <see cref="INotificationHubRestClient"/>; resolved only through
+/// <c>AddAzureNotificationHubsPush</c>.
+/// </para>
 /// </summary>
-public sealed partial class AzureNotificationHubNativePushSender(
-    INotificationHubClient hubClient,
+internal sealed partial class AzureNotificationHubNativePushSender(
+    INotificationHubRestClient hubClient,
     ILogger<AzureNotificationHubNativePushSender> logger) : INativePushSender
 {
     private const string FcmPlatform = "fcmv1";
@@ -39,7 +42,7 @@ public sealed partial class AzureNotificationHubNativePushSender(
 
         foreach (var tagExpression in NativePushUserTags.BuildUserTagExpressions(userIds))
         {
-            var androidError = await TrySendAsync(new FcmV1Notification(fcmPayload), FcmPlatform, tagExpression, cancellationToken).ConfigureAwait(false);
+            var androidError = await TrySendAsync(NotificationHubNotification.FcmV1(fcmPayload), FcmPlatform, tagExpression, cancellationToken).ConfigureAwait(false);
             if (androidError is null)
             {
                 androidSent++;
@@ -50,7 +53,7 @@ public sealed partial class AzureNotificationHubNativePushSender(
                 firstFailure ??= androidError;
             }
 
-            var appleError = await TrySendAsync(new AppleNotification(apnsPayload), ApnsPlatform, tagExpression, cancellationToken).ConfigureAwait(false);
+            var appleError = await TrySendAsync(NotificationHubNotification.Apple(apnsPayload), ApnsPlatform, tagExpression, cancellationToken).ConfigureAwait(false);
             if (appleError is null)
             {
                 appleSent++;
@@ -68,7 +71,7 @@ public sealed partial class AzureNotificationHubNativePushSender(
 
     /// <summary>Sends one batch on one platform.</summary>
     /// <returns>Null on success, otherwise the failure (never the caller's own cancellation, which propagates).</returns>
-    private async Task<Exception?> TrySendAsync(Notification notification, string platform, string tagExpression, CancellationToken cancellationToken)
+    private async Task<Exception?> TrySendAsync(NotificationHubNotification notification, string platform, string tagExpression, CancellationToken cancellationToken)
     {
         try
         {
