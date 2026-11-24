@@ -105,15 +105,18 @@ public sealed class AiSettings : IValidatableObject
     public bool AllowTools { get; init; }
 
     /// <summary>
-    /// Whether this host must register at least one guardrail before it may talk to a model.
+    /// Whether this host must register a prompt-injection guardrail before it may talk to a model.
     /// <see langword="true"/> by default.
     /// <para>
     /// A guardrail is a policy the feature cannot bypass: it runs inside the composition root, on
     /// every call, whatever the calling code believes it is doing. Defaulting this to
-    /// <see langword="true"/> makes "we shipped a model call and nobody inspects it" a startup
-    /// failure rather than a finding, and the message names the one-line fix
-    /// (<c>AddPiiRedactionGuardrail()</c>). A host that deliberately wants none sets it false, which
-    /// is a reviewable line in a configuration file rather than an absence nobody can see.
+    /// <see langword="true"/> makes "we shipped a model call and nothing defends it against prompt
+    /// injection" a startup failure rather than a finding, and the message names the one-line fix
+    /// (<c>AddContentPolicyGuardrail(configuration)</c>). Only a guardrail or redactor whose
+    /// implementation type is marked <see cref="Guardrails.IPromptInjectionGuardrail"/> satisfies
+    /// it: a PII redactor on its own strips contact details but not injected instructions, so it
+    /// does not. A host that deliberately wants none sets it false, which is a reviewable line in a
+    /// configuration file rather than an absence nobody can see.
     /// </para>
     /// </summary>
     public bool RequireGuardrail { get; init; } = true;

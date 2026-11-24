@@ -21,7 +21,8 @@ public static class GuardrailServiceCollectionExtensions
         /// <summary>
         /// Registers <see cref="PiiRedactionGuardrail"/> as both an <see cref="IChatRequestRedactor"/>
         /// and an <see cref="IChatGuardrail"/>, so contact details are stripped from every outgoing
-        /// message and the host satisfies <see cref="AiSettings.RequireGuardrail"/>.
+        /// message. On its own it does NOT satisfy <see cref="AiSettings.RequireGuardrail"/>, which
+        /// asks for a prompt-injection defense (<c>AddContentPolicyGuardrail(configuration)</c>).
         /// </summary>
         /// <returns>The same collection for chaining.</returns>
         /// <remarks>
@@ -48,7 +49,8 @@ public static class GuardrailServiceCollectionExtensions
         /// registers <see cref="ContentPolicyGuardrail"/> as both an
         /// <see cref="IChatRequestRedactor"/> and an <see cref="IChatGuardrail"/>, so
         /// prompt-injection markers in user content and answers matching a configured pattern are
-        /// handled on every call and the host satisfies <see cref="AiSettings.RequireGuardrail"/>.
+        /// handled on every call. It is an <see cref="IPromptInjectionGuardrail"/>, so registering it
+        /// satisfies <see cref="AiSettings.RequireGuardrail"/>.
         /// </summary>
         /// <param name="configuration">The application configuration.</param>
         /// <returns>The same collection for chaining.</returns>

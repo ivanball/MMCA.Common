@@ -43,9 +43,10 @@ namespace MMCA.Common.AI;
 /// The guardrail layer is added ONLY when the host registered at least one
 /// <see cref="Chat.IChatGuardrail"/> or one <see cref="Guardrails.IChatRequestRedactor"/>, so an
 /// application that adopts neither keeps the chain it had, down to the type the container hands
-/// back. Registering neither is itself a startup failure while
+/// back. Registering no prompt-injection defense (a guardrail or redactor marked
+/// <see cref="Guardrails.IPromptInjectionGuardrail"/>) is itself a startup failure while
 /// <see cref="AiSettings.RequireGuardrail"/> is true (its default), and
-/// <c>AddPiiRedactionGuardrail()</c> is the one-line answer.
+/// <c>AddContentPolicyGuardrail(configuration)</c> is the one-line answer.
 /// </para>
 /// <para>
 /// <b>Two registration-time refusals.</b> Both are thrown here rather than left to the first
@@ -140,8 +141,9 @@ public static class AiServiceCollectionExtensions
             // pipeline is built from.
             var hasGuardrail = services.Any(descriptor => descriptor.ServiceType == typeof(IChatGuardrail));
             var hasRedactor = services.Any(descriptor => descriptor.ServiceType == typeof(IChatRequestRedactor));
+            var hasInjectionGuardrail = services.Any(IsPromptInjectionGuardrail);
 
-            RefuseAnUngovernedHost(services, settings, hasGuardrail, hasRedactor);
+            RefuseAnUngovernedHost(services, settings, hasInjectionGuardrail);
 
             services.AddMetrics();
             services.TryAddSingleton<AiUsageMeter>();
@@ -194,27 +196,34 @@ public static class AiServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection being configured.</param>
     /// <param name="settings">The bound settings for this host.</param>
-    /// <param name="hasGuardrail">Whether an <see cref="IChatGuardrail"/> descriptor is present.</param>
-    /// <param name="hasRedactor">Whether an <see cref="IChatRequestRedactor"/> descriptor is present.</param>
+    /// <param name="hasInjectionGuardrail">
+    /// Whether an <see cref="IChatGuardrail"/> or <see cref="IChatRequestRedactor"/> descriptor names an
+    /// implementation marked <see cref="IPromptInjectionGuardrail"/>.
+    /// </param>
     /// <exception cref="InvalidOperationException">When a required extension point is missing.</exception>
     /// <remarks>
     /// At registration rather than on the first call, and with the fix in the message both times: a
-    /// bound nobody reaches is not a bound, so the deployment fails instead of the tenth user.
+    /// bound nobody reaches is not a bound, so the deployment fails instead of the tenth user. The
+    /// guardrail requirement asks for a defense against prompt injection specifically, because that
+    /// is the threat every model call shares; a PII redactor alone leaves it open.
     /// </remarks>
     private static void RefuseAnUngovernedHost(
         IServiceCollection services,
         AiSettings settings,
-        bool hasGuardrail,
-        bool hasRedactor)
+        bool hasInjectionGuardrail)
     {
-        if (settings.RequireGuardrail && !hasGuardrail && !hasRedactor)
+        if (settings.RequireGuardrail && !hasInjectionGuardrail)
         {
             throw new InvalidOperationException(
                 $"{AiSettings.SectionName}:{nameof(AiSettings.Enabled)} is true but this host registered no "
-                + $"{nameof(IChatGuardrail)} and no {nameof(IChatRequestRedactor)}, so nothing inspects what is "
-                + "sent to the model or what comes back. Register a guardrail before AddMmcaChatClient, or call "
-                + "AddPiiRedactionGuardrail() for the one this framework ships. A host that deliberately wants "
-                + $"none sets {AiSettings.SectionName}:{nameof(AiSettings.RequireGuardrail)} to false, which is a "
+                + $"prompt-injection guardrail (an {nameof(IChatGuardrail)} or {nameof(IChatRequestRedactor)} "
+                + $"whose implementation type is marked {nameof(IPromptInjectionGuardrail)}), so nothing stops "
+                + "instructions smuggled into user content from reaching the model. Call "
+                + "AddContentPolicyGuardrail(configuration) before AddMmcaChatClient for the one this framework "
+                + $"ships, or mark your own injection defense with {nameof(IPromptInjectionGuardrail)}. "
+                + "AddPiiRedactionGuardrail() alone does not satisfy this: it strips contact details, not "
+                + "injected instructions. A host that deliberately wants none sets "
+                + $"{AiSettings.SectionName}:{nameof(AiSettings.RequireGuardrail)} to false, which is a "
                 + "reviewable line rather than an absence nobody can see.");
         }
 
@@ -227,6 +236,38 @@ public static class AiServiceCollectionExtensions
                 + $"leave {AiSettings.SectionName}:{nameof(AiSettings.AllowTools)} false.");
         }
     }
+
+    /// <summary>
+    /// Answers whether a descriptor registers a prompt-injection defense: an unkeyed
+    /// <see cref="IChatGuardrail"/> or <see cref="IChatRequestRedactor"/> whose implementation type
+    /// is marked <see cref="IPromptInjectionGuardrail"/>.
+    /// </summary>
+    /// <param name="descriptor">One registration from the collection being configured.</param>
+    /// <returns><see langword="true"/> when the registration is a prompt-injection defense.</returns>
+    /// <remarks>
+    /// Reads the descriptor rather than resolving it, like every other registration-time check here.
+    /// The implementation type comes from the descriptor's type, its instance, or the return type of
+    /// a typed factory (the same source the container's own <c>TryAddEnumerable</c> reads), so a
+    /// factory typed only as the contract cannot be recognized and does not count.
+    /// </remarks>
+    private static bool IsPromptInjectionGuardrail(ServiceDescriptor descriptor)
+    {
+        var isGuardrailContract = descriptor.ServiceType == typeof(IChatGuardrail)
+            || descriptor.ServiceType == typeof(IChatRequestRedactor);
+        if (descriptor.IsKeyedService || !isGuardrailContract)
+        {
+            return false;
+        }
+
+        var implementationType = descriptor.ImplementationType
+            ?? descriptor.ImplementationInstance?.GetType()
+            ?? FactoryReturnType(descriptor.ImplementationFactory);
+
+        return implementationType is not null && typeof(IPromptInjectionGuardrail).IsAssignableFrom(implementationType);
+    }
+
+    private static Type? FactoryReturnType(Func<IServiceProvider, object>? factory) =>
+        factory?.GetType() is { IsGenericType: true } factoryType ? factoryType.GenericTypeArguments[^1] : null;
 
     /// <summary>
     /// Builds the innermost provider client by resolving the registered

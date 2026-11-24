@@ -14,6 +14,9 @@ public sealed class ReplayChatClientTests
 {
     private const string Prompt = "Summarize this.";
 
+    private static readonly PromptContract HarnessContract =
+        new("harness-prompt", "1", "reference-model", "You answer harness questions.");
+
     [Fact]
     public async Task Replays_TheRecordedResponse()
     {
@@ -135,6 +138,55 @@ public sealed class ReplayChatClientTests
         assertion.WithMessage("*second-case*", "the report names every failing case, not only the first");
     }
 
+    [Fact]
+    public void GoldenBase_HashGate_Fails_WhenTheCorpusIsEmpty()
+    {
+        var harness = new EmptyCorpusHarness();
+
+        Action act = harness.EveryGoldenCase_WasRecordedAgainstTheCurrentContract;
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*corpus is empty*", "the hash gate refuses an empty corpus exactly as the replay gate does");
+    }
+
+    [Fact]
+    public void GoldenBase_HashGate_Fails_NamingEveryCaseRecordedAgainstAStaleContract()
+    {
+        var harness = new StaleHashHarness();
+
+        Action act = harness.EveryGoldenCase_WasRecordedAgainstTheCurrentContract;
+
+        var assertion = act.Should().Throw<InvalidOperationException>();
+        assertion.WithMessage("*stale-one*");
+        assertion.WithMessage("*stale-two*", "the report names every stale case, not only the first");
+        assertion.WithMessage("*re-record*", "the message tells the author what to do");
+        assertion.WithMessage($"*{HarnessContract.Hash}*", "the message names the hash to record against");
+        assertion.Which.Message.Should().NotContain(
+            "current-one",
+            "a case recorded against the current contract is not reported");
+    }
+
+    [Fact]
+    public void GoldenBase_HashGate_Passes_WhenEveryCaseMatchesTheCurrentContract()
+    {
+        var harness = new MissingRecordingHarness();
+
+        Action act = harness.EveryGoldenCase_WasRecordedAgainstTheCurrentContract;
+
+        act.Should().NotThrow("both cases were recorded against the harness contract");
+    }
+
+    [Fact]
+    public void GoldenBase_HashGate_Fails_WhenOnlyTheSystemPromptMoved()
+    {
+        var harness = new StaleHashHarness(HarnessContract with { SystemPrompt = "Answer in French." });
+
+        Action act = harness.EveryGoldenCase_WasRecordedAgainstTheCurrentContract;
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*current-one*", "a system-prompt edit moves the hash, so even the once-current case is stale");
+    }
+
     private static ChatResponse Recorded(string text) =>
         new(new ChatMessage(ChatRole.Assistant, text))
         {
@@ -145,6 +197,8 @@ public sealed class ReplayChatClientTests
     private sealed class EmptyCorpusHarness : GoldenReplayTestsBase
     {
         protected override IEnumerable<GoldenReplayCase> Cases => [];
+
+        protected override PromptContract CurrentContract => HarnessContract;
 
         protected override Task AssertCaseAsync(
             GoldenReplayCase testCase,
@@ -157,9 +211,34 @@ public sealed class ReplayChatClientTests
     {
         protected override IEnumerable<GoldenReplayCase> Cases =>
         [
-            new("first-case", "a recording that is not there", "Evaluation/Golden/does-not-exist-1.json"),
-            new("second-case", "another recording that is not there", "Evaluation/Golden/does-not-exist-2.json"),
+            new("first-case", "a recording that is not there", "Evaluation/Golden/does-not-exist-1.json", HarnessContract.Hash),
+            new("second-case", "another recording that is not there", "Evaluation/Golden/does-not-exist-2.json", HarnessContract.Hash),
         ];
+
+        protected override PromptContract CurrentContract => HarnessContract;
+
+        protected override Task AssertCaseAsync(
+            GoldenReplayCase testCase,
+            ReplayChatClient replay,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// One case recorded against the harness contract and two recorded against an older one, so the
+    /// hash gate must name exactly the two stale ones.
+    /// </summary>
+    private sealed class StaleHashHarness(PromptContract? current = null) : GoldenReplayTestsBase
+    {
+        private static readonly string OlderHash = (HarnessContract with { Version = "0" }).Hash;
+
+        protected override IEnumerable<GoldenReplayCase> Cases =>
+        [
+            new("current-one", "recorded against the current contract", "Evaluation/Golden/case-plain-text.json", HarnessContract.Hash),
+            new("stale-one", "recorded against an older contract", "Evaluation/Golden/case-plain-text.json", OlderHash),
+            new("stale-two", "also recorded against an older contract", "Evaluation/Golden/case-multiline.json", OlderHash),
+        ];
+
+        protected override PromptContract CurrentContract => current ?? HarnessContract;
 
         protected override Task AssertCaseAsync(
             GoldenReplayCase testCase,

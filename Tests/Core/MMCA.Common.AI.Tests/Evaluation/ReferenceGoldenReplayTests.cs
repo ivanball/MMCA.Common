@@ -13,16 +13,28 @@ namespace MMCA.Common.AI.Tests.Evaluation;
 /// point of a golden corpus: the recording is the expectation, and re-recording it is a reviewable
 /// diff rather than an edit to an assertion.
 /// </para>
+/// <para>
+/// Each case carries the hash of the contract it was recorded against as a literal, never as
+/// <c>ReferencePrompts.Contract.Hash</c>: a computed value would always equal the current one and
+/// the hash gate would pass vacuously. Editing the reference prompt therefore fails this class until
+/// the cases are re-recorded and the literal moved, which is the protocol the base enforces.
+/// </para>
 /// </summary>
 public sealed class ReferenceGoldenReplayTests : GoldenReplayTestsBase
 {
+    /// <summary>The hash of <c>reference-summarize@1</c>, the contract these cases were recorded against.</summary>
+    private const string RecordedAgainst = "5c7c2605ba80e5b17e814078868f210e31f3674e812af61c1df9504569bb8d06";
+
     /// <inheritdoc />
     protected override IEnumerable<GoldenReplayCase> Cases =>
     [
-        new("plain-text", "a one-line answer", "Evaluation/Golden/case-plain-text.json"),
-        new("with-usage", "an answer whose recording carries both token counts", "Evaluation/Golden/case-with-usage.json"),
-        new("multiline", "an answer spanning several lines", "Evaluation/Golden/case-multiline.json"),
+        new("plain-text", "a one-line answer", "Evaluation/Golden/case-plain-text.json", RecordedAgainst),
+        new("with-usage", "an answer whose recording carries both token counts", "Evaluation/Golden/case-with-usage.json", RecordedAgainst),
+        new("multiline", "an answer spanning several lines", "Evaluation/Golden/case-multiline.json", RecordedAgainst),
     ];
+
+    /// <inheritdoc />
+    protected override PromptContract CurrentContract => ReferencePrompts.Contract;
 
     /// <inheritdoc />
     protected override async Task AssertCaseAsync(

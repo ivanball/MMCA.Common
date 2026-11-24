@@ -20,11 +20,24 @@ namespace MMCA.Common.AI.Testing;
 /// alphabetically. An empty corpus is a failure too, because an evaluation that evaluates nothing
 /// passes forever.
 /// </para>
+/// <para>
+/// Every case records the <see cref="PromptContract.Hash"/> it was recorded against, and
+/// <see cref="EveryGoldenCase_WasRecordedAgainstTheCurrentContract"/> fails, naming the cases, when
+/// that hash is not <see cref="CurrentContract"/>'s. A recording is evidence about one exact
+/// prompt, model and system text; once any of them moves, replaying the old answer still passes
+/// while proving nothing, so the gate demands a re-recording instead.
+/// </para>
 /// </summary>
 public abstract class GoldenReplayTestsBase
 {
     /// <summary>Gets the corpus: one entry per recorded case.</summary>
     protected abstract IEnumerable<GoldenReplayCase> Cases { get; }
+
+    /// <summary>
+    /// Gets the prompt contract the code under test ships today: the same instance it sends with
+    /// its requests, so the hash compared against each case is the hash in production.
+    /// </summary>
+    protected abstract PromptContract CurrentContract { get; }
 
     /// <summary>
     /// Drives the code under test for one case and asserts the outcome. Throwing (an assertion
@@ -40,9 +53,34 @@ public abstract class GoldenReplayTestsBase
         CancellationToken cancellationToken);
 
     [Fact]
+    public void EveryGoldenCase_WasRecordedAgainstTheCurrentContract()
+    {
+        var cases = LoadCases();
+        var contract = CurrentContract
+            ?? throw new InvalidOperationException(
+                "CurrentContract is null, so no recording can be checked against the prompt that ships. "
+                + "Return the PromptContract the code under test sends.");
+        var currentHash = contract.Hash;
+
+        var stale = cases
+            .Where(testCase => testCase is not null
+                && !string.Equals(testCase.PromptContractHash, currentHash, StringComparison.Ordinal))
+            .Select(testCase => $"  - {testCase.Id}: recorded against {testCase.PromptContractHash}")
+            .ToList();
+
+        if (stale.Count > 0)
+        {
+            throw new InvalidOperationException(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{stale.Count} of {cases.Count} golden cases were recorded against a different prompt contract than {contract.Name}@{contract.Version} (hash {currentHash}). A recording proves nothing about a prompt, model or system text it was not made with: re-record these cases against the current contract and set their PromptContractHash to {currentHash}.{Environment.NewLine}{string.Join(Environment.NewLine, stale)}"));
+        }
+    }
+
+    [Fact]
     public async Task EveryGoldenCase_ReplaysAsRecorded()
     {
-        List<GoldenReplayCase> cases = Cases is null ? [] : [.. Cases];
+        var cases = LoadCases();
         var failures = new List<string>();
 
         foreach (var testCase in cases)
@@ -54,13 +92,6 @@ public abstract class GoldenReplayTestsBase
             }
         }
 
-        if (cases.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "The golden corpus is empty, so this gate would pass without evaluating anything. "
-                + "Record at least one case and declare it in Cases.");
-        }
-
         if (failures.Count > 0)
         {
             throw new InvalidOperationException(
@@ -68,6 +99,20 @@ public abstract class GoldenReplayTestsBase
                     CultureInfo.InvariantCulture,
                     $"{failures.Count} of {cases.Count} golden cases did not replay as recorded:{Environment.NewLine}{string.Join(Environment.NewLine, failures)}"));
         }
+    }
+
+    private List<GoldenReplayCase> LoadCases()
+    {
+        List<GoldenReplayCase> cases = Cases is null ? [] : [.. Cases];
+
+        if (cases.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "The golden corpus is empty, so this gate would pass without evaluating anything. "
+                + "Record at least one case and declare it in Cases.");
+        }
+
+        return cases;
     }
 
     private async Task<string?> RunCaseAsync(GoldenReplayCase testCase, CancellationToken cancellationToken)
