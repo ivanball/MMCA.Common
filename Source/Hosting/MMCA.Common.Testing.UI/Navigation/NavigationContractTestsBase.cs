@@ -405,38 +405,52 @@ public abstract partial class NavigationContractTestsBase
         File.Exists(docPath).Should().BeTrue(
             because: $"the navigation gate reads the Route Contract from {DocFileName}, looked up via the {DocEnvironmentVariable} environment variable and otherwise at the default path {DefaultDocPath}, and neither exists; clone the Website repo next to this repo or set {DocEnvironmentVariable} to the document's path (CI downloads the published copy and sets it)");
 
-        var problems = new List<string>();
-        var lines = File.ReadAllLines(docPath);
+        return ParseContractTable(File.ReadAllLines(docPath));
+    }
+
+    private static ContractTable ParseContractTable(string[] lines)
+    {
         var headingIndex = Array.FindIndex(lines, line => RouteContractHeadingRegex.IsMatch(line));
         if (headingIndex < 0)
         {
-            problems.Add("missing '## Route Contract' section");
-            return new ContractTable([], problems);
+            return new ContractTable([], ["missing '## Route Contract' section"]);
         }
 
-        var section = lines.Skip(headingIndex + 1).TakeWhile(line => !SectionHeadingRegex.IsMatch(line)).ToList();
-        var tableLines = section
+        var tableLines = ReadSectionTable(lines, headingIndex);
+        if (tableLines.Count < 2 || !HeaderRowRegex.IsMatch(tableLines[0]))
+        {
+            return new ContractTable([], ["the '## Route Contract' section has no '| Route | Page | Access |' table"]);
+        }
+
+        return ParseContractRows(tableLines.Skip(2));
+    }
+
+    // The first run of '|' lines in the section that starts below the heading.
+    private static List<string> ReadSectionTable(string[] lines, int headingIndex)
+    {
+        var tableLines = lines
+            .Skip(headingIndex + 1)
+            .TakeWhile(line => !SectionHeadingRegex.IsMatch(line))
             .SkipWhile(line => line.TrimStart() is not ['|', ..])
             .TakeWhile(line => line.TrimStart() is ['|', ..])
             .ToList();
-        if (tableLines.Count < 2 || !HeaderRowRegex.IsMatch(tableLines[0]))
-        {
-            problems.Add("the '## Route Contract' section has no '| Route | Page | Access |' table");
-            return new ContractTable([], problems);
-        }
+        return tableLines;
+    }
 
+    private static ContractTable ParseContractRows(IEnumerable<string> lines)
+    {
         var rows = new List<ContractRow>();
-        foreach (var line in tableLines.Skip(2))
+        var problems = new List<string>();
+        foreach (var line in lines)
         {
-            var cells = line.Trim().Trim('|').Split('|').Select(cell => cell.Trim()).ToArray();
-            var route = cells.Length > 0 ? BacktickedRouteRegex.Match(cells[0]) : Match.Empty;
-            if (cells.Length != 3 || !route.Success)
+            if (ParseContractRow(line) is { } row)
+            {
+                rows.Add(row);
+            }
+            else
             {
                 problems.Add($"malformed row '{line.Trim()}': expected three cells with a backticked route template first");
-                continue;
             }
-
-            rows.Add(new ContractRow(route.Groups["route"].Value, cells[1], cells[2]));
         }
 
         if (rows.Count == 0)
@@ -445,6 +459,16 @@ public abstract partial class NavigationContractTestsBase
         }
 
         return new ContractTable(rows, problems);
+    }
+
+    // Three cells, the first a backticked route template; null for anything else.
+    private static ContractRow? ParseContractRow(string line)
+    {
+        var cells = line.Trim().Trim('|').Split('|').Select(cell => cell.Trim()).ToArray();
+        var route = cells.Length > 0 ? BacktickedRouteRegex.Match(cells[0]) : Match.Empty;
+        return cells.Length == 3 && route.Success
+            ? new ContractRow(route.Groups["route"].Value, cells[1], cells[2])
+            : null;
     }
 
     private string ResolveDocPath()

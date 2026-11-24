@@ -69,6 +69,45 @@ public sealed class NavItemGuardContractTestsBaseTests : IDisposable
     }
 
     [Fact]
+    public void AnItemRequiringAnotherRole_Fails()
+    {
+        _fixture.WriteModule(NavigationFixture.CleanModule.Replace(
+            "RequiredRole: FixtureRoleNames.Admin",
+            "RequiredRole: FixtureRoleNames.Member",
+            StringComparison.Ordinal));
+        var gate = new FixtureGuard(_fixture);
+
+        var act = gate.EveryNavItem_IsNoLooserThanTheGuardOfThePageItOpens;
+
+        act.Should().Throw<Exception>().WithMessage("*Admin -> /admin*requires one of the roles [Admin] but the item requires role 'Member'*");
+    }
+
+    [Fact]
+    public void AnItemRequiringAnotherPermission_Fails()
+    {
+        _fixture.WriteModule(NavigationFixture.CleanModule.Replace(
+            "RequiredPermission: \"reports:view\"",
+            "RequiredPermission: \"reports:edit\"",
+            StringComparison.Ordinal));
+        var gate = new FixtureGuard(_fixture);
+
+        var act = gate.EveryNavItem_IsNoLooserThanTheGuardOfThePageItOpens;
+
+        act.Should().Throw<Exception>().WithMessage("*Report -> /reports/1*requires the permission 'reports:view' but the item requires permission 'reports:edit'*");
+    }
+
+    [Fact]
+    public void AnItemToAPageWhoseGuardCannotBeRead_Fails()
+    {
+        _fixture.WritePage("Dashboard", "@page \"/dashboard\"\n<h1>Dashboard</h1>\n");
+        var gate = new FixtureGuard(_fixture);
+
+        var act = gate.EveryNavItem_IsNoLooserThanTheGuardOfThePageItOpens;
+
+        act.Should().Throw<Exception>().WithMessage("*Dashboard -> /dashboard*the page guard could not be read (declares no access attribute*");
+    }
+
+    [Fact]
     public void ADeadLink_Fails()
     {
         _fixture.WriteModule(NavigationFixture.CleanModule.Replace("\"/dashboard\"", "\"/nowhere\"", StringComparison.Ordinal));

@@ -139,6 +139,92 @@ public sealed class NavigationContractTestsBaseTests : IDisposable
     }
 
     [Fact]
+    public void AMissingRouteContractHeading_FailsTheTableFact()
+    {
+        _fixture.WriteContract(NavigationFixture.CleanContract.Replace("## Route Contract", "## Routes", StringComparison.Ordinal));
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*missing '## Route Contract' section*");
+    }
+
+    [Fact]
+    public void ARouteContractSectionWithoutATable_FailsTheTableFact()
+    {
+        _fixture.WriteContract("# Fixture navigation\n\n## Route Contract\n\nThe table moved.\n\n## Something else\n\n| Route | Page | Access |\n| --- | --- | --- |\n| `/app-home` | AppHome | Anonymous |\n");
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>("a table under the next heading is not the contract").WithMessage("*section has no*Route*Page*Access*table*");
+    }
+
+    [Fact]
+    public void ATableWithTheWrongHeader_FailsTheTableFact()
+    {
+        _fixture.WriteContract(NavigationFixture.CleanContract.Replace("| Route | Page | Access |\n| --- | --- | --- |\n| `/app-home`", "| Path | Page | Access |\n| --- | --- | --- |\n| `/app-home`", StringComparison.Ordinal));
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*section has no*table*");
+    }
+
+    [Fact]
+    public void AnEmptyContractTable_FailsTheTableFact()
+    {
+        _fixture.WriteContract("# Fixture navigation\n\n## Route Contract\n\n| Route | Page | Access |\n| --- | --- | --- |\n");
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*the Route Contract table is empty*");
+    }
+
+    [Fact]
+    public void ARowWithTooFewCells_FailsTheTableFact()
+    {
+        _fixture.WriteContract(NavigationFixture.CleanContract.Replace(
+            "| `/dashboard` | Dashboard | Authenticated |",
+            "| `/dashboard` | Authenticated |",
+            StringComparison.Ordinal));
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*malformed row*/dashboard*expected three cells*");
+    }
+
+    [Fact]
+    public void ADuplicateRow_FailsTheTableFact()
+    {
+        _fixture.WriteContract(NavigationFixture.CleanContract.Replace(
+            "| `/admin` | AdminPanel | Admin |",
+            "| `/admin` | AdminPanel | Admin |\n| `/admin` | AdminPanel | Admin |",
+            StringComparison.Ordinal));
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*/admin: 2 rows; keep exactly one row per route*");
+    }
+
+    [Fact]
+    public void APageCellNamingAnotherPage_FailsTheTableFact()
+    {
+        _fixture.WriteContract(NavigationFixture.CleanContract.Replace(
+            "| `/admin` | AdminPanel | Admin |",
+            "| `/admin` | Dashboard | Admin |",
+            StringComparison.Ordinal));
+        var gate = new FixtureContract(_fixture);
+
+        var act = gate.RouteContractTable_IsWellFormed;
+
+        act.Should().Throw<Exception>().WithMessage("*/admin: Page 'Dashboard' does not match the page that declares it (AdminPanel*");
+    }
+
+    [Fact]
     public void AMissingDocument_Fails_RatherThanSkipping()
     {
         _fixture.DeleteContract();

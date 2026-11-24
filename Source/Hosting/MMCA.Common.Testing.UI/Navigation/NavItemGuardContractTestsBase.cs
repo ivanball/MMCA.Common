@@ -128,35 +128,50 @@ public abstract partial class NavItemGuardContractTestsBase
             because: "a nav item must require at least what its page's guard enforces, or the menu offers signed-out or under-privileged callers a link that ends in a sign-in challenge or Access Denied; fix the NAV ITEM (add the RequiredRole, RequiredClaim or RequiredPermission the page enforces, or move it to the User/Admin section), never loosen the page guard (rubric section 25)");
     }
 
+    // One problem per rule the item fails, in rule order: authentication, role, claim, permission.
     private static IEnumerable<string> Compare(NavItem item, GuardedPage page)
     {
         if (page.Guard is not { } guard)
         {
-            yield return $"the page guard could not be read ({page.Problem})";
-            yield break;
+            return [$"the page guard could not be read ({page.Problem})"];
         }
 
-        var itemIsAnonymous = item.RequiredRole is null && item.RequiredClaim is null && item.RequiredPermission is null && item.Section is NavSection.General;
-        if (guard.RequiresAuthentication && itemIsAnonymous)
-        {
-            yield return $"the page requires a signed-in caller ({guard.Description}) but the item is shown to anonymous visitors";
-        }
-
-        if (guard.AnyOfRoles.Count > 0 && (item.RequiredRole is null || !guard.AnyOfRoles.Contains(item.RequiredRole, StringComparer.Ordinal)))
-        {
-            yield return $"the page requires one of the roles [{string.Join(", ", guard.AnyOfRoles)}] but the item requires role '{item.RequiredRole ?? "<none>"}'";
-        }
-
-        if (guard.ClaimType is not null && !string.Equals(item.RequiredClaim, guard.ClaimType, StringComparison.Ordinal))
-        {
-            yield return $"the page requires the claim '{guard.ClaimType}' but the item requires claim '{item.RequiredClaim ?? "<none>"}'";
-        }
-
-        if (guard.Permission is not null && !string.Equals(item.RequiredPermission, guard.Permission, StringComparison.Ordinal))
-        {
-            yield return $"the page requires the permission '{guard.Permission}' but the item requires permission '{item.RequiredPermission ?? "<none>"}'";
-        }
+        string?[] problems =
+        [
+            CompareAuthentication(item, guard),
+            CompareRoles(item, guard),
+            CompareClaim(item, guard),
+            ComparePermission(item, guard),
+        ];
+        return problems.OfType<string>();
     }
+
+    private static string? CompareAuthentication(NavItem item, PageGuard guard) =>
+        guard.RequiresAuthentication && IsAnonymous(item)
+            ? $"the page requires a signed-in caller ({guard.Description}) but the item is shown to anonymous visitors"
+            : null;
+
+    // The shared NavMenu shows an item with no requirement in the General section to everyone.
+    private static bool IsAnonymous(NavItem item) =>
+        item.RequiredRole is null && item.RequiredClaim is null && item.RequiredPermission is null && item.Section is NavSection.General;
+
+    private static string? CompareRoles(NavItem item, PageGuard guard) =>
+        guard.AnyOfRoles.Count > 0 && !RequiresOneOfTheRoles(item, guard)
+            ? $"the page requires one of the roles [{string.Join(", ", guard.AnyOfRoles)}] but the item requires role '{item.RequiredRole ?? "<none>"}'"
+            : null;
+
+    private static bool RequiresOneOfTheRoles(NavItem item, PageGuard guard) =>
+        item.RequiredRole is not null && guard.AnyOfRoles.Contains(item.RequiredRole, StringComparer.Ordinal);
+
+    private static string? CompareClaim(NavItem item, PageGuard guard) =>
+        guard.ClaimType is not null && !string.Equals(item.RequiredClaim, guard.ClaimType, StringComparison.Ordinal)
+            ? $"the page requires the claim '{guard.ClaimType}' but the item requires claim '{item.RequiredClaim ?? "<none>"}'"
+            : null;
+
+    private static string? ComparePermission(NavItem item, PageGuard guard) =>
+        guard.Permission is not null && !string.Equals(item.RequiredPermission, guard.Permission, StringComparison.Ordinal)
+            ? $"the page requires the permission '{guard.Permission}' but the item requires permission '{item.RequiredPermission ?? "<none>"}'"
+            : null;
 
     private static string? PositionalName(int position) =>
         position < PositionalRequirementNames.Length ? PositionalRequirementNames[position] : null;
@@ -217,52 +232,101 @@ public abstract partial class NavItemGuardContractTestsBase
             return (new PageGuard(false, [], null, null, "no [Authorize]"), null);
         }
 
-        var roles = authorize
-            .Where(attribute => !string.IsNullOrWhiteSpace(attribute.Roles))
-            .SelectMany(attribute => attribute.Roles!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .ToList();
-        string? claimType = null;
-        string? permission = null;
+        var guard = new GuardBuilder(ReadAttributeRoles(authorize));
         foreach (var policyName in authorize.Select(attribute => attribute.Policy).OfType<string>())
         {
-            if (policies.GetPolicy(policyName) is not { } policy)
+            if (ReadPolicy(policyName, policies, guard) is { } problem)
             {
-                return (null, $"policy '{policyName}' is not registered by AddUIShared");
-            }
-
-            foreach (var requirement in policy.Requirements)
-            {
-                switch (requirement)
-                {
-                    case DenyAnonymousAuthorizationRequirement:
-                        break;
-                    case RolesAuthorizationRequirement rolesRequirement:
-                        roles.AddRange(rolesRequirement.AllowedRoles);
-                        break;
-                    case ClaimsAuthorizationRequirement { ClaimType: AuthClaimTypes.Permission, AllowedValues: { } values } when values.Take(2).Count() == 1:
-                        permission = values.Single();
-                        break;
-                    case ClaimsAuthorizationRequirement claimsRequirement:
-                        claimType = claimsRequirement.ClaimType;
-                        break;
-                    case var other when string.Equals(other.GetType().Name, PagePermissionRequirementTypeName, StringComparison.Ordinal):
-                        // [HasPagePermission(X)]: the caller's token carries the permission claim X
-                        // (PagePermissionRequirement's own contract).
-                        permission = ReadPermissionProperty(other);
-                        break;
-                    case var other when string.Equals(other.GetType().Name, NotificationPageRequirementTypeName, StringComparison.Ordinal):
-                        // [Authorize] semantics plus its Permission when set (NotificationPageRequirement's
-                        // own contract, evaluated by NotificationPageAuthorizationHandler).
-                        permission ??= ReadPermissionProperty(other);
-                        break;
-                    default:
-                        return (null, $"policy '{policyName}' carries requirement {requirement.GetType().Name}, which this gate does not know how to compare; teach NavItemGuardContractTestsBase what it enforces");
-                }
+                return (null, problem);
             }
         }
 
         var description = string.Join(" ", authorize.Select(attribute => $"[Authorize(Roles = {attribute.Roles ?? "-"}, Policy = {attribute.Policy ?? "-"})]"));
-        return (new PageGuard(true, roles, claimType, permission, description), null);
+        return (new PageGuard(true, guard.Roles, guard.ClaimType, guard.Permission, description), null);
+    }
+
+    private static List<string> ReadAttributeRoles(List<AuthorizeAttribute> authorize)
+    {
+        var roles = authorize
+            .Where(attribute => !string.IsNullOrWhiteSpace(attribute.Roles))
+            .SelectMany(attribute => attribute.Roles!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .ToList();
+        return roles;
+    }
+
+    // Folds what one named policy enforces into the guard; returns the problem when it cannot.
+    private static string? ReadPolicy(string policyName, AuthorizationOptions policies, GuardBuilder guard)
+    {
+        if (policies.GetPolicy(policyName) is not { } policy)
+        {
+            return $"policy '{policyName}' is not registered by AddUIShared";
+        }
+
+        foreach (var requirement in policy.Requirements)
+        {
+            if (!ApplyRequirement(requirement, guard))
+            {
+                return $"policy '{policyName}' carries requirement {requirement.GetType().Name}, which this gate does not know how to compare; teach NavItemGuardContractTestsBase what it enforces";
+            }
+        }
+
+        return null;
+    }
+
+    // False when the requirement is not one this gate knows how to compare.
+    private static bool ApplyRequirement(IAuthorizationRequirement requirement, GuardBuilder guard)
+    {
+        switch (requirement)
+        {
+            case DenyAnonymousAuthorizationRequirement:
+                return true;
+            case RolesAuthorizationRequirement rolesRequirement:
+                guard.Roles.AddRange(rolesRequirement.AllowedRoles);
+                return true;
+            case ClaimsAuthorizationRequirement claimsRequirement:
+                ApplyClaimsRequirement(claimsRequirement, guard);
+                return true;
+            default:
+                return ApplyFrameworkRequirement(requirement, guard);
+        }
+    }
+
+    // A permission claim with exactly one allowed value is that permission; any other claim is a claim type.
+    private static void ApplyClaimsRequirement(ClaimsAuthorizationRequirement requirement, GuardBuilder guard)
+    {
+        if (string.Equals(requirement.ClaimType, AuthClaimTypes.Permission, StringComparison.Ordinal)
+            && requirement.AllowedValues is { } values
+            && values.Take(2).Count() == 1)
+        {
+            guard.Permission = values.Single();
+        }
+        else
+        {
+            guard.ClaimType = requirement.ClaimType;
+        }
+    }
+
+    // The framework's own requirements, matched by name because their types are internal to MMCA.Common.UI.
+    private static bool ApplyFrameworkRequirement(IAuthorizationRequirement requirement, GuardBuilder guard)
+    {
+        var name = requirement.GetType().Name;
+        if (string.Equals(name, PagePermissionRequirementTypeName, StringComparison.Ordinal))
+        {
+            // [HasPagePermission(X)]: the caller's token carries the permission claim X
+            // (PagePermissionRequirement's own contract).
+            guard.Permission = ReadPermissionProperty(requirement);
+            return true;
+        }
+
+        if (string.Equals(name, NotificationPageRequirementTypeName, StringComparison.Ordinal))
+        {
+            // [Authorize] semantics plus its Permission when set (NotificationPageRequirement's
+            // own contract, evaluated by NotificationPageAuthorizationHandler).
+            guard.Permission ??= ReadPermissionProperty(requirement);
+            return true;
+        }
+
+        return false;
     }
 
     private static string? ReadPermissionProperty(IAuthorizationRequirement requirement) =>
@@ -528,4 +592,14 @@ public abstract partial class NavItemGuardContractTestsBase
     private sealed record GuardedPage(string Route, string Source, PageGuard? Guard, string? Problem);
 
     private sealed record PageGuard(bool RequiresAuthentication, IReadOnlyList<string> AnyOfRoles, string? ClaimType, string? Permission, string Description);
+
+    // What a component's [Authorize] attributes and their policies add up to, while they are read.
+    private sealed class GuardBuilder(List<string> roles)
+    {
+        public List<string> Roles { get; } = roles;
+
+        public string? ClaimType { get; set; }
+
+        public string? Permission { get; set; }
+    }
 }
