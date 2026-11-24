@@ -34,6 +34,32 @@ public sealed class GenericArgumentOnlyDependent
     public IReadOnlyList<GenericArgumentTarget> Items { get; init; } = [];
 }
 
+/// <summary>The target is only ever the element of a rectangular (multi-dimensional) array property.</summary>
+public sealed class MultiDimensionalArrayOnlyDependent
+{
+#pragma warning disable CA1814 // the rectangular array is the point of the fixture
+    public RectangularArrayTarget[,] Grid { get; init; } = new RectangularArrayTarget[0, 0];
+#pragma warning restore CA1814
+}
+
+/// <summary>The target is only ever the element of a single-dimensional array parameter.</summary>
+public static class VectorOnlyDependent
+{
+    public static int Count(VectorTarget[] items) => items.Length;
+}
+
+/// <summary>The target is only ever passed by reference.</summary>
+public static class ByReferenceOnlyDependent
+{
+    public static void Reset(ref ByReferenceTarget target) => target = default;
+}
+
+/// <summary>The target is a nested type, only ever a generic argument inside an array element.</summary>
+public sealed class NestedGenericArrayOnlyDependent
+{
+    public IReadOnlyList<TargetHolder.NestedTarget>[] Batches { get; init; } = [];
+}
+
 /// <summary>Names nothing from <see cref="Targets"/>: the control.</summary>
 public static class IndependentSubject
 {

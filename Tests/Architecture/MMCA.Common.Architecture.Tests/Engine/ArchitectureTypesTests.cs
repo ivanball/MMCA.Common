@@ -20,6 +20,10 @@ public sealed class ArchitectureTypesTests
     [InlineData(nameof(AsyncOnlyDependent))]
     [InlineData(nameof(AttributeOnlyDependent))]
     [InlineData(nameof(GenericArgumentOnlyDependent))]
+    [InlineData(nameof(MultiDimensionalArrayOnlyDependent))]
+    [InlineData(nameof(VectorOnlyDependent))]
+    [InlineData(nameof(ByReferenceOnlyDependent))]
+    [InlineData(nameof(NestedGenericArrayOnlyDependent))]
     public void ADependencyNamedOnlyThere_IsFound(string fixture)
     {
         var result = Fixture(fixture).ShouldNot().HaveDependencyOnAny(TargetNamespace);
@@ -47,6 +51,19 @@ public sealed class ArchitectureTypesTests
         Fixture(nameof(AttributeOnlyDependent))
             .ShouldNot().HaveDependencyOnAny($"{TargetNamespace}.LambdaTarget")
             .IsSuccessful.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(nameof(MultiDimensionalArrayOnlyDependent), "RectangularArrayTarget")]
+    [InlineData(nameof(VectorOnlyDependent), "VectorTarget")]
+    [InlineData(nameof(ByReferenceOnlyDependent), "ByReferenceTarget")]
+    [InlineData(nameof(NestedGenericArrayOnlyDependent), "TargetHolder")]
+    public void AWrappedElement_MatchesByItsOwnFullName(string fixture, string target)
+    {
+        // An array or a reference matches through its element type: the suffix comes after the
+        // element's pieces, so the element's full name is still a leading run of them.
+        Fixture(fixture).Should().HaveDependencyOnAll($"{TargetNamespace}.{target}").IsSuccessful.Should().BeTrue();
+        Fixture(fixture).ShouldNot().HaveDependencyOnAny($"{TargetNamespace}.LambdaTarget").IsSuccessful.Should().BeTrue();
     }
 
     [Theory]

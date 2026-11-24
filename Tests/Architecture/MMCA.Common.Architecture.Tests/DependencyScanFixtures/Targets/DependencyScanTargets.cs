@@ -16,5 +16,21 @@ public static class AsyncTarget
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class AttributeTargetAttribute : Attribute;
 
+/// <summary>Reached only as the element of a rectangular array.</summary>
+public sealed class RectangularArrayTarget;
+
+/// <summary>Reached only as the element of a single-dimensional array.</summary>
+public sealed class VectorTarget;
+
+/// <summary>Reached only as a by-reference parameter.</summary>
+public readonly record struct ByReferenceTarget(int Value);
+
+/// <summary>Declares the nested target.</summary>
+public static class TargetHolder
+{
+    /// <summary>Reached only as a generic argument of an array element.</summary>
+    public sealed class NestedTarget;
+}
+
 /// <summary>Reached only as the type argument of a generic type.</summary>
 public sealed class GenericArgumentTarget;
