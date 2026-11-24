@@ -126,13 +126,6 @@
          idiom, the DI scope-per-execution pattern, the OpenTelemetry meters). The only piece the
          framework lacked was the cron grammar, so that is the only piece taken as a dependency. -->
     <PackageVersion Include="Cronos" Version="0.13.0" />
-    <!-- RFC 6238 TOTP grammar behind the opt-in two-factor second factor (MMCA.Common.Infrastructure).
-         MIT and zero-dependency (netstandard2.0), and it does exactly one thing the BCL has no
-         primitive for: derive and verify a time-stepped one-time code, plus the Base32 alphabet the
-         authenticator apps key from. The rest of the feature (secret storage, recovery codes, the
-         claim) is framework code, so this is the only piece taken as a dependency, and it is
-         referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
-    <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <!-- WebAuthn registration and assertion verification behind the opt-in AddPasskeys (ADR-139).
          MIT, .NET Foundation. Held to one version: it parses attacker-supplied CBOR/COSE, so a bump is a
          reviewed change. The bare Version is a NuGet floor ("[4.3.3, )"); the committed
@@ -178,8 +171,6 @@
          MMCA.Common.Testing.Azure). 7.20.2 is the first line with working emulator admin-plane
          support (>= 7.20.1 required). -->
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
-    <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
-    <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage (ADR-045): the MMCA.Common.Azure Blob Storage adapter and its
          Azure.Identity credential. -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
@@ -202,10 +193,6 @@
          a hand-written provider that lists the secrets under one name prefix and reads them in
          batches. Same AWS SDK v4 line as AWSSDK.S3, so both share one AWSSDK.Core. -->
     <PackageVersion Include="AWSSDK.SecretsManager" Version="4.1.1.2" />
-    <!-- Shared DataProtection key ring (MMCA.Common.Aws.AddAwsDataProtection): each key is one
-         SecureString parameter in Systems Manager, KMS-encrypted at rest. AWS-authored; brings
-         AWSSDK.SimpleSystemsManagement and AWSSDK.Extensions.NETCore.Setup on the same v4 line. -->
-    <PackageVersion Include="Amazon.AspNetCore.DataProtection.SSM" Version="4.0.3" />
     <!-- RDS IAM database authentication for PostgreSQL (MMCA.Common.Aws.AddAwsRdsIamAuthentication):
          only RDSAuthTokenGenerator is used, which signs the token locally with SigV4. Same AWS SDK
          v4 line as AWSSDK.S3. -->
@@ -271,17 +258,12 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="$(MmcaFrameworkVersion)" />
-    <!-- Direct dependency of Common.UI: QueryHelpers (Services/ListPageQueryStateService). It is the
-         standalone package, not the shared framework, because Common.UI is consumed by Blazor
-         WebAssembly clients and cannot take <FrameworkReference Include="Microsoft.AspNetCore.App" />. -->
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MmcaFrameworkVersion)" />
     <!-- Direct dependency of Common.UI: IConfiguration appears in its public API. -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <!-- Direct dependency of Common.UI: IHostEnvironment (Globalization/CultureSwitcher.razor). -->
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="$(MmcaFrameworkVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="$(MmcaFrameworkVersion)" />
     <PackageVersion Include="MudBlazor" Version="9.14.0" />
     <PackageVersion Include="Polly" Version="8.9.1" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
@@ -461,7 +443,6 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.21.0" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
