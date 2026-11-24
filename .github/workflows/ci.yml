@@ -173,8 +173,17 @@ jobs:
           # regression that silently drops a whole test project must fail the leg, not pass green.
           # Ratchet it up as the suite grows; lower it only in the PR that deliberately deletes tests.
           # release.yml keeps the two-framework floor (22500) for its single combined run.
+          # --max-parallel-test-modules 1: dotnet-coverage 18.11.0 (and 18.12.0, same native profiler)
+          # races on Linux when test hosts start in parallel. Every host of a session maps one shared
+          # /tmp/CodeCoverage.<session>.d<guid> file per module, and two hosts loading the same module
+          # make the collector truncate and re-create it under a host that already sized it, which
+          # dies with SIGBUS in InitializeModuleFromSharedMemoryUnix (exit 135, "Zero tests ran",
+          # a random first-wave assembly). Reproduced on main and on feat/native-messaging (dumps in
+          # the workspace harness Docs/Planning/sigbus-evidence). One module at a time removed every
+          # re-created file in the trace; it costs about a minute per leg. Remove the flag only when a
+          # dotnet-coverage release fixes the race.
           dotnet-coverage collect -f cobertura -o coverage.unit.${{ matrix.tfm }}.cobertura.xml \
-            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --framework ${{ matrix.tfm }} --minimum-expected-tests 11250"
+            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --framework ${{ matrix.tfm }} --minimum-expected-tests 11250 --max-parallel-test-modules 1"
 
       - name: Upload coverage (unit + architecture + bUnit, ${{ matrix.tfm }})
         if: always() && needs.changes.outputs.code == 'true'
