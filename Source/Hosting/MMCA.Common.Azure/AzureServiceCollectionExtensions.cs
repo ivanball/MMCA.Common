@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Aspire.Integrations;
@@ -80,6 +80,15 @@ public static class AzureServiceCollectionExtensions
         /// when disabled or incomplete the call is a no-op, so hosts register it unconditionally and
         /// deployments switch the channel on by configuration alone (the hub itself is provisioned
         /// before its FCM/APNs credentials exist).
+        /// <para>
+        /// The hub is reached through the framework's own Notification Hubs REST client, a typed factory
+        /// <see cref="HttpClient"/> authorized with a Shared Access Signature from the connection string
+        /// (parsed on first use, so a malformed one fails the first push, not start-up). The client
+        /// carries its own retry (three retries of a transient failure with exponential backoff, or
+        /// the hub's <c>Retry-After</c>) and a 60-second attempt timeout, so the standard resilience
+        /// handler <c>AddServiceDefaults()</c> puts on every factory client is taken off it rather than
+        /// stacked on top.
+        /// </para>
         /// </summary>
         /// <param name="configuration">Application configuration providing the <c>NativePush</c> section.</param>
         /// <returns>The service collection for chaining.</returns>
@@ -98,9 +107,25 @@ public static class AzureServiceCollectionExtensions
                 return services;
             }
 
-            services.TryAddSingleton<INotificationHubClient>(_ =>
-                NotificationHubClient.CreateClientFromConnectionString(
-                    settings.ConnectionString, settings.HubName));
+            services.TryAddSingleton(_ => NotificationHubConnection.Parse(settings.ConnectionString, settings.HubName));
+            services.AddHttpClient<INotificationHubRestClient, NotificationHubRestClient>(static (httpClient, serviceProvider) =>
+                    new NotificationHubRestClient(
+                        httpClient,
+                        serviceProvider.GetRequiredService<NotificationHubConnection>(),
+                        serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System,
+                        NotificationHubRetryPolicy.Default))
+                .ConfigureAdditionalHttpMessageHandlers(static (handlers, _) =>
+                {
+                    // What RemoveAllResilienceHandlers() does, written against the stable API because
+                    // that helper is still EXTEXP0001 (experimental).
+                    for (var i = handlers.Count - 1; i >= 0; i--)
+                    {
+                        if (handlers[i] is ResilienceHandler)
+                        {
+                            handlers.RemoveAt(i);
+                        }
+                    }
+                });
             services.AddTransient<INativePushSender, AzureNotificationHubNativePushSender>();
             services.AddTransient<IPushDeviceRegistrar, AzureNotificationHubDeviceRegistrar>();
 

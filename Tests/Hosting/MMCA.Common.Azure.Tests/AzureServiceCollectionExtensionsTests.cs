@@ -1,8 +1,8 @@
 using AwesomeAssertions;
 using Azure.Storage.Blobs;
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
@@ -91,7 +91,59 @@ public sealed class AzureServiceCollectionExtensionsTests
         ImplementationOf<INativePushSender>(services).Should().Be<AzureNotificationHubNativePushSender>();
         ImplementationOf<IPushDeviceRegistrar>(services).Should().Be<AzureNotificationHubDeviceRegistrar>();
         using var provider = services.BuildServiceProvider();
-        provider.GetRequiredService<INotificationHubClient>().Should().NotBeNull();
+        provider.GetRequiredService<INotificationHubRestClient>().Should().BeOfType<NotificationHubRestClient>();
+        provider.GetRequiredService<IPushDeviceRegistrar>().Should().BeOfType<AzureNotificationHubDeviceRegistrar>();
+        provider.GetRequiredService<INativePushSender>().Should().BeOfType<AzureNotificationHubNativePushSender>();
+    }
+
+    [Fact]
+    public void AddAzureNotificationHubsPush_TakesTheStandardResilienceHandlerOffTheHubClient()
+    {
+        // AddServiceDefaults() puts the standard handler on every factory client; the hub client
+        // carries its own retry, so stacking the two would multiply the attempts.
+        var services = new ServiceCollection().AddLogging();
+        services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
+        services.AddAzureNotificationHubsPush(ConfigurationWith(new()
+        {
+            ["NativePush:Enabled"] = "true",
+            ["NativePush:ConnectionString"] = "Endpoint=sb://hub.servicebus.windows.net/;SharedAccessKeyName=DefaultFullSharedAccessSignature;SharedAccessKey=dGVzdA==",
+            ["NativePush:HubName"] = "mmca-hub",
+        }));
+        services.AddHttpClient("control");
+
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IHttpMessageHandlerFactory>();
+
+        HandlerChain(factory.CreateHandler(nameof(INotificationHubRestClient))).Should().NotContain(h => h is ResilienceHandler);
+        HandlerChain(factory.CreateHandler("control")).Should().Contain(h => h is ResilienceHandler, "the defaults do reach other clients");
+    }
+
+    [Fact]
+    public void AddAzureNotificationHubsPush_AMalformedConnectionString_FailsOnFirstUse_NotAtRegistration()
+    {
+        var services = new ServiceCollection().AddLogging();
+
+        services.AddAzureNotificationHubsPush(ConfigurationWith(new()
+        {
+            ["NativePush:Enabled"] = "true",
+            ["NativePush:ConnectionString"] = "not-a-connection-string",
+            ["NativePush:HubName"] = "mmca-hub",
+        }));
+
+        using var provider = services.BuildServiceProvider();
+        var resolve = () => provider.GetRequiredService<INotificationHubRestClient>();
+        resolve.Should().Throw<FormatException>();
+    }
+
+    private static List<HttpMessageHandler> HandlerChain(HttpMessageHandler handler)
+    {
+        var chain = new List<HttpMessageHandler>();
+        for (HttpMessageHandler? current = handler; current is not null; current = (current as DelegatingHandler)?.InnerHandler)
+        {
+            chain.Add(current);
+        }
+
+        return chain;
     }
 
     [Fact]

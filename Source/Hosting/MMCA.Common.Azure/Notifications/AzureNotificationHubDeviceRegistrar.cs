@@ -1,5 +1,3 @@
-using Microsoft.Azure.NotificationHubs;
-using Microsoft.Azure.NotificationHubs.Messaging;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Shared.Abstractions;
@@ -10,10 +8,12 @@ namespace MMCA.Common.Azure.Notifications;
 /// <summary>
 /// Azure Notification Hubs implementation of <see cref="IPushDeviceRegistrar"/> (ADR-044).
 /// Uses the installation model (client-owned stable ids, full upsert semantics) and stamps
-/// every installation with its owner's <c>user:{id}</c> tag so sends can target users.
+/// every installation with its owner's <c>user:{id}</c> tag so sends can target users. Talks to the
+/// hub through <see cref="INotificationHubRestClient"/>; resolved only through
+/// <c>AddAzureNotificationHubsPush</c>.
 /// </summary>
-public sealed class AzureNotificationHubDeviceRegistrar(
-    INotificationHubClient hubClient,
+internal sealed class AzureNotificationHubDeviceRegistrar(
+    INotificationHubRestClient hubClient,
     ILogger<AzureNotificationHubDeviceRegistrar> logger) : IPushDeviceRegistrar
 {
     /// <summary>The system tag prefix the hub stamps on every registration an installation owns.</summary>
@@ -25,10 +25,10 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     /// <inheritdoc />
     public async Task<Result> UpsertAsync(UserIdentifierType userId, DeviceInstallationRequest request, CancellationToken cancellationToken = default)
     {
-        NotificationPlatform? platform = request.Platform.ToUpperInvariant() switch
+        NotificationHubPlatform? platform = request.Platform.ToUpperInvariant() switch
         {
-            "FCMV1" => NotificationPlatform.FcmV1,
-            "APNS" => NotificationPlatform.Apns,
+            "FCMV1" => NotificationHubPlatform.FcmV1,
+            "APNS" => NotificationHubPlatform.Apns,
             _ => null,
         };
         if (platform is null)
@@ -39,13 +39,11 @@ public sealed class AzureNotificationHubDeviceRegistrar(
                 source: nameof(AzureNotificationHubDeviceRegistrar)));
         }
 
-        var installation = new Installation
-        {
-            InstallationId = request.InstallationId,
-            Platform = platform.Value,
-            PushChannel = request.PushChannel,
-            Tags = [NativePushUserTags.UserTag(userId)],
-        };
+        var installation = new NotificationHubInstallation(
+            request.InstallationId,
+            platform.Value,
+            request.PushChannel,
+            [NativePushUserTags.UserTag(userId)]);
 
         try
         {
@@ -68,7 +66,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             await hubClient.CreateOrUpdateInstallationAsync(installation, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
-        catch (MessagingException ex)
+        catch (NotificationHubException ex)
         {
             logger.LogError(ex, "Device installation upsert failed");
             return Result.Failure(Error.Failure(
@@ -87,7 +85,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             // user:{id} stamp written by UpsertAsync, so read-then-delete is the check.
             // A concurrent re-registration of the same id between the two calls is the
             // owner's own doing, so no lock is warranted.
-            Installation installation = await hubClient.GetInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
+            var installation = await hubClient.GetInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
             if (!OwnedBy(installation, userId))
             {
                 // Someone else's installation (or one registered before ownership tagging).
@@ -98,12 +96,12 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             await hubClient.DeleteInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
-        catch (MessagingEntityNotFoundException)
+        catch (NotificationHubException ex) when (ex.IsEntityNotFound)
         {
             // Idempotent delete: an unknown installation is already the desired state.
             return Result.Success();
         }
-        catch (MessagingException ex)
+        catch (NotificationHubException ex)
         {
             logger.LogError(ex, "Device installation delete failed");
             return DeleteFailed();
@@ -113,10 +111,9 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     /// <inheritdoc />
     /// <remarks>
     /// The hub has no "installations by tag" query, but every installation is materialized as
-    /// registrations that carry its tags plus the system tag <c>$InstallationId:{id}</c> (the SDK
-    /// models that tag on <see cref="RegistrationDescription"/>). Listing the registrations under the
-    /// owner's <c>user:{id}</c> tag, paged by continuation token, therefore yields the user's
-    /// installation ids, and each one goes through <see cref="DeleteAsync"/>, which re-reads the
+    /// registrations that carry its tags plus the system tag <c>$InstallationId:{id}</c>. Listing the
+    /// registrations under the owner's <c>user:{id}</c> tag, paged by continuation token, therefore
+    /// yields the user's installation ids, and each one goes through <see cref="DeleteAsync"/>, which re-reads the
     /// installation and deletes it only while the owner tag is still on it.
     /// </remarks>
     public async Task<Result> DeleteAllForUserAsync(UserIdentifierType userId, CancellationToken cancellationToken = default)
@@ -126,7 +123,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
         {
             installationIds = await FindInstallationIdsAsync(userId, cancellationToken).ConfigureAwait(false);
         }
-        catch (MessagingException ex)
+        catch (NotificationHubException ex)
         {
             logger.LogError(ex, "Listing a user's device installations failed");
             return DeleteFailed();
@@ -160,7 +157,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             var page = await hubClient
                 .GetRegistrationsByTagAsync(ownerTag, continuationToken, RegistrationPageSize, cancellationToken)
                 .ConfigureAwait(false);
-            foreach (var tag in page.SelectMany(registration => registration.Tags ?? Enumerable.Empty<string>()))
+            foreach (var tag in page.RegistrationTags.SelectMany(tags => tags))
             {
                 if (TryReadInstallationId(tag, out var installationId))
                 {
@@ -175,7 +172,7 @@ public sealed class AzureNotificationHubDeviceRegistrar(
         return installationIds;
     }
 
-    /// <summary>Reads the id out of a <c>$InstallationId:{id}</c> system tag (case-insensitive, as the SDK matches it).</summary>
+    /// <summary>Reads the id out of a <c>$InstallationId:{id}</c> system tag (case-insensitive, as the hub matches it).</summary>
     private static bool TryReadInstallationId(string? tag, out string installationId)
     {
         installationId = string.Empty;
@@ -199,12 +196,12 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     /// </summary>
     private async Task<bool> ClaimedByAnotherDeviceAsync(DeviceInstallationRequest request, UserIdentifierType userId, CancellationToken cancellationToken)
     {
-        Installation existing;
+        NotificationHubInstallationState? existing;
         try
         {
             existing = await hubClient.GetInstallationAsync(request.InstallationId, cancellationToken).ConfigureAwait(false);
         }
-        catch (MessagingEntityNotFoundException)
+        catch (NotificationHubException ex) when (ex.IsEntityNotFound)
         {
             return false;
         }
@@ -214,11 +211,11 @@ public sealed class AzureNotificationHubDeviceRegistrar(
             && tags.Any(tag => tag.StartsWith(NativePushUserTags.UserTagPrefix, StringComparison.Ordinal)
                 && !string.Equals(tag, ownTag, StringComparison.Ordinal));
         return ownedByAnotherUser
-            && !string.Equals(existing.PushChannel, request.PushChannel, StringComparison.Ordinal);
+            && !string.Equals(existing!.PushChannel, request.PushChannel, StringComparison.Ordinal);
     }
 
-    private static bool OwnedBy(Installation installation, UserIdentifierType userId) =>
-        installation.Tags is { } tags && tags.Contains(NativePushUserTags.UserTag(userId), StringComparer.Ordinal);
+    private static bool OwnedBy(NotificationHubInstallationState? installation, UserIdentifierType userId) =>
+        installation?.Tags is { } tags && tags.Contains(NativePushUserTags.UserTag(userId), StringComparer.Ordinal);
 
     private static Result DeleteFailed() =>
         Result.Failure(Error.Failure(

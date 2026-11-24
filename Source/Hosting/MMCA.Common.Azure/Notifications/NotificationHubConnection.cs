@@ -45,8 +45,8 @@ internal sealed partial class NotificationHubConnection
 
     /// <summary>
     /// Parses a namespace connection string (<c>Endpoint=...;SharedAccessKeyName=...;SharedAccessKey=...</c>).
-    /// The three keys match case-insensitively, a value runs to the next recognized key, and any other
-    /// key is rejected, as the hub's own connection string parser does.
+    /// The three keys match case-insensitively and in any order, and a value runs to the next of them (so a
+    /// key outside the three is not split out), as the SDK's connection string parser did.
     /// </summary>
     /// <exception cref="FormatException">The connection string is malformed or misses a key.</exception>
     internal static NotificationHubConnection Parse(string connectionString, string hubName)
