@@ -91,43 +91,44 @@ internal sealed class DependencyNameTree
     /// pointer or reference; otherwise the namespace (or declaring type) and the name, then, for a
     /// generic instance, an opening marker and each argument's pieces. Only the leading pieces can
     /// match a supported name; the rest keep a walk from matching across a boundary it should not.
+    /// Built eagerly: <see cref="Match"/> caches the walk per type, so the list is built once per
+    /// distinct type, and the walk still stops at the first piece no name continues into.
     /// </summary>
-    private static IEnumerable<string> Tokens(TypeSig type)
+    private static List<string> Tokens(TypeSig type)
+    {
+        var tokens = new List<string>();
+        AddTokens(type, tokens);
+        return tokens;
+    }
+
+    private static void AddTokens(TypeSig type, List<string> tokens)
     {
         if (type.Kind is TypeSigKind.Array or TypeSigKind.Pointer or TypeSigKind.ByReference)
         {
-            foreach (var token in Tokens(type.Element!))
-            {
-                yield return token;
-            }
-
-            yield return SuffixToken(type);
+            AddTokens(type.Element!, tokens);
+            tokens.Add(SuffixToken(type));
         }
         else
         {
             var @namespace = type.IsNested ? type.DeclaringType!.FullName : type.Namespace;
             if (@namespace.Length > 0)
             {
-                yield return @namespace;
+                tokens.Add(@namespace);
             }
 
-            yield return type.Name;
+            tokens.Add(type.Name);
         }
 
         if (type.Kind != TypeSigKind.GenericInstance || type.Arguments.IsEmpty)
         {
-            yield break;
+            return;
         }
 
-        yield return "<";
+        tokens.Add("<");
         foreach (var argument in type.Arguments)
         {
-            foreach (var token in Tokens(argument))
-            {
-                yield return token;
-            }
-
-            yield return ",";
+            AddTokens(argument, tokens);
+            tokens.Add(",");
         }
     }
 
