@@ -34,7 +34,22 @@ MMCA.Common.Testing.Architecture.ArchitectureMapBase.ModuleShared() -> System.Co
 MMCA.Common.Testing.Architecture.ArchitectureMapBase.OfLayer(MMCA.Common.Testing.Architecture.Layer layer) -> System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>!
 MMCA.Common.Testing.Architecture.ArchitectureMapBase.OtherModuleNamespaces(string! module, MMCA.Common.Testing.Architecture.Layer layer) -> string![]!
 MMCA.Common.Testing.Architecture.ArchitectureMapBase.RootNamespace(string! module, MMCA.Common.Testing.Architecture.Layer layer) -> string!
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult.FailingTypeNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult.IsSuccessful.get -> bool
 MMCA.Common.Testing.Architecture.ArchitectureRules
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions.HaveDependencyOnAll(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureRuleResult!
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions.HaveDependencyOnAny(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureRuleResult!
+MMCA.Common.Testing.Architecture.ArchitectureTypes
+MMCA.Common.Testing.Architecture.ArchitectureTypes.DoNotHaveDependencyOnAny(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.GetTypeNames() -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveAttribute(string! attributeFullName) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveName(string! name) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveNameEndingWith(string! suffix) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.Should() -> MMCA.Common.Testing.Architecture.ArchitectureTypeConditions!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.ShouldNot() -> MMCA.Common.Testing.Architecture.ArchitectureTypeConditions!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.That() -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.BrandColorTokenTestsBase() -> void
 MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.LandingPageCss_SourcesBrandColorFromToken_NotHardcodedHex() -> void
@@ -497,7 +512,7 @@ override MMCA.Common.Testing.Architecture.LayerRef.ToString() -> string!
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsController(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsRoutableComponent(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsScannedEndpointType(System.Type! type) -> bool
-static MMCA.Common.Testing.Architecture.ArchitectureAssert.NoViolations(NetArchTest.Rules.TestResult! result, string! reason) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureAssert.NoViolations(MMCA.Common.Testing.Architecture.ArchitectureRuleResult! result, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureAssert.NoViolations(System.Collections.Generic.IEnumerable<string!>! violations, string! reason) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureMapBase.FindRepoRoot(string! solutionFileName) -> string!
 static MMCA.Common.Testing.Architecture.ArchitectureMapBase.Framework(MMCA.Common.Testing.Architecture.Layer layer, System.Reflection.Assembly! assembly) -> MMCA.Common.Testing.Architecture.LayerRef!
@@ -653,6 +668,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsAreCoLocated
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsHaveValidatorOrRulesSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsResideInApplicationLayer(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValueObjectsAreImmutableSealedInShared(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureTypes.InAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
 static MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ContainsRegionClaim(string! policyText, string! regionClaim) -> bool
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.InheritsCreatePageBase(string! razorMarkup, string? codeBehind) -> bool
 static MMCA.Common.Testing.Architecture.FormsConventionTestsBase.MissingMarkers(string! markup, System.Collections.Generic.IEnumerable<string!>! markers) -> System.Collections.Generic.IReadOnlyList<string!>!
