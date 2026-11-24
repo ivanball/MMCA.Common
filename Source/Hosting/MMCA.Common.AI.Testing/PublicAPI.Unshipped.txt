@@ -1,9 +1,1 @@
 #nullable enable
-*REMOVED*MMCA.Common.AI.Testing.GoldenReplayCase.Deconstruct(out string! Id, out string! Description, out string! ResponsePath) -> void
-*REMOVED*MMCA.Common.AI.Testing.GoldenReplayCase.GoldenReplayCase(string! Id, string! Description, string! ResponsePath) -> void
-MMCA.Common.AI.Testing.GoldenReplayCase.Deconstruct(out string! Id, out string! Description, out string! ResponsePath, out string! PromptContractHash) -> void
-MMCA.Common.AI.Testing.GoldenReplayCase.GoldenReplayCase(string! Id, string! Description, string! ResponsePath, string! PromptContractHash) -> void
-MMCA.Common.AI.Testing.GoldenReplayCase.PromptContractHash.get -> string!
-MMCA.Common.AI.Testing.GoldenReplayCase.PromptContractHash.init -> void
-MMCA.Common.AI.Testing.GoldenReplayTestsBase.EveryGoldenCase_WasRecordedAgainstTheCurrentContract() -> void
-abstract MMCA.Common.AI.Testing.GoldenReplayTestsBase.CurrentContract.get -> MMCA.Common.AI.PromptContract!
