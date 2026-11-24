@@ -804,7 +804,7 @@ public sealed partial class OutboxProcessor(
 
     /// <summary>
     /// Delivers one deserialized event. Integration events route through <see cref="IMessageBus"/>
-    /// so the registered transport (in-process for the monolith, MassTransit broker for extracted
+    /// so the registered transport (in-process for the monolith, a broker transport for extracted
     /// services) determines delivery; pure domain events keep the in-process dispatch.
     /// </summary>
     private async Task DeliverAsync(IDomainEvent domainEvent, IServiceProvider rowServices, CancellationToken cancellationToken)

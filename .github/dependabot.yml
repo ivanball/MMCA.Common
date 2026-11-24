@@ -57,10 +57,6 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # MassTransit is pinned to v8 by policy (v9 requires a commercial license); enforced by a
-      # fitness test. Don't let Dependabot propose the major bump. See Directory.Packages.props.
-      - dependency-name: "MassTransit*"
-        update-types: ["version-update:semver-major"]
       # VS.Threading.Analyzers majors are taken by hand, not by Dependabot: a new major adds
       # stricter rules (v18 brought VSTHRD103) that error under TreatWarningsAsErrors, so the
       # flagged call sites are reworked in the same PR. The repo is on v18.

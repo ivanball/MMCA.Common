@@ -54,7 +54,8 @@ fix before public disclosure.
 - `nuget.config` **package source mapping** restricts every package to nuget.org (dependency-
   confusion defense).
 - A **CycloneDX SBOM** is produced at release.
-- `MassTransit` is pinned to v8 (v9 requires a commercial license); a fitness test enforces this.
+- No third-party messaging library is referenced: the broker transports are framework code over
+  the vendor SDKs (ADR-118), and a fitness test fails the build on any `MassTransit*` package.
 
 ## Security invariants enforced as tests
 
