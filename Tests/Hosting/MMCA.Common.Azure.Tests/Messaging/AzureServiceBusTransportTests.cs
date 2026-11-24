@@ -35,6 +35,7 @@ public sealed class AzureServiceBusTransportTests
             ["MessageBus:Provider"] = provider,
             ["MessageBus:ConnectionString"] = NamespaceConnectionString,
             ["applicationName"] = "Azure.Tests.Service",
+            ["Application:Namespace"] = "azure-tests",
         };
         foreach (var (key, value) in extra ?? [])
         {
@@ -97,6 +98,18 @@ public sealed class AzureServiceBusTransportTests
         await using var provider = services.BuildServiceProvider();
         provider.GetService<AzureServiceBusTopologyProvisioner>().Should().BeNull();
         provider.GetRequiredService<IBrokerPublisher>().Should().BeOfType<AzureServiceBusPublisher>();
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_WithoutAnApplicationNamespace_FailsNamingTheKey()
+    {
+        var services = new ServiceCollection().AddLogging();
+        services.AddAzureServiceBusTransport();
+
+        var act = () => services.AddBrokerMessaging(ConfigurationFor("AzureServiceBus", new() { ["Application:Namespace"] = null }));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*'AzureServiceBus'*Application:Namespace is not configured*same value on every service*");
     }
 
     [Fact]

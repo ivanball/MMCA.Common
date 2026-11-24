@@ -46,6 +46,11 @@ public static partial class DependencyInjection
         /// registers only its <see cref="IBrokerPublisher"/> and its hosted receiver.
         /// </para>
         /// <para>
+        /// A broker host must configure <c>Application:Namespace</c>, with the same value on every service
+        /// of the application: it prefixes every topic, so services that resolved different namespaces
+        /// would never exchange an event. Without it this method throws.
+        /// </para>
+        /// <para>
         /// Consumer registration is the responsibility of each service: pass an action that calls
         /// <c>RegisterIntegrationEventConsumer&lt;TEvent&gt;()</c> (or
         /// <c>RegisterUpcastedIntegrationEventConsumer&lt;TEvent&gt;()</c> for a retired contract) for
@@ -79,7 +84,9 @@ public static partial class DependencyInjection
             var transport = ResolveBrokerTransport(services, settings.Provider);
 
             // SECURITY (SEC-Common-53): every topic is prefixed with the application namespace, so two
-            // applications sharing one broker never publish onto each other's topics.
+            // applications sharing one broker never publish onto each other's topics. It must be set
+            // explicitly: the fallback (the host's own application name) differs per service.
+            EnsureApplicationNamespaceConfigured(configuration, settings);
             var applicationNamespace = ApplicationNamespace.Resolve(configuration, environment: null);
             var builder = new BrokerConsumerBuilder(applicationNamespace);
             configureConsumers?.Invoke(builder);
@@ -244,6 +251,32 @@ public static partial class DependencyInjection
         {
             throw new InvalidOperationException(
                 $"MessageBus:EnableOutbox=false is not supported with the '{settings.Provider}' transport. A broker deployment publishes integration events exclusively through the outbox (BrokerEventBus writes the rows, OutboxProcessor publishes them), so disabling it drops every cross-service event silently. Remove MessageBus:EnableOutbox (or set it to true) for a broker transport; the setting exists to let a single-process host opt out of store-and-forward.");
+        }
+    }
+
+    /// <summary>
+    /// Fails the registration when a broker transport is selected and <c>Application:Namespace</c> is
+    /// not configured. Every topic is prefixed with the application namespace, and without an explicit
+    /// value <see cref="ApplicationNamespace.Resolve"/> falls back to the host's own application name,
+    /// which is different in every service of a multi-service application: each service would then
+    /// publish and subscribe on topics of its own, and every cross-service event would be lost
+    /// without an error anywhere. Throwing here turns that into a startup failure.
+    /// </summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="settings">The resolved message bus settings.</param>
+    /// <exception cref="InvalidOperationException">
+    /// A broker transport is configured and <c>Application:Namespace</c> is missing or blank.
+    /// </exception>
+    private static void EnsureApplicationNamespaceConfigured(IConfiguration configuration, MessageBusSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(configuration[ApplicationNamespace.ConfigurationKey]))
+        {
+            throw new InvalidOperationException(
+                $"MessageBus:Provider is '{settings.Provider}', but {ApplicationNamespace.ConfigurationKey} is not configured. "
+                + "Every broker topic is prefixed with the application namespace, so every service of one application must share the same value: "
+                + "without it each service falls back to its own application name, publishers and consumers end up on different topics, and integration events are silently lost. "
+                + $"Set {ApplicationNamespace.ConfigurationKey} to the same value on every service of the application, for example \"Application\": {{ \"Namespace\": \"contoso-shop\" }} in appsettings.json "
+                + "or the environment variable Application__Namespace=contoso-shop.");
         }
     }
 

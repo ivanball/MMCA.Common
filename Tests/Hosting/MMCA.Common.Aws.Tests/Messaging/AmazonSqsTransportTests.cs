@@ -80,6 +80,20 @@ public sealed class AmazonSqsTransportTests
     }
 
     [Fact]
+    public void AddBrokerMessaging_WithoutAnApplicationNamespace_FailsNamingTheKey()
+    {
+        var services = new ServiceCollection().AddLogging();
+        services.AddAmazonSqsTransport();
+        var settings = SqsSettings();
+        settings.Remove("Application:Namespace");
+
+        var act = () => services.AddBrokerMessaging(ConfigurationWith(settings));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*'AmazonSqs'*Application:Namespace is not configured*same value on every service*");
+    }
+
+    [Fact]
     public void AddBrokerMessaging_WithoutTheTransport_NamesThisPackage()
     {
         var act = () => new ServiceCollection().AddBrokerMessaging(ConfigurationWith(SqsSettings()));

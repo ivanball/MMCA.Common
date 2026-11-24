@@ -26,6 +26,7 @@ public sealed class BrokerTransportRegistrationTests
                 ["MessageBus:ConnectionString"] = connectionString,
                 ["MessageBus:RetryLimit"] = "3",
                 ["applicationName"] = "Demo.Orders.Service",
+                ["Application:Namespace"] = "demo",
             })
             .Build();
 
@@ -94,6 +95,7 @@ public sealed class BrokerTransportRegistrationTests
                 ["MessageBus:Provider"] = "Fake",
                 ["ConnectionStrings:messaging"] = "fake://from-aspire",
                 ["applicationName"] = "Demo",
+                ["Application:Namespace"] = "demo",
             })
             .Build();
 

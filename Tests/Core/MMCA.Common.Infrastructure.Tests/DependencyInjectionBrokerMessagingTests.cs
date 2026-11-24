@@ -116,6 +116,68 @@ public sealed class DependencyInjectionBrokerMessagingTests
         services.Should().BeEmpty("the in-process provider short-circuits before touching the container");
     }
 
+    [Theory]
+    [InlineData("RabbitMq", "amqp://guest:guest@localhost:5672", null)]
+    [InlineData("PostgreSql", "Host=localhost;Database=broker;Username=u;Password=p", null)]
+    [InlineData(InMemoryBrokerTransport.DefaultName, null, null)]
+    [InlineData(InMemoryBrokerTransport.DefaultName, null, "   ")]
+    public void AddBrokerMessaging_BrokerProviderWithoutAnApplicationNamespace_FailsBeforeRegisteringAnything(
+        string provider,
+        string? connectionString,
+        string? applicationNamespace)
+    {
+        // The host's application name is set, so the namespace WOULD resolve (to "Demo-Orders-Service"):
+        // that per-service fallback is exactly what splits one application's services onto different topics.
+        var services = WithTransport(out var transport);
+        var descriptorsBefore = services.Count;
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = provider,
+                ["MessageBus:ConnectionString"] = connectionString,
+                ["applicationName"] = "Demo.Orders.Service",
+                ["Application:Namespace"] = applicationNamespace,
+            })
+            .Build();
+
+        var act = () => services.AddBrokerMessaging(configuration, consumers => consumers.RegisterIntegrationEventConsumer<OrderPlaced>());
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"*'{provider}'*Application:Namespace is not configured*every service of one application must share the same value*silently lost*Set Application:Namespace to the same value on every service of the application*Application__Namespace=*");
+        services.Should().HaveCount(descriptorsBefore, "a refused broker registration leaves nothing half-registered");
+        transport.RegisterCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("RabbitMq", "amqp://guest:guest@localhost:5672")]
+    [InlineData("PostgreSql", "Host=localhost;Database=broker;Username=u;Password=p")]
+    [InlineData(InMemoryBrokerTransport.DefaultName, null)]
+    public void AddBrokerMessaging_BrokerProviderWithAnApplicationNamespace_PrefixesEveryTopicWithIt(string provider, string? connectionString)
+    {
+        var services = WithTransport(out _);
+
+        services.AddBrokerMessaging(
+            ConfigurationFor(provider, extra: connectionString is null ? [] : [("MessageBus:ConnectionString", connectionString)]),
+            consumers => consumers.RegisterIntegrationEventConsumer<OrderPlaced>());
+
+        var topology = Topology(services);
+        topology.ApplicationNamespace.Should().Be("demo");
+        topology.Subscriptions.Should().ContainSingle().Which.Topic.Should().StartWith("demo-");
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_InProcessProviderWithoutAnApplicationNamespace_RegistersNothingAndDoesNotThrow()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["MessageBus:Provider"] = "InProcess" })
+            .Build();
+
+        services.AddBrokerMessaging(configuration);
+
+        services.Should().BeEmpty("an in-process host has no topics, so it needs no shared namespace");
+    }
+
     [Fact]
     public void AddBrokerMessaging_BuildsTheTopology_QueueFromTheApplicationName_TopicsFromTheNamespace()
     {
@@ -147,7 +209,11 @@ public sealed class DependencyInjectionBrokerMessagingTests
     {
         var services = WithTransport(out _);
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["MessageBus:Provider"] = InMemoryBrokerTransport.DefaultName })
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = InMemoryBrokerTransport.DefaultName,
+                ["Application:Namespace"] = "demo",
+            })
             .Build();
 
         var act = () => services.AddBrokerMessaging(configuration);
