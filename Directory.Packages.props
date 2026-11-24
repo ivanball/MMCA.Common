@@ -168,7 +168,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="13.12.0" />
+    <PackageVersion Include="Anthropic" Version="13.13.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -463,7 +463,7 @@
          a host carries one client version. -->
     <PackageVersion Include="Npgsql" Version="$(MmcaNpgsqlVersion)" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="$(MmcaEfCoreVersion)" />
-    <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
+    <PackageVersion Include="RabbitMQ.Client" Version="7.3.0" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared
          gateway building blocks are written against; MMCA.Common.Testing takes it for the gateway
          hardening test base and its recording forwarder. Deliberately not referenced from

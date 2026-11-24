@@ -4,9 +4,9 @@
     "net10.0": {
       "Anthropic": {
         "type": "Direct",
-        "requested": "[13.12.0, )",
-        "resolved": "13.12.0",
-        "contentHash": "pIguTtfKb8lfsLRdnsmbzhzmPfwhoVjr2v1M7BVdxYZOR4/2nDiuKcHJBSzS2zsEKyW2is0trrqPKOIuyL1gDg==",
+        "requested": "[13.13.0, )",
+        "resolved": "13.13.0",
+        "contentHash": "KWCBDIQYfbDICd+2IO9dulLLvXTPqgFkJCRBoB2ITsEIGNODwsF16J6PFUm7lBXRyWBICe8lEDwcgj/fPw4r7A==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
@@ -112,9 +112,9 @@
     "net11.0": {
       "Anthropic": {
         "type": "Direct",
-        "requested": "[13.12.0, )",
-        "resolved": "13.12.0",
-        "contentHash": "pIguTtfKb8lfsLRdnsmbzhzmPfwhoVjr2v1M7BVdxYZOR4/2nDiuKcHJBSzS2zsEKyW2is0trrqPKOIuyL1gDg==",
+        "requested": "[13.13.0, )",
+        "resolved": "13.13.0",
+        "contentHash": "KWCBDIQYfbDICd+2IO9dulLLvXTPqgFkJCRBoB2ITsEIGNODwsF16J6PFUm7lBXRyWBICe8lEDwcgj/fPw4r7A==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
