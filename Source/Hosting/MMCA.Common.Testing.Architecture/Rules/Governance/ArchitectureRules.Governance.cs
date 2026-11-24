@@ -35,11 +35,23 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>The pinned major version of a package in Directory.Packages.props is below a ceiling.</summary>
-    public static void PinnedPackageMajorBelow(string packageId, int exclusiveMajorCeiling, string reason)
+    public static void PinnedPackageMajorBelow(string packageId, int exclusiveMajorCeiling, string reason) =>
+        PinnedPackageMajorBelow(FindUpwards("Directory.Packages.props"), packageId, exclusiveMajorCeiling, reason);
+
+    /// <summary>
+    /// The pinned major version of a package in the given central package file is below a ceiling.
+    /// </summary>
+    /// <param name="propsPath">Path of the <c>Directory.Packages.props</c> file to read.</param>
+    /// <param name="packageId">The package id, matched ordinally.</param>
+    /// <param name="exclusiveMajorCeiling">The first major version that fails the rule.</param>
+    /// <param name="reason">Why the ceiling exists, shown on failure.</param>
+    public static void PinnedPackageMajorBelow(string propsPath, string packageId, int exclusiveMajorCeiling, string reason)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(propsPath);
+
         // Assert on the nullable major directly (no null-forgiving access after NotBeNull — that trips
         // IDE0370 only in CI; see the same pattern in EventVersioningConventionTests).
-        var major = ReadPinnedPackageVersion(packageId)?.Major;
+        var major = ReadPinnedPackageVersion(propsPath, packageId)?.Major;
 
         major.Should().NotBeNull(because: $"{packageId} must remain pinned in Directory.Packages.props");
         major.Should().BeLessThan(exclusiveMajorCeiling, because: reason);
@@ -79,9 +91,8 @@ public static partial class ArchitectureRules
         type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Any(p => p.GetCustomAttributes(inherit: true).Any(a => string.Equals(a.GetType().Name, "PiiAttribute", StringComparison.Ordinal)));
 
-    private static Version? ReadPinnedPackageVersion(string packageId)
+    private static Version? ReadPinnedPackageVersion(string propsPath, string packageId)
     {
-        var propsPath = FindUpwards("Directory.Packages.props");
         var raw = XDocument.Load(propsPath)
             .Descendants("PackageVersion")
             .FirstOrDefault(e => string.Equals((string?)e.Attribute("Include"), packageId, StringComparison.Ordinal))
