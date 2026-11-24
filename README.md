@@ -20,7 +20,7 @@ What comes in the box:
 - **Transactional outbox** persisted atomically with your data, drained per data source, at-least-once, with OpenTelemetry metrics.
 - **Database-per-module** over one context class per engine, with cross-source relationships degrading automatically instead of breaking.
 - **Auth at the edge**: JWKS cross-service validation with no shared secret, permission-based authorization, rotating refresh tokens, idempotency keys, and rate limiting.
-- **Architecture that fails the build**: a compile-time layer guard plus a shared NetArchTest rule library, re-run identically in every consuming repo (counts in [FACTS.md](https://github.com/ivanball/MMCA.Common/blob/main/FACTS.md)).
+- **Architecture that fails the build**: a compile-time layer guard plus a shared architecture rule library read straight from the compiled assemblies, re-run identically in every consuming repo (counts in [FACTS.md](https://github.com/ivanball/MMCA.Common/blob/main/FACTS.md)).
 
 The framework is not a demo. It runs two production applications (a conference platform and an e-commerce store) plus a minimal reference app, and it is graded against a published 34-category rubric with the gaps left visible.
 
@@ -89,7 +89,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
 | `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers, and the navigation fitness bases (`NavigationContractTestsBase`, `NavItemGuardContractTestsBase`) |
 | `MMCA.Common.AI.Testing` | Provider-neutral evaluation harness for `MMCA.Common.AI`: a `ReplayChatClient` over recorded `ChatResponse` JSON, `GoldenReplayTestsBase` and `PromptContractPinTestsBase`, so a golden-replay gate and a prompt-change protocol run in a consumer's CI |
-| `MMCA.Common.Testing.Architecture` | `IArchitectureMap` + reusable NetArchTest rule library + abstract test bases (consumed by each repo's `*.Architecture.Tests`) |
+| `MMCA.Common.Testing.Architecture` | `IArchitectureMap` + reusable metadata-based architecture rule library + abstract test bases (consumed by each repo's `*.Architecture.Tests`) |
 
 Packages are published to **nuget.org** and mirrored to GitHub Packages (ADR-053).
 

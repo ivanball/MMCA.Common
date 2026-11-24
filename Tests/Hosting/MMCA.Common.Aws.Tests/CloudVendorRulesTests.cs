@@ -7,7 +7,7 @@ namespace MMCA.Common.Aws.Tests;
 
 /// <summary>
 /// Pins that the type-level cloud-vendor rule actually matches AWS SDK types. The namespace entries
-/// were once written with a trailing dot, which NetArchTest never matches, so the rule passed
+/// were once written with a trailing dot, which the dependency rules never match, so the rule passed
 /// vacuously for every AWS type; an SDK assembly names its own types and must fail it.
 /// </summary>
 public sealed class CloudVendorRulesTests

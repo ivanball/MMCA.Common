@@ -42,7 +42,7 @@ dotnet test --solution MMCA.Common.slnx -c Release
 
 - `TreatWarningsAsErrors` is on globally, with five analyzers at error severity. A clean local
   Release build is the baseline.
-- Layer rules are enforced twice: a compile-time MSBuild guard and NetArchTest fitness tests.
+- Layer rules are enforced twice: a compile-time MSBuild guard and the metadata-based fitness tests in `MMCA.Common.Testing.Architecture`.
   If you move a type between packages or add a project reference, expect both gates to react,
   and update both when the change is deliberate.
 - `FACTS.md` is generated and CI-gated. If your change affects the version, package list, ADR

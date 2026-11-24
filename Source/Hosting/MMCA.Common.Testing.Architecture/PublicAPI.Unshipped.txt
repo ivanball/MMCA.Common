@@ -1,1 +1,19 @@
 #nullable enable
+*REMOVED*static MMCA.Common.Testing.Architecture.ArchitectureAssert.NoViolations(NetArchTest.Rules.TestResult! result, string! reason) -> void
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult.FailingTypeNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.Architecture.ArchitectureRuleResult.IsSuccessful.get -> bool
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions.HaveDependencyOnAll(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureRuleResult!
+MMCA.Common.Testing.Architecture.ArchitectureTypeConditions.HaveDependencyOnAny(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureRuleResult!
+MMCA.Common.Testing.Architecture.ArchitectureTypes
+MMCA.Common.Testing.Architecture.ArchitectureTypes.DoNotHaveDependencyOnAny(params string![]! dependencies) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.GetTypeNames() -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveAttribute(string! attributeFullName) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveName(string! name) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.HaveNameEndingWith(string! suffix) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.Should() -> MMCA.Common.Testing.Architecture.ArchitectureTypeConditions!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.ShouldNot() -> MMCA.Common.Testing.Architecture.ArchitectureTypeConditions!
+MMCA.Common.Testing.Architecture.ArchitectureTypes.That() -> MMCA.Common.Testing.Architecture.ArchitectureTypes!
+static MMCA.Common.Testing.Architecture.ArchitectureAssert.NoViolations(MMCA.Common.Testing.Architecture.ArchitectureRuleResult! result, string! reason) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureTypes.InAssembly(System.Reflection.Assembly! assembly) -> MMCA.Common.Testing.Architecture.ArchitectureTypes!

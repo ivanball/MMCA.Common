@@ -22,8 +22,8 @@ public sealed class PasswordHashingFitnessTests
 
     [Fact]
     public void ScannedPasswordHasherSet_IsNotEmpty() =>
-        PasswordHasherTypes().GetTypes().Should().ContainSingle(
-            t => string.Equals(t.FullName, typeof(PasswordHasher).FullName, StringComparison.Ordinal),
+        PasswordHasherTypes().GetTypeNames().Should().ContainSingle(
+            name => string.Equals(name, typeof(PasswordHasher).FullName, StringComparison.Ordinal),
             "a rule that selects nothing passes vacuously: the scan must actually reach PasswordHasher");
 
     [Fact]
@@ -31,8 +31,7 @@ public sealed class PasswordHashingFitnessTests
     {
         var result = PasswordHasherTypes()
             .Should()
-            .HaveDependencyOnAll(Rfc2898DeriveBytesType)
-            .GetResult();
+            .HaveDependencyOnAll(Rfc2898DeriveBytesType);
 
         ArchitectureAssert.NoViolations(result,
             "credentials must be stretched with PBKDF2; a bare hash lets commodity GPUs try billions of "
@@ -44,8 +43,7 @@ public sealed class PasswordHashingFitnessTests
     {
         var result = PasswordHasherTypes()
             .Should()
-            .HaveDependencyOnAll(CryptographicOperationsType)
-            .GetResult();
+            .HaveDependencyOnAll(CryptographicOperationsType);
 
         ArchitectureAssert.NoViolations(result,
             "verification must compare with CryptographicOperations.FixedTimeEquals; a short-circuiting "
@@ -53,8 +51,8 @@ public sealed class PasswordHashingFitnessTests
             + "byte by byte");
     }
 
-    private static PredicateList PasswordHasherTypes() =>
-        Types.InAssembly(Infrastructure)
+    private static ArchitectureTypes PasswordHasherTypes() =>
+        ArchitectureTypes.InAssembly(Infrastructure)
             .That()
             .HaveName(nameof(PasswordHasher));
 }

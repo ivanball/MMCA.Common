@@ -1,5 +1,5 @@
-using Mono.Cecil;
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -33,8 +33,8 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>How it looks.</b> Neither NetArchTest nor reflection can see a <see langword="throw"/> inside a method
-    /// body, so the rule reads IL (through the Mono.Cecil already carried by NetArchTest) and, for
+    /// <b>How it looks.</b> Reflection cannot see a <see langword="throw"/> inside a method body, so the
+    /// rule reads IL straight from the assembly file (<c>System.Reflection.Metadata</c>) and, for
     /// every <see langword="throw"/> instruction, reads the type of the exception constructed immediately before
     /// it. Types are matched by full name, so the package keeps its zero-reference stance toward the
     /// framework.
@@ -80,9 +80,9 @@ public static partial class ArchitectureRules
 
         foreach (var location in DomainAssemblyLocations(map))
         {
-            using var module = ModuleDefinition.ReadModule(location);
+            var module = MetadataModule.Load(location);
 
-            foreach (var type in module.GetTypes())
+            foreach (var type in module.Types)
             {
                 if (IsAllowed(type.FullName, allowedTypesAndNamespaces))
                 {
@@ -116,8 +116,8 @@ public static partial class ArchitectureRules
 
     /// <summary>Records every disallowed or unreadable <see langword="throw"/> inside one method body.</summary>
     private static void CollectThrowsIn(
-        TypeDefinition type,
-        MethodDefinition method,
+        MetadataType type,
+        MetadataMethod method,
         List<string> violations,
         List<string> unverifiable)
     {
@@ -141,8 +141,8 @@ public static partial class ArchitectureRules
     /// shared IL read behind every rule that judges what a method throws (the domain-throw rule and
     /// the substitutability rule).
     /// </summary>
-    private static IEnumerable<string?> ThrownExceptionTypes(MethodDefinition method) =>
-        method.Body.Instructions
+    private static IEnumerable<string?> ThrownExceptionTypes(MetadataMethod method) =>
+        method.Instructions
             .Where(instruction => instruction.OpCode == OpCodes.Throw)
             .Select(ConstructedExceptionType);
 
@@ -150,7 +150,7 @@ public static partial class ArchitectureRules
     /// The full name of the exception constructed immediately before a <see langword="throw"/>, or null when the
     /// thrown value came from somewhere else. Debug builds interleave <c>nop</c>s, which are skipped.
     /// </summary>
-    private static string? ConstructedExceptionType(Instruction throwInstruction)
+    private static string? ConstructedExceptionType(IlInstruction throwInstruction)
     {
         var previous = throwInstruction.Previous;
         while (previous is not null && previous.OpCode == OpCodes.Nop)
@@ -158,7 +158,7 @@ public static partial class ArchitectureRules
             previous = previous.Previous;
         }
 
-        return previous?.OpCode == OpCodes.Newobj && previous.Operand is MethodReference constructor
+        return previous?.OpCode == OpCodes.Newobj && previous.Operand is MethodOperand constructor
             ? constructor.DeclaringType.FullName
             : null;
     }
@@ -181,12 +181,12 @@ public static partial class ArchitectureRules
     /// The dotted-name test keeps this narrow: a lambda body and an async <c>MoveNext</c> are not
     /// explicit implementations, so a throw a developer typed inside one is still reported.
     /// </summary>
-    private static bool IsCompilerSynthesized(MethodDefinition method) =>
-        HasAttribute(method.CustomAttributes, ExtensionMarkerAttributeFullName)
-        || HasAttribute(method.DeclaringType.CustomAttributes, CompilerGeneratedAttributeFullName)
+    private static bool IsCompilerSynthesized(MetadataMethod method) =>
+        HasAttribute(method.Attributes, ExtensionMarkerAttributeFullName)
+        || HasAttribute(method.DeclaringType.Attributes, CompilerGeneratedAttributeFullName)
             && method.Name.Contains('.', StringComparison.Ordinal);
 
     /// <summary>True when the attribute collection carries the named attribute.</summary>
-    private static bool HasAttribute(IEnumerable<CustomAttribute> attributes, string attributeFullName) =>
-        attributes.Any(a => string.Equals(a.AttributeType.FullName, attributeFullName, StringComparison.Ordinal));
+    private static bool HasAttribute(IEnumerable<MetadataAttribute> attributes, string attributeFullName) =>
+        attributes.Any(a => string.Equals(a.FullName, attributeFullName, StringComparison.Ordinal));
 }

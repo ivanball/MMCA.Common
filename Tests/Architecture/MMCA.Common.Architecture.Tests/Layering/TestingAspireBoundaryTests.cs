@@ -21,7 +21,7 @@ public sealed class TestingAspireBoundaryTests
 {
     private static Assembly TestingAspire => typeof(AppHostFixtureBase).Assembly;
 
-    // MMCA.Common.Aspire (service defaults) has no trailing dot: a dotted NetArchTest namespace entry
+    // MMCA.Common.Aspire (service defaults) has no trailing dot: a dotted dependency-rule namespace entry
     // matches nothing, so the segment form is the one that covers MMCA.Common.Aspire and every
     // namespace under it.
     [Theory]

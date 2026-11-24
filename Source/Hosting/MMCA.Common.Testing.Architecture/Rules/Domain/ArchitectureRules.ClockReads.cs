@@ -1,4 +1,4 @@
-using Mono.Cecil;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -37,9 +37,9 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>How it looks.</b> IL, through the Mono.Cecil NetArchTest already carries: every method body
+    /// <b>How it looks.</b> IL, read straight from the assembly file: every method body
     /// of every type the module defines, nested and compiler-generated types included
-    /// (<c>ModuleDefinition.GetTypes()</c> flattens them), is searched for a call to one of the five
+    /// (the module type list flattens them), is searched for a call to one of the five
     /// getters. That reaches a lambda or local function whichever shape the compiler gave it (a method
     /// on a generated closure class, or a method on the declaring type itself) and the
     /// <c>MoveNext</c> of an async or iterator state machine.
@@ -78,9 +78,9 @@ public static partial class ArchitectureRules
         var violations = new List<string>();
         foreach (var location in locations)
         {
-            using var module = ModuleDefinition.ReadModule(location);
+            var module = MetadataModule.Load(location);
 
-            violations.AddRange(module.GetTypes().SelectMany(type => ClockReadsIn(type, allowed)));
+            violations.AddRange(module.Types.SelectMany(type => ClockReadsIn(type, allowed)));
         }
 
         ArchitectureAssert.NoViolations(
@@ -96,7 +96,7 @@ public static partial class ArchitectureRules
     /// owns it (a compiler-generated nested type answers for its declaring type) and to the source
     /// member that wrote it.
     /// </summary>
-    private static IEnumerable<string> ClockReadsIn(TypeDefinition type, IReadOnlyCollection<string> allowed)
+    private static IEnumerable<string> ClockReadsIn(MetadataType type, IReadOnlyCollection<string> allowed)
     {
         var owner = OwnerName(type);
         if (IsAllowed(owner, allowed))
@@ -120,9 +120,9 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>The ambient-clock getters a method body calls, as <c>Type.Property</c> display names.</summary>
-    private static IEnumerable<string> ClockGettersCalledBy(MethodDefinition method) =>
-        method.Body.Instructions
-            .Select(instruction => instruction.Operand as MethodReference)
+    private static IEnumerable<string> ClockGettersCalledBy(MetadataMethod method) =>
+        method.Instructions
+            .Select(instruction => instruction.Operand as MethodOperand)
             .Where(callee => callee is not null
                 && AmbientClockGetters.Any(getter =>
                     string.Equals(callee.Name, getter.Getter, StringComparison.Ordinal)
@@ -134,7 +134,7 @@ public static partial class ArchitectureRules
     /// compiler's rewrites, the member named inside the angle brackets of the generated name (an async
     /// or iterator state machine <c>&lt;Member&gt;d__N</c>, a lambda <c>&lt;Member&gt;b__N_M</c>).
     /// </summary>
-    private static string SourceMemberName(TypeDefinition type, MethodDefinition method)
+    private static string SourceMemberName(MetadataType type, MetadataMethod method)
     {
         var current = type;
         while (current is not null && current.Name.AsSpan().StartsWith('<'))

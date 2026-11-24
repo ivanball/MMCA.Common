@@ -153,10 +153,9 @@ public static partial class ArchitectureRules
         foreach (var layerRef in map.Layers.Where(l => l.Layer == from))
         {
             var forbidden = map.RootNamespace(layerRef.Module, to);
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result, $"{layerRef.RootNamespace} → {forbidden}: {reason}");
         }

@@ -1,5 +1,5 @@
-using Mono.Cecil;
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -167,9 +167,9 @@ public static partial class ArchitectureRules
 
         foreach (var location in ErrorCatalogAssemblyLocations(map))
         {
-            using var module = ModuleDefinition.ReadModule(location);
+            var module = MetadataModule.Load(location);
 
-            foreach (var type in module.GetTypes())
+            foreach (var type in module.Types)
             {
                 foreach (var method in type.Methods.Where(m => m.HasBody))
                 {
@@ -191,19 +191,19 @@ public static partial class ArchitectureRules
 
     /// <summary>Reads every <c>Error</c> construction inside one method body.</summary>
     private static void CollectErrorCodesIn(
-        TypeDefinition type,
-        MethodDefinition method,
+        MetadataType type,
+        MetadataMethod method,
         List<(string Code, string Owner)> sites,
         List<string> unverifiable)
     {
-        foreach (var instruction in method.Body.Instructions)
+        foreach (var instruction in method.Instructions)
         {
-            if (instruction.Operand is not MethodReference callee || !IsErrorFactory(callee))
+            if (instruction.Operand is not MethodOperand callee || !IsErrorFactory(callee))
             {
                 continue;
             }
 
-            var codeArgument = PurePushArgument(instruction, callee.Parameters.Count);
+            var codeArgument = PurePushArgument(instruction, callee.ParameterTypes.Length);
             if (codeArgument is not null && codeArgument.OpCode == OpCodes.Ldstr && codeArgument.Operand is string code)
             {
                 sites.Add((code, OwnerName(type)));
@@ -216,11 +216,11 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>True when the callee is an <c>Error</c> factory (or constructor) taking a code first.</summary>
-    private static bool IsErrorFactory(MethodReference callee) =>
+    private static bool IsErrorFactory(MethodOperand callee) =>
         string.Equals(callee.DeclaringType?.FullName, ErrorTypeFullName, StringComparison.Ordinal)
         && ErrorFactoryNames.Contains(callee.Name, StringComparer.Ordinal)
-        && callee.Parameters.Count > 0
-        && string.Equals(callee.Parameters[0].ParameterType.FullName, "System.String", StringComparison.Ordinal);
+        && callee.ParameterTypes.Length > 0
+        && string.Equals(callee.ParameterTypes[0].FullName, "System.String", StringComparison.Ordinal);
 
     /// <summary>
     /// The instruction that pushed the FIRST argument of a call, or null when the arguments are not
@@ -228,7 +228,7 @@ public static partial class ArchitectureRules
     /// overwhelmingly common shape (literals, nulls, locals, fields); anything computed makes the
     /// offset unsound, so the walk bails and the site is reported as UNVERIFIABLE instead of guessed.
     /// </summary>
-    private static Instruction? PurePushArgument(Instruction call, int argumentCount)
+    private static IlInstruction? PurePushArgument(IlInstruction call, int argumentCount)
     {
         var current = call;
         for (var remaining = argumentCount; remaining > 0; remaining--)
@@ -244,7 +244,7 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>True when an instruction pushes exactly one value and pops nothing.</summary>
-    private static bool IsPurePush(Instruction instruction) =>
+    private static bool IsPurePush(IlInstruction instruction) =>
         instruction.OpCode.StackBehaviourPop == StackBehaviour.Pop0
         && instruction.OpCode.StackBehaviourPush is StackBehaviour.Push1
             or StackBehaviour.Pushi
@@ -257,7 +257,7 @@ public static partial class ArchitectureRules
     /// The type credited with a code. Compiler-generated nested types (lambda closures, async state
     /// machines) are collapsed onto the type that declares them, so ownership reads like source.
     /// </summary>
-    private static string OwnerName(TypeDefinition type)
+    private static string OwnerName(MetadataType type)
     {
         var owner = type;
         while (owner.DeclaringType is not null && owner.Name.AsSpan().StartsWith('<'))
