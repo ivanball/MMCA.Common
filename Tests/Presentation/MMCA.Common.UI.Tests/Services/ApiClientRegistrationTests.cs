@@ -65,15 +65,17 @@ public sealed class ApiClientRegistrationTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
+    [InlineData("   ")]
     public void MissingApiEndpoint_FailsTheOptionsValidation(string? endpoint)
     {
-        // The Required annotation plus ValidateDataAnnotations and ValidateOnStart form the one guard,
-        // so the client factory no longer repeats it with a hand-written throw.
+        // The Required annotation plus the source-generated ApiSettingsValidator and ValidateOnStart
+        // form the one guard, so the client factory no longer repeats it with a hand-written throw.
         using var provider = BuildProvider(endpoint);
 
         var act = () => provider.GetRequiredService<IOptions<ApiSettings>>().Value;
 
-        act.Should().Throw<OptionsValidationException>();
+        act.Should().Throw<OptionsValidationException>()
+            .Which.Failures.Should().ContainSingle().Which.Should().StartWith("ApiEndpoint: ").And.Contain("ApiEndpoint field is required.");
     }
 
     [Fact]
