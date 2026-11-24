@@ -39,12 +39,11 @@ public static partial class ArchitectureRules
 
         foreach (var layerRef in map.Layers)
         {
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .That()
-                .MeetCustomRule(CarriesServiceContractAttribute)
+                .HaveAttribute(ServiceContractAttributeFullName)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbidden)
-                .GetResult();
+                .HaveDependencyOnAny(forbidden);
 
             ArchitectureAssert.NoViolations(result,
                 $"{layerRef.RootNamespace}: a [ServiceContract] type is the published wire surface of an "
@@ -128,17 +127,10 @@ public static partial class ArchitectureRules
             .Order(StringComparer.Ordinal)];
     }
 
-    /// <summary>True when the type carries the framework's <c>[ServiceContract]</c> marker, matched by name.</summary>
-    private static bool CarriesServiceContractAttribute(Mono.Cecil.TypeDefinition type) =>
-        type.HasCustomAttributes
-        && type.CustomAttributes.Any(attribute => string.Equals(
-            attribute.AttributeType.FullName,
-            ServiceContractAttributeFullName,
-            StringComparison.Ordinal));
-
     /// <summary>
-    /// The reflection twin of the overload above, for the rules that walk loaded types rather than
-    /// NetArchTest's Cecil model.
+    /// True when the loaded type carries the framework's <c>[ServiceContract]</c> marker, matched by
+    /// name (the dependency rule above selects the same types from metadata with
+    /// <see cref="ArchitectureTypes.HaveAttribute"/>).
     /// </summary>
     private static bool CarriesServiceContractAttribute(Type contract) =>
         contract.GetCustomAttributesData().Any(attribute => string.Equals(

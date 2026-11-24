@@ -7,7 +7,7 @@ namespace MMCA.Common.Azure.Tests;
 /// <summary>
 /// Pins that the type-level cloud-vendor rule actually matches Azure SDK types, through the <c>Azure</c> namespace
 /// root. The entries were once written with a trailing dot,
-/// which NetArchTest never matches, so the rule passed vacuously; an SDK assembly names its own types
+/// which the dependency rules never match, so the rule passed vacuously; an SDK assembly names its own types
 /// and must fail it.
 /// </summary>
 public sealed class CloudVendorRulesTests

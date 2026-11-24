@@ -76,7 +76,6 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="NetArchTest.eNhancedEdition" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />

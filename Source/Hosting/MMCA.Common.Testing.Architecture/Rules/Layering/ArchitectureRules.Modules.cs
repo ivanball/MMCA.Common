@@ -72,10 +72,9 @@ public static partial class ArchitectureRules
             foreach (var internalLayer in internalLayers)
             {
                 var forbidden = map.RootNamespace(sharedRef.Module, internalLayer);
-                var result = Types.InAssembly(sharedRef.Assembly)
+                var result = ArchitectureTypes.InAssembly(sharedRef.Assembly)
                     .ShouldNot()
-                    .HaveDependencyOnAny(forbidden)
-                    .GetResult();
+                    .HaveDependencyOnAny(forbidden);
 
                 ArchitectureAssert.NoViolations(result,
                     $"{sharedRef.RootNamespace} → {forbidden}: Shared is a contracts-only layer");
@@ -91,10 +90,9 @@ public static partial class ArchitectureRules
     {
         foreach (var sharedRef in map.Layers.Where(l => l.Layer == Layer.Shared && l.Module.Length > 0))
         {
-            var result = Types.InAssembly(sharedRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(sharedRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny("Microsoft.EntityFrameworkCore")
-                .GetResult();
+                .HaveDependencyOnAny("Microsoft.EntityFrameworkCore");
 
             ArchitectureAssert.NoViolations(result,
                 $"{sharedRef.RootNamespace}: Shared is a contracts-only layer — no EF Core");
@@ -111,10 +109,9 @@ public static partial class ArchitectureRules
                 continue;
             }
 
-            var result = Types.InAssembly(layerRef.Assembly)
+            var result = ArchitectureTypes.InAssembly(layerRef.Assembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(otherNamespaces)
-                .GetResult();
+                .HaveDependencyOnAny(otherNamespaces);
 
             ArchitectureAssert.NoViolations(result, $"{layerRef.RootNamespace}: {reason}");
         }

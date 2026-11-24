@@ -6,8 +6,8 @@ namespace MMCA.Common.Architecture.Tests.Layering.GovernedAi;
 
 /// <summary>
 /// M257: pins that the type-level governed-AI rule actually matches <c>MMCA.Common.AI</c> types. The
-/// rule once matched the dotted entry <c>MMCA.Common.AI.</c>, which NetArchTest never matches (it
-/// compares whole namespace segments), so the gate passed vacuously in every subclass. It also pins
+/// rule once matched the dotted entry <c>MMCA.Common.AI.</c>, which the dependency rules never match (they
+/// compare whole namespace segments), so the gate passed vacuously in every subclass. It also pins
 /// that the undotted root does not catch <c>MMCA.Common.API</c>, a different segment.
 /// </summary>
 public sealed class AiBoundaryRulesTests

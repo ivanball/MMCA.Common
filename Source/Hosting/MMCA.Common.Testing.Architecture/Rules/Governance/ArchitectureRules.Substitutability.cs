@@ -1,5 +1,5 @@
 using System.Collections.Frozen;
-using Mono.Cecil;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -58,13 +58,13 @@ public static partial class ArchitectureRules
 
         foreach (var assembly in SubstitutabilityAssemblies(map))
         {
-            using var module = ModuleDefinition.ReadModule(assembly.Location);
+            var module = MetadataModule.Load(assembly.Location);
 
             foreach (var method in SubstitutableMethods(assembly))
             {
                 var memberName = $"{method.DeclaringType!.FullName}.{method.Name}";
                 if (excludedMembers.Contains(memberName)
-                    || module.LookupToken(method.MetadataToken) is not MethodDefinition { HasBody: true } definition
+                    || module.FindMethod(method.MetadataToken) is not { HasBody: true } definition
                     || IsCompilerSynthesized(definition))
                 {
                     continue;

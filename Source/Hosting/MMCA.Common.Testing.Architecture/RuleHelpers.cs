@@ -3,9 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
-/// Reflection helpers shared by the reflection-based fitness functions. NetArchTest cannot inspect
-/// method return types, generic-argument constraints, property accessors, or attribute usage, so
-/// those rules reflect over loaded types directly via these helpers.
+/// Reflection helpers shared by the reflection-based fitness functions. The metadata dependency rules
+/// (<see cref="ArchitectureTypes"/>) answer one question, which types a type names, so the rules about
+/// method return types, generic-argument constraints, property accessors or attribute usage reflect
+/// over loaded types directly via these helpers.
 /// </summary>
 [SuppressMessage(
     "Naming",

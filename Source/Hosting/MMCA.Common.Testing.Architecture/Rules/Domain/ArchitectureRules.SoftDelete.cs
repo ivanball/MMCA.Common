@@ -1,4 +1,4 @@
-using Mono.Cecil;
+using MMCA.Common.Testing.Architecture.Metadata;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -35,9 +35,9 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>How it looks.</b> Neither NetArchTest nor reflection can see a CALL inside a method body,
-    /// so the rule reads the IL of every assembly the map registers (through the Mono.Cecil already
-    /// carried by NetArchTest) and inspects each <c>call</c>/<c>callvirt</c> operand. Callees are
+    /// <b>How it looks.</b> Reflection cannot see a CALL inside a method body, so the rule reads the IL
+    /// of every assembly the map registers straight from its file (<c>System.Reflection.Metadata</c>)
+    /// and inspects each <c>call</c>/<c>callvirt</c> operand. Callees are
     /// matched by full name, exactly like the other framework types this package detects, so the
     /// package keeps its deliberate zero-reference stance toward EF Core.
     /// </para>
@@ -70,9 +70,9 @@ public static partial class ArchitectureRules
 
         foreach (var location in ScannableAssemblyLocations(map))
         {
-            using var module = ModuleDefinition.ReadModule(location);
+            var module = MetadataModule.Load(location);
 
-            foreach (var type in module.GetTypes())
+            foreach (var type in module.Types)
             {
                 violations.AddRange(HardDeleteCallsIn(type, allowedTypesAndNamespaces));
             }
@@ -93,7 +93,7 @@ public static partial class ArchitectureRules
 
     /// <summary>The disallowed hard-delete call sites inside one type's method bodies.</summary>
     private static IEnumerable<string> HardDeleteCallsIn(
-        TypeDefinition type,
+        MetadataType type,
         IReadOnlyCollection<string> allowedTypesAndNamespaces)
     {
         if (IsAllowed(type.FullName, allowedTypesAndNamespaces))
@@ -108,9 +108,9 @@ public static partial class ArchitectureRules
                 continue;
             }
 
-            foreach (var instruction in method.Body.Instructions)
+            foreach (var instruction in method.Instructions)
             {
-                if (instruction.Operand is MethodReference callee && IsHardDelete(callee))
+                if (instruction.Operand is MethodOperand callee && IsHardDelete(callee))
                 {
                     yield return $"  - {type.FullName}.{method.Name} calls {callee.DeclaringType.Name}.{callee.Name}";
                 }
@@ -119,7 +119,7 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>True when the callee is one of EF Core's row-erasing members.</summary>
-    private static bool IsHardDelete(MethodReference callee)
+    private static bool IsHardDelete(MethodOperand callee)
     {
         if (!HardDeleteMemberNames.Contains(callee.Name, StringComparer.Ordinal))
         {
@@ -141,7 +141,7 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// True when a type full name is covered by an allowlist entry, either exactly or as a member of
-    /// an allowlisted namespace, generic type or containing type (Cecil separates nested types
+    /// an allowlisted namespace, generic type or containing type (metadata names separate nested types
     /// with <c>/</c> and generic arity with <c>`</c>).
     /// </summary>
     private static bool IsAllowed(string typeFullName, IReadOnlyCollection<string> allowedTypesAndNamespaces) =>

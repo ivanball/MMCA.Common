@@ -9,14 +9,13 @@ namespace MMCA.Common.Architecture.Tests;
 internal static class DependencyAssertions
 {
     /// <summary>
-    /// Runs the NetArchTest dependency rule: no type in <paramref name="assembly"/> may depend on any
+    /// Runs the dependency rule: no type in <paramref name="assembly"/> may depend on any
     /// of <paramref name="forbiddenNamespaces"/>.
     /// </summary>
-    public static NetArchTest.Rules.TestResult NoDependencyOnAny(Assembly assembly, params string[] forbiddenNamespaces) =>
-        Types.InAssembly(assembly)
+    public static ArchitectureRuleResult NoDependencyOnAny(Assembly assembly, params string[] forbiddenNamespaces) =>
+        ArchitectureTypes.InAssembly(assembly)
             .ShouldNot()
-            .HaveDependencyOnAny(forbiddenNamespaces)
-            .GetResult();
+            .HaveDependencyOnAny(forbiddenNamespaces);
 
     /// <summary>
     /// Fails, naming the violating types and <paramref name="reason"/>, when any type in
