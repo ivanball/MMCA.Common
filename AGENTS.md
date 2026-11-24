@@ -112,7 +112,7 @@ The positions are deliberate; keep them when adding or moving a decorator:
 - **Validating** runs before the transaction opens; the query decorator sits inside Caching (a cached entry was validated when produced).
 - **Transactional** rolls back on an exception AND on `Result.Failure`, and defers in-process domain event dispatch until after commit. Queries have no Transactional decorator.
 
-An optional `Profiling` pair (`AddApplicationProfiling()`) is not wired by any host today.
+An optional `Profiling` pair (`AddApplicationProfiling()`) wraps the closed pipeline as its outermost layer; `AddMmcaServiceHost` adds it, with the MiniProfiler services and middleware, only when `ApplicationSettings:UseMiniProfiler` is true (off by default; the `/profiler` results answer only in Development).
 
 ### Module System
 

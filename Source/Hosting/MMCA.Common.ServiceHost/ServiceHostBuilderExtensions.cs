@@ -40,9 +40,11 @@ public static class ServiceHostBuilderExtensions
         /// versioning and rate limiting from configuration; the output cache with a no-cache base policy
         /// then the output-cache callback; response compression, the OpenAPI 3.1 pin on the <c>v1</c>
         /// document and <c>AddCommonOpenApi()</c>; forwarded JWT or in-process token validation; the
-        /// exception handlers, the infrastructure and the API; the services callback; the
-        /// broker-transport callback; the application pipeline (whose body is the pipeline callback);
-        /// and finally the gRPC service defaults and the per-module health checks.
+        /// exception handlers, the infrastructure and the API; MiniProfiler when
+        /// <c>ApplicationSettings:UseMiniProfiler</c> is true; the services callback; the
+        /// broker-transport callback; the application pipeline (whose body is the pipeline callback),
+        /// then the profiling decorators over it when the same flag is true; and finally the gRPC
+        /// service defaults and the per-module health checks.
         /// <para>
         /// The host keeps its own <c>builder.Services.AddOpenApi();</c> line in Program.cs (before or
         /// after this call): the OpenAPI XML-comment generator attaches a project's controller
@@ -144,12 +146,23 @@ public static class ServiceHostBuilderExtensions
             services.AddInfrastructure(configuration);
             services.AddAPI(moduleHost.ModulesSettings);
 
+            // ApplicationSettings:UseMiniProfiler (off by default) registers the profiler and its EF
+            // Core listener; with the flag off this registers nothing.
+            services.AddMiniProfilerIfEnabled(moduleHost.ApplicationSettings);
+
             options.ConfigureServices?.Invoke(builder);
 
             // A transport must exist when AddBrokerMessaging (inside the pipeline) picks it.
             options.RegisterBrokerTransports?.Invoke(services);
 
             services.AddMmcaApplicationPipeline(pipeline => options.ConfigurePipeline(pipeline, moduleHost));
+
+            // The profiling decorators wrap the closed pipeline as its outermost layer, which is why
+            // they come after it: TryDecorate only wraps what is already registered.
+            if (moduleHost.ApplicationSettings.UseMiniProfiler)
+            {
+                services.AddApplicationProfiling();
+            }
 
             services.AddGrpcServiceDefaults();
 
