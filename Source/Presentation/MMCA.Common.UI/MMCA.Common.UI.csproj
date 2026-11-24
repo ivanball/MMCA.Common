@@ -26,16 +26,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
-    <!-- Direct dependency: QueryHelpers (Services/ListPageQueryStateService). The standalone package
-         keeps this project WebAssembly-safe (no Microsoft.AspNetCore.App framework reference). -->
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <!-- Direct dependency: IConfiguration is part of this package's public API. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <!-- Direct dependency: IHostEnvironment (Globalization/CultureSwitcher.razor). -->
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Localization" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="Microsoft.FeatureManagement" />
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="Polly" />

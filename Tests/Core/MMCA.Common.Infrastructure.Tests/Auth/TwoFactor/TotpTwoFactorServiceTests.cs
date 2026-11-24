@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
-using OtpNet;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.TwoFactor;
 
@@ -23,7 +22,7 @@ public sealed class TotpTwoFactorServiceTests
         string second = sut.GenerateSecret();
 
         first.Should().NotBe(second, "every enrollment gets its own secret");
-        Base32Encoding.ToBytes(first).Should().HaveCount(20);
+        Base32.Decode(first).Should().HaveCount(20);
     }
 
     [Fact]
@@ -102,14 +101,17 @@ public sealed class TotpTwoFactorServiceTests
         sut.VerifyCode(secret, code).Should().BeFalse();
     }
 
-    [Fact]
-    public void VerifyCode_WithAnUnreadableStoredSecret_FailsInsteadOfThrowing()
+    [Theory]
+    [InlineData("not base32 at all!!")]
+    [InlineData("========")]
+    [InlineData("A")]
+    public void VerifyCode_WithAnUnreadableStoredSecret_FailsInsteadOfThrowing(string secret)
     {
         // A corrupted secret is a data fault, and the login path must answer it as "does not verify"
-        // rather than as an exception.
+        // rather than as an exception. Padding alone or a single character decodes to no key at all.
         var sut = CreateSut();
 
-        sut.VerifyCode("not base32 at all!!", "123456").Should().BeFalse();
+        sut.VerifyCode(secret, "123456").Should().BeFalse();
     }
 
     [Fact]
@@ -223,5 +225,5 @@ public sealed class TotpTwoFactorServiceTests
 
     /// <summary>Mints the code an authenticator app would show at a given instant.</summary>
     private static string CodeAt(string secret, DateTime utcInstant) =>
-        new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp(utcInstant);
+        Totp.Compute(Base32.Decode(secret), utcInstant, periodSeconds: 30, digits: 6);
 }

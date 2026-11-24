@@ -65,7 +65,7 @@ public static class GoogleCloudDataProtectionExtensions
         /// persistence is what fixes cross-replica decryption and must work on its own. A key named
         /// here is used for every key written from then on, so grant the KMS role before setting
         /// it. A host keeps exactly one key ring: setting this object and
-        /// <c>DataProtection:BlobStorageUri</c> or <c>DataProtection:SsmParameterPrefix</c> together
+        /// <c>DataProtection:BlobStorageUri</c> or <c>DataProtection:S3ObjectUri</c> together
         /// fails the startup tripwire.
         /// </para>
         /// </summary>

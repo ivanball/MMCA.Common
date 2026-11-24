@@ -10,10 +10,10 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Users;
 using MMCA.Common.Application.Users.UseCases.TwoFactor;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
-using OtpNet;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth.TwoFactor;
 
@@ -132,7 +132,7 @@ public sealed class TwoFactorSecretProtectionEndToEndTests
     }
 
     private static string CodeFor(string base32Secret) =>
-        new Totp(Base32Encoding.ToBytes(base32Secret)).ComputeTotp(DateTime.UtcNow);
+        Totp.Compute(Base32.Decode(base32Secret), DateTime.UtcNow, periodSeconds: 30, digits: 6);
 
     /// <summary>The app-side command shape the handler bases read.</summary>
     private sealed record EnrollmentCommand(UserIdentifierType UserId, TwoFactorCodeRequest Request)

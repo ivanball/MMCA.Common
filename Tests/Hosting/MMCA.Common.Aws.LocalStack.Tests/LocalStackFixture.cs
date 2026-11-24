@@ -1,8 +1,8 @@
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
+using Amazon.S3;
 using Amazon.SecretsManager;
 using Amazon.SimpleNotificationService;
-using Amazon.SimpleSystemsManagement;
 using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Testcontainers.LocalStack;
@@ -12,7 +12,7 @@ using Testcontainers.LocalStack;
 namespace MMCA.Common.Aws.LocalStack.Tests;
 
 /// <summary>
-/// One LocalStack container for the whole tier (S3, SQS, SNS, Secrets Manager, Systems Manager and DynamoDB),
+/// One LocalStack container for the whole tier (S3, SQS, SNS, Secrets Manager and DynamoDB),
 /// started once per assembly. The image is pinned: LocalStack's later images need an auth token,
 /// and an unpinned tag would turn that change into a red CI run nobody caused. LocalStack accepts any key pair, so the tier uses a
 /// fixed dummy one and never touches the AWS default credential chain.
@@ -79,12 +79,12 @@ public sealed class LocalStackFixture : IAsyncLifetime
         new(new BasicAWSCredentials(DummyKey, DummyKey), new AmazonSecretsManagerConfig { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region });
 
     /// <summary>
-    /// A Systems Manager client on LocalStack. A host registers its own client the same way when the
+    /// An S3 client on LocalStack, path-style. A host registers its own client the same way when the
     /// AWS SDK defaults do not fit; <c>AddAwsDataProtection</c> then uses it as is.
     /// </summary>
     /// <returns>The client; the caller (or the container it is registered in) disposes it.</returns>
-    public AmazonSimpleSystemsManagementClient CreateSsmClient() =>
-        new(new BasicAWSCredentials(DummyKey, DummyKey), new AmazonSimpleSystemsManagementConfig { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region });
+    public AmazonS3Client CreateS3Client() =>
+        new(new BasicAWSCredentials(DummyKey, DummyKey), new AmazonS3Config { ServiceURL = ServiceUrl.AbsoluteUri, AuthenticationRegion = Region, ForcePathStyle = true });
 
     /// <summary>The <c>NativePush</c> keys enabling SNS mobile push against LocalStack.</summary>
     /// <param name="table">The installations table.</param>

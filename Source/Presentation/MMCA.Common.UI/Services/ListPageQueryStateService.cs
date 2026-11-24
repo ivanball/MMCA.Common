@@ -1,6 +1,5 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 
 namespace MMCA.Common.UI.Services;
@@ -63,7 +62,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
     /// </summary>
     public static ListPageState ParseQueryString(string? queryString)
     {
-        var parsed = QueryHelpers.ParseQuery(queryString ?? string.Empty);
+        var parsed = QueryStringCodec.Parse(queryString);
 
         // Out-of-range values fall back to their defaults the way an unparsable one does: a hand-edited
         // or stale link with p=-3 or ps=5000 must not leave the list stuck on a failing fetch.
@@ -153,7 +152,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
 
         return parameters.Count == 0
             ? basePath
-            : QueryHelpers.AddQueryString(basePath, parameters);
+            : QueryStringCodec.AddQueryString(basePath, parameters);
     }
 
     /// <summary>
