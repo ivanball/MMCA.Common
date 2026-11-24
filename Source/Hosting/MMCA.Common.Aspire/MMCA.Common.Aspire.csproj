@@ -27,9 +27,6 @@
     <!-- Readiness probe for a SQL Server database (Health/SqlServerHealthCheck), on the same 7.x
          driver as MMCA.Common.Infrastructure. -->
     <PackageReference Include="Microsoft.Data.SqlClient" />
-    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
-         vulnerable 9.0.18 (NU1903); see the pin note in Directory.Packages.props. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <!-- Redis wiring is owned by the framework (Caching/RedisCachingExtensions): the raw Aspire
          integrations register an untagged health check that gates readiness and issues CLUSTER INFO,
          which Azure Managed Redis refuses. The wrapper turns those checks off and Common contributes
@@ -41,10 +38,6 @@
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <!-- Direct reference to force transitive OpenTelemetry.Api resolution to the non-vulnerable version
          Directory.Packages.props pins. -->
     <PackageReference Include="OpenTelemetry.Api" />

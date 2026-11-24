@@ -13,10 +13,6 @@
          Redis / health-check graph that AddServiceDefaults brings. The two compose at the host
          instead (see GatewayRoutePolicyExtensions' summary on the global limiter). -->
     <PackageReference Include="Yarp.ReverseProxy" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- A linked SOURCE file, not a reference: the in-memory fixed window with a remaining-window

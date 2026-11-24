@@ -29,10 +29,6 @@
     <PackageReference Include="AWSSDK.SimpleNotificationService" />
     <!-- The DynamoDB installation registry behind SNS mobile push (AddAmazonSnsPush). -->
     <PackageReference Include="AWSSDK.DynamoDBv2" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />

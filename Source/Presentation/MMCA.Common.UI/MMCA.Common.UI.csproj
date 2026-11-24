@@ -37,10 +37,6 @@
     <PackageReference Include="Microsoft.Extensions.Localization" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="Microsoft.FeatureManagement" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="Polly" />
     <!-- QrCodeImage encodes locally; managed-only, so it stays WebAssembly-safe. -->

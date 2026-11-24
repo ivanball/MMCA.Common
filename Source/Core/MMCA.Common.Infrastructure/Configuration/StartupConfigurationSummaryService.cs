@@ -42,7 +42,8 @@ internal sealed partial class StartupConfigurationSummaryService(
     : IHostedService
 {
     /// <summary>
-    /// Gets the MMCA.Common informational version MinVer stamped on this assembly, or
+    /// Gets the MMCA.Common informational version stamped on this assembly (the release tag, or the
+    /// 0.0.0-dev placeholder outside a release build), or
     /// <c>unknown</c> when the attribute is absent.
     /// </summary>
     internal static string FrameworkVersion { get; } =

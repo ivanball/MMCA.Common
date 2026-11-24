@@ -28,10 +28,6 @@
          (AddFirebaseCloudMessagingPush). -->
     <PackageReference Include="FirebaseAdmin" />
     <PackageReference Include="Google.Cloud.Firestore" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />

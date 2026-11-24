@@ -65,26 +65,8 @@
   <!-- NuGet advisory suppressions: each is a
        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." /> in an ItemGroup here,
        with its reachability argument in a comment; the CI audit step
-       (.github/actions/nuget-vulnerability-audit) re-applies exactly this list. The only entries
-       today are the two net11.0 false positives below. -->
-
-  <!-- net11.0 ONLY, and a false positive rather than an accepted risk. The two
-       System.Security.Cryptography.Pkcs advisories are fixed by the direct pin in
-       Directory.Packages.props, and that pin is what a net11.0 app loads: the ASP.NET Core 11 shared
-       framework carries the package at 11.0.0. Restore, though, prunes the 11.0.0 pin in every project
-       that references that shared framework (its PackageOverrides.txt lists Pkcs|11.0.0, and a pin
-       at or below that ceiling is pruned), then records and audits Microsoft.Data.SqlClient's
-       unpruned transitive 9.0.18 instead, which never loads. net10.0 is unaffected because 10.0.14
-       sits above the 10.0 ceiling. REMOVE these two entries when a Pkcs 11.0.1 exists and the net11.0
-       value of MmcaFrameworkVersion moves to it: a pin above the ceiling is not pruned.
-       Unconditional on purpose: NuGet requires NuGetAuditSuppress to be identical across target
-       frameworks, and the Visual Studio restore enforces that (NU1105 on every project) where the
-       CLI does not. On net10.0 the two entries are inert while the 10.0.14 pin stays above the
-       fixed version. -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-846f-f764-76mx" />
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2fmv-rv2c-59x7" />
-  </ItemGroup>
+       (.github/actions/nuget-vulnerability-audit) re-applies exactly this list. There are no entries
+       today. -->
 
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects.
        SYSLIB0066 (IStartupValidator is obsolete on net11.0 in favour of IAsyncStartupValidator, which
@@ -102,6 +84,10 @@
 
   <!-- NuGet package metadata (applied to all Source projects) -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
+    <!-- The version is the release tag: release.yml and build/consumer-check pass -p:Version and
+         -p:PackageVersion explicitly. Every other build (local, PR CI) carries this placeholder, so a
+         package packed by hand is visibly not a release and nothing depends on git history. -->
+    <Version>0.0.0-dev</Version>
     <Authors>Ivan Ball</Authors>
     <Company>MMCA</Company>
     <Copyright>Copyright (c) Ivan Ball-llovera</Copyright>

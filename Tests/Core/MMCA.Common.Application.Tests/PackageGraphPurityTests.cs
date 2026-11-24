@@ -40,7 +40,6 @@ public sealed class PackageGraphPurityTests
     /// <c>MiniProfiler.AspNetCore.Mvc</c>, which the profiling decorators do not use and which would
     /// pull MVC into every consumer of this package.</item>
     /// <item><c>Riok.Mapperly</c>: source generator, PrivateAssets=all, no runtime dependency.</item>
-    /// <item><c>MinVer</c>: build-time versioning, PrivateAssets=all.</item>
     /// <item><c>Scrutor</c>: the assembly scanning and decoration this layer's registration is built on.</item>
     /// <item><c>System.Linq.Dynamic.Core</c>: KEPT DELIBERATELY. It is the parser behind the whole
     /// entity query pipeline (QueryFieldService plus every strategy under Services/Filtering), which
@@ -55,7 +54,6 @@ public sealed class PackageGraphPurityTests
         "FluentValidation.DependencyInjectionExtensions",
         "Microsoft.Extensions.Configuration.Json",
         "Microsoft.FeatureManagement",
-        "MinVer",
         "MiniProfiler.Shared",
         "Riok.Mapperly",
         "Scrutor",

@@ -31,9 +31,6 @@
          itself is registered by MMCA.Common.Aspire's AddRedisOutputCaching. -->
     <PackageReference Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
-    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
-         vulnerable 9.0.13 (NU1903); see the pin note in Directory.Packages.props. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
@@ -45,16 +42,8 @@
          every other engine: a host that configures no PostgreSQL connection string never builds the
          context, so the only cost is one entry in the consumer's lock file. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <!-- The built-in RabbitMQ broker transport (Messaging/Transports/RabbitMq). Same build the
          MMCA.Common.Aspire readiness check uses, so a host carries one client version. -->
     <PackageReference Include="RabbitMQ.Client" />

@@ -34,10 +34,6 @@
     <!-- Entra token login for Redis (Redis/AzureRedisEntraAuthenticationConfigurator): the token
          acquisition and the re-authentication of open connections before each token expires. -->
     <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />

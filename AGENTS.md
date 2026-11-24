@@ -14,7 +14,7 @@ MMCA.Common is a NuGet package framework for modular monolith applications (DDD,
 dotnet build MMCA.Common.slnx -c Release
 dotnet test --solution MMCA.Common.slnx -c Release
 dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- --filter-method "*IdempotencyFilterTests*"
-dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests     # NetArchTest layer rules (fast, no DB)
+dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests     # architecture rules (fast, no DB)
 dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj   # NOT in slnx; needs `playwright install chromium` once
 dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks -- --filter "*"   # add --job Dry for a fast pass; without --filter BDN prompts and hangs headless
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
@@ -36,7 +36,7 @@ There is no `push: main` trigger: `main` requires an up-to-date branch, so the P
 - Also run, none of them a required check: **sample-deployment-validate**, the Testcontainers tiers **redis-integration**, **postgresql-integration**, **sqlserver-integration**, **aws-integration** (LocalStack), **gcp-integration** (emulators), **azure-integration** (the Service Bus emulator) and **rabbitmq-integration**, all out of the slnx, plus **apphost-testing** (a real Aspire orchestrator over the sample AppHost; a red fails the run).
 - The 8 required contexts are build-and-test, build-maui, the three ui-e2e engines, coverage, consumer-source-build and performance-smoke; `gh api repos/ivanball/MMCA.Common/branches/main/protection --jq '.required_status_checks.contexts[]'` is authoritative. `load-tests.yml` runs `Tests/Performance/MMCA.Common.LoadTests` weekly as a trend signal, not a gate.
 
-A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version with MinVer skipped, and MinVer versions every other build from git history (`fetch-depth: 0` required). `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs in a separate `pack-maui` job off the same tag and is pushed by `publish-maui`. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
+A release is versioned by its `v*` tag: `release.yml` passes the tag as the build and package version; every other build carries the `0.0.0-dev` placeholder from `Directory.Build.props`, so no build depends on git history. `release.yml` triggers on `v*` (build/test/pack, CycloneDX SBOM as a hard gate, push to both registries); `MMCA.Common.UI.Maui` packs in a separate `pack-maui` job off the same tag and is pushed by `publish-maui`. **The nuget.org push is keyless OIDC pinned to the workflow filename, so never rename `release.yml`.** The last commit before the tag runs `pwsh build/publicapi/Promote-PublicApi.ps1` (`-WhatIf` first) to move every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`.
 
 Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive.
@@ -46,7 +46,7 @@ Gotchas:
 
 ## Source Layout
 
-All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, MinVer otherwise). Every one except `MMCA.Common.UI.Maui` declares its surface in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`: a new or changed public member goes into `PublicAPI.Unshipped.txt` in the same change, or RS0016/RS0017 fail the build.
+All `Source/` projects are packable (bulk metadata via `Directory.Build.props`, versions from the release tag, `0.0.0-dev` otherwise). Every one except `MMCA.Common.UI.Maui` declares its surface in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`: a new or changed public member goes into `PublicAPI.Unshipped.txt` in the same change, or RS0016/RS0017 fail the build.
 
 ```
 Source/

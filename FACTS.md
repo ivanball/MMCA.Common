@@ -12,7 +12,7 @@ _As of: 2026-11-24 (framework v1.317.0) — **generated from source by `build/fa
 
 ## Framework version
 - **Current: `v1.317.0`** (the latest release tag reachable from `main` HEAD; `release.yml` packs with
-  that tag as the version and skips MinVer).
+  that tag as the version).
 - All consumers (**MMCA.ADC**, **MMCA.Store**, MMCA.Helpdesk) track this version in **lockstep** — every
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).

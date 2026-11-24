@@ -13,10 +13,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <!-- ServiceBusEmulatorFixtureBase owns the Azure Service Bus emulator container, its two clients and
          the one transport host for the broker-parity tier. Consumers of this tier need a Docker daemon.
          Azure.Messaging.ServiceBus 7.20.2 is the first line with working emulator admin-plane support. -->

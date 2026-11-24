@@ -96,7 +96,7 @@ public sealed class StartupConfigurationSummaryServiceTests
         var summary = recorder.Entries.Should()
             .ContainSingle(e => e.Category == SummaryCategory && e.Level == LogLevel.Information).Which.Message;
 
-        StartupConfigurationSummaryService.FrameworkVersion.Should().NotBe("unknown", "MinVer stamps the informational version");
+        StartupConfigurationSummaryService.FrameworkVersion.Should().NotBe("unknown", "the build stamps the informational version");
         summary.Should().Contain(StartupConfigurationSummaryService.FrameworkVersion);
         summary.Should().Contain("SQLServer").And.Contain("PostgreSQL");
         summary.Should().Contain("AzureServiceBus");

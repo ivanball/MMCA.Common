@@ -15,19 +15,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="AwesomeAssertions" />
     <!-- JwtTokenGenerator.ConfigureInProcessTokenValidation re-points a host's JwtBearerOptions at the
          committed test key, so the options type must be referenced here rather than in every test project. -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
-    <!-- Direct reference lifting SqlClient's System.Security.Cryptography.Pkcs transitive off the
-         vulnerable 9.0.18 (NU1903); see the pin note in Directory.Packages.props. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.FeatureManagement" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Respawn" />

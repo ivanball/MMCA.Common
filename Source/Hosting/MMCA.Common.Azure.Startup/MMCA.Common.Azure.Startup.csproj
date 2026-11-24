@@ -27,10 +27,6 @@
     <!-- DefaultAzureCredential for Key Vault and the DataProtection sinks. -->
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire supplies HostIntegrationMarker, the receipt the core start-up tripwire checks. -->

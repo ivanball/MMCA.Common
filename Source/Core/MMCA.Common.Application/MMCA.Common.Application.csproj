@@ -21,10 +21,6 @@
          them in here would drag MVC into a host-agnostic package. PackageGraphPurityTests guards it. -->
     <PackageReference Include="MiniProfiler.Shared" />
     <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Scrutor" />
     <PackageReference Include="System.Linq.Dynamic.Core" />
   </ItemGroup>

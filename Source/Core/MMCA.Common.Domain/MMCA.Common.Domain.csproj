@@ -17,10 +17,6 @@
     <ProjectReference Include="..\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>build</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

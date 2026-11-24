@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
+          fetch-depth: 0 # full history: the next step proves the tagged commit is reachable from main
 
       # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
       # flow, and this workflow re-runs only restore/build/vulnerability audit/test/SBOM. So refuse to
@@ -82,7 +82,7 @@ jobs:
       # up-to-date branch with squash merges, so this exact tree already passed the analyzer-enforcing
       # build-and-test legs of ci.yml. Re-running the five analyzers here would only repeat that work.
       - name: Build
-        run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }} -p:RunAnalyzers=false
+        run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.VERSION }} -p:RunAnalyzers=false
 
       # The same gate ci.yml build-and-test runs, re-run on the tag build: the graph that gets packed
       # is restored from the lock files here, and an advisory published between the PR run and the
@@ -102,7 +102,7 @@ jobs:
         run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 22500
 
       - name: Pack
-        run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
       # Software Bill of Materials for the released packages (CycloneDX).
       # Hard gate (R29 section 32): every published version must ship a verifiable SBOM. The shared
@@ -245,7 +245,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0 # MinVer needs full history
+          fetch-depth: 0 # full history: the next step proves the tagged commit is reachable from main
 
       # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
       # flow, and this workflow re-runs only restore/build/vulnerability audit/test/SBOM. So refuse to
@@ -308,10 +308,10 @@ jobs:
           no-restore: 'true'
 
       - name: Build (every MAUI TFM)
-        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
+        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-restore -p:Version=${{ steps.version.outputs.VERSION }}
 
       - name: Pack
-        run: dotnet pack Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-build -o ./nupkgs-maui -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        run: dotnet pack Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-build -o ./nupkgs-maui -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
       - name: Generate SBOM (CycloneDX)
         # Shared gate (ADR-038): the composite action fails unless the BOM exists AND lists at least
