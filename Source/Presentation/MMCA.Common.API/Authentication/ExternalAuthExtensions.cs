@@ -20,6 +20,12 @@ namespace MMCA.Common.API.Authentication;
 /// the same posture as <c>AddPermissions</c>, ADR-020).
 /// </para>
 /// <para>
+/// Every provider sends a round trip that fails before the completion (cancelled at the provider, a
+/// correlation cookie that expired during a long wait, a forged or stale state) to the login page with
+/// <c>?error=oauth_failed</c>, or to the allow-listed native callback, through
+/// <c>OAuthReturnUrls.RedirectRemoteFailureAsync</c>, never as a 500.
+/// </para>
+/// <para>
 /// Any OIDC provider (Entra ID, Okta, ...) joins by configuration: each <c>OAuth:Oidc:&lt;Name&gt;</c>
 /// section with a <c>ClientId</c> (plus <c>Authority</c>, <c>ClientSecret</c>, and optionally
 /// <c>Scopes</c>, <c>DisplayName</c>, <c>Domains</c>, <c>TrustEmail</c>) becomes an OpenID Connect
@@ -119,6 +125,7 @@ public static class ExternalAuthExtensions
             options.UsePkce = true;
             options.SignInScheme = ExternalLoginScheme;
             options.CallbackPath = $"/auth/callback/{provider.Name}";
+            options.Events.OnRemoteFailure = OAuthReturnUrls.RedirectRemoteFailureAsync;
 
             // Per-provider paths: the handler defaults are shared, so two OIDC providers would both
             // claim the same sign-out callback.
@@ -168,6 +175,7 @@ public static class ExternalAuthExtensions
                     "OAuth:Google:ClientSecret is required when OAuth:Google:ClientId is set.");
             options.SignInScheme = ExternalLoginScheme;
             options.CallbackPath = "/auth/callback/google";
+            options.Events.OnRemoteFailure = OAuthReturnUrls.RedirectRemoteFailureAsync;
             options.SaveTokens = true;
         });
 
@@ -180,6 +188,7 @@ public static class ExternalAuthExtensions
                     "OAuth:GitHub:ClientSecret is required when OAuth:GitHub:ClientId is set.");
             options.SignInScheme = ExternalLoginScheme;
             options.CallbackPath = "/auth/callback/github";
+            options.Events.OnRemoteFailure = OAuthReturnUrls.RedirectRemoteFailureAsync;
             // GitHub does not return the email on the default scope; request it so the
             // ClaimTypes.Email lookup in OAuthControllerBase.ExtractClaims succeeds.
             options.Scope.Add("user:email");
@@ -209,6 +218,7 @@ public static class ExternalAuthExtensions
 
             options.SignInScheme = ExternalLoginScheme;
             options.CallbackPath = "/auth/callback/apple";
+            options.Events.OnRemoteFailure = OAuthReturnUrls.RedirectRemoteFailureAsync;
             options.SaveTokens = true;
 
             // The handler reads only the ID token, which never carries the name; Apple posts it once,

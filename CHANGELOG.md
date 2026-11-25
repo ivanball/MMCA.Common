@@ -6,6 +6,15 @@ and are the git release tags (see [the published versioning policy](https://ivan
 
 ## [Unreleased]
 
+### Fixed
+
+- **External sign-in failures no longer answer 500** (MMCA.Common.API): a provider round trip that fails before the OAuth completion (the user cancels at the provider, the correlation cookie expires during a long wait, a forged or stale state) on the Google, GitHub, Apple or OIDC callback now redirects to `{OAuth:UIBaseUrl}/login?error=oauth_failed`, or to the allow-listed native callback with `?error=oauth_failed` when the challenge carried one, instead of an unhandled-exception problem response.
+- **Role change on an unknown account with an unknown role** (MMCA.Common.API, `UsersAdminControllerBase`): with a permission registry registered, `PUT {userId}/roles` for an account that does not exist now returns the service's answer, which validates the requested role first (the app's invalid-role 400 for an unknown role, 404 for a valid one), instead of always 404 from the privilege-ceiling lookup.
+
+### Changed
+
+- **Dependencies:** AWSSDK.S3 4.1.2.1, AngleSharp 1.11.0.
+
 ## [1.318.0] - 2026-11-24
 
 **Breaking (MMCA.Common.Testing.Architecture):** the package no longer depends on NetArchTest.eNhancedEdition (or Mono.Cecil). Its rules run on an own engine over System.Reflection.Metadata with the same verdicts, and the NetArchTest type leaves the public API: `ArchitectureAssert.NoViolations(NetArchTest.Rules.TestResult, string)` is replaced by `ArchitectureAssert.NoViolations(ArchitectureRuleResult, string)`. A consumer that only subclasses the `*TestsBase` classes (ADC, Store, Helpdesk) deletes `global using NetArchTest.Rules;` and its NetArchTest PackageReference, and changes nothing else. A consumer that wrote its own NetArchTest rules either keeps its own NetArchTest reference or moves them to the new entry point: `Types.InAssembly(a)` becomes `ArchitectureTypes.InAssembly(a)`, `.GetResult()` is dropped (the condition returns the `ArchitectureRuleResult` directly), and `FailingTypes` becomes `FailingTypeNames` (nested types spelled `Outer+Inner`). The engine covers `That`, `HaveName`, `HaveNameEndingWith`, `HaveAttribute`, `DoNotHaveDependencyOnAny`, `Should` / `ShouldNot` with `HaveDependencyOnAny` / `HaveDependencyOnAll`, and `GetTypeNames`.
