@@ -201,16 +201,40 @@ public sealed class UsersAdminPrivilegeCeilingTests : IDisposable
         var before = CreateController(beforeUsers.Object, Caller(Role(Admin)), registry: null);
         var beforeResult = (await InvokeAsync(before, action, Support)).Should().BeAssignableTo<ObjectResult>().Which;
 
-        // After: a registry is registered and the target lookup reports the missing account.
+        // After: a registry is registered and the target lookup reports the missing account (so does
+        // the service's role change, which set-roles hands an unknown target to).
         _users
             .Setup(x => x.GetRoleAsync(TargetUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<string>(Error.NotFound));
+        _users
+            .Setup(x => x.SetRolesAsync(TargetUserId, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.NotFound));
         var after = CreateController(Caller(Role(Admin)), CompiledRegistry());
         var afterResult = (await InvokeAsync(after, action, Support)).Should().BeAssignableTo<ObjectResult>().Which;
 
         beforeResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
         afterResult.StatusCode.Should().Be(beforeResult.StatusCode);
         ErrorsJson(afterResult).Should().Contain(Error.NotFound.Code).And.NotContain(CeilingCode);
+    }
+
+    // -- An unknown role on a missing target is refused as an invalid role, not as a missing account --
+    [Fact]
+    public async Task SetRoles_UnknownRoleOnATargetThatDoesNotExist_ReturnsTheServicesInvalidRoleRefusal()
+    {
+        var invalidRole = Error.Validation("User.Role.Invalid", "The role is not valid.", "roles");
+        _users
+            .Setup(x => x.GetRoleAsync(TargetUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<string>(Error.NotFound));
+        _users
+            .Setup(x => x.SetRolesAsync(TargetUserId, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(invalidRole));
+        var sut = CreateController(Caller(Role(Admin)), CompiledRegistry());
+
+        ActionResult result = await sut.SetRolesAsync(TargetUserId, new SetUserRolesRequest(["Nonexistent"]));
+
+        var refusal = result.Should().BeAssignableTo<ObjectResult>().Which;
+        refusal.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        ErrorsJson(refusal).Should().Contain("User.Role.Invalid").And.NotContain(Error.NotFound.Code);
     }
 
     // -- A role-only host (no registry) applies no ceiling --

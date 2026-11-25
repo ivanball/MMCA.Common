@@ -298,7 +298,16 @@ public abstract partial class UsersAdminControllerBase<TUserDto>(
         var ceiling = await CheckRoleChangeCeilingAsync(userId, request.Roles, cancellationToken).ConfigureAwait(false);
         if (ceiling.IsFailure)
         {
-            return HandleFailure(ceiling.Errors);
+            // An unknown target has no role to put a ceiling on. The service validates the requested
+            // role before it loads the account, so its answer is the one the caller gets: the app's
+            // invalid-role refusal for an unknown role, not found for a valid one. Nothing is changed,
+            // because there is no account to change.
+            return ceiling.Errors is [{ Type: ErrorType.NotFound }]
+                ? Completed(
+                    await Administration.SetRolesAsync(userId, request.Roles, cancellationToken).ConfigureAwait(false),
+                    "set-roles",
+                    userId)
+                : HandleFailure(ceiling.Errors);
         }
 
         var enrollment = await CheckSecondFactorEnrollmentAsync(userId, request.Roles, cancellationToken).ConfigureAwait(false);
