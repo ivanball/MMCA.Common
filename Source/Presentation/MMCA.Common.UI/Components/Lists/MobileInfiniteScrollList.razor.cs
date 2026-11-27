@@ -155,7 +155,8 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
         // A next-page load is started from a JS callback or the Retry button, so nothing renders
         // until the fetch ends; queue a render now so the "Loading more items" status paints while
-        // the fetch is in flight. The initial load has its own progress bar.
+        // the fetch is in flight. The initial load has its own progress bar, and a Retry on an
+        // empty list (a failed first page) renders that same bar while _isLoadingMore holds.
         if (!isInitial)
         {
             StateHasChanged();

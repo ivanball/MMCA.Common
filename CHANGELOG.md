@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are the git release tags (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- **Retry on a failed first page no longer flashes the empty state** (MMCA.Common.UI, `MobileInfiniteScrollList`): while the retried first page is in flight the list shows its loading bar, not `EmptyMessage`, so a phone reader no longer sees "no records" between the failure and the result.
+
 ## [1.319.0] - 2026-11-25
 
 ### Fixed

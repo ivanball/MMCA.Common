@@ -328,6 +328,48 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         page1Attempts.Should().Be(2, "the retry must re-fetch the first page");
     }
 
+    // U-35 (ADC local test run 21): Retry after a failed first page cleared the error and repainted
+    // before its fetch settled, so the empty list rendered EmptyMessage ("No sessions found.") for
+    // the whole in-flight window. An empty list with a fetch in flight is loading, not empty.
+    [Fact]
+    public async Task RetryingAFailedFirstPage_ShowsTheLoadingBar_NotTheEmptyState_UntilTheFetchSettles()
+    {
+        var retryPage = new TaskCompletionSource<Result<(IReadOnlyList<string> Items, int TotalItems)>>();
+        var page1Attempts = 0;
+
+        Task<Result<(IReadOnlyList<string> Items, int TotalItems)>> Fetch(int page, int pageSize, CancellationToken ct)
+        {
+            page1Attempts++;
+            return page1Attempts == 1
+                ? Task.FromResult(Result.Failure<(IReadOnlyList<string>, int)>(
+                    Error.NotFoundError("Catalog.Unavailable", "The catalog is unavailable.")))
+                : retryPage.Task;
+        }
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.FetchPageResult, Fetch)
+            .Add(c => c.EmptyMessage, "Nothing here"));
+        cut.Markup.Should().Contain("The catalog is unavailable.");
+
+        // Held open by the TaskCompletionSource, so the click handler does not complete yet.
+        var retry = cut.FindButtonByText("Retry").ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() =>
+        {
+            cut.FindComponents<MudProgressLinear>().Should().ContainSingle();
+            cut.Markup.Should().NotContain("Nothing here", "a list still loading is not an empty list");
+        }, TimeSpan.FromSeconds(5));
+        cut.Markup.Should().NotContain("The catalog is unavailable.");
+
+        retryPage.SetResult(Result.Success<(IReadOnlyList<string>, int)>((["Alpha", "Bravo"], 2)));
+        await retry.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await cut.WaitForAssertionAsync(() => cut.FindComponents<MudCard>().Count.Should().Be(2), TimeSpan.FromSeconds(5));
+        cut.FindComponents<MudProgressLinear>().Should().BeEmpty();
+        cut.Markup.Should().NotContain("Nothing here");
+    }
+
     [Fact]
     public async Task WhenFetchIsCancelled_RendersNoErrorState()
     {
