@@ -167,6 +167,10 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     // the viewport answers, X-17): the grid that renders after it takes the restored state the same way.
     private bool _restoreGridWhenRendered;
     private bool _suppressNextLocationChanged;
+
+    // Set by NavigateAway: the page is leaving, so it no longer reloads on a location change or mirrors
+    // its state to the URL (a replace navigation landing after the redirect overrode it, A-23).
+    private bool _navigatingAway;
     private bool _locationHandlerRegistered;
     private bool _deferSessionPersist;
     private readonly string _scrollTrackerId = Guid.NewGuid().ToString();
@@ -331,6 +335,13 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         if (_suppressNextLocationChanged)
         {
             _suppressNextLocationChanged = false;
+            return;
+        }
+
+        // A derived page redirected away on this (or an earlier) location change: reloading here would
+        // end in a replace navigation to this route, after the redirect, and cancel it.
+        if (_navigatingAway)
+        {
             return;
         }
 
@@ -1894,10 +1905,37 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
     /// <summary>
     /// True while this list page's route is still the CURRENT location. Deferred grid-state
-    /// writes must be dropped once the user navigated away (see <c>_ownRoutePath</c>).
+    /// writes must be dropped once the user navigated away (see <c>_ownRoutePath</c>), and once a
+    /// <see cref="NavigateAway"/> is under way: on Blazor Server the URI moves only when the browser
+    /// confirms the navigation, so until then it still names this route.
     /// </summary>
     private bool IsOwnRouteCurrent() =>
-        string.Equals(new Uri(NavigationManager.Uri).AbsolutePath, GetRoutePath(), StringComparison.OrdinalIgnoreCase);
+        !_navigatingAway
+        && string.Equals(new Uri(NavigationManager.Uri).AbsolutePath, GetRoutePath(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Navigates away from this list page, and from then on the page neither reloads on a location
+    /// change nor mirrors its state to the URL. A derived page that redirects in response to a
+    /// same-route navigation (a signed-out reader following a link that needs sign-in, say) calls this
+    /// instead of <see cref="NavigationManager.NavigateTo(string, bool, bool)"/>: on that same location
+    /// change the base reloads the list and rewrites the URL with a replace navigation, which, landing
+    /// after the redirect, cancelled it (A-23). Use it only for a target outside this page's route; the
+    /// page stays inert until it is disposed.
+    /// </summary>
+    /// <param name="uri">The destination, relative to the base URI or absolute.</param>
+    /// <param name="forceLoad">Whether to bypass client-side routing and load the target from the server.</param>
+    /// <param name="replace">Whether to replace the current history entry instead of adding one.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1054:URI-like parameters should not be strings",
+        Justification = "It forwards to NavigationManager.NavigateTo, whose uri is a string relative to the base URI; a System.Uri would only be turned back into one.")]
+    protected void NavigateAway(string uri, bool forceLoad = false, bool replace = false)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(uri);
+
+        _navigatingAway = true;
+        NavigationManager.NavigateTo(uri, forceLoad, replace);
+    }
 
     /// <summary>
     /// Called when the viewport switches to mobile or on first render in mobile mode.

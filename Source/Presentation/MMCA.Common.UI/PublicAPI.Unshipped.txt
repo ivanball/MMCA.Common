@@ -2,3 +2,4 @@
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.get -> bool?
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsLayoutKnown.get -> bool
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.NavigateAway(string! uri, bool forceLoad = false, bool replace = false) -> void
