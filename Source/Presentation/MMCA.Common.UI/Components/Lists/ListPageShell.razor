@@ -31,7 +31,18 @@
     </MudStack>
 }
 
-@if (IsMobile)
+@if (!LayoutKnown)
+{
+    @* The page has not heard from the viewport yet, so IsMobile is only its default. Rendering a
+       layout now took the desktop grid, which a phone then swapped for the card list, fetching twice
+       and moving everything below it (X-17). Hold both back behind a viewport-high placeholder, in
+       the loading shape the card list uses, and fetch nothing: the first notification picks one. *@
+    <div class="list-layout-pending" role="status" aria-live="polite" aria-busy="true">
+        <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2"
+                           aria-label="@L["Loading.Label"]" />
+    </div>
+}
+else if (IsMobile)
 {
     <MobileInfiniteScrollList TItem="TItem"
                               @ref="MobileList"

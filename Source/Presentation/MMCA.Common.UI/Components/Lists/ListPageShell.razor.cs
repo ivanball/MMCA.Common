@@ -71,6 +71,18 @@ public partial class ListPageShell<TItem>
     /// <summary>Gets or sets a value indicating whether the phone list renders instead of the grid.</summary>
     [Parameter] public bool IsMobile { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the page knows its viewport yet, so that
+    /// <see cref="IsMobile"/> is a measurement rather than a default. While it is false the shell
+    /// renders neither the grid nor the phone list (so neither fetches), only a viewport-high loading
+    /// placeholder, and the first viewport notification picks the layout. Leave it
+    /// <see langword="null"/> (the default) and the shell reads it from the page that owns
+    /// <see cref="ServerData"/> when that page is a <c>DataGridListPageBase</c> (its
+    /// <c>IsLayoutKnown</c>), so every list page wired the usual way gets it with no markup change; a
+    /// shell driven by anything else renders its layout at once.
+    /// </summary>
+    [Parameter] public bool? IsLayoutKnown { get; set; }
+
     /// <summary>Gets or sets the phone list's page fetcher (see <c>DataGridListPageBase.MobilePageFetcher</c>).</summary>
     [Parameter]
     [EditorRequired]
@@ -145,6 +157,14 @@ public partial class ListPageShell<TItem>
 
     /// <summary>Gets the rendered delete confirmation, or <see langword="null"/> when <see cref="ShowDeleteConfirmation"/> is false.</summary>
     public DeleteConfirmation? DeleteDialog { get => ShowDeleteConfirmation ? field : null; private set; }
+
+    /// <summary>
+    /// The layout gate: the explicit <see cref="IsLayoutKnown"/> when passed, otherwise the page that
+    /// owns <see cref="ServerData"/> (the page's own method, bound as <c>ServerData="LoadServerData"</c>),
+    /// otherwise open. The page re-renders the shell after its viewport notification, so this is read
+    /// again on the render that follows it.
+    /// </summary>
+    private bool LayoutKnown => IsLayoutKnown ?? (ServerData?.Target as IListLayoutSource)?.IsLayoutKnown ?? true;
 
     private int[] EffectivePageSizeOptions => PageSizeOptions is null ? [5, 10, 25, 50, 100] : [.. PageSizeOptions];
 

@@ -93,9 +93,10 @@ public abstract class BunitComponentTestBase : BunitContext
     /// </para>
     /// <para>
     /// <paramref name="stubViewport"/> substitutes MudBlazor's <see cref="IBrowserViewportService"/>
-    /// with an inert double so <c>IsMobile</c> stays deterministically false: in bUnit no browser
-    /// answers the breakpoint subscription, so the real service would leave the card/grid choice up to
-    /// timing. Pass false to exercise the real one. Registered with a plain Add (not TryAdd) on
+    /// with a double that answers every subscription at once with a desktop breakpoint, so <c>IsMobile</c>
+    /// stays deterministically false and <c>IsLayoutKnown</c> turns true: in bUnit no browser answers the
+    /// breakpoint subscription, so the real service would leave the card/grid choice up to timing, and a
+    /// page that never hears from the viewport renders neither layout. Pass false to exercise the real one. Registered with a plain Add (not TryAdd) on
     /// purpose: <c>AddMudServices</c> already registered the real implementation, and last
     /// registration wins.
     /// </para>
@@ -117,7 +118,7 @@ public abstract class BunitComponentTestBase : BunitContext
 
         if (stubViewport)
         {
-            Services.AddSingleton(Mock.Of<IBrowserViewportService>());
+            Services.AddSingleton(DesktopViewport());
         }
 
         // The list-page base persists its grid state across the prerender/interactive boundary.
@@ -125,6 +126,22 @@ public abstract class BunitComponentTestBase : BunitContext
 
         // MUST be last: this freezes the service provider.
         SetRendererInfo(new RendererInfo(rendererName, isInteractive));
+    }
+
+    /// <summary>
+    /// A viewport double that, like the real service with <c>fireImmediately</c>, notifies a new
+    /// subscriber of the current breakpoint, here always a 1280 x 800 desktop.
+    /// </summary>
+    private static IBrowserViewportService DesktopViewport()
+    {
+        var viewport = new Mock<IBrowserViewportService>();
+        viewport
+            .Setup(v => v.SubscribeAsync(It.IsAny<IBrowserViewportObserver>(), It.IsAny<bool>()))
+            .Returns((IBrowserViewportObserver observer, bool fireImmediately) => fireImmediately
+                ? observer.NotifyBrowserViewportChangeAsync(new BrowserViewportEventArgs(
+                    observer.Id, new BrowserWindowSize { Width = 1280, Height = 800 }, Breakpoint.Lg, isImmediate: true))
+                : Task.CompletedTask);
+        return viewport.Object;
     }
 
     /// <summary>Sets the principal the injected <see cref="AuthenticationStateProvider"/> returns (and notifies listeners) without re-rendering a new root — useful for mid-test auth changes.</summary>
