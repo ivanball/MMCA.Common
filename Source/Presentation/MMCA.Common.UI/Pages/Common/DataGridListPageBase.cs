@@ -166,6 +166,12 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     // Also set when the first-render setup finds no grid yet (a shell holding both layouts back until
     // the viewport answers, X-17): the grid that renders after it takes the restored state the same way.
     private bool _restoreGridWhenRendered;
+
+    // Set by the first viewport notification until the render it queued has run (that render's
+    // after-render clears it), and set when the first-render setup paused for that render, which then
+    // resumes it. See RunFirstRenderSetupAsync.
+    private bool _layoutRenderPending;
+    private bool _setupWaitsForLayoutRender;
     private bool _suppressNextLocationChanged;
 
     // Set by NavigateAway: the page is leaving, so it no longer reloads on a location change or mirrors
@@ -442,6 +448,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             IsMobile = BreakpointConstants.IsMobileBreakpoint(browserViewportEventArgs.Breakpoint);
 
             // The first notification picks the layout: a gated shell renders it in the render below.
+            _layoutRenderPending |= !IsLayoutKnown;
             IsLayoutKnown = true;
 
             if (IsMobile && !wasMobile)
@@ -496,12 +503,9 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         {
             await RunFirstRenderSetupAsync();
         }
-        else if (_restoreGridWhenRendered && GridRef is not null)
+        else
         {
-            // The grid created on widening, or on the first viewport notification, has rendered: put
-            // the saved pager and sort back on it.
-            _restoreGridWhenRendered = false;
-            await RestoreGridStateAsync(needsReload: false);
+            await OnLaterRenderAsync();
         }
 
         // Restore scroll only after the grid has finished its first data load and rendered rows.
@@ -522,8 +526,30 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     }
 
     /// <summary>
-    /// The first interactive render's setup: the viewport subscription, the late <c>sessionStorage</c>
-    /// restore, scroll tracking, the grid-state restore, then <see cref="OnRestoredStateAppliedAsync"/>.
+    /// After-render work for every render but the first: resume a first-render setup that paused for
+    /// the layout render, or put the saved pager and sort on a grid that has just been created.
+    /// </summary>
+    private async Task OnLaterRenderAsync()
+    {
+        _layoutRenderPending = false;
+        if (_setupWaitsForLayoutRender)
+        {
+            _setupWaitsForLayoutRender = false;
+            await ContinueFirstRenderSetupAsync();
+        }
+        else if (_restoreGridWhenRendered && GridRef is not null)
+        {
+            // The grid created on widening, or on the first viewport notification, has rendered: put
+            // the saved pager and sort back on it.
+            _restoreGridWhenRendered = false;
+            await RestoreGridStateAsync(needsReload: false);
+        }
+    }
+
+    /// <summary>
+    /// The first interactive render's setup: the viewport subscription, then (in
+    /// <see cref="ContinueFirstRenderSetupAsync"/>) the late <c>sessionStorage</c> restore, scroll
+    /// tracking, the grid-state restore and <see cref="OnRestoredStateAppliedAsync"/>.
     /// </summary>
     private async Task RunFirstRenderSetupAsync()
     {
@@ -534,6 +560,27 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             return;
         }
 
+        // A notification answered inside SubscribeAsync queued the render that mounts the chosen layout,
+        // and that render runs only after this after-render returns or yields. Resume in its
+        // after-render, so the grid or card list mounts before the sessionStorage read below is sent, as
+        // when the grid mounted in the first render; continuing here ran the whole mount while that read
+        // was outstanding, so a host that answers it late (a slow device, a test holding it) waited out
+        // the mount too.
+        if (_layoutRenderPending)
+        {
+            _setupWaitsForLayoutRender = true;
+            return;
+        }
+
+        await ContinueFirstRenderSetupAsync();
+    }
+
+    /// <summary>
+    /// The rest of the first-render setup: the late <c>sessionStorage</c> restore, scroll tracking,
+    /// the grid-state restore, then <see cref="OnRestoredStateAppliedAsync"/>.
+    /// </summary>
+    private async Task ContinueFirstRenderSetupAsync()
+    {
         // Hydrate scroll/state from sessionStorage now that JS interop is available
         // (the SSR-time OnInitialized only saw the in-memory dictionary, which is
         // empty after a circuit teardown or forceLoad navigation).
