@@ -26,6 +26,11 @@ public sealed class ProbeListPageDeepLinkRestoreTests : BunitTestBase
     private const string FirstPageRange = "1-5 of 36";
     private const string SecondPageRange = "6-10 of 36";
 
+    // The rows render one viewport round trip after the first render (the shell holds both layouts back
+    // until the viewport answers, X-17), which bUnit's 1 s default wait missed under a loaded full run.
+    // The bound only limits how long a correct render may take; every assertion is unchanged.
+    private static readonly TimeSpan RenderWait = TimeSpan.FromSeconds(5);
+
     private readonly Mock<IProbeRowClient> _client = new();
     private TaskCompletionSource? _fetchGate;
 
@@ -63,7 +68,7 @@ public sealed class ProbeListPageDeepLinkRestoreTests : BunitTestBase
         var renders = RecordRenders(cut);
 
         await cut.InvokeAsync(() => _fetchGate.SetResult());
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)), RenderWait);
         await cut.InvokeAsync(() => { hydrate.SetResult(null); });
         await WaitForTheRestoreAsync(cut);
 
@@ -83,7 +88,7 @@ public sealed class ProbeListPageDeepLinkRestoreTests : BunitTestBase
         await cut.InvokeAsync(() => { hydrate.SetResult(null); });
         await WaitForTheRestoreAsync(cut);
         await cut.InvokeAsync(() => _fetchGate.SetResult());
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)).And.Contain(SecondPageRange));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)).And.Contain(SecondPageRange), RenderWait);
         await FlushTheDispatcherAsync(cut);
 
         AssertEveryRenderAgreesWithItsRows(renders);
@@ -96,10 +101,10 @@ public sealed class ProbeListPageDeepLinkRestoreTests : BunitTestBase
         Navigation.NavigateTo(DeepLink);
         var hydrate = HoldTheSessionHydrate();
         var cut = RenderPage();
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)).And.Contain(SecondPageRange));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)).And.Contain(SecondPageRange), RenderWait);
 
         await cut.Find("button[aria-label='First page']").ClickAsync(new MouseEventArgs());
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(1)).And.Contain(FirstPageRange));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(1)).And.Contain(FirstPageRange), RenderWait);
         await cut.InvokeAsync(() => { hydrate.SetResult(null); });
         await WaitForTheRestoreAsync(cut);
 
@@ -115,7 +120,7 @@ public sealed class ProbeListPageDeepLinkRestoreTests : BunitTestBase
         Navigation.NavigateTo(DeepLink);
         var hydrate = HoldTheSessionHydrate();
         var cut = RenderPage();
-        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)));
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(RowName(6)), RenderWait);
 
         await cut.InvokeAsync(() => { hydrate.SetResult(null); });
         await WaitForTheRestoreAsync(cut);
