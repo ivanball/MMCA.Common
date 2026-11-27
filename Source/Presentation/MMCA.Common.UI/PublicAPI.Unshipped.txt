@@ -1,6 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.get -> bool?
-MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.set -> void
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsLayoutKnown.get -> bool
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.NavigateAway(string! uri, bool forceLoad = false, bool replace = false) -> void
-MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.ScanContinuouslyAsync(System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string?>!>! onScanned, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

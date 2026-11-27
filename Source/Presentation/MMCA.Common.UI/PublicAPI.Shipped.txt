@@ -419,6 +419,8 @@ MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Filters.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.Grid.get -> MudBlazor.MudDataGrid<TItem>?
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.HeaderActions.get -> Microsoft.AspNetCore.Components.RenderFragment?
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.HeaderActions.set -> void
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.get -> bool?
+MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLayoutKnown.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLoading.get -> bool
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsLoading.set -> void
 MMCA.Common.UI.Components.Lists.ListPageShell<TItem>.IsMobile.get -> bool
@@ -919,6 +921,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Dispose() -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.EmptyConfirmed.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Id.get -> System.Guid
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsLayoutKnown.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsLoading.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.IsMobile.get -> bool
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadFailed.get -> bool
@@ -932,6 +935,7 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageFetcher(System.
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageSize.get -> int
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobilePageSize.set -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.MobileTotalItems.get -> int
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.NavigateAway(string! uri, bool forceLoad = false, bool replace = false) -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.NotifyBrowserViewportChangeAsync(MudBlazor.BrowserViewportEventArgs! browserViewportEventArgs) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnScrollPositionChanged(double scrollTop) -> void
 MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.ReloadActiveLayoutAsync(MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TDto>? mobileList) -> System.Threading.Tasks.Task!
@@ -1456,6 +1460,7 @@ MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.EnsureCameraAccessAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.IsSupported.get -> bool
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.ScanAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService.ScanContinuouslyAsync(System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<string?>!>! onScanned, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService.CapturePhotoAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Media.PickedMedia?>!
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService.IsSupported.get -> bool
