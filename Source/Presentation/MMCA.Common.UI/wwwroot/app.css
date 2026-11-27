@@ -532,6 +532,12 @@ h1:focus:not(:focus-visible) {
     padding: 1rem 0;
 }
 
+/* ListPageShell before the first viewport notification: neither the grid nor the card list renders
+   yet, so this reserves the viewport height and nothing below the list moves when one arrives (X-17). */
+.list-layout-pending {
+    min-height: 100vh;
+}
+
 /* ══════════════════════════════════════════
    Shared Home Page Patterns
    ══════════════════════════════════════════ */

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,12 @@ namespace MMCA.Common.UI.Pages.Auth.SignInLinks;
 /// One POST per tap, through <see cref="ISignInLinkUIService"/>, which never retries: the token is
 /// single-use, so a retried POST can only spend it twice.
 /// </para>
+/// <para>
+/// <b>A second link opened on the open page is read too</b> (U-48): on MAUI an app link that lands on
+/// this route while the page is showing (the in-page "Email me a new link" flow) is a same-page
+/// navigation, which renders nothing new, so the page reads the fragment of every location change to
+/// its own route and waits for Continue on the new link. A token already posted is never shown again.
+/// </para>
 /// </remarks>
 public sealed partial class SignInLink : IDisposable
 {
@@ -47,6 +54,11 @@ public sealed partial class SignInLink : IDisposable
     private bool _isBusy;
     private bool _attempted;
     private bool _disposed;
+
+    // The route this page was opened on, and the last token Continue posted: a link that brings that
+    // token back is ignored rather than posted twice.
+    private string _ownPath = string.Empty;
+    private string? _submittedToken;
 
     /// <summary>What the page is showing.</summary>
     private enum LinkState
@@ -87,8 +99,16 @@ public sealed partial class SignInLink : IDisposable
         }
 
         _disposed = true;
+        Navigation.LocationChanged -= OnLocationChanged;
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _ownPath = new Uri(Navigation.Uri).AbsolutePath;
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
     /// <inheritdoc />
@@ -100,7 +120,59 @@ public sealed partial class SignInLink : IDisposable
         }
 
         _attempted = true;
-        ApplyFragment(await TakeFragmentAsync());
+        ShowLink(await TakeFragmentAsync());
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// A link opened while this page is already showing navigates to the same route with a new
+    /// fragment, which re-renders nothing; read it here. Before the first read the page has not taken a
+    /// fragment yet, so that read picks the new one up itself.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        var location = new Uri(e.Location, UriKind.Absolute);
+        if (!_attempted
+            || location.Fragment.Length <= 1
+            || !string.Equals(location.AbsolutePath, _ownPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() => ShowNewLinkAsync(location.Fragment[1..]));
+    }
+
+    private async Task ShowNewLinkAsync(string fragment)
+    {
+        // A redemption in flight owns the page; it ends on the landing page or on a refusal.
+        if (_disposed || _isBusy)
+        {
+            return;
+        }
+
+        // Scrub the new link from the address bar and the history entry, as the first read does; the
+        // values come from the navigation itself, so a host without the module still reads them.
+        await TakeFragmentAsync();
+
+        var (_, token) = ParseFragment(fragment);
+        if (_disposed || string.Equals(token.Trim(), _submittedToken, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _linkSent = false;
+        ShowLink(fragment);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Takes the address and the token from <paramref name="fragment"/> and offers Continue, or the
+    /// fresh-link form when either is missing.
+    /// </summary>
+    /// <param name="fragment">The raw fragment, without its leading hash.</param>
+    private void ShowLink(string? fragment)
+    {
+        (_email, _token) = ParseFragment(fragment);
 
         if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_token))
         {
@@ -109,10 +181,9 @@ public sealed partial class SignInLink : IDisposable
         }
         else
         {
+            _errorMessage = null;
             _state = LinkState.Ready;
         }
-
-        StateHasChanged();
     }
 
     // A document name inside the consent sentence: a link when the host published that document,
@@ -143,13 +214,16 @@ public sealed partial class SignInLink : IDisposable
             : await module.InvokeOrDefaultAsync<string?>("locationHashTake", [], CancellationToken.None);
     }
 
-    /// <summary>Copies the <c>email</c> and <c>token</c> pairs out of the URL fragment.</summary>
+    /// <summary>Reads the <c>email</c> and <c>token</c> pairs out of the URL fragment.</summary>
     /// <param name="fragment">The raw fragment, without its leading hash.</param>
-    private void ApplyFragment(string? fragment)
+    /// <returns>The address and the token, each empty when the fragment does not carry it.</returns>
+    private static (string Email, string Token) ParseFragment(string? fragment)
     {
+        var email = string.Empty;
+        var token = string.Empty;
         if (string.IsNullOrWhiteSpace(fragment))
         {
-            return;
+            return (email, token);
         }
 
         foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
@@ -165,23 +239,33 @@ public sealed partial class SignInLink : IDisposable
 
             if (string.Equals(name, "email", StringComparison.Ordinal))
             {
-                _email = value;
+                email = value;
             }
             else if (string.Equals(name, "token", StringComparison.Ordinal))
             {
-                _token = value;
+                token = value;
             }
         }
+
+        return (email, token);
     }
 
     private async Task RedeemAsync()
     {
+        // One POST per token: a second tap, or the same link opened again, never spends it twice.
+        var token = _token.Trim();
+        if (_isBusy || string.Equals(token, _submittedToken, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _submittedToken = token;
         _errorMessage = null;
         _isBusy = true;
 
         try
         {
-            var result = await SignInLinks.RedeemSignInLinkAsync(_email.Trim(), _token.Trim(), RequiresTerms, _cts.LifetimeToken());
+            var result = await SignInLinks.RedeemSignInLinkAsync(_email.Trim(), token, RequiresTerms, _cts.LifetimeToken());
             if (result.IsSuccess)
             {
                 // A full load, as after a password sign-in, so every component re-reads the new

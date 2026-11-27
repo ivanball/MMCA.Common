@@ -21,7 +21,7 @@ namespace MMCA.Common.UI.Pages.Common;
 /// <see cref="IAsyncDisposable"/> pattern that is otherwise repeated across every list page.
 /// </summary>
 /// <typeparam name="TDto">The DTO type displayed in the grid.</typeparam>
-public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IAsyncDisposable, IDisposable
+public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IListLayoutSource, IAsyncDisposable, IDisposable
 {
     [Inject] protected IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> Localizer { get; set; } = default!;
@@ -73,6 +73,21 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
     /// <summary>True when the viewport is below the sidebar-collapse threshold (phone or tablet, &lt; 960 px).</summary>
     protected bool IsMobile { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the first viewport notification has arrived and set
+    /// <see cref="IsMobile"/>. False during the SSR prerender and the first interactive render, when
+    /// <see cref="IsMobile"/> is only its default: rendering a layout then took the desktop grid, which
+    /// a phone swapped for the card list once the viewport answered, fetching twice and moving
+    /// everything below the list (CLS 0.3 to 0.44 on a phone, X-17). <see cref="ListPageShell{TItem}"/>
+    /// reads it and renders a viewport-high placeholder, and fetches nothing, until it is true; the
+    /// chosen layout then fetches once. A page with its own <c>@if (IsMobile)</c> markup gates on it
+    /// the same way.
+    /// </summary>
+    protected bool IsLayoutKnown { get; private set; }
+
+    /// <inheritdoc />
+    bool IListLayoutSource.IsLayoutKnown => IsLayoutKnown;
 
     // ── Mobile card-view state ──
     protected IReadOnlyList<TDto> MobileItems { get; private set; } = [];
@@ -148,8 +163,20 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     private (string? Column, string? Direction)? _shadowedGridSort;
     // Set when the viewport widens from the phone card list back to the grid: the grid is created anew
     // there, so the pager, page size and sort are restored onto it once it has rendered (Run 17 O-73).
-    private bool _restoreGridAfterWidening;
+    // Also set when the first-render setup finds no grid yet (a shell holding both layouts back until
+    // the viewport answers, X-17): the grid that renders after it takes the restored state the same way.
+    private bool _restoreGridWhenRendered;
+
+    // Set by the first viewport notification until the render it queued has run (that render's
+    // after-render clears it), and set when the first-render setup paused for that render, which then
+    // resumes it. See RunFirstRenderSetupAsync.
+    private bool _layoutRenderPending;
+    private bool _setupWaitsForLayoutRender;
     private bool _suppressNextLocationChanged;
+
+    // Set by NavigateAway: the page is leaving, so it no longer reloads on a location change or mirrors
+    // its state to the URL (a replace navigation landing after the redirect overrode it, A-23).
+    private bool _navigatingAway;
     private bool _locationHandlerRegistered;
     private bool _deferSessionPersist;
     private readonly string _scrollTrackerId = Guid.NewGuid().ToString();
@@ -317,6 +344,13 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             return;
         }
 
+        // A derived page redirected away on this (or an earlier) location change: reloading here would
+        // end in a replace navigation to this route, after the redirect, and cancel it.
+        if (_navigatingAway)
+        {
+            return;
+        }
+
         // Only react when the user navigates within the same list page (back/forward
         // between filtered states). Different paths are handled by component disposal.
         var newPath = new Uri(e.Location, UriKind.Absolute).AbsolutePath;
@@ -413,6 +447,10 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             var wasMobile = IsMobile;
             IsMobile = BreakpointConstants.IsMobileBreakpoint(browserViewportEventArgs.Breakpoint);
 
+            // The first notification picks the layout: a gated shell renders it in the render below.
+            _layoutRenderPending |= !IsLayoutKnown;
+            IsLayoutKnown = true;
+
             if (IsMobile && !wasMobile)
             {
                 MobileCurrentPage = 1;
@@ -450,7 +488,7 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
         RestoreSort(saved);
         RestoreColumnFilters(saved);
-        _restoreGridAfterWidening = true;
+        _restoreGridWhenRendered = true;
     }
 
     /// <summary>
@@ -465,11 +503,9 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         {
             await RunFirstRenderSetupAsync();
         }
-        else if (_restoreGridAfterWidening && GridRef is not null)
+        else
         {
-            // The grid created on widening has rendered: put the saved pager and sort back on it.
-            _restoreGridAfterWidening = false;
-            await RestoreGridStateAsync(needsReload: false);
+            await OnLaterRenderAsync();
         }
 
         // Restore scroll only after the grid has finished its first data load and rendered rows.
@@ -490,11 +526,60 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     }
 
     /// <summary>
-    /// The first interactive render's setup: the late <c>sessionStorage</c> restore, the viewport
-    /// subscription and scroll tracking, the grid-state restore, then
-    /// <see cref="OnRestoredStateAppliedAsync"/>.
+    /// After-render work for every render but the first: resume a first-render setup that paused for
+    /// the layout render, or put the saved pager and sort on a grid that has just been created.
+    /// </summary>
+    private async Task OnLaterRenderAsync()
+    {
+        _layoutRenderPending = false;
+        if (_setupWaitsForLayoutRender)
+        {
+            _setupWaitsForLayoutRender = false;
+            await ContinueFirstRenderSetupAsync();
+        }
+        else if (_restoreGridWhenRendered && GridRef is not null)
+        {
+            // The grid created on widening, or on the first viewport notification, has rendered: put
+            // the saved pager and sort back on it.
+            _restoreGridWhenRendered = false;
+            await RestoreGridStateAsync(needsReload: false);
+        }
+    }
+
+    /// <summary>
+    /// The first interactive render's setup: the viewport subscription, then (in
+    /// <see cref="ContinueFirstRenderSetupAsync"/>) the late <c>sessionStorage</c> restore, scroll
+    /// tracking, the grid-state restore and <see cref="OnRestoredStateAppliedAsync"/>.
     /// </summary>
     private async Task RunFirstRenderSetupAsync()
+    {
+        // Subscribe first: its first notification picks the layout a ListPageShell holds back until
+        // then (IsLayoutKnown, X-17), so every round trip ahead of it would hold the rows back too.
+        if (!await SubscribeToViewportAsync())
+        {
+            return;
+        }
+
+        // A notification answered inside SubscribeAsync queued the render that mounts the chosen layout,
+        // and that render runs only after this after-render returns or yields. Resume in its
+        // after-render, so the grid or card list mounts before the sessionStorage read below is sent, as
+        // when the grid mounted in the first render; continuing here ran the whole mount while that read
+        // was outstanding, so a host that answers it late (a slow device, a test holding it) waited out
+        // the mount too.
+        if (_layoutRenderPending)
+        {
+            _setupWaitsForLayoutRender = true;
+            return;
+        }
+
+        await ContinueFirstRenderSetupAsync();
+    }
+
+    /// <summary>
+    /// The rest of the first-render setup: the late <c>sessionStorage</c> restore, scroll tracking,
+    /// the grid-state restore, then <see cref="OnRestoredStateAppliedAsync"/>.
+    /// </summary>
+    private async Task ContinueFirstRenderSetupAsync()
     {
         // Hydrate scroll/state from sessionStorage now that JS interop is available
         // (the SSR-time OnInitialized only saw the in-memory dictionary, which is
@@ -502,30 +587,16 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
         var routePath = GetRoutePath();
         await ListPageStateService.HydrateFromSessionAsync(routePath);
 
-        // M236: every await below is an interop round trip the user can navigate away during.
+        // M236: every await here is an interop round trip the user can navigate away during.
         // DisposeAsync has then already run with nothing to clean up, so each continuation
         // checks _disposed and releases whatever it created after that point.
         if (_disposed)
         {
+            await ReleaseLateFirstRenderSetupAsync();
             return;
         }
 
-        // Cross-circuit fallback: when neither URL nor in-memory state was available
-        // during OnInitialized (new circuit after forceLoad or session teardown),
-        // check if sessionStorage hydration recovered any list-page state.
-        var hydrated = ListPageStateService.GetState(routePath);
-        var needsSessionRestore = _deferSessionPersist && hydrated is not null && HasListPageState(hydrated);
-
-        if (needsSessionRestore)
-        {
-            ApplyRestoredState(hydrated!);
-        }
-
-        if (_pendingScrollRestore is null && hydrated is { ScrollPosition: > 0 })
-        {
-            _pendingScrollRestore = hydrated.ScrollPosition;
-        }
-
+        var needsSessionRestore = await ApplyHydratedStateAsync(routePath);
         _deferSessionPersist = false;
 
         if (!await StartScrollTrackingAsync())
@@ -533,10 +604,21 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             return;
         }
 
-        await RestoreGridStateAsync(needsSessionRestore);
-        if (_disposed)
+        if (GridRef is null && !IsLayoutKnown)
         {
-            return;
+            // The viewport has not answered yet, so a ListPageShell still holds both layouts back. The
+            // state was restored above, so a grid created from it loads the restored filters and page on
+            // its own first load; keep that page pending and put the pager and sort on the grid once it
+            // renders, as after a widening.
+            _restoreGridWhenRendered = true;
+        }
+        else
+        {
+            await RestoreGridStateAsync(needsSessionRestore);
+            if (_disposed)
+            {
+                return;
+            }
         }
 
         await OnRestoredStateAppliedAsync(needsSessionRestore);
@@ -548,11 +630,45 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
     }
 
     /// <summary>
-    /// Subscribes to the viewport and starts the window scroll tracker. Returns
-    /// <see langword="false"/> when the page was disposed during one of the round trips, after
-    /// releasing what was created past that point.
+    /// Applies the list state <c>sessionStorage</c> hydration recovered, and the scroll position it holds.
     /// </summary>
-    private async Task<bool> StartScrollTrackingAsync()
+    /// <param name="routePath">This page's route.</param>
+    /// <returns><see langword="true"/> when the hydrated state replaced the state the first load used.</returns>
+    private async Task<bool> ApplyHydratedStateAsync(string routePath)
+    {
+        // Cross-circuit fallback: when neither URL nor in-memory state was available
+        // during OnInitialized (new circuit after forceLoad or session teardown),
+        // check if sessionStorage hydration recovered any list-page state.
+        var hydrated = ListPageStateService.GetState(routePath);
+        var needsSessionRestore = _deferSessionPersist && hydrated is not null && HasListPageState(hydrated);
+
+        if (needsSessionRestore)
+        {
+            ApplyRestoredState(hydrated!);
+
+            // A phone card list that rendered on the first notification fetched with the
+            // filters from before this restore: start it over on the restored ones (the grid reloads
+            // in RestoreGridStateAsync).
+            if (IsMobile && MobileListRef is { } mobileList)
+            {
+                await mobileList.ResetAsync();
+            }
+        }
+
+        if (_pendingScrollRestore is null && hydrated is { ScrollPosition: > 0 })
+        {
+            _pendingScrollRestore = hydrated.ScrollPosition;
+        }
+
+        return needsSessionRestore;
+    }
+
+    /// <summary>
+    /// Subscribes to the viewport; the first notification sets <see cref="IsMobile"/> and
+    /// <see cref="IsLayoutKnown"/>. Returns <see langword="false"/> when the page was disposed during
+    /// the round trip, after releasing the subscription.
+    /// </summary>
+    private async Task<bool> SubscribeToViewportAsync()
     {
         await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
         if (_disposed)
@@ -561,6 +677,15 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
             return false;
         }
 
+        return true;
+    }
+
+    /// <summary>
+    /// Starts the window scroll tracker. Returns <see langword="false"/> when the page was disposed
+    /// during one of the round trips, after releasing what was created past that point.
+    /// </summary>
+    private async Task<bool> StartScrollTrackingAsync()
+    {
         try
         {
             _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
@@ -1827,10 +1952,37 @@ public abstract partial class DataGridListPageBase<TDto> : ComponentBase, IBrows
 
     /// <summary>
     /// True while this list page's route is still the CURRENT location. Deferred grid-state
-    /// writes must be dropped once the user navigated away (see <c>_ownRoutePath</c>).
+    /// writes must be dropped once the user navigated away (see <c>_ownRoutePath</c>), and once a
+    /// <see cref="NavigateAway"/> is under way: on Blazor Server the URI moves only when the browser
+    /// confirms the navigation, so until then it still names this route.
     /// </summary>
     private bool IsOwnRouteCurrent() =>
-        string.Equals(new Uri(NavigationManager.Uri).AbsolutePath, GetRoutePath(), StringComparison.OrdinalIgnoreCase);
+        !_navigatingAway
+        && string.Equals(new Uri(NavigationManager.Uri).AbsolutePath, GetRoutePath(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Navigates away from this list page, and from then on the page neither reloads on a location
+    /// change nor mirrors its state to the URL. A derived page that redirects in response to a
+    /// same-route navigation (a signed-out reader following a link that needs sign-in, say) calls this
+    /// instead of <see cref="NavigationManager.NavigateTo(string, bool, bool)"/>: on that same location
+    /// change the base reloads the list and rewrites the URL with a replace navigation, which, landing
+    /// after the redirect, cancelled it (A-23). Use it only for a target outside this page's route; the
+    /// page stays inert until it is disposed.
+    /// </summary>
+    /// <param name="uri">The destination, relative to the base URI or absolute.</param>
+    /// <param name="forceLoad">Whether to bypass client-side routing and load the target from the server.</param>
+    /// <param name="replace">Whether to replace the current history entry instead of adding one.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "CA1054:URI-like parameters should not be strings",
+        Justification = "It forwards to NavigationManager.NavigateTo, whose uri is a string relative to the base URI; a System.Uri would only be turned back into one.")]
+    protected void NavigateAway(string uri, bool forceLoad = false, bool replace = false)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(uri);
+
+        _navigatingAway = true;
+        NavigationManager.NavigateTo(uri, forceLoad, replace);
+    }
 
     /// <summary>
     /// Called when the viewport switches to mobile or on first render in mobile mode.

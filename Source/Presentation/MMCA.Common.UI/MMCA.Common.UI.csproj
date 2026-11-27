@@ -20,6 +20,9 @@
          reached through NotificationHubService's public API: JoinChannelAsync starts a real
          HubConnection, so a join-based test would need a live server and a multi-second backoff. -->
     <InternalsVisibleTo Include="MMCA.Common.UI.Tests" />
+    <!-- The MAUI scanner shares RepeatScanFilter with the default continuous scan, so a code held in
+         view is skipped the same way on every head; the two packages ship in lockstep (ADR-016). -->
+    <InternalsVisibleTo Include="MMCA.Common.UI.Maui" />
   </ItemGroup>
 
   <ItemGroup>

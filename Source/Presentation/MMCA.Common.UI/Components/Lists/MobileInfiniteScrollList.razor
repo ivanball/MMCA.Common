@@ -2,9 +2,11 @@
 
 @typeparam TItem
 
-@if (_isInitialLoad)
+@if (_isInitialLoad || (_items.Count == 0 && _isLoadingMore))
 {
-    @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
+    @* A Retry after a failed first page clears the error before its fetch settles; an empty list
+       with a fetch in flight is still loading, never "no records", so it keeps this branch.
+       Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
        may not take aria-label) and the bar itself carries the accessible name, so the progressbar is
        never anonymous. *@
     <div role="status" aria-live="polite" aria-busy="true">
